@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
@@ -61,7 +61,7 @@ export const ConnectionTimelinePage = () => {
 
   const { closeDrawer } = useDrawerActions();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     return () => {
       closeDrawer();
     };

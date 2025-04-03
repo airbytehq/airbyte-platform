@@ -5,7 +5,6 @@ import { Bar, BarChart, BarProps, CartesianGrid, ResponsiveContainer, XAxis, YAx
 import { CategoricalChartFunc } from "recharts/types/chart/generateCategoricalChart";
 
 import { Box } from "components/ui/Box";
-import { Drawer } from "components/ui/Drawer";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
@@ -17,6 +16,7 @@ import {
   ConnectionEventType,
 } from "core/api/types/AirbyteClient";
 import { DefaultErrorBoundary } from "core/errors";
+import { useDrawerActions } from "core/services/ui/DrawerService";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 
 import { ConnectionEventsList } from "./ConnectionEventsList";
@@ -47,8 +47,7 @@ const isGraphEvent = (event: ConnectionEventMinimal | RunningJobEvent): event is
 };
 
 export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, connections }) => {
-  const [didUserOpenDrawer, setDidUserOpenDrawer] = useState(false);
-  const [selectedWindowId, setSelectedWindowId] = useState<number | null>(null);
+  const { openDrawer } = useDrawerActions();
 
   const { formatDate } = useIntl();
   const connectionIds = connections.map((connection) => connection.connectionId);
@@ -162,22 +161,24 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
         failure: categoryClicked.failure,
         running: categoryClicked.running,
       });
-      setDidUserOpenDrawer(true);
-      setSelectedWindowId(categoryClicked.windowId);
+      openDrawer({
+        title: (
+          <Box pl="lg">
+            <Heading size="sm" as="h2">
+              <FormattedDate value={categoryClicked.windowStart} year="numeric" month="short" day="numeric" />
+            </Heading>
+          </Box>
+        ),
+        content: (
+          <ConnectionEventsList
+            start={categoryClicked.windowStart}
+            end={categoryClicked.windowEnd}
+            events={categoryClicked.events ?? []}
+          />
+        ),
+      });
     }
   };
-
-  const selectedWindow = useMemo(() => {
-    return barChartCategories.find((category) => category.windowId === selectedWindowId);
-  }, [barChartCategories, selectedWindowId]);
-
-  // Because of the drawer animation and the fact that the connection filters remain interactive, we cannot only rely on
-  // a boolean value to determine if the drawer should be open. Instead, we need to check if the user has clicked the
-  // drawer open button and if the selected window has events (as that the data for that window might be filtered)
-  const isDrawerVisible = useMemo(
-    () => didUserOpenDrawer && !!selectedWindow && selectedWindow.events.length > 0 && combinedEvents !== undefined,
-    [combinedEvents, selectedWindow, didUserOpenDrawer]
-  );
 
   if (combinedEvents === undefined) {
     return (
@@ -244,32 +245,6 @@ export const ConnectionsGraph: React.FC<ConnectionsGraphProps> = ({ lookback, co
           ))}
         </BarChart>
       </ResponsiveContainer>
-      <Drawer
-        isOpen={isDrawerVisible}
-        onClose={() => setDidUserOpenDrawer(false)}
-        afterClose={() => {
-          if (!didUserOpenDrawer) {
-            setSelectedWindowId(null);
-          }
-        }}
-        title={
-          selectedWindow ? (
-            <Box pl="lg">
-              <Heading size="sm" as="h2">
-                <FormattedDate value={selectedWindow.windowStart} year="numeric" month="short" day="numeric" />
-              </Heading>
-            </Box>
-          ) : null
-        }
-      >
-        {selectedWindow && (
-          <ConnectionEventsList
-            start={selectedWindow.windowStart}
-            end={selectedWindow.windowEnd}
-            events={selectedWindow.events ?? []}
-          />
-        )}
-      </Drawer>
     </DefaultErrorBoundary>
   );
 };

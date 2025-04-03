@@ -11,10 +11,11 @@ import { FlexContainer } from "components/ui/Flex";
 import { IconType } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useConnectionList } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { ConnectionTimelineEventIcon } from "pages/connections/ConnectionTimelinePage/ConnectionTimelineEventIcon";
-import { ConnectionRoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionEventsList.module.scss";
 import { GraphEvent } from "./ConnectionsGraph";
@@ -44,6 +45,7 @@ function eventTypeInKeyMap(eventType: GraphEvent["eventType"]): eventType is key
 }
 
 export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ start, end, events }) => {
+  const createLink = useCurrentWorkspaceLink();
   const failedCount = useMemo(() => {
     return events.filter((event) => event.eventType === "SYNC_FAILED" || event.eventType === "REFRESH_FAILED").length;
   }, [events]);
@@ -118,9 +120,10 @@ export const ConnectionEventsList: React.FC<ConnectionEventsListProps> = ({ star
 
                 const linkTo =
                   event.eventType === "RUNNING_JOB"
-                    ? `${event.connectionId}/${ConnectionRoutePaths.Timeline}`
-                    : `${event.connectionId}/${ConnectionRoutePaths.Timeline}?eventId=${event.eventId}`;
-
+                    ? createLink(`/${RoutePaths.Connections}/${event.connectionId}/${ConnectionRoutePaths.Timeline}`)
+                    : createLink(
+                        `/${RoutePaths.Connections}/${event.connectionId}/${ConnectionRoutePaths.Timeline}?eventId=${event.eventId}`
+                      );
                 return (
                   <Link className={styles.connectionEventsList__eventLink} to={linkTo} key={event.eventId}>
                     <ConnectionTimelineEventIcon

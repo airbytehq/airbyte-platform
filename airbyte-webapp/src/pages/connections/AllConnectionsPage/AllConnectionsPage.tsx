@@ -1,4 +1,4 @@
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense, useLayoutEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
@@ -17,6 +17,7 @@ import { useCurrentWorkspaceLimits } from "area/workspace/utils/useCurrentWorksp
 import { useConnectionList, useCurrentWorkspace, useListConnectionsStatusesAsync } from "core/api";
 import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useDrawerActions } from "core/services/ui/DrawerService";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
 import { useModalService } from "hooks/services/Modal";
@@ -33,6 +34,7 @@ export const AllConnectionsPage: React.FC = () => {
   const { activeConnectionLimitReached, limits } = useCurrentWorkspaceLimits();
   const { formatMessage } = useIntl();
   const { openModal } = useModalService();
+  const { closeDrawer } = useDrawerActions();
 
   const { workspaceId } = useCurrentWorkspace();
   const canCreateConnection = useIntent("CreateConnection", { workspaceId });
@@ -57,6 +59,10 @@ export const AllConnectionsPage: React.FC = () => {
       navigate(`${ConnectionRoutePaths.ConnectionNew}`, { state: { sourceDefinitionId } });
     }
   };
+
+  useLayoutEffect(() => {
+    return () => closeDrawer();
+  }, [closeDrawer]);
 
   return (
     <Suspense fallback={<LoadingPage />}>
