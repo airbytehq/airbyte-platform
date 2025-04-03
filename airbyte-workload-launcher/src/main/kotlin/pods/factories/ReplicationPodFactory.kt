@@ -95,7 +95,7 @@ data class ReplicationPodFactory(
     val containers =
       when {
         singleConnectorTest -> mutableListOf(orchContainer)
-        socketTest -> mutableListOf(orchContainer, sourceContainer)
+        socketTest -> mutableListOf(orchContainer, sourceContainer, destContainer)
         else -> mutableListOf(orchContainer, sourceContainer, destContainer)
       }
 
