@@ -47,7 +47,7 @@ val genAirbyteApiProblems =
   tasks.register<GenerateTask>("genAirbyteApiProblems") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/problems"
 
-    inputs.file(airbyteApiProblemsSpecFile)
+    inputs.file(airbyteApiProblemsSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(serverOutputDir)
 
     generatorName = "jaxrs-spec"
@@ -67,6 +67,7 @@ val genAirbyteApiProblems =
         "generatePom" to "false",
         "interfaceOnly" to "true",
         "useJakartaEe" to "true",
+        "hideGenerationTimestamp" to "true",
       )
 
     doLast {
