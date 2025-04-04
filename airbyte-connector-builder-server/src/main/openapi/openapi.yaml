@@ -108,6 +108,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/manifest/full_resolve:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: Given a JSON manifest, returns a JSON manifest with all dynamic streams and all of the $refs and $parameters resolved and flattened
+      operationId: fullResolveManifest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FullResolveManifestRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveManifest"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/assist/v1/process:
     post:
       tags:
@@ -458,6 +481,31 @@ components:
           type: boolean
           description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
           default: false
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
+    FullResolveManifestRequestBody:
+      type: object
+      required:
+        - manifest
+        - config
+      properties:
+        config:
+          $ref: "#/components/schemas/ConnectorConfig"
+        manifest:
+          $ref: "#/components/schemas/ConnectorManifest"
+        form_generated_manifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        stream_limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of generated streams that will be returned to the client from the connector builder
         project_id:
           type: string
           description: ID of the project where the request is coming from

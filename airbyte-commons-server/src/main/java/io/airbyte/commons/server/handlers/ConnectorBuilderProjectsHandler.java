@@ -23,6 +23,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -67,8 +69,10 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.AuxiliaryRequest;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.FullResolveManifestRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.ResolveManifest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
@@ -530,6 +534,25 @@ public class ConnectorBuilderProjectsHandler {
     }
   }
 
+  public ConnectorBuilderProjectFullResolveResponse fullResolveManifestBuilderProject(final ConnectorBuilderProjectFullResolveRequestBody requestBody)
+      throws ConfigNotFoundException, IOException {
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
+    final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+    final JsonNode existingHydratedTestingValues =
+        getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
+
+    final FullResolveManifestRequestBody fullResolveManifestRequestBody =
+        new FullResolveManifestRequestBody(existingHydratedTestingValues,
+            requestBody.getManifest(),
+            requestBody.getFormGeneratedManifest(),
+            requestBody.getStreamLimit(),
+            requestBody.getBuilderProjectId().toString(),
+            requestBody.getWorkspaceId().toString());
+    final ResolveManifest resolveManifest = connectorBuilderServerApiClient.fullResolveManifest(fullResolveManifestRequestBody);
+    final ConnectorBuilderProjectFullResolveResponse builderProjectResolveManifest = convertResolveManifest(resolveManifest);
+    return builderProjectResolveManifest;
+  }
+
   public BuilderProjectForDefinitionResponse getConnectorBuilderProjectForDefinitionId(final BuilderProjectForDefinitionRequestBody requestBody)
       throws IOException {
     final Optional<UUID> builderProjectId =
@@ -557,6 +580,22 @@ public class ConnectorBuilderProjectsHandler {
         .auxiliaryRequests(mapGlobalAuxiliaryRequests(streamRead))
         .inferredSchema(streamRead.getInferredSchema())
         .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+  }
+
+  /**
+   * Converts the provided {@code ResolveManifest} object into a
+   * {@code ConnectorBuilderProjectFullResolveResponse} object.
+   * <p>
+   * This method maps manifest property from the {@code resolveManifest} instance.
+   *
+   * @param resolveManifest the {@code ResolveManifest} instance containing the original data to be
+   *        converted.
+   * @return a new {@code ConnectorBuilderProjectFullResolveResponse} instance populated with the
+   *         mapped value from {@code resolveManifest}.
+   */
+  private ConnectorBuilderProjectFullResolveResponse convertResolveManifest(final ResolveManifest resolveManifest) {
+    return new ConnectorBuilderProjectFullResolveResponse()
+        .manifest(resolveManifest.getManifest());
   }
 
   /**

@@ -44,6 +44,9 @@ micronaut:
     v1/manifest/resolve:
       enable: true
       sensitive: false
+    v1/manifest/full_resolve:
+      enable: true
+      sensitive: false
     v1/stream/read:
       enable: true
       sensitive: false

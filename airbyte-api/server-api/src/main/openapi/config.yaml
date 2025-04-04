@@ -1158,6 +1158,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectStreamRead"
+  /v1/connector_builder_projects/full_resolve:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a JSON manifest, returns a JSON manifest with all dynamic streams and all of the $refs and $parameters resolved and flattened
+      operationId: fullResolveManifestBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectFullResolveRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectFullResolveResponse"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connector_builder_projects/fork:
     post:
       tags:
@@ -10391,6 +10414,35 @@ components:
         latest_config_update:
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
           $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderProjectFullResolveRequestBody:
+      type: object
+      required:
+        - manifest
+      properties:
+        formGeneratedManifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        streamLimit:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 100
+          description: Maximum number of generated streams that will be returned to the client from connector builder test reads
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderProjectFullResolveResponse:
+      type: object
+      required:
+        - manifest
+      properties:
+        manifest:
+          type: object
+          description: The config-based connector manifest contents with $refs and $parameters resolved
     ConnectorBuilderAuxiliaryRequest:
       type: object
       required:
