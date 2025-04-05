@@ -28,6 +28,9 @@ Helm chart to deploy airbyte-temporal
 | global.configMapName | string | `""` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
+| global.database.type | string | `"internal"` |  |
+| global.database.ssl.enabled | bool | `"true"` |  |
+| global.deploymentMode | string | `"oss"` |  |
 | global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |
@@ -59,4 +62,3 @@ Helm chart to deploy airbyte-temporal
 | service.port | int | `7233` |  |
 | service.type | string | `"ClusterIP"` |  |
 | tolerations | list | `[]` |  |
-
