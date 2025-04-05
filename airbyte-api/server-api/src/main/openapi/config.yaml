@@ -6135,7 +6135,7 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /public/v1/config_templates/list:
+  /v1/config_templates/list:
     post:
       summary: List all config templates available to a workspace
       tags:
@@ -6147,7 +6147,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConfigTemplateListRequest"
+              $ref: "#/components/schemas/ListConfigTemplatesRequestBody"
         required: true
       responses:
         "200":
@@ -6158,7 +6158,9 @@ paths:
                 $ref: "#/components/schemas/ConfigTemplateList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /public/v1/config_templates/get:
+        "403":
+          description: Not allowed
+  /v1/config_templates/get:
     post:
       summary: Get details of a specific config template
       tags:
@@ -6179,52 +6181,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfigTemplateRead"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /public/v1/config_templates/create:
-    post:
-      summary: Create a config template
-      tags:
-        - config_template
-        - embedded
-        - public
-      operationId: createConfigTemplate
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully created config template
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /public/v1/config_templates/update:
-    post:
-      summary: Update a config template
-      tags:
-        - config_template
-        - embedded
-        - public
-      operationId: updateConfigTemplate
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successfully update config template
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/get:
@@ -6346,6 +6302,112 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
+  /public/v1/config_templates:
+    get:
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateList"
+          description: List all Applications a User has permission to view.
+        "403":
+          description: Not allowed
+      operationId: publicListConfigTemplate
+      summary: List config templates
+      x-sdk-alias: listConfigTemplates
+      x-sdk-group: ConfigTemplates
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
+          description: Create a config template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConfigTemplate
+      summary: Create config template
+      x-sdk-alias: createConfigTemplate
+      x-sdk-group: ConfigTemplates
+  /public/v1/config_templates/{configTemplateId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
+          description: Successfully updated config template
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateConfigTemplate
+      x-sdk-alias: updateConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Update a config template
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
+    get:
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateRead"
+          description: Get an TODO.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetConfigTemplate
+      x-sdk-alias: getConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Get TODO
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
   /public/v1/applications:
     get:
       tags:
@@ -18520,7 +18582,14 @@ components:
           format: uuid
         configTemplateSpec:
           type: object
-
+    ListConfigTemplatesRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
     ConfigTemplateCreateRequestBody:
       type: object
       required:
@@ -18552,11 +18621,7 @@ components:
       type: object
       required:
         - organizationId
-        - configTemplateId
       properties:
-        configTemplateId:
-          type: string
-          format: uuid
         organizationId:
           type: string
           format: uuid
