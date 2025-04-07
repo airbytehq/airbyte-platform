@@ -6141,7 +6141,6 @@ paths:
       tags:
         - config_template
         - embedded
-        - public
       operationId: listConfigTemplates
       requestBody:
         content:
@@ -6166,7 +6165,6 @@ paths:
       tags:
         - config_template
         - embedded
-        - public
       operationId: getConfigTemplate
       requestBody:
         content:
