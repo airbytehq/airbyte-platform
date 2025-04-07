@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
-import * as yup from "yup";
 
 import { useCurrentWorkspace, useGetDestinationDefinitionSpecification } from "core/api";
 import {
@@ -14,7 +13,6 @@ import {
   SchemaChangeBackfillPreference,
   Tag,
 } from "core/api/types/AirbyteClient";
-import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { analyzeSyncCatalogBreakingChanges } from "./calculateInitialCatalog";
@@ -23,12 +21,6 @@ import {
   BASIC_FREQUENCY_DEFAULT_VALUE,
   SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
-import {
-  namespaceDefinitionSchema,
-  namespaceFormatSchema,
-  syncCatalogSchema,
-  useGetScheduleDataSchema,
-} from "./schema";
 import { updateStreamSyncMode } from "../SyncCatalogTable/utils";
 
 /**
@@ -65,44 +57,6 @@ export const SUPPORTED_MODES: Array<[SyncMode, DestinationSyncMode]> = [
   [SyncMode.full_refresh, DestinationSyncMode.append],
   [SyncMode.full_refresh, DestinationSyncMode.overwrite_dedup],
 ];
-
-/**
- * useConnectionValidationSchema with additional arguments
- */
-export const useConnectionValidationSchema = () => {
-  const allowAutoDetectSchema = useFeature(FeatureItem.AllowAutoDetectSchema);
-  const scheduleDataSchema = useGetScheduleDataSchema();
-  return useMemo(
-    () =>
-      yup
-        .object({
-          name: yup.string().required("form.empty.error"),
-          // scheduleType can't be 'undefined', make it required()
-          scheduleType: yup.mixed<ConnectionScheduleType>().oneOf(Object.values(ConnectionScheduleType)).required(),
-          scheduleData: scheduleDataSchema,
-          namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
-          namespaceFormat: namespaceFormatSchema,
-          prefix: yup.string().default(""),
-          nonBreakingChangesPreference: allowAutoDetectSchema
-            ? yup.mixed().oneOf(Object.values(NonBreakingChangesPreference)).required("form.empty.error")
-            : yup.mixed().notRequired(),
-          geography: yup.string().optional(),
-          syncCatalog: syncCatalogSchema,
-          notifySchemaChanges: yup.boolean().optional(),
-          backfillPreference: yup.mixed().oneOf(Object.values(SchemaChangeBackfillPreference)).optional(),
-          tags: yup
-            .array()
-            .of(
-              yup
-                .object()
-                .shape({ tagId: yup.string(), name: yup.string(), color: yup.string(), workspaceId: yup.string() })
-            )
-            .notRequired(),
-        })
-        .noUnknown(),
-    [allowAutoDetectSchema, scheduleDataSchema]
-  );
-};
 
 // react-hook-form form values type for the connection form.
 export const useInitialFormValues = (
