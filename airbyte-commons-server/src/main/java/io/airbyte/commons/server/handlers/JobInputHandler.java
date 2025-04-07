@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SyncInput;
+import io.airbyte.commons.annotation.InternalForTesting;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.ConfigReplacer;
 import io.airbyte.commons.converters.StateConverter;
@@ -30,6 +31,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfigScopeType;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
@@ -231,7 +233,8 @@ public class JobInputHandler {
           .withConnectionContext(connectionContext)
           .withUseAsyncReplicate(true)
           .withUseAsyncActivities(true)
-          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()))
+          .withIncludesFiles(shouldIncludeFiles(config, sourceVersion, destinationVersion));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -474,6 +477,13 @@ public class JobInputHandler {
       LOGGER.error(e.getMessage());
       return Collections.emptyList();
     }
+  }
+
+  @InternalForTesting
+  Boolean shouldIncludeFiles(final JobSyncConfig jobSyncConfig, final ActorDefinitionVersion sourceAdv, final ActorDefinitionVersion destinationAdv) {
+    // TODO add compatibility check with sourceAdv and destinationAdv to avoid scanning through all
+    // catalogs for nothing
+    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludesFiles);
   }
 
 }

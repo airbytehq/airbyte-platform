@@ -5,6 +5,8 @@
 package io.airbyte.commons.server.handlers;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -28,6 +30,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
@@ -66,6 +69,7 @@ import io.airbyte.workers.models.SyncJobCheckConnectionInputs;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -239,7 +243,8 @@ class JobInputHandlerTest {
         .withDestinationConfiguration(INLINED_DESTINATION_CONFIG_WITH_REFS)
         .withIsReset(false)
         .withUseAsyncReplicate(true)
-        .withUseAsyncActivities(true);
+        .withUseAsyncActivities(true)
+        .withIncludesFiles(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -318,7 +323,8 @@ class JobInputHandlerTest {
         .withWebhookOperationConfigs(jobResetConfig.getWebhookOperationConfigs())
         .withIsReset(true)
         .withUseAsyncReplicate(true)
-        .withUseAsyncActivities(true);
+        .withUseAsyncActivities(true)
+        .withIncludesFiles(false);
 
     final JobRunConfig expectedJobRunConfig = new JobRunConfig()
         .withJobId(String.valueOf(JOB_ID))
@@ -434,6 +440,33 @@ class JobInputHandlerTest {
 
     final Object checkInputs = jobInputHandler.getCheckJobInput(syncInput);
     Assertions.assertEquals(expectedCheckInputs, checkInputs);
+  }
+
+  @Test
+  void testIncludesFilesIsTrueIfConnectorsSupportFilesAndFileIsConfigured() {
+    final ConfiguredAirbyteStream streamWithFilesEnabled = mock(ConfiguredAirbyteStream.class);
+    when(streamWithFilesEnabled.getIncludesFiles()).thenReturn(true);
+
+    final ActorDefinitionVersion sourceAdv = mock(ActorDefinitionVersion.class);
+    final ActorDefinitionVersion destinationAdv = mock(ActorDefinitionVersion.class);
+    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+        .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(
+            List.of(
+                mock(ConfiguredAirbyteStream.class),
+                streamWithFilesEnabled)));
+    assertTrue(jobInputHandler.shouldIncludeFiles(jobSyncConfig, sourceAdv, destinationAdv));
+  }
+
+  @Test
+  void testIncludesFilesIsFalseIfConnectorsSupportFilesAndFileIsNotConfigured() {
+    final ActorDefinitionVersion sourceAdv = mock(ActorDefinitionVersion.class);
+    final ActorDefinitionVersion destinationAdv = mock(ActorDefinitionVersion.class);
+    final JobSyncConfig jobSyncConfig = new JobSyncConfig()
+        .withConfiguredAirbyteCatalog(new ConfiguredAirbyteCatalog().withStreams(
+            List.of(
+                mock(ConfiguredAirbyteStream.class),
+                mock(ConfiguredAirbyteStream.class))));
+    assertFalse(jobInputHandler.shouldIncludeFiles(jobSyncConfig, sourceAdv, destinationAdv));
   }
 
 }

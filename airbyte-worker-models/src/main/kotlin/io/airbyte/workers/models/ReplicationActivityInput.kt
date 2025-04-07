@@ -59,4 +59,5 @@ data class ReplicationActivityInput(
   val connectionContext: ConnectionContext? = null,
   val signalInput: String? = null,
   val networkSecurityTokens: List<String>? = null,
+  val includesFiles: Boolean? = false,
 )
