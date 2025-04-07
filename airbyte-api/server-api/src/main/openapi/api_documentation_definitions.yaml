@@ -1,182 +1,403 @@
 ---
 openapi: "3.1.0"
 info:
-  title: "Applications"
+  title: "Definitions"
   version: "1.0.0"
   description: "Programmatically control Airbyte Cloud, OSS & Enterprise."
 servers:
   - url: "https://api.airbyte.com/v1"
     description: "Airbyte API v1"
 paths:
-  /applications:
-    get:
-      tags:
-        - "public_applications"
-        - "public"
-        - "Applications"
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApplicationReadList"
-              examples:
-                Application List Response Example:
-                  value:
-                    applications:
-                      - id: "780d5bd9-a8a0-43cf-8b35-cc2061ad8319"
-                        name: "test application"
-                        clientId: "b6b159ce-07f4-4699-94b3-3e85b318852e"
-                        clientSecret: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-                        createdAt: 1717969830000
-          description: "List all Applications a User has permission to view."
-        "403":
-          description: "Not allowed"
-      operationId: "listApplications"
-      summary: "List Applications"
-      x-speakeasy-alias: "listApplications"
-      x-speakeasy-group: "Applications"
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApplicationCreate"
-            examples:
-              Application Creation Request Example:
-                value:
-                  name: "test application"
-        required: true
-      tags:
-        - "public_applications"
-        - "public"
-        - "Applications"
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApplicationRead"
-              examples:
-                Application Creation Response Example:
-                  value:
-                    id: "780d5bd9-a8a0-43cf-8b35-cc2061ad8319"
-                    name: "test application"
-                    clientId: "b6b159ce-07f4-4699-94b3-3e85b318852e"
-                    clientSecret: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-                    createdAt: 1717969830000
-          description: "Creates a new Application."
-        "400":
-          description: "Invalid data"
-        "403":
-          description: "Not allowed"
-      operationId: "createApplication"
-      summary: "Create an Application"
-      x-speakeasy-alias: "createApplication"
-      x-speakeasy-group: "Applications"
-  /applications/{applicationId}:
-    get:
-      tags:
-        - "public_applications"
-        - "public"
-        - "Applications"
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApplicationRead"
-              examples:
-                Application Get Response Example:
-                  value:
-                    id: "780d5bd9-a8a0-43cf-8b35-cc2061ad8319"
-                    name: "test application"
-                    clientId: "b6b159ce-07f4-4699-94b3-3e85b318852e"
-                    clientSecret: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-                    createdAt: 1717969830000
-          description: "Get an Application by the id in the path."
-        "403":
-          description: "Not allowed"
-        "404":
-          description: "Not found"
-      operationId: "getApplication"
-      x-speakeasy-alias: "getApplication"
-      x-speakeasy-group: "Applications"
-      summary: "Get an Application detail"
-    delete:
-      tags:
-        - "public_applications"
-        - "public"
-        - "Applications"
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApplicationRead"
-              examples:
-                Application Delete Response Example:
-                  value:
-                    id: "780d5bd9-a8a0-43cf-8b35-cc2061ad8319"
-                    name: "test application"
-                    clientId: "b6b159ce-07f4-4699-94b3-3e85b318852e"
-                    clientSecret: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-                    createdAt: 1717969830000
-          description: "Delete an Application."
-        "403":
-          description: "Not allowed"
-        "404":
-          description: "Not found"
-      operationId: "deleteApplication"
-      x-speakeasy-alias: "deleteApplication"
-      x-speakeasy-group: "Applications"
-      summary: "Deletes an Application"
+  /workspaces/{workspaceId}/definitions/declarative_sources:
     parameters:
-      - name: "applicationId"
+      - name: "workspaceId"
         schema:
+          format: "uuid"
           type: "string"
         in: "path"
         required: true
-  /applications/token:
-    post:
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: "#/components/schemas/ApplicationTokenRequestWithGrant"
-            examples:
-              Application Token Request Example:
-                value:
-                  clientId: "0da998a2-0d7b-49c7-bb6e-9f7eb9cc68a0"
-                  clientSecret: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-        required: true
+    get:
       tags:
-        - "public_applications"
+        - "public_declarative_source_definitions"
         - "public"
-        - "Applications"
+        - "DeclarativeSourceDefinitions"
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PublicAccessTokenResponse"
-              examples:
-                Application Creation Response Example:
-                  value:
-                    access_token: "TG9yZW0gaXBzdW0gZG9sb3Igc2l0IGFtZXQsIGNvbnNlY3RldHVyIGFkaXBpc2NpbmcgZWxpdC4gU2VkIGNvbmRpbWVudHVtIG5lYyBsaWJlcm8gc2VkIGxvYm9ydGlzLg=="
-          description: "Creates an Access Token."
-        "400":
-          description: "Invalid data"
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionsResponse"
+          description: "Successful operation"
         "403":
           description: "Not allowed"
-      operationId: "createAccessToken"
-      summary: "Get an Access Token"
-      x-speakeasy-alias: "createAccessToken"
-      x-speakeasy-group: "Applications"
-      security: []
+        "404":
+          description: "Not found"
+      operationId: "listDeclarativeSourceDefinitions"
+      x-speakeasy-alias: "listDeclarativeSourceDefinitions"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "List declarative source definitions."
+    post:
+      summary: "Create a declarative source definition."
+      operationId: "createDeclarativeSourceDefinition"
+      x-speakeasy-alias: "createDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      tags:
+        - "public_declarative_source_definitions"
+        - "public"
+        - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeclarativeSourceDefinitionRequest"
+  /workspaces/{workspaceId}/definitions/declarative_sources/{definitionId}:
+    parameters:
+      - name: "workspaceId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "definitionId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+    get:
+      tags:
+        - "public_declarative_source_definitions"
+        - "public"
+        - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getDeclarativeSourceDefinition"
+      x-speakeasy-alias: "getDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Get declarative source definition details."
+    put:
+      tags:
+        - "public_declarative_source_definitions"
+        - "public"
+        - "DeclarativeSourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeclarativeSourceDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateDeclarativeSourceDefinition"
+      x-speakeasy-alias: "updateDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Update declarative source definition details."
+    delete:
+      tags:
+        - "public_declarative_source_definitions"
+        - "public"
+        - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteDeclarativeSourceDefinition"
+      x-speakeasy-alias: "deleteDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Delete a declarative source definition."
+  /workspaces/{workspaceId}/definitions/sources:
+    parameters:
+      - name: "workspaceId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+    get:
+      tags:
+        - "public_source_definitions"
+        - "public"
+        - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: "Successful operation"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "listSourceDefinitions"
+      x-speakeasy-alias: "listSourceDefinitions"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "List source definitions."
+    post:
+      operationId: "createSourceDefinition"
+      x-speakeasy-alias: "createSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Create a source definition."
+      tags:
+        - "public_source_definitions"
+        - "public"
+        - "SourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+  /workspaces/{workspaceId}/definitions/sources/{definitionId}:
+    parameters:
+      - name: "workspaceId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "definitionId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+    get:
+      tags:
+        - "public_source_definitions"
+        - "public"
+        - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getSourceDefinition"
+      x-speakeasy-alias: "getSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Get source definition details."
+    put:
+      tags:
+        - "public_source_definitions"
+        - "public"
+        - "SourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateSourceDefinition"
+      x-speakeasy-alias: "updateSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Update source definition details."
+    delete:
+      tags:
+        - "public_source_definitions"
+        - "public"
+        - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteSourceDefinition"
+      x-speakeasy-alias: "deleteSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Delete a source definition."
+  /workspaces/{workspaceId}/definitions/destinations:
+    parameters:
+      - name: "workspaceId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+    get:
+      tags:
+        - "public_destination_definitions"
+        - "public"
+        - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: "Successful operation"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "listDestinationDefinitions"
+      x-speakeasy-alias: "listDestinationDefinitions"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "List destination definitions."
+    post:
+      operationId: "createDestinationDefinition"
+      x-speakeasy-alias: "createDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Create a destination definition."
+      tags:
+        - "public_destination_definitions"
+        - "public"
+        - "DestinationDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+  /workspaces/{workspaceId}/definitions/destinations/{definitionId}:
+    parameters:
+      - name: "workspaceId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+      - name: "definitionId"
+        schema:
+          format: "uuid"
+          type: "string"
+        in: "path"
+        required: true
+    get:
+      tags:
+        - "public_destination_definitions"
+        - "public"
+        - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getDestinationDefinition"
+      x-speakeasy-alias: "getDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Get destination definition details."
+    put:
+      tags:
+        - "public_destination_definitions"
+        - "public"
+        - "DestinationDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateDestinationDefinition"
+      x-speakeasy-alias: "updateDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Update destination definition details."
+    delete:
+      tags:
+        - "public_destination_definitions"
+        - "public"
+        - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteDestinationDefinition"
+      x-speakeasy-alias: "deleteDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Delete a destination definition."
 components:
   responses:
     InitiateOauthResponse:

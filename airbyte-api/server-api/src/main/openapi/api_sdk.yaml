@@ -358,6 +358,14 @@ paths:
       x-speakeasy-alias: "getSource"
       x-speakeasy-group: "Sources"
       summary: "Get Source details"
+      parameters:
+      - in: "query"
+        name: "includeSecretCoordinates"
+        schema:
+          type: "boolean"
+        required: false
+        description: "Rather than return *** for secret properties include the secret\
+          \ coordinate information"
     patch:
       tags:
       - "public_sources"
@@ -609,6 +617,14 @@ paths:
       x-speakeasy-alias: "getDestination"
       x-speakeasy-group: "Destinations"
       summary: "Get Destination details"
+      parameters:
+      - in: "query"
+        name: "includeSecretCoordinates"
+        schema:
+          type: "boolean"
+        required: false
+        description: "Rather than return *** for secret properties include the secret\
+          \ coordinate information"
     delete:
       tags:
       - "public_destinations"
@@ -2681,6 +2697,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2692,6 +2711,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -3270,6 +3292,130 @@ components:
       - "source"
       - "destination"
       x-speakeasy-component: true
+    RegionCreateRequest:
+      type: "object"
+      required:
+      - "name"
+      - "organizationId"
+      - "enabled"
+      properties:
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionPatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionResponse:
+      type: "object"
+      required:
+      - "regionId"
+      - "name"
+      - "organizationId"
+      - "enabled"
+      - "createdAt"
+      - "updatedAt"
+      properties:
+        regionId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionsResponse:
+      type: "object"
+      required:
+      - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RegionResponse"
+      x-speakeasy-component: true
+    DataplaneCreateRequest:
+      type: "object"
+      required:
+      - "name"
+      - "enabled"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanePatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplaneResponse:
+      type: "object"
+      required:
+      - "dataplaneId"
+      - "name"
+      - "regionId"
+      - "enabled"
+      - "createdAt"
+      - "updatedAt"
+      properties:
+        dataplaneId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        regionId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanesResponse:
+      type: "object"
+      required:
+      - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DataplaneResponse"
+      x-speakeasy-component: true
     source-invoiced:
       type: "object"
       required:
@@ -3303,6 +3449,65 @@ components:
           order: 0
           title: "API Key"
           airbyte_secret: true
+    source-nebius-ai:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          title: "Limit"
+          default: "20"
+          order: 2
+        sourceType:
+          title: "nebius-ai"
+          const: "nebius-ai"
+          enum:
+          - "nebius-ai"
+          order: 0
+          type: "string"
+    source-nebius-ai-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          title: "Limit"
+          default: "20"
+          order: 2
     source-google-forms:
       type: "object"
       required:
@@ -5983,6 +6188,84 @@ components:
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
           format: "date-time"
           order: 4
+    source-dwolla:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "environment"
+      - "start_date"
+      - "sourceType"
+      properties:
+        client_id:
+          type: "string"
+          title: "Client ID"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        client_secret:
+          type: "string"
+          title: "Client secret"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        environment:
+          type: "string"
+          description: "The environment for the Dwolla API, either 'api-sandbox' or\
+            \ 'api'."
+          title: "Environment"
+          default: "api"
+          enum:
+          - "api"
+          - "api-sandbox"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
+        sourceType:
+          title: "dwolla"
+          const: "dwolla"
+          enum:
+          - "dwolla"
+          order: 0
+          type: "string"
+    source-dwolla-update:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "environment"
+      - "start_date"
+      properties:
+        client_id:
+          type: "string"
+          title: "Client ID"
+          airbyte_secret: true
+          order: 0
+        client_secret:
+          type: "string"
+          title: "Client secret"
+          airbyte_secret: true
+          order: 1
+        environment:
+          type: "string"
+          description: "The environment for the Dwolla API, either 'api-sandbox' or\
+            \ 'api'."
+          title: "Environment"
+          default: "api"
+          enum:
+          - "api"
+          - "api-sandbox"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
     source-sigma-computing:
       type: "object"
       required:
@@ -6079,6 +6362,89 @@ components:
           description: "The base url of your sigma organization"
           order: 5
           title: "Base URL"
+    source-yousign:
+      type: "object"
+      required:
+      - "api_key"
+      - "subdomain"
+      - "limit"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        subdomain:
+          type: "string"
+          description: "The subdomain for the Yousign API environment, such as 'sandbox'\
+            \ or 'api'."
+          title: "Subdomain"
+          default: "api"
+          enum:
+          - "api-sandbox"
+          - "api"
+          order: 1
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          title: "Limit"
+          default: "10"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
+        sourceType:
+          title: "yousign"
+          const: "yousign"
+          enum:
+          - "yousign"
+          order: 0
+          type: "string"
+    source-yousign-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "subdomain"
+      - "limit"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        subdomain:
+          type: "string"
+          description: "The subdomain for the Yousign API environment, such as 'sandbox'\
+            \ or 'api'."
+          title: "Subdomain"
+          default: "api"
+          enum:
+          - "api-sandbox"
+          - "api"
+          order: 1
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          title: "Limit"
+          default: "10"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
     source-piwik:
       type: "object"
       required:
@@ -6618,14 +6984,80 @@ components:
           description: "The username which is used to access the database."
           title: "User"
           order: 4
-        password:
-          type: "string"
-          description: "The password associated with the username."
-          title: "Password"
+        authentication_method:
+          oneOf:
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Authenticate using a password."
+            properties:
+              authentication_method:
+                type: "string"
+                enum:
+                - "password_authentication"
+                default: "password_authentication"
+              password:
+                type: "string"
+                description: "The password associated with the username."
+                title: "Password"
+                order: 1
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "authentication_method"
+            - "password"
+          - title: "Token Based Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Authenticate using a token-based authentication method.\
+              \ This requires a consumer key and secret, as well as a token ID and\
+              \ secret."
+            properties:
+              authentication_method:
+                type: "string"
+                enum:
+                - "token_based_authentication"
+                default: "token_based_authentication"
+              client_id:
+                type: "string"
+                description: "The consumer key used for token-based authentication.\
+                  \ This is generated in NetSuite when creating an integration record."
+                title: "Consumer Key"
+                order: 1
+              client_secret:
+                type: "string"
+                description: "The consumer secret used for token-based authentication.\
+                  \ This is generated in NetSuite when creating an integration record."
+                title: "Consumer Secret"
+                order: 2
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+              token_id:
+                type: "string"
+                description: "The token ID used for token-based authentication. This\
+                  \ is generated in NetSuite when creating a token-based role."
+                title: "Token ID"
+                order: 3
+              token_secret:
+                type: "string"
+                description: "The token secret used for token-based authentication.\
+                  \ This is generated in NetSuite when creating a token-based role.Ensure\
+                  \ to keep this value secure."
+                title: "Token Secret"
+                order: 4
+                airbyte_secret: true
+                x-speakeasy-param-sensitive: true
+            required:
+            - "authentication_method"
+            - "client_id"
+            - "client_secret"
+            - "token_id"
+            - "token_secret"
+          description: "Configure how to authenticate to Netsuite. Options include\
+            \ username/password or token-based authentication."
+          title: "Authentication Method"
           order: 5
-          always_show: true
-          airbyte_secret: true
-          x-speakeasy-param-sensitive: true
+          type: "object"
         jdbc_url_params:
           type: "string"
           description: "Additional properties to pass to the JDBC URL string when\
@@ -6807,6 +7239,7 @@ components:
       - "host"
       - "port"
       - "username"
+      - "authentication_method"
       - "tunnel_method"
       - "cursor"
       - "account_id"
@@ -6834,13 +7267,77 @@ components:
           description: "The username which is used to access the database."
           title: "User"
           order: 4
-        password:
-          type: "string"
-          description: "The password associated with the username."
-          title: "Password"
+        authentication_method:
+          oneOf:
+          - title: "Password Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Authenticate using a password."
+            properties:
+              authentication_method:
+                type: "string"
+                enum:
+                - "password_authentication"
+                default: "password_authentication"
+              password:
+                type: "string"
+                description: "The password associated with the username."
+                title: "Password"
+                order: 1
+                airbyte_secret: true
+            required:
+            - "authentication_method"
+            - "password"
+          - title: "Token Based Authentication"
+            type: "object"
+            additionalProperties: true
+            description: "Authenticate using a token-based authentication method.\
+              \ This requires a consumer key and secret, as well as a token ID and\
+              \ secret."
+            properties:
+              authentication_method:
+                type: "string"
+                enum:
+                - "token_based_authentication"
+                default: "token_based_authentication"
+              client_id:
+                type: "string"
+                description: "The consumer key used for token-based authentication.\
+                  \ This is generated in NetSuite when creating an integration record."
+                title: "Consumer Key"
+                order: 1
+              client_secret:
+                type: "string"
+                description: "The consumer secret used for token-based authentication.\
+                  \ This is generated in NetSuite when creating an integration record."
+                title: "Consumer Secret"
+                order: 2
+                airbyte_secret: true
+              token_id:
+                type: "string"
+                description: "The token ID used for token-based authentication. This\
+                  \ is generated in NetSuite when creating a token-based role."
+                title: "Token ID"
+                order: 3
+              token_secret:
+                type: "string"
+                description: "The token secret used for token-based authentication.\
+                  \ This is generated in NetSuite when creating a token-based role.Ensure\
+                  \ to keep this value secure."
+                title: "Token Secret"
+                order: 4
+                airbyte_secret: true
+            required:
+            - "authentication_method"
+            - "client_id"
+            - "client_secret"
+            - "token_id"
+            - "token_secret"
+          description: "Configure how to authenticate to Netsuite. Options include\
+            \ username/password or token-based authentication."
+          title: "Authentication Method"
           order: 5
-          always_show: true
-          airbyte_secret: true
+          type: "object"
         jdbc_url_params:
           type: "string"
           description: "Additional properties to pass to the JDBC URL string when\
@@ -7013,6 +7510,7 @@ components:
       - "host"
       - "port"
       - "username"
+      - "authentication_method"
       - "tunnel_method"
       - "cursor"
       - "account_id"
@@ -7389,7 +7887,7 @@ components:
                       type: "boolean"
                   required:
                   - "filetype"
-                - title: "Document File Type Format (Experimental)"
+                - title: "Unstructured Document Format"
                   type: "object"
                   properties:
                     filetype:
@@ -7456,6 +7954,12 @@ components:
                   \ against the stream's schema."
                 default: false
                 type: "boolean"
+              recent_n_files_to_read_for_schema_discovery:
+                title: "Files To Read For Schema Discover"
+                description: "The number of resent files which will be used to discover\
+                  \ the schema for this stream."
+                exclusiveMinimum: 0
+                type: "integer"
             required:
             - "name"
             - "format"
@@ -7893,7 +8397,7 @@ components:
                       type: "boolean"
                   required:
                   - "filetype"
-                - title: "Document File Type Format (Experimental)"
+                - title: "Unstructured Document Format"
                   type: "object"
                   properties:
                     filetype:
@@ -7960,6 +8464,12 @@ components:
                   \ against the stream's schema."
                 default: false
                 type: "boolean"
+              recent_n_files_to_read_for_schema_discovery:
+                title: "Files To Read For Schema Discover"
+                description: "The number of resent files which will be used to discover\
+                  \ the schema for this stream."
+                exclusiveMinimum: 0
+                type: "integer"
             required:
             - "name"
             - "format"
@@ -9484,6 +9994,79 @@ components:
           title: "Email parameter for contacts stream"
           default: "test@test.com"
           order: 1
+    source-paddle:
+      type: "object"
+      required:
+      - "api_key"
+      - "environment"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Paddle API key. You can generate it by navigating to\
+            \ Paddle > Developer tools > Authentication > Generate API key. Treat\
+            \ this key like a password and keep it secure."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        environment:
+          type: "string"
+          description: "The environment for the Paddle API, either 'sandbox' or 'live'."
+          enum:
+          - "api"
+          - "sandbox-api"
+          name: "environment"
+          order: 1
+          title: "Environment"
+          default: "api"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "paddle"
+          const: "paddle"
+          enum:
+          - "paddle"
+          order: 0
+          type: "string"
+    source-paddle-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "environment"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Paddle API key. You can generate it by navigating to\
+            \ Paddle > Developer tools > Authentication > Generate API key. Treat\
+            \ this key like a password and keep it secure."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        environment:
+          type: "string"
+          description: "The environment for the Paddle API, either 'sandbox' or 'live'."
+          enum:
+          - "api"
+          - "sandbox-api"
+          name: "environment"
+          order: 1
+          title: "Environment"
+          default: "api"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-snapchat-marketing:
       type: "object"
       required:
@@ -10691,7 +11274,8 @@ components:
         site_url:
           title: "Site URL"
           description: "Url of SharePoint site to search for files. Leave empty to\
-            \ search in the main site."
+            \ search in the main site. Use 'https://<tenant_name>.sharepoint.com/sites/'\
+            \ to iterate over all sites."
           default: ""
           order: 5
           type: "string"
@@ -11246,7 +11830,8 @@ components:
         site_url:
           title: "Site URL"
           description: "Url of SharePoint site to search for files. Leave empty to\
-            \ search in the main site."
+            \ search in the main site. Use 'https://<tenant_name>.sharepoint.com/sites/'\
+            \ to iterate over all sites."
           default: ""
           order: 5
           type: "string"
@@ -18481,6 +19066,71 @@ components:
           - "country"
           - "date"
           order: 3
+    source-ding-connect:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the DingConnect API.\
+            \ You can generate this key by navigating to the Developer tab in the\
+            \ Account Settings section of your DingConnect account."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        X-Correlation-Id:
+          type: "string"
+          description: "Optional header to correlate HTTP requests between a client\
+            \ and server."
+          name: "X-Correlation-Id"
+          order: 1
+          title: "X-Correlation-Id"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "ding-connect"
+          const: "ding-connect"
+          enum:
+          - "ding-connect"
+          order: 0
+          type: "string"
+    source-ding-connect-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the DingConnect API.\
+            \ You can generate this key by navigating to the Developer tab in the\
+            \ Account Settings section of your DingConnect account."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        X-Correlation-Id:
+          type: "string"
+          description: "Optional header to correlate HTTP requests between a client\
+            \ and server."
+          name: "X-Correlation-Id"
+          order: 1
+          title: "X-Correlation-Id"
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-tiktok-marketing:
       title: "TikTok Marketing Source Spec"
       type: "object"
@@ -20675,6 +21325,80 @@ components:
           description: "IDs of the surveys from which you'd like to replicate data.\
             \ If left empty, data from all boards to which you have access will be\
             \ replicated."
+    source-signnow:
+      type: "object"
+      required:
+      - "auth_token"
+      - "api_key_id"
+      - "start_date"
+      - "sourceType"
+      properties:
+        auth_token:
+          type: "string"
+          description: "The authorization token is needed for `signing_links` stream\
+            \ which could be seen from enlarged view of `https://app.signnow.com/webapp/api-dashboard/keys`"
+          order: 0
+          title: "Auth Token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        api_key_id:
+          type: "string"
+          description: "Api key which could be found in API section after enlarging\
+            \ keys section"
+          title: "API Key"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        name_filter_for_documents:
+          type: "array"
+          description: "Name filter for documents stream"
+          order: 3
+          title: "Name filter for documents"
+        sourceType:
+          title: "signnow"
+          const: "signnow"
+          enum:
+          - "signnow"
+          order: 0
+          type: "string"
+    source-signnow-update:
+      type: "object"
+      required:
+      - "auth_token"
+      - "api_key_id"
+      - "start_date"
+      properties:
+        auth_token:
+          type: "string"
+          description: "The authorization token is needed for `signing_links` stream\
+            \ which could be seen from enlarged view of `https://app.signnow.com/webapp/api-dashboard/keys`"
+          order: 0
+          title: "Auth Token"
+          airbyte_secret: true
+        api_key_id:
+          type: "string"
+          description: "Api key which could be found in API section after enlarging\
+            \ keys section"
+          title: "API Key"
+          airbyte_secret: true
+          order: 1
+        start_date:
+          type: "string"
+          order: 2
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        name_filter_for_documents:
+          type: "array"
+          description: "Name filter for documents stream"
+          order: 3
+          title: "Name filter for documents"
     source-reddit:
       type: "object"
       required:
@@ -22561,6 +23285,57 @@ components:
           description: "The playback id for your video asset shown in website details"
           order: 3
           title: "Playback ID"
+    source-poplar:
+      type: "object"
+      required:
+      - "access_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        access_token:
+          type: "string"
+          description: "Your Poplar API Access Token. Generate it from the [API Credentials\
+            \ page](https://app.heypoplar.com/credentials) in your account. Use a\
+            \ production token for live data or a test token for testing purposes."
+          name: "access_token"
+          order: 0
+          title: "Access Token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "poplar"
+          const: "poplar"
+          enum:
+          - "poplar"
+          order: 0
+          type: "string"
+    source-poplar-update:
+      type: "object"
+      required:
+      - "access_token"
+      - "start_date"
+      properties:
+        access_token:
+          type: "string"
+          description: "Your Poplar API Access Token. Generate it from the [API Credentials\
+            \ page](https://app.heypoplar.com/credentials) in your account. Use a\
+            \ production token for live data or a test token for testing purposes."
+          name: "access_token"
+          order: 0
+          title: "Access Token"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-sap-hana-enterprise:
       title: "SapHana Source Spec"
       type: "object"
@@ -23943,6 +24718,126 @@ components:
           order: 1
           title: "Client secret"
           airbyte_secret: true
+    source-ebay-finance:
+      type: "object"
+      required:
+      - "token_refresh_endpoint"
+      - "username"
+      - "redirect_uri"
+      - "refresh_token"
+      - "api_host"
+      - "start_date"
+      - "sourceType"
+      properties:
+        token_refresh_endpoint:
+          type: "string"
+          order: 0
+          title: "Refresh Token Endpoint"
+          default: "https://api.ebay.com/identity/v1/oauth2/token"
+          enum:
+          - "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+          - "https://api.ebay.com/identity/v1/oauth2/token"
+        username:
+          type: "string"
+          description: "Ebay Developer Client ID"
+          order: 2
+          title: "Username"
+        password:
+          type: "string"
+          description: "Ebay Client Secret"
+          order: 3
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        redirect_uri:
+          type: "string"
+          order: 4
+          title: "Redirect URI"
+        refresh_token:
+          type: "string"
+          order: 5
+          title: "Refresh Token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        api_host:
+          type: "string"
+          description: "https://apiz.sandbox.ebay.com for sandbox & https://apiz.ebay.com\
+            \ for production"
+          enum:
+          - "https://apiz.sandbox.ebay.com"
+          - "https://apiz.ebay.com"
+          order: 6
+          title: "API Host"
+          default: "https://apiz.ebay.com"
+        start_date:
+          type: "string"
+          order: 7
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "ebay-finance"
+          const: "ebay-finance"
+          enum:
+          - "ebay-finance"
+          order: 0
+          type: "string"
+    source-ebay-finance-update:
+      type: "object"
+      required:
+      - "token_refresh_endpoint"
+      - "username"
+      - "redirect_uri"
+      - "refresh_token"
+      - "api_host"
+      - "start_date"
+      properties:
+        token_refresh_endpoint:
+          type: "string"
+          order: 0
+          title: "Refresh Token Endpoint"
+          default: "https://api.ebay.com/identity/v1/oauth2/token"
+          enum:
+          - "https://api.sandbox.ebay.com/identity/v1/oauth2/token"
+          - "https://api.ebay.com/identity/v1/oauth2/token"
+        username:
+          type: "string"
+          description: "Ebay Developer Client ID"
+          order: 2
+          title: "Username"
+        password:
+          type: "string"
+          description: "Ebay Client Secret"
+          order: 3
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+        redirect_uri:
+          type: "string"
+          order: 4
+          title: "Redirect URI"
+        refresh_token:
+          type: "string"
+          order: 5
+          title: "Refresh Token"
+          airbyte_secret: true
+        api_host:
+          type: "string"
+          description: "https://apiz.sandbox.ebay.com for sandbox & https://apiz.ebay.com\
+            \ for production"
+          enum:
+          - "https://apiz.sandbox.ebay.com"
+          - "https://apiz.ebay.com"
+          order: 6
+          title: "API Host"
+          default: "https://apiz.ebay.com"
+        start_date:
+          type: "string"
+          order: 7
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-katana:
       type: "object"
       required:
@@ -31713,6 +32608,100 @@ components:
             pattern: "^[0-9]{1,8}$"
           title: "Qualaroo survey IDs"
           order: 3
+    source-phyllo:
+      type: "object"
+      required:
+      - "client_id"
+      - "environment"
+      - "client_secret"
+      - "start_date"
+      - "sourceType"
+      properties:
+        client_id:
+          type: "string"
+          description: "Your Client ID for the Phyllo API. You can find this in the\
+            \ Phyllo Developer Dashboard under API credentials."
+          name: "client_id"
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        environment:
+          type: "string"
+          description: "The environment for the API (e.g., 'api.sandbox', 'api.staging',\
+            \ 'api')"
+          enum:
+          - "api.sandbox"
+          - "api.staging"
+          - "api"
+          name: "environment"
+          order: 1
+          title: "Environment"
+          default: "api"
+        client_secret:
+          type: "string"
+          description: "Your Client Secret for the Phyllo API. You can find this in\
+            \ the Phyllo Developer Dashboard under API credentials."
+          name: "client_secret"
+          order: 2
+          title: "Client Secret"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "phyllo"
+          const: "phyllo"
+          enum:
+          - "phyllo"
+          order: 0
+          type: "string"
+    source-phyllo-update:
+      type: "object"
+      required:
+      - "client_id"
+      - "environment"
+      - "client_secret"
+      - "start_date"
+      properties:
+        client_id:
+          type: "string"
+          description: "Your Client ID for the Phyllo API. You can find this in the\
+            \ Phyllo Developer Dashboard under API credentials."
+          name: "client_id"
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+        environment:
+          type: "string"
+          description: "The environment for the API (e.g., 'api.sandbox', 'api.staging',\
+            \ 'api')"
+          enum:
+          - "api.sandbox"
+          - "api.staging"
+          - "api"
+          name: "environment"
+          order: 1
+          title: "Environment"
+          default: "api"
+        client_secret:
+          type: "string"
+          description: "Your Client Secret for the Phyllo API. You can find this in\
+            \ the Phyllo Developer Dashboard under API credentials."
+          name: "client_secret"
+          order: 2
+          title: "Client Secret"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-front:
       type: "object"
       required:
@@ -37635,6 +38624,101 @@ components:
           - "IBM"
           - "MSFT"
           description: "The exchange symbol that this item is traded under."
+    source-alpaca-broker-api:
+      type: "object"
+      required:
+      - "environment"
+      - "username"
+      - "start_date"
+      - "sourceType"
+      properties:
+        environment:
+          type: "string"
+          description: "The trading environment, either 'live', 'paper' or 'broker-api.sandbox'."
+          enum:
+          - "api"
+          - "paper-api"
+          - "broker-api.sandbox"
+          name: "environment"
+          order: 0
+          title: "Environment"
+          default: "broker-api.sandbox"
+        username:
+          type: "string"
+          description: "API Key ID for the alpaca market"
+          order: 1
+          title: "Username"
+        password:
+          type: "string"
+          description: "Your Alpaca API Secret Key. You can find this in the Alpaca\
+            \ developer web console under your account settings."
+          order: 2
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          order: 4
+          title: "Limit"
+          default: "20"
+        sourceType:
+          title: "alpaca-broker-api"
+          const: "alpaca-broker-api"
+          enum:
+          - "alpaca-broker-api"
+          order: 0
+          type: "string"
+    source-alpaca-broker-api-update:
+      type: "object"
+      required:
+      - "environment"
+      - "username"
+      - "start_date"
+      properties:
+        environment:
+          type: "string"
+          description: "The trading environment, either 'live', 'paper' or 'broker-api.sandbox'."
+          enum:
+          - "api"
+          - "paper-api"
+          - "broker-api.sandbox"
+          name: "environment"
+          order: 0
+          title: "Environment"
+          default: "broker-api.sandbox"
+        username:
+          type: "string"
+          description: "API Key ID for the alpaca market"
+          order: 1
+          title: "Username"
+        password:
+          type: "string"
+          description: "Your Alpaca API Secret Key. You can find this in the Alpaca\
+            \ developer web console under your account settings."
+          order: 2
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        limit:
+          type: "string"
+          description: "Limit for each response objects"
+          order: 4
+          title: "Limit"
+          default: "20"
     source-omnisend:
       type: "object"
       required:
@@ -41052,6 +42136,53 @@ components:
           order: 1
           examples:
           - "2020-11-16T00:00:00Z"
+    source-ninjaone-rmm:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Token could be generated natively by authorize section of\
+            \ NinjaOne swagger documentation `https://app.ninjarmm.com/apidocs/?links.active=authorization`"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "ninjaone-rmm"
+          const: "ninjaone-rmm"
+          enum:
+          - "ninjaone-rmm"
+          order: 0
+          type: "string"
+    source-ninjaone-rmm-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Token could be generated natively by authorize section of\
+            \ NinjaOne swagger documentation `https://app.ninjarmm.com/apidocs/?links.active=authorization`"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-youtube-data:
       type: "object"
       required:
@@ -42664,6 +43795,59 @@ components:
             \ report. If false, the source will treat the provided sheet_id as a sheet."
           default: false
           order: 4
+    source-cisco-meraki:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Meraki API key. Obtain it by logging into your Meraki\
+            \ Dashboard at https://dashboard.meraki.com/, navigating to 'My Profile'\
+            \ via the avatar icon in the top right corner, and generating the API\
+            \ key. Save this key securely as it represents your admin credentials."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "cisco-meraki"
+          const: "cisco-meraki"
+          enum:
+          - "cisco-meraki"
+          order: 0
+          type: "string"
+    source-cisco-meraki-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Meraki API key. Obtain it by logging into your Meraki\
+            \ Dashboard at https://dashboard.meraki.com/, navigating to 'My Profile'\
+            \ via the avatar icon in the top right corner, and generating the API\
+            \ key. Save this key securely as it represents your admin credentials."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-n8n:
       type: "object"
       required:
@@ -43944,25 +45128,25 @@ components:
       properties:
         email:
           type: "string"
-          title: "Email"
           description: "Your Confluence login email"
+          order: 0
+          title: "Email"
           examples:
           - "abc@example.com"
-          order: 0
         api_token:
           type: "string"
-          title: "API Token"
           description: "Please follow the Jira confluence for generating an API token:\
             \ <a href=\"https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/\"\
             >generating an API token</a>."
-          airbyte_secret: true
           order: 1
+          title: "API Token"
+          airbyte_secret: true
           x-speakeasy-param-sensitive: true
         domain_name:
           type: "string"
-          title: "Domain name"
           description: "Your Confluence domain name"
           order: 2
+          title: "Domain name"
         sourceType:
           title: "confluence"
           const: "confluence"
@@ -43979,24 +45163,24 @@ components:
       properties:
         email:
           type: "string"
-          title: "Email"
           description: "Your Confluence login email"
+          order: 0
+          title: "Email"
           examples:
           - "abc@example.com"
-          order: 0
         api_token:
           type: "string"
-          title: "API Token"
           description: "Please follow the Jira confluence for generating an API token:\
             \ <a href=\"https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/\"\
             >generating an API token</a>."
-          airbyte_secret: true
           order: 1
+          title: "API Token"
+          airbyte_secret: true
         domain_name:
           type: "string"
-          title: "Domain name"
           description: "Your Confluence domain name"
           order: 2
+          title: "Domain name"
     source-zoho-expense:
       type: "object"
       required:
@@ -44791,6 +45975,156 @@ components:
           title: "API Key"
           airbyte_secret: true
           order: 0
+    source-shutterstock:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      - "query_for_image_search"
+      - "query_for_video_search"
+      - "query_for_audio_search"
+      - "query_for_catalog_search"
+      - "sourceType"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your OAuth 2.0 token for accessing the Shutterstock API. Obtain\
+            \ this token from your Shutterstock developer account."
+          name: "api_token"
+          order: 0
+          title: "API Token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        query_for_image_search:
+          type: "string"
+          description: "The query for image search"
+          order: 2
+          title: "Query for image search"
+          default: "mountain"
+        query_for_video_search:
+          type: "string"
+          description: "The Query for `videos_search` stream"
+          title: "Query for video search"
+          default: "mountain"
+          order: 3
+        query_for_audio_search:
+          type: "string"
+          description: "The query for image search"
+          title: "Query for audio search"
+          default: "mountain"
+          order: 4
+        query_for_catalog_search:
+          type: "string"
+          description: "The query for catalog search"
+          title: "Query for catalog search"
+          default: "mountain"
+          order: 5
+        sourceType:
+          title: "shutterstock"
+          const: "shutterstock"
+          enum:
+          - "shutterstock"
+          order: 0
+          type: "string"
+    source-shutterstock-update:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      - "query_for_image_search"
+      - "query_for_video_search"
+      - "query_for_audio_search"
+      - "query_for_catalog_search"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your OAuth 2.0 token for accessing the Shutterstock API. Obtain\
+            \ this token from your Shutterstock developer account."
+          name: "api_token"
+          order: 0
+          title: "API Token"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        query_for_image_search:
+          type: "string"
+          description: "The query for image search"
+          order: 2
+          title: "Query for image search"
+          default: "mountain"
+        query_for_video_search:
+          type: "string"
+          description: "The Query for `videos_search` stream"
+          title: "Query for video search"
+          default: "mountain"
+          order: 3
+        query_for_audio_search:
+          type: "string"
+          description: "The query for image search"
+          title: "Query for audio search"
+          default: "mountain"
+          order: 4
+        query_for_catalog_search:
+          type: "string"
+          description: "The query for catalog search"
+          title: "Query for catalog search"
+          default: "mountain"
+          order: 5
+    source-gologin:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key found at `https://app.gologin.com/personalArea/TokenApi`"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "gologin"
+          const: "gologin"
+          enum:
+          - "gologin"
+          order: 0
+          type: "string"
+    source-gologin-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "API Key found at `https://app.gologin.com/personalArea/TokenApi`"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-plaid:
       type: "object"
       required:
@@ -58343,6 +59677,57 @@ components:
           order: 0
           title: "API Key"
           airbyte_secret: true
+    source-boldsign:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your BoldSign API key. You can generate it by navigating to\
+            \ the API menu in the BoldSign app, selecting 'API Key', and clicking\
+            \ 'Generate API Key'. Copy the generated key and paste it here."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "boldsign"
+          const: "boldsign"
+          enum:
+          - "boldsign"
+          order: 0
+          type: "string"
+    source-boldsign-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your BoldSign API key. You can generate it by navigating to\
+            \ the API menu in the BoldSign app, selecting 'API Key', and clicking\
+            \ 'Generate API Key'. Copy the generated key and paste it here."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-brevo:
       type: "object"
       required:
@@ -58386,6 +59771,62 @@ components:
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    source-partnerize:
+      type: "object"
+      required:
+      - "user_api_key"
+      - "application_key"
+      - "sourceType"
+      properties:
+        user_api_key:
+          type: "string"
+          description: "The user API key identifies the user on whose behalf the request\
+            \ is made. Find it in your account settings under 'User API Key' at https://console.partnerize.com."
+          name: "user_api_key"
+          title: "User API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        application_key:
+          type: "string"
+          description: "The application key identifies the network you are making\
+            \ the request against. Find it in your account settings under 'User Application\
+            \ Key' at https://console.partnerize.com."
+          name: "application_key"
+          title: "Application Key"
+          airbyte_secret: true
+          order: 1
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "partnerize"
+          const: "partnerize"
+          enum:
+          - "partnerize"
+          order: 0
+          type: "string"
+    source-partnerize-update:
+      type: "object"
+      required:
+      - "user_api_key"
+      - "application_key"
+      properties:
+        user_api_key:
+          type: "string"
+          description: "The user API key identifies the user on whose behalf the request\
+            \ is made. Find it in your account settings under 'User API Key' at https://console.partnerize.com."
+          name: "user_api_key"
+          title: "User API Key"
+          airbyte_secret: true
+          order: 0
+        application_key:
+          type: "string"
+          description: "The application key identifies the network you are making\
+            \ the request against. Find it in your account settings under 'User Application\
+            \ Key' at https://console.partnerize.com."
+          name: "application_key"
+          title: "Application Key"
+          airbyte_secret: true
+          order: 1
     source-finage:
       type: "object"
       required:
@@ -59278,6 +60719,17 @@ components:
             \ from all boards that exist within the account."
           items:
             type: "integer"
+        num_workers:
+          type: "integer"
+          title: "Number of concurrent workers"
+          minimum: 2
+          maximum: 50
+          default: 4
+          examples:
+          - 1
+          - 2
+          - 3
+          description: "The number of worker threads to use for the sync."
         sourceType:
           title: "monday"
           const: "monday"
@@ -59355,6 +60807,141 @@ components:
             \ from all boards that exist within the account."
           items:
             type: "integer"
+        num_workers:
+          type: "integer"
+          title: "Number of concurrent workers"
+          minimum: 2
+          maximum: 50
+          default: 4
+          examples:
+          - 1
+          - 2
+          - 3
+          description: "The number of worker threads to use for the sync."
+    source-zapsign:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your static API token for authentication. You can find it\
+            \ in your ZapSign account under the 'Settings' or 'API' section. For more\
+            \ details, refer to the [Getting Started](https://docs.zapsign.com.br/english/getting-started#how-do-i-get-my-api-token)\
+            \ guide."
+          name: "api_token"
+          title: "API Token"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        signer_ids:
+          type: "array"
+          description: "The signer ids for signer stream"
+          title: "Signer IDs"
+          order: 2
+        sourceType:
+          title: "zapsign"
+          const: "zapsign"
+          enum:
+          - "zapsign"
+          order: 0
+          type: "string"
+    source-zapsign-update:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your static API token for authentication. You can find it\
+            \ in your ZapSign account under the 'Settings' or 'API' section. For more\
+            \ details, refer to the [Getting Started](https://docs.zapsign.com.br/english/getting-started#how-do-i-get-my-api-token)\
+            \ guide."
+          name: "api_token"
+          title: "API Token"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        signer_ids:
+          type: "array"
+          description: "The signer ids for signer stream"
+          title: "Signer IDs"
+          order: 2
+    source-docuseal:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the DocuSeal API. Obtain\
+            \ it from the DocuSeal API Console at https://console.docuseal.com/api."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        limit:
+          type: "string"
+          description: "The pagination limit"
+          title: "Limit"
+          default: "5"
+          order: 2
+        sourceType:
+          title: "docuseal"
+          const: "docuseal"
+          enum:
+          - "docuseal"
+          order: 0
+          type: "string"
+    source-docuseal-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the DocuSeal API. Obtain\
+            \ it from the DocuSeal API Console at https://console.docuseal.com/api."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        limit:
+          type: "string"
+          description: "The pagination limit"
+          title: "Limit"
+          default: "5"
+          order: 2
     source-onepagecrm:
       type: "object"
       required:
@@ -64971,392 +66558,6 @@ components:
                 type: "string"
                 airbyte_secret: true
                 order: 4
-    destination-s3-glue:
-      title: "S3 Destination Spec"
-      type: "object"
-      required:
-      - "s3_bucket_name"
-      - "s3_bucket_path"
-      - "s3_bucket_region"
-      - "format"
-      - "glue_database"
-      - "glue_serialization_library"
-      - "destinationType"
-      properties:
-        access_key_id:
-          type: "string"
-          description: "The access key ID to access the S3 bucket. Airbyte requires\
-            \ Read and Write permissions to the given bucket. Read more <a href=\"\
-            https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-            >here</a>."
-          title: "S3 Key ID"
-          airbyte_secret: true
-          examples:
-          - "A012345678910EXAMPLE"
-          order: 0
-          x-speakeasy-param-sensitive: true
-        secret_access_key:
-          type: "string"
-          description: "The corresponding secret to the access key ID. Read more <a\
-            \ href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-            >here</a>"
-          title: "S3 Access Key"
-          airbyte_secret: true
-          examples:
-          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
-          order: 1
-          x-speakeasy-param-sensitive: true
-        s3_bucket_name:
-          title: "S3 Bucket Name"
-          type: "string"
-          description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
-            >here</a>."
-          examples:
-          - "airbyte_sync"
-          order: 2
-        s3_bucket_path:
-          title: "S3 Bucket Path"
-          description: "Directory under the S3 bucket where data will be written.\
-            \ Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=to%20format%20the-,bucket%20path,-%3A\"\
-            >here</a>"
-          type: "string"
-          examples:
-          - "data_sync/test"
-          order: 3
-        s3_bucket_region:
-          title: "S3 Bucket Region"
-          type: "string"
-          default: ""
-          description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
-            >here</a> for all region codes."
-          enum:
-          - ""
-          - "af-south-1"
-          - "ap-east-1"
-          - "ap-northeast-1"
-          - "ap-northeast-2"
-          - "ap-northeast-3"
-          - "ap-south-1"
-          - "ap-south-2"
-          - "ap-southeast-1"
-          - "ap-southeast-2"
-          - "ap-southeast-3"
-          - "ap-southeast-4"
-          - "ca-central-1"
-          - "ca-west-1"
-          - "cn-north-1"
-          - "cn-northwest-1"
-          - "eu-central-1"
-          - "eu-central-2"
-          - "eu-north-1"
-          - "eu-south-1"
-          - "eu-south-2"
-          - "eu-west-1"
-          - "eu-west-2"
-          - "eu-west-3"
-          - "il-central-1"
-          - "me-central-1"
-          - "me-south-1"
-          - "sa-east-1"
-          - "us-east-1"
-          - "us-east-2"
-          - "us-gov-east-1"
-          - "us-gov-west-1"
-          - "us-west-1"
-          - "us-west-2"
-          order: 4
-        format:
-          title: "Output Format"
-          type: "object"
-          description: "Format of the data output. See <a href=\"https://docs.airbyte.com/integrations/destinations/s3/#supported-output-schema\"\
-            >here</a> for more details"
-          oneOf:
-          - title: "JSON Lines: Newline-delimited JSON"
-            required:
-            - "format_type"
-            properties:
-              format_type:
-                title: "Format Type"
-                type: "string"
-                enum:
-                - "JSONL"
-                default: "JSONL"
-              compression:
-                title: "Compression"
-                type: "object"
-                description: "Whether the output files should be compressed. If compression\
-                  \ is selected, the output filename will have an extra extension\
-                  \ (GZIP: \".jsonl.gz\")."
-                oneOf:
-                - title: "No Compression"
-                  requires: "compression_type"
-                  properties:
-                    compression_type:
-                      type: "string"
-                      enum:
-                      - "No Compression"
-                      default: "No Compression"
-                - title: "GZIP"
-                  requires: "compression_type"
-                  properties:
-                    compression_type:
-                      type: "string"
-                      enum:
-                      - "GZIP"
-                      default: "GZIP"
-              flattening:
-                type: "string"
-                title: "Flattening"
-                description: "Whether the input json data should be normalized (flattened)\
-                  \ in the output JSON Lines. Please refer to docs for details."
-                default: "Root level flattening"
-                enum:
-                - "No flattening"
-                - "Root level flattening"
-          order: 5
-        s3_endpoint:
-          title: "Endpoint"
-          type: "string"
-          default: ""
-          description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
-            >here</a>"
-          examples:
-          - "http://localhost:9000"
-          order: 6
-        s3_path_format:
-          title: "S3 Path Format"
-          description: "Format string on how data will be organized inside the S3\
-            \ bucket directory. Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=The%20full%20path%20of%20the%20output%20data%20with%20the%20default%20S3%20path%20format\"\
-            >here</a>"
-          type: "string"
-          examples:
-          - "${NAMESPACE}/${STREAM_NAME}/${YEAR}_${MONTH}_${DAY}_${EPOCH}_"
-          order: 7
-        file_name_pattern:
-          type: "string"
-          description: "The pattern allows you to set the file-name format for the\
-            \ S3 staging file(s)"
-          title: "S3 Filename pattern"
-          examples:
-          - "{date}"
-          - "{date:yyyy_MM}"
-          - "{timestamp}"
-          - "{part_number}"
-          - "{sync_id}"
-          order: 8
-        glue_database:
-          type: "string"
-          description: "Name of the glue database for creating the tables, leave blank\
-            \ if no integration"
-          title: "Glue database name"
-          examples:
-          - "airbyte_database"
-          order: 9
-        glue_serialization_library:
-          title: "Serialization Library"
-          description: "The library that your query engine will use for reading and\
-            \ writing data in your lake."
-          type: "string"
-          enum:
-          - "org.openx.data.jsonserde.JsonSerDe"
-          - "org.apache.hive.hcatalog.data.JsonSerDe"
-          default: "org.openx.data.jsonserde.JsonSerDe"
-          order: 10
-        destinationType:
-          title: "s3-glue"
-          const: "s3-glue"
-          enum:
-          - "s3-glue"
-          order: 0
-          type: "string"
-    destination-s3-glue-update:
-      title: "S3 Destination Spec"
-      type: "object"
-      required:
-      - "s3_bucket_name"
-      - "s3_bucket_path"
-      - "s3_bucket_region"
-      - "format"
-      - "glue_database"
-      - "glue_serialization_library"
-      properties:
-        access_key_id:
-          type: "string"
-          description: "The access key ID to access the S3 bucket. Airbyte requires\
-            \ Read and Write permissions to the given bucket. Read more <a href=\"\
-            https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-            >here</a>."
-          title: "S3 Key ID"
-          airbyte_secret: true
-          examples:
-          - "A012345678910EXAMPLE"
-          order: 0
-        secret_access_key:
-          type: "string"
-          description: "The corresponding secret to the access key ID. Read more <a\
-            \ href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-            >here</a>"
-          title: "S3 Access Key"
-          airbyte_secret: true
-          examples:
-          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
-          order: 1
-        s3_bucket_name:
-          title: "S3 Bucket Name"
-          type: "string"
-          description: "The name of the S3 bucket. Read more <a href=\"https://docs.aws.amazon.com/AmazonS3/latest/userguide/create-bucket-overview.html\"\
-            >here</a>."
-          examples:
-          - "airbyte_sync"
-          order: 2
-        s3_bucket_path:
-          title: "S3 Bucket Path"
-          description: "Directory under the S3 bucket where data will be written.\
-            \ Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=to%20format%20the-,bucket%20path,-%3A\"\
-            >here</a>"
-          type: "string"
-          examples:
-          - "data_sync/test"
-          order: 3
-        s3_bucket_region:
-          title: "S3 Bucket Region"
-          type: "string"
-          default: ""
-          description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
-            >here</a> for all region codes."
-          enum:
-          - ""
-          - "af-south-1"
-          - "ap-east-1"
-          - "ap-northeast-1"
-          - "ap-northeast-2"
-          - "ap-northeast-3"
-          - "ap-south-1"
-          - "ap-south-2"
-          - "ap-southeast-1"
-          - "ap-southeast-2"
-          - "ap-southeast-3"
-          - "ap-southeast-4"
-          - "ca-central-1"
-          - "ca-west-1"
-          - "cn-north-1"
-          - "cn-northwest-1"
-          - "eu-central-1"
-          - "eu-central-2"
-          - "eu-north-1"
-          - "eu-south-1"
-          - "eu-south-2"
-          - "eu-west-1"
-          - "eu-west-2"
-          - "eu-west-3"
-          - "il-central-1"
-          - "me-central-1"
-          - "me-south-1"
-          - "sa-east-1"
-          - "us-east-1"
-          - "us-east-2"
-          - "us-gov-east-1"
-          - "us-gov-west-1"
-          - "us-west-1"
-          - "us-west-2"
-          order: 4
-        format:
-          title: "Output Format"
-          type: "object"
-          description: "Format of the data output. See <a href=\"https://docs.airbyte.com/integrations/destinations/s3/#supported-output-schema\"\
-            >here</a> for more details"
-          oneOf:
-          - title: "JSON Lines: Newline-delimited JSON"
-            required:
-            - "format_type"
-            properties:
-              format_type:
-                title: "Format Type"
-                type: "string"
-                enum:
-                - "JSONL"
-                default: "JSONL"
-              compression:
-                title: "Compression"
-                type: "object"
-                description: "Whether the output files should be compressed. If compression\
-                  \ is selected, the output filename will have an extra extension\
-                  \ (GZIP: \".jsonl.gz\")."
-                oneOf:
-                - title: "No Compression"
-                  requires: "compression_type"
-                  properties:
-                    compression_type:
-                      type: "string"
-                      enum:
-                      - "No Compression"
-                      default: "No Compression"
-                - title: "GZIP"
-                  requires: "compression_type"
-                  properties:
-                    compression_type:
-                      type: "string"
-                      enum:
-                      - "GZIP"
-                      default: "GZIP"
-              flattening:
-                type: "string"
-                title: "Flattening"
-                description: "Whether the input json data should be normalized (flattened)\
-                  \ in the output JSON Lines. Please refer to docs for details."
-                default: "Root level flattening"
-                enum:
-                - "No flattening"
-                - "Root level flattening"
-          order: 5
-        s3_endpoint:
-          title: "Endpoint"
-          type: "string"
-          default: ""
-          description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
-            >here</a>"
-          examples:
-          - "http://localhost:9000"
-          order: 6
-        s3_path_format:
-          title: "S3 Path Format"
-          description: "Format string on how data will be organized inside the S3\
-            \ bucket directory. Read more <a href=\"https://docs.airbyte.com/integrations/destinations/s3#:~:text=The%20full%20path%20of%20the%20output%20data%20with%20the%20default%20S3%20path%20format\"\
-            >here</a>"
-          type: "string"
-          examples:
-          - "${NAMESPACE}/${STREAM_NAME}/${YEAR}_${MONTH}_${DAY}_${EPOCH}_"
-          order: 7
-        file_name_pattern:
-          type: "string"
-          description: "The pattern allows you to set the file-name format for the\
-            \ S3 staging file(s)"
-          title: "S3 Filename pattern"
-          examples:
-          - "{date}"
-          - "{date:yyyy_MM}"
-          - "{timestamp}"
-          - "{part_number}"
-          - "{sync_id}"
-          order: 8
-        glue_database:
-          type: "string"
-          description: "Name of the glue database for creating the tables, leave blank\
-            \ if no integration"
-          title: "Glue database name"
-          examples:
-          - "airbyte_database"
-          order: 9
-        glue_serialization_library:
-          title: "Serialization Library"
-          description: "The library that your query engine will use for reading and\
-            \ writing data in your lake."
-          type: "string"
-          enum:
-          - "org.openx.data.jsonserde.JsonSerDe"
-          - "org.apache.hive.hcatalog.data.JsonSerDe"
-          default: "org.openx.data.jsonserde.JsonSerDe"
-          order: 10
     destination-redshift:
       title: "Redshift Destination Spec"
       type: "object"
@@ -68831,721 +70032,6 @@ components:
           type: "string"
           description: "Database schema name, default for duckdb is 'main'."
           example: "main"
-    destination-iceberg:
-      title: "Iceberg Destination Spec"
-      type: "object"
-      required:
-      - "catalog_config"
-      - "storage_config"
-      - "format_config"
-      - "destinationType"
-      properties:
-        catalog_config:
-          title: "Iceberg catalog config"
-          type: "object"
-          description: "Catalog config of Iceberg."
-          oneOf:
-          - title: "HiveCatalog: Use Apache Hive MetaStore"
-            required:
-            - "catalog_type"
-            - "hive_thrift_uri"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Hive"
-                enum:
-                - "Hive"
-                order: 0
-              hive_thrift_uri:
-                title: "Hive Metastore thrift uri"
-                type: "string"
-                description: "Hive MetaStore thrift server uri of iceberg catalog."
-                examples:
-                - "host:port"
-                order: 1
-              database:
-                title: "Default database"
-                description: "The default database tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"default\"."
-                type: "string"
-                default: "default"
-                examples:
-                - "default"
-                order: 2
-          - title: "HadoopCatalog: Use hierarchical file systems as same as storage\
-              \ config"
-            description: "A Hadoop catalog doesn’t need to connect to a Hive MetaStore,\
-              \ but can only be used with HDFS or similar file systems that support\
-              \ atomic rename."
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Hadoop"
-                enum:
-                - "Hadoop"
-                order: 0
-              database:
-                title: "Default database"
-                description: "The default database tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"default\"."
-                type: "string"
-                default: "default"
-                examples:
-                - "default"
-                order: 1
-          - title: "JdbcCatalog: Use relational database"
-            description: "Using a table in a relational database to manage Iceberg\
-              \ tables through JDBC. Read more <a href=\"https://iceberg.apache.org/docs/latest/jdbc/\"\
-              >here</a>. Supporting: PostgreSQL"
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Jdbc"
-                enum:
-                - "Jdbc"
-                order: 0
-              database:
-                title: "Default schema"
-                description: "The default schema tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 1
-              jdbc_url:
-                title: "Jdbc url"
-                type: "string"
-                examples:
-                - "jdbc:postgresql://{host}:{port}/{database}"
-                order: 2
-              username:
-                title: "User"
-                description: "Username to use to access the database."
-                type: "string"
-                order: 3
-              password:
-                title: "Password"
-                description: "Password associated with the username."
-                type: "string"
-                airbyte_secret: true
-                order: 4
-                x-speakeasy-param-sensitive: true
-              ssl:
-                title: "SSL Connection"
-                description: "Encrypt data using SSL. When activating SSL, please\
-                  \ select one of the connection modes."
-                type: "boolean"
-                default: false
-                order: 5
-              catalog_schema:
-                title: "schema for Iceberg catalog"
-                description: "Iceberg catalog metadata tables are written to catalog\
-                  \ schema. The usual value for this field is \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 6
-          - title: "RESTCatalog"
-            description: "The RESTCatalog connects to a REST server at the specified\
-              \ URI"
-            required:
-            - "catalog_type"
-            - "rest_uri"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Rest"
-                enum:
-                - "Rest"
-                order: 0
-              rest_uri:
-                title: "REST Server URI"
-                type: "string"
-                examples:
-                - "http://localhost:12345"
-                order: 1
-              rest_credential:
-                title: "A credential to exchange for a token in the OAuth2 client\
-                  \ credentials flow."
-                type: "string"
-                airbyte_secret: true
-                examples:
-                - "username:password"
-                order: 2
-                x-speakeasy-param-sensitive: true
-              rest_token:
-                title: "A Bearer token which will be used for interaction with the\
-                  \ server."
-                type: "string"
-                airbyte_secret: true
-                examples:
-                - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-                order: 3
-                x-speakeasy-param-sensitive: true
-          - title: "GlueCatalog"
-            description: "The GlueCatalog connects to a AWS Glue Catalog"
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Glue"
-                enum:
-                - "Glue"
-                order: 0
-              database:
-                title: "Default schema"
-                description: "The default schema tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 1
-          order: 0
-        storage_config:
-          title: "Storage config"
-          type: "object"
-          description: "Storage config of Iceberg."
-          oneOf:
-          - title: "S3"
-            type: "object"
-            description: "S3 object storage"
-            required:
-            - "storage_type"
-            - "access_key_id"
-            - "secret_access_key"
-            - "s3_warehouse_uri"
-            properties:
-              storage_type:
-                title: "Storage Type"
-                type: "string"
-                default: "S3"
-                enum:
-                - "S3"
-                order: 0
-              access_key_id:
-                type: "string"
-                description: "The access key ID to access the S3 bucket. Airbyte requires\
-                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
-                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-                  >here</a>."
-                title: "S3 Key ID"
-                airbyte_secret: true
-                examples:
-                - "A012345678910EXAMPLE"
-                order: 0
-                x-speakeasy-param-sensitive: true
-              secret_access_key:
-                type: "string"
-                description: "The corresponding secret to the access key ID. Read\
-                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-                  >here</a>"
-                title: "S3 Access Key"
-                airbyte_secret: true
-                examples:
-                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
-                order: 1
-                x-speakeasy-param-sensitive: true
-              s3_warehouse_uri:
-                title: "S3 Warehouse Uri for Iceberg"
-                type: "string"
-                description: "The Warehouse Uri for Iceberg"
-                examples:
-                - "s3a://my-bucket/path/to/warehouse"
-                - "s3://my-bucket/path/to/warehouse"
-                order: 2
-              s3_bucket_region:
-                title: "S3 Bucket Region"
-                type: "string"
-                default: ""
-                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
-                  >here</a> for all region codes."
-                enum:
-                - ""
-                - "af-south-1"
-                - "ap-east-1"
-                - "ap-northeast-1"
-                - "ap-northeast-2"
-                - "ap-northeast-3"
-                - "ap-south-1"
-                - "ap-south-2"
-                - "ap-southeast-1"
-                - "ap-southeast-2"
-                - "ap-southeast-3"
-                - "ap-southeast-4"
-                - "ca-central-1"
-                - "ca-west-1"
-                - "cn-north-1"
-                - "cn-northwest-1"
-                - "eu-central-1"
-                - "eu-central-2"
-                - "eu-north-1"
-                - "eu-south-1"
-                - "eu-south-2"
-                - "eu-west-1"
-                - "eu-west-2"
-                - "eu-west-3"
-                - "il-central-1"
-                - "me-central-1"
-                - "me-south-1"
-                - "sa-east-1"
-                - "us-east-1"
-                - "us-east-2"
-                - "us-gov-east-1"
-                - "us-gov-west-1"
-                - "us-west-1"
-                - "us-west-2"
-                order: 3
-              s3_endpoint:
-                title: "Endpoint"
-                type: "string"
-                default: ""
-                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
-                  >here</a>"
-                examples:
-                - "http://localhost:9000"
-                - "localhost:9000"
-                order: 4
-              s3_path_style_access:
-                type: "boolean"
-                description: "Use path style access"
-                examples:
-                - true
-                - false
-                default: true
-                order: 5
-          - title: "Server-managed"
-            type: "object"
-            description: "Server-managed object storage"
-            required:
-            - "storage_type"
-            - "managed_warehouse_name"
-            properties:
-              storage_type:
-                title: "Storage Type"
-                type: "string"
-                default: "MANAGED"
-                enum:
-                - "MANAGED"
-                order: 0
-              managed_warehouse_name:
-                type: "string"
-                description: "The name of the managed warehouse"
-                title: "Warehouse name"
-                order: 0
-          order: 1
-        format_config:
-          title: "File format"
-          type: "object"
-          required:
-          - "format"
-          description: "File format of Iceberg storage."
-          properties:
-            format:
-              title: "File storage format"
-              type: "string"
-              default: "Parquet"
-              description: ""
-              enum:
-              - "Parquet"
-              - "Avro"
-              order: 0
-            flush_batch_size:
-              title: "Data file flushing batch size"
-              description: "Iceberg data file flush batch size. Incoming rows write\
-                \ to cache firstly; When cache size reaches this 'batch size', flush\
-                \ into real Iceberg data file."
-              type: "integer"
-              default: 10000
-              order: 1
-            auto_compact:
-              title: "Auto compact data files"
-              description: "Auto compact data files when stream close"
-              type: "boolean"
-              default: false
-              order: 2
-            compact_target_file_size_in_mb:
-              title: "Target size of compacted data file"
-              description: "Specify the target size of Iceberg data file when performing\
-                \ a compaction action. "
-              type: "integer"
-              default: 100
-              order: 3
-          order: 2
-        destinationType:
-          title: "iceberg"
-          const: "iceberg"
-          enum:
-          - "iceberg"
-          order: 0
-          type: "string"
-    destination-iceberg-update:
-      title: "Iceberg Destination Spec"
-      type: "object"
-      required:
-      - "catalog_config"
-      - "storage_config"
-      - "format_config"
-      properties:
-        catalog_config:
-          title: "Iceberg catalog config"
-          type: "object"
-          description: "Catalog config of Iceberg."
-          oneOf:
-          - title: "HiveCatalog: Use Apache Hive MetaStore"
-            required:
-            - "catalog_type"
-            - "hive_thrift_uri"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Hive"
-                enum:
-                - "Hive"
-                order: 0
-              hive_thrift_uri:
-                title: "Hive Metastore thrift uri"
-                type: "string"
-                description: "Hive MetaStore thrift server uri of iceberg catalog."
-                examples:
-                - "host:port"
-                order: 1
-              database:
-                title: "Default database"
-                description: "The default database tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"default\"."
-                type: "string"
-                default: "default"
-                examples:
-                - "default"
-                order: 2
-          - title: "HadoopCatalog: Use hierarchical file systems as same as storage\
-              \ config"
-            description: "A Hadoop catalog doesn’t need to connect to a Hive MetaStore,\
-              \ but can only be used with HDFS or similar file systems that support\
-              \ atomic rename."
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Hadoop"
-                enum:
-                - "Hadoop"
-                order: 0
-              database:
-                title: "Default database"
-                description: "The default database tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"default\"."
-                type: "string"
-                default: "default"
-                examples:
-                - "default"
-                order: 1
-          - title: "JdbcCatalog: Use relational database"
-            description: "Using a table in a relational database to manage Iceberg\
-              \ tables through JDBC. Read more <a href=\"https://iceberg.apache.org/docs/latest/jdbc/\"\
-              >here</a>. Supporting: PostgreSQL"
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Jdbc"
-                enum:
-                - "Jdbc"
-                order: 0
-              database:
-                title: "Default schema"
-                description: "The default schema tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 1
-              jdbc_url:
-                title: "Jdbc url"
-                type: "string"
-                examples:
-                - "jdbc:postgresql://{host}:{port}/{database}"
-                order: 2
-              username:
-                title: "User"
-                description: "Username to use to access the database."
-                type: "string"
-                order: 3
-              password:
-                title: "Password"
-                description: "Password associated with the username."
-                type: "string"
-                airbyte_secret: true
-                order: 4
-              ssl:
-                title: "SSL Connection"
-                description: "Encrypt data using SSL. When activating SSL, please\
-                  \ select one of the connection modes."
-                type: "boolean"
-                default: false
-                order: 5
-              catalog_schema:
-                title: "schema for Iceberg catalog"
-                description: "Iceberg catalog metadata tables are written to catalog\
-                  \ schema. The usual value for this field is \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 6
-          - title: "RESTCatalog"
-            description: "The RESTCatalog connects to a REST server at the specified\
-              \ URI"
-            required:
-            - "catalog_type"
-            - "rest_uri"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Rest"
-                enum:
-                - "Rest"
-                order: 0
-              rest_uri:
-                title: "REST Server URI"
-                type: "string"
-                examples:
-                - "http://localhost:12345"
-                order: 1
-              rest_credential:
-                title: "A credential to exchange for a token in the OAuth2 client\
-                  \ credentials flow."
-                type: "string"
-                airbyte_secret: true
-                examples:
-                - "username:password"
-                order: 2
-              rest_token:
-                title: "A Bearer token which will be used for interaction with the\
-                  \ server."
-                type: "string"
-                airbyte_secret: true
-                examples:
-                - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c"
-                order: 3
-          - title: "GlueCatalog"
-            description: "The GlueCatalog connects to a AWS Glue Catalog"
-            required:
-            - "catalog_type"
-            properties:
-              catalog_type:
-                title: "Catalog Type"
-                type: "string"
-                default: "Glue"
-                enum:
-                - "Glue"
-                order: 0
-              database:
-                title: "Default schema"
-                description: "The default schema tables are written to if the source\
-                  \ does not specify a namespace. The usual value for this field is\
-                  \ \"public\"."
-                type: "string"
-                default: "public"
-                examples:
-                - "public"
-                order: 1
-          order: 0
-        storage_config:
-          title: "Storage config"
-          type: "object"
-          description: "Storage config of Iceberg."
-          oneOf:
-          - title: "S3"
-            type: "object"
-            description: "S3 object storage"
-            required:
-            - "storage_type"
-            - "access_key_id"
-            - "secret_access_key"
-            - "s3_warehouse_uri"
-            properties:
-              storage_type:
-                title: "Storage Type"
-                type: "string"
-                default: "S3"
-                enum:
-                - "S3"
-                order: 0
-              access_key_id:
-                type: "string"
-                description: "The access key ID to access the S3 bucket. Airbyte requires\
-                  \ Read and Write permissions to the given bucket. Read more <a href=\"\
-                  https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-                  >here</a>."
-                title: "S3 Key ID"
-                airbyte_secret: true
-                examples:
-                - "A012345678910EXAMPLE"
-                order: 0
-              secret_access_key:
-                type: "string"
-                description: "The corresponding secret to the access key ID. Read\
-                  \ more <a href=\"https://docs.aws.amazon.com/general/latest/gr/aws-sec-cred-types.html#access-keys-and-secret-access-keys\"\
-                  >here</a>"
-                title: "S3 Access Key"
-                airbyte_secret: true
-                examples:
-                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
-                order: 1
-              s3_warehouse_uri:
-                title: "S3 Warehouse Uri for Iceberg"
-                type: "string"
-                description: "The Warehouse Uri for Iceberg"
-                examples:
-                - "s3a://my-bucket/path/to/warehouse"
-                - "s3://my-bucket/path/to/warehouse"
-                order: 2
-              s3_bucket_region:
-                title: "S3 Bucket Region"
-                type: "string"
-                default: ""
-                description: "The region of the S3 bucket. See <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions\"\
-                  >here</a> for all region codes."
-                enum:
-                - ""
-                - "af-south-1"
-                - "ap-east-1"
-                - "ap-northeast-1"
-                - "ap-northeast-2"
-                - "ap-northeast-3"
-                - "ap-south-1"
-                - "ap-south-2"
-                - "ap-southeast-1"
-                - "ap-southeast-2"
-                - "ap-southeast-3"
-                - "ap-southeast-4"
-                - "ca-central-1"
-                - "ca-west-1"
-                - "cn-north-1"
-                - "cn-northwest-1"
-                - "eu-central-1"
-                - "eu-central-2"
-                - "eu-north-1"
-                - "eu-south-1"
-                - "eu-south-2"
-                - "eu-west-1"
-                - "eu-west-2"
-                - "eu-west-3"
-                - "il-central-1"
-                - "me-central-1"
-                - "me-south-1"
-                - "sa-east-1"
-                - "us-east-1"
-                - "us-east-2"
-                - "us-gov-east-1"
-                - "us-gov-west-1"
-                - "us-west-1"
-                - "us-west-2"
-                order: 3
-              s3_endpoint:
-                title: "Endpoint"
-                type: "string"
-                default: ""
-                description: "Your S3 endpoint url. Read more <a href=\"https://docs.aws.amazon.com/general/latest/gr/s3.html#:~:text=Service%20endpoints-,Amazon%20S3%20endpoints,-When%20you%20use\"\
-                  >here</a>"
-                examples:
-                - "http://localhost:9000"
-                - "localhost:9000"
-                order: 4
-              s3_path_style_access:
-                type: "boolean"
-                description: "Use path style access"
-                examples:
-                - true
-                - false
-                default: true
-                order: 5
-          - title: "Server-managed"
-            type: "object"
-            description: "Server-managed object storage"
-            required:
-            - "storage_type"
-            - "managed_warehouse_name"
-            properties:
-              storage_type:
-                title: "Storage Type"
-                type: "string"
-                default: "MANAGED"
-                enum:
-                - "MANAGED"
-                order: 0
-              managed_warehouse_name:
-                type: "string"
-                description: "The name of the managed warehouse"
-                title: "Warehouse name"
-                order: 0
-          order: 1
-        format_config:
-          title: "File format"
-          type: "object"
-          required:
-          - "format"
-          description: "File format of Iceberg storage."
-          properties:
-            format:
-              title: "File storage format"
-              type: "string"
-              default: "Parquet"
-              description: ""
-              enum:
-              - "Parquet"
-              - "Avro"
-              order: 0
-            flush_batch_size:
-              title: "Data file flushing batch size"
-              description: "Iceberg data file flush batch size. Incoming rows write\
-                \ to cache firstly; When cache size reaches this 'batch size', flush\
-                \ into real Iceberg data file."
-              type: "integer"
-              default: 10000
-              order: 1
-            auto_compact:
-              title: "Auto compact data files"
-              description: "Auto compact data files when stream close"
-              type: "boolean"
-              default: false
-              order: 2
-            compact_target_file_size_in_mb:
-              title: "Target size of compacted data file"
-              description: "Specify the target size of Iceberg data file when performing\
-                \ a compaction action. "
-              type: "integer"
-              default: 100
-              order: 3
-          order: 2
     destination-mssql-v2:
       title: "MSSQL V2 Destination Specification"
       type: "object"
@@ -82228,6 +82714,8 @@ components:
           $ref: "#/components/schemas/source-akeneo"
         - title: source-algolia
           $ref: "#/components/schemas/source-algolia"
+        - title: source-alpaca-broker-api
+          $ref: "#/components/schemas/source-alpaca-broker-api"
         - title: source-alpha-vantage
           $ref: "#/components/schemas/source-alpha-vantage"
         - title: source-amazon-ads
@@ -82280,6 +82768,8 @@ components:
           $ref: "#/components/schemas/source-bitly"
         - title: source-blogger
           $ref: "#/components/schemas/source-blogger"
+        - title: source-boldsign
+          $ref: "#/components/schemas/source-boldsign"
         - title: source-box
           $ref: "#/components/schemas/source-box"
         - title: source-braintree
@@ -82342,6 +82832,8 @@ components:
           $ref: "#/components/schemas/source-circa"
         - title: source-circleci
           $ref: "#/components/schemas/source-circleci"
+        - title: source-cisco-meraki
+          $ref: "#/components/schemas/source-cisco-meraki"
         - title: source-clarif-ai
           $ref: "#/components/schemas/source-clarif-ai"
         - title: source-clazar
@@ -82400,10 +82892,14 @@ components:
           $ref: "#/components/schemas/source-delighted"
         - title: source-deputy
           $ref: "#/components/schemas/source-deputy"
+        - title: source-ding-connect
+          $ref: "#/components/schemas/source-ding-connect"
         - title: source-dixa
           $ref: "#/components/schemas/source-dixa"
         - title: source-dockerhub
           $ref: "#/components/schemas/source-dockerhub"
+        - title: source-docuseal
+          $ref: "#/components/schemas/source-docuseal"
         - title: source-dremio
           $ref: "#/components/schemas/source-dremio"
         - title: source-drift
@@ -82412,6 +82908,8 @@ components:
           $ref: "#/components/schemas/source-drip"
         - title: source-dropbox-sign
           $ref: "#/components/schemas/source-dropbox-sign"
+        - title: source-dwolla
+          $ref: "#/components/schemas/source-dwolla"
         - title: source-dynamodb
           $ref: "#/components/schemas/source-dynamodb"
         - title: source-e-conomic
@@ -82420,6 +82918,8 @@ components:
           $ref: "#/components/schemas/source-easypost"
         - title: source-easypromos
           $ref: "#/components/schemas/source-easypromos"
+        - title: source-ebay-finance
+          $ref: "#/components/schemas/source-ebay-finance"
         - title: source-elasticemail
           $ref: "#/components/schemas/source-elasticemail"
         - title: source-emailoctopus
@@ -82524,6 +83024,8 @@ components:
           $ref: "#/components/schemas/source-gocardless"
         - title: source-goldcast
           $ref: "#/components/schemas/source-goldcast"
+        - title: source-gologin
+          $ref: "#/components/schemas/source-gologin"
         - title: source-gong
           $ref: "#/components/schemas/source-gong"
         - title: source-google-ads
@@ -82734,6 +83236,8 @@ components:
           $ref: "#/components/schemas/source-nasa"
         - title: source-navan
           $ref: "#/components/schemas/source-navan"
+        - title: source-nebius-ai
+          $ref: "#/components/schemas/source-nebius-ai"
         - title: source-netsuite
           $ref: "#/components/schemas/source-netsuite"
         - title: source-netsuite-enterprise
@@ -82744,6 +83248,8 @@ components:
           $ref: "#/components/schemas/source-newsdata"
         - title: source-newsdata-io
           $ref: "#/components/schemas/source-newsdata-io"
+        - title: source-ninjaone-rmm
+          $ref: "#/components/schemas/source-ninjaone-rmm"
         - title: source-nocrm
           $ref: "#/components/schemas/source-nocrm"
         - title: source-northpass-lms
@@ -82796,6 +83302,8 @@ components:
           $ref: "#/components/schemas/source-oveit"
         - title: source-pabbly-subscriptions-billing
           $ref: "#/components/schemas/source-pabbly-subscriptions-billing"
+        - title: source-paddle
+          $ref: "#/components/schemas/source-paddle"
         - title: source-pagerduty
           $ref: "#/components/schemas/source-pagerduty"
         - title: source-pandadoc
@@ -82806,6 +83314,8 @@ components:
           $ref: "#/components/schemas/source-papersign"
         - title: source-pardot
           $ref: "#/components/schemas/source-pardot"
+        - title: source-partnerize
+          $ref: "#/components/schemas/source-partnerize"
         - title: source-partnerstack
           $ref: "#/components/schemas/source-partnerstack"
         - title: source-payfit
@@ -82824,6 +83334,8 @@ components:
           $ref: "#/components/schemas/source-persona"
         - title: source-pexels-api
           $ref: "#/components/schemas/source-pexels-api"
+        - title: source-phyllo
+          $ref: "#/components/schemas/source-phyllo"
         - title: source-picqer
           $ref: "#/components/schemas/source-picqer"
         - title: source-pingdom
@@ -82850,6 +83362,8 @@ components:
           $ref: "#/components/schemas/source-pokeapi"
         - title: source-polygon-stock-api
           $ref: "#/components/schemas/source-polygon-stock-api"
+        - title: source-poplar
+          $ref: "#/components/schemas/source-poplar"
         - title: source-postgres
           $ref: "#/components/schemas/source-postgres"
         - title: source-posthog
@@ -82976,8 +83490,12 @@ components:
           $ref: "#/components/schemas/source-shortcut"
         - title: source-shortio
           $ref: "#/components/schemas/source-shortio"
+        - title: source-shutterstock
+          $ref: "#/components/schemas/source-shutterstock"
         - title: source-sigma-computing
           $ref: "#/components/schemas/source-sigma-computing"
+        - title: source-signnow
+          $ref: "#/components/schemas/source-signnow"
         - title: source-simfin
           $ref: "#/components/schemas/source-simfin"
         - title: source-simplecast
@@ -83156,12 +83674,16 @@ components:
           $ref: "#/components/schemas/source-you-need-a-budget-ynab"
         - title: source-younium
           $ref: "#/components/schemas/source-younium"
+        - title: source-yousign
+          $ref: "#/components/schemas/source-yousign"
         - title: source-youtube-analytics
           $ref: "#/components/schemas/source-youtube-analytics"
         - title: source-youtube-data
           $ref: "#/components/schemas/source-youtube-data"
         - title: source-zapier-supported-storage
           $ref: "#/components/schemas/source-zapier-supported-storage"
+        - title: source-zapsign
+          $ref: "#/components/schemas/source-zapsign"
         - title: source-zendesk-chat
           $ref: "#/components/schemas/source-zendesk-chat"
         - title: source-zendesk-sunshine
@@ -83236,8 +83758,6 @@ components:
           $ref: "#/components/schemas/destination-firestore"
         - title: destination-gcs
           $ref: "#/components/schemas/destination-gcs"
-        - title: destination-iceberg
-          $ref: "#/components/schemas/destination-iceberg"
         - title: destination-milvus
           $ref: "#/components/schemas/destination-milvus"
         - title: destination-mongodb
@@ -83270,8 +83790,6 @@ components:
           $ref: "#/components/schemas/destination-s3"
         - title: destination-s3-data-lake
           $ref: "#/components/schemas/destination-s3-data-lake"
-        - title: destination-s3-glue
-          $ref: "#/components/schemas/destination-s3-glue"
         - title: destination-sftp-json
           $ref: "#/components/schemas/destination-sftp-json"
         - title: destination-snowflake

@@ -34,6 +34,112 @@ paths:
       security: []
       x-speakeasy-alias: getHealthCheck
       x-speakeasy-group: Health
+  /config_templates:
+    get:
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateList'
+          description: List all Applications a User has permission to view.
+        '403':
+          description: Not allowed
+      operationId: listConfigTemplates
+      summary: List config templates
+      x-speakeasy-alias: listConfigTemplates
+      x-speakeasy-group: ConfigTemplates
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigTemplateCreateRequestBody'
+        required: true
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateCreateResponse'
+          description: Create a config template.
+        '403':
+          description: Not allowed
+      operationId: createConfigTemplate
+      summary: Create config template
+      x-speakeasy-alias: createConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+  /config_templates/{configTemplateId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigTemplateUpdateRequestBody'
+        required: true
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateUpdateResponse'
+          description: Successfully updated config template
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateConfigTemplate
+      x-speakeasy-alias: updateConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+      summary: Update a config template
+      parameters:
+      - name: configTemplateId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+    get:
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateRead'
+          description: Get an TODO.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getConfigTemplate
+      x-speakeasy-alias: getConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+      summary: Get TODO
+      parameters:
+      - name: configTemplateId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
   /applications:
     get:
       tags:
@@ -411,6 +517,273 @@ paths:
         type: integer
       in: path
       required: true
+  /regions:
+    get:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionsResponse'
+          description: List all regions for the organization
+        '403':
+          description: Not allowed
+      operationId: listRegions
+      summary: List regions
+      x-speakeasy-alias: listRegions
+      x-speakeasy-group: Regions
+      parameters:
+      - name: organizationId
+        description: The UUID of the organization to list regions for
+        schema:
+          type: string
+          format: uuid
+        in: query
+        required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionCreateRequest'
+        required: true
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully created region
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+      operationId: createRegion
+      summary: Create a region
+      x-speakeasy-alias: createRegion
+      x-speakeasy-group: Dataplanes
+  /regions/{regionId}:
+    get:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Get a region by the id in the path
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getRegion
+      x-speakeasy-alias: getRegion
+      x-speakeasy-group: Regions
+      summary: Get a region
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionPatchRequest'
+        required: true
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully updated region
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateRegion
+      x-speakeasy-alias: updateRegion
+      x-speakeasy-group: Dataplanes
+      summary: Update a region
+    delete:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully deleted region
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteRegion
+      x-speakeasy-alias: deleteRegion
+      x-speakeasy-group: Regions
+      summary: Delete a region
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+  /regions/{regionId}/dataplanes:
+    get:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplanesResponse'
+          description: List all dataplanes for the region
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listDataplanes
+      summary: List dataplanes
+      x-speakeasy-alias: listDataplanes
+      x-speakeasy-group: Dataplanes
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataplaneCreateRequest'
+        required: true
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneCreateResponseBody'
+          description: Successfully created dataplane
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: createDataplane
+      summary: Create a dataplane
+      x-speakeasy-alias: createDataplane
+      x-speakeasy-group: Dataplanes
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+  /regions/{regionId}/dataplanes/{dataplaneId}:
+    get:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Get a dataplane by the id in the path
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getDataplane
+      x-speakeasy-alias: getDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Get a dataplane
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataplanePatchRequest'
+        required: true
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Successfully updated dataplane
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateDataplane
+      x-speakeasy-alias: updateDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Update a dataplane
+    delete:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Successfully deleted dataplane
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteDataplane
+      x-speakeasy-alias: deleteDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Delete a dataplane
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+    - name: dataplaneId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
   /connector_definitions:
     get:
       tags:
@@ -478,7 +851,10 @@ paths:
       summary: List declarative source definitions.
     post:
       summary: Create a declarative source definition.
-      operationId: null
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#create
+      operationId: createDeclarativeSourceDefinition
+      x-speakeasy-alias: createDeclarativeSourceDefinition
+      x-speakeasy-group: DeclarativeSourceDefinitions
       tags:
       - public_declarative_source_definitions
       - public
@@ -530,6 +906,7 @@ paths:
       x-speakeasy-alias: getDeclarativeSourceDefinition
       x-speakeasy-group: DeclarativeSourceDefinitions
       summary: Get declarative source definition details.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#read
     put:
       tags:
       - public_declarative_source_definitions
@@ -556,6 +933,7 @@ paths:
       x-speakeasy-alias: updateDeclarativeSourceDefinition
       x-speakeasy-group: DeclarativeSourceDefinitions
       summary: Update declarative source definition details.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#update
     delete:
       tags:
       - public_declarative_source_definitions
@@ -576,6 +954,7 @@ paths:
       x-speakeasy-alias: deleteDeclarativeSourceDefinition
       x-speakeasy-group: DeclarativeSourceDefinitions
       summary: Delete a declarative source definition.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#delete
   /workspaces/{workspaceId}/definitions/sources:
     parameters:
     - name: workspaceId
@@ -609,6 +988,7 @@ paths:
       x-speakeasy-alias: createSourceDefinition
       x-speakeasy-group: SourceDefinitions
       summary: Create a source definition.
+      x-speakeasy-entity-operation: SourceDefinition#create
       tags:
       - public_source_definitions
       - public
@@ -660,6 +1040,7 @@ paths:
       x-speakeasy-alias: getSourceDefinition
       x-speakeasy-group: SourceDefinitions
       summary: Get source definition details.
+      x-speakeasy-entity-operation: SourceDefinition#read
     put:
       tags:
       - public_source_definitions
@@ -686,6 +1067,7 @@ paths:
       x-speakeasy-alias: updateSourceDefinition
       x-speakeasy-group: SourceDefinitions
       summary: Update source definition details.
+      x-speakeasy-entity-operation: SourceDefinition#update
     delete:
       tags:
       - public_source_definitions
@@ -706,6 +1088,7 @@ paths:
       x-speakeasy-alias: deleteSourceDefinition
       x-speakeasy-group: SourceDefinitions
       summary: Delete a source definition.
+      x-speakeasy-entity-operation: SourceDefinition#delete
   /workspaces/{workspaceId}/definitions/destinations:
     parameters:
     - name: workspaceId
@@ -739,6 +1122,7 @@ paths:
       x-speakeasy-alias: createDestinationDefinition
       x-speakeasy-group: DestinationDefinitions
       summary: Create a destination definition.
+      x-speakeasy-entity-operation: DestinationDefinition#create
       tags:
       - public_destination_definitions
       - public
@@ -790,6 +1174,7 @@ paths:
       x-speakeasy-alias: getDestinationDefinition
       x-speakeasy-group: DestinationDefinitions
       summary: Get destination definition details.
+      x-speakeasy-entity-operation: DestinationDefinition#read
     put:
       tags:
       - public_destination_definitions
@@ -816,6 +1201,7 @@ paths:
       x-speakeasy-alias: updateDestinationDefinition
       x-speakeasy-group: DestinationDefinitions
       summary: Update destination definition details.
+      x-speakeasy-entity-operation: DestinationDefinition#update
     delete:
       tags:
       - public_destination_definitions
@@ -836,6 +1222,7 @@ paths:
       x-speakeasy-alias: deleteDestinationDefinition
       x-speakeasy-group: DestinationDefinitions
       summary: Delete a destination definition.
+      x-speakeasy-entity-operation: DestinationDefinition#delete
   /sources:
     get:
       tags:
@@ -965,6 +1352,14 @@ paths:
       x-speakeasy-alias: getSource
       x-speakeasy-group: Sources
       summary: Get Source details
+      parameters:
+      - in: query
+        name: includeSecretCoordinates
+        schema:
+          type: boolean
+        required: false
+        description: Rather than return *** for secret properties include the secret
+          coordinate information
     patch:
       tags:
       - public_sources
@@ -1216,6 +1611,14 @@ paths:
       x-speakeasy-alias: getDestination
       x-speakeasy-group: Destinations
       summary: Get Destination details
+      parameters:
+      - in: query
+        name: includeSecretCoordinates
+        schema:
+          type: boolean
+        required: false
+        description: Rather than return *** for secret properties include the secret
+          coordinate information
     delete:
       tags:
       - public_destinations
@@ -3381,6 +3784,9 @@ components:
           type: string
         notifications:
           $ref: '#/components/schemas/NotificationsConfig'
+        regionId:
+          type: string
+          format: uuid
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -3392,6 +3798,9 @@ components:
           type: string
         notifications:
           $ref: '#/components/schemas/NotificationsConfig'
+        regionId:
+          type: string
+          format: uuid
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -3969,4 +4378,128 @@ components:
       enum:
       - source
       - destination
+      x-speakeasy-component: true
+    RegionCreateRequest:
+      type: object
+      required:
+      - name
+      - organizationId
+      - enabled
+      properties:
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionResponse:
+      type: object
+      required:
+      - regionId
+      - name
+      - organizationId
+      - enabled
+      - createdAt
+      - updatedAt
+      properties:
+        regionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionsResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegionResponse'
+      x-speakeasy-component: true
+    DataplaneCreateRequest:
+      type: object
+      required:
+      - name
+      - enabled
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplaneResponse:
+      type: object
+      required:
+      - dataplaneId
+      - name
+      - regionId
+      - enabled
+      - createdAt
+      - updatedAt
+      properties:
+        dataplaneId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        regionId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanesResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataplaneResponse'
       x-speakeasy-component: true

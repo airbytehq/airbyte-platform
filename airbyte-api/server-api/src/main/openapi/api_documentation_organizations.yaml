@@ -1156,6 +1156,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1167,6 +1170,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1748,6 +1754,130 @@ components:
       enum:
         - "source"
         - "destination"
+      x-speakeasy-component: true
+    RegionCreateRequest:
+      type: "object"
+      required:
+        - "name"
+        - "organizationId"
+        - "enabled"
+      properties:
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionPatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionResponse:
+      type: "object"
+      required:
+        - "regionId"
+        - "name"
+        - "organizationId"
+        - "enabled"
+        - "createdAt"
+        - "updatedAt"
+      properties:
+        regionId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionsResponse:
+      type: "object"
+      required:
+        - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RegionResponse"
+      x-speakeasy-component: true
+    DataplaneCreateRequest:
+      type: "object"
+      required:
+        - "name"
+        - "enabled"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanePatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplaneResponse:
+      type: "object"
+      required:
+        - "dataplaneId"
+        - "name"
+        - "regionId"
+        - "enabled"
+        - "createdAt"
+        - "updatedAt"
+      properties:
+        dataplaneId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        regionId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanesResponse:
+      type: "object"
+      required:
+        - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DataplaneResponse"
       x-speakeasy-component: true
     SourceConfiguration:
       description: The values required to configure the source.

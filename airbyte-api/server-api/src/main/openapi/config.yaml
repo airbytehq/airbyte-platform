@@ -7132,7 +7132,10 @@ paths:
       summary: List declarative source definitions.
     post:
       summary: Create a declarative source definition.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#create
       operationId: publicCreateDeclarativeSourceDefinition
+      x-sdk-alias: createDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
       tags:
         - public_declarative_source_definitions
         - public
@@ -7185,6 +7188,7 @@ paths:
       x-sdk-alias: getDeclarativeSourceDefinition
       x-sdk-group: DeclarativeSourceDefinitions
       summary: Get declarative source definition details.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#read
     put:
       tags:
         - public_declarative_source_definitions
@@ -7211,6 +7215,7 @@ paths:
       x-sdk-alias: updateDeclarativeSourceDefinition
       x-sdk-group: DeclarativeSourceDefinitions
       summary: Update declarative source definition details.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#update
     delete:
       tags:
         - public_declarative_source_definitions
@@ -7231,6 +7236,7 @@ paths:
       x-sdk-alias: deleteDeclarativeSourceDefinition
       x-sdk-group: DeclarativeSourceDefinitions
       summary: Delete a declarative source definition.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#delete
 
   /public/v1/workspaces/{workspaceId}/definitions/sources:
     parameters:
@@ -7266,6 +7272,7 @@ paths:
       x-sdk-alias: createSourceDefinition
       x-sdk-group: SourceDefinitions
       summary: Create a source definition.
+      x-sdk-entity-operation: SourceDefinition#create
       tags:
         - public_source_definitions
         - public
@@ -7318,6 +7325,7 @@ paths:
       x-sdk-alias: getSourceDefinition
       x-sdk-group: SourceDefinitions
       summary: Get source definition details.
+      x-sdk-entity-operation: SourceDefinition#read
     put:
       tags:
         - public_source_definitions
@@ -7344,6 +7352,7 @@ paths:
       x-sdk-alias: updateSourceDefinition
       x-sdk-group: SourceDefinitions
       summary: Update source definition details.
+      x-sdk-entity-operation: SourceDefinition#update
     delete:
       tags:
         - public_source_definitions
@@ -7364,6 +7373,7 @@ paths:
       x-sdk-alias: deleteSourceDefinition
       x-sdk-group: SourceDefinitions
       summary: Delete a source definition.
+      x-sdk-entity-operation: SourceDefinition#delete
 
   /public/v1/workspaces/{workspaceId}/definitions/destinations:
     parameters:
@@ -7399,6 +7409,7 @@ paths:
       x-sdk-alias: createDestinationDefinition
       x-sdk-group: DestinationDefinitions
       summary: Create a destination definition.
+      x-sdk-entity-operation: DestinationDefinition#create
       tags:
         - public_destination_definitions
         - public
@@ -7451,6 +7462,7 @@ paths:
       x-sdk-alias: getDestinationDefinition
       x-sdk-group: DestinationDefinitions
       summary: Get destination definition details.
+      x-sdk-entity-operation: DestinationDefinition#read
     put:
       tags:
         - public_destination_definitions
@@ -7477,6 +7489,7 @@ paths:
       x-sdk-alias: updateDestinationDefinition
       x-sdk-group: DestinationDefinitions
       summary: Update destination definition details.
+      x-sdk-entity-operation: DestinationDefinition#update
     delete:
       tags:
         - public_destination_definitions
@@ -7497,6 +7510,7 @@ paths:
       x-sdk-alias: deleteDestinationDefinition
       x-sdk-group: DestinationDefinitions
       summary: Delete a destination definition.
+      x-sdk-entity-operation: DestinationDefinition#delete
 
   /public/v1/sources:
     get:
