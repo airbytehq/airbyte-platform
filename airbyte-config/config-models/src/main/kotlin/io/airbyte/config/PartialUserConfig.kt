@@ -24,7 +24,7 @@ data class PartialUserConfig(
    * applied to the template configuration
    */
   var partialUserConfigProperties: JsonNode,
-  val sourceId: UUID? = null,
+  val actorId: UUID? = null,
 )
 
 /**

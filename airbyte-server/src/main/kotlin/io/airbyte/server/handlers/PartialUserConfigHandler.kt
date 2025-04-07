@@ -56,7 +56,7 @@ class PartialUserConfigHandler(
       )
 
     // Save the secure config
-    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig, sourceId = savedSource.sourceId)
+    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig, actorId = savedSource.sourceId)
     val createdPartialUserConfig = partialUserConfigService.createPartialUserConfig(securePartialUserConfig)
 
     return PartialUserConfigWithConfigTemplateAndActorDetails(
@@ -95,7 +95,7 @@ class PartialUserConfigHandler(
 
     sourceHandler.partialUpdateSource(
       PartialSourceUpdate().apply {
-        sourceId = existingConfig.sourceId
+        sourceId = existingConfig.actorId
         connectionConfiguration = combinedConfigs
       },
     )

@@ -18658,15 +18658,15 @@ components:
         - id
         - partialUserConfigProperties
         - configTemplate
-        - sourceId
+        - actorId
       properties:
         id:
           type: string
           format: uuid
         configTemplate:
           $ref: "#/components/schemas/ConfigTemplateRead"
-        sourceId:
-          description: the source that this partial user config is for
+        actorId:
+          description: the actor that this partial user config is for
           type: string
           format: uuid
         partialUserConfigProperties:

@@ -104,7 +104,7 @@ class PartialUserConfigController(
     PartialUserConfigRead()
       .id(
         partialUserConfig.partialUserConfig.id,
-      ).sourceId(partialUserConfig.partialUserConfig.sourceId)
+      ).actorId(partialUserConfig.partialUserConfig.actorId)
       .partialUserConfigProperties(partialUserConfig.partialUserConfig.partialUserConfigProperties)
       .configTemplate(
         ConfigTemplateRead()

@@ -16,17 +16,18 @@ fun EntityPartialUserConfig.toConfigModel(): ModelPartialUserConfig {
     workspaceId = this.workspaceId,
     configTemplateId = this.configTemplateId,
     partialUserConfigProperties = this.partialUserConfigProperties,
+    actorId = this.actorId,
   )
 }
 
 fun ModelPartialUserConfig.toEntity(): EntityPartialUserConfig {
-  this.sourceId ?: throw IllegalStateException("Cannot map Partial User Config model that lacks a source id")
+  this.actorId ?: throw IllegalStateException("Cannot map Partial User Config model that lacks a source id")
 
   return EntityPartialUserConfig(
     id = this.id,
     workspaceId = this.workspaceId,
     configTemplateId = this.configTemplateId,
     partialUserConfigProperties = this.partialUserConfigProperties,
-    sourceId = this.sourceId!!,
+    actorId = this.actorId!!,
   )
 }

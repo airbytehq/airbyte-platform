@@ -66,7 +66,7 @@ class PartialUserConfigHandlerTest {
 
     Assertions.assertNotNull(result)
     Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.sourceId)
+    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
 
     verify { partialUserConfigService.createPartialUserConfig(any()) }
     verify { sourceHandler.createSource(any()) }
@@ -129,7 +129,7 @@ class PartialUserConfigHandlerTest {
         id = partialUserConfig.partialUserConfig.id,
         workspaceId = partialUserConfig.partialUserConfig.workspaceId,
         configTemplateId = partialUserConfig.partialUserConfig.configTemplateId,
-        sourceId = partialUserConfig.partialUserConfig.sourceId,
+        actorId = partialUserConfig.partialUserConfig.actorId,
         partialUserConfigProperties = updateUserConfig,
       )
 
@@ -155,7 +155,7 @@ class PartialUserConfigHandlerTest {
     val result = handler.updatePartialUserConfig(partialUserConfigRequest)
 
     Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.sourceId)
+    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
     verify { partialUserConfigService.updatePartialUserConfig(any()) }
     verify { sourceHandler.partialUpdateSource(any()) }
 
@@ -362,7 +362,7 @@ class PartialUserConfigHandlerTest {
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
           partialUserConfigProperties = properties,
-          sourceId = sourceId,
+          actorId = sourceId,
         ),
       actorName = "test-source",
       actorIcon = "test-icon",
@@ -390,7 +390,7 @@ class PartialUserConfigHandlerTest {
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
           partialUserConfigProperties = properties,
-          sourceId = sourceId,
+          actorId = sourceId,
         ),
       configTemplate = configTemplate,
       actorName = "test-source",
