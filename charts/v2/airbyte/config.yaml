@@ -32,7 +32,7 @@ common:
       valueExp: (printf "%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port))
 
     - env: API_AUTHORIZATION_ENABLED
-      key: api.authEnabled
+      key: auth.enabled
       defaultValue: true
 
     - env: CONNECTOR_BUILDER_SERVER_API_HOST
