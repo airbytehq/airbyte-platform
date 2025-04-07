@@ -6321,6 +6321,14 @@ paths:
       summary: List config templates
       x-sdk-alias: listConfigTemplates
       x-sdk-group: ConfigTemplates
+      parameters:
+        - name: organizationId
+          description: ID of the organization
+          schema:
+            format: UUID
+            type: string
+          in: query
+          required: true
     post:
       requestBody:
         content:

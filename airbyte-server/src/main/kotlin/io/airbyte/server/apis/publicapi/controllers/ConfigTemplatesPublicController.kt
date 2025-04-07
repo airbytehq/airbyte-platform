@@ -83,7 +83,7 @@ open class ConfigTemplatesPublicController(
     }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicListConfigTemplate(): Response =
+  override fun publicListConfigTemplate(organizationId: String): Response =
     wrap {
       logger.info { "Listing config templates from wrap" }
       val user: AuthenticatedUser = currentUserService.currentUser
@@ -92,7 +92,7 @@ open class ConfigTemplatesPublicController(
         trackingHelper.callWithTracker(
           {
             configTemplateService
-              .listConfigTemplatesForOrganization(OrganizationId(UUID.fromString("00000000-0000-0000-0000-000000000000")))
+              .listConfigTemplatesForOrganization(OrganizationId(UUID.fromString(organizationId)))
               .map { it.toPublicApiModel() }
           },
           APPLICATIONS_PATH,
