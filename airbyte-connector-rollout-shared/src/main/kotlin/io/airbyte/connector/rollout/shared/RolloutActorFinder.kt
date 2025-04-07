@@ -209,7 +209,7 @@ class RolloutActorFinder(
     jobService: JobService,
     configTypes: Set<JobConfig.ConfigType>,
     scopes: Set<String>,
-    updatedAt: OffsetDateTime?,
+    createdAt: OffsetDateTime?,
     processJobs: (Map<UUID, List<Job>>) -> Unit,
   ) {
     var offset = 0
@@ -225,9 +225,9 @@ class RolloutActorFinder(
           limit = JOB_FETCH_LIMIT,
           offset = offset,
           statuses = listOf(),
-          createdAtStart = null,
+          createdAtStart = createdAt ?: OffsetDateTime.now().minusDays(1),
           createdAtEnd = null,
-          updatedAtStart = updatedAt ?: OffsetDateTime.now().minusDays(1),
+          updatedAtStart = null,
           updatedAtEnd = null,
         )
 
