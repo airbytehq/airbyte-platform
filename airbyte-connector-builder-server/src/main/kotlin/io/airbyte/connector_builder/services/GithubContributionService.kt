@@ -287,20 +287,20 @@ class GithubContributionService(
     return createPullRequest(description)
   }
 
-  fun attemptUpdateForkedBranchAndRepoToLatest() {
-    val airbyteMasterSha = getBranchSha(airbyteRepository.defaultBranch, airbyteRepository)
-    val forkedMasterRef = getBranchRef(airbyteRepository.defaultBranch, forkedRepository)
-    val forkedContributionBranch = getBranch(contributionBranchName, forkedRepository)
-
-    try {
-      forkedMasterRef?.updateTo(airbyteMasterSha)
-      forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
-    } catch (e: GHFileNotFoundException) {
-      // HACK: This method is flaky and relies on an eventually consistent GitHub API
-      // TODO: Update to use `merge-upstream` instead
-      // WHEN: When a version of org.kohsuke:github-api < 1.323 is available
-      // WHY: https://github.com/hub4j/github-api/pull/1898 will be part of that change
-      logger.error(e) { "Failed to update forked branch to latest" }
+  private fun attemptUpdateForkedBranchAndRepoToLatest() {
+    for (branch in listOf(airbyteRepository.defaultBranch, contributionBranchName)) {
+      try {
+        forkedRepository.sync(branch)
+      } catch (e: HttpException) {
+        logger.debug(e) { "Failed to update forked branch '$branch' from upstream repository: $e" }
+        if (e.responseCode == 409) {
+          // A 409 signifies a merge conflict, see https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#sync-a-fork-branch-with-the-upstream-repository
+          // we will continue to make the contribution and expect the user to resolve the merge conflict.
+          logger.info { "There is a merge conflict, continuing to publish contribution regardless" }
+        } else {
+          throw e
+        }
+      }
     }
   }
 
@@ -308,16 +308,13 @@ class GithubContributionService(
     val existingBranch = getBranchRef(contributionBranchName, forkedRepository)
     val existingPR = getExistingOpenPullRequest()
 
-    if (existingBranch != null) {
-      if (existingPR != null) {
-        // Make sure the existing PR stays up to date with master
-        attemptUpdateForkedBranchAndRepoToLatest()
-      } else {
-        // Delete the branch with old contributions in the PR doesn't exist anymore
-        deleteBranch(contributionBranchName, forkedRepository)
-      }
+    // If the branch exists and the PR doesn't exist, delete the branch to clean up commit history
+    if (existingBranch != null && existingPR == null) {
+      deleteBranch(contributionBranchName, forkedRepository)
     }
 
+    // Create a new branch if it doesn't exist and update it and the repo fork to the latest Airbyte main
     getOrCreateContributionBranch()
+    attemptUpdateForkedBranchAndRepoToLatest()
   }
 }

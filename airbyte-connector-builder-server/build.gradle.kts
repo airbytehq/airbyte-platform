@@ -56,7 +56,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
 
   // Third-party dependencies
-  implementation("org.kohsuke:github-api:1.323")
+  implementation("org.kohsuke:github-api:1.327")
   implementation("org.yaml:snakeyaml:2.2")
   implementation("io.pebbletemplates:pebble:3.2.2")
 
