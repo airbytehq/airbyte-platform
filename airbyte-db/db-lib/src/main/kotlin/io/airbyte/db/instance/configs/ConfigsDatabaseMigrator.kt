@@ -14,7 +14,7 @@ import org.flywaydb.core.Flyway
 class ConfigsDatabaseMigrator(
   database: Database,
   flyway: Flyway,
-) : FlywayDatabaseMigrator(database, flyway) {
+) : FlywayDatabaseMigrator(database = database, flyway = flyway) {
   companion object {
     const val DB_IDENTIFIER: String = "configs"
     const val MIGRATION_FILE_LOCATION: String = "classpath:io/airbyte/db/instance/configs/migrations"

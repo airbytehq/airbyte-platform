@@ -4,34 +4,21 @@
 
 package io.airbyte.db.check
 
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Implementation of the [DatabaseMigrationCheck] for the Configurations database.
+ *
+ * TODO inject via dependency injection framework
  */
 class ConfigsDatabaseMigrationCheck(
-// TODO inject via dependency injection framework
-  private val databaseAvailablityCheck: ConfigsDatabaseAvailabilityCheck,
-  // TODO inject via dependency injection framework
-  private val flyway: Flyway,
-  // TODO inject via dependency injection framework
-  private val minimumFlywayVersion: String,
-  // TODO inject via dependency injection framework
-  private val timeoutMs: Long,
+  override val databaseAvailabilityCheck: ConfigsDatabaseAvailabilityCheck,
+  override val flyway: Flyway,
+  override val minimumFlywayVersion: String,
+  override val timeoutMs: Long,
 ) : DatabaseMigrationCheck {
-  override fun getDatabaseAvailabilityCheck(): DatabaseAvailabilityCheck? = databaseAvailablityCheck
-
-  override fun getFlyway(): Flyway? = flyway
-
-  override fun getLogger(): Logger = LOGGER
-
-  override fun getMinimumFlywayVersion(): String = minimumFlywayVersion
-
-  override fun getTimeoutMs(): Long = timeoutMs
-
-  companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ConfigsDatabaseMigrationCheck::class.java)
-  }
+  override val log = io.airbyte.db.check.log
 }

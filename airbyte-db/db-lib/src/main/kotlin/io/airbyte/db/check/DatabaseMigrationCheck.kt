@@ -4,6 +4,7 @@
 
 package io.airbyte.db.check
 
+import io.github.oshai.kotlinlogging.KLogger
 import org.flywaydb.core.Flyway
 import org.slf4j.Logger
 
@@ -23,12 +24,20 @@ private const val NUM_POLL_TIMES = 10
  */
 interface DatabaseMigrationCheck {
   /**
+   * Retrieves the configured [Logger] object to be used to record progress of the migration
+   * check.
+   *
+   * @return The configured [Logger] object.
+   */
+  val log: KLogger
+
+  /**
    * Retrieves the [DatabaseAvailabilityCheck] used to verify that the database is running and
    * available.
    *
    * @return The [DatabaseAvailabilityCheck].
    */
-  fun getDatabaseAvailabilityCheck(): DatabaseAvailabilityCheck?
+  val databaseAvailabilityCheck: DatabaseAvailabilityCheck
 
   /**
    * Retrieves the configured [Flyway] object to be used to check the migration status of the
@@ -36,22 +45,14 @@ interface DatabaseMigrationCheck {
    *
    * @return The configured [Flyway] object.
    */
-  fun getFlyway(): Flyway?
-
-  /**
-   * Retrieves the configured [Logger] object to be used to record progress of the migration
-   * check.
-   *
-   * @return The configured [Logger] object.
-   */
-  fun getLogger(): Logger
+  val flyway: Flyway
 
   /**
    * Retrieves the required minimum migration version of the schema.
    *
    * @return The required minimum migration version of the schema.
    */
-  fun getMinimumFlywayVersion(): String
+  val minimumFlywayVersion: String
 
   /**
    * Retrieves the timeout in milliseconds for the check. Once this timeout is exceeded, the check
@@ -59,7 +60,7 @@ interface DatabaseMigrationCheck {
    *
    * @return The timeout in milliseconds for the check.
    */
-  fun getTimeoutMs(): Long
+  val timeoutMs: Long
 
   /**
    * Checks whether the configured database has been migrated to the required minimum schema version.
@@ -69,57 +70,38 @@ interface DatabaseMigrationCheck {
   @Throws(DatabaseCheckException::class)
   fun check() {
     val startTime = System.currentTimeMillis()
-    val sleepTime: Long = getTimeoutMs() / NUM_POLL_TIMES
-    val flyway = getFlyway()
+    val sleepTime: Long = timeoutMs / NUM_POLL_TIMES
 
     // Verify that the database is up and reachable first
-    val availabilityCheck =
-      getDatabaseAvailabilityCheck()?.let { availabilityCheck ->
-        availabilityCheck.check()
+    databaseAvailabilityCheck.let { availabilityCheck ->
+      availabilityCheck.check()
 
-        flyway?.let { flyway ->
-          var currDatabaseMigrationVersion = getCurrentVersion(flyway)
-          getLogger().info("Current database migration version {}.", currDatabaseMigrationVersion)
-          getLogger().info("Minimum Flyway version required {}.", getMinimumFlywayVersion())
+      var currDatabaseMigrationVersion = flyway.currentVersion()
+      log.info { "Current database migration version $currDatabaseMigrationVersion." }
+      log.info { "Minimum Flyway version required $minimumFlywayVersion." }
 
-          while (currDatabaseMigrationVersion.compareTo(getMinimumFlywayVersion()!!) < 0) {
-            if (System.currentTimeMillis() - startTime >= getTimeoutMs()) {
-              throw DatabaseCheckException("Timeout while waiting for database to fulfill minimum flyway migration version..")
-            }
+      while (currDatabaseMigrationVersion.compareTo(minimumFlywayVersion) < 0) {
+        if (System.currentTimeMillis() - startTime >= timeoutMs) {
+          throw DatabaseCheckException("Timeout while waiting for database to fulfill minimum flyway migration version..")
+        }
 
-            try {
-              Thread.sleep(sleepTime)
-            } catch (e: InterruptedException) {
-              throw DatabaseCheckException("Unable to wait for database to be migrated.", e)
-            }
+        try {
+          Thread.sleep(sleepTime)
+        } catch (e: InterruptedException) {
+          throw DatabaseCheckException("Unable to wait for database to be migrated.", e)
+        }
 
-            currDatabaseMigrationVersion = getCurrentVersion(flyway)
-          }
-          getLogger().info("Verified that database has been migrated to the required minimum version {}.", getMinimumFlywayVersion())
-        } ?: throw DatabaseCheckException("Flyway configuration not present.")
-      } ?: throw DatabaseCheckException("Availability check not configured.")
-  }
-
-  /**
-   * Retrieves the current version of the migration schema.
-   *
-   * @param flyway A [Flyway] that can be used to retrieve the current version.
-   * @return The current version of the migrated schema or [.UNAVAILABLE_VERSION] if the version
-   * cannot be discovered.
-   */
-  fun getCurrentVersion(flyway: Flyway): String {
-    /*
-     * The database may be available, but not yet migrated. If this is the case, the Flyway object will
-     * not be able to retrieve the current version of the schema. If that happens, return a fake version
-     * so that the check will fail and try again.
-     */
-    return if (flyway.info().current() != null) {
-      flyway
-        .info()
-        .current()
-        .version.version
-    } else {
-      UNAVAILABLE_VERSION
+        currDatabaseMigrationVersion = flyway.currentVersion()
+      }
+      log.info { "Verified that database has been migrated to the required minimum version $minimumFlywayVersion." }
     }
   }
 }
+
+/**
+ * Retrieves the current version of the migration schema.
+ *
+ * @receiver flyway A [Flyway] that can be used to retrieve the current version.
+ * @return The current version of the migrated schema or [UNAVAILABLE_VERSION] if the version cannot be discovered.
+ */
+private fun Flyway.currentVersion(): String = info().current()?.version?.version ?: UNAVAILABLE_VERSION

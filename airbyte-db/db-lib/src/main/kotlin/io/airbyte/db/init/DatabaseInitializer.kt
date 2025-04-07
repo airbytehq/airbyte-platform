@@ -8,6 +8,7 @@ import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.check.DatabaseAvailabilityCheck
 import io.airbyte.db.check.DatabaseCheckException
+import io.github.oshai.kotlinlogging.KLogger
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.Logger
@@ -27,21 +28,21 @@ interface DatabaseInitializer {
    *
    * @return The [DatabaseAvailabilityCheck].
    */
-  fun getDatabaseAvailabilityCheck(): DatabaseAvailabilityCheck?
+  val databaseAvailabilityCheck: DatabaseAvailabilityCheck?
 
   /**
    * Retrieves the configured database name to be tested.
    *
    * @return The name of the database to test.
    */
-  fun getDatabaseName(): String
+  val databaseName: String
 
   /**
    * Retrieves the configured [DSLContext] to be used to test the database availability.
    *
    * @return The configured [DSLContext] object.
    */
-  fun getDslContext(): DSLContext?
+  val dslContext: DSLContext?
 
   /**
    * Retrieve the initial schema to be applied to the database if the database is not already
@@ -49,7 +50,7 @@ interface DatabaseInitializer {
    *
    * @return The initial schema.
    */
-  fun getInitialSchema(): String
+  val initialSchema: String
 
   /**
    * Retrieves the configured [Logger] object to be used to record progress of the migration
@@ -57,14 +58,14 @@ interface DatabaseInitializer {
    *
    * @return The configured [Logger] object.
    */
-  fun getLogger(): Logger
+  val log: KLogger
 
   /**
    * The collection of table names that will be used to confirm database availability.
    *
    * @return The collection of database table names.
    */
-  fun getTableNames(): Collection<String>
+  val tableNames: Collection<String>
 
   /**
    * Initializes the configured database by using the following steps.
@@ -80,12 +81,13 @@ interface DatabaseInitializer {
   @Throws(DatabaseInitializationException::class)
   fun initialize() {
     // Verify that the database is up and reachable first
-    val availabilityCheck = getDatabaseAvailabilityCheck() ?: throw DatabaseInitializationException("Availability check not configured.")
+    val availabilityCheck = databaseAvailabilityCheck ?: throw DatabaseInitializationException("Availability check not configured.")
     try {
       availabilityCheck.check()
-      val dslContext = getDslContext() ?: throw DatabaseInitializationException("Database configuration not present.")
-      val database = Database(dslContext)
-      ExceptionWrappingDatabase(database).transaction { ctx: DSLContext -> this.initializeSchema(ctx) }
+      dslContext?.let {
+        val database = Database(it)
+        ExceptionWrappingDatabase(database).transaction { ctx: DSLContext -> this.initializeSchema(ctx) }
+      } ?: throw DatabaseInitializationException("Database configuration not present.")
     } catch (e: DatabaseCheckException) {
       throw DatabaseInitializationException("Database availability check failed.", e)
     } catch (e: IOException) {
@@ -126,25 +128,25 @@ interface DatabaseInitializer {
    * @return `true` indicating that the operation ran
    */
   fun initializeSchema(ctx: DSLContext): Boolean {
-    val tableNames = getTableNames()
+    val tableNames = tableNames
     if (tableNames.isEmpty()) {
-      getLogger().warn("Initial collection of table names is empty.  Cannot perform schema check.")
+      log.warn { "Initial collection of table names is empty.  Cannot perform schema check." }
       return false
     }
 
-    val dbName = getDatabaseName()
+    val dbName = databaseName
 
     // Verify that all the required tables are present
     if (tableNames.all { hasTable(ctx, it) }) {
-      getLogger().info("The $dbName database is initialized")
+      log.info { "The $dbName database is initialized" }
     } else {
-      val initSchema = getInitialSchema()
-      getLogger().info(
-        "The $dbName database has not been initialized; initializing it with schema: \n$initSchema",
-      )
+      val initSchema = initialSchema
+      log.info {
+        "The $dbName database has not been initialized; initializing it with schema: \n$initSchema"
+      }
 
-      ctx.execute(getInitialSchema())
-      getLogger().info("The $dbName database successfully initialized with schema: \n$initSchema.")
+      ctx.execute(initialSchema)
+      log.info { "The $dbName database successfully initialized with schema: \n$initSchema." }
     }
     return true
   }

@@ -7,7 +7,6 @@ package io.airbyte.db.instance
 import org.flywaydb.core.api.MigrationInfo
 import org.flywaydb.core.api.output.BaselineResult
 import org.flywaydb.core.api.output.MigrateResult
-import java.io.IOException
 
 /**
  * Database migrator interface.
@@ -36,6 +35,5 @@ interface DatabaseMigrator {
   /**
    * Dump the current database schema.
    */
-  @Throws(IOException::class)
-  fun dumpSchema(): String?
+  fun dumpSchema(): String
 }

@@ -114,7 +114,7 @@ abstract class MigrationDevCenter protected constructor(
    * @return schema
    */
   @VisibleForTesting
-  fun dumpSchema(persistToFile: Boolean): String? {
+  fun dumpSchema(persistToFile: Boolean = false): String {
     try {
       createContainer().use { container ->
         val dataSource = createDataSource(container)
@@ -126,7 +126,7 @@ abstract class MigrationDevCenter protected constructor(
           migrator.migrate()
           val schema = migrator.dumpSchema()
           if (persistToFile) {
-            dumpSchema(schema!!, schemaDumpFile, true)
+            dumpSchema(schema, schemaDumpFile, true)
           }
           return schema
         } finally {
@@ -139,9 +139,14 @@ abstract class MigrationDevCenter protected constructor(
   }
 
   private fun createDataSource(container: PostgreSQLContainer<*>): DataSource =
-    create(container.username, container.password, container.driverClassName, container.jdbcUrl)
+    create(
+      username = container.username,
+      password = container.password,
+      driverClassName = container.driverClassName,
+      jdbcConnectionString = container.jdbcUrl,
+    )
 
-  private fun createDslContext(dataSource: DataSource): DSLContext = create(dataSource, SQLDialect.POSTGRES)
+  private fun createDslContext(dataSource: DataSource): DSLContext = create(dataSource = dataSource, dialect = SQLDialect.POSTGRES)
 
   companion object {
     @JvmStatic
@@ -153,7 +158,6 @@ abstract class MigrationDevCenter protected constructor(
         when (db) {
           Db.CONFIGS -> ConfigsDatabaseMigrationDevCenter()
           Db.JOBS -> JobsDatabaseMigrationDevCenter()
-          else -> throw IllegalArgumentException("Unexpected database: " + args[0])
         }
 
       val command = Command.valueOf(args[1].uppercase())
@@ -161,7 +165,6 @@ abstract class MigrationDevCenter protected constructor(
         Command.CREATE -> devCenter.createMigration()
         Command.MIGRATE -> devCenter.runLastMigration()
         Command.DUMP_SCHEMA -> devCenter.dumpSchema(true)
-        else -> throw IllegalArgumentException("Unexpected command: " + args[1])
       }
     }
   }

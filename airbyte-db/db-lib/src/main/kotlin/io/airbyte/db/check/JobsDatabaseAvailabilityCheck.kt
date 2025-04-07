@@ -5,27 +5,21 @@
 package io.airbyte.db.check
 
 import io.airbyte.db.instance.DatabaseConstants
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jooq.DSLContext
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+
+private val log = KotlinLogging.logger {}
 
 /**
  * Implementation of the [DatabaseAvailabilityCheck] for the Jobs database.
+ *
+ * TODO inject via dependency injection framework
  */
 class JobsDatabaseAvailabilityCheck(
-// TODO inject via dependency injection framework
-  private val dslContext: DSLContext, // TODO inject via dependency injection framework
-  private val timeoutMs: Long,
+  override val dslContext: DSLContext,
+  override val timeoutMs: Long,
 ) : DatabaseAvailabilityCheck {
-  override fun getDatabaseName(): String = DatabaseConstants.JOBS_DATABASE_LOGGING_NAME
+  override val databaseName = DatabaseConstants.JOBS_DATABASE_LOGGING_NAME
 
-  override fun getDslContext(): DSLContext? = dslContext
-
-  override fun getLogger(): Logger = LOGGER
-
-  override fun getTimeoutMs(): Long = timeoutMs
-
-  companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(JobsDatabaseAvailabilityCheck::class.java)
-  }
+  override val log = io.airbyte.db.check.log
 }

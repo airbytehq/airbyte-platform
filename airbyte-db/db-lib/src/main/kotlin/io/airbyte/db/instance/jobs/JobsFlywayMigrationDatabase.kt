@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.jobs
 
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DatabaseCheckFactory.Companion.createJobsDatabaseInitializer
 import io.airbyte.db.init.DatabaseInitializationException
@@ -37,7 +37,7 @@ class JobsFlywayMigrationDatabase : FlywayMigrationDatabase() {
 
   @Throws(DatabaseInitializationException::class, IOException::class)
   override fun initializeDatabase(dslContext: DSLContext) {
-    val initialSchema = MoreResources.readResource(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH)
+    val initialSchema = Resources.read(DatabaseConstants.JOBS_INITIAL_SCHEMA_PATH)
     createJobsDatabaseInitializer(
       dslContext,
       DatabaseConstants.DEFAULT_CONNECTION_TIMEOUT_MS,

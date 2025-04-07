@@ -5,7 +5,7 @@
 package io.airbyte.db.instance.development
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.db.instance.FlywayDatabaseMigrator
 import io.airbyte.db.instance.development.FlywayFormatter.formatMigrationInfoList
@@ -102,7 +102,7 @@ object MigrationDevHelper {
     val nextMigrationVersion = getNextMigrationVersion(migrator)
     val versionId = nextMigrationVersion.toString().replace("\\.".toRegex(), "_")
 
-    val template = MoreResources.readResource("migration_template.txt")
+    val template = Resources.read("migration_template.txt")
     val newMigration =
       template
         .replace("<db-name>", dbIdentifier)

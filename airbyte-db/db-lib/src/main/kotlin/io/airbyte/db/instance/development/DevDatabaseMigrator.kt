@@ -16,7 +16,6 @@ import org.flywaydb.core.api.output.MigrateResult
 import org.flywaydb.database.postgresql.PostgreSQLConfigurationExtension
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.io.IOException
 
 /**
  * This migrator can prepare the database with previous migrations, and only run the latest
@@ -65,8 +64,7 @@ class DevDatabaseMigrator : DatabaseMigrator {
     return fullMigrator.createBaseline()
   }
 
-  @Throws(IOException::class)
-  override fun dumpSchema(): String? = fullMigrator.dumpSchema()
+  override fun dumpSchema(): String = fullMigrator.dumpSchema()
 
   companion object {
     private val LOGGER: Logger = LoggerFactory.getLogger(DevDatabaseMigrator::class.java)

@@ -5,16 +5,12 @@
 package io.airbyte.db.instance
 
 import io.airbyte.db.Database
-import io.airbyte.db.ExceptionWrappingDatabase
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.MigrationInfo
 import org.flywaydb.core.api.output.BaselineResult
 import org.flywaydb.core.api.output.MigrateResult
 import org.jooq.DSLContext
-import org.jooq.Query
-import org.jooq.Schema
-import kotlin.streams.asSequence
 
 private val log = KotlinLogging.logger {}
 
@@ -34,12 +30,12 @@ open class FlywayDatabaseMigrator(
   val database: Database,
   val flyway: Flyway,
 ) : DatabaseMigrator {
-  override fun migrate(): MigrateResult? =
+  override fun migrate(): MigrateResult =
     flyway
       .migrate()
       .also { it.warnings.forEach { msg -> log.warn { msg } } }
 
-  override fun list(): List<MigrationInfo>? = flyway.info().all().asList()
+  override fun list(): List<MigrationInfo> = flyway.info().all().asList()
 
   override fun getLatestMigration(): MigrationInfo? = flyway.info().current()
 
@@ -48,17 +44,16 @@ open class FlywayDatabaseMigrator(
       .baseline()
       .also { it.warnings.forEach { msg -> log.warn { msg } } }
 
-  override fun dumpSchema(): String? =
+  override fun dumpSchema(): String =
     DISCLAIMER +
-      ExceptionWrappingDatabase(database).query<String> { ctx: DSLContext ->
+      database.query { ctx: DSLContext ->
         ctx
           .meta()
-          .filterSchemas { s: Schema -> SCHEMAS.contains(s.name) }
+          .filterSchemas { SCHEMAS.contains(it.name) }
           .ddl()
-          .queryStream()
-          .map { query: Query -> "$query;" }
-          .filter { statement: String -> !statement.startsWith("create schema") }
-          .asSequence()
+          .queries()
+          .map { "$it;" }
+          .filter { !it.startsWith("create schema") }
           .joinToString(separator = "\n")
       }
 }

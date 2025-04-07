@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs
 
-import io.airbyte.commons.resources.MoreResources
+import io.airbyte.commons.resources.Resources
 import io.airbyte.config.ConfigSchema
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
@@ -30,7 +30,7 @@ class ConfigsDatabaseTestProvider(
 ) : TestDatabaseProvider {
   @Throws(IOException::class, DatabaseInitializationException::class)
   override fun create(runMigration: Boolean): Database {
-    val initalSchema = MoreResources.readResource(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH)
+    val initalSchema = Resources.read(DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH)
     createConfigsDatabaseInitializer(
       dslContext,
       DatabaseConstants.DEFAULT_CONNECTION_TIMEOUT_MS,

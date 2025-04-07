@@ -17,9 +17,9 @@ import javax.sql.DataSource
  */
 class ConfigsDatabaseMigrationDevCenter :
   MigrationDevCenter(
-    "configs",
-    DatabaseConstants.CONFIGS_SCHEMA_DUMP_PATH,
-    DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH,
+    dbIdentifier = "configs",
+    schemaDumpFile = DatabaseConstants.CONFIGS_SCHEMA_DUMP_PATH,
+    initialScript = DatabaseConstants.CONFIGS_INITIAL_SCHEMA_PATH,
   ) {
   override fun getMigrator(
     database: Database,

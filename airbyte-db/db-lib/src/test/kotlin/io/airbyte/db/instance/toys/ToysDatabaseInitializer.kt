@@ -6,28 +6,19 @@ package io.airbyte.db.instance.toys
 
 import io.airbyte.db.check.DatabaseAvailabilityCheck
 import io.airbyte.db.init.DatabaseInitializer
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jooq.DSLContext
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
+
+private val log = KotlinLogging.logger {}
 
 class ToysDatabaseInitializer(
-  private val databaseAvailablityCheck: DatabaseAvailabilityCheck,
-  private val dslContext: DSLContext,
-  private val initialSchema: String,
+  override val databaseAvailabilityCheck: DatabaseAvailabilityCheck,
+  override val dslContext: DSLContext,
+  override val initialSchema: String,
 ) : DatabaseInitializer {
-  override fun getDatabaseAvailabilityCheck(): DatabaseAvailabilityCheck? = databaseAvailablityCheck
+  override val databaseName = ToysDatabaseConstants.DATABASE_LOGGING_NAME
 
-  override fun getDatabaseName(): String = ToysDatabaseConstants.DATABASE_LOGGING_NAME
+  override val log = io.airbyte.db.instance.toys.log
 
-  override fun getDslContext(): DSLContext? = dslContext
-
-  override fun getInitialSchema(): String = initialSchema
-
-  override fun getLogger(): Logger = LOGGER
-
-  override fun getTableNames(): Collection<String> = setOf(ToysDatabaseConstants.TABLE_NAME)
-
-  companion object {
-    private val LOGGER: Logger = LoggerFactory.getLogger(ToysDatabaseInitializer::class.java)
-  }
+  override val tableNames = setOf(ToysDatabaseConstants.TABLE_NAME)
 }
