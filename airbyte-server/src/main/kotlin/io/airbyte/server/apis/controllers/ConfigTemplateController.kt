@@ -49,7 +49,7 @@ open class ConfigTemplateController(
   private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead {
     val configTemplateRead = ConfigTemplateRead()
     configTemplateRead.sourceDefinitionId(this.configTemplate.actorDefinitionId)
-    configTemplateRead.configTemplateSpec(this.configTemplate.partialDefaultConfig)
+    configTemplateRead.configTemplateSpec(this.configTemplate.userConfigSpec)
     configTemplateRead.icon(this.actorIcon)
     configTemplateRead.name(this.actorName)
     configTemplateRead.id(this.configTemplate.id)
