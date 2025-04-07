@@ -28,7 +28,7 @@ object K8sSecretHelper {
     secretName: String,
     secretData: Map<String, String>,
   ) {
-    val base64EncodedSecretData = secretData.mapValues { (_, value) -> value.toBase64() }
+    val base64EncodedSecretData = secretData.mapValues { (_, value) -> base64Encode(value) }
     val existingSecret = kubernetesClient.secrets().withName(secretName).get()
     if (existingSecret == null) {
       logger.info { "No existing secret with name $secretName was found. Creating it..." }
@@ -92,5 +92,8 @@ object K8sSecretHelper {
   }
 
   @OptIn(ExperimentalEncodingApi::class)
-  internal fun String.toBase64(): String = Base64.encode(this.toByteArray())
+  fun base64Encode(text: String): String = Base64.encode(text.toByteArray())
+
+  @OptIn(ExperimentalEncodingApi::class)
+  fun base64Decode(encodedText: String): String = String(Base64.decode(encodedText))
 }

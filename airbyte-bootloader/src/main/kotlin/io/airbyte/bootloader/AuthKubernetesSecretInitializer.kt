@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.bootloader.K8sSecretHelper.base64Decode
 import io.airbyte.commons.random.randomAlphanumeric
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -70,18 +71,14 @@ class AuthKubernetesSecretInitializer(
     defaultValue: String,
   ): String {
     if (!providedValue.isNullOrBlank()) {
-      // if a value is provided directly, simply return it, regardless of what may be
-      // present in the secret.
       logger.info { "Using provided value for secret key $secretKey" }
       return providedValue
     } else {
       val secret = kubernetesClient.secrets().withName(secretName).get()
       if (secret != null && secretKey != null && secret.data.containsKey(secretKey)) {
-        // if a value is present in the secret, simply return it without overwriting it.
         logger.info { "Using existing value for secret key $secretKey" }
-        return secret.data[secretKey]!!
+        return base64Decode(secret.data[secretKey]!!)
       } else {
-        // if no value is provided or present in the secret, generate a new value and return it.
         logger.info { "Using generated/default value for secret key $secretKey" }
         return defaultValue
       }

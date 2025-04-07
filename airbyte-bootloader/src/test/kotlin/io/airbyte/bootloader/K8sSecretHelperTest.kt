@@ -4,7 +4,7 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.bootloader.K8sSecretHelper.toBase64
+import io.airbyte.bootloader.K8sSecretHelper.base64Encode
 import io.fabric8.kubernetes.api.model.Secret
 import io.fabric8.kubernetes.api.model.SecretBuilder
 import io.fabric8.kubernetes.client.KubernetesClient
@@ -45,7 +45,7 @@ class K8sSecretHelperTest {
     verify { creator.create() }
     resourceSlot.captured.asClue {
       it.data.size shouldBe 1
-      it.data["key1"] shouldBe "value1".toBase64()
+      it.data["key1"] shouldBe base64Encode("value1")
     }
   }
 
@@ -89,8 +89,8 @@ class K8sSecretHelperTest {
     resourceSlot.captured.asClue {
       it.data.size shouldBe 3
       it.data["key1"] shouldBe "unchangedValue"
-      it.data["key2"] shouldBe "updatedValue".toBase64()
-      it.data["key3"] shouldBe "newValue".toBase64()
+      it.data["key2"] shouldBe base64Encode("updatedValue")
+      it.data["key3"] shouldBe base64Encode("newValue")
     }
   }
 }

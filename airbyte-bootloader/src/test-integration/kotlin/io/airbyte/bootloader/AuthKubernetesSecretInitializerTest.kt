@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.bootloader.K8sSecretHelper.base64Encode
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.env.Environment
@@ -116,8 +117,8 @@ class AuthKubernetesSecretInitializerTest {
       mockk {
         every { data } returns
           mapOf(
-            CLIENT_ID_KEY to preExistingClientId,
-            CLIENT_SECRET_KEY to preExistingClientSecret,
+            CLIENT_ID_KEY to base64Encode(preExistingClientId),
+            CLIENT_SECRET_KEY to base64Encode(preExistingClientSecret),
           )
       }
 
