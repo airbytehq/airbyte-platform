@@ -11,7 +11,6 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseWorkloadQueueTableProducer
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -22,7 +21,6 @@ import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.featureFlagClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
@@ -759,51 +757,11 @@ class WorkloadHandlerImplTest {
 
   @ParameterizedTest
   @MethodSource("pendingWorkloadMatrix")
-  fun `poll workloads returns pending workloads`(
-    group: String,
-    priority: Int,
-    domainWorkloads: List<Workload>,
-  ) {
-    every { workloadRepository.getPendingWorkloads(group, priority, 10) }.returns(domainWorkloads)
-    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
-    val expected = domainWorkloads.map { it.toApi() }
-
-    assertEquals(expected, result)
-  }
-
-  @ParameterizedTest
-  @MethodSource("countPendingWorkloadMatrix")
-  fun `count workload queue depth returns count of pending workloads`(
-    group: String,
-    priority: Int,
-    count: Long,
-  ) {
-    every { workloadRepository.countPendingWorkloads(group, priority) }.returns(count)
-    val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
-
-    assertEquals(count, result)
-  }
-
-  @ParameterizedTest
-  @MethodSource("workloadStatsMatrix")
-  fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority)`(
-    stats: List<WorkloadQueueStats>,
-  ) {
-    every { workloadRepository.getPendingWorkloadQueueStats() }.returns(stats)
-    val result = workloadHandler.getWorkloadQueueStats()
-    val expected = stats.map { it.toApi() }
-
-    assertEquals(expected, result)
-  }
-
-  @ParameterizedTest
-  @MethodSource("pendingWorkloadMatrix")
   fun `poll workloads returns enqueued workloads (separate table enabled)`(
     group: String,
     priority: Int,
     domainWorkloads: List<Workload>,
   ) {
-    every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns true
     every { workloadQueueRepository.pollWorkloadQueue(group, priority, 10, any()) }.returns(domainWorkloads)
     val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
     val expected = domainWorkloads.map { it.toApi() }
@@ -818,7 +776,6 @@ class WorkloadHandlerImplTest {
     priority: Int,
     count: Long,
   ) {
-    every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns true
     every { workloadQueueRepository.countEnqueuedWorkloads(group, priority) }.returns(count)
     val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
 
@@ -830,7 +787,6 @@ class WorkloadHandlerImplTest {
   fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority) (separate table enabled)`(
     stats: List<WorkloadQueueStats>,
   ) {
-    every { featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, any()) } returns true
     every { workloadQueueRepository.getEnqueuedWorkloadStats() }.returns(stats)
     val result = workloadHandler.getWorkloadQueueStats()
     val expected = stats.map { it.toApi() }

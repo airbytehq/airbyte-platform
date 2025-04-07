@@ -200,8 +200,4 @@ object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-she
 
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
-object UseWorkloadQueueTableProducer : Temporary<Boolean>(key = "platform.use-workload-queue-table", default = true)
-
-object UseWorkloadQueueTableConsumer : Temporary<Boolean>(key = "platform.use-workload-queue-table-consumer", default = true)
-
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)

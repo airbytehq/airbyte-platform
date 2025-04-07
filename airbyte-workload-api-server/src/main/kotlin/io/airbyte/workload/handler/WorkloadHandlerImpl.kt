@@ -9,9 +9,7 @@ import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
-import io.airbyte.featureflag.Empty
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.UseWorkloadQueueTableProducer
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -320,16 +318,12 @@ class WorkloadHandlerImpl(
     quantity: Int,
   ): List<Workload> {
     val domainWorkloads =
-      if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
-        workloadQueueRepository.pollWorkloadQueue(
-          dataplaneGroup,
-          priority?.toInt(),
-          quantity,
-          redeliveryWindowSecs = workloadRedeliveryWindow.seconds.toInt(),
-        )
-      } else {
-        workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
-      }
+      workloadQueueRepository.pollWorkloadQueue(
+        dataplaneGroup,
+        priority?.toInt(),
+        quantity,
+        redeliveryWindowSecs = workloadRedeliveryWindow.seconds.toInt(),
+      )
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -337,20 +331,11 @@ class WorkloadHandlerImpl(
   override fun countWorkloadQueueDepth(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
-  ): Long =
-    if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
-      workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
-    } else {
-      workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
-    }
+  ): Long = workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
     val domainStats =
-      if (featureFlagClient.boolVariation(UseWorkloadQueueTableProducer, Empty)) {
-        workloadQueueRepository.getEnqueuedWorkloadStats()
-      } else {
-        workloadRepository.getPendingWorkloadQueueStats()
-      }
+      workloadQueueRepository.getEnqueuedWorkloadStats()
 
     return domainStats.map { it.toApi() }
   }

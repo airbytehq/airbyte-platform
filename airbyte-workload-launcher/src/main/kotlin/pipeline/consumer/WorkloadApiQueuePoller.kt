@@ -5,8 +5,6 @@
 package io.airbyte.workload.launcher.pipeline.consumer
 
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PlaneName
-import io.airbyte.featureflag.UseWorkloadQueueTableConsumer
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -67,7 +65,7 @@ class WorkloadApiQueuePoller(
     suspended = false
   }
 
-  fun isSuspended(): Boolean = !featureFlagClient.boolVariation(UseWorkloadQueueTableConsumer, PlaneName(dataplaneName)) || suspended
+  fun isSuspended(): Boolean = suspended
 
   private fun buildInputFlux(): Flux<LauncherInput> {
     val interval = Flux.interval(Duration.ofSeconds(pollIntervalSeconds))

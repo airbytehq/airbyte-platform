@@ -5,7 +5,6 @@
 package io.airbyte.workload.repository
 
 import io.airbyte.workload.repository.domain.Workload
-import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
 import io.micronaut.data.annotation.Expandable
@@ -126,39 +125,4 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     status: WorkloadStatus,
     deadline: OffsetDateTime,
   )
-
-  @Query(
-    """
-    SELECT * FROM workload WHERE status = 'pending'
-        AND (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
-        AND (:priority IS NULL OR priority = :priority)
-        ORDER BY created_at
-        LIMIT :quantity
-    """,
-  )
-  fun getPendingWorkloads(
-    dataplaneGroup: String?,
-    priority: Int?,
-    quantity: Int,
-  ): List<Workload>
-
-  @Query(
-    """
-    SELECT count(*) FROM workload WHERE status = 'pending'
-        AND (:dataplaneGroup IS NULL OR dataplane_group = :dataplaneGroup)
-        AND (:priority IS NULL OR priority = :priority)
-    """,
-  )
-  fun countPendingWorkloads(
-    dataplaneGroup: String?,
-    priority: Int?,
-  ): Long
-
-  @Query(
-    """
-    SELECT count(*) as enqueued_count, dataplane_group, priority  FROM workload WHERE status = 'pending'
-        GROUP BY dataplane_group, priority
-    """,
-  )
-  fun getPendingWorkloadQueueStats(): List<WorkloadQueueStats>
 }
