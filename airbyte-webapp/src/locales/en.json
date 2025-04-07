@@ -747,6 +747,7 @@
   "connections.graph.runningSyncsCount": "{count, plural, one {# running sync} other {# running syncs}}",
   "connections.graph.noSyncs": "No syncs",
   "connections.mappings.title": "Mappings",
+  "connections.mappings.docsLink": "View docs",
   "connections.mappings.mappingType": "Mapping type",
   "connections.mappings.emptyState": "No mappings yet",
   "connections.mappings.selectStream": "Select a stream to apply mappings",
