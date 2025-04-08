@@ -159,7 +159,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       realm = (String) jwtAttributes.get(JwtTokenParser.JWT_SSO_REALM);
       log.debug("Extracted realm {}", realm);
     } catch (final Exception e) {
-      log.error("Failed to parse realm from JWT token: {}", token, e);
+      log.debug("Failed to parse realm from JWT token: {}", token, e);
       return Mono.just(false);
     }
 
