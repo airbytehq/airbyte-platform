@@ -4,7 +4,7 @@ APP_VERSION ?= $(VERSION)
 
 .PHONY: gen.config
 gen.config:
-	gen-config-templates --config config.yaml --out-dir ./templates/config --chart-name airbyte-data-plane --base-secret-path secretName
+	via helm gen-config-templates --config config.yaml --out-dir ./templates/config --chart-name airbyte-data-plane --base-secret-path secretName
 
 .PHONY: helm.publish
 helm.publish:
