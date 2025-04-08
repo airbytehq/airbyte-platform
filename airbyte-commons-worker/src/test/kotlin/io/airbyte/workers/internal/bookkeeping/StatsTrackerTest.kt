@@ -9,6 +9,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageFileReference
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamState
@@ -74,6 +75,37 @@ class StatsTrackerTest {
       perStreamStateMessageWithoutStats.getStateHashCode(hashFunction),
       perStreamStateMessageWithStats.getStateHashCode(hashFunction),
     )
+  }
+
+  @Test
+  internal fun `test file reference transfer stats`() {
+    val streamStatsTracker =
+      StreamStatsTracker(
+        mockk(),
+        mockk(),
+        true,
+      )
+
+    val name = "name"
+    val namespace = "namespace"
+    val fileReferenceSize = 12L
+    val oldFileSize = 11L
+    val record =
+      AirbyteRecordMessage()
+        .withStream(name)
+        .withNamespace(namespace)
+        .withData(Jsons.jsonNode(mapOf("id" to 1)))
+        .withFileReference(
+          AirbyteRecordMessageFileReference()
+            .withFileSizeBytes(fileReferenceSize),
+        )
+        // This is the old file transfer format, making sure prioritize the new format.
+        // This should be deleted when we get rid of the old format
+        .withAdditionalProperty("file", FileTransferInformations("", "", "", "", oldFileSize))
+
+    streamStatsTracker.trackRecord(record)
+
+    assertEquals(fileReferenceSize, streamStatsTracker.streamStats.emittedBytesCount.get())
   }
 
   @Test

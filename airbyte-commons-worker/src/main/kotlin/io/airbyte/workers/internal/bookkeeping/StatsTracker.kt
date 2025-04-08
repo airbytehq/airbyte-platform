@@ -133,16 +133,12 @@ class StreamStatsTracker(
    * avoid having to traverse the map to get the global count.
    */
   fun trackRecord(recordMessage: AirbyteRecordMessage) {
-    // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
     val estimatedBytesSize: Long =
       if (!useFileTransfer) {
-        Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+        getRecordSize(recordMessage)
       } else {
-        recordMessage.additionalProperties["file"]?.let {
-          logger.info { "Received a file transfer record: $it" }
-          val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
-          fileTransferInformations.bytes
-        } ?: Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+        // Note: to get file and metadata size, use plus instead of elvis
+        getFileRecordSize(recordMessage) ?: getRecordSize(recordMessage)
       }
 
     // Update the current emitted stats
@@ -163,6 +159,20 @@ class StreamStatsTracker(
       emittedBytesCount.addAndGet(estimatedBytesSize)
     }
   }
+
+  private fun getFileRecordSize(recordMessage: AirbyteRecordMessage): Long? =
+    if (recordMessage.fileReference != null) {
+      recordMessage.fileReference.fileSizeBytes
+    } else {
+      // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
+      recordMessage.additionalProperties["file"]?.let {
+        logger.info { "Received a file transfer record: $it" }
+        val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
+        fileTransferInformations.bytes
+      }
+    }
+
+  private fun getRecordSize(recordMessage: AirbyteRecordMessage): Long = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
 
   /**
    * Bookkeeping for when a state is read from the source.
