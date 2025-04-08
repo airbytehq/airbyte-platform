@@ -118,16 +118,16 @@ Renders the workloadLauncher.dataPlane.clientId environment variable
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.dataPlane.secretName value
+Renders the workloadLauncher.dataPlane.clientIdSecretName value
 */}}
-{{- define "airbyte.workloadLauncher.dataPlane.secretName" }}
-    {{- .Values.workloadLauncher.dataPlane.secretName }}
+{{- define "airbyte.workloadLauncher.dataPlane.clientIdSecretName" }}
+    {{- .Values.workloadLauncher.dataPlane.clientIdSecretName | default .Values.global.auth.secretName }}
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.dataPlane.secretName environment variable
+Renders the workloadLauncher.dataPlane.clientIdSecretName environment variable
 */}}
-{{- define "airbyte.workloadLauncher.dataPlane.secretName.env" }}
+{{- define "airbyte.workloadLauncher.dataPlane.clientIdSecretName.env" }}
 - name: DATAPLANE_CLIENT_ID_SECRET_NAME
   valueFrom:
     configMapKeyRef:
@@ -143,7 +143,7 @@ Renders the workloadLauncher.dataPlane.clientIdSecretKey environment variable
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: {{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" . }}
+      key: {{ include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" . }}
 {{- end }}
 
 {{/*
@@ -172,16 +172,16 @@ Renders the workloadLauncher.dataPlane.clientSecret environment variable
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.dataPlane.secretName value
+Renders the workloadLauncher.dataPlane.clientSecretSecretName value
 */}}
-{{- define "airbyte.workloadLauncher.dataPlane.secretName" }}
-    {{- .Values.workloadLauncher.dataPlane.secretName }}
+{{- define "airbyte.workloadLauncher.dataPlane.clientSecretSecretName" }}
+    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretName | default .Values.global.auth.secretName }}
 {{- end }}
 
 {{/*
-Renders the workloadLauncher.dataPlane.secretName environment variable
+Renders the workloadLauncher.dataPlane.clientSecretSecretName environment variable
 */}}
-{{- define "airbyte.workloadLauncher.dataPlane.secretName.env" }}
+{{- define "airbyte.workloadLauncher.dataPlane.clientSecretSecretName.env" }}
 - name: DATAPLANE_CLIENT_SECRET_SECRET_NAME
   valueFrom:
     configMapKeyRef:
@@ -197,7 +197,7 @@ Renders the workloadLauncher.dataPlane.clientSecretSecretKey environment variabl
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: {{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" . }}
+      key: {{ include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" . }}
 {{- end }}
 
 {{/*
@@ -205,10 +205,10 @@ Renders the set of all workloadLauncher.dataPlane environment variables
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.envs" }}
 {{- include "airbyte.workloadLauncher.dataPlane.clientId.env" . }}
-{{- include "airbyte.workloadLauncher.dataPlane.secretName.env" . }}
+{{- include "airbyte.workloadLauncher.dataPlane.clientIdSecretName.env" . }}
 {{- include "airbyte.workloadLauncher.dataPlane.clientIdSecretKey.env" . }}
 {{- include "airbyte.workloadLauncher.dataPlane.clientSecret.env" . }}
-{{- include "airbyte.workloadLauncher.dataPlane.secretName.env" . }}
+{{- include "airbyte.workloadLauncher.dataPlane.clientSecretSecretName.env" . }}
 {{- include "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey.env" . }}
 {{- end }}
 
@@ -216,8 +216,8 @@ Renders the set of all workloadLauncher.dataPlane environment variables
 Renders the set of all workloadLauncher.dataPlane config map variables
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.configVars" }}
-DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.secretName" . | quote }}
-DATAPLANE_CLIENT_SECRET_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.secretName" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretName" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_NAME: {{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretName" . | quote }}
 {{- end }}
 
 {{/*

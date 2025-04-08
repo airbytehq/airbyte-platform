@@ -915,7 +915,7 @@ storage:
       sensitive: true
 
     - env: AWS_SECRET_ACCESS_KEY
-      key: s3.secretAccesskey
+      key: s3.secretAccessKey
       discriminatorOpts:
         - s3
       sensitive: true
@@ -1279,11 +1279,12 @@ workloadLauncher.dataPlane:
       sensitive: true
 
     - env: DATAPLANE_CLIENT_ID_SECRET_NAME
-      key: secretName
+      key: clientIdSecretName
+      defaultValueExp: .Values.global.auth.secretName
 
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: clientIdSecretKey
-      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientIdSecretKey" . }}'
+      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" . }}'
       defaultValue: DATAPLANE_CLIENT_ID
 
     - env: DATAPLANE_CLIENT_SECRET
@@ -1291,11 +1292,12 @@ workloadLauncher.dataPlane:
       sensitive: true
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
-      key: secretName
+      key: clientSecretSecretName
+      defaultValueExp: .Values.global.auth.secretName
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: clientSecretSecretKey
-      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientSecretSecretKey" . }}'
+      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" . }}'
       defaulValue: DATAPLANE_CLIENT_SECRET
 
 workloadLauncher.images:
