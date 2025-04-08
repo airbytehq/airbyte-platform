@@ -14,7 +14,7 @@ EOF
 
 # Set up python
 USER airbyte:airbyte
-ENV PYTHON_VERSION=3.10.15
+ENV PYTHON_VERSION=3.10.17
 ENV PYENV_ROOT=/home/airbyte/.pyenv
 ENV PATH=${PYENV_ROOT}/shims:${PYENV_ROOT}/bin:$PATH
 
