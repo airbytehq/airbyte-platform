@@ -310,12 +310,13 @@ class ReplicationWorkerHelperK(
 
   private fun updateRecordsCount() {
     recordsRead++
+    totalRecordsRead += recordsRead
+
     if (recordsRead == 5000L) {
       logger.info {
         val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-        "Records read: $recordsRead ($bytes)"
+        "Records read: $totalRecordsRead ($bytes)"
       }
-      totalRecordsRead += recordsRead
       recordsRead = 0
     }
   }
