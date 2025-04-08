@@ -67,10 +67,14 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     [workspace.workspaceId, workspace.customerId]
   );
   useAnalyticsRegisterValues(analyticsContext);
-  useAnalyticsIdentifyUser(workspace.workspaceId, {
-    protocol: window.location.protocol,
-    isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
-  });
+  const userTraits = useMemo(
+    () => ({
+      protocol: window.location.protocol,
+      isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
+    }),
+    []
+  );
+  useAnalyticsIdentifyUser(workspace.workspaceId, userTraits);
 };
 
 const MainViewRoutes: React.FC = () => {
