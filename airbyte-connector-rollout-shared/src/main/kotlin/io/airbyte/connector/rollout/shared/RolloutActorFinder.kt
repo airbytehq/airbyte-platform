@@ -219,16 +219,12 @@ class RolloutActorFinder(
 
       logger.info { "fetchAndProcessJobsForScopes fetching $offset - ${offset + JOB_FETCH_LIMIT}" }
       val jobs =
-        jobService.listJobsForScopes(
+        jobService.findLatestJobPerScope(
           configTypes = configTypes,
-          scope = scopes,
+          scopes = scopes,
           limit = JOB_FETCH_LIMIT,
           offset = offset,
-          statuses = listOf(),
           createdAtStart = createdAt ?: OffsetDateTime.now().minusDays(1),
-          createdAtEnd = null,
-          updatedAtStart = null,
-          updatedAtEnd = null,
         )
 
       if (jobs.isEmpty()) break
