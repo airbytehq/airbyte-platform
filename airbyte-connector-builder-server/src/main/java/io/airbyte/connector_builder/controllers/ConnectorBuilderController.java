@@ -29,6 +29,7 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.http.server.cors.CrossOrigin;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
@@ -133,6 +134,7 @@ public class ConnectorBuilderController implements V1Api {
         consumes = MediaType.APPLICATION_JSON,
         produces = MediaType.APPLICATION_JSON)
   @Secured(SecurityRule.IS_ANONYMOUS)
+  @CrossOrigin("*")
   @ExecuteOn(TaskExecutors.IO)
   public Map<String, Object> assistV1Warm(@Body final Map<String, Object> requestBody) {
     return assistProxyHandler.process(requestBody, false);
