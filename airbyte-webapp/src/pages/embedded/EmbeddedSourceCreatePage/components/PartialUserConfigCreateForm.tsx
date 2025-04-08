@@ -16,6 +16,7 @@ export const MaskCreateForm: React.FC = () => {
   const { mutate: createPartialUserConfig } = useCreatePartialUserConfig();
   const configTemplate = useGetConfigTemplate(selectedTemplateId ?? "");
   const maskDefinitionSpecification: SourceDefinitionSpecificationDraft = {
+    // @ts-expect-error todo: fix this type https://github.com/airbytehq/airbyte-internal-issues/issues/12333s
     connectionSpecification: configTemplate.configTemplateSpec.connectionSpecification,
   };
 

@@ -12,7 +12,7 @@ export interface ApiCallOptions {
 
 export interface RequestOptions<DataType = unknown> {
   url: string;
-  method: "get" | "post" | "put" | "delete" | "patch";
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   params?: Record<string, string | number | boolean | string[]>;
   data?: DataType;
   headers?: HeadersInit;

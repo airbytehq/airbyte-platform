@@ -15,8 +15,13 @@ interface FieldRowProps {
   transform: FieldTransform | StreamAttributeTransform;
 }
 
-const formatFieldType = (type: string | string[] | undefined) => {
-  return Array.isArray(type) ? type.join(", ") : type;
+const formatFieldType = (type: unknown): string | undefined => {
+  if (typeof type === "string" && !Array.isArray(type)) {
+    return type;
+  } else if (Array.isArray(type)) {
+    return type.join(", ");
+  }
+  return undefined;
 };
 
 const formatFieldName = (fieldName: FieldName | undefined): string => {

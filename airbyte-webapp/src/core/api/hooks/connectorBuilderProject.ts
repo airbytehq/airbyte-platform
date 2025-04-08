@@ -615,6 +615,7 @@ export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequest
   const requestOptions = useRequestOptions();
 
   return useQuery<DeclarativeManifestBaseImageRead>(
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
     () => getDeclarativeManifestBaseImage(params, requestOptions)
   );

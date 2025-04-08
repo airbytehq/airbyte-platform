@@ -676,6 +676,7 @@ function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedMa
   }
   resolvedManifest.streams.forEach((resolvedStream, i) => {
     const streamName = streamNameOrDefault(resolvedStream.name, i);
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     if (persistedManifest.metadata?.testedStreams?.[streamName]) {
       return;
     }

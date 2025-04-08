@@ -354,7 +354,8 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn | Crea
     <BuilderField
       preview={(fieldValue) => {
         const mostRecentRecordValues = data?.slices?.at(0)?.pages.at(0)?.records.at(0);
-        const cursorValue = mostRecentRecordValues?.[fieldValue];
+        const rawCursorValue = mostRecentRecordValues?.[fieldValue];
+        const cursorValue = typeof rawCursorValue === "string" ? rawCursorValue : null;
         return cursorValue != null ? (
           <FormattedMessage id="connectorBuilder.incremental.cursorValuePreview" values={{ cursorValue }} />
         ) : undefined;
@@ -379,10 +380,11 @@ const CursorDatetimeFormatField = ({
   const {
     streamRead: { data },
   } = useConnectorBuilderTestRead();
-  const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
+  const rawDetectedFormat = data?.inferred_datetime_formats?.[cursorField];
+  const detectedFormat = typeof rawDetectedFormat === "string" ? rawDetectedFormat : null;
   return (
     <>
-      {!cursorDatetimeFormats?.includes(detectedFormat) && cursorField && detectedFormat && (
+      {detectedFormat && !cursorDatetimeFormats?.includes(detectedFormat) && cursorField && (
         <Message
           type="info"
           text={

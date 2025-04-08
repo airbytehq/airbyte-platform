@@ -22,8 +22,13 @@ const NAME_GROUP_ID = "__name_group";
 export const DEFAULT_GROUP_ID = "default";
 export const ADVANCED_GROUP_ID = "advanced";
 
+interface ConnectorFormValuesWithAnyConfiguration extends ConnectorFormValues {
+  // using unknown is incompatible with react-hook-form
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  connectionConfiguration: Record<string, any>;
+}
 export interface BuildFormHook {
-  initialValues: ConnectorFormValues;
+  initialValues: ConnectorFormValuesWithAnyConfiguration;
   formFields: FormBlock[];
   validationSchema: AnySchema;
   groups: GroupDetails[];

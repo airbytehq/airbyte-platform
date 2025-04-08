@@ -12,6 +12,8 @@ import {
   NonBreakingChangesPreference,
   SchemaChangeBackfillPreference,
   Tag,
+  AirbyteStreamAndConfiguration,
+  AirbyteStream,
 } from "core/api/types/AirbyteClient";
 import { ConnectionFormMode, ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 
@@ -22,6 +24,17 @@ import {
   SOURCE_SPECIFIC_FREQUENCY_DEFAULT,
 } from "./ScheduleFormField/useBasicFrequencyDropdownData";
 import { updateStreamSyncMode } from "../SyncCatalogTable/utils";
+
+type AirbyteCatalogWithAnySchema = Omit<AirbyteCatalog, "streams"> & {
+  streams: Array<
+    Omit<AirbyteStreamAndConfiguration, "stream"> & {
+      stream?: Omit<AirbyteStream, "jsonSchema"> & {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        jsonSchema?: Record<string, any>;
+      };
+    }
+  >;
+};
 
 /**
  * react-hook-form form values type for the connection form
@@ -35,7 +48,7 @@ export interface FormConnectionFormValues {
   prefix: string;
   nonBreakingChangesPreference?: NonBreakingChangesPreference;
   geography?: string;
-  syncCatalog: AirbyteCatalog;
+  syncCatalog: AirbyteCatalogWithAnySchema;
   notifySchemaChanges?: boolean;
   backfillPreference?: SchemaChangeBackfillPreference;
   tags?: Tag[];

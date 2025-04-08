@@ -18,7 +18,7 @@ export interface SourceFormValues {
   name: string;
   serviceType: string;
   sourceDefinitionId?: string;
-  connectionConfiguration?: ConnectionConfiguration;
+  connectionConfiguration: ConnectionConfiguration;
 }
 
 interface SourceFormProps {

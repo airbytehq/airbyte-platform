@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@8.6.12",
   "engines": {
-    "node": "20.11.0",
+    "node": "20.19.0",
     "pnpm": "8.6.12"
   },
   "scripts": {
@@ -211,7 +211,7 @@
     "mime-types": "^2.1.35",
     "node-fetch": "^2.6.9",
     "optionator": "^0.9.3",
-    "orval": "^6.19.1",
+    "orval": "7.7.0",
     "pg-promise": "^10.15.4",
     "prettier": "^3.0.3",
     "react-select-event": "^5.5.0",

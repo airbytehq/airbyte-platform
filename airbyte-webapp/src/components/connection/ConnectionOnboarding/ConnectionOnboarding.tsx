@@ -147,7 +147,6 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                 key={source?.sourceDefinitionId}
                 testId={`onboardingSource-${index}`}
                 connector={source}
-                connectorType="source"
                 to={createSourcePath(source?.sourceDefinitionId)}
                 tooltipText={tooltipText}
                 onMouseEnter={() => setHighlightedSource(index as HighlightIndex)}
@@ -204,7 +203,6 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
                 key={destination?.destinationDefinitionId}
                 testId={`onboardingDestination-${index}`}
                 connector={destination}
-                connectorType="destination"
                 to={`${createDestinationBasePath}/${destination.destinationDefinitionId}`}
                 tooltipText={tooltipText}
                 onMouseEnter={() => setHighlightedDestination(index as HighlightIndex)}

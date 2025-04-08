@@ -1,6 +1,6 @@
-import { useIntl } from "react-intl";
+import { PrimitiveType, useIntl } from "react-intl";
 
-type FormatMessageFn = ReturnType<typeof useIntl>["formatMessage"];
+export type FormatMessageParams = Record<string, PrimitiveType | ((node: React.ReactNode) => JSX.Element)> | undefined;
 
 /**
  * An error that can be thrown or extended to have an i18n message been rendered in the error view.
@@ -10,7 +10,7 @@ type FormatMessageFn = ReturnType<typeof useIntl>["formatMessage"];
 export class I18nError extends Error {
   constructor(
     public readonly i18nKey: string,
-    public readonly i18nParams?: Parameters<FormatMessageFn>[1]
+    public readonly i18nParams?: FormatMessageParams
   ) {
     super(i18nKey);
     this.name = "I18nError";

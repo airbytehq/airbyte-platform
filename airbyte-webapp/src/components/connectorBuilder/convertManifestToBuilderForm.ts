@@ -142,9 +142,11 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   } else {
     const firstStream = declarativeStreams[0];
     assertType<AsyncRetriever>(firstStream.retriever, "AsyncRetriever");
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     builderFormValues.global.urlBase = firstStream.retriever.creation_requester.url_base;
   }
 
+  // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
   const builderMetadata = resolvedManifest.metadata ? (resolvedManifest.metadata as BuilderMetadata) : undefined;
 
   const getStreamName = (stream: DeclarativeStream, index: number) => streamNameOrDefault(stream.name, index);
@@ -167,6 +169,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
         streamId,
         streamNameToIndex,
         serializedStreamToName,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         firstSimpleRetriever?.requester?.url_base,
         firstSimpleRetriever?.requester?.authenticator,
         builderMetadata,
@@ -193,6 +196,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
 
   builderFormValues.global.authenticator = firstSimpleRetriever
     ? convertOrDumpAsString(
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         firstSimpleRetriever.requester.authenticator,
         manifestAuthenticatorToBuilder,
         {
@@ -593,6 +597,7 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
     "query" in requester.request_body_json
   ) {
     try {
+      // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
       const formattedQuery = formatGraphqlQuery(requester.request_body_json.query);
       return {
         type: "graphql",
@@ -610,6 +615,7 @@ function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
     isObject(requester.request_body_json) &&
     Object.values(requester.request_body_json).every((value) => isString(value))
   ) {
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     return { type: "json_list", values: Object.entries(requester.request_body_json) };
   }
   return {
@@ -694,6 +700,7 @@ export function manifestRecordSelectorToBuilder(
   }
 
   if (
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     extractor.field_path.length === 0 &&
     !filter &&
     (!selector.schema_normalization || selector.schema_normalization === "None")
@@ -703,6 +710,7 @@ export function manifestRecordSelectorToBuilder(
 
   return {
     fieldPath: extractor.field_path as string[],
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     filterCondition: filter?.condition,
     normalizeToSchema: selector.schema_normalization === "Default",
   };
@@ -1453,7 +1461,9 @@ export function manifestAuthenticatorToBuilder(
       return {
         ...jwtAuth,
         secret_key: interpolateConfigKey(extractAndValidateAuthKey(["secret_key"], jwtAuth, spec)),
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         additional_jwt_headers: Object.entries(jwtAuth.additional_jwt_headers ?? {}),
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         additional_jwt_payload: Object.entries(jwtAuth.additional_jwt_payload ?? {}),
         jwt_headers: jwtHeaders,
         jwt_payload: jwtPayload,
@@ -1504,6 +1514,7 @@ export function manifestAuthenticatorToBuilder(
       } = {
         ...oauth,
         type: isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : OAUTH_AUTHENTICATOR,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         refresh_request_body: Object.entries(oauth.refresh_request_body ?? {}),
         grant_type: oauth.grant_type ?? "refresh_token",
         refresh_token_updater: undefined,
@@ -1869,6 +1880,7 @@ const extractAndValidateSpecKey = (
     throw new ManifestCompatibilityError(streamName, `${manifestPath} must point to a config field`);
   }
 
+  // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
   const specDefinition = specKey ? spec?.connection_specification?.properties?.[specKey] : undefined;
   if (!specDefinition) {
     throw new ManifestCompatibilityError(
@@ -1876,6 +1888,7 @@ const extractAndValidateSpecKey = (
       `${manifestPath} references spec key "${specKey}", which must appear in the spec`
     );
   }
+  // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
   if (lockedInput.required && !spec?.connection_specification?.required?.includes(specKey)) {
     throw new ManifestCompatibilityError(
       streamName,

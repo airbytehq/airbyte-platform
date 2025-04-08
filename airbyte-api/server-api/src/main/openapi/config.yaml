@@ -11000,6 +11000,7 @@ components:
         name:
           type: string
     SourceConfiguration:
+      type: object
       description: The values required to configure the source. The schema for this must match the schema return by source_definition_specifications/get for the source.
       example: { user: "charles" }
       x-sdk-component: true
@@ -11446,6 +11447,7 @@ components:
         destinationId:
           $ref: "#/components/schemas/DestinationId"
     DestinationConfiguration:
+      type: object
       description: The values required to configure the destination. The schema for this must match the schema return by destination_definition_specifications/get for the destinationDefinition.
       example: { user: "charles" }
       x-sdk-component: true

@@ -839,6 +839,7 @@ export function builderAuthenticatorToManifest(
       decoder: authenticator.decoder === "XML" ? { type: XmlDecoderType.XmlDecoder } : undefined,
     };
   }
+  // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
   return authenticator as HttpRequesterAuthenticator;
 }
 
@@ -1408,14 +1409,17 @@ export const addDeclarativeOAuthAuthenticatorToSpec = (
         extract_output: isRefreshTokenFlowEnabled
           ? [authenticator.declarative.access_token_key, "refresh_token"]
           : [authenticator.declarative.access_token_key],
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         state: authenticator.declarative.state ? JSON.parse(authenticator.declarative.state) : undefined,
 
         access_token_headers: authenticator.declarative.access_token_headers
-          ? Object.fromEntries(authenticator.declarative.access_token_headers)
+          ? // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
+            Object.fromEntries(authenticator.declarative.access_token_headers)
           : undefined,
 
         access_token_params: authenticator.declarative.access_token_params
-          ? Object.fromEntries(authenticator.declarative.access_token_params)
+          ? // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
+            Object.fromEntries(authenticator.declarative.access_token_params)
           : undefined,
       } as OAuthConfigSpecificationOauthConnectorInputSpecification,
       complete_oauth_output_specification: {
@@ -1475,6 +1479,7 @@ export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
   };
 
   return {
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     connection_specification: specSchema,
     type: "Spec",
   };
@@ -1535,6 +1540,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     streams: streamRefs,
     schemas: streamNameToSchema,
     spec,
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     metadata: builderFormValuesToMetadata(values),
     description: values.description,
   };

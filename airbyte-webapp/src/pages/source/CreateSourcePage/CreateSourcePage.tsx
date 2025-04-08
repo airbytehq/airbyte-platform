@@ -46,7 +46,7 @@ export const CreateSourcePage: React.FC = () => {
   const onSubmitSourceStep = async (values: {
     name: string;
     serviceType: string;
-    connectionConfiguration?: ConnectionConfiguration;
+    connectionConfiguration: ConnectionConfiguration;
   }) => {
     const connector = sourceDefinitions.find((item) => item.sourceDefinitionId === values.serviceType);
     if (!connector) {

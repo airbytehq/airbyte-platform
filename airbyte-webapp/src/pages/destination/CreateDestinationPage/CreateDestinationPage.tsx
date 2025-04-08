@@ -35,7 +35,7 @@ export const CreateDestinationPage: React.FC = () => {
   const onSubmitDestinationForm = async (values: {
     name: string;
     serviceType: string;
-    connectionConfiguration?: ConnectionConfiguration;
+    connectionConfiguration: ConnectionConfiguration;
   }) => {
     const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
     const result = await createDestination({

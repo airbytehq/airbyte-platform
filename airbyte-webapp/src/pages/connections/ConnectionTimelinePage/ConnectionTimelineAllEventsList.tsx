@@ -1,6 +1,7 @@
 import { HTMLAttributes, Ref, forwardRef, useContext, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
+import { z } from "zod";
 
 import { LoadingPage } from "components";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -18,6 +19,17 @@ import styles from "./ConnectionTimelineAllEventsList.module.scss";
 import { ConnectionTimelineRunningEvent, EventTypeToSchema, eventTypeToSchemaMap } from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
 
+const onlyResourceRequirements = z
+  .object({
+    patches: z
+      .object({
+        resourceRequirements: z.unknown().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineRunningEvent) => {
   /**
    * known cases for excluding timeline events that we should not trigger error reporting for:
@@ -30,7 +42,7 @@ export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineR
   };
 
   const hasOnlyResourceRequirementPatches = (summary: ConnectionEventSummary): boolean =>
-    summary?.patches && Object.keys(summary?.patches).length === 1 && summary.patches.resourceRequirements;
+    onlyResourceRequirements.safeParse(summary).success;
 
   const eventType = event.eventType as string; // eventType can be out of sync with the eventTypeToSchemaMap
 

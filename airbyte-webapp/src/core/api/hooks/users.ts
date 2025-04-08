@@ -1,7 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import get from "lodash/get";
-import set from "lodash/set";
-import { useCallback } from "react";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { AuthGetAccessToken } from "core/services/auth";
@@ -91,69 +88,5 @@ export const useUpdateUser = () => {
         queryClient.setQueryData(userKeys.detail(user.userId), user);
       },
     }
-  );
-};
-
-// https://stackoverflow.com/questions/71096136/how-to-implement-a-gettypebypath-type-in-typescript
-type Idx<T, K extends string | undefined> = K extends keyof T ? T[K] : never;
-export type DeepIndex<T, K extends string | undefined> = T extends object
-  ? K extends `${infer F}.${infer R}`
-    ? DeepIndex<Idx<T, F>, R>
-    : Idx<T, K>
-  : never;
-
-// patches over DeepIndex needing a string path but lodash's get doesn't
-type OptionallyDeepIndex<T, K extends string | undefined> = K extends ""
-  ? T
-  : K extends undefined
-  ? T
-  : DeepIndex<T, K>;
-
-// any aspect of the metadata object, including itself, can be undefined
-type WithUndefined<T> = T extends never ? never : T | undefined;
-
-export interface UserMetadata {}
-
-export const useUserMetadata = <
-  T extends string | undefined,
-  MetadataType = WithUndefined<OptionallyDeepIndex<UserMetadata, T>>,
->(
-  userId: string,
-  path?: T
-): [MetadataType, (nextValue: MetadataType) => void] => {
-  const user = useGetUser(userId);
-  const setMetaData = useSetUserMetadata(userId);
-
-  const setter = useCallback(
-    (nextValue: MetadataType) => {
-      // @ts-expect-error TS doesn't like the fake currying here
-      setMetaData(path, nextValue);
-    },
-    [path, setMetaData]
-  );
-
-  return [path ? get(user.metadata, path) : user.metadata, setter];
-};
-
-export const useSetUserMetadata = <T extends string | undefined>(userId: string) => {
-  const { refetch: getUser } = useGetUserAsync(userId);
-  const { mutateAsync: updateUser } = useUpdateUser();
-  const { getAccessToken } = useRequestOptions();
-
-  return useCallback(
-    async (path: T, value: DeepIndex<UserMetadata, T>) => {
-      const { data: user } = await getUser();
-      if (user) {
-        const metadata = path ? set(structuredClone(user.metadata ?? {}), path, value) : value;
-        await updateUser({
-          userUpdate: {
-            userId,
-            metadata,
-          },
-          getAccessToken,
-        });
-      }
-    },
-    [getAccessToken, getUser, updateUser, userId]
   );
 };

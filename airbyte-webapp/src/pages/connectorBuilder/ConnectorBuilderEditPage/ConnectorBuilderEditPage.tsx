@@ -74,6 +74,7 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     defaultValues: defaultValues.current,
     mode: "onChange",
     resolver: yupResolver<AnyObjectSchema>(builderStateValidationSchema),
