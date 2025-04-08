@@ -10,12 +10,9 @@ import io.airbyte.api.model.generated.ConfigTemplateListItem
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
-import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.security.annotation.Secured
@@ -23,12 +20,8 @@ import io.micronaut.security.rules.SecurityRule
 
 @Controller("/api/v1/config_templates")
 open class ConfigTemplateController(
-  private val currentUserService: CurrentUserService,
   private val configTemplateService: ConfigTemplateService,
-  private val trackingHelper: TrackingHelper,
 ) : ConfigTemplateApi {
-  private val logger = KotlinLogging.logger {}
-
   @Post("/get")
   @Secured(SecurityRule.IS_AUTHENTICATED)
   override fun getConfigTemplate(configTemplateRequestBody: ConfigTemplateRequestBody): ConfigTemplateRead =

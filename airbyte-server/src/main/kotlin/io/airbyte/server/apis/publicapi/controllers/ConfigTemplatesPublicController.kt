@@ -4,25 +4,26 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicConfigTemplatesApi
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateRequestBody
-import io.airbyte.publicApi.server.generated.models.ConfigTemplateList
+import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateResponse
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateListItem
+import io.airbyte.publicApi.server.generated.models.ConfigTemplateListResponse
+import io.airbyte.publicApi.server.generated.models.ConfigTemplateRead
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateRequestBody
+import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
-import io.airbyte.server.apis.publicapi.constants.APPLICATIONS_PATH
-import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpAttributes
@@ -48,61 +49,58 @@ open class ConfigTemplatesPublicController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): Response =
     wrap {
-      logger.info { "Creating config template from wrap" }
-      val userId: UUID = currentUserService.currentUser.userId
-      val organizationId = configTemplateCreateRequestBody.organizationId
+      createConfigTemplate(configTemplateCreateRequestBody).ok()
+    }
 
-      logger.info { "UserId: $userId" }
-      logger.info {
-        "Creating config template with organizationId: $organizationId and actorDefinitionId: ${configTemplateCreateRequestBody.actorDefinitionId}"
-      }
+  @VisibleForTesting
+  fun createConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): ConfigTemplateCreateResponse {
+    val userId: UUID = currentUserService.currentUser.userId
+    val organizationId = configTemplateCreateRequestBody.organizationId
 
-      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
 
-      licenseEntitlementChecker.ensureEntitled(
-        organizationId,
-        Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
+    val configTemplate =
+      configTemplateService.createTemplate(
+        OrganizationId(configTemplateCreateRequestBody.organizationId),
+        ActorDefinitionId(configTemplateCreateRequestBody.actorDefinitionId),
+        configTemplateCreateRequestBody.partialDefaultConfig,
+        configTemplateCreateRequestBody.partialUserConfigSpec,
       )
 
-      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
-      val configTemplate =
-        configTemplateService.createTemplate(
-          OrganizationId(configTemplateCreateRequestBody.organizationId),
-          ActorDefinitionId(configTemplateCreateRequestBody.actorDefinitionId),
-          configTemplateCreateRequestBody.partialDefaultConfig,
-          configTemplateCreateRequestBody.partialUserConfigSpec,
-        )
-
-      configTemplate.toPublicApiModel().ok()
-    }
+    return ConfigTemplateCreateResponse(id = configTemplate.configTemplate.id)
+  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetConfigTemplate(configTemplateId: UUID): Response =
     wrap {
-      configTemplateService.getConfigTemplate(configTemplateId).toPublicApiModel().ok()
+      getConfigTemplate(configTemplateId).ok()
     }
+
+  @VisibleForTesting
+  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateRead = configTemplateService.getConfigTemplate(configTemplateId).toApiModel()
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListConfigTemplate(organizationId: String): Response =
     wrap {
-      logger.info { "Listing config templates from wrap" }
-      val user: AuthenticatedUser = currentUserService.currentUser
-      // process and monitor the request
-      val configTemplates =
-        trackingHelper.callWithTracker(
-          {
-            configTemplateService
-              .listConfigTemplatesForOrganization(OrganizationId(UUID.fromString(organizationId)))
-              .map { it.toPublicApiModel() }
-          },
-          APPLICATIONS_PATH,
-          GET,
-          user.userId,
-        )
-      ConfigTemplateList(
-        configTemplates = configTemplates,
-      ).ok()
+      listConfigTemplate(organizationId).ok()
     }
+
+  @VisibleForTesting
+  fun listConfigTemplate(organizationId: String): ConfigTemplateListResponse {
+    val configTemplates =
+      configTemplateService
+        .listConfigTemplatesForOrganization(OrganizationId(UUID.fromString(organizationId)))
+        .map { it.toListItemApiModel() }
+    return ConfigTemplateListResponse(
+      data = configTemplates,
+    )
+  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicUpdateConfigTemplate(
@@ -110,27 +108,46 @@ open class ConfigTemplatesPublicController(
     configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,
   ): Response =
     wrap {
-      val userId: UUID = currentUserService.currentUser.userId
-      val organizationId = configTemplateUpdateRequestBody.organizationId
+      updateConfigTemplate(configTemplateId, configTemplateUpdateRequestBody).ok()
+    }
 
-      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
+  @VisibleForTesting
+  fun updateConfigTemplate(
+    configTemplateId: UUID,
+    configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,
+  ): ConfigTemplateUpdateResponse {
+    val userId: UUID = currentUserService.currentUser.userId
+    val organizationId = configTemplateUpdateRequestBody.organizationId
 
-      licenseEntitlementChecker.ensureEntitled(
-        organizationId,
-        Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
-      )
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
 
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+
+    val updated =
       configTemplateService
         .updateTemplate(
           configTemplateId = configTemplateId,
           organizationId = OrganizationId(organizationId),
           partialDefaultConfig = configTemplateUpdateRequestBody.partialDefaultConfig,
           userConfigSpec = configTemplateUpdateRequestBody.partialUserConfigSpec,
-        ).toPublicApiModel()
-        .ok()
-    }
+        )
 
-  private fun ConfigTemplateWithActorDetails.toPublicApiModel(): ConfigTemplateListItem =
+    return ConfigTemplateUpdateResponse(id = updated.configTemplate.id)
+  }
+
+  private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead =
+    ConfigTemplateRead(
+      id = this.configTemplate.id,
+      name = actorName,
+      icon = this.actorIcon,
+      sourceDefinitionId = this.configTemplate.actorDefinitionId,
+      configTemplateSpec = this.configTemplate.userConfigSpec,
+    )
+
+  private fun ConfigTemplateWithActorDetails.toListItemApiModel(): ConfigTemplateListItem =
     ConfigTemplateListItem(
       id = this.configTemplate.id,
       name = actorName,
@@ -139,7 +156,6 @@ open class ConfigTemplatesPublicController(
 
   // wrap controller endpoints in common functionality: segment tracking, error conversion, etc.
   private fun wrap(block: () -> Response): Response {
-    logger.info("wrapping request")
     val currentRequest = ServerRequestContext.currentRequest<Any>().get()
     val template = currentRequest.attributes.get(HttpAttributes.URI_TEMPLATE.toString(), String::class.java).orElse(currentRequest.path)
     val method = currentRequest.method.name

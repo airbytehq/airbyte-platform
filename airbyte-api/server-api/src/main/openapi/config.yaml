@@ -6311,7 +6311,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConfigTemplateList"
+                $ref: "#/components/schemas/ConfigTemplateListResponse"
           description: List all Applications a User has permission to view.
         "403":
           description: Not allowed
@@ -18551,6 +18551,15 @@ components:
         organizationId:
           type: string
           format: uuid
+    ConfigTemplateListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
     ConfigTemplateList:
       type: object
       required:
