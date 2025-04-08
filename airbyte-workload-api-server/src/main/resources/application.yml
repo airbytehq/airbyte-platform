@@ -40,8 +40,13 @@ micronaut:
     enabled: ${API_AUTHORIZATION_ENABLED:true}
     token:
       jwt:
+        enabled: ${API_AUTHORIZATION_ENABLED:true}
         bearer:
           secret: ${WORKLOAD_API_BEARER_TOKEN:}
+        signatures:
+          secret:
+            generator:
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
     oauth2:
       clients:
         keycloak:

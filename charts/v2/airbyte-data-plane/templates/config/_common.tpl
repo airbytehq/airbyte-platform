@@ -60,24 +60,6 @@ Renders the common.airbyteUrl environment variable
 {{- end }}
 
 {{/*
-Renders the api.authHeaderName value
-*/}}
-{{- define "airbyte-data-plane.common.api.authHeaderName" }}
-    {{- .Values.api.authHeaderName | default "X-Airbyte-Auth" }}
-{{- end }}
-
-{{/*
-Renders the common.api.authHeaderName environment variable
-*/}}
-{{- define "airbyte-data-plane.common.api.authHeaderName.env" }}
-- name: AIRBYTE_API_AUTH_HEADER_NAME
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: AIRBYTE_API_AUTH_HEADER_NAME
-{{- end }}
-
-{{/*
 Renders the api.authEnabled value
 */}}
 {{- define "airbyte-data-plane.common.api.authEnabled" }}
@@ -146,7 +128,6 @@ Renders the set of all common environment variables
 {{- include "airbyte-data-plane.common.edition.env" . }}
 {{- include "airbyte-data-plane.common.version.env" . }}
 {{- include "airbyte-data-plane.common.airbyteUrl.env" . }}
-{{- include "airbyte-data-plane.common.api.authHeaderName.env" . }}
 {{- include "airbyte-data-plane.common.api.authEnabled.env" . }}
 {{- include "airbyte-data-plane.common.api.internalHost.env" . }}
 {{- include "airbyte-data-plane.common.local.env" . }}
@@ -159,7 +140,6 @@ Renders the set of all common config map variables
 AIRBYTE_EDITION: {{ include "airbyte-data-plane.common.edition" . | quote }}
 AIRBYTE_VERSION: {{ include "airbyte-data-plane.common.version" . | quote }}
 AIRBYTE_URL: {{ include "airbyte-data-plane.common.airbyteUrl" . | quote }}
-AIRBYTE_API_AUTH_HEADER_NAME: {{ include "airbyte-data-plane.common.api.authHeaderName" . | quote }}
 API_AUTHORIZATION_ENABLED: {{ include "airbyte-data-plane.common.api.authEnabled" . | quote }}
 INTERNAL_API_HOST: {{ include "airbyte-data-plane.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte-data-plane.common.local" . | quote }}

@@ -273,7 +273,7 @@ JOB_ERROR_REPORTING_SENTRY_DSN: {{ include "airbyte-data-plane.jobs.errors.sentr
 Renders the jobs.kube.scheduling.check.nodeSelectors value
 */}}
 {{- define "airbyte-data-plane.jobs.scheduling.check.nodeSelectors" }}
-    {{- check.nodeSelectors | include "airbyte.flattenMap" }}
+    {{- .Values.check.nodeSelectors | include "airbyte-data-plane.flattenMap" }}
 {{- end }}
 
 {{/*
@@ -309,7 +309,7 @@ Renders the jobs.scheduling.check.runtimeClassName environment variable
 Renders the jobs.kube.scheduling.discover.nodeSelectors value
 */}}
 {{- define "airbyte-data-plane.jobs.scheduling.discover.nodeSelectors" }}
-    {{- discover.nodeSelectors | include "airbyte.flattenMap" }}
+    {{- .Values.discover.nodeSelectors | include "airbyte-data-plane.flattenMap" }}
 {{- end }}
 
 {{/*
@@ -345,7 +345,7 @@ Renders the jobs.scheduling.discover.runtimeClassName environment variable
 Renders the jobs.kube.scheduling.isolated.nodeSelectors value
 */}}
 {{- define "airbyte-data-plane.jobs.scheduling.isolated.nodeSelectors" }}
-    {{- isolated.nodeSelectors | include "airbyte.flattenMap" }}
+    {{- .Values.isolated.nodeSelectors | include "airbyte-data-plane.flattenMap" }}
 {{- end }}
 
 {{/*

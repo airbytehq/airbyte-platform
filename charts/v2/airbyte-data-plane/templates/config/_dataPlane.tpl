@@ -6,6 +6,17 @@
 */}}
 
 {{/*
+Renders the dataPlane secret name
+*/}}
+{{- define "airbyte-data-plane.dataPlane.secretName" }}
+{{- if .Values.dataPlane.secretName }}
+    {{- .Values.dataPlane.secretName }}
+{{- else }}
+    {{- .Values.secretName | default (printf "%s-airbyte-data-plane-secrets" .Release.Name) }}
+{{- end }}
+{{- end }}
+
+{{/*
 Renders the dataPlane.id value
 */}}
 {{- define "airbyte-data-plane.dataPlane.id" }}
@@ -42,39 +53,143 @@ Renders the dataPlane.controlPlaneAuthEndpoint environment variable
 {{- end }}
 
 {{/*
-Renders the dataPlane.serviceAccountEmail value
+Renders the dataPlane.controlPlaneTokenEndpoint value
 */}}
-{{- define "airbyte-data-plane.dataPlane.serviceAccountEmail" }}
-    {{- .Values.dataPlane.serviceAccountEmail }}
+{{- define "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint" }}
+    {{- (printf "%s/api/v1/dataplanes/token" (include "airbyte-data-plane.common.airbyteUrl" .)) }}
 {{- end }}
 
 {{/*
-Renders the dataPlane.serviceAccountEmail environment variable
+Renders the dataPlane.controlPlaneTokenEndpoint environment variable
 */}}
-{{- define "airbyte-data-plane.dataPlane.serviceAccountEmail.env" }}
-- name: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
+{{- define "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint.env" }}
+- name: CONTROL_PLANE_TOKEN_ENDPOINT
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
+      key: CONTROL_PLANE_TOKEN_ENDPOINT
 {{- end }}
 
 {{/*
-Renders the dataPlane.serviceAccountCredentialsPath value
+Renders the dataPlane.clientId value
 */}}
-{{- define "airbyte-data-plane.dataPlane.serviceAccountCredentialsPath" }}
-    {{- .Values.dataPlane.serviceAccountCredentialsPath | default "/secrets/dataplane-creds/sa.json" }}
+{{- define "airbyte-data-plane.dataPlane.clientId" }}
+    {{- .Values.dataPlane.clientId }}
 {{- end }}
 
 {{/*
-Renders the dataPlane.serviceAccountCredentialsPath environment variable
+Renders the dataPlane.clientId secret key
 */}}
-{{- define "airbyte-data-plane.dataPlane.serviceAccountCredentialsPath.env" }}
-- name: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
+{{- define "airbyte-data-plane.dataPlane.clientId.secretKey" }}
+	{{- .Values.dataPlane.clientIdSecretKey | default "DATAPLANE_CLIENT_ID" }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientId environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientId.env" }}
+- name: DATAPLANE_CLIENT_ID
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte-data-plane.dataPlane.secretName" . }}
+      key: {{ include "airbyte-data-plane.dataPlane.clientId.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientIdSecretName value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientIdSecretName" }}
+    {{- .Values.dataPlane.clientIdSecretName }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientIdSecretName environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientIdSecretName.env" }}
+- name: DATAPLANE_CLIENT_ID_SECRET_NAME
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
+      key: DATAPLANE_CLIENT_ID_SECRET_NAME
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientIdSecretKey value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientIdSecretKey" }}
+    {{- .Values.dataPlane.clientIdSecretKey | default "DATAPLANE_CLIENT_ID" }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientIdSecretKey environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientIdSecretKey.env" }}
+- name: DATAPLANE_CLIENT_ID_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: DATAPLANE_CLIENT_ID_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecret value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecret" }}
+    {{- .Values.dataPlane.clientSecret }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecret secret key
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecret.secretKey" }}
+	{{- .Values.dataPlane.clientSecretSecretKey | default "DATAPLANE_CLIENT_SECRET" }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecret environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecret.env" }}
+- name: DATAPLANE_CLIENT_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte-data-plane.dataPlane.secretName" . }}
+      key: {{ include "airbyte-data-plane.dataPlane.clientSecret.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecretSecretName value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecretSecretName" }}
+    {{- .Values.dataPlane.clientSecretSecretName }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecretSecretName environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecretSecretName.env" }}
+- name: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecretSecretKey value
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecretSecretKey" }}
+    {{- .Values.dataPlane.clientSecretSecretKey }}
+{{- end }}
+
+{{/*
+Renders the dataPlane.clientSecretSecretKey environment variable
+*/}}
+{{- define "airbyte-data-plane.dataPlane.clientSecretSecretKey.env" }}
+- name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-data-plane-env
+      key: DATAPLANE_CLIENT_SECRET_SECRET_KEY
 {{- end }}
 
 {{/*
@@ -83,8 +198,13 @@ Renders the set of all dataPlane environment variables
 {{- define "airbyte-data-plane.dataPlane.envs" }}
 {{- include "airbyte-data-plane.dataPlane.id.env" . }}
 {{- include "airbyte-data-plane.dataPlane.controlPlaneAuthEndpoint.env" . }}
-{{- include "airbyte-data-plane.dataPlane.serviceAccountEmail.env" . }}
-{{- include "airbyte-data-plane.dataPlane.serviceAccountCredentialsPath.env" . }}
+{{- include "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientId.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientIdSecretName.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientIdSecretKey.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientSecret.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientSecretSecretName.env" . }}
+{{- include "airbyte-data-plane.dataPlane.clientSecretSecretKey.env" . }}
 {{- end }}
 
 {{/*
@@ -93,6 +213,17 @@ Renders the set of all dataPlane config map variables
 {{- define "airbyte-data-plane.dataPlane.configVars" }}
 DATA_PLANE_ID: {{ include "airbyte-data-plane.dataPlane.id" . | quote }}
 CONTROL_PLANE_AUTH_ENDPOINT: {{ include "airbyte-data-plane.dataPlane.controlPlaneAuthEndpoint" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_EMAIL: {{ include "airbyte-data-plane.dataPlane.serviceAccountEmail" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH: {{ include "airbyte-data-plane.dataPlane.serviceAccountCredentialsPath" . | quote }}
+CONTROL_PLANE_TOKEN_ENDPOINT: {{ include "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte-data-plane.dataPlane.clientIdSecretName" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte-data-plane.dataPlane.clientIdSecretKey" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_NAME: {{ include "airbyte-data-plane.dataPlane.clientSecretSecretName" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte-data-plane.dataPlane.clientSecretSecretKey" . | quote }}
+{{- end }}
+
+{{/*
+Renders the set of all dataPlane secret variables
+*/}}
+{{- define "airbyte-data-plane.dataPlane.secrets" }}
+DATAPLANE_CLIENT_ID: {{ include "airbyte-data-plane.dataPlane.clientId" . | quote }}
+DATAPLANE_CLIENT_SECRET: {{ include "airbyte-data-plane.dataPlane.clientSecret" . | quote }}
 {{- end }}

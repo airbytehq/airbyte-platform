@@ -1061,6 +1061,7 @@ workloadLauncher:
     tokenEndpoint: ""
   
   dataPlane:
+    secretName: ""
     clientId: ""
     clientIdSecretName: ""
     clientIdSecretKey: ""

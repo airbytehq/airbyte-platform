@@ -34,8 +34,8 @@ spec:
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.workloadLauncher.securityContext | nindent 12 }}
-          image: "{{ .Values.workloadLauncher.image.repository }}:{{ .Values.workloadLauncher.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.workloadLauncher.image.pullPolicy }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           env: 
             {{- if .Values.workloadLauncher.debug.enabled }}
             - name: JAVA_TOOL_OPTIONS

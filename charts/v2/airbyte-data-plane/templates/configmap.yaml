@@ -19,7 +19,6 @@ data:
   {{- include "airbyte-data-plane.temporal.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.temporal.sdk.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.temporal.worker.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.topology.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.tracking.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.worker.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.workloadApiServer.configVars" . | nindent 2 }}

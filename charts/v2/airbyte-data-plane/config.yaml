@@ -12,10 +12,6 @@ common:
     - env: AIRBYTE_URL
       key: airbyteUrl
 
-    - env: AIRBYTE_API_AUTH_HEADER_NAME
-      key: api.authHeaderName
-      defaultValue: "X-Airbyte-Auth"
-
     - env: API_AUTHORIZATION_ENABLED
       key: api.authEnabled
       defaultValue: true
@@ -39,12 +35,40 @@ dataPlane:
       key: controlPlaneAuthEndpoint
       defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
 
-    - env: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
-      key: serviceAccountEmail
+    - env: CONTROL_PLANE_TOKEN_ENDPOINT
+      key: controlPlaneTokenEndpoint
+      valueExp: (printf "%s/api/v1/dataplanes/token" (include "airbyte-data-plane.common.airbyteUrl" .)) 
 
-    - env: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
-      key: serviceAccountCredentialsPath
-      defaultValue: /secrets/dataplane-creds/sa.json
+    - env: DATAPLANE_CLIENT_ID
+      key: clientId
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_NAME
+      key: clientIdSecretName 
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: clientIdSecretKey
+      #refKey: '{{ include "airbyte-data-plane.dataPlane.clientId.secretKey" . }}'
+      defaultValue: DATAPLANE_CLIENT_ID
+
+    - env: DATAPLANE_CLIENT_SECRET
+      key: clientSecret
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+      key: clientSecretSecretName 
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: clientSecretSecretKey
+      #refKey: '{{ include "airbyte-data-plane.dataPlane.clientSecret.secretKey" . }}'
+      defaulValue: DATAPLANE_CLIENT_SECRET
+
+enterprise:
+  keyBasePath: enterprise
+  config:
+    - env: AIRBYTE_LICENSE_KEY
+      key: licenseKey
+      sensitive: true
 
 jobs:
   keyBasePath: jobs
@@ -110,21 +134,21 @@ jobs.scheduling:
   config:
     - env: CHECK_JOB_KUBE_NODE_SELECTORS
       key: check.nodeSelectors
-      valueExp: check.nodeSelectors | include "airbyte.flattenMap"
+      valueExp: .Values.check.nodeSelectors | include "airbyte-data-plane.flattenMap"
 
     - env: CHECK_JOB_KUBE_RUNTIME_CLASS_NAME
       key: check.runtimeClassName
 
     - env: DISCOVER_JOB_KUBE_NODE_SELECTORS
       key: discover.nodeSelectors
-      valueExp: discover.nodeSelectors | include "airbyte.flattenMap"
+      valueExp: .Values.discover.nodeSelectors | include "airbyte-data-plane.flattenMap"
 
     - env: DISCOVER_JOB_KUBE_RUNTIME_CLASS_NAME
       key: discover.runtimeClassName
 
     - env: JOB_ISOLATED_KUBE_NODE_SELECTORS 
       key: isolated.nodeSelectors
-      valueExp: isolated.nodeSelectors | include "airbyte.flattenMap"
+      valueExp: .Values.isolated.nodeSelectors | include "airbyte-data-plane.flattenMap"
 
     - env: JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME
       key: isolated.runtimeClassName
@@ -363,7 +387,7 @@ storage:
       sensitive: true
 
     - env: AWS_SECRET_ACCESS_KEY
-      key: s3.secretAccesskey
+      key: s3.secretAccessKey
       discriminatorOpts:
         - s3
       sensitive: true

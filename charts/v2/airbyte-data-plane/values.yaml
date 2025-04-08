@@ -8,7 +8,7 @@ replicaCount: 1
 # This sets the container image more information can be found here: https://kubernetes.io/docs/concepts/containers/images/
 image:
   registry: ""
-  repository: airbyte/airbyte-workload-launcher
+  repository: airbyte/workload-launcher
   # This sets the pull policy for images.
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
@@ -41,15 +41,24 @@ api:
 edition: "community"
 
 dataPlane:
+  secretName: ""
   id: "local"
   controlPlaneAuthEndpoint: ""
   serviceAccountEmail: ""
   serviceAccountCredentialsPath: ""
 
+  clientId: ""
+  clientIdSecretName: ""
+  clientIdSecretKey: ""
+  clientSecret: ""
+  clientSecretSecretName: ""
+  clientSecretSecretKey: ""
+
 enterprise:
   # -- Secret name where an Airbyte license key is stored
   secretName: ""
   # -- The key within `licenseKeySecretName` where the Airbyte license key is stored
+  licenseKey: ""
   licenseKeySecretKey: ""
 
 logging:
