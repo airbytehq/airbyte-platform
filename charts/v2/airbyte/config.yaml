@@ -1284,8 +1284,7 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: clientIdSecretKey
-      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" . }}'
-      defaultValue: DATAPLANE_CLIENT_ID
+      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" .)
 
     - env: DATAPLANE_CLIENT_SECRET
       key: clientSecret
@@ -1297,8 +1296,7 @@ workloadLauncher.dataPlane:
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: clientSecretSecretKey
-      refKey: '{{ include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" . }}'
-      defaulValue: DATAPLANE_CLIENT_SECRET
+      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" .)
 
 workloadLauncher.images:
   keyBasePath: workloadLauncher
