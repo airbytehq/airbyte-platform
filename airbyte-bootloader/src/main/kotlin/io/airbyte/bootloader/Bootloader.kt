@@ -69,6 +69,12 @@ class Bootloader(
    * @throws Exception if unable to perform any of the bootstrap operations.
    */
   fun load() {
+    if (authSecretInitializer != null) {
+      log.info { "Initializing auth secrets..." }
+      authSecretInitializer.checkAccessToSecrets(currentAirbyteVersion)
+      authSecretInitializer.initializeSecrets()
+    }
+
     log.info { "Initializing databases..." }
     initializeDatabases()
 
@@ -102,11 +108,6 @@ class Bootloader(
     log.info { "Setting Airbyte version to '$airbyteVersion'" }
     jobPersistence.setVersion(airbyteVersion)
     log.info { "Set version to '$airbyteVersion'" }
-
-    if (authSecretInitializer != null) {
-      log.info { "Initializing auth secrets..." }
-      authSecretInitializer.initializeSecrets()
-    }
 
     postLoadExecution?.execute()?.also {
       log.info { "Finished running post load Execution." }
