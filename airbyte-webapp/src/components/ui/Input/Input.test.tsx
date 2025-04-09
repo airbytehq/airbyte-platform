@@ -5,8 +5,6 @@ import { act } from "react-dom/test-utils";
 import { render } from "test-utils/testutils";
 
 import { Input } from "./Input";
-// eslint-disable-next-line css-modules/no-unused-class
-import styles from "./Input.module.scss";
 
 describe("<Input />", () => {
   it("renders text input", async () => {
@@ -114,25 +112,27 @@ describe("<Input />", () => {
     expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  it("has focused class after focus", async () => {
+  it("has focused styling when input is focused", async () => {
     const { getByTestId } = await render(<Input />);
     const inputEl = getByTestId("input");
+    const containerEl = getByTestId("input-container");
 
     fireEvent.focus(inputEl);
     fireEvent.focus(inputEl);
 
-    expect(getByTestId("input-container")).toHaveClass(styles.focused);
+    expect(containerEl).toHaveStyle({ borderColor: "var(--color-blue)" });
   });
 
-  it("does not have focused class after blur", async () => {
+  it("does not have focused styling after blur", async () => {
     const { getByTestId } = await render(<Input />);
     const inputEl = getByTestId("input");
+    const containerEl = getByTestId("input-container");
 
     fireEvent.focus(inputEl);
     fireEvent.blur(inputEl);
     fireEvent.blur(inputEl);
 
-    expect(getByTestId("input-container")).not.toHaveClass(styles.focused);
+    expect(containerEl).toHaveStyle({ borderColor: "var(--color-grey-200)" });
   });
 
   it("calls onFocus if passed as prop", async () => {

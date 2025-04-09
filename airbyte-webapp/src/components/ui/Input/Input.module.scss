@@ -31,7 +31,15 @@
     border-color: colors.$grey-100;
   }
 
-  &:not(.disabled, .readOnly, .focused):hover {
+  &:focus-within {
+    border-color: colors.$blue;
+
+    &.light {
+      background-color: colors.$foreground;
+    }
+  }
+
+  &:not(.disabled, .readOnly, :focus-within):hover {
     border-color: colors.$grey-300;
 
     &.light {
@@ -40,14 +48,6 @@
 
     &.error {
       border-color: colors.$red;
-    }
-  }
-
-  &.focused {
-    border-color: colors.$blue;
-
-    &.light {
-      background-color: colors.$foreground;
     }
   }
 }
