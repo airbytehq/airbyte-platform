@@ -7,10 +7,13 @@ package io.airbyte.server.apis.controllers
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
@@ -21,14 +24,27 @@ import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.UUID
 
-@MicronautTest(environments = ["test"])
+@MicronautTest
 class ConfigTemplateControllerTest {
   val organizationId = UUID.randomUUID()
+  val workspaceId = UUID.randomUUID()
 
-  private val objectMapper: ObjectMapper = ObjectMapper()
+  val objectMapper: ObjectMapper = ObjectMapper()
 
-  private val configTemplateService: ConfigTemplateService = mockk()
-  private val controller = ConfigTemplateController(configTemplateService)
+  val configTemplateService: ConfigTemplateService = mockk()
+  val workspaceHelper: WorkspaceHelper =
+    mockk {
+      every {
+        getOrganizationForWorkspace(workspaceId)
+      } returns organizationId
+    }
+  val licenseEntitlementChecker: LicenseEntitlementChecker =
+    mockk {
+      every {
+        ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
+      } returns Unit
+    }
+  val controller = ConfigTemplateController(configTemplateService, workspaceHelper, licenseEntitlementChecker)
 
   @Nested
   inner class ListEndpointTests {
@@ -56,7 +72,7 @@ class ConfigTemplateControllerTest {
       } returns configTemplates
 
       val requestBody = ListConfigTemplatesRequestBody()
-      requestBody.organizationId = organizationId
+      requestBody.workspaceId = workspaceId
 
       val response = controller.listConfigTemplates(requestBody)
 
@@ -75,7 +91,7 @@ class ConfigTemplateControllerTest {
       } returns configTemplates
 
       val requestBody = ListConfigTemplatesRequestBody()
-      requestBody.organizationId = organizationId
+      requestBody.workspaceId = workspaceId
 
       val response = controller.listConfigTemplates(requestBody)
 
@@ -110,6 +126,7 @@ class ConfigTemplateControllerTest {
       val requestBody = ConfigTemplateRequestBody()
 
       requestBody.configTemplateId = configTemplateId
+      requestBody.workspaceId = workspaceId
 
       val response = controller.getConfigTemplate(requestBody)
 

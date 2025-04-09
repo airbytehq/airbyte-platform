@@ -14,19 +14,19 @@ const configTemplates = {
   detail: (configTemplateId: string) => [...configTemplates.all, "details", configTemplateId] as const,
 };
 
-export const useListConfigTemplates = (organizationId: string): ConfigTemplateList => {
+export const useListConfigTemplates = (workspaceId: string): ConfigTemplateList => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.lists(), () => {
-    return listConfigTemplates({ organizationId }, requestOptions);
+    return listConfigTemplates({ workspaceId }, requestOptions);
   });
 };
 
-export const useGetConfigTemplate = (configTemplateId: string) => {
+export const useGetConfigTemplate = (configTemplateId: string, workspaceId: string) => {
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.detail(configTemplateId), () => {
-    return getConfigTemplate({ configTemplateId }, requestOptions);
+    return getConfigTemplate({ configTemplateId, workspaceId }, requestOptions);
   });
 };
 

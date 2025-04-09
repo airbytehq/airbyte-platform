@@ -26,7 +26,7 @@ import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.http.HttpAttributes
+import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -64,7 +64,6 @@ open class ConfigTemplatesPublicController(
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
     )
 
-    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
     val configTemplate =
       configTemplateService.createTemplate(
         OrganizationId(configTemplateCreateRequestBody.organizationId),
@@ -157,7 +156,7 @@ open class ConfigTemplatesPublicController(
   // wrap controller endpoints in common functionality: segment tracking, error conversion, etc.
   private fun wrap(block: () -> Response): Response {
     val currentRequest = ServerRequestContext.currentRequest<Any>().get()
-    val template = currentRequest.attributes.get(HttpAttributes.URI_TEMPLATE.toString(), String::class.java).orElse(currentRequest.path)
+    val template = BasicHttpAttributes.getUriTemplate(currentRequest).orElse(currentRequest.path)
     val method = currentRequest.method.name
 
     val userId: UUID = currentUserService.currentUser.userId

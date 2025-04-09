@@ -11,10 +11,10 @@ import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorFor
 
 export const MaskCreateForm: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const selectedTemplateId = searchParams.get("selectedTemplateId");
+  const selectedTemplateId = searchParams.get("selectedTemplateId") ?? "";
   const workspaceId = searchParams.get("workspaceId") ?? "";
   const { mutate: createPartialUserConfig } = useCreatePartialUserConfig();
-  const configTemplate = useGetConfigTemplate(selectedTemplateId ?? "");
+  const configTemplate = useGetConfigTemplate(selectedTemplateId, workspaceId);
   const maskDefinitionSpecification: SourceDefinitionSpecificationDraft = {
     // @ts-expect-error todo: fix this type https://github.com/airbytehq/airbyte-internal-issues/issues/12333s
     connectionSpecification: configTemplate.configTemplateSpec.connectionSpecification,
@@ -22,8 +22,8 @@ export const MaskCreateForm: React.FC = () => {
 
   const onSubmit = (values: ConnectorFormValues) => {
     createPartialUserConfig({
-      workspaceId: workspaceId ?? "",
-      configTemplateId: selectedTemplateId ?? "",
+      workspaceId,
+      configTemplateId: selectedTemplateId,
       partialUserConfigProperties: values,
     });
   };

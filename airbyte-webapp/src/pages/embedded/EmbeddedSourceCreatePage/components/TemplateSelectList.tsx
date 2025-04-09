@@ -13,7 +13,7 @@ import styles from "./TemplateSelectList.module.scss";
 export const TemplateSelectList: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const organizationId = searchParams.get("organizationId") ?? "";
+  const workspaceId = searchParams.get("workspaceId") ?? "";
 
   const onTemplateSelect = (templateId: string) => {
     setSearchParams((params) => {
@@ -22,7 +22,7 @@ export const TemplateSelectList: React.FC = () => {
     });
   };
 
-  const { configTemplates } = useListConfigTemplates(organizationId);
+  const { configTemplates } = useListConfigTemplates(workspaceId);
 
   if (configTemplates.length === 0) {
     return <EmptyState text={<FormattedMessage id="configTemplates.emptyState" />} />;

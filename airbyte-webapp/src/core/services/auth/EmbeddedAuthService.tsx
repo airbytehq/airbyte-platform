@@ -22,7 +22,7 @@ export const EmbeddedAuthService: React.FC<PropsWithChildren<unknown>> = ({ chil
         inited: !!scopedAuthToken,
         emailVerified: false,
         provider: null,
-        loggedOut: !!scopedAuthToken,
+        loggedOut: !scopedAuthToken,
         getAccessToken: () => Promise.resolve(scopedAuthToken),
       }}
     >

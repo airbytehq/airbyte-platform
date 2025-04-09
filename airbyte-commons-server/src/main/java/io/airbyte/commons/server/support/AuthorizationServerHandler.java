@@ -4,9 +4,6 @@
 
 package io.airbyte.commons.server.support;
 
-import static io.airbyte.commons.server.ServerConstants.APPLICATIONS_TOKEN_PATH;
-import static io.airbyte.commons.server.ServerConstants.DATAPLANE_TOKEN_PATH;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler.Sharable;
@@ -17,6 +14,7 @@ import jakarta.inject.Singleton;
 import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +30,15 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
 
   private final AirbyteHttpRequestFieldExtractor airbyteHttpRequestFieldExtractor;
 
+  private static final Set<String> SKIP_HEADER_UPDATE = Set.of(
+      "/api/v1/health",
+      // Only update headers if we're not talking about token generation endpoints.
+      // Those endpoints don't need the updated headers and can be in a non-JSON format.
+      // Did this here because I didn't want to parse a JSON Parsing exception in the contentToJson call.
+      "/api/public/v1/applications/token",
+      "/api/public/v1/embedded/widget",
+      "/api/v1/dataplanes/token");
+
   public AuthorizationServerHandler(final AirbyteHttpRequestFieldExtractor airbyteHttpRequestFieldExtractor) {
     this.airbyteHttpRequestFieldExtractor = airbyteHttpRequestFieldExtractor;
   }
@@ -43,13 +50,8 @@ public class AuthorizationServerHandler extends ChannelDuplexHandler {
 
     Object updatedMessage = message;
 
-    if (FullHttpRequest.class.isInstance(message)) {
-      final FullHttpRequest fullHttpRequest = FullHttpRequest.class.cast(message);
-      // Only update headers if we're not talking about the APPLICATIONS_TOKEN_PATH
-      // or the DATAPLANE_TOKEN_PATH.
-      // Those endpoints don't need the updated headers and can be in a non-JSON format.
-      // Did this here because I didn't want to parse a JSON Parsing exception in the contentToJson call.
-      if (!APPLICATIONS_TOKEN_PATH.equals(fullHttpRequest.uri()) && !DATAPLANE_TOKEN_PATH.equals(fullHttpRequest.uri())) {
+    if (message instanceof FullHttpRequest fullHttpRequest) {
+      if (!SKIP_HEADER_UPDATE.contains(fullHttpRequest.uri())) {
         updatedMessage = updateHeaders(fullHttpRequest);
       }
     }

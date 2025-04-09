@@ -8896,6 +8896,29 @@ paths:
       operationId: publicUpdateTag
       x-sdk-alias: updateTag
       x-sdk-group: Tags
+
+  /public/v1/embedded/widget:
+    post:
+      operationId: getEmbeddedWidget
+      summary: Get a token for Airbyte Embedded
+      x-sdk-group: EmbeddedWidget
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedWidgetRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Success
+      tags:
+        - public
+        - embedded_widget
+
 components:
   securitySchemes:
     bearerAuth:
@@ -18549,14 +18572,6 @@ components:
       x-sdk-component: true
 
     # CONFIG TEMPLATES
-    ConfigTemplateListRequest:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
     ConfigTemplateListResponse:
       type: object
       required:
@@ -18592,8 +18607,12 @@ components:
     ConfigTemplateRequestBody:
       type: object
       required:
+        - workspaceId
         - configTemplateId
       properties:
+        workspaceId:
+          type: string
+          format: uuid
         configTemplateId:
           type: string
           format: uuid
@@ -18622,9 +18641,9 @@ components:
     ListConfigTemplatesRequestBody:
       type: object
       required:
-        - organizationId
+        - workspaceId
       properties:
-        organizationId:
+        workspaceId:
           type: string
           format: uuid
     ConfigTemplateCreateRequestBody:
@@ -18674,6 +18693,7 @@ components:
         id:
           type: string
           format: uuid
+
     # PARTIAL USER CONFIGS
     PartialUserConfigRequestBody:
       type: object
@@ -18773,6 +18793,19 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
+    EmbeddedWidgetRequest:
+      type: object
+      required:
+        - workspaceId
+        - allowedOrigin
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        allowedOrigin:
+          type: string
+        externalUserId:
+          type: string
 
   responses:
     NotFoundResponse:
