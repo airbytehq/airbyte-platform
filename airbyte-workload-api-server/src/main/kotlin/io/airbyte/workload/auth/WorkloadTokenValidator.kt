@@ -8,8 +8,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
-import io.micronaut.security.authentication.AuthenticationFailureReason
-import io.micronaut.security.authentication.AuthenticationResponse
 import io.micronaut.security.token.validator.TokenValidator
 import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
@@ -24,20 +22,25 @@ private val LOGGER = KotlinLogging.logger {}
  */
 @Singleton
 class WorkloadTokenValidator(
-  @Value("\${micronaut.security.token.jwt.bearer.secret}") val bearerSecret: String,
+  @Value("\${airbyte.workload-api.bearer-token.secret}") val bearerSecret: String,
 ) : TokenValidator<HttpRequest<*>> {
   override fun validateToken(
     token: String,
     request: HttpRequest<*>?,
   ): Publisher<Authentication> =
     Flux.create<Authentication> { emitter: FluxSink<Authentication?> ->
-      if (authenticateRequest(token)) {
-        LOGGER.debug { "Request authorized." }
-        emitter.next(Authentication.build(WORKLOAD_API_USER))
+      try {
+        if (authenticateRequest(token)) {
+          LOGGER.debug { "Request authorized." }
+          emitter.next(Authentication.build(WORKLOAD_API_USER))
+          emitter.complete()
+        } else {
+          LOGGER.debug { "Request denied." }
+          emitter.complete()
+        }
+      } catch (exception: Exception) {
+        LOGGER.debug(exception) { "Error validating token" }
         emitter.complete()
-      } else {
-        LOGGER.debug { "Request denied." }
-        emitter.error(AuthenticationResponse.exception(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH))
       }
     }
 

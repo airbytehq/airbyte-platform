@@ -335,7 +335,7 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
     @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
     @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
-    @Value("\${airbyte.control-plane-token-endpoint}") controlPlaneTokenEndpoint: String,
+    @Value("\${airbyte.auth.control-plane-token-endpoint}") controlPlaneTokenEndpoint: String,
   ): Map<String, String> =
     buildMap {
       put(EnvVarConstants.INTERNAL_API_HOST_ENV_VAR, internalApiHost)

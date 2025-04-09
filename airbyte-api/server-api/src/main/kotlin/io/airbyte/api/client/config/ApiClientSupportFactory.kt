@@ -66,4 +66,18 @@ class ApiClientSupportFactory {
         readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
         connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
       }.build()
+
+  @Singleton
+  @Named("airbyteApiOkHttpClientWithoutInterceptors")
+  @Requires(property = "airbyte.internal-api.base-path")
+  fun airbyteApiOkHttpClientWithoutInterceptors(
+    @Value("\${airbyte.internal-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
+    @Value("\${airbyte.internal-api.read-timeout-seconds}") readTimeoutSeconds: Long,
+  ): OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .apply {
+        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
+      }.build()
 }

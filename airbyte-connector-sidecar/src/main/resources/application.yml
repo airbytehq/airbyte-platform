@@ -16,6 +16,8 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
+  security:
+    enabled: false
 airbyte:
   auth:
     control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
