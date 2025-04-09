@@ -304,7 +304,8 @@ public class AcceptanceTestHarness {
         List.of(),
         List.of(),
         PUBLIC,
-        true);
+        true,
+        null);
     final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration(
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.OVERWRITE,

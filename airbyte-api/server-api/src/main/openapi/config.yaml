@@ -13760,6 +13760,9 @@ components:
           description: Optional Source-defined namespace. Airbyte streams from the same sources should have the same namespace. Currently only used by JDBC destinations to determine what schema to write to.
         isResumable:
           type: boolean
+        isFileBased:
+          type: boolean
+          description: If the stream supports FileReference.
     StreamJsonSchema:
       description: Stream schema using Json Schema specs.
       type: object

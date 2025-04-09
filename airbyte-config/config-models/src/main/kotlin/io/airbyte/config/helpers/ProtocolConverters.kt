@@ -25,6 +25,7 @@ class ProtocolConverters {
         sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,
         namespace = namespace,
         isResumable = isResumable,
+        isFileBased = isFileBased,
       )
 
     @JvmStatic
@@ -38,6 +39,7 @@ class ProtocolConverters {
         .withSourceDefinedPrimaryKey(sourceDefinedPrimaryKey)
         .withNamespace(namespace)
         .withIsResumable(isResumable)
+        .withIsFileBased(isFileBased)
 
     @JvmStatic
     fun ProtocolStreamDescriptor.toInternal(): InternalStreamDescriptor = InternalStreamDescriptor().withName(name).withNamespace(namespace)

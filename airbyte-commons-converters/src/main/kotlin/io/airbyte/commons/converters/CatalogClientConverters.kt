@@ -107,6 +107,7 @@ class CatalogClientConverters(
       sourceDefinedPrimaryKey = stream.sourceDefinedPrimaryKey ?: emptyList(),
       namespace = stream.namespace,
       isResumable = stream.isResumable,
+      isFileBased = stream.isFileBased,
     )
   }
 
@@ -200,4 +201,5 @@ private fun ProtocolAirbyteStream.toAirbyteStreamClientApi(): ClientAirbyteStrea
     sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,
     namespace = namespace,
     isResumable = isResumable,
+    isFileBased = isFileBased,
   )

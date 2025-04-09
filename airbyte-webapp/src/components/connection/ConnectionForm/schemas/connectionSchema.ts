@@ -46,6 +46,7 @@ const streamZodSchema = z.object({
   sourceDefinedPrimaryKey: z.array(z.array(z.string())).optional(),
   namespace: z.string().optional(),
   isResumable: z.boolean().optional(),
+  isFileBased: z.boolean().optional(),
 } satisfies ToZodSchema<AirbyteStream>);
 
 /**

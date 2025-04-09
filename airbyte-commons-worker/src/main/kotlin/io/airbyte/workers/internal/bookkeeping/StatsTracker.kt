@@ -138,7 +138,7 @@ class StreamStatsTracker(
         getRecordSize(recordMessage)
       } else {
         // Note: to get file and metadata size, use plus instead of elvis
-        getFileRecordSize(recordMessage) ?: getRecordSize(recordMessage)
+        getFileSize(recordMessage) ?: getRecordSize(recordMessage)
       }
 
     // Update the current emitted stats
@@ -160,7 +160,7 @@ class StreamStatsTracker(
     }
   }
 
-  private fun getFileRecordSize(recordMessage: AirbyteRecordMessage): Long? =
+  private fun getFileSize(recordMessage: AirbyteRecordMessage): Long? =
     if (recordMessage.fileReference != null) {
       recordMessage.fileReference.fileSizeBytes
     } else {
