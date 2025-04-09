@@ -23,8 +23,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
 
-object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
-
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -44,8 +42,6 @@ object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.n
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
 
 object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakingChangeScopes", default = true)
-
-object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
@@ -180,8 +176,6 @@ object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instan
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
 
 object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
-
-object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable-temporal-ingestion", default = false)
 
 object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
 
