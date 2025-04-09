@@ -5,7 +5,7 @@ import { useNotificationService } from "hooks/services/Notification";
 import { listConfigTemplates, getConfigTemplate, createPartialUserConfig } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { ConfigTemplateList, PartialUserConfigCreate } from "../types/AirbyteClient";
-import { useQueryParamsRequestOptions } from "../useRequestOptions";
+import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 const configTemplates = {
@@ -15,7 +15,7 @@ const configTemplates = {
 };
 
 export const useListConfigTemplates = (organizationId: string): ConfigTemplateList => {
-  const requestOptions = useQueryParamsRequestOptions();
+  const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.lists(), () => {
     return listConfigTemplates({ organizationId }, requestOptions);
@@ -23,7 +23,7 @@ export const useListConfigTemplates = (organizationId: string): ConfigTemplateLi
 };
 
 export const useGetConfigTemplate = (configTemplateId: string) => {
-  const requestOptions = useQueryParamsRequestOptions();
+  const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(configTemplates.detail(configTemplateId), () => {
     return getConfigTemplate({ configTemplateId }, requestOptions);
@@ -31,7 +31,7 @@ export const useGetConfigTemplate = (configTemplateId: string) => {
 };
 
 export const useCreatePartialUserConfig = () => {
-  const requestOptions = useQueryParamsRequestOptions();
+  const requestOptions = useRequestOptions();
   const { registerNotification } = useNotificationService();
 
   return useMutation(

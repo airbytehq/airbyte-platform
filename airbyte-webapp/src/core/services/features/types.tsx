@@ -17,7 +17,6 @@ export enum FeatureItem {
   ConnectorResourceAllocation = "CONNECTOR_RESOURCE_ALLOCATION",
   DiagnosticsExport = "DIAGNOSTICS_EXPORT",
   DisplayOrganizationUsers = "DISPLAY_ORGANIZATION_USERS",
-  EmbeddedUI = "EMBEDDED_UI",
   EmailNotifications = "EMAIL_NOTIFICATIONS",
   EnterpriseBranding = "ENTERPRISE_BRANDING",
   EnterpriseUpsell = "ENTERPRISE_UPSELL",

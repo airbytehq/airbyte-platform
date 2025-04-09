@@ -182,7 +182,6 @@ export const Routing: React.FC = () => {
   const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
-  const allowEmbeddedWidgetContent = useFeature(FeatureItem.EmbeddedUI);
 
   useEffectOnce(() => {
     storeConnectorChatBuilderFromQuery(search);
@@ -241,9 +240,7 @@ export const Routing: React.FC = () => {
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
         <Routes>
-          {allowEmbeddedWidgetContent && (
-            <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
-          )}
+          <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
           <Route
             path="*"
             element={

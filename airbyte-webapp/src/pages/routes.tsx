@@ -194,7 +194,6 @@ export const Routing: React.FC = () => {
   const { inited, loggedOut } = useAuthService();
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useBuildUpdateCheck();
-  const allowEmbeddedWidgetContent = useFeature(FeatureItem.EmbeddedUI);
 
   useEffectOnce(() => {
     storeUtmFromQuery(search);
@@ -215,9 +214,6 @@ export const Routing: React.FC = () => {
 
     return (
       <Routes>
-        {allowEmbeddedWidgetContent && (
-          <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
-        )}
         {!initialSetupComplete ? (
           <Route path="*" element={<PreferencesRoutes />} />
         ) : (
@@ -238,7 +234,6 @@ const AuthenticatedRoutes = () => {
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const { initialSetupComplete } = useGetInstanceConfiguration();
   useEnterpriseLicenseCheck();
-  const allowEmbeddedWidgetContent = useFeature(FeatureItem.EmbeddedUI);
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;
@@ -246,18 +241,13 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
+      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (
         <>
           {multiWorkspaceUI && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
           <Route path="/" element={<DefaultView />} />
-          {allowEmbeddedWidgetContent && (
-            <Route
-              path={`${RoutePaths.Workspaces}/:workspaceId/${RoutePaths.EmbeddedWidget}`}
-              element={<EmbeddedSourceCreatePage />}
-            />
-          )}
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<RoutingWithWorkspace />} />
           <Route path="*" element={<AutoSelectFirstWorkspace />} />
         </>
