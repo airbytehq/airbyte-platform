@@ -45,7 +45,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConfigTemplateList'
+                $ref: '#/components/schemas/ConfigTemplateListResponse'
           description: List all Applications a User has permission to view.
         '403':
           description: Not allowed
@@ -53,6 +53,14 @@ paths:
       summary: List config templates
       x-speakeasy-alias: listConfigTemplates
       x-speakeasy-group: ConfigTemplates
+      parameters:
+      - name: organizationId
+        description: ID of the organization
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: true
     post:
       requestBody:
         content:
@@ -881,6 +889,7 @@ paths:
       in: path
       required: true
     - name: definitionId
+      x-speakeasy-match: id
       schema:
         format: uuid
         type: string
@@ -1015,6 +1024,7 @@ paths:
       in: path
       required: true
     - name: definitionId
+      x-speakeasy-match: id
       schema:
         format: uuid
         type: string
@@ -1149,6 +1159,7 @@ paths:
       in: path
       required: true
     - name: definitionId
+      x-speakeasy-match: id
       schema:
         format: uuid
         type: string
@@ -2631,6 +2642,7 @@ components:
       type: integer
       format: int64
     SourceConfiguration:
+      type: object
       description: The values required to configure the source. The schema for this
         must match the schema return by source_definition_specifications/get for the
         source.
@@ -2638,6 +2650,7 @@ components:
         user: charles
       x-speakeasy-component: true
     DestinationConfiguration:
+      type: object
       description: The values required to configure the destination. The schema for
         this must match the schema return by destination_definition_specifications/get
         for the destinationDefinition.

@@ -229,6 +229,411 @@ paths:
         type: "integer"
       in: "path"
       required: true
+  /workspaces/{workspaceId}/definitions/declarative_sources:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_declarative_source_definitions"
+      - "public"
+      - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionsResponse"
+          description: "Successful operation"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "listDeclarativeSourceDefinitions"
+      x-speakeasy-alias: "listDeclarativeSourceDefinitions"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "List declarative source definitions."
+    post:
+      summary: "Create a declarative source definition."
+      x-speakeasy-entity-operation: "DeclarativeSourceDefinition#create"
+      operationId: "createDeclarativeSourceDefinition"
+      x-speakeasy-alias: "createDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      tags:
+      - "public_declarative_source_definitions"
+      - "public"
+      - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeclarativeSourceDefinitionRequest"
+  /workspaces/{workspaceId}/definitions/declarative_sources/{definitionId}:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    - name: "definitionId"
+      x-speakeasy-match: "id"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_declarative_source_definitions"
+      - "public"
+      - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getDeclarativeSourceDefinition"
+      x-speakeasy-alias: "getDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Get declarative source definition details."
+      x-speakeasy-entity-operation: "DeclarativeSourceDefinition#read"
+    put:
+      tags:
+      - "public_declarative_source_definitions"
+      - "public"
+      - "DeclarativeSourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeclarativeSourceDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateDeclarativeSourceDefinition"
+      x-speakeasy-alias: "updateDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Update declarative source definition details."
+      x-speakeasy-entity-operation: "DeclarativeSourceDefinition#update"
+    delete:
+      tags:
+      - "public_declarative_source_definitions"
+      - "public"
+      - "DeclarativeSourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteDeclarativeSourceDefinition"
+      x-speakeasy-alias: "deleteDeclarativeSourceDefinition"
+      x-speakeasy-group: "DeclarativeSourceDefinitions"
+      summary: "Delete a declarative source definition."
+      x-speakeasy-entity-operation: "DeclarativeSourceDefinition#delete"
+  /workspaces/{workspaceId}/definitions/sources:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_source_definitions"
+      - "public"
+      - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: "Successful operation"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "listSourceDefinitions"
+      x-speakeasy-alias: "listSourceDefinitions"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "List source definitions."
+    post:
+      operationId: "createSourceDefinition"
+      x-speakeasy-alias: "createSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Create a source definition."
+      x-speakeasy-entity-operation: "SourceDefinition#create"
+      tags:
+      - "public_source_definitions"
+      - "public"
+      - "SourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+  /workspaces/{workspaceId}/definitions/sources/{definitionId}:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    - name: "definitionId"
+      x-speakeasy-match: "id"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_source_definitions"
+      - "public"
+      - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getSourceDefinition"
+      x-speakeasy-alias: "getSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Get source definition details."
+      x-speakeasy-entity-operation: "SourceDefinition#read"
+    put:
+      tags:
+      - "public_source_definitions"
+      - "public"
+      - "SourceDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateSourceDefinition"
+      x-speakeasy-alias: "updateSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Update source definition details."
+      x-speakeasy-entity-operation: "SourceDefinition#update"
+    delete:
+      tags:
+      - "public_source_definitions"
+      - "public"
+      - "SourceDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteSourceDefinition"
+      x-speakeasy-alias: "deleteSourceDefinition"
+      x-speakeasy-group: "SourceDefinitions"
+      summary: "Delete a source definition."
+      x-speakeasy-entity-operation: "SourceDefinition#delete"
+  /workspaces/{workspaceId}/definitions/destinations:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_destination_definitions"
+      - "public"
+      - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: "Successful operation"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "listDestinationDefinitions"
+      x-speakeasy-alias: "listDestinationDefinitions"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "List destination definitions."
+    post:
+      operationId: "createDestinationDefinition"
+      x-speakeasy-alias: "createDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Create a destination definition."
+      x-speakeasy-entity-operation: "DestinationDefinition#create"
+      tags:
+      - "public_destination_definitions"
+      - "public"
+      - "DestinationDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+  /workspaces/{workspaceId}/definitions/destinations/{definitionId}:
+    parameters:
+    - name: "workspaceId"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    - name: "definitionId"
+      x-speakeasy-match: "id"
+      schema:
+        format: "uuid"
+        type: "string"
+      in: "path"
+      required: true
+    get:
+      tags:
+      - "public_destination_definitions"
+      - "public"
+      - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "getDestinationDefinition"
+      x-speakeasy-alias: "getDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Get destination definition details."
+      x-speakeasy-entity-operation: "DestinationDefinition#read"
+    put:
+      tags:
+      - "public_destination_definitions"
+      - "public"
+      - "DestinationDefinitions"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "updateDestinationDefinition"
+      x-speakeasy-alias: "updateDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Update destination definition details."
+      x-speakeasy-entity-operation: "DestinationDefinition#update"
+    delete:
+      tags:
+      - "public_destination_definitions"
+      - "public"
+      - "DestinationDefinitions"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: "Success"
+        "403":
+          description: "Not allowed"
+        "404":
+          description: "Not found"
+      operationId: "deleteDestinationDefinition"
+      x-speakeasy-alias: "deleteDestinationDefinition"
+      x-speakeasy-group: "DestinationDefinitions"
+      summary: "Delete a destination definition."
+      x-speakeasy-entity-operation: "DestinationDefinition#delete"
   /sources:
     get:
       tags:
@@ -11838,6 +12243,53 @@ components:
       required:
       - "streams"
       - "credentials"
+    source-svix:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "svix"
+          const: "svix"
+          enum:
+          - "svix"
+          order: 0
+          type: "string"
+    source-svix-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "API key or access token"
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-amazon-sqs:
       type: "object"
       required:
@@ -15662,9 +16114,13 @@ components:
       required:
       - "accountid"
       - "api_key"
-      - "start_date"
       - "sourceType"
       properties:
+        accountid:
+          type: "string"
+          description: "The ID associated with your account."
+          order: 0
+          title: "Account ID"
         api_key:
           type: "string"
           description: "The API key associated with your account."
@@ -15672,18 +16128,6 @@ components:
           title: "API Key"
           airbyte_secret: true
           x-speakeasy-param-sensitive: true
-        accountid:
-          type: "string"
-          description: "The ID associated with your account."
-          order: 0
-          title: "Account ID"
-        start_date:
-          type: "string"
-          description: "1970-01-01T00:00:00Z"
-          order: 2
-          title: "Start date"
-          format: "date-time"
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
         sourceType:
           title: "cin7"
           const: "cin7"
@@ -15696,26 +16140,71 @@ components:
       required:
       - "accountid"
       - "api_key"
-      - "start_date"
       properties:
+        accountid:
+          type: "string"
+          description: "The ID associated with your account."
+          order: 0
+          title: "Account ID"
         api_key:
           type: "string"
           description: "The API key associated with your account."
           order: 1
           title: "API Key"
           airbyte_secret: true
-        accountid:
+    source-jamf-pro:
+      type: "object"
+      required:
+      - "subdomain"
+      - "username"
+      - "sourceType"
+      properties:
+        subdomain:
           type: "string"
-          description: "The ID associated with your account."
+          description: "The unique subdomain for your Jamf Pro instance."
+          name: "subdomain"
           order: 0
-          title: "Account ID"
-        start_date:
+          title: "Subdomain"
+        username:
           type: "string"
-          description: "1970-01-01T00:00:00Z"
+          order: 1
+          title: "Username"
+        password:
+          type: "string"
           order: 2
-          title: "Start date"
-          format: "date-time"
-          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        sourceType:
+          title: "jamf-pro"
+          const: "jamf-pro"
+          enum:
+          - "jamf-pro"
+          order: 0
+          type: "string"
+    source-jamf-pro-update:
+      type: "object"
+      required:
+      - "subdomain"
+      - "username"
+      properties:
+        subdomain:
+          type: "string"
+          description: "The unique subdomain for your Jamf Pro instance."
+          name: "subdomain"
+          order: 0
+          title: "Subdomain"
+        username:
+          type: "string"
+          order: 1
+          title: "Username"
+        password:
+          type: "string"
+          order: 2
+          title: "Password"
+          always_show: true
+          airbyte_secret: true
     source-looker:
       type: "object"
       required:
@@ -16373,6 +16862,113 @@ components:
                 - "MONTHLY"
                 - "YEARLY"
           default: []
+    source-mendeley:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "client_refresh_token"
+      - "start_date"
+      - "query_for_catalog"
+      - "name_for_institution"
+      - "sourceType"
+      properties:
+        client_id:
+          type: "string"
+          description: "Could be found at `https://dev.mendeley.com/myapps.html`"
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        client_secret:
+          type: "string"
+          description: "Could be found at `https://dev.mendeley.com/myapps.html`"
+          order: 1
+          title: "Client secret"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        query_for_catalog:
+          type: "string"
+          description: "Query for catalog search"
+          order: 4
+          title: "Query for catalog search"
+          default: "Polar Bear"
+        client_refresh_token:
+          type: "string"
+          description: "Use cURL or Postman with the OAuth 2.0 Authorization tab.\
+            \ Set the Auth URL to https://api.mendeley.com/oauth/authorize, the Token\
+            \ URL to https://api.mendeley.com/oauth/token, and use all as the scope."
+          order: 2
+          title: "Refresh token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        name_for_institution:
+          type: "string"
+          description: "The name parameter for institutions search"
+          order: 5
+          title: "Name for institution"
+          default: "City University"
+        sourceType:
+          title: "mendeley"
+          const: "mendeley"
+          enum:
+          - "mendeley"
+          order: 0
+          type: "string"
+    source-mendeley-update:
+      type: "object"
+      required:
+      - "client_id"
+      - "client_secret"
+      - "client_refresh_token"
+      - "start_date"
+      - "query_for_catalog"
+      - "name_for_institution"
+      properties:
+        client_id:
+          type: "string"
+          description: "Could be found at `https://dev.mendeley.com/myapps.html`"
+          order: 0
+          title: "Client ID"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 3
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        client_secret:
+          type: "string"
+          description: "Could be found at `https://dev.mendeley.com/myapps.html`"
+          order: 1
+          title: "Client secret"
+          airbyte_secret: true
+        query_for_catalog:
+          type: "string"
+          description: "Query for catalog search"
+          order: 4
+          title: "Query for catalog search"
+          default: "Polar Bear"
+        client_refresh_token:
+          type: "string"
+          description: "Use cURL or Postman with the OAuth 2.0 Authorization tab.\
+            \ Set the Auth URL to https://api.mendeley.com/oauth/authorize, the Token\
+            \ URL to https://api.mendeley.com/oauth/token, and use all as the scope."
+          order: 2
+          title: "Refresh token"
+          airbyte_secret: true
+        name_for_institution:
+          type: "string"
+          description: "The name parameter for institutions search"
+          order: 5
+          title: "Name for institution"
+          default: "City University"
     source-freshchat:
       type: "object"
       required:
@@ -20017,6 +20613,57 @@ components:
             \ sync."
           type: "boolean"
           default: false
+    source-fastly:
+      type: "object"
+      required:
+      - "fastly_api_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        fastly_api_token:
+          type: "string"
+          description: "Your Fastly API token. You can generate this token in the\
+            \ Fastly web interface under Account Settings or via the Fastly API. Ensure\
+            \ the token has the appropriate scope for your use case."
+          name: "fastly_api_token"
+          title: "Fastly API Token"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "fastly"
+          const: "fastly"
+          enum:
+          - "fastly"
+          order: 0
+          type: "string"
+    source-fastly-update:
+      type: "object"
+      required:
+      - "fastly_api_token"
+      - "start_date"
+      properties:
+        fastly_api_token:
+          type: "string"
+          description: "Your Fastly API token. You can generate this token in the\
+            \ Fastly web interface under Account Settings or via the Fastly API. Ensure\
+            \ the token has the appropriate scope for your use case."
+          name: "fastly_api_token"
+          title: "Fastly API Token"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-sap-fieldglass:
       title: "Sap Fieldglass Spec"
       type: "object"
@@ -22274,6 +22921,57 @@ components:
             \ by default, sessions are good for 14 days and needs to be regenerated."
           airbyte_secret: true
           order: 3
+    source-bluetally:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key to authenticate with the BlueTally API. You can\
+            \ generate it by navigating to your account settings, selecting 'API Keys',\
+            \ and clicking 'Create API Key'."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        sourceType:
+          title: "bluetally"
+          const: "bluetally"
+          enum:
+          - "bluetally"
+          order: 0
+          type: "string"
+    source-bluetally-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key to authenticate with the BlueTally API. You can\
+            \ generate it by navigating to your account settings, selecting 'API Keys',\
+            \ and clicking 'Create API Key'."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          order: 1
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
     source-algolia:
       type: "object"
       required:
@@ -31265,6 +31963,127 @@ components:
           title: "End date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    source-shopwired:
+      type: "object"
+      required:
+      - "api_key"
+      - "api_secret"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API Key, which acts as the username for Basic Authentication.\
+            \ You can find it in your ShopWired account under API settings."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        api_secret:
+          type: "string"
+          description: "Your API Secret, which acts as the password for Basic Authentication.\
+            \ You can find it in your ShopWired account under API settings."
+          name: "api_secret"
+          order: 1
+          title: "API Secret"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 2
+        sourceType:
+          title: "shopwired"
+          const: "shopwired"
+          enum:
+          - "shopwired"
+          order: 0
+          type: "string"
+    source-shopwired-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "api_secret"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API Key, which acts as the username for Basic Authentication.\
+            \ You can find it in your ShopWired account under API settings."
+          name: "api_key"
+          order: 0
+          title: "API Key"
+          airbyte_secret: true
+        api_secret:
+          type: "string"
+          description: "Your API Secret, which acts as the password for Basic Authentication.\
+            \ You can find it in your ShopWired account under API settings."
+          name: "api_secret"
+          order: 1
+          title: "API Secret"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 2
+    source-100ms:
+      type: "object"
+      required:
+      - "management_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        management_token:
+          type: "string"
+          description: "The management token used for authenticating API requests.\
+            \ You can find or generate this token in your 100ms dashboard under the\
+            \ API section. Refer to the documentation at https://www.100ms.live/docs/concepts/v2/concepts/security-and-tokens#management-token-for-rest-api\
+            \ for more details."
+          name: "management_token"
+          order: 0
+          title: "Management Token"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "100ms"
+          const: "100ms"
+          enum:
+          - "100ms"
+          order: 0
+          type: "string"
+    source-100ms-update:
+      type: "object"
+      required:
+      - "management_token"
+      - "start_date"
+      properties:
+        management_token:
+          type: "string"
+          description: "The management token used for authenticating API requests.\
+            \ You can find or generate this token in your 100ms dashboard under the\
+            \ API section. Refer to the documentation at https://www.100ms.live/docs/concepts/v2/concepts/security-and-tokens#management-token-for-rest-api\
+            \ for more details."
+          name: "management_token"
+          order: 0
+          title: "Management Token"
+          airbyte_secret: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-campaign-monitor:
       type: "object"
       required:
@@ -34770,6 +35589,57 @@ components:
           name: "subdomain"
           order: 1
           title: "Subdomain"
+    source-perigon:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the Perigon API. Obtain\
+            \ it by creating an account at https://www.perigon.io/sign-up and verifying\
+            \ your email. The API key will be visible on your account dashboard."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "perigon"
+          const: "perigon"
+          enum:
+          - "perigon"
+          order: 0
+          type: "string"
+    source-perigon-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your API key for authenticating with the Perigon API. Obtain\
+            \ it by creating an account at https://www.perigon.io/sign-up and verifying\
+            \ your email. The API key will be visible on your account dashboard."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-openaq:
       type: "object"
       required:
@@ -45633,6 +46503,59 @@ components:
           description: "Harness Account ID"
           title: "Account ID"
           order: 2
+    source-insightful:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your API token for accessing the Insightful API. Generate\
+            \ it by logging in as an Admin to your organization's account, navigating\
+            \ to the API page, and creating a new token. Note that this token will\
+            \ only be shown once, so store it securely."
+          name: "api_token"
+          title: "API Token"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        sourceType:
+          title: "insightful"
+          const: "insightful"
+          enum:
+          - "insightful"
+          order: 0
+          type: "string"
+    source-insightful-update:
+      type: "object"
+      required:
+      - "api_token"
+      - "start_date"
+      properties:
+        api_token:
+          type: "string"
+          description: "Your API token for accessing the Insightful API. Generate\
+            \ it by logging in as an Admin to your organization's account, navigating\
+            \ to the API page, and creating a new token. Note that this token will\
+            \ only be shown once, so store it securely."
+          name: "api_token"
+          title: "API Token"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
     source-slack:
       title: "Slack Spec"
       type: "object"
@@ -47528,6 +48451,30 @@ components:
             \ target=\"_blank\">Troubleshooting</a> section for more details"
           default: false
           order: 12
+        financial_events_step:
+          title: "Financial Events Step Size (in days)"
+          description: "The time window size (in days) for fetching financial events\
+            \ data in chunks. Options are 1 day, 7 days, 14 days, 30 days, 60 days,\
+            \ and 190 days, based on API limitations.\n\n- **Smaller step sizes (e.g.,\
+            \ 1 day)** are better for large data volumes. They fetch smaller chunks\
+            \ per request, reducing the risk of timeouts or overwhelming the API,\
+            \ though more requests may slow syncing and increase the chance of hitting\
+            \ rate limits.\n- **Larger step sizes (e.g., 14 days)** are better for\
+            \ smaller data volumes. They fetch more data per request, speeding up\
+            \ syncing and reducing the number of API calls, which minimizes strain\
+            \ on rate limits.\n\nSelect a step size that matches your data volume\
+            \ to optimize syncing speed and API performance."
+          type: "string"
+          enum:
+          - "1"
+          - "7"
+          - "14"
+          - "30"
+          - "60"
+          - "90"
+          - "180"
+          default: "180"
+          order: 13
         sourceType:
           title: "amazon-seller-partner"
           const: "amazon-seller-partner"
@@ -47744,6 +48691,30 @@ components:
             \ target=\"_blank\">Troubleshooting</a> section for more details"
           default: false
           order: 12
+        financial_events_step:
+          title: "Financial Events Step Size (in days)"
+          description: "The time window size (in days) for fetching financial events\
+            \ data in chunks. Options are 1 day, 7 days, 14 days, 30 days, 60 days,\
+            \ and 190 days, based on API limitations.\n\n- **Smaller step sizes (e.g.,\
+            \ 1 day)** are better for large data volumes. They fetch smaller chunks\
+            \ per request, reducing the risk of timeouts or overwhelming the API,\
+            \ though more requests may slow syncing and increase the chance of hitting\
+            \ rate limits.\n- **Larger step sizes (e.g., 14 days)** are better for\
+            \ smaller data volumes. They fetch more data per request, speeding up\
+            \ syncing and reducing the number of API calls, which minimizes strain\
+            \ on rate limits.\n\nSelect a step size that matches your data volume\
+            \ to optimize syncing speed and API performance."
+          type: "string"
+          enum:
+          - "1"
+          - "7"
+          - "14"
+          - "30"
+          - "60"
+          - "90"
+          - "180"
+          default: "180"
+          order: 13
     source-northpass-lms:
       type: "object"
       required:
@@ -62358,6 +63329,97 @@ components:
           order: 0
           title: "API Key"
           airbyte_secret: true
+    source-nexiopay:
+      type: "object"
+      required:
+      - "api_key"
+      - "username"
+      - "subdomain"
+      - "start_date"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Nexio API key (password). You can find it in the Nexio\
+            \ Dashboard under Settings > User Management. Select the API user and\
+            \ copy the API key."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        username:
+          type: "string"
+          description: "Your Nexio API username. You can find it in the Nexio Dashboard\
+            \ under Settings > User Management. Select the API user and copy the username."
+          name: "username"
+          title: "API Username"
+          order: 1
+        subdomain:
+          type: "string"
+          description: "The subdomain for the Nexio API environment, such as 'nexiopaysandbox'\
+            \ or 'nexiopay'."
+          name: "subdomain"
+          title: "Subdomain"
+          default: "nexiopay"
+          enum:
+          - "nexiopaysandbox"
+          - "nexiopay"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
+        sourceType:
+          title: "nexiopay"
+          const: "nexiopay"
+          enum:
+          - "nexiopay"
+          order: 0
+          type: "string"
+    source-nexiopay-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "username"
+      - "subdomain"
+      - "start_date"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your Nexio API key (password). You can find it in the Nexio\
+            \ Dashboard under Settings > User Management. Select the API user and\
+            \ copy the API key."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        username:
+          type: "string"
+          description: "Your Nexio API username. You can find it in the Nexio Dashboard\
+            \ under Settings > User Management. Select the API user and copy the username."
+          name: "username"
+          title: "API Username"
+          order: 1
+        subdomain:
+          type: "string"
+          description: "The subdomain for the Nexio API environment, such as 'nexiopaysandbox'\
+            \ or 'nexiopay'."
+          name: "subdomain"
+          title: "Subdomain"
+          default: "nexiopay"
+          enum:
+          - "nexiopaysandbox"
+          - "nexiopay"
+          order: 2
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 3
     source-pagerduty:
       type: "object"
       required:
@@ -62714,6 +63776,111 @@ components:
           examples:
           - "mydomain.myfreshworks.com"
           description: "The Name of your Freshsales domain"
+    source-giphy:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "query"
+      - "query_for_gif"
+      - "query_for_stickers"
+      - "query_for_clips"
+      - "sourceType"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your GIPHY API Key. You can create and find your API key in\
+            \ the GIPHY Developer Dashboard at https://developers.giphy.com/dashboard/."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+          x-speakeasy-param-sensitive: true
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        query:
+          type: "string"
+          description: "A query for search endpoint"
+          title: "Query for search endpoints"
+          default: "foo"
+          order: 2
+        query_for_gif:
+          type: "string"
+          description: "Query for gif search endpoint"
+          title: "Query for gif search endpoint"
+          default: "foo"
+          order: 3
+        query_for_stickers:
+          type: "string"
+          description: "Query for stickers search endpoint"
+          title: "Query for stickers search endpoint"
+          default: "foo"
+          order: 4
+        query_for_clips:
+          type: "string"
+          description: "Query for clips search endpoint"
+          title: "Query for clips search endpoint"
+          default: "foo"
+          order: 5
+        sourceType:
+          title: "giphy"
+          const: "giphy"
+          enum:
+          - "giphy"
+          order: 0
+          type: "string"
+    source-giphy-update:
+      type: "object"
+      required:
+      - "api_key"
+      - "start_date"
+      - "query"
+      - "query_for_gif"
+      - "query_for_stickers"
+      - "query_for_clips"
+      properties:
+        api_key:
+          type: "string"
+          description: "Your GIPHY API Key. You can create and find your API key in\
+            \ the GIPHY Developer Dashboard at https://developers.giphy.com/dashboard/."
+          name: "api_key"
+          title: "API Key"
+          airbyte_secret: true
+          order: 0
+        start_date:
+          type: "string"
+          title: "Start date"
+          format: "date-time"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+          order: 1
+        query:
+          type: "string"
+          description: "A query for search endpoint"
+          title: "Query for search endpoints"
+          default: "foo"
+          order: 2
+        query_for_gif:
+          type: "string"
+          description: "Query for gif search endpoint"
+          title: "Query for gif search endpoint"
+          default: "foo"
+          order: 3
+        query_for_stickers:
+          type: "string"
+          description: "Query for stickers search endpoint"
+          title: "Query for stickers search endpoint"
+          default: "foo"
+          order: 4
+        query_for_clips:
+          type: "string"
+          description: "Query for clips search endpoint"
+          title: "Query for clips search endpoint"
+          default: "foo"
+          order: 5
     source-drip:
       type: "object"
       required:
@@ -82698,6 +83865,8 @@ components:
       oneOf:
         - title: source-aha
           $ref: "#/components/schemas/source-aha"
+        - title: source-100ms
+          $ref: "#/components/schemas/source-100ms"
         - title: source-7shifts
           $ref: "#/components/schemas/source-7shifts"
         - title: source-activecampaign
@@ -82768,6 +83937,8 @@ components:
           $ref: "#/components/schemas/source-bitly"
         - title: source-blogger
           $ref: "#/components/schemas/source-blogger"
+        - title: source-bluetally
+          $ref: "#/components/schemas/source-bluetally"
         - title: source-boldsign
           $ref: "#/components/schemas/source-boldsign"
         - title: source-box
@@ -82948,6 +84119,8 @@ components:
           $ref: "#/components/schemas/source-faker"
         - title: source-fastbill
           $ref: "#/components/schemas/source-fastbill"
+        - title: source-fastly
+          $ref: "#/components/schemas/source-fastly"
         - title: source-fauna
           $ref: "#/components/schemas/source-fauna"
         - title: source-file
@@ -83008,6 +84181,8 @@ components:
           $ref: "#/components/schemas/source-getgist"
         - title: source-getlago
           $ref: "#/components/schemas/source-getlago"
+        - title: source-giphy
+          $ref: "#/components/schemas/source-giphy"
         - title: source-gitbook
           $ref: "#/components/schemas/source-gitbook"
         - title: source-github
@@ -83098,6 +84273,8 @@ components:
           $ref: "#/components/schemas/source-incident-io"
         - title: source-inflowinventory
           $ref: "#/components/schemas/source-inflowinventory"
+        - title: source-insightful
+          $ref: "#/components/schemas/source-insightful"
         - title: source-insightly
           $ref: "#/components/schemas/source-insightly"
         - title: source-instagram
@@ -83116,6 +84293,8 @@ components:
           $ref: "#/components/schemas/source-ip2whois"
         - title: source-iterable
           $ref: "#/components/schemas/source-iterable"
+        - title: source-jamf-pro
+          $ref: "#/components/schemas/source-jamf-pro"
         - title: source-jira
           $ref: "#/components/schemas/source-jira"
         - title: source-jobnimbus
@@ -83190,6 +84369,8 @@ components:
           $ref: "#/components/schemas/source-marketo"
         - title: source-marketstack
           $ref: "#/components/schemas/source-marketstack"
+        - title: source-mendeley
+          $ref: "#/components/schemas/source-mendeley"
         - title: source-mention
           $ref: "#/components/schemas/source-mention"
         - title: source-merge
@@ -83248,6 +84429,8 @@ components:
           $ref: "#/components/schemas/source-newsdata"
         - title: source-newsdata-io
           $ref: "#/components/schemas/source-newsdata-io"
+        - title: source-nexiopay
+          $ref: "#/components/schemas/source-nexiopay"
         - title: source-ninjaone-rmm
           $ref: "#/components/schemas/source-ninjaone-rmm"
         - title: source-nocrm
@@ -83328,6 +84511,8 @@ components:
           $ref: "#/components/schemas/source-pendo"
         - title: source-pennylane
           $ref: "#/components/schemas/source-pennylane"
+        - title: source-perigon
+          $ref: "#/components/schemas/source-perigon"
         - title: source-persistiq
           $ref: "#/components/schemas/source-persistiq"
         - title: source-persona
@@ -83486,6 +84671,8 @@ components:
           $ref: "#/components/schemas/source-shipstation"
         - title: source-shopify
           $ref: "#/components/schemas/source-shopify"
+        - title: source-shopwired
+          $ref: "#/components/schemas/source-shopwired"
         - title: source-shortcut
           $ref: "#/components/schemas/source-shortcut"
         - title: source-shortio
@@ -83550,6 +84737,8 @@ components:
           $ref: "#/components/schemas/source-surveymonkey"
         - title: source-survicate
           $ref: "#/components/schemas/source-survicate"
+        - title: source-svix
+          $ref: "#/components/schemas/source-svix"
         - title: source-systeme
           $ref: "#/components/schemas/source-systeme"
         - title: source-taboola

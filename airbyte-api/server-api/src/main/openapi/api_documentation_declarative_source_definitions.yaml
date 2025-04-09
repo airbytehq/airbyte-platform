@@ -68,6 +68,7 @@ paths:
         in: "path"
         required: true
       - name: "definitionId"
+        x-speakeasy-match: "id"
         schema:
           format: "uuid"
           type: "string"
