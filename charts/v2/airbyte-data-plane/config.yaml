@@ -75,7 +75,7 @@ jobs:
   config:
     - env: JOB_KUBE_SERVICEACCOUNT
       key: kube.serviceAccount
-      valueExp: .Values.serviceAccountName
+      defaultValueExp: (include "airbyte-data-plane.serviceAccountName" .)
 
     # TODO: This may need to be conditional depending on whether we are running
     # the control plane or the data plane.

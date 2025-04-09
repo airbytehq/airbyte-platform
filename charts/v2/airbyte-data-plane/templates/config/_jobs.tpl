@@ -9,7 +9,7 @@
 Renders the jobs.kube.serviceAccount value
 */}}
 {{- define "airbyte-data-plane.jobs.kube.serviceAccount" }}
-    {{- .Values.serviceAccountName }}
+    {{- .Values.jobs.kube.serviceAccount | default (include "airbyte-data-plane.serviceAccountName" .) }}
 {{- end }}
 
 {{/*
