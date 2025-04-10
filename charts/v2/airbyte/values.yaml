@@ -479,6 +479,8 @@ webapp:
   # -- Number of webapp replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   ##  webapp.image.repository
   ##  webapp.image.pullPolicy
   ##  webapp.image.tag The airbyte webapp image tag. Defaults to the chart's AppVersion
@@ -709,6 +711,8 @@ server:
   # -- Number of server replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   deploymentStrategyType: Recreate
 
   applications: ""
@@ -908,6 +912,8 @@ worker:
   # -- Number of worker replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte worker image.
     repository: airbyte/worker
@@ -1050,6 +1056,8 @@ workloadLauncher:
   enabled: true
   # -- Number of workload launcher replicas
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The repository to use for the airbyte workload launcher image.
@@ -1231,6 +1239,8 @@ connectorRolloutWorker:
   # -- Number of connector rollout worker replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte connector rollout worker image.
     repository: airbyte/connector-rollout-worker
@@ -1378,6 +1388,8 @@ metrics:
   # -- Number of metrics-reporter replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte metrics-reporter image.
     repository: airbyte/metrics-reporter
@@ -1472,6 +1484,9 @@ metrics:
 
 airbyteBootloader:
   enabled: true
+
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte bootloader image.
     repository: airbyte/bootloader
@@ -1625,6 +1640,8 @@ temporal:
   enabled: true
   # -- The number of temporal replicas to deploy
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The temporal image repository to use
@@ -1783,6 +1800,8 @@ temporalUi:
   enabled: false
   # -- The number of temporal-ui replicas to deploy
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The temporal-ui image repository to use
@@ -2003,6 +2022,9 @@ cron:
   enabled: true
   # -- Number of cron replicas
   replicaCount: 1
+
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte cron image.
     repository: airbyte/cron
@@ -2191,6 +2213,8 @@ connectorBuilderServer:
   # -- Number of connector-builder-server replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte connector-builder-server image.
     repository: airbyte/connector-builder-server
@@ -2328,6 +2352,8 @@ keycloak:
 
     adminCliClientId: ""
 
+  serviceAccountName:
+
   image:
     repository: airbyte/keycloak
     pullPolicy: IfNotPresent
@@ -2427,6 +2453,8 @@ keycloakSetup:
   enabled: false
   env_vars: {}
 
+  serviceAccountName:
+
   image:
     repository: airbyte/keycloak-setup
     pullPolicy: IfNotPresent
@@ -2484,6 +2512,8 @@ workloadApiServer:
 
   # -- workload-api-server replicas
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The repository to use for the airbyte-workload-api-server image.
@@ -2613,6 +2643,8 @@ featureflagServer:
 
   # -- workload-api-server replicas
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The repository to use for the airbyte-workload-api-server image.

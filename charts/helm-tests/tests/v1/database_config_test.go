@@ -179,7 +179,6 @@ func TestExternalDatabaseConfiguration(t *testing.T) {
 		"global.database.port",
 		"global.database.user",
 		"global.database.database",
-		"global.database.password",
 	}
 
 	secretFields := []string{

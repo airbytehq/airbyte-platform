@@ -33,7 +33,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.worker.serviceAccountName }}
       automountServiceAccountToken: true
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
