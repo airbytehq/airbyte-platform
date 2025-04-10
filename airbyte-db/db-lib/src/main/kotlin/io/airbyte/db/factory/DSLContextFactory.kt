@@ -26,7 +26,7 @@ object DSLContextFactory {
   @JvmStatic
   fun create(
     dataSource: DataSource,
-    dialect: SQLDialect,
+    dialect: SQLDialect = SQLDialect.POSTGRES,
   ): DSLContext = DSL.using(dataSource, dialect)
 
   /**

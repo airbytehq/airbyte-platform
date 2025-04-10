@@ -5,19 +5,18 @@
 package io.airbyte.db.instance.configs.development
 
 import io.airbyte.commons.version.AirbyteVersion
-import io.airbyte.db.instance.development.MigrationDevHelper.AIRBYTE_VERSION_ENV_VAR
-import io.airbyte.db.instance.development.MigrationDevHelper.VERSION_ENV_VAR
+import io.airbyte.db.instance.development.AIRBYTE_VERSION_ENV_VAR
 import io.airbyte.db.instance.development.MigrationDevHelper.currentAirbyteVersion
-import io.airbyte.db.instance.development.MigrationDevHelper.formatAirbyteVersion
-import io.airbyte.db.instance.development.MigrationDevHelper.getAirbyteVersion
-import io.airbyte.db.instance.development.MigrationDevHelper.getMigrationId
 import io.airbyte.db.instance.development.MigrationDevHelper.getNextMigrationVersion
+import io.airbyte.db.instance.development.VERSION_ENV_VAR
+import io.airbyte.db.instance.development.airbyteVersion
+import io.airbyte.db.instance.development.format
+import io.airbyte.db.instance.development.migrationId
 import org.flywaydb.core.api.MigrationVersion
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junitpioneer.jupiter.ClearEnvironmentVariable
 import org.junitpioneer.jupiter.SetEnvironmentVariable
-import java.util.Optional
 
 private const val VERSION_0113_ALPHA = "0.11.3-alpha"
 
@@ -48,20 +47,20 @@ internal class MigrationDevHelperTest {
   @Test
   fun testGetAirbyteVersion() {
     val migrationVersion = MigrationVersion.fromVersion("0.11.3.010")
-    val airbyteVersion = getAirbyteVersion(migrationVersion)
+    val airbyteVersion = migrationVersion.airbyteVersion
     Assertions.assertEquals("0.11.3", airbyteVersion.serialize())
   }
 
   @Test
   fun testFormatAirbyteVersion() {
     val airbyteVersion = AirbyteVersion(VERSION_0113_ALPHA)
-    Assertions.assertEquals("0_11_3", formatAirbyteVersion(airbyteVersion))
+    Assertions.assertEquals("0_11_3", airbyteVersion.format())
   }
 
   @Test
   fun testGetMigrationId() {
     val migrationVersion = MigrationVersion.fromVersion("0.11.3.010")
-    Assertions.assertEquals("010", getMigrationId(migrationVersion))
+    Assertions.assertEquals("010", migrationVersion.migrationId)
   }
 
   @Test
@@ -71,7 +70,7 @@ internal class MigrationDevHelperTest {
       "0.11.3.001",
       getNextMigrationVersion(
         AirbyteVersion(VERSION_0113_ALPHA),
-        Optional.empty(),
+        null,
       ).version,
     )
 
@@ -80,7 +79,7 @@ internal class MigrationDevHelperTest {
       "0.11.3.001",
       getNextMigrationVersion(
         AirbyteVersion(VERSION_0113_ALPHA),
-        Optional.of(MigrationVersion.fromVersion("0.10.9.003")),
+        MigrationVersion.fromVersion("0.10.9.003"),
       ).version,
     )
 
@@ -89,7 +88,7 @@ internal class MigrationDevHelperTest {
       "0.11.3.004",
       getNextMigrationVersion(
         AirbyteVersion(VERSION_0113_ALPHA),
-        Optional.of(MigrationVersion.fromVersion("0.11.3.003")),
+        MigrationVersion.fromVersion("0.11.3.003"),
       ).version,
     )
 
@@ -98,7 +97,7 @@ internal class MigrationDevHelperTest {
       "0.11.3.004",
       getNextMigrationVersion(
         AirbyteVersion("0.9.17-alpha"),
-        Optional.of(MigrationVersion.fromVersion("0.11.3.003")),
+        MigrationVersion.fromVersion("0.11.3.003"),
       ).version,
     )
   }

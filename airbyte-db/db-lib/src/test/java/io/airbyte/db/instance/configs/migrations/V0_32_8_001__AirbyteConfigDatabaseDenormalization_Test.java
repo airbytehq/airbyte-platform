@@ -166,7 +166,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
       Assertions.assertEquals(now(), sourceDefinition.get(createdAt).toInstant());
       Assertions.assertEquals(now(), sourceDefinition.get(updatedAt).toInstant());
       Assertions.assertFalse(
-          V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(standardSourceDefinition.sourceDefinitionId(), context));
+          V0_32_8_001__AirbyteConfigDatabaseDenormalization.actorDefinitionDoesNotExist(standardSourceDefinition.sourceDefinitionId, context));
     }
   }
 
@@ -204,7 +204,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test extends AbstractCon
       Assertions.assertEquals(now(), record.get(createdAt).toInstant());
       Assertions.assertEquals(now(), record.get(updatedAt).toInstant());
       Assertions.assertFalse(V0_32_8_001__AirbyteConfigDatabaseDenormalization
-          .actorDefinitionDoesNotExist(standardDestinationDefinition.destinationDefinitionId(), context));
+          .actorDefinitionDoesNotExist(standardDestinationDefinition.destinationDefinitionId, context));
     }
   }
 

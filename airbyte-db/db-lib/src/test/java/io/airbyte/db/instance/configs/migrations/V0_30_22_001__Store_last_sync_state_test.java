@@ -12,7 +12,8 @@ import static io.airbyte.db.instance.configs.migrations.V0_30_22_001__Store_last
 import static io.airbyte.db.instance.configs.migrations.V0_30_22_001__Store_last_sync_state.TABLE_AIRBYTE_CONFIGS;
 import static io.airbyte.db.instance.configs.migrations.V0_30_22_001__Store_last_sync_state.getStandardSyncState;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -67,7 +68,7 @@ class V0_30_22_001__Store_last_sync_state_test extends AbstractConfigsDatabaseTe
   @Test
   @Order(10)
   void testGetJobsDatabase() {
-    assertTrue(V0_30_22_001__Store_last_sync_state.getJobsDatabase("", "", "").isEmpty());
+    assertNull(V0_30_22_001__Store_last_sync_state.getJobsDatabase("", "", ""));
 
     // when there is database environment variable, return the database
     final Configs configs = mock(Configs.class);
@@ -75,8 +76,8 @@ class V0_30_22_001__Store_last_sync_state_test extends AbstractConfigsDatabaseTe
     when(configs.getDatabasePassword()).thenReturn(container.getPassword());
     when(configs.getDatabaseUrl()).thenReturn(container.getJdbcUrl());
 
-    assertTrue(V0_30_22_001__Store_last_sync_state
-        .getJobsDatabase(configs.getDatabaseUser(), configs.getDatabasePassword(), configs.getDatabaseUrl()).isPresent());
+    assertNotNull(
+        V0_30_22_001__Store_last_sync_state.getJobsDatabase(configs.getDatabaseUser(), configs.getDatabasePassword(), configs.getDatabaseUrl()));
   }
 
   @Test
