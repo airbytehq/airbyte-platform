@@ -101,6 +101,8 @@ export const enum Action {
   // Connections Actions
   CONNECTIONS_GRAPH_DRAWER_OPENED = "ConnectionGraphDrawerOpened",
   CONNECTIONS_GRAPH_DRAWER_LOADED = "ConnectionGraphDrawerLoaded",
+  SYNC_FAILURE_EXPLANATION_OPENED = "SyncFailureExplanationOpened",
+  REFRESH_FAILURE_EXPLANATION_OPENED = "RefreshFailureExplanationOpened",
 }
 
 export type EventParams = Record<string, unknown>;
