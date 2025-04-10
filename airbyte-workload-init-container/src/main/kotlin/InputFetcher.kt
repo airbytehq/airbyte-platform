@@ -14,7 +14,6 @@ import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Context
 import io.micronaut.context.annotation.Value
-import javax.annotation.PostConstruct
 
 private val logger = KotlinLogging.logger {}
 
@@ -26,7 +25,6 @@ class InputFetcher(
   private val metricClient: MetricClient,
   @Value("\${airbyte.workload-id}") private val workloadId: String,
 ) {
-  @PostConstruct
   fun fetch() {
     logger.info { "Fetching workload..." }
 

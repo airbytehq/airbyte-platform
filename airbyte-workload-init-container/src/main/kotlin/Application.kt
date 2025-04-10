@@ -4,6 +4,7 @@
 
 package io.airbyte.initContainer
 
+import io.airbyte.initContainer.system.ExitWithCode
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.runtime.Micronaut.build
 
@@ -17,12 +18,28 @@ fun main() {
    * This was done to improve startup time by preventing searching through all the beans.
    */
 
-  build()
-    .deduceCloudEnvironment(false)
-    .deduceEnvironment(false)
-    .start()
-    // Explicitly call stop so that the application shuts down after InputFetcher runs
-    .stop()
+  val applicationBuilder =
+    build()
+      .deduceCloudEnvironment(false)
+      .deduceEnvironment(false)
 
-  logger.info { "Init end" }
+  val applicationContext = applicationBuilder.build()
+  var exitCode = 0
+  with(applicationContext) {
+    start()
+    try {
+      val inputFetcher = getBean(InputFetcher::class.java)
+      inputFetcher.fetch()
+    } catch (e: ExitWithCode) {
+      exitCode = e.code
+    }
+    stop()
+  }
+
+  if (exitCode != 0) {
+    logger.info { "Init end with error $exitCode" }
+    kotlin.system.exitProcess(exitCode)
+  } else {
+    logger.info { "Init end" }
+  }
 }
