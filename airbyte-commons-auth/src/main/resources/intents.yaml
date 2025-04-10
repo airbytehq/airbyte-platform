@@ -115,3 +115,14 @@ intents:
       - ORGANIZATION_EDITOR
       - ORGANIZATION_ADMIN
       - ADMIN
+
+  RunOAuthFlow:
+    name: Run the OAuth flow
+    description: Allow user to run OAuth flow
+    roles:
+      - EMBEDDED_END_USER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
