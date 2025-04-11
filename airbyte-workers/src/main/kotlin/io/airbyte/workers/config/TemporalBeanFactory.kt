@@ -20,7 +20,6 @@ class TemporalBeanFactory {
     val workerFactoryOptions =
       WorkerFactoryOptions
         .newBuilder()
-        .setUsingVirtualWorkflowThreads(true)
         .build()
     return WorkerFactory.newInstance(workflowClient, workerFactoryOptions)
   }
