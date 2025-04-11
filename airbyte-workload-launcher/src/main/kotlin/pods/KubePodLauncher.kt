@@ -10,11 +10,13 @@ import dev.failsafe.function.CheckedSupplier
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.MAX_DELETION_TIMEOUT
+import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.VALID_INIT_CONTAINER_EXIT_CODES
 import io.fabric8.kubernetes.api.model.ContainerState
 import io.fabric8.kubernetes.api.model.DeletionPropagation
 import io.fabric8.kubernetes.api.model.Pod
@@ -100,6 +102,10 @@ class KubePodLauncher(
       )
     }
 
+    val initContainerExitCode =
+      initializedPod.status.initContainerStatuses[0]
+        .state.terminated.exitCode
+
     val terminationReason =
       initializedPod
         .status
@@ -108,7 +114,7 @@ class KubePodLauncher(
         .terminated
         .reason
 
-    if (terminationReason != FABRIC8_COMPLETED_REASON_VALUE) {
+    if (terminationReason != FABRIC8_COMPLETED_REASON_VALUE && !VALID_INIT_CONTAINER_EXIT_CODES.contains(initContainerExitCode)) {
       throw RuntimeException(
         "Init container for Pod: ${pod.fullResourceName} did not complete successfully. " +
           "Actual termination reason: $terminationReason.",
@@ -259,6 +265,15 @@ class KubePodLauncher(
       return false
     }
 
+    // Edge case of the init container exiting with specific error codes
+    // Those are configuration related errors that cause the main container to never start however, we did not fail
+    // because the launch was a success from a workload-infra pov
+    if (pod.status.initContainerStatuses[0]
+        .state.terminated.exitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE
+    ) {
+      return true
+    }
+
     // Get statuses for all "non-init" containers.
     val mainContainerStatuses =
       pod.status
@@ -315,5 +330,11 @@ class KubePodLauncher(
     const val FABRIC8_COMPLETED_REASON_VALUE = "Completed"
     const val KUBECTL_PHASE_FIELD_NAME = "status.phase"
     const val MAX_DELETION_TIMEOUT = 45L
+
+    val VALID_INIT_CONTAINER_EXIT_CODES =
+      setOf(
+        InitContainerConstants.SUCCESS_EXIT_CODE,
+        InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE,
+      )
   }
 }
