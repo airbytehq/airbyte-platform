@@ -476,7 +476,7 @@ export const CloudAuthService: React.FC<PropsWithChildren> = ({ children }) => {
   const location = useLocation();
   /* This is the route for the embedded widget.  It uses scoped auth tokens and will not have an associated user.
       Thus, it leverages the EmbeddedAuthService to provide an empty user object to the AuthContext. */
-  if (location.pathname === RoutePaths.EmbeddedWidget) {
+  if (location.pathname === `/${RoutePaths.EmbeddedWidget}`) {
     return <EmbeddedAuthService>{children}</EmbeddedAuthService>;
   }
 
