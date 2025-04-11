@@ -17,6 +17,12 @@
     "envFile": ".env.frontend-dev-enterprise",
     "description": "Develop against a remote Enterprise environment. Requires VPN to be active."
   },
+  "embedded-enterprise-widget": {
+    "name": "Embedded Enterprise Env",
+    "group": "Enterprise",
+    "envFile": ".env.embedded-dev-widget",
+    "description": "Embedded dev env`"
+  },
   "enterprise-local": {
     "name": "Local Enterprise K8s",
     "group": "Enterprise",
