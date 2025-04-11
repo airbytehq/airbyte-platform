@@ -604,6 +604,12 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message:
+            "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -644,6 +650,12 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message:
+            "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"

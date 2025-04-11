@@ -2619,6 +2619,27 @@ paths:
       operationId: updateTag
       x-speakeasy-alias: updateTag
       x-speakeasy-group: Tags
+  /embedded/widget:
+    post:
+      operationId: null
+      summary: Get a token for Airbyte Embedded
+      x-speakeasy-group: EmbeddedWidget
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddedWidgetRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Success
+      tags:
+      - public
+      - embedded_widget
 components:
   responses:
     InitiateOauthResponse:
@@ -3200,6 +3221,11 @@ components:
         schedule:
           $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency
+            on Community and Enterprise connections. This will be supported on Cloud
+            until May 31, at which time all connections will use the dataResidency
+            of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: '#/components/schemas/NamespaceDefinitionEnum'
@@ -3238,6 +3264,11 @@ components:
         schedule:
           $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency
+            on Community and Enterprise connections. This will be supported on Cloud
+            until May 31, at which time all connections will use the dataResidency
+            of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: '#/components/schemas/NamespaceDefinitionEnumNoDefault'
