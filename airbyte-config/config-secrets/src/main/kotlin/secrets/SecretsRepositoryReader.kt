@@ -41,6 +41,10 @@ open class SecretsRepositoryReader(
    * @param secretCoordinate secret coordinate
    * @return JsonNode representing the fetched secret
    */
+  @Deprecated(
+    "Use fetchSecretFromSecretPersistence instead",
+    ReplaceWith("fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence)", "io.airbyte.config.secrets.SecretsRepositoryReader"),
+  )
   fun fetchSecretFromRuntimeSecretPersistence(
     secretCoordinate: SecretCoordinate,
     runtimeSecretPersistence: RuntimeSecretPersistence,
@@ -48,6 +52,15 @@ open class SecretsRepositoryReader(
     val node = JsonNodeFactory.instance.objectNode()
     node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
     return secretsHydrator.hydrateSecretCoordinateFromRuntimeSecretPersistence(node, runtimeSecretPersistence)
+  }
+
+  fun fetchSecretFromSecretPersistence(
+    secretCoordinate: SecretCoordinate,
+    secretPersistence: SecretPersistence,
+  ): JsonNode {
+    val node = JsonNodeFactory.instance.objectNode()
+    node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
+    return secretsHydrator.hydrate(buildConfigWithSecretRefsJava(node), secretPersistence)
   }
 
   /**

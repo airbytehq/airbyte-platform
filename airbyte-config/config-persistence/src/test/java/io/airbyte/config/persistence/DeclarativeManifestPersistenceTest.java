@@ -106,7 +106,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
-    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
+    sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, metricClient, dataplaneGroupService);

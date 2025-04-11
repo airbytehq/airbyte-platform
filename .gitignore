@@ -22,7 +22,9 @@ acceptance_tests_logs/
 # Secrets
 secrets
 !airbyte-config/config-secrets/src/main/kotlin/secrets
+!airbyte-config/config-secrets/src/test/kotlin/secrets
 !airbyte-config/config-models/src/main/kotlin/io/airbyte/config/secrets
+!airbyte-config/config-models/src/test/kotlin/io/airbyte/config/secrets
 !airbyte-domain/services/src/main/kotlin/io/airbyte/domain/services/secrets
 !airbyte-domain/services/src/test/kotlin/io/airbyte/domain/services/secrets
 updated_configurations

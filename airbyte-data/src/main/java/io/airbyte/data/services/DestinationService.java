@@ -11,7 +11,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
-import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -80,8 +79,7 @@ public interface DestinationService {
   void tombstoneDestination(
                             final String name,
                             final UUID workspaceId,
-                            final UUID destinationId,
-                            final ConnectorSpecification spec)
+                            final UUID destinationId)
       throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

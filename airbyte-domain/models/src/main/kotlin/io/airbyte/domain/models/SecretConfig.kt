@@ -23,3 +23,11 @@ data class SecretConfig(
   val createdAt: OffsetDateTime?,
   val updatedAt: OffsetDateTime?,
 )
+
+data class SecretConfigCreate(
+  val secretStorageId: SecretStorageId,
+  val descriptor: String,
+  val externalCoordinate: String,
+  val airbyteManaged: Boolean,
+  val createdBy: UserId,
+)

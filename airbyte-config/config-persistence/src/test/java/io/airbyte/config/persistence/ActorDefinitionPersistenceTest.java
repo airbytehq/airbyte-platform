@@ -115,7 +115,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         new SourceServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryWriter,
             secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
@@ -129,8 +128,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         new DestinationServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
                 featureFlagClient,

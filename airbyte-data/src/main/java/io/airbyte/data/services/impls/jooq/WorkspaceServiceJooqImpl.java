@@ -752,17 +752,18 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
       final JsonNode partialConfig;
       if (previousWebhookConfigs.isPresent()) {
-        partialConfig = secretsRepositoryWriter.updateFromConfig(
+        partialConfig = secretsRepositoryWriter.updateFromConfigLegacy(
             workspace.getWorkspaceId(),
             previousWebhookConfigs.get(),
             workspace.getWebhookOperationConfigs(),
             webhookConfigSchema,
             secretPersistence);
       } else {
-        partialConfig = secretsRepositoryWriter.createFromConfig(
+        partialConfig = secretsRepositoryWriter.createFromConfigLegacy(
             workspace.getWorkspaceId(),
             workspace.getWebhookOperationConfigs(),
-            webhookConfigSchema, secretPersistence);
+            webhookConfigSchema,
+            secretPersistence);
       }
       partialWorkspace.withWebhookOperationConfigs(partialConfig);
     }

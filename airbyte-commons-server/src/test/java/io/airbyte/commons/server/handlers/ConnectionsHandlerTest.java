@@ -106,6 +106,7 @@ import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.CronExpressionHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.commons.server.validation.ValidationError;
 import io.airbyte.config.ActorCatalog;
@@ -176,11 +177,12 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
@@ -286,7 +288,7 @@ class ConnectionsHandlerTest {
   private SecretsRepositoryReader secretsRepositoryReader;
   private SourceService sourceService;
   private WorkspaceService workspaceService;
-  private SecretPersistenceConfigService secretPersistenceConfigService;
+  private SecretPersistenceService secretPersistenceService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private MapperSecretHelper mapperSecretHelper;
 
@@ -314,7 +316,9 @@ class ConnectionsHandlerTest {
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
   private MetricClient metricClient;
   private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretStorageService secretStorageService;
   private SecretReferenceService secretReferenceService;
+  private CurrentUserService currentUserService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -423,7 +427,7 @@ class ConnectionsHandlerTest {
     secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     sourceService = mock(SourceService.class);
     workspaceService = mock(WorkspaceService.class);
-    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    secretPersistenceService = mock(SecretPersistenceService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     streamStatusesService = mock(StreamStatusesService.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
@@ -436,7 +440,9 @@ class ConnectionsHandlerTest {
     featureFlagClient = mock(TestClient.class);
     metricClient = mock(MetricClient.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretStorageService = mock(SecretStorageService.class);
     secretReferenceService = mock(SecretReferenceService.class);
+    currentUserService = mock(CurrentUserService.class);
 
     destinationHandler =
         new DestinationHandler(
@@ -454,11 +460,11 @@ class ConnectionsHandlerTest {
             workspaceHelper,
             licenseEntitlementChecker,
             Configs.AirbyteEdition.COMMUNITY,
-            featureFlagClient,
             secretsRepositoryWriter,
-            metricClient,
-            secretPersistenceConfigService,
-            secretReferenceService);
+            secretPersistenceService,
+            secretStorageService,
+            secretReferenceService,
+            currentUserService);
     sourceHandler = new SourceHandler(
         catalogService,
         secretsRepositoryReader,
@@ -469,20 +475,19 @@ class ConnectionsHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
-        featureFlagClient,
         sourceService,
-        workspaceService,
         workspaceHelper,
-        secretPersistenceConfigService,
+        secretPersistenceService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
-        metricClient,
         Configs.AirbyteEdition.COMMUNITY,
         secretsRepositoryWriter,
-        secretReferenceService);
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

@@ -30,6 +30,7 @@ dependencies {
    * need to define singletons from these modules in order for everything work.
    */
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-featureflag"))

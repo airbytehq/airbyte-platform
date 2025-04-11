@@ -17,4 +17,15 @@ interface SecretReferenceRepository : PageableRepository<SecretReference, UUID> 
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReference>
+
+  fun deleteByScopeTypeAndScopeId(
+    scopeType: SecretReferenceScopeType,
+    id: UUID,
+  )
+
+  fun deleteByScopeTypeAndScopeIdAndHydrationPath(
+    scopeType: SecretReferenceScopeType,
+    scopeId: UUID,
+    hydrationPath: String?,
+  )
 }

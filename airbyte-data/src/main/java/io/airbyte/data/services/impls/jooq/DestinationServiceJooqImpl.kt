@@ -11,13 +11,10 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.StandardDestinationDefinition
-import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.SecretPersistenceConfigService
 import io.airbyte.data.services.shared.DestinationAndDefinition
 import io.airbyte.data.services.shared.ResourcesQueryPaginated
 import io.airbyte.db.ContextQueryFunction
@@ -29,10 +26,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinitionWorkspaceGrantRecord
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Organization
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
-import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -64,16 +58,12 @@ class DestinationServiceJooqImpl
   constructor(
     @Named("configDatabase") database: Database,
     featureFlagClient: FeatureFlagClient,
-    secretsRepositoryWriter: SecretsRepositoryWriter,
-    secretPersistenceConfigService: SecretPersistenceConfigService,
     connectionService: ConnectionService,
     actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
     metricClient: MetricClient,
   ) : DestinationService {
     private val database: ExceptionWrappingDatabase
     private val featureFlagClient: FeatureFlagClient
-    private val secretsRepositoryWriter: SecretsRepositoryWriter
-    private val secretPersistenceConfigService: SecretPersistenceConfigService
     private val connectionService: ConnectionService
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
     private val metricClient: MetricClient
@@ -82,8 +72,6 @@ class DestinationServiceJooqImpl
       this.database = ExceptionWrappingDatabase(database)
       this.connectionService = connectionService
       this.featureFlagClient = featureFlagClient
-      this.secretsRepositoryWriter = secretsRepositoryWriter
-      this.secretPersistenceConfigService = secretPersistenceConfigService
       this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
       this.metricClient = metricClient
     }
@@ -766,7 +754,8 @@ class DestinationServiceJooqImpl
     }
 
     /**
-     * Delete destination: tombstone destination AND delete secrets
+     * Delete destination: tombstone destination. Assumes secrets have already been deleted by the
+     * domain layer.
      *
      * @param name Destination name
      * @param workspaceId workspace ID
@@ -780,24 +769,10 @@ class DestinationServiceJooqImpl
       name: String?,
       workspaceId: UUID?,
       destinationId: UUID,
-      spec: ConnectorSpecification,
     ) {
-      // 1. Delete secrets from config
       val destinationConnection = getDestinationConnection(destinationId)
-      val config = destinationConnection.getConfiguration()
-      val organizationId = getOrganizationIdFromWorkspaceId(workspaceId)
-      var secretPersistence: RuntimeSecretPersistence? = null
-      if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-        val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-        secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
-      }
-      secretsRepositoryWriter.deleteFromConfig(
-        config,
-        spec.getConnectionSpecification(),
-        secretPersistence,
-      )
 
-      // 2. Tombstone destination and void config
+      // Tombstone destination and void config
       val newDestinationConnection =
         DestinationConnection()
           .withName(name)

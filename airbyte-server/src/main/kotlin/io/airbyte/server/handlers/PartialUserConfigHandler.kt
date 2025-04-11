@@ -17,6 +17,7 @@ import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import jakarta.inject.Singleton
+import java.util.Optional
 
 @Singleton
 class PartialUserConfigHandler(
@@ -45,14 +46,14 @@ class PartialUserConfigHandler(
       ConnectorSpecification().apply {
         connectionSpecification = configTemplate.configTemplate.userConfigSpec.get("connectionSpecification")
       }
-
     val connectionConfig = partialUserConfigCreate.partialUserConfigProperties.get("connectionConfiguration")
     val secureConfig =
-      sourceHandler.persistSecretsAndUpdateSourceConnection(
-        null,
+      sourceHandler.persistConfigRawSecretValues(
         connectionConfig,
+        Optional.empty(),
         partialUserConfigCreate.workspaceId,
         connectorSpec,
+        savedSource.sourceId,
       )
 
     // Save the secure config
@@ -108,11 +109,12 @@ class PartialUserConfigHandler(
 
     val connectionConfig = partialUserConfig.partialUserConfigProperties.get("connectionConfiguration")
     val secureConfig =
-      sourceHandler.persistSecretsAndUpdateSourceConnection(
-        null,
+      sourceHandler.persistConfigRawSecretValues(
         connectionConfig,
+        Optional.empty(),
         partialUserConfig.workspaceId,
         connectorSpec,
+        existingConfig.actorId,
       )
 
     val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig)

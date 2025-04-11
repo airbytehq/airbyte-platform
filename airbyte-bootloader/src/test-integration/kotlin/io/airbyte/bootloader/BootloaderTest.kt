@@ -153,8 +153,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -163,7 +161,6 @@ internal class BootloaderTest {
       SourceServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
@@ -342,7 +339,6 @@ internal class BootloaderTest {
         configDatabase,
         featureFlagClient!!,
         mockk(),
-        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -351,8 +347,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        mockk(),
-        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -665,7 +659,6 @@ internal class BootloaderTest {
         configDatabase,
         featureFlagClient!!,
         mockk(),
-        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -674,8 +667,6 @@ internal class BootloaderTest {
       DestinationServiceJooqImpl(
         configDatabase,
         featureFlagClient!!,
-        mockk(),
-        mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,

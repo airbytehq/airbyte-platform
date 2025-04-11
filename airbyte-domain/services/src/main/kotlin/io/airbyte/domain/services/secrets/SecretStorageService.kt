@@ -47,6 +47,7 @@ open class SecretStorageService(
    * @param workspaceId the workspace to get the secret storage for
    * @return the secret storage for the workspace, or null if none exists
    */
+  @JvmName("getByWorkspaceId")
   fun getByWorkspaceId(workspaceId: WorkspaceId): SecretStorage? {
     // If the workspace has a workspace-scoped secret storage, return the first one found.
     // Otherwise, return the first org-level secret storage found.

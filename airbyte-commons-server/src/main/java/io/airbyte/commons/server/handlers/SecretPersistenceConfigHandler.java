@@ -35,7 +35,7 @@ public class SecretPersistenceConfigHandler {
   }
 
   public String writeToEnvironmentSecretPersistence(final AirbyteManagedSecretCoordinate secretCoordinate, final String payload) {
-    secretsRepositoryWriter.store(secretCoordinate, payload, null);
+    secretsRepositoryWriter.storeInDefaultPersistence(secretCoordinate, payload);
     return secretCoordinate.getFullCoordinate();
   }
 
