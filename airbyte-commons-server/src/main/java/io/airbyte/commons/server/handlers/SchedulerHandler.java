@@ -353,7 +353,11 @@ public class SchedulerHandler {
         destinationService.getStandardDestinationDefinition(updatedDestination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDef,
         updatedDestination.getWorkspaceId(), updatedDestination.getDestinationId());
-    jsonSchemaValidator.ensure(destinationVersion.getSpec().getConnectionSpecification(), updatedDestination.getConfiguration());
+
+    // validate the provided updated config
+    jsonSchemaValidator.ensure(
+        destinationVersion.getSpec().getConnectionSpecification(),
+        destinationUpdate.getConnectionConfiguration());
 
     final DestinationCoreConfig destinationCoreConfig = new DestinationCoreConfig()
         .destinationId(updatedDestination.getDestinationId())
