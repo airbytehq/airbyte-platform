@@ -9,6 +9,7 @@
 export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
+  "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
   "connection.hashingUI": boolean;
   "connection.mappingsUI": boolean;
@@ -36,6 +37,7 @@ export interface Experiments {
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
+  "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
   "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
