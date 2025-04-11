@@ -13,17 +13,21 @@ import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
+import java.util.UUID
 
 @Singleton
 class PartialUserConfigHandler(
   private val partialUserConfigService: PartialUserConfigService,
   private val configTemplateService: ConfigTemplateService,
   private val sourceHandler: SourceHandler,
+  @Named("jsonSecretsProcessorWithCopy") val secretsProcessor: JsonSecretsProcessor,
 ) {
   /**
    * Creates a partial user config and its associated source.
@@ -66,6 +70,26 @@ class PartialUserConfigHandler(
       actorName = createdPartialUserConfig.actorName,
       actorIcon = createdPartialUserConfig.actorIcon,
     )
+  }
+
+  /**
+   * Gets an existing partial user config.
+   *
+   * @param partialUserConfigId The id of the partial user config
+   * @return The fetched partial user config with its template
+   */
+  fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithConfigTemplateAndActorDetails {
+    val partialUserConfig = partialUserConfigService.getPartialUserConfig(partialUserConfigId)
+
+    val sanitizedConfigProperties =
+      secretsProcessor.prepareSecretsForOutput(
+        partialUserConfig.partialUserConfig.partialUserConfigProperties,
+        partialUserConfig.configTemplate.userConfigSpec["connectionSpecification"],
+      )
+
+    partialUserConfig.partialUserConfig.partialUserConfigProperties = sanitizedConfigProperties
+
+    return partialUserConfig
   }
 
   /**
@@ -117,7 +141,7 @@ class PartialUserConfigHandler(
         existingConfig.actorId,
       )
 
-    val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig)
+    val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig, actorId = existingConfig.actorId)
 
     // Update the partial user config in the database
     val updatedPartialUserConfig = partialUserConfigService.updatePartialUserConfig(securePartialUserConfig)

@@ -61,7 +61,7 @@ open class ConfigTemplateController(
 private fun ConfigTemplateWithActorDetails.toApiModel() =
   ConfigTemplateRead()
     .sourceDefinitionId(this.configTemplate.actorDefinitionId)
-    .configTemplateSpec(this.configTemplate.partialDefaultConfig)
+    .configTemplateSpec(this.configTemplate.userConfigSpec)
     .icon(this.actorIcon)
     .name(this.actorName)
     .id(this.configTemplate.id)

@@ -2407,5 +2407,9 @@
   "jinjaInput.suggest.userInput.createNew.label": "Create new user input…",
   "jinjaInput.suggest.userInput.createNew.doc": "Create a new user input and insert a reference to it here.",
 
-  "configTemplates.emptyState": "This organization has no available sources available to configure."
+  "configTemplates.emptyState": "This organization has no available sources available to configure.",
+
+  "partialUserConfig.create.success": "Source created successfully",
+  "partialUserConfig.update.success": "Source updated successfully",
+  "partialUserConfig.back": "Back"
 }

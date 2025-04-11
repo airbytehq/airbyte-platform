@@ -18641,7 +18641,7 @@ components:
           type: string
           format: uuid
         configTemplateSpec:
-          type: object
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
     ListConfigTemplatesRequestBody:
       type: object
       required:

@@ -62,7 +62,7 @@ class PartialUserConfigController(
     @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
   ): PartialUserConfigRead =
     partialUserConfigWithTemplateAndActorDetailsToApiModel(
-      partialUserConfigService.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId),
+      partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId),
     )
 
   private fun PartialUserConfigCreate.toConfigModel(): PartialUserConfig =
@@ -77,7 +77,7 @@ class PartialUserConfigController(
     val existingPartialUserConfig = partialUserConfigService.getPartialUserConfig(this.partialUserConfigId)
 
     return PartialUserConfig(
-      id = UUID.randomUUID(),
+      id = partialUserConfigId,
       workspaceId = existingPartialUserConfig.partialUserConfig.workspaceId,
       configTemplateId = existingPartialUserConfig.partialUserConfig.configTemplateId,
       partialUserConfigProperties = this.partialUserConfigProperties,

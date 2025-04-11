@@ -15,6 +15,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -34,6 +35,7 @@ class PartialUserConfigHandlerTest {
   private lateinit var sourceHandler: SourceHandler
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var secretsProcessor: JsonSecretsProcessor
 
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
@@ -46,7 +48,8 @@ class PartialUserConfigHandlerTest {
     partialUserConfigService = mockk<PartialUserConfigService>()
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler)
+    secretsProcessor = mockk<JsonSecretsProcessor>()
+    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
     objectMapper = ObjectMapper()
   }
 

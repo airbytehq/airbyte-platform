@@ -1,8 +1,8 @@
-export * from "./embeddedWidget";
 export * from "./actorDefinitionVersions";
 export * from "./applications";
 export * from "./auth";
 export * from "./billing";
+export * from "./configTemplates";
 export * from "./connections";
 export * from "./connectorBuilderApi";
 export * from "./connectorBuilderProject";
@@ -25,6 +25,7 @@ export * from "./mappers";
 export * from "./notifications";
 export * from "./operations";
 export * from "./organizations";
+export * from "./partialUserConfigs";
 export * from "./permissions";
 export * from "./pypi";
 export * from "./security";
