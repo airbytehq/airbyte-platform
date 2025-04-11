@@ -32,8 +32,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/claim:
     put:
       tags:
@@ -65,8 +63,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/create:
     post:
       tags:
@@ -87,8 +83,6 @@ paths:
                 type: object
         "200":
           description: Workload with given workload id already exists.
-      security:
-      - Authorization: []
   /api/v1/workload/expired_deadline_list:
     post:
       tags:
@@ -107,8 +101,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/failure:
     put:
       tags:
@@ -135,8 +127,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/heartbeat:
     put:
       tags:
@@ -164,8 +154,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/launched:
     put:
       tags:
@@ -192,8 +180,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/list:
     post:
       tags:
@@ -212,8 +198,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/list_long_running_non_sync:
     post:
       tags:
@@ -232,8 +216,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/list_long_running_sync:
     post:
       tags:
@@ -252,8 +234,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/queue/depth:
     post:
       tags:
@@ -272,8 +252,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadDepthResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/queue/poll:
     post:
       tags:
@@ -292,8 +270,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/queue/stats:
     get:
       tags:
@@ -307,8 +283,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadQueueStatsResponse"
-      security:
-      - Authorization: []
   /api/v1/workload/running:
     put:
       tags:
@@ -335,8 +309,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/success:
     put:
       tags:
@@ -363,8 +335,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
   /api/v1/workload/{workloadId}:
     get:
       tags:
@@ -390,8 +360,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/KnownExceptionInfo"
-      security:
-      - Authorization: []
 components:
   schemas:
     ClaimResponse:
@@ -731,8 +699,3 @@ components:
       - discover
       - spec
       x-type: String
-  securitySchemes:
-    Authorization:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
