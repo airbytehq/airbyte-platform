@@ -13,6 +13,7 @@ import io.airbyte.data.repositories.Specifications
 import io.airbyte.data.services.JobService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
@@ -60,17 +61,13 @@ class JobServiceDataImpl(
   override fun findLatestJobPerScope(
     configTypes: Set<JobConfig.ConfigType>,
     scopes: Set<String>,
-    limit: Int,
-    offset: Int,
     createdAtStart: OffsetDateTime,
   ): List<Job> =
     jobsRepository
       .findLatestJobPerScope(
-        configTypes.map { it.toEntity() }.toSet(),
+        JobConfigType.sync.toString(),
         scopes,
         createdAtStart,
-        limit,
-        offset,
       ).map { it.toConfigModel() }
 
   override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()

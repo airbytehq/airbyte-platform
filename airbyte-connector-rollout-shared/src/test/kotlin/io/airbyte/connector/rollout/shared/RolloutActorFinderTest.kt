@@ -232,7 +232,7 @@ class RolloutActorFinderTest {
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns mockConnectionSyncs
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         createJobsFromSyncs(mockConnectionSyncs, 0, 0),
@@ -253,7 +253,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
 
@@ -284,7 +284,7 @@ class RolloutActorFinderTest {
     } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns mockConnectionSyncs
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         createJobsFromSyncs(mockConnectionSyncs, 0, 0),
@@ -304,7 +304,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getConfigScopeMaps(any())
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
 
@@ -429,7 +429,7 @@ class RolloutActorFinderTest {
           )
         }.chunked(jobLimit) // Split into batches
 
-    every { jobService.findLatestJobPerScope(any(), any(), any(), any(), any()) } returnsMany (
+    every { jobService.findLatestJobPerScope(any(), any(), any()) } returnsMany (
       paginatedJobBatches + listOf(emptyList()) // Add an empty list at the end to stop pagination
     )
 
@@ -440,7 +440,7 @@ class RolloutActorFinderTest {
 
     verify {
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
 
       if (actorType == ActorType.SOURCE) {
         connectionService.listConnectionsBySources(any(), any(), any())
@@ -458,7 +458,7 @@ class RolloutActorFinderTest {
     val mockConnectionSyncs = createSyncsFromConfigScopeMap(CONFIG_SCOPE_MAP, actorType)
 
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         createJobsFromSyncs(mockConnectionSyncs, 0, mockConnectionSyncs.size),
@@ -475,7 +475,7 @@ class RolloutActorFinderTest {
 
     assertEquals(4, jobInfo.size)
 
-    verify(exactly = 1) { jobService.findLatestJobPerScope(any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { jobService.findLatestJobPerScope(any(), any(), any()) }
   }
 
   @ParameterizedTest
@@ -495,7 +495,7 @@ class RolloutActorFinderTest {
 
     assertEquals(0, jobInfo.size)
 
-    verify(exactly = 0) { jobService.findLatestJobPerScope(any(), any(), any(), any(), any()) }
+    verify(exactly = 0) { jobService.findLatestJobPerScope(any(), any(), any()) }
   }
 
   @ParameterizedTest
@@ -618,7 +618,7 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns mockConnectionSyncs
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         createJobsFromSyncs(mockConnectionSyncs, 0, 0),
@@ -638,7 +638,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
 
@@ -697,7 +697,7 @@ class RolloutActorFinderTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
     every { connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any()) } returns mockConnectionSyncs
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         createJobsFromSyncs(mockConnectionSyncs, 0, 1),
@@ -717,7 +717,7 @@ class RolloutActorFinderTest {
       actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
       scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
       connectionService.listConnectionsByActorDefinitionIdAndType(any(), any(), any(), any())
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
     }
 
@@ -1200,7 +1200,7 @@ class RolloutActorFinderTest {
         createJobsFromSyncs(mockConnectionSyncs.drop(1), 0, 0)
 
     every {
-      jobService.findLatestJobPerScope(any(), any(), any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     } returnsMany
       listOf(
         jobs,
@@ -1215,7 +1215,7 @@ class RolloutActorFinderTest {
         actorType,
       )
     assertEquals(mockConnectionSyncs.size - 1, candidates.size)
-    verify { jobService.findLatestJobPerScope(any(), any(), any(), any(), any()) }
+    verify { jobService.findLatestJobPerScope(any(), any(), any()) }
   }
 
   @Test
