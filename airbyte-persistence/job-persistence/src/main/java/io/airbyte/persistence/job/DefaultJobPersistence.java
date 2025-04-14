@@ -1225,16 +1225,11 @@ public class DefaultJobPersistence implements JobPersistence {
    * @return the last job for the connection including the cancelled jobs
    */
   @Override
-  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException {
-    final String startOfTheQuery = "SELECT id FROM jobs "
+  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException {
+    final String query = "SELECT id FROM jobs "
         + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
-        + SCOPE_WITHOUT_AND_CLAUSE;
-
-    final String endOfTheQuery = withScheduledOnly ? AND + "is_scheduled = true "
-        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1
-        : ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
-
-    final String query = startOfTheQuery + endOfTheQuery;
+        + SCOPE_WITHOUT_AND_CLAUSE + AND + "is_scheduled = true "
+        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
 
     return jobDatabase.query(ctx -> ctx
         .fetch(query, connectionId.toString())

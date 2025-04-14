@@ -173,8 +173,6 @@ object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instan
 
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
 
-object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
-
 object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
 
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)

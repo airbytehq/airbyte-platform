@@ -314,7 +314,6 @@ class ConfigFetchActivityTest {
         configFetchActivity = new ConfigFetchActivityImpl(mAirbyteApiClient, SYNC_JOB_MAX_ATTEMPTS, () -> 60L * 3,
             mFeatureFlagClient, mScheduleJitterHelper, mFfContextMapper);
 
-        when(mJobRead.getStartedAt()).thenReturn(null);
         when(mJobRead.getCreatedAt())
             .thenReturn(60L);
 

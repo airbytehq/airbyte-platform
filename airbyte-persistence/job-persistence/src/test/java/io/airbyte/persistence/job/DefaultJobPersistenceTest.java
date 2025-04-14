@@ -407,65 +407,27 @@ class DefaultJobPersistenceTest {
   }
 
   @Test
-  @DisplayName("When getting the last replication job should return the most recently created job")
-  void testGetLastSyncJobWithCancel() throws IOException {
-    final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow();
-    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
-    jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
-    jobPersistence.cancelJob(jobId);
-
-    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE), false);
-
-    final Job expected = createJob(
-        jobId,
-        SYNC_JOB_CONFIG,
-        JobStatus.CANCELLED,
-        Lists.newArrayList(
-            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
-            createAttempt(1, jobId, AttemptStatus.FAILED, LOG_PATH)),
-        NOW.getEpochSecond());
-
-    assertEquals(Optional.of(expected), actual);
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
   @DisplayName("When getting the last replication job should return the most recently created job without scheduled functionalities")
-  void testGetLastSyncJobWithCancelWithScheduleEnabledForNonScheduledJob(final boolean scheduleEnabled) throws IOException {
+  void testGetLastSyncJobWithCancelWithScheduleEnabledForNonScheduledJob() throws IOException {
     final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, false).orElseThrow();
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
     jobPersistence.cancelJob(jobId);
 
-    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE), scheduleEnabled);
+    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE));
 
-    final Job expected = createJob(
-        jobId,
-        SYNC_JOB_CONFIG,
-        JobStatus.CANCELLED,
-        Lists.newArrayList(
-            createAttempt(0, jobId, AttemptStatus.FAILED, LOG_PATH),
-            createAttempt(1, jobId, AttemptStatus.FAILED, LOG_PATH)),
-        NOW.getEpochSecond(),
-        false);
-
-    if (scheduleEnabled) {
-      assertEquals(Optional.empty(), actual);
-    } else {
-      assertEquals(Optional.of(expected), actual);
-    }
+    assertEquals(Optional.empty(), actual);
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = {true, false})
+  @Test
   @DisplayName("When getting the last replication job should return the most recently created job with scheduled functionalities")
-  void testGetLastSyncJobWithCancelWithScheduleEnabledForScheduledJob(final boolean scheduleEnabled) throws IOException {
+  void testGetLastSyncJobWithCancelWithScheduleEnabledForScheduledJob() throws IOException {
     final long jobId = jobPersistence.enqueueJob(SCOPE, SYNC_JOB_CONFIG, true).orElseThrow();
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
     jobPersistence.failAttempt(jobId, jobPersistence.createAttempt(jobId, LOG_PATH));
     jobPersistence.cancelJob(jobId);
 
-    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE), scheduleEnabled);
+    final Optional<Job> actual = jobPersistence.getLastReplicationJobWithCancel(UUID.fromString(SCOPE));
 
     final Job expected = createJob(
         jobId,
