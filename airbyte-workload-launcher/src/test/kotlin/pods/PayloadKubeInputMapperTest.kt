@@ -241,6 +241,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
@@ -354,6 +355,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
