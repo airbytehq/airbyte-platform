@@ -25,7 +25,7 @@ class DataResidencyHelper(
     } else {
       return if (airbyteEdition == AirbyteEdition.CLOUD) {
         if (dataResidency.equals(GEOGRAPHY_AUTO, ignoreCase = true)) {
-          val default = dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US).name
+          val default = dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US).name
           logger.warn { "Data Residency $dataResidency is no longer supported on Airbyte Cloud. Defaulting to $default." }
           default
         } else {

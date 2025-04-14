@@ -33,7 +33,7 @@ class DataResidencyHelperTest {
   @Test
   fun `cloud edition with AUTO returns default group`() {
     val defaultGroup = DataplaneGroup().withName("cloud-default")
-    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns defaultGroup
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns defaultGroup
 
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
 
