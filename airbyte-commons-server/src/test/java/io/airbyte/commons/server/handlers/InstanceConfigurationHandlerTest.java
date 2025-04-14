@@ -50,6 +50,7 @@ import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,6 +78,7 @@ class InstanceConfigurationHandlerTest {
   private static final String DEFAULT_USER_EMAIL = ""; // matches what we do in production code
   private static final Integer MAX_NODES = 12;
   private static final Integer MAX_EDITORS = 50;
+  private static final Set<UUID> ENTERPRISE_CONNECTOR_IDS = Set.of();
   private static final Date EXPIRATION_DATE = new Date(2025, 12, 3);
 
   @Mock
@@ -110,7 +112,7 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense
-        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS));
+        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS, false));
   }
 
   @ParameterizedTest
@@ -133,7 +135,7 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(isEnterprise);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(isEnterprise ? EditionEnum.PRO : EditionEnum.COMMUNITY)
+        .edition(isEnterprise ? EditionEnum.ENTERPRISE : EditionEnum.COMMUNITY)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(isEnterprise ? LicenseStatus.EXCEEDED.PRO : null)
@@ -241,7 +243,7 @@ class InstanceConfigurationHandlerTest {
     instanceConfigurationHandler = getInstanceConfigurationHandler(true);
 
     final InstanceConfigurationResponse expected = new InstanceConfigurationResponse()
-        .edition(EditionEnum.PRO)
+        .edition(EditionEnum.ENTERPRISE)
         .version("0.50.1")
         .airbyteUrl(AIRBYTE_URL)
         .licenseStatus(LicenseStatus.PRO)
@@ -331,7 +333,7 @@ class InstanceConfigurationHandlerTest {
     final var handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -359,7 +361,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(license),
         mWorkspacePersistence,
@@ -379,7 +381,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -400,7 +402,7 @@ class InstanceConfigurationHandlerTest {
     final InstanceConfigurationHandler handler = new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        AirbyteEdition.PRO,
+        AirbyteEdition.ENTERPRISE,
         new AirbyteVersion("0.50.1"),
         Optional.of(activeAirbyteLicense),
         mWorkspacePersistence,
@@ -449,7 +451,7 @@ class InstanceConfigurationHandlerTest {
     return new InstanceConfigurationHandler(
         Optional.of(AIRBYTE_URL),
         "logging",
-        isEnterprise ? AirbyteEdition.PRO : AirbyteEdition.COMMUNITY,
+        isEnterprise ? AirbyteEdition.ENTERPRISE : AirbyteEdition.COMMUNITY,
         new AirbyteVersion("0.50.1"),
         isEnterprise ? Optional.of(activeAirbyteLicense) : Optional.empty(),
         mWorkspacePersistence,

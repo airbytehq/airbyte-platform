@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationPaymentConfigApi
@@ -8,12 +12,12 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
-import io.airbyte.commons.server.OrganizationId
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.services.OrganizationService
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.config.OrganizationPaymentConfig.UsageCategoryOverride
+import io.airbyte.domain.models.OrganizationId
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Get
@@ -30,8 +34,8 @@ private val UTC = ZoneId.of("UTC")
 
 @Controller("/api/v1/organization_payment_config")
 open class OrganizationPaymentConfigController(
-  private val organizationService: OrganizationService,
-  private val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
+  protected val organizationService: OrganizationService,
+  protected val organizationPaymentConfigRepository: OrganizationPaymentConfigRepository,
 ) : OrganizationPaymentConfigApi {
   @RequiresIntent(Intent.ManageOrganizationPaymentConfigs)
   @Get("/{organizationId}")

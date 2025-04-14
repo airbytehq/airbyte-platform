@@ -42,7 +42,12 @@ import {
   SourceDefinitionId,
   BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
-import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
+import {
+  DeclarativeComponentSchema,
+  DeclarativeComponentSchemaStreamsItem,
+  NoPaginationType,
+  StateDelegatingStreamType,
+} from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -65,6 +70,7 @@ export interface BuilderProject {
   version: "draft" | number;
   sourceDefinitionId?: string;
   id: string;
+  updatedAt: number;
   hasDraft?: boolean;
   baseActorDefinitionVersionInfo?: BaseActorDefinitionVersionInfo;
   contributionInfo?: ContributionInfo;
@@ -74,6 +80,7 @@ export interface BuilderProjectWithManifest {
   name: string;
   manifest?: DeclarativeComponentSchema;
   yamlManifest?: string;
+  componentsFileContent?: string;
   contributionPullRequestUrl?: string;
   contributionActorDefinitionId?: string;
 }
@@ -102,6 +109,7 @@ export const convertProjectDetailsReadToBuilderProject = (
     typeof projectDetails.activeDeclarativeManifestVersion !== "undefined"
       ? projectDetails.activeDeclarativeManifestVersion
       : "draft",
+  updatedAt: projectDetails.updatedAt,
   sourceDefinitionId: projectDetails.sourceDefinitionId,
   id: projectDetails.builderProjectId,
   hasDraft: projectDetails.hasDraft,
@@ -165,6 +173,7 @@ export const useCreateBuilderProject = () => {
               id: builderProjectId,
               name,
               version: "draft" as const,
+              updatedAt: Date.now(),
             },
           ]
         );
@@ -254,7 +263,12 @@ export const useResolvedBuilderProjectVersion = (projectId: string, version?: nu
       if (!project.declarativeManifest?.manifest) {
         return null;
       }
-      return (await resolveManifestQuery(project.declarativeManifest.manifest)).manifest as DeclarativeComponentSchema;
+      const resolvedManifest = (await resolveManifestQuery(project.declarativeManifest.manifest))
+        .manifest as DeclarativeComponentSchema;
+      return {
+        resolvedManifest,
+        componentsFileContent: project.builderProject.componentsFileContent,
+      };
     },
     {
       retry: false,
@@ -270,7 +284,14 @@ export const useUpdateBuilderProject = (projectId: string) => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, BuilderProjectWithManifest>(
-    ({ name, manifest, yamlManifest, contributionActorDefinitionId, contributionPullRequestUrl }) =>
+    ({
+      name,
+      manifest,
+      yamlManifest,
+      contributionActorDefinitionId,
+      contributionPullRequestUrl,
+      componentsFileContent,
+    }) =>
       updateConnectorBuilderProject(
         {
           workspaceId,
@@ -281,6 +302,7 @@ export const useUpdateBuilderProject = (projectId: string) => {
             yamlManifest,
             contributionActorDefinitionId,
             contributionPullRequestUrl,
+            componentsFileContent,
           },
         },
         requestOptions
@@ -303,6 +325,7 @@ export interface BuilderProjectPublishBody {
   projectId: string;
   description: string;
   manifest: DeclarativeComponentSchema;
+  componentsFileContent?: string;
 }
 
 function updateProjectQueryCache(
@@ -340,7 +363,7 @@ export const usePublishBuilderProject = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<SourceDefinitionIdBody, Error, BuilderProjectPublishBody>(
-    ({ name, projectId, description, manifest }) =>
+    ({ name, projectId, description, manifest, componentsFileContent }) =>
       publishConnectorBuilderProject(
         {
           workspaceId,
@@ -356,6 +379,7 @@ export const usePublishBuilderProject = () => {
               advancedAuth: manifest.spec?.advanced_auth,
             },
           },
+          componentsFileContent,
         },
         requestOptions
       ),
@@ -376,6 +400,7 @@ export interface NewVersionBody {
   version: number;
   useAsActiveVersion: boolean;
   manifest: DeclarativeComponentSchema;
+  componentsFileContent?: string;
 }
 
 export const useReleaseNewBuilderProjectVersion = () => {
@@ -384,7 +409,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
   const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<void, Error, NewVersionBody>(
-    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest }) =>
+    ({ sourceDefinitionId, description, version, useAsActiveVersion, manifest, componentsFileContent }) =>
       createDeclarativeSourceDefinitionManifest(
         {
           workspaceId,
@@ -400,6 +425,7 @@ export const useReleaseNewBuilderProjectVersion = () => {
             },
           },
           setAsActiveManifest: useAsActiveVersion,
+          componentsFileContent,
         },
         requestOptions
       ),
@@ -468,7 +494,7 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream | undefined,
+  testStream: DeclarativeComponentSchemaStreamsItem | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
@@ -476,15 +502,27 @@ export const useBuilderProjectReadStream = (
   return useQuery<StreamReadTransformedSlices>(
     connectorBuilderProjectsKeys.read(params.builderProjectId, params.streamName),
     async () => {
+      if (!testStream) {
+        // this shouldn't happen, because read stream can only be triggered when a stream is selected
+        throw new Error("No test stream provided - this state should not be reached!");
+      }
+
       const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
-      return transformSlices(streamRead, testStream!);
+      return transformSlices(streamRead, testStream);
     },
     {
       refetchOnWindowFocus: false,
-      enabled: !!testStream,
+      enabled: false,
       onSuccess,
     }
   );
+};
+
+export const useCancelBuilderProjectStreamRead = (builderProjectId: string, streamName: string) => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.cancelQueries(connectorBuilderProjectsKeys.read(builderProjectId, streamName));
+  };
 };
 
 export type Page = ConnectorBuilderProjectStreamReadSlicesItemPagesItem & {
@@ -501,8 +539,12 @@ export type StreamReadTransformedSlices = Omit<ConnectorBuilderProjectStreamRead
 
 const transformSlices = (
   streamReadData: ConnectorBuilderProjectStreamRead,
-  stream: DeclarativeStream
+  stream: DeclarativeComponentSchemaStreamsItem
 ): StreamReadTransformedSlices => {
+  if (stream.type === StateDelegatingStreamType.StateDelegatingStream) {
+    return streamReadData;
+  }
+
   // With the addition of ResumableFullRefresh, when pagination is configured and both incremental_sync and
   // partition_routers are NOT configured, the CDK splits up each page into a separate slice, each with its own state.
   // This is to allow full refresh syncs to resume from the last page read in the event of a failure.
@@ -549,10 +591,7 @@ const transformSlices = (
   };
 };
 
-export const useBuilderProjectUpdateTestingValues = (
-  builderProjectId: string,
-  onSuccess: (data: ConnectorBuilderProjectTestingValues) => void
-) => {
+export const useBuilderProjectUpdateTestingValues = (builderProjectId: string, onSettled?: () => void) => {
   const requestOptions = useRequestOptions();
   const workspaceId = useCurrentWorkspaceId();
 
@@ -567,7 +606,7 @@ export const useBuilderProjectUpdateTestingValues = (
         requestOptions
       ),
     {
-      onSuccess,
+      onSettled,
     }
   );
 };
@@ -576,6 +615,7 @@ export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequest
   const requestOptions = useRequestOptions();
 
   return useQuery<DeclarativeManifestBaseImageRead>(
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
     () => getDeclarativeManifestBaseImage(params, requestOptions)
   );

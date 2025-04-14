@@ -60,6 +60,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
+  implementation(libs.kotlin.coroutines)
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
@@ -73,6 +74,7 @@ dependencies {
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)
+  testImplementation(libs.mockk)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

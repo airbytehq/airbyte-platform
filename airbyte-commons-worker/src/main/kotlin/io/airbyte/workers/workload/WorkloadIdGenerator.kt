@@ -23,24 +23,18 @@ class WorkloadIdGenerator {
     actorDefinitionId: UUID,
     jobId: String,
     attemptNumber: Int,
-  ): String {
-    return "${actorDefinitionId}_${jobId}_${attemptNumber}_check"
-  }
+  ): String = "${actorDefinitionId}_${jobId}_${attemptNumber}_check"
 
   fun generateDiscoverWorkloadId(
     actorDefinitionId: UUID,
     jobId: String,
     attemptNumber: Int,
-  ): String {
-    return "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
-  }
+  ): String = "${actorDefinitionId}_${jobId}_${attemptNumber}_discover"
 
   fun generateDiscoverWorkloadIdV2(
     actorId: UUID,
     timestampMs: Long,
-  ): String {
-    return "${actorId}_${timestampMs}_discover"
-  }
+  ): String = "${actorId}_${timestampMs}_discover"
 
   fun generateDiscoverWorkloadIdV2WithSnap(
     actorId: UUID,
@@ -52,15 +46,11 @@ class WorkloadIdGenerator {
     return generateDiscoverWorkloadIdV2(actorId, snapped)
   }
 
-  fun generateSpecWorkloadId(differentiator: String): String {
-    return "${differentiator}_spec"
-  }
+  fun generateSpecWorkloadId(differentiator: String): String = "${differentiator}_spec"
 
   fun generateSyncWorkloadId(
     connectionId: UUID,
     jobId: Long,
     attemptNumber: Int,
-  ): String {
-    return "${connectionId}_${jobId}_${attemptNumber}_sync"
-  }
+  ): String = "${connectionId}_${jobId}_${attemptNumber}_sync"
 }

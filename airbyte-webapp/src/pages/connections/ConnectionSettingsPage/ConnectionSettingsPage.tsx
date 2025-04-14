@@ -4,26 +4,23 @@ import React, { useCallback } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import {
-  FormConnectionFormValues,
-  useConnectionValidationSchema,
-  useInitialFormValues,
-} from "components/connection/ConnectionForm/formConfig";
+import { FormConnectionFormValues, useInitialFormValues } from "components/connection/ConnectionForm/formConfig";
+import { useConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/connectionSchema";
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
 import { I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionScheduleFormField";
 import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { Form } from "components/forms";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
 import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
-import { Geography, WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
+import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { trackError } from "core/utils/datadog";
-import { useIntent } from "core/utils/rbac";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -33,7 +30,7 @@ import { StateBlock } from "./StateBlock";
 
 export interface ConnectionSettingsFormValues {
   connectionName: string;
-  geography?: Geography;
+  geography?: string;
   notifySchemaChanges?: boolean;
 }
 
@@ -43,23 +40,33 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { connection, updateConnection } = useConnectionEditService();
   const { defaultGeography } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
-  const { registerNotification } = useNotificationService();
+  const { registerNotification, unregisterNotificationById } = useNotificationService();
 
   const { mode } = useConnectionFormService();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
-  const { workspaceId } = useCurrentWorkspace();
-  const canEditConnection = useIntent("EditConnection", { workspaceId });
+  const zodValidationSchema = useConnectionValidationZodSchema();
 
-  const validationSchema = useConnectionValidationSchema();
+  const onSubmit = useCallback(
+    (values: FormConnectionFormValues) => {
+      const connectionUpdates: WebBackendConnectionUpdate = {
+        connectionId: connection.connectionId,
+        skipReset: true,
+        ...values,
+      };
 
-  const onSuccess = () => {
+      return updateConnection(connectionUpdates);
+    },
+    [connection.connectionId, updateConnection]
+  );
+
+  const onSuccess = useCallback(() => {
     registerNotification({
       id: "connection_settings_change_success",
       text: formatMessage({ id: "form.changesSaved" }),
       type: "success",
     });
-  };
+  }, [formatMessage, registerNotification]);
 
   const onError = useCallback(
     (error: Error, values: FormConnectionFormValues, methods: UseFormReturn<FormConnectionFormValues>) => {
@@ -68,41 +75,63 @@ export const ConnectionSettingsPage: React.FC = () => {
         methods.setError("scheduleData.cron.cronExpression", {
           message: I18N_KEY_UNDER_ONE_HOUR_NOT_ALLOWED,
         });
+        return;
       }
+
+      if (error instanceof HttpError && HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+        registerNotification({
+          id: "connection.conflictingDestinationStream",
+          text: formatMessage(
+            {
+              id: "connectionForm.conflictingDestinationStream",
+            },
+            {
+              stream: error.response?.data?.streams?.[0]?.streamName,
+              moreCount:
+                (error.response?.data?.streams?.length ?? 0) > 1 ? (error.response?.data?.streams?.length ?? 1) - 1 : 0,
+              lnk: (...lnk: React.ReactNode[]) => (
+                <ExternalLink href={error.response.documentationUrl ?? ""}>{lnk}</ExternalLink>
+              ),
+            }
+          ),
+          actionBtnText: formatMessage({ id: "connectionForm.conflictingDestinationStream.action" }),
+          onAction: async () => {
+            const randomPrefix = `${Math.random().toString(36).substring(2, 8)}_`;
+            methods.setValue("prefix", randomPrefix);
+            unregisterNotificationById("connection.conflictingDestinationStream");
+            await methods.handleSubmit(onSubmit)();
+            onSuccess();
+          },
+          type: "error",
+        });
+        return;
+      }
+
       registerNotification({
         id: "connection_settings_change_error",
         text: formatMessage({ id: "connection.updateFailed" }),
         type: "error",
       });
     },
-    [formatMessage, registerNotification]
+    [formatMessage, onSubmit, registerNotification, unregisterNotificationById, onSuccess]
   );
 
   const isDeprecated = connection.status === "deprecated";
   const hasConfiguredGeography =
-    connection.geography !== undefined &&
-    connection.geography !== defaultGeography &&
-    connection.geography !== Geography.auto;
+    connection.geography !== undefined && connection.geography !== defaultGeography && connection.geography !== "AUTO";
 
   return (
     <ScrollParent>
       <FlexContainer direction="column">
         <Form<FormConnectionFormValues>
           trackDirtyChanges
-          disabled={!canEditConnection}
-          onSubmit={(values: FormConnectionFormValues) => {
-            const connectionUpdates: WebBackendConnectionUpdate = {
-              connectionId: connection.connectionId,
-              skipReset: true,
-              ...values,
-            };
-
-            return updateConnection(connectionUpdates);
-          }}
+          disabled={mode === "readonly"}
+          onSubmit={onSubmit}
           onSuccess={onSuccess}
           onError={onError}
-          schema={validationSchema}
+          zodSchema={zodValidationSchema}
           defaultValues={simplifiedInitialValues}
+          reinitializeDefaultValues
         >
           <SimplifiedConnectionsSettingsCard
             title={formatMessage({ id: "sources.settings" })}

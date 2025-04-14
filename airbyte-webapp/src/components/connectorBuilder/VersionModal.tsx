@@ -31,7 +31,7 @@ export const VersionModal: React.FC<{
       return;
     }
 
-    setDisplayedVersion(selectedVersion, data);
+    setDisplayedVersion(selectedVersion, data.resolvedManifest, data.componentsFileContent);
     onClose();
   }, [data, isLoading, onClose, selectedVersion, setDisplayedVersion]);
 
@@ -51,7 +51,11 @@ export const VersionModal: React.FC<{
               <button
                 type="button"
                 onClick={() => {
-                  setDisplayedVersion(undefined, previousManifestDraft);
+                  setDisplayedVersion(
+                    undefined,
+                    previousManifestDraft.manifest,
+                    previousManifestDraft.componentsFileContent
+                  );
                   onClose();
                 }}
                 className={classNames(styles.versionItem)}

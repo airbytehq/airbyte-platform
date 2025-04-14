@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.storage.StorageConfig
@@ -24,6 +28,7 @@ class OrchestratorEnvVarFactory(
   @Named("orchestratorSecretsEnvMap") private val secretsEnvMap: Map<String, EnvVarSource>,
   @Named("airbyteMetadataEnvMap") private val airbyteMetadataEnvMap: Map<String, String>,
   @Named("featureFlagEnvMap") private val ffEnvVars: Map<String, String>,
+  @Named("dataplaneCredentialsSecretsEnvMap") private val dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
 ) {
   /**
    * The list of environment variables to be passed to the orchestrator.
@@ -63,7 +68,8 @@ class OrchestratorEnvVarFactory(
     // TODO: Don't do this. Be explicit about what env vars we pass.
     // Copy over all local values
     val localEnvMap =
-      System.getenv()
+      System
+        .getenv()
         .filter { OrchestratorConstants.ENV_VARS_TO_TRANSFER.contains(it.key) }
     envMap.putAll(localEnvMap)
 
@@ -71,14 +77,13 @@ class OrchestratorEnvVarFactory(
     envMap.putAll(micronautEnvMap)
 
     val secretEnvVars =
-      secretsEnvMap.toRefEnvVarList()
+      (secretsEnvMap + dataplaneCredentialsSecretsEnvMap).toRefEnvVarList()
 
     val envVars =
       envMap
         .filterNot { env ->
           secretsEnvMap.containsKey(env.key)
-        }
-        .toEnvVarList()
+        }.toEnvVarList()
 
     return envVars + secretEnvVars
   }

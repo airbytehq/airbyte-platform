@@ -7,15 +7,16 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +26,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -125,7 +125,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
       if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE,
           new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
         runnableFuture.cancel(true);
-        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
             new MetricAttribute(MetricTags.KILLED, "true"),
             new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
@@ -134,7 +134,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
         throw new HeartbeatTimeoutException(thresholdMs, timeBetweenLastRecordMs);
       } else {
         LOGGER.info("Do not terminate as feature flag is disable");
-        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+        metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
             new MetricAttribute(MetricTags.KILLED, "false"),
             new MetricAttribute(MetricTags.SOURCE_IMAGE, sourceDockerImage));
@@ -187,10 +187,10 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
     public HeartbeatTimeoutException(final long thresholdMs, final long timeBetweenLastRecordMs) {
       super(String.format("Last record seen %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true),
-          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
-      this.humanReadableTimeSinceLastRec = DurationFormatUtils.formatDurationWords(timeBetweenLastRecordMs, true, true);
+          DurationKt.formatMilli(timeBetweenLastRecordMs),
+          DurationKt.formatMilli(thresholdMs)));
+      this.humanReadableThreshold = DurationKt.formatMilli(thresholdMs);
+      this.humanReadableTimeSinceLastRec = DurationKt.formatMilli(timeBetweenLastRecordMs);
     }
 
   }

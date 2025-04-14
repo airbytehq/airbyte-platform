@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.model.generated.PermissionCheckRead
@@ -155,6 +159,14 @@ open class ApiAuthorizationHelper(
       return
     }
     if (permissionHandler.isUserOrganizationAdmin(userId, organizationId)) {
+      return
+    }
+    throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))
+  }
+
+  fun isUserInstanceAdminOrThrow(userId: UUID) {
+    if (permissionHandler.isUserInstanceAdmin(userId)) {
+      logger.debug { "User $userId is an instance admin, short circuiting auth check." }
       return
     }
     throw ForbiddenProblem(ProblemMessageData().message("User does not have the required permissions to fulfill the request."))

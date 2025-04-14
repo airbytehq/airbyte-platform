@@ -51,7 +51,9 @@ sealed interface Attribute {
  *
  * @param [email] the email address
  */
-data class EmailAttribute(val email: String) : Attribute {
+data class EmailAttribute(
+  val email: String,
+) : Attribute {
   override val key = "email"
   override val value = email
   override val private = true
@@ -62,7 +64,11 @@ data class EmailAttribute(val email: String) : Attribute {
  *
  *  @param [contexts] list of contexts, must not contain another Multi context
  */
-data class Multi(val contexts: List<Context>) : Context {
+data class Multi(
+  val contexts: Set<Context>,
+) : Context {
+  constructor(contexts: List<Context>) : this(contexts = contexts.toSet())
+
   /** This value MUST be "multi" to properly sync with the LaunchDarkly client. */
   override val kind = "multi"
 
@@ -87,8 +93,13 @@ data class Multi(val contexts: List<Context>) : Context {
    * @param [T] the [Context] type to fetch.
    * @return all [Context] of [T] within this [Multi], or an empty list if none match.
    */
-  internal inline fun <reified T> fetchContexts(): List<T> {
-    return contexts.filterIsInstance<T>()
+  internal inline fun <reified T> fetchContexts(): List<T> = contexts.filterIsInstance<T>()
+
+  companion object {
+    /**
+     * Constructs a new [Multi] from the given contexts or returns an [Empty] if given contexts are empty.
+     */
+    fun orEmpty(contexts: List<Context>): Context = if (contexts.isEmpty()) Empty else Multi(contexts)
   }
 }
 
@@ -97,7 +108,9 @@ data class Multi(val contexts: List<Context>) : Context {
  *
  * @param [key] the unique identifying value of this organization
  */
-data class Organization(override val key: String) : Context {
+data class Organization(
+  override val key: String,
+) : Context {
   override val kind = "organization"
 
   /**
@@ -113,7 +126,9 @@ data class Organization(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this workspace
  */
-data class Workspace(override val key: String) : Context {
+data class Workspace(
+  override val key: String,
+) : Context {
   override val kind = "workspace"
 
   /**
@@ -129,7 +144,10 @@ data class Workspace(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this user
  */
-data class User(override val key: String, override val attrs: List<Attribute> = emptyList()) : Context {
+data class User(
+  override val key: String,
+  override val attrs: List<Attribute> = emptyList(),
+) : Context {
   override val kind = "user"
 
   /**
@@ -153,7 +171,9 @@ data class User(override val key: String, override val attrs: List<Attribute> = 
  *
  * @param [key] the unique identifying value of this connection
  */
-data class Connection(override val key: String) : Context {
+data class Connection(
+  override val key: String,
+) : Context {
   override val kind = "connection"
 
   /**
@@ -169,7 +189,9 @@ data class Connection(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this source
  */
-data class Source(override val key: String) : Context {
+data class Source(
+  override val key: String,
+) : Context {
   override val kind = "source"
 
   /**
@@ -185,7 +207,9 @@ data class Source(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this destination
  */
-data class Destination(override val key: String) : Context {
+data class Destination(
+  override val key: String,
+) : Context {
   override val kind = "destination"
 
   /**
@@ -201,7 +225,9 @@ data class Destination(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this source definition
  */
-data class SourceDefinition(override val key: String) : Context {
+data class SourceDefinition(
+  override val key: String,
+) : Context {
   override val kind = "source-definition"
 
   /**
@@ -217,7 +243,9 @@ data class SourceDefinition(override val key: String) : Context {
  *
  * @param [key] the unique identifying value of this destination definition
  */
-data class DestinationDefinition(override val key: String) : Context {
+data class DestinationDefinition(
+  override val key: String,
+) : Context {
   override val kind = "destination-definition"
 
   /**
@@ -233,19 +261,27 @@ data class DestinationDefinition(override val key: String) : Context {
  *
  * @param [key] the type of source
  */
-data class SourceType(override val key: String) : Context {
+data class SourceType(
+  override val key: String,
+) : Context {
   override val kind = "source-type"
 }
 
-data class ImageName(override val key: String) : Context {
+data class ImageName(
+  override val key: String,
+) : Context {
   override val kind = "image-name"
 }
 
-data class ImageVersion(override val key: String) : Context {
+data class ImageVersion(
+  override val key: String,
+) : Context {
   override val kind = "image-version"
 }
 
-data class Geography(override val key: String) : Context {
+data class Geography(
+  override val key: String,
+) : Context {
   override val kind: String = "geography"
 }
 
@@ -256,11 +292,15 @@ data class Geography(override val key: String) : Context {
  *
  * @param [key] the name of the plane.
  */
-data class PlaneName(override val key: String) : Context {
+data class PlaneName(
+  override val key: String,
+) : Context {
   override val kind: String = "plane-name"
 }
 
-data class Priority(override val key: String) : Context {
+data class Priority(
+  override val key: String,
+) : Context {
   override val kind: String = "priority"
 
   companion object {
@@ -275,15 +315,21 @@ data class Priority(override val key: String) : Context {
  *
  * @param [key] the number of the attempt.
  */
-data class Attempt(override val key: String) : Context {
+data class Attempt(
+  override val key: String,
+) : Context {
   override val kind = "attempt"
 }
 
-data class UserAgent(override val key: String) : Context {
+data class UserAgent(
+  override val key: String,
+) : Context {
   override val kind: String = "user-agent"
 }
 
-data class RequestId(override val key: String) : Context {
+data class RequestId(
+  override val key: String,
+) : Context {
   override val kind: String = "request-id"
 
   // secondary constructor
@@ -293,10 +339,14 @@ data class RequestId(override val key: String) : Context {
 // This is aimed to be used with the EnvFeatureFlag
 data object Empty : Context {
   override val kind: String = "empty"
-  override val key: String = ""
+
+  // key needs to be not null or empty for LD to accept the context
+  override val key: String = "empty"
 }
 
-data class CloudProvider(override val key: String) : Context {
+data class CloudProvider(
+  override val key: String,
+) : Context {
   override val kind: String = "cloud-provider"
 
   companion object {
@@ -304,7 +354,9 @@ data class CloudProvider(override val key: String) : Context {
   }
 }
 
-data class GeographicRegion(override val key: String) : Context {
+data class GeographicRegion(
+  override val key: String,
+) : Context {
   override val kind: String = "geographic-region"
 
   companion object {
@@ -313,10 +365,32 @@ data class GeographicRegion(override val key: String) : Context {
   }
 }
 
-data class CloudProviderRegion(override val key: String) : Context {
+data class DataplaneGroup(
+  override val key: String,
+) : Context {
+  override val kind: String = "dataplane-group"
+}
+
+data class CloudProviderRegion(
+  override val key: String,
+) : Context {
   override val kind: String = "cloud-provider-region"
 
   companion object {
     const val AWS_US_EAST_1 = "us-east-1"
   }
 }
+
+/**
+ * Combines two contexts.
+ */
+fun Context.merge(other: Context): Context =
+  when {
+    this == other -> this
+    other is Empty -> this
+    this is Empty -> other
+    this is Multi && other is Multi -> Multi(this.contexts + other.contexts)
+    this is Multi -> Multi(this.contexts + other)
+    other is Multi -> Multi(other.contexts + this)
+    else -> Multi(listOf(this, other))
+  }

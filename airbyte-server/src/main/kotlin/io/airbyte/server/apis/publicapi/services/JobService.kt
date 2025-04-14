@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -75,7 +75,8 @@ class JobServiceImpl(
   override fun sync(connectionId: UUID): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
-      kotlin.runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
+      kotlin
+        .runCatching { schedulerHandler.syncConnection(connectionIdRequestBody) }
         .onFailure { ConfigClientErrorHandler.handleError(it) }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
@@ -88,7 +89,8 @@ class JobServiceImpl(
   override fun reset(connectionId: UUID): JobResponse {
     val connectionIdRequestBody = ConnectionIdRequestBody().connectionId(connectionId)
     val result =
-      kotlin.runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
+      kotlin
+        .runCatching { schedulerHandler.resetConnection(connectionIdRequestBody) }
         .onFailure {
           log.error("reset job error $it")
           ConfigClientErrorHandler.handleError(it)
@@ -103,10 +105,10 @@ class JobServiceImpl(
   override fun cancelJob(jobId: Long): JobResponse {
     val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val result =
-      kotlin.runCatching {
-        schedulerHandler.cancelJob(jobIdRequestBody)
-      }
-        .onFailure {
+      kotlin
+        .runCatching {
+          schedulerHandler.cancelJob(jobIdRequestBody)
+        }.onFailure {
           log.error("cancel job error $it")
           ConfigClientErrorHandler.handleError(it)
         }
@@ -118,9 +120,9 @@ class JobServiceImpl(
    * Gets job info without logs as they're sometimes large enough to make the response size exceed the server max.
    */
   override fun getJobInfoWithoutLogs(jobId: Long): JobResponse {
-    val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val result =
-      kotlin.runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody) }
+      kotlin
+        .runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobId) }
         .onFailure {
           log.error("Error getting job info without logs $it")
           ConfigClientErrorHandler.handleError(it)
@@ -155,7 +157,8 @@ class JobServiceImpl(
         )
 
     val result =
-      kotlin.runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
+      kotlin
+        .runCatching { jobHistoryHandler.listJobsForLight(jobListRequestBody) }
         .onFailure {
           log.error("Error getting job list $it")
           ConfigClientErrorHandler.handleError(it)
@@ -200,7 +203,8 @@ class JobServiceImpl(
         .orderByMethod(OrderByMethodEnum.valueOf(orderByMethod.name))
 
     val result =
-      kotlin.runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
+      kotlin
+        .runCatching { jobHistoryHandler.listJobsForWorkspaces(requestBody) }
         .onFailure {
           log.error("Error getting job list:", it)
           ConfigClientErrorHandler.handleError(it)

@@ -223,7 +223,7 @@ public class ConnectorBuilderTests {
     final ConnectorBuilderProjectIdWithWorkspaceId connectorBuilderProject = apiClient.getConnectorBuilderProjectApi()
         .createConnectorBuilderProject(new ConnectorBuilderProjectWithWorkspaceId(
             workspaceId,
-            new ConnectorBuilderProjectDetails("A custom declarative source", null, null, null, null, null)));
+            new ConnectorBuilderProjectDetails("A custom declarative source", null, null, null, null, null, null)));
     return apiClient.getConnectorBuilderProjectApi()
         .publishConnectorBuilderProject(new ConnectorBuilderPublishRequestBody(
             workspaceId,
@@ -233,17 +233,20 @@ public class ConnectorBuilderTests {
                 "A description",
                 manifest,
                 A_SPEC,
-                1L)))
+                1L),
+            null))
         .getSourceDefinitionId();
   }
 
   private static SourceRead createSource(final UUID sourceDefinitionId) throws IOException {
+    final JsonNode config = new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}");
     return apiClient.getSourceApi().createSource(
         new SourceCreate(
             sourceDefinitionId,
-            new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}"),
+            config,
             workspaceId,
             "A custom declarative source",
+            null,
             null));
   }
 
@@ -272,6 +275,7 @@ public class ConnectorBuilderTests {
             null,
             null,
             syncCatalog,
+            null,
             null,
             null,
             null,

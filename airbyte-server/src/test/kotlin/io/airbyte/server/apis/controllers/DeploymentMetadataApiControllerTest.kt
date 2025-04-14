@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.DeploymentMetadataRead
@@ -40,7 +41,7 @@ internal class DeploymentMetadataApiControllerTest {
     val deploymentMetadataRead =
       DeploymentMetadataRead()
         .id(UUID.randomUUID())
-        .mode(Configs.DeploymentMode.OSS.name)
+        .mode(Configs.AirbyteEdition.COMMUNITY.name)
         .version("0.2.3")
 
     every { deploymentMetadataHandler.deploymentMetadata } returns deploymentMetadataRead

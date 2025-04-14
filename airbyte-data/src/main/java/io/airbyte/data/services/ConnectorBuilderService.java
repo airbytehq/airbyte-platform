@@ -10,8 +10,9 @@ import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -38,6 +39,7 @@ public interface ConnectorBuilderService {
                                 UUID workspaceId,
                                 String name,
                                 JsonNode manifestDraft,
+                                String componentsFileContent,
                                 UUID baseActorDefinitionVersionId,
                                 String contributionUrl,
                                 UUID contributionActorDefinitionId)
@@ -51,6 +53,7 @@ public interface ConnectorBuilderService {
                                               UUID workspaceId,
                                               String name,
                                               JsonNode manifestDraft,
+                                              String componentsFileContent,
                                               UUID baseActorDefinitionVersionId,
                                               String contributionUrl,
                                               UUID contributionActorDefinitionId,
@@ -60,19 +63,21 @@ public interface ConnectorBuilderService {
   void assignActorDefinitionToConnectorBuilderProject(UUID builderProjectId, UUID actorDefinitionId) throws IOException;
 
   void createDeclarativeManifestAsActiveVersion(DeclarativeManifest declarativeManifest,
-                                                ActorDefinitionConfigInjection configInjection,
+                                                List<ActorDefinitionConfigInjection> configInjections,
                                                 ConnectorSpecification connectorSpecification,
                                                 String cdkVersion)
       throws IOException;
 
   void setDeclarativeSourceActiveVersion(UUID sourceDefinitionId,
                                          Long version,
-                                         ActorDefinitionConfigInjection configInjection,
+                                         List<ActorDefinitionConfigInjection> configInjections,
                                          ConnectorSpecification connectorSpecification,
                                          String cdkVersion)
       throws IOException;
 
   Stream<ActorDefinitionConfigInjection> getActorDefinitionConfigInjections(UUID actorDefinitionId) throws IOException;
+
+  void writeActorDefinitionConfigInjectionsForPath(List<ActorDefinitionConfigInjection> actorDefinitionConfigInjection) throws IOException;
 
   void writeActorDefinitionConfigInjectionForPath(ActorDefinitionConfigInjection actorDefinitionConfigInjection) throws IOException;
 

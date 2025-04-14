@@ -1,6 +1,5 @@
 global:
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
   edition: community
   configMapName: ""
   secretName: ""
@@ -68,6 +67,8 @@ global:
 enabled: false
 ##  replicaCount Number of server replicas
 replicaCount: 1
+
+serviceAccountName:
 
 ##  image.repository The repository to use for the airbyte workload api server image.
 ##  image.pullPolicy the pull policy to use for the airbyte workload api server image

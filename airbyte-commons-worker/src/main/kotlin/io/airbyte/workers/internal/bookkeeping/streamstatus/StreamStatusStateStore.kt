@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
@@ -24,9 +28,7 @@ class StreamStatusStateStore {
 
   fun getLatestGlobalStateId(): Int = latestGlobalStateId
 
-  fun entries(): Set<Map.Entry<StreamStatusKey, StreamStatusValue>> {
-    return store.entries
-  }
+  fun entries(): Set<Map.Entry<StreamStatusKey, StreamStatusValue>> = store.entries
 
   fun set(
     key: StreamStatusKey,
@@ -42,17 +44,24 @@ class StreamStatusStateStore {
     runState: ApiEnum,
   ): StreamStatusValue {
     val value = store[key]
+    val currentRunState = value?.runState
 
-    store[key] =
-      if (value == null) {
-        StreamStatusValue(runState = runState)
-      } else if (value.runState == null) {
-        StreamStatusValue(runState = runState)
-      } else {
-        StreamStatusValue(runState = resolveRunState(value.runState!!, runState))
+    // Determine new run state based on current state
+    val newRunState =
+      when {
+        currentRunState == null -> runState
+        else -> resolveRunState(currentRunState, runState)
       }
 
-    return store[key]!!
+    // Create new status value
+    val streamStatusValue = StreamStatusValue(runState = newRunState)
+
+    // Only update store if run state has changed
+    if (currentRunState != newRunState) {
+      store[key] = streamStatusValue
+    }
+
+    return streamStatusValue
   }
 
   fun setLatestStateId(
@@ -110,13 +119,17 @@ class StreamStatusStateStore {
   fun markStreamNotEmpty(key: StreamStatusKey): StreamStatusValue {
     val value = store[key]
 
-    if (value == null) {
-      store[key] = StreamStatusValue(streamEmpty = false)
-    } else {
-      value.streamEmpty = false
+    return when {
+      value == null -> {
+        val newValue = StreamStatusValue(streamEmpty = false)
+        store[key] = newValue
+        newValue
+      }
+      else -> {
+        value.streamEmpty = false
+        value
+      }
     }
-
-    return store[key]!!
   }
 
   fun isStreamComplete(
@@ -143,23 +156,29 @@ class StreamStatusStateStore {
     return sourceComplete && destComplete
   }
 
-  private fun resolveRunState(
+  internal fun resolveRunState(
     current: ApiEnum,
     incoming: ApiEnum,
-  ): ApiEnum {
-    return when (current to incoming) {
-      RUNNING to COMPLETE,
-      RUNNING to INCOMPLETE,
-      RUNNING to RATE_LIMITED,
-      RATE_LIMITED to RUNNING,
-      RATE_LIMITED to INCOMPLETE,
-      RATE_LIMITED to COMPLETE,
-      -> {
+  ): ApiEnum =
+    if (current === RUNNING) {
+      if (incoming === COMPLETE ||
+        incoming === INCOMPLETE ||
+        incoming === RATE_LIMITED
+      ) {
         incoming
-      }
-      else -> {
+      } else {
         current
       }
+    } else if (current === RATE_LIMITED) {
+      if (incoming === RUNNING ||
+        incoming === COMPLETE ||
+        incoming === INCOMPLETE
+      ) {
+        incoming
+      } else {
+        current
+      }
+    } else {
+      current
     }
-  }
 }

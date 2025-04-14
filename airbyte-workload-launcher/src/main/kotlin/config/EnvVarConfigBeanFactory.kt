@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.workload.launcher.config
@@ -9,8 +9,9 @@ import io.airbyte.commons.envvar.EnvVar.LOG_LEVEL
 import io.airbyte.commons.envvar.EnvVar.S3_PATH_STYLE_ACCESS
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.commons.storage.StorageConfig
+import io.airbyte.commons.version.AirbyteVersion
 import io.airbyte.config.Configs
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.workers.pod.Metadata.AWS_ACCESS_KEY_ID
 import io.airbyte.workers.pod.Metadata.AWS_SECRET_ACCESS_KEY
 import io.airbyte.workload.launcher.constants.EnvVarConstants
@@ -51,6 +52,9 @@ class EnvVarConfigBeanFactory {
     @Named("databaseEnvMap") dbEnvMap: Map<String, String>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
     @Named("metricsEnvMap") metricsEnvMap: Map<String, String>,
+    @Named("trackingClientEnvMap") trackingClientEnvMap: Map<String, String>,
+    @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
+    @Named("dataplaneCredentialsSecretsEnvMap") dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -78,10 +82,16 @@ class EnvVarConfigBeanFactory {
     envMap.putAll(metricsEnvMap)
     envMap[EnvVarConstants.DD_SERVICE_ENV_VAR] = "airbyte-workload-init-container"
 
+    // Tracking configuration
+    envMap.putAll(trackingClientEnvMap)
+
+    // Airbyte metadata
+    envMap.putAll(airbyteMetadataEnvMap)
+
     val envVars = envMap.toEnvVarList()
 
     val secretEnvVars =
-      (secretsEnvMap + secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv)
+      (secretsEnvMap + secretPersistenceSecretsEnvMap + awsAssumedRoleSecretEnv + dataplaneCredentialsSecretsEnvMap)
         .toRefEnvVarList()
 
     return envVars + secretEnvVars
@@ -99,6 +109,9 @@ class EnvVarConfigBeanFactory {
     @Named("micronautEnvMap") micronautEnvMap: Map<String, String>,
     @Named("workloadApiEnvMap") workloadApiEnvMap: Map<String, String>,
     @Named("apiAuthSecretEnv") secretsEnvMap: Map<String, EnvVarSource>,
+    @Named("trackingClientEnvMap") trackingClientEnvMap: Map<String, String>,
+    @Named("airbyteMetadataEnvMap") airbyteMetadataEnvMap: Map<String, String>,
+    @Named("dataplaneCredentialsSecretsEnvMap") dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
   ): List<EnvVar> {
     val envMap: MutableMap<String, String> = HashMap()
 
@@ -116,9 +129,15 @@ class EnvVarConfigBeanFactory {
     // Micronaut environment (secretly necessary for configuring API client auth)
     envMap.putAll(micronautEnvMap)
 
+    // Tracking configuration
+    envMap.putAll(trackingClientEnvMap)
+
+    // Airbyte metadata
+    envMap.putAll(airbyteMetadataEnvMap)
+
     val envVars = envMap.toEnvVarList()
 
-    val secretEnvVars = secretsEnvMap.toRefEnvVarList()
+    val secretEnvVars = (secretsEnvMap + dataplaneCredentialsSecretsEnvMap).toRefEnvVarList()
 
     return envVars + secretEnvVars
   }
@@ -145,13 +164,12 @@ class EnvVarConfigBeanFactory {
   fun loggingEnvVars(
     @Value("\${airbyte.logging.log-level}") logLevel: String,
     @Value("\${airbyte.logging.s3-path-style-access}") s3PathStyleAccess: String,
-  ): Map<String, String> {
-    return mapOf(
+  ): Map<String, String> =
+    mapOf(
       CLOUD_STORAGE_APPENDER_THREADS.name to "1",
       LOG_LEVEL.name to logLevel,
       S3_PATH_STYLE_ACCESS.name to s3PathStyleAccess,
     )
-  }
 
   /**
    * The list of env vars to be passed to the connector container we are checking.
@@ -160,9 +178,7 @@ class EnvVarConfigBeanFactory {
   @Named("checkEnvVars")
   fun checkEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
-  ): List<EnvVar> {
-    return metadataEnvMap.toEnvVarList()
-  }
+  ): List<EnvVar> = metadataEnvMap.toEnvVarList()
 
   /**
    * The list of env vars to be passed to the connector container we are discovering.
@@ -171,9 +187,7 @@ class EnvVarConfigBeanFactory {
   @Named("discoverEnvVars")
   fun discoverEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
-  ): List<EnvVar> {
-    return metadataEnvMap.toEnvVarList()
-  }
+  ): List<EnvVar> = metadataEnvMap.toEnvVarList()
 
   /**
    * The list of env vars to be passed to the connector container we are specifying.
@@ -182,9 +196,7 @@ class EnvVarConfigBeanFactory {
   @Named("specEnvVars")
   fun specEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
-  ): List<EnvVar> {
-    return metadataEnvMap.toEnvVarList()
-  }
+  ): List<EnvVar> = metadataEnvMap.toEnvVarList()
 
   /**
    * The list of env vars to be passed to the connector container we are reading from (the source).
@@ -194,9 +206,7 @@ class EnvVarConfigBeanFactory {
   fun readEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
     @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
-  ): List<EnvVar> {
-    return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
-  }
+  ): List<EnvVar> = metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
 
   /**
    * The list of env vars to be passed to the connector container we are writing to (the destination).
@@ -206,9 +216,7 @@ class EnvVarConfigBeanFactory {
   fun writeEnvVars(
     @Named("airbyteMetadataEnvMap") metadataEnvMap: Map<String, String>,
     @Named("featureFlagEnvMap") ffEnvVars: Map<String, String>,
-  ): List<EnvVar> {
-    return metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
-  }
+  ): List<EnvVar> = metadataEnvMap.toEnvVarList() + ffEnvVars.toEnvVarList()
 
   @Singleton
   @Named("apiAuthSecretEnv")
@@ -217,8 +225,8 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.workload-api.bearer-token-secret-key}") bearerTokenSecretKey: String,
     @Value("\${airbyte.internal-api.keycloak-auth-client.secret-name}") keycloakAuthSecretName: String,
     @Value("\${airbyte.internal-api.keycloak-auth-client.secret-key}") keycloakAuthSecretKey: String,
-  ): Map<String, EnvVarSource> {
-    return buildMap {
+  ): Map<String, EnvVarSource> =
+    buildMap {
       if (bearerTokenSecretName.isNotBlank()) {
         put(EnvVarConstants.WORKLOAD_API_BEARER_TOKEN_ENV_VAR, createEnvVarSource(bearerTokenSecretName, bearerTokenSecretKey))
       }
@@ -226,7 +234,6 @@ class EnvVarConfigBeanFactory {
         put(EnvVarConstants.KEYCLOAK_CLIENT_SECRET_ENV_VAR, createEnvVarSource(keycloakAuthSecretName, keycloakAuthSecretKey))
       }
     }
-  }
 
   /**
    * To be injected into the replication pod, for the connectors that use assumed role access.
@@ -237,14 +244,13 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") awsAssumedRoleAccessKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") awsAssumedRoleSecretKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") awsAssumedRoleSecretName: String,
-  ): Map<String, EnvVarSource> {
-    return buildMap {
+  ): Map<String, EnvVarSource> =
+    buildMap {
       if (awsAssumedRoleSecretName.isNotBlank()) {
         put(EnvVarConstants.AWS_ASSUME_ROLE_ACCESS_KEY_ID_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleAccessKey))
         put(EnvVarConstants.AWS_ASSUME_ROLE_SECRET_ACCESS_KEY_ENV_VAR, createEnvVarSource(awsAssumedRoleSecretName, awsAssumedRoleSecretKey))
       }
     }
-  }
 
   /**
    * To be injected into AWS connector pods that use assumed role access.
@@ -255,14 +261,13 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.access-key}") accessKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-key}") secretKey: String,
     @Value("\${airbyte.connector.source.credentials.aws.assumed-role.secret-name}") secretName: String,
-  ): List<EnvVar> {
-    return buildList {
+  ): List<EnvVar> =
+    buildList {
       if (secretName.isNotBlank()) {
         add(EnvVar(AWS_ACCESS_KEY_ID, null, createEnvVarSource(secretName, accessKey)))
         add(EnvVar(AWS_SECRET_ACCESS_KEY, null, createEnvVarSource(secretName, secretKey)))
       }
     }
-  }
 
   /**
    * Creates a map that represents environment variables that will be used by the orchestrator that are sourced from kubernetes secrets.
@@ -273,9 +278,7 @@ class EnvVarConfigBeanFactory {
   fun orchestratorSecretsEnvMap(
     @Named("apiAuthSecretEnv") apiAuthSecretEnv: Map<String, EnvVarSource>,
     @Named("awsAssumedRoleSecretEnv") awsAssumedRoleSecretEnv: Map<String, EnvVarSource>,
-  ): Map<String, EnvVarSource> {
-    return apiAuthSecretEnv + awsAssumedRoleSecretEnv
-  }
+  ): Map<String, EnvVarSource> = apiAuthSecretEnv + awsAssumedRoleSecretEnv
 
   private fun createEnvVarSource(
     secretName: String,
@@ -294,6 +297,23 @@ class EnvVarConfigBeanFactory {
 
     return envVarSource
   }
+
+  @Singleton
+  @Named("dataplaneCredentialsSecretsEnvMap")
+  fun dataplaneCredentialsSecretsEnvMap(
+    @Value("\${airbyte.data-plane-credentials.client-id-secret-name}") clientIdSecretName: String,
+    @Value("\${airbyte.data-plane-credentials.client-id-secret-key}") clientIdSecretKey: String,
+    @Value("\${airbyte.data-plane-credentials.client-secret-secret-name}") clientSecretSecretName: String,
+    @Value("\${airbyte.data-plane-credentials.client-secret-secret-key}") clientSecretSecretKey: String,
+  ): Map<String, EnvVarSource> =
+    buildMap {
+      if (clientIdSecretName.isNotBlank()) {
+        put(EnvVarConstants.DATAPLANE_CLIENT_ID, createEnvVarSource(clientIdSecretName, clientIdSecretKey))
+      }
+      if (clientSecretSecretName.isNotBlank()) {
+        put(EnvVarConstants.DATAPLANE_CLIENT_SECRET, createEnvVarSource(clientSecretSecretName, clientSecretSecretKey))
+      }
+    }
 
   /**
    * Map of env vars for AirbyteApiClient
@@ -315,23 +335,22 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.acceptance.test.enabled}") isInTestMode: Boolean,
     @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
     @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
-  ): Map<String, String> {
-    val envMap: MutableMap<String, String> = HashMap()
-
-    envMap[EnvVarConstants.INTERNAL_API_HOST_ENV_VAR] = internalApiHost
-    envMap[EnvVarConstants.AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR] = apiAuthHeaderName
-    envMap[EnvVarConstants.AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR] = apiAuthHeaderValue
-    envMap[EnvVarConstants.CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR] = controlPlaneAuthEndpoint
-    envMap[EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR] = dataPlaneServiceAccountEmail
-    envMap[EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR] = dataPlaneServiceAccountCredentialsPath
-    envMap[EnvVarConstants.ACCEPTANCE_TEST_ENABLED_VAR] = java.lang.Boolean.toString(isInTestMode)
-
-    // Expected to be present in Cloud for internal api auth
-    envMap[EnvVarConstants.KEYCLOAK_CLIENT_ID_ENV_VAR] = keycloakAuthClientId
-    envMap[EnvVarConstants.KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR] = keycloakAuthOpenIdIssuer
-
-    return envMap
-  }
+    @Value("\${airbyte.auth.control-plane-token-endpoint}") controlPlaneTokenEndpoint: String,
+  ): Map<String, String> =
+    buildMap {
+      put(EnvVarConstants.INTERNAL_API_HOST_ENV_VAR, internalApiHost)
+      put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR, apiAuthHeaderName)
+      put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR, apiAuthHeaderValue)
+      put(EnvVarConstants.CONTROL_PLANE_AUTH_ENDPOINT_ENV_VAR, controlPlaneAuthEndpoint)
+      put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_EMAIL_ENV_VAR, dataPlaneServiceAccountEmail)
+      put(EnvVarConstants.DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH_ENV_VAR, dataPlaneServiceAccountCredentialsPath)
+      put(EnvVarConstants.ACCEPTANCE_TEST_ENABLED_VAR, isInTestMode.toString())
+      // Expected to be present in Cloud for internal api auth
+      put(EnvVarConstants.KEYCLOAK_CLIENT_ID_ENV_VAR, keycloakAuthClientId)
+      put(EnvVarConstants.KEYCLOAK_INTERNAL_REALM_ISSUER_ENV_VAR, keycloakAuthOpenIdIssuer)
+      // Expected to be present in dataplane for fetching token from control plane
+      put(EnvVarConstants.CONTROL_PLANE_TOKEN_ENDPOINT, controlPlaneTokenEndpoint)
+    }
 
   /**
    * Map of env vars for specifying the Micronaut environment.
@@ -342,7 +361,7 @@ class EnvVarConfigBeanFactory {
   fun micronautEnvMap(
     @Value("\${airbyte.secret.persistence}") secretPersistenceType: String,
     @Value("\${micronaut.env.additional-envs}") additionalMicronautEnv: String,
-    deploymentMode: DeploymentMode,
+    edition: AirbyteEdition,
   ): Map<String, String> {
     val envs = mutableListOf(EnvConstants.WORKER_V2)
 
@@ -356,7 +375,7 @@ class EnvVarConfigBeanFactory {
       envs.add(EnvConstants.LOCAL_SECRETS)
     }
 
-    if (deploymentMode == DeploymentMode.CLOUD) {
+    if (edition == AirbyteEdition.CLOUD) {
       envs.add(Environment.CLOUD)
     }
 
@@ -373,32 +392,36 @@ class EnvVarConfigBeanFactory {
   fun metricsEnvMap(
     @Value("\${datadog.agent.host}") dataDogAgentHost: String,
     @Value("\${datadog.agent.port}") dataDogStatsdPort: String,
-    @Value("\${airbyte.metric.client}") metricClient: String,
-    @Value("\${airbyte.metric.should-publish}") shouldPublishMetrics: String,
-    @Value("\${airbyte.metric.otel-collector-endpoint}") otelCollectorEndPoint: String,
     @Value("\${datadog.orchestrator.disabled.integrations}") disabledIntegrations: String,
     @Value("\${datadog.env}") ddEnv: String,
     @Value("\${datadog.version}") ddVersion: String,
   ): Map<String, String> {
     val envMap: MutableMap<String, String> = HashMap()
-    envMap[EnvVarConstants.METRIC_CLIENT_ENV_VAR] = metricClient
     envMap[EnvVarConstants.DD_AGENT_HOST_ENV_VAR] = dataDogAgentHost
     envMap[EnvVarConstants.DD_DOGSTATSD_PORT_ENV_VAR] = dataDogStatsdPort
-    envMap[EnvVarConstants.PUBLISH_METRICS_ENV_VAR] = shouldPublishMetrics
-    envMap[EnvVarConstants.OTEL_COLLECTOR_ENDPOINT_ENV_VAR] = otelCollectorEndPoint
     if (ddEnv.isNotBlank()) {
       envMap[EnvVarConstants.DD_ENV_ENV_VAR] = ddEnv
     }
     if (ddVersion.isNotBlank()) {
       envMap[EnvVarConstants.DD_VERSION_ENV_VAR] = ddVersion
     }
+    // Copy all Micrometer environment variables
+    envMap.putAll(
+      System.getenv().filter {
+        it.key.startsWith(EnvVarConstants.MICROMETER_ENV_VAR_PREFIX) ||
+          it.key == EnvVarConstants.OTEL_COLLECTOR_ENDPOINT ||
+          it.key.startsWith(EnvVarConstants.STATSD_ENV_VAR_PREFIX)
+      },
+    )
 
     // Disable DD agent integrations based on the configuration
     if (StringUtils.isNotEmpty(disabledIntegrations)) {
       listOf(*disabledIntegrations.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray())
         .forEach(
           Consumer { e: String ->
-            envMap[String.format(EnvVarConstants.DD_INTEGRATION_ENV_VAR_FORMAT, e.trim { it <= ' ' })] = java.lang.Boolean.FALSE.toString()
+            envMap[String.format(EnvVarConstants.DD_INTEGRATION_ENV_VAR_FORMAT, e.trim { it <= ' ' })] =
+              java.lang.Boolean.FALSE
+                .toString()
           },
         )
     }
@@ -423,8 +446,8 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.azure.tags}") azureTags: String,
     @Value("\${airbyte.secret.store.vault.address}") vaultAddress: String,
     @Value("\${airbyte.secret.store.vault.prefix}") vaultPrefix: String,
-  ): Map<String, String> {
-    return buildMap {
+  ): Map<String, String> =
+    buildMap {
       put(EnvVarConstants.SECRET_PERSISTENCE, persistenceType)
       put(EnvVarConstants.SECRET_STORE_GCP_PROJECT_ID, gcpProjectId)
       put(EnvVarConstants.AWS_SECRET_MANAGER_REGION, awsRegion)
@@ -436,7 +459,6 @@ class EnvVarConfigBeanFactory {
       put(EnvVarConstants.VAULT_ADDRESS, vaultAddress)
       put(EnvVarConstants.VAULT_PREFIX, vaultPrefix)
     }
-  }
 
   /**
    * Environment variables for secret persistence configuration.
@@ -459,8 +481,8 @@ class EnvVarConfigBeanFactory {
     @Value("\${airbyte.secret.store.azure.client-secret-ref-key}") azureSecretKeyRefKey: String,
     @Value("\${airbyte.secret.store.vault.token-ref-name}") vaultTokenRefName: String,
     @Value("\${airbyte.secret.store.vault.token-ref-key}") vaultTokenRefKey: String,
-  ): Map<String, EnvVarSource> {
-    return buildMap {
+  ): Map<String, EnvVarSource> =
+    buildMap {
       // Note: If any of the secret ref names or keys are blank kube will fail to create the pod, so we have to manually exclude empties
       if (gcpCredsRefName.isNotBlank() && gcpCredsRefKey.isNotBlank()) {
         put(EnvVarConstants.SECRET_STORE_GCP_CREDENTIALS, createEnvVarSource(gcpCredsRefName, gcpCredsRefKey))
@@ -482,7 +504,6 @@ class EnvVarConfigBeanFactory {
         put(EnvVarConstants.VAULT_AUTH_TOKEN, createEnvVarSource(vaultTokenRefName, vaultTokenRefKey))
       }
     }
-  }
 
   /**
    * Map of env vars for configuring the WorkloadApiClient (separate from ApiClient).
@@ -529,14 +550,23 @@ class EnvVarConfigBeanFactory {
   @Singleton
   @Named("airbyteMetadataEnvMap")
   fun airbyteMetadataEnvMap(
-    @Value("\${airbyte.version}") version: String,
+    edition: AirbyteEdition,
+    version: AirbyteVersion,
     @Value("\${airbyte.role}") role: String,
-    @Value("\${airbyte.deployment-mode}") deploymentMode: String,
-  ): Map<String, String> {
-    return mapOf(
-      EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version,
+  ): Map<String, String> =
+    mapOf(
+      EnvVarConstants.AIRBYTE_EDITION_ENV_VAR to edition.name,
+      EnvVarConstants.AIRBYTE_VERSION_ENV_VAR to version.serialize(),
       EnvVarConstants.AIRBYTE_ROLE_ENV_VAR to role,
-      EnvVarConstants.DEPLOYMENT_MODE_ENV_VAR to deploymentMode,
     )
-  }
+
+  @Singleton
+  @Named("trackingClientEnvMap")
+  fun trackingClientEnvMap(
+    @Value("\${airbyte.tracking.strategy}") trackingStrategy: String,
+    @Value("\${airbyte.tracking.write-key}") trackingWriteKey: String,
+  ) = mapOf(
+    EnvVarConstants.TRACKING_STRATEGY to trackingStrategy,
+    EnvVarConstants.SEGMENT_WRITE_KEY to trackingWriteKey,
+  )
 }

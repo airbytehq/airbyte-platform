@@ -1,10 +1,10 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DestinationCloneRequestBody
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
@@ -66,15 +66,6 @@ internal class DestinationApiControllerTest {
     val path = "/api/v1/destinations/check_connection_for_update"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationUpdate())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationUpdate())))
-  }
-
-  @Test
-  fun testCloneDestination() {
-    every { destinationHandler.cloneDestination(any()) } returns DestinationRead() andThenThrows ConfigNotFoundException("", "")
-
-    val path = "/api/v1/destinations/clone"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, DestinationCloneRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, DestinationCloneRequestBody())))
   }
 
   @Test

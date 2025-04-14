@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.commons.temporal
 
 import com.google.common.annotations.VisibleForTesting
@@ -30,19 +31,22 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.saveStreamsToRefresh
+import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.api.common.v1.WorkflowType
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
+import io.temporal.api.filter.v1.StatusFilter
+import io.temporal.api.filter.v1.WorkflowTypeFilter
 import io.temporal.api.workflowservice.v1.ListClosedWorkflowExecutionsRequest
 import io.temporal.api.workflowservice.v1.ListOpenWorkflowExecutionsRequest
 import io.temporal.client.WorkflowOptions
@@ -50,7 +54,6 @@ import io.temporal.common.RetryOptions
 import io.temporal.workflow.Functions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import org.apache.commons.lang3.time.StopWatch
 import java.io.IOException
 import java.nio.file.Path
 import java.util.UUID
@@ -58,9 +61,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Consumer
 import java.util.function.Supplier
 import kotlin.jvm.optionals.getOrNull
+import kotlin.time.Duration
+import kotlin.time.measureTime
 
 private const val SAFE_TERMINATE_MESSAGE = "Terminating workflow in unreachable state before starting a new workflow for this connection"
 
@@ -125,6 +129,8 @@ class TemporalClient(
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
         .setNamespace(workflowClientWrapped.getNamespace())
+        .setStatusFilter(StatusFilter.newBuilder().setStatus(executionStatus).build())
+        .setTypeFilter(WorkflowTypeFilter.newBuilder().setName(ConnectionManagerWorkflow::class.java.getSimpleName()).build())
         .build()
 
     val workflowExecutionInfos = mutableSetOf<UUID>()
@@ -135,7 +141,7 @@ class TemporalClient(
       listOpenWorkflowExecutionsRequest
         .executionsList
         .filterNotNull()
-        .filter { it.type == connectionManagerWorkflowType || it.status == executionStatus }
+        .filter { it.type == connectionManagerWorkflowType && it.status == executionStatus }
         .mapNotNull { extractConnectionIdFromWorkflowId(it.execution.workflowId) }
         .toSet()
         .also {
@@ -455,10 +461,10 @@ class TemporalClient(
 
     val input =
       StandardCheckConnectionInput()
-        .withActorType(config.getActorType())
-        .withActorId(config.getActorId())
-        .withConnectionConfiguration(config.getConnectionConfiguration())
-        .withResourceRequirements(config.getResourceRequirements())
+        .withActorType(config.actorType)
+        .withActorId(config.actorId)
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
+        .withResourceRequirements(config.resourceRequirements)
         .withActorContext(context)
         .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId))
 
@@ -499,7 +505,7 @@ class TemporalClient(
         .withPriority(priority)
     val input =
       StandardDiscoverCatalogInput()
-        .withConnectionConfiguration(config.getConnectionConfiguration())
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
         .withSourceId(config.getSourceId())
         .withConnectorVersion(config.getConnectorVersion())
         .withConfigHash(config.getConfigHash())
@@ -520,40 +526,44 @@ class TemporalClient(
    * @param connectionIds connection ids
    * // todo (cgardens) - i dunno what this is
    */
-  fun migrateSyncIfNeeded(connectionIds: MutableSet<UUID?>) {
-    val globalMigrationWatch = StopWatch()
-    globalMigrationWatch.start()
-    refreshRunningWorkflow()
+  fun migrateSyncIfNeeded(connectionIds: Set<UUID>) {
+    val globalMigrationTime =
+      measureTime {
+        refreshRunningWorkflow()
+        connectionIds.forEach { connectionId ->
+          val singleMigrationTime =
+            measureTime {
+              if (!isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(connectionId))) {
+                logger.info { "Migrating: $connectionId" }
+                try {
+                  submitConnectionUpdaterAsync(connectionId)
+                } catch (e: Exception) {
+                  logger.error(e) { "New workflow submission failed, retrying" }
+                  refreshRunningWorkflow()
+                  submitConnectionUpdaterAsync(connectionId)
+                }
+              }
+            }
 
-    connectionIds.forEach(
-      Consumer { connectionId: UUID? ->
-        val singleSyncMigrationWatch = StopWatch()
-        singleSyncMigrationWatch.start()
-        if (!isInRunningWorkflowCache(connectionManagerUtils.getConnectionManagerName(connectionId))) {
-          logger.info { "Migrating: $connectionId" }
-          try {
-            submitConnectionUpdaterAsync(connectionId)
-          } catch (e: Exception) {
-            logger.error(e) { "New workflow submission failed, retrying" }
-            refreshRunningWorkflow()
-            submitConnectionUpdaterAsync(connectionId)
-          }
+          logger.info { "Sync migration took: " + singleMigrationTime.formatTime() }
         }
-        singleSyncMigrationWatch.stop()
-        logger.info { "Sync migration took: " + singleSyncMigrationWatch.formatTime() }
-      },
-    )
-    globalMigrationWatch.stop()
+      }
 
-    logger.info { "The migration to the new scheduler took: " + globalMigrationWatch.formatTime() }
+    logger.info { "The migration to the new scheduler took: " + globalMigrationTime.formatTime() }
   }
+
+  // formatTime exists to mimic the previous apache StopWatch.formatTime method
+  private fun Duration.formatTime(): String =
+    this.toComponents { hours, minutes, seconds, nano ->
+      "%02d:%02d:%02d.%03d".format(hours, minutes, seconds, nano / 1_000_000)
+    }
 
   @VisibleForTesting
   fun <T> execute(
     jobRunConfig: JobRunConfig,
     executor: Supplier<T>,
   ): TemporalResponse<T> {
-    val jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId())
+    val jobRoot = TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId)
     val logPath = TemporalUtils.getLogPath(jobRoot)
 
     var operationOutput: T? = null
@@ -583,7 +593,7 @@ class TemporalClient(
         .newBuilder()
         .setTaskQueue(queueConfiguration.uiCommandsQueue)
         .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
-        .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.getJobId()))
+        .setWorkflowId(String.format("%s_%s", input.type, jobRunConfig.jobId))
         .build()
 
     return execute<ConnectorJobOutput>(jobRunConfig) {
@@ -661,9 +671,8 @@ class TemporalClient(
       return
     } catch (e: UnreachableWorkflowException) {
       metricClient.count(
-        OssMetricsRegistry.WORFLOW_UNREACHABLE,
-        1,
-        MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+        metric = OssMetricsRegistry.WORFLOW_UNREACHABLE,
+        attributes = arrayOf(MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString())),
       )
       logger.error(e) {
         "Failed to retrieve ConnectionManagerWorkflow for connection $connectionId. Repairing state by creating new workflow."

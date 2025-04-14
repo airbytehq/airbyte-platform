@@ -105,9 +105,7 @@ class StreamStatus(
     return thisMetadata?.asText() == otherMetadata?.asText()
   }
 
-  private fun canEqual(other: Any?): Boolean {
-    return other is StreamStatus
-  }
+  private fun canEqual(other: Any?): Boolean = other is StreamStatus
 
   override fun hashCode(): Int {
     val prime = 59
@@ -223,27 +221,35 @@ class StreamStatus(
       return this
     }
 
-    fun build(): StreamStatus {
-      return StreamStatus(
-        this.id, this.workspaceId, this.connectionId, this.jobId, this.attemptNumber, this.streamNamespace, this.streamName,
-        this.jobType, this.createdAt, this.updatedAt, this.runState, this.incompleteRunCause, this.transitionedAt, this.metadata,
+    fun build(): StreamStatus =
+      StreamStatus(
+        this.id,
+        this.workspaceId,
+        this.connectionId,
+        this.jobId,
+        this.attemptNumber,
+        this.streamNamespace,
+        this.streamName,
+        this.jobType,
+        this.createdAt,
+        this.updatedAt,
+        this.runState,
+        this.incompleteRunCause,
+        this.transitionedAt,
+        this.metadata,
       )
-    }
 
-    override fun toString(): String {
-      return (
+    override fun toString(): String =
+      (
         "StreamStatus.StreamStatusBuilder(id=" + this.id + ", workspaceId=" + this.workspaceId + ", connectionId=" + this.connectionId +
           ", jobId=" + this.jobId + ", attemptNumber=" + this.attemptNumber + ", streamNamespace=" + this.streamNamespace + ", streamName=" +
           this.streamName + ", jobType=" + this.jobType + ", createdAt=" + this.createdAt + ", updatedAt=" + this.updatedAt + ", runState=" +
           this.runState + ", incompleteRunCause=" + this.incompleteRunCause + ", transitionedAt=" + this.transitionedAt + ", metadata=" +
           this.metadata + ")"
       )
-    }
   }
 
   companion object {
-    fun builder(): StreamStatusBuilder {
-      return StreamStatusBuilder()
-    }
+    fun builder(): StreamStatusBuilder = StreamStatusBuilder()
   }
 }

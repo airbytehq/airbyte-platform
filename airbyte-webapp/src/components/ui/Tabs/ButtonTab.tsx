@@ -12,9 +12,10 @@ interface ButtonTabProps<T extends string = string> {
   disabled?: boolean;
   onSelect: (id: T) => void;
   badge?: string;
+  className?: string;
 }
 
-export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSelect, disabled, badge }) => {
+export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSelect, disabled, badge, className }) => {
   const onItemClickItem = useCallback(() => onSelect?.(id), [id, onSelect]);
 
   return (
@@ -22,10 +23,14 @@ export const ButtonTab: React.FC<ButtonTabProps> = ({ name, id, isActive, onSele
       type="button"
       disabled={!onSelect || disabled}
       onClick={onItemClickItem}
-      className={classNames(styles.tabContainer, {
-        [styles["tabContainer--active"]]: isActive,
-        [styles["tabContainer--inactive"]]: !isActive,
-      })}
+      className={classNames(
+        styles.tabContainer,
+        {
+          [styles["tabContainer--active"]]: isActive,
+          [styles["tabContainer--inactive"]]: !isActive,
+        },
+        className
+      )}
       data-id={`${id.toLowerCase()}-step`}
     >
       <Text color={isActive ? "darkBlue" : "grey"} className={styles.text} size="lg">

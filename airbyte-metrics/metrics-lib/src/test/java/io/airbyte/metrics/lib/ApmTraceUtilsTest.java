@@ -21,6 +21,7 @@ import static org.mockito.Mockito.withSettings;
 
 import datadog.trace.api.DDTags;
 import datadog.trace.api.interceptor.MutableSpan;
+import io.airbyte.metrics.MetricAttribute;
 import io.opentracing.Span;
 import io.opentracing.Tracer;
 import io.opentracing.log.Fields;

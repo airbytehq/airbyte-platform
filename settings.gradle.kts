@@ -1,25 +1,17 @@
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // NOTE: this settings is only discovered when running from oss/build.gradle
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+import java.net.HttpURLConnection
+import java.net.URI
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.DurationUnit.MILLISECONDS
+
 pluginManagement {
-
-  plugins {
-    val airbyteGradlePluginsVersion: String by settings
-    id("io.airbyte.gradle.jvm") version "${airbyteGradlePluginsVersion}" apply false
-    id("io.airbyte.gradle.jvm.app") version "${airbyteGradlePluginsVersion}" apply false
-    id("io.airbyte.gradle.jvm.lib") version "${airbyteGradlePluginsVersion}" apply false
-    id("io.airbyte.gradle.docker") version "${airbyteGradlePluginsVersion}" apply false
-    id("io.airbyte.gradle.publish") version "${airbyteGradlePluginsVersion}" apply false
-    id("io.airbyte.gradle.kube-reload") version "${airbyteGradlePluginsVersion}" apply false
-
-    id("com.github.eirnym.js2p") version "1.0" apply false
-    id("org.openapi.generator") version "7.10.0" apply false
-  }
-
   repositories {
     maven {
       name = "localPluginRepo"
-      url = uri("../.gradle-plugins-local")
+      url = uri("${System.getProperty("user.home")}/.airbyte/gradle")
     }
     maven(url = "https://airbyte.mycloudrepo.io/public/repositories/airbyte-public-jars")
     gradlePluginPortal()
@@ -53,29 +45,41 @@ buildscript {
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
-  id("com.gradle.enterprise") version "3.15.1"
+  id("com.gradle.develocity") version "3.19.2"
+  id("com.gradle.common-custom-user-data-gradle-plugin") version "2.1"
   id("com.github.burrunan.s3-build-cache") version "1.8.1"
-}
-
-gradleEnterprise {
-  buildScan {
-    termsOfServiceUrl = "https://gradle.com/terms-of-service"
-    termsOfServiceAgree = "yes"
-  }
 }
 
 val isCiServer = System.getenv().containsKey("CI")
 
-gradleEnterprise {
+develocity {
+  server = "http://gradle.internal.airbyte.io"
+  allowUntrustedServer = true
   buildScan {
-    isUploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
+    publishing.onlyIf { urlAccessible() }
+    uploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
     buildScanPublished {
       file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
     }
   }
 }
 
+private fun urlAccessible(url: String = "http://gradle.internal.airbyte.io"): Boolean =
+  runCatching {
+    val connection =
+      (URI(url).toURL().openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 2.seconds.toInt(MILLISECONDS)
+        readTimeout = 2.seconds.toInt(MILLISECONDS)
+      }
+
+    (connection.responseCode in 200..299)
+  }.getOrDefault(false)
+
 buildCache {
+  local {
+    isEnabled = !isCiServer
+  }
   remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
     region = "us-west-2"
     bucket = "ab-ci-cache"
@@ -124,11 +128,15 @@ include(":oss:airbyte-config:init")
 include(":oss:airbyte-config:config-models")
 include(":oss:airbyte-data")
 include(":oss:airbyte-db:db-lib")
+include(":oss:airbyte-domain:models")
+include(":oss:airbyte-domain:services")
 include(":oss:airbyte-json-validation")
 include(":oss:airbyte-metrics:metrics-lib")
 include(":oss:airbyte-oauth")
 include(":oss:airbyte-test-utils")
-
+include(":oss:airbyte-base-java-image")
+include(":oss:airbyte-base-java-python-image")
+include(":oss:airbyte-base-nginx-image")
 include(":oss:airbyte-analytics")
 include(":oss:airbyte-commons-temporal")
 include(":oss:airbyte-commons-temporal-core")
@@ -146,6 +154,7 @@ include(":oss:airbyte-worker-models")
 
 include(":oss:airbyte-bootloader")
 include(":oss:airbyte-commons-auth")
+include(":oss:airbyte-commons-entitlements")
 include(":oss:airbyte-commons-license")
 include(":oss:airbyte-commons-storage")
 include(":oss:airbyte-commons-micronaut")
@@ -163,7 +172,6 @@ include(":oss:airbyte-keycloak")
 include(":oss:airbyte-keycloak-setup")
 include(":oss:airbyte-mappers")
 include(":oss:airbyte-metrics:reporter")
-include(":oss:airbyte-pod-sweeper")
 include(":oss:airbyte-server")
 include(":oss:airbyte-temporal")
 include(":oss:airbyte-tests")
@@ -172,6 +180,7 @@ include(":oss:airbyte-workers")
 include(":oss:airbyte-workload-launcher")
 include(":oss:airbyte-connector-sidecar")
 include(":oss:airbyte-workload-init-container")
+include(":oss:airbyte-async-profiler")
 include(":oss:airbyte-pmd-rules")
 
 project(":oss:airbyte-commons").projectDir = file("airbyte-commons")
@@ -205,12 +214,15 @@ project(":oss:airbyte-csp-check").projectDir = file("airbyte-csp-check")
 project(":oss:airbyte-featureflag").projectDir = file("airbyte-featureflag")
 project(":oss:airbyte-featureflag-server").projectDir = file("airbyte-featureflag-server")
 project(":oss:airbyte-db:jooq").projectDir = file("airbyte-db/jooq")
+project(":oss:airbyte-domain:models").projectDir = file("airbyte-domain/models")
+project(":oss:airbyte-domain:services").projectDir = file("airbyte-domain/services")
 project(":oss:airbyte-micronaut-temporal").projectDir = file("airbyte-micronaut-temporal")
 project(":oss:airbyte-notification").projectDir = file("airbyte-notification")
 project(":oss:airbyte-persistence:job-persistence").projectDir = file("airbyte-persistence/job-persistence")
 project(":oss:airbyte-worker-models").projectDir = file("airbyte-worker-models")
 project(":oss:airbyte-bootloader").projectDir = file("airbyte-bootloader")
 project(":oss:airbyte-commons-auth").projectDir = file("airbyte-commons-auth")
+project(":oss:airbyte-commons-entitlements").projectDir = file("airbyte-commons-entitlements")
 project(":oss:airbyte-commons-license").projectDir = file("airbyte-commons-license")
 project(":oss:airbyte-commons-storage").projectDir = file("airbyte-commons-storage")
 project(":oss:airbyte-commons-micronaut").projectDir = file("airbyte-commons-micronaut")
@@ -227,7 +239,6 @@ project(":oss:airbyte-keycloak").projectDir = file("airbyte-keycloak")
 project(":oss:airbyte-keycloak-setup").projectDir = file("airbyte-keycloak-setup")
 project(":oss:airbyte-mappers").projectDir = file("airbyte-mappers")
 project(":oss:airbyte-metrics:reporter").projectDir = file("airbyte-metrics/reporter")
-project(":oss:airbyte-pod-sweeper").projectDir = file("airbyte-pod-sweeper")
 project(":oss:airbyte-server").projectDir = file("airbyte-server")
 project(":oss:airbyte-temporal").projectDir = file("airbyte-temporal")
 project(":oss:airbyte-tests").projectDir = file("airbyte-tests")
@@ -236,4 +247,8 @@ project(":oss:airbyte-workers").projectDir = file("airbyte-workers")
 project(":oss:airbyte-workload-launcher").projectDir = file("airbyte-workload-launcher")
 project(":oss:airbyte-connector-sidecar").projectDir = file("airbyte-connector-sidecar")
 project(":oss:airbyte-workload-init-container").projectDir = file("airbyte-workload-init-container")
+project(":oss:airbyte-async-profiler").projectDir = file("airbyte-async-profiler")
 project(":oss:airbyte-pmd-rules").projectDir = file("airbyte-pmd-rules")
+project(":oss:airbyte-base-java-image").projectDir = file("airbyte-base-java-image")
+project(":oss:airbyte-base-java-python-image").projectDir = file("airbyte-base-java-python-image")
+project(":oss:airbyte-base-nginx-image").projectDir = file("airbyte-base-nginx-image")

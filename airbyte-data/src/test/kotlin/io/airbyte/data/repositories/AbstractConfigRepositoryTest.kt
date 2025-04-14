@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.specialized.LastJobWithStatsPerStreamRepository
@@ -93,4 +97,11 @@ abstract class AbstractConfigRepositoryTest {
   val organizationRepository = context.getBean(OrganizationRepository::class.java)!!
   val workspaceRepository = context.getBean(WorkspaceRepository::class.java)!!
   val organizationPaymentConfigRepository = context.getBean(OrganizationPaymentConfigRepository::class.java)!!
+  val tagRepository = context.getBean(TagRepository::class.java)!!
+  val dataplaneGroupRepository = context.getBean(DataplaneGroupRepository::class.java)!!
+  val dataplaneRepository = context.getBean(DataplaneRepository::class.java)!!
+  val secretConfigRepository = context.getBean(SecretConfigRepository::class.java)!!
+  val secretStorageRepository = context.getBean(SecretStorageRepository::class.java)!!
+  val secretReferenceRepository = context.getBean(SecretReferenceRepository::class.java)!!
+  val secretReferenceWithConfigRepository = context.getBean(SecretReferenceWithConfigRepository::class.java)!!
 }

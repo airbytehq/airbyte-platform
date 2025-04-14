@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.featureflag.server
 
 import io.airbyte.featureflag.server.model.Context
@@ -24,7 +28,9 @@ import jakarta.ws.rs.Path
 
 @Controller("/api/v1/feature-flags")
 @ExecuteOn(TaskExecutors.IO)
-class FeatureFlagApi(private val ffs: FeatureFlagService) {
+class FeatureFlagApi(
+  private val ffs: FeatureFlagService,
+) {
   @DELETE
   @Path("/{key}")
   @ApiResponses(
@@ -54,9 +60,7 @@ class FeatureFlagApi(private val ffs: FeatureFlagService) {
   )
   fun get(
     @PathVariable key: String,
-  ): FeatureFlag {
-    return ffs.get(key) ?: throw KnownException(HttpStatus.NOT_FOUND, "$key not found")
-  }
+  ): FeatureFlag = ffs.get(key) ?: throw KnownException(HttpStatus.NOT_FOUND, "$key not found")
 
   @PUT
   @Path("/")
@@ -72,9 +76,7 @@ class FeatureFlagApi(private val ffs: FeatureFlagService) {
   )
   fun put(
     @RequestBody(content = [Content(schema = Schema(implementation = FeatureFlag::class))]) @Body request: FeatureFlag,
-  ): FeatureFlag {
-    return ffs.put(request)
-  }
+  ): FeatureFlag = ffs.put(request)
 
   @GET
   @Path("/{key}/evaluate")
@@ -108,9 +110,7 @@ class FeatureFlagApi(private val ffs: FeatureFlagService) {
   fun deleteRule(
     @PathVariable key: String,
     @RequestBody(content = [Content(schema = Schema(implementation = Context::class))]) @Body context: Context,
-  ): FeatureFlag {
-    return ffs.removeRule(key, context)
-  }
+  ): FeatureFlag = ffs.removeRule(key, context)
 
   @POST
   @Path("/{key}/rules")
@@ -125,9 +125,7 @@ class FeatureFlagApi(private val ffs: FeatureFlagService) {
   fun postRule(
     @PathVariable key: String,
     @RequestBody(content = [Content(schema = Schema(implementation = Rule::class))]) @Body rule: Rule,
-  ): FeatureFlag {
-    return ffs.addRule(key, rule)
-  }
+  ): FeatureFlag = ffs.addRule(key, rule)
 
   @PUT
   @Path("/{key}/rules")
@@ -142,9 +140,10 @@ class FeatureFlagApi(private val ffs: FeatureFlagService) {
   fun putRule(
     @PathVariable key: String,
     @RequestBody(content = [Content(schema = Schema(implementation = Rule::class))]) @Body rule: Rule,
-  ): FeatureFlag {
-    return ffs.updateRule(key, rule)
-  }
+  ): FeatureFlag = ffs.updateRule(key, rule)
 }
 
-class KnownException(val httpCode: HttpStatus, message: String) : Throwable(message)
+class KnownException(
+  val httpCode: HttpStatus,
+  message: String,
+) : Throwable(message)

@@ -1,4 +1,4 @@
-{{- if or (eq .Values.global.edition "community") (eq .Values.global.enterprise.connectorRolloutOptIn true)}}
+{{- if .Values.connectorRolloutWorker.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,6 +8,8 @@ metadata:
     {{- if .Values.connectorRolloutWorker.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.connectorRolloutWorker.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.connectorRolloutWorker.replicaCount }}
   selector:
@@ -26,14 +28,14 @@ spec:
         {{ toYaml (mergeOverwrite .Values.connectorRolloutWorker.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.connectorRolloutWorker.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.connectorRolloutWorker.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.connectorRolloutWorker.serviceAccountName }}
       automountServiceAccountToken: true
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -42,13 +44,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorRolloutWorker.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.connectorRolloutWorker.extraInitContainers }}
       initContainers:
@@ -64,8 +66,10 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorRolloutWorker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
 
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
+        {{- end }}
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}

@@ -18,10 +18,10 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionUpdate;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
@@ -103,7 +103,7 @@ class ConnectionTimelineEventHelperTest {
 
     final JobConfig jobConfig = new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(catalog));
     final Job job =
-        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L);
+        new Job(100L, SYNC, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true);
 
     /*
      * on a per stream basis, the stats are "users" -> (100L, 1L), (500L, 8L), (200L, 7L) "purchase" ->
@@ -242,13 +242,13 @@ class ConnectionTimelineEventHelperTest {
         .name("old name")
         .prefix("old prefix")
         .notifySchemaChanges(false)
-        .geography(Geography.AUTO)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .notifySchemaChangesByEmail(false);
     final ConnectionUpdate patch = new ConnectionUpdate()
         .connectionId(connectionId)
         .name("new name")
         .prefix("new prefix")
-        .geography(Geography.AUTO)
+        .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .notifySchemaChanges(true);
     final Map<String, Map<String, Object>> expectedPatches = new HashMap<>();
     expectedPatches.put("name", Map.of("from", "old name", "to", "new name"));

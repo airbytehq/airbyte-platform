@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -30,10 +30,10 @@ open class OrganizationServiceImpl(
 
   override fun getOrganizationsByUser(userId: UUID): OrganizationsResponse {
     val result =
-      kotlin.runCatching {
-        organizationsHandler.listOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId))
-      }
-        .onFailure {
+      kotlin
+        .runCatching {
+          organizationsHandler.listOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId))
+        }.onFailure {
           log.error("Error for getOrganizationsByUser", it)
           ConfigClientErrorHandler.handleError(it)
         }

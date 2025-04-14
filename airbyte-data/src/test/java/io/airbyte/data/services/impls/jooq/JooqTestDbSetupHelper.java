@@ -4,22 +4,25 @@
 
 package io.airbyte.data.services.impls.jooq;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.TAG;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.Tag;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -27,18 +30,24 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import org.jooq.impl.DSL;
 
 public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
@@ -46,6 +55,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final DestinationServiceJooqImpl destinationServiceJooqImpl;
   private final WorkspaceServiceJooqImpl workspaceServiceJooqImpl;
   private final OrganizationServiceJooqImpl organizationServiceJooqImpl;
+  private final DataplaneGroupService dataplaneGroupServiceDataImpl;
   private final TestClient featureFlagClient;
   private final UUID ORGANIZATION_ID = UUID.randomUUID();
   private final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -60,9 +70,12 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private ActorDefinitionVersion destinationDefinitionVersion;
   private SourceConnection source;
   private DestinationConnection destination;
+  private List<Tag> tags;
+  private List<Tag> tagsFromAnotherWorkspace;
 
   public JooqTestDbSetupHelper() {
     this.featureFlagClient = mock(TestClient.class);
+    final MetricClient metricClient = mock(MetricClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
@@ -78,23 +91,23 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     this.sourceServiceJooqImpl = new SourceServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
+    this.dataplaneGroupServiceDataImpl = new DataplaneGroupServiceTestJooqImpl(database);
     this.workspaceServiceJooqImpl = new WorkspaceServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient,
+        this.dataplaneGroupServiceDataImpl);
     this.organizationServiceJooqImpl = new OrganizationServiceJooqImpl(database);
   }
 
@@ -103,6 +116,9 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     organization = createBaseOrganization();
     organizationServiceJooqImpl.writeOrganization(organization);
 
+    // Create dataplane group
+    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup());
+
     // Create workspace
     workspace = createBaseWorkspace();
     workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(createBaseWorkspace());
@@ -138,10 +154,13 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
   }
 
-  public void setUpDependencies() throws IOException, JsonValidationException, ConfigNotFoundException {
+  public void setUpDependencies() throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
     // Create org
     organization = createBaseOrganization();
     organizationServiceJooqImpl.writeOrganization(organization);
+
+    // Create dataplane group
+    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup());
 
     // Create workspace
     workspace = createBaseWorkspace();
@@ -176,6 +195,12 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     final UUID initialDestinationDefinitionDefaultVersionId =
         destinationServiceJooqImpl.getStandardDestinationDefinition(DESTINATION_DEFINITION_ID).getDefaultVersionId();
     assertNotNull(initialDestinationDefinitionDefaultVersionId);
+
+    // Create connection tags
+    tags = createTags(workspace.getWorkspaceId());
+    final StandardWorkspace secondWorkspace = createSecondWorkspace();
+    workspaceServiceJooqImpl.writeStandardWorkspaceNoSecrets(secondWorkspace);
+    tagsFromAnotherWorkspace = createTags(secondWorkspace.getWorkspaceId());
   }
 
   public void setupForGetActorDefinitionVersionByDockerRepositoryAndDockerImageTagTests(UUID sourceDefinitionId, String name, String version)
@@ -188,6 +213,32 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     sourceDefinitionVersion = createBaseActorDefVersion(sourceDefinition.getSourceDefinitionId(), version);
     sourceDefinitionVersion.withDockerRepository(name).withDockerImageTag(version);
     createActorDefinition(sourceDefinition, sourceDefinitionVersion);
+  }
+
+  // It's kind of ugly and brittle to create the tags in this way, but since TagService is a micronaut
+  // data service, we cannot instantiate it here and use it to create the tags
+  public List<Tag> createTags(final UUID workspaceId) throws SQLException {
+    final Tag tagOne = new Tag().withName("tag_one").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("111111");
+    final Tag tagTwo = new Tag().withName("tag_two").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("222222");
+    final Tag tagThree = new Tag().withName("tag_three").withTagId(UUID.randomUUID()).withWorkspaceId(workspaceId).withColor("333333");
+    final List<Tag> tags = List.of(tagOne, tagTwo, tagThree);
+
+    database.query(ctx -> {
+      final List<TagRecord> records = tags.stream()
+          .map(tag -> {
+            final TagRecord record = DSL.using(ctx.configuration()).newRecord(TAG);
+            record.setId(tag.getTagId());
+            record.setWorkspaceId(workspaceId);
+            record.setName(tag.getName());
+            record.setColor(tag.getColor());
+            return record;
+          })
+          .collect(Collectors.toList());
+
+      return ctx.batchInsert(records).execute();
+    });
+
+    return tags;
   }
 
   public void createActorDefinition(final StandardSourceDefinition sourceDefinition, final ActorDefinitionVersion actorDefinitionVersion)
@@ -234,6 +285,15 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withEmail("org@airbyte.io");
   }
 
+  private DataplaneGroup createBaseDataplaneGroup() {
+    return new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(ORGANIZATION_ID)
+        .withName(DataplaneConstantsKt.GEOGRAPHY_US)
+        .withEnabled(true)
+        .withTombstone(false);
+  }
+
   private StandardWorkspace createBaseWorkspace() {
     return new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
@@ -242,7 +302,18 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+  }
+
+  private StandardWorkspace createSecondWorkspace() {
+    return new StandardWorkspace()
+        .withWorkspaceId(UUID.randomUUID())
+        .withOrganizationId(ORGANIZATION_ID)
+        .withName("second")
+        .withSlug("second-workspace-slug")
+        .withInitialSetupComplete(false)
+        .withTombstone(false)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
   }
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {
@@ -287,6 +358,14 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
   public ActorDefinitionVersion getDestinationDefinitionVersion() {
     return destinationDefinitionVersion;
+  }
+
+  public List<Tag> getTags() {
+    return tags;
+  }
+
+  public List<Tag> getTagsFromAnotherWorkspace() {
+    return tagsFromAnotherWorkspace;
   }
 
 }

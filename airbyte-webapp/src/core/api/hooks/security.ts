@@ -6,7 +6,7 @@ interface SecurityResult {
 
 const securityCheck = async (host: string): Promise<SecurityResult> => {
   return fetch("https://oss.airbyte.com/security-check", {
-    method: "post",
+    method: "POST",
     headers: {
       "content-type": "application/json",
     },

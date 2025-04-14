@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 class RealSecretsHydratorTest {
   @Test
   fun `test secret hydration`() {
-    val coordinate = "secret_coordinate_v1"
+    val coordinate = "airbyte_secret_coordinate_v1"
     val secretValue = "secret_value"
     val secretPersistence: SecretPersistence = mockk()
     every { secretPersistence.read(any()) } returns secretValue
@@ -26,7 +26,7 @@ class RealSecretsHydratorTest {
 
   @Test
   fun `test coordinate secret hydration`() {
-    val coordinate = "secret_coordinate_v1"
+    val coordinate = "airbyte_secret_coordinate_v1"
     val secretValue = "secret_value"
     val secret = mapOf("config" to secretValue)
     val secretPersistence: SecretPersistence = mockk()

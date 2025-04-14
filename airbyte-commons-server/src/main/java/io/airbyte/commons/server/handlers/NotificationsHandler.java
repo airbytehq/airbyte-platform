@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.server.errors.IdNotFoundKnownException;
+import io.airbyte.config.FailureReason;
 import io.airbyte.notification.SlackNotificationClient;
 import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.DestinationInfo;
@@ -52,6 +53,8 @@ public class NotificationsHandler {
       1000,
       0,
       0,
+      null,
+      null,
       null);
   public static final SyncSummary TEST_FAILURE_SUMMARY = new SyncSummary(
       new WorkspaceInfo(UUID.randomUUID(), "Main Workspace", AIRBYTE_URL),
@@ -68,7 +71,9 @@ public class NotificationsHandler {
       10,
       0,
       0,
-      "This is test notification. Everything is fine! This is where the error message will show up when an actual sync fails.");
+      "This is test notification. Everything is fine! This is where the error message will show up when an actual sync fails.",
+      FailureReason.FailureType.TRANSIENT_ERROR,
+      FailureReason.FailureOrigin.SOURCE);
   public static final CatalogDiff TEST_DIFF = new CatalogDiff()
       .addTransformsItem(new StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)
           .streamDescriptor(new StreamDescriptor().name("some_new_stream").namespace("ns")))

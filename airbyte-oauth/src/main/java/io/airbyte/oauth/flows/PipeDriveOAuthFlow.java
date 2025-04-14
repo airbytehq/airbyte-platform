@@ -18,7 +18,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://pipedrive.readme.io/docs/marketplace-oauth-authorization
+ * Following docs from https://pipedrive.readme.io/docs/marketplace-oauth-authorization.
  */
 public class PipeDriveOAuthFlow extends BaseOAuth2Flow {
 

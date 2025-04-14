@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -8,6 +12,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
+import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel
@@ -22,6 +27,7 @@ class SpecCommand(
   workloadClient: WorkloadClient,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
+  private val dataplaneGroupResolver: DataplaneGroupResolver,
 ) : WorkloadCommandBase<SpecInput>(
     airbyteApiClient = airbyteApiClient,
     workloadClient = workloadClient,
@@ -35,6 +41,11 @@ class SpecCommand(
     val jobId = input.jobRunConfig.jobId
     val workloadId = workloadIdGenerator.generateSpecWorkloadId(jobId)
     val serializedInput = Jsons.serialize(input)
+    val dataplaneGroup =
+      dataplaneGroupResolver.resolveForSpec(
+        organizationId = null,
+        workspaceId = input.launcherConfig.workspaceId,
+      )
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -44,12 +55,12 @@ class SpecCommand(
       type = WorkloadType.SPEC,
       priority = WorkloadPriority.HIGH,
       signalInput = signalPayload,
+      dataplaneGroup = dataplaneGroup,
     )
   }
 
   override fun getOutput(id: String): ConnectorJobOutput =
-    workloadClient.getConnectorJobOutput(workloadId = id) {
-        failureReason: FailureReason ->
+    workloadClient.getConnectorJobOutput(workloadId = id) { failureReason: FailureReason ->
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.SPEC)
         .withSpec(null)

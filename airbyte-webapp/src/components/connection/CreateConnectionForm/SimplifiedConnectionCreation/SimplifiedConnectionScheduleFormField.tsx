@@ -255,7 +255,6 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
                 selectedValue={cronTimeZone}
                 onSelect={onCronTimeZoneSelect}
                 optionClassName={styles.cronZoneOption}
-                optionsMenuClassName={styles.cronZonesOptionsMenu}
                 buttonClassName={styles.cronZonesListBoxBtn}
               />
             </FlexContainer>

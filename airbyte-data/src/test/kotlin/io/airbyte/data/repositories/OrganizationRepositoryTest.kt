@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Organization
@@ -107,6 +111,7 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Workspace",
         slug = "test-workspace",
         organizationId = savedOrg.id!!,
+        dataplaneGroupId = UUID.randomUUID(),
       )
     val savedWorkspace = workspaceRepository.save(workspace)
 

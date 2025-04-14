@@ -11,10 +11,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.db.instance.jobs.jooq.generated.enums.JobStatus;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.metrics.reporter.model.LongRunningJobMetadata;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -55,7 +55,7 @@ class EmitterTest {
         new MetricAttribute(MetricTags.GEOGRAPHY, AUTO_REGION));
     verify(client).gauge(OssMetricsRegistry.NUM_PENDING_JOBS, 20,
         new MetricAttribute(MetricTags.GEOGRAPHY, EU_REGION));
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -72,7 +72,7 @@ class EmitterTest {
         new MetricAttribute(MetricTags.ATTEMPT_QUEUE, SYNC_QUEUE));
     verify(client).gauge(OssMetricsRegistry.NUM_RUNNING_JOBS, 20,
         new MetricAttribute(MetricTags.ATTEMPT_QUEUE, AWS_QUEUE));
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -86,7 +86,7 @@ class EmitterTest {
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
     verify(repo).numberOfOrphanRunningJobs();
     verify(client).gauge(OssMetricsRegistry.NUM_ORPHAN_RUNNING_JOBS, value);
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -103,7 +103,7 @@ class EmitterTest {
         new MetricAttribute(MetricTags.ATTEMPT_QUEUE, SYNC_QUEUE));
     verify(client).gauge(OssMetricsRegistry.OLDEST_RUNNING_JOB_AGE_SECS, 20,
         new MetricAttribute(MetricTags.ATTEMPT_QUEUE, AWS_QUEUE));
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -121,7 +121,7 @@ class EmitterTest {
     verify(client).gauge(OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS, 20,
         new MetricAttribute(MetricTags.GEOGRAPHY, EU_REGION));
 
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -137,7 +137,7 @@ class EmitterTest {
     for (final var value : values) {
       verify(client).distribution(OssMetricsRegistry.NUM_ACTIVE_CONN_PER_WORKSPACE, value);
     }
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -151,7 +151,7 @@ class EmitterTest {
     assertEquals(Duration.ofHours(1), emitter.getDuration());
     verify(repo).numberOfJobsNotRunningOnScheduleInLastDay();
     verify(client).gauge(OssMetricsRegistry.NUM_ABNORMAL_SCHEDULED_SYNCS_IN_LAST_DAY, value);
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -165,7 +165,7 @@ class EmitterTest {
     assertEquals(Duration.ofHours(1), emitter.getDuration());
     verify(repo).numScheduledActiveConnectionsInLastDay();
     verify(client).gauge(OssMetricsRegistry.NUM_TOTAL_SCHEDULED_SYNCS_IN_LAST_DAY, value);
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
@@ -184,15 +184,15 @@ class EmitterTest {
           OssMetricsRegistry.OVERALL_JOB_RUNTIME_IN_LAST_HOUR_BY_TERMINAL_STATE_SECS, time,
           new MetricAttribute(MetricTags.JOB_STATUS, jobStatus.getLiteral()));
     });
-    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER, 1);
+    verify(client).count(OssMetricsRegistry.EST_NUM_METRICS_EMITTED_BY_REPORTER);
   }
 
   @Test
   void unusuallyLongSyncs() {
     final var values = List.of(
-        new LongRunningJobMetadata("sourceImg1", "destImg1", "connection1"),
-        new LongRunningJobMetadata("sourceImg2", "destImg2", "connection2"),
-        new LongRunningJobMetadata("sourceImg3", "destImg3", "connection3"));
+        new LongRunningJobMetadata("sourceImg1", "destImg1", "workspace1", "connection1"),
+        new LongRunningJobMetadata("sourceImg2", "destImg2", "workspace2", "connection2"),
+        new LongRunningJobMetadata("sourceImg3", "destImg3", "workspace3", "connection3"));
     when(repo.unusuallyLongRunningJobs()).thenReturn(values);
 
     final var emitter = new UnusuallyLongSyncs(client, repo);
@@ -200,19 +200,20 @@ class EmitterTest {
 
     values.forEach(meta -> {
       verify(client).count(
-          OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1,
+          OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS,
           new MetricAttribute(MetricTags.SOURCE_IMAGE, meta.sourceDockerImage()),
           new MetricAttribute(MetricTags.DESTINATION_IMAGE, meta.destinationDockerImage()),
-          new MetricAttribute(MetricTags.CONNECTION_ID, meta.connectionId()));
+          new MetricAttribute(MetricTags.CONNECTION_ID, meta.connectionId()),
+          new MetricAttribute(MetricTags.WORKSPACE_ID, meta.workspaceId()));
     });
   }
 
   @Test
   void unusuallyLongSyncsHandlesNullMetadata() {
     final List<LongRunningJobMetadata> values = new ArrayList<>();
-    values.add(new LongRunningJobMetadata("sourceImg1", "destImg1", "connection1"));
+    values.add(new LongRunningJobMetadata("sourceImg1", "destImg1", "workspace1", "connection1"));
     values.add(null); // specifically add a null to simulate a mapping failure
-    values.add(new LongRunningJobMetadata("sourceImg2", "destImg2", "connection2"));
+    values.add(new LongRunningJobMetadata("sourceImg2", "destImg2", "workspace2", "connection2"));
     when(repo.unusuallyLongRunningJobs()).thenReturn(values);
 
     final var emitter = new UnusuallyLongSyncs(client, repo);
@@ -220,19 +221,21 @@ class EmitterTest {
 
     // metric is incremented for well-formed job metadata with attrs
     verify(client).count(
-        OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1,
+        OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS,
         new MetricAttribute(MetricTags.SOURCE_IMAGE, "sourceImg1"),
         new MetricAttribute(MetricTags.DESTINATION_IMAGE, "destImg1"),
-        new MetricAttribute(MetricTags.CONNECTION_ID, "connection1"));
+        new MetricAttribute(MetricTags.CONNECTION_ID, "connection1"),
+        new MetricAttribute(MetricTags.WORKSPACE_ID, "workspace1"));
 
     verify(client).count(
-        OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1,
+        OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS,
         new MetricAttribute(MetricTags.SOURCE_IMAGE, "sourceImg2"),
         new MetricAttribute(MetricTags.DESTINATION_IMAGE, "destImg2"),
-        new MetricAttribute(MetricTags.CONNECTION_ID, "connection2"));
+        new MetricAttribute(MetricTags.CONNECTION_ID, "connection2"),
+        new MetricAttribute(MetricTags.WORKSPACE_ID, "workspace2"));
 
     // metric is incremented without attrs for the null case
-    verify(client, times(1)).count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS, 1, new MetricAttribute[0]);
+    verify(client, times(1)).count(OssMetricsRegistry.NUM_UNUSUALLY_LONG_SYNCS);
   }
 
 }

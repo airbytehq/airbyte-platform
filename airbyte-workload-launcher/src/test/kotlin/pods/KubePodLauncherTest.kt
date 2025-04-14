@@ -1,9 +1,13 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.RetryPolicy
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workload.launcher.config.ApplicationBeanFactory
 import io.fabric8.kubernetes.api.model.HasMetadata
 import io.fabric8.kubernetes.api.model.ObjectMeta
@@ -16,6 +20,7 @@ import io.fabric8.kubernetes.client.dsl.FilterWatchListDeletable
 import io.fabric8.kubernetes.client.dsl.MixedOperation
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation
 import io.fabric8.kubernetes.client.dsl.PodResource
+import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
@@ -57,13 +62,11 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     every { kubernetesClient.pods() } throws IllegalStateException()
     every { kubernetesClient.resource(any<Pod>()) } throws IllegalStateException()
-    every { metricClient.count(any(), any(), any()) } returns Unit
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
   }
 
   @Test
@@ -127,7 +130,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -149,8 +153,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -166,7 +168,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -188,8 +191,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -205,7 +206,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -230,8 +232,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -247,7 +247,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -270,8 +271,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -287,7 +286,8 @@ class KubePodLauncherTest {
     val handleIf = ApplicationBeanFactory().kubeHttpErrorRetryPredicate()
 
     val kubernetesClientRetryPolicy =
-      RetryPolicy.builder<Any>()
+      RetryPolicy
+        .builder<Any>()
         .handleIf(handleIf)
         .onRetry { counter.incrementAndGet() }
         .withMaxRetries(maxRetries)
@@ -303,7 +303,7 @@ class KubePodLauncherTest {
     every { pods.inNamespace(any()) } returns namespaceable
     every { namespaceable.withLabels(any()) } returns labels
     every { labels.waitUntilCondition(any(), any(), any()) } throws
-      KubernetesClientTimeoutException(hasMetadata, 2L, TimeUnit.SECONDS)
+      RuntimeException()
     every { kubernetesClient.pods() } returns pods
 
     val kubePodLauncher =
@@ -312,11 +312,9 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
-    assertThrows<KubernetesClientException> {
+    assertThrows<RuntimeException> {
       kubePodLauncher.waitForPodReadyOrTerminal(mapOf("label" to "value"), Duration.ofSeconds(30))
     }
     assertEquals(0, counter.get())

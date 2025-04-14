@@ -10,9 +10,9 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.Configs.DeploymentMode;
+import io.airbyte.config.Configs;
 import io.airbyte.protocol.models.AirbyteProtocolSchema;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.nio.charset.StandardCharsets;
@@ -35,21 +35,21 @@ public class GcsBucketSpecFetcher {
 
   private final Storage storage;
   private final String bucketName;
-  private final DeploymentMode deploymentMode;
+  private final Configs.AirbyteEdition airbyteEdition;
 
   public GcsBucketSpecFetcher(final Storage storage, final String bucketName) {
     this.storage = storage;
     this.bucketName = bucketName;
-    this.deploymentMode = DeploymentMode.OSS;
+    this.airbyteEdition = Configs.AirbyteEdition.COMMUNITY;
   }
 
   /**
    * This constructor is used by airbyte-cloud to fetch cloud-specific spec files.
    */
-  public GcsBucketSpecFetcher(final Storage storage, final String bucketName, final DeploymentMode deploymentMode) {
+  public GcsBucketSpecFetcher(final Storage storage, final String bucketName, final Configs.AirbyteEdition airbyteEdition) {
     this.storage = storage;
     this.bucketName = bucketName;
-    this.deploymentMode = deploymentMode;
+    this.airbyteEdition = airbyteEdition;
   }
 
   /**
@@ -92,23 +92,23 @@ public class GcsBucketSpecFetcher {
 
   @VisibleForTesting
   Optional<Blob> getSpecAsBlob(final String dockerImageName, final String dockerImageTag) {
-    if (deploymentMode == DeploymentMode.CLOUD) {
-      final Optional<Blob> cloudSpecAsBlob = getSpecAsBlob(dockerImageName, dockerImageTag, CLOUD_SPEC_FILE, DeploymentMode.CLOUD);
+    if (airbyteEdition == Configs.AirbyteEdition.CLOUD) {
+      final Optional<Blob> cloudSpecAsBlob = getSpecAsBlob(dockerImageName, dockerImageTag, CLOUD_SPEC_FILE, Configs.AirbyteEdition.CLOUD);
       if (cloudSpecAsBlob.isPresent()) {
         LOGGER.info("Found cloud specific spec: {} {}", bucketName, cloudSpecAsBlob);
         return cloudSpecAsBlob;
       }
     }
-    return getSpecAsBlob(dockerImageName, dockerImageTag, DEFAULT_SPEC_FILE, DeploymentMode.OSS);
+    return getSpecAsBlob(dockerImageName, dockerImageTag, DEFAULT_SPEC_FILE, Configs.AirbyteEdition.COMMUNITY);
   }
 
   @VisibleForTesting
   Optional<Blob> getSpecAsBlob(final String dockerImageName,
                                final String dockerImageTag,
                                final String specFile,
-                               final DeploymentMode deploymentMode) {
+                               final Configs.AirbyteEdition airbyteEdition) {
     final Path specPath = Path.of("specs").resolve(dockerImageName).resolve(dockerImageTag).resolve(specFile);
-    LOGGER.debug("Checking path for cached {} spec: {} {}", deploymentMode.name(), bucketName, specPath);
+    LOGGER.debug("Checking path for cached {} spec: {} {}", airbyteEdition.name(), bucketName, specPath);
     final Blob specAsBlob = storage.get(bucketName, specPath.toString());
     if (specAsBlob != null) {
       return Optional.of(specAsBlob);

@@ -16,9 +16,9 @@ import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.micronaut.EnvConstants;
 import io.airbyte.commons.temporal.exception.RetryableException;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
 import io.airbyte.metrics.lib.MetricTags;
 import io.micronaut.cache.annotation.Cacheable;
 import io.micronaut.context.annotation.Requires;
@@ -68,7 +68,7 @@ public class RecordMetricActivityImpl implements RecordMetricActivity {
       baseMetricAttributes.addAll(Stream.of(metricInput.getMetricAttributes()).toList());
     }
     metricInput.getFailureCause().ifPresent(fc -> baseMetricAttributes.add(new MetricAttribute(MetricTags.FAILURE_CAUSE, fc.name())));
-    metricClient.count(metricInput.getMetricName(), 1L, baseMetricAttributes.toArray(new MetricAttribute[] {}));
+    metricClient.count(metricInput.getMetricName(), baseMetricAttributes.toArray(new MetricAttribute[] {}));
   }
 
   /**

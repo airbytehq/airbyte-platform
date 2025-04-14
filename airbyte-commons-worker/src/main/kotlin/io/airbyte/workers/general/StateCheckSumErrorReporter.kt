@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.amazonaws.internal.ExceptionUtils
@@ -13,6 +17,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.map.MoreMaps
+import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.StandardWorkspace
@@ -21,7 +26,7 @@ import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
-import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Value
@@ -39,7 +44,7 @@ private val logger = KotlinLogging.logger { }
 class StateCheckSumErrorReporter(
   @Named("stateCheckSumErrorReportingClient") private val jobErrorReportingClient: Optional<JobErrorReportingClient>,
   @Value("\${airbyte.version}") private val airbyteVersion: String,
-  @Value("\${airbyte.deployment-mode}") private val deploymentMode: String,
+  private val airbyteEdition: Configs.AirbyteEdition,
   private val airbyteApiClient: AirbyteApiClient,
   @param:Parameter private val webUrlHelper: WebUrlHelper = WebUrlHelper(BASE_URL),
 ) {
@@ -154,7 +159,7 @@ class StateCheckSumErrorReporter(
   fun airbyteMetadata(): Map<String, String> =
     mapOf(
       JobErrorReporter.AIRBYTE_VERSION_META_KEY to airbyteVersion,
-      JobErrorReporter.DEPLOYMENT_MODE_META_KEY to deploymentMode,
+      JobErrorReporter.AIRBYTE_EDITION_META_KEY to airbyteEdition.name,
     )
 
   fun getFailureReasonMetadata(failureReason: FailureReason): Map<String, String> =

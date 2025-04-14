@@ -6,21 +6,10 @@
 */}}
 
 {{/*
-Renders the auth secret name
-*/}}
-{{- define "airbyte.auth.secretName" }}
-{{- if .Values.global.auth.secretName }}
-    {{- .Values.global.auth.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the auth.instanceAdmin.password secret key
 */}}
 {{- define "airbyte.auth.instanceAdmin.password.secretKey" }}
-	{{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "INSTANCE_ADMIN_PASSWORD" }}
+	{{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" }}
 {{- end }}
 
 {{/*
@@ -46,9 +35,9 @@ Renders the auth.bootstrap secret name
 */}}
 {{- define "airbyte.auth.bootstrap.secretName" }}
 {{- if .Values.global.auth.secretName }}
-    {{- .Values.global.auth.secretName | quote }}
+    {{- .Values.global.auth.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -56,7 +45,11 @@ Renders the auth.bootstrap secret name
 Renders the global.auth.secretCreationEnabled value
 */}}
 {{- define "airbyte.auth.bootstrap.secretCreationEnabled" }}
-    {{- .Values.global.auth.secretCreationEnabled | default true }}
+	{{- if eq .Values.global.auth.secretCreationEnabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.auth.secretCreationEnabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -117,7 +110,7 @@ Renders the auth.bootstrap.instanceAdmin.password environment variable
 Renders the global.auth.instanceAdmin.passwordSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.passwordSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "INSTANCE_ADMIN_PASSWORD" }}
+    {{- .Values.global.auth.instanceAdmin.passwordSecretKey | default "instance-admin-password" }}
 {{- end }}
 
 {{/*
@@ -132,35 +125,35 @@ Renders the auth.bootstrap.instanceAdmin.passwordSecretKey environment variable
 {{- end }}
 
 {{/*
-Renders the global.auth.instanceAdmin.cilentId value
+Renders the global.auth.instanceAdmin.clientId value
 */}}
-{{- define "airbyte.auth.bootstrap.instanceAdmin.cilentId" }}
-    {{- .Values.global.auth.instanceAdmin.cilentId }}
+{{- define "airbyte.auth.bootstrap.instanceAdmin.clientId" }}
+    {{- .Values.global.auth.instanceAdmin.clientId }}
 {{- end }}
 
 {{/*
-Renders the auth.bootstrap.instanceAdmin.cilentId secret key
+Renders the auth.bootstrap.instanceAdmin.clientId secret key
 */}}
-{{- define "airbyte.auth.bootstrap.instanceAdmin.cilentId.secretKey" }}
-	{{- .Values.global.auth.instanceAdmin.cilentIdSecretKey | default "AB_INSTANCE_ADMIN_CLIENT_ID" }}
+{{- define "airbyte.auth.bootstrap.instanceAdmin.clientId.secretKey" }}
+	{{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "AB_INSTANCE_ADMIN_CLIENT_ID" }}
 {{- end }}
 
 {{/*
-Renders the auth.bootstrap.instanceAdmin.cilentId environment variable
+Renders the auth.bootstrap.instanceAdmin.clientId environment variable
 */}}
-{{- define "airbyte.auth.bootstrap.instanceAdmin.cilentId.env" }}
+{{- define "airbyte.auth.bootstrap.instanceAdmin.clientId.env" }}
 - name: AB_INSTANCE_ADMIN_CLIENT_ID
   valueFrom:
     secretKeyRef:
       name: {{ include "airbyte.auth.bootstrap.secretName" . }}
-      key: {{ include "airbyte.auth.bootstrap.instanceAdmin.cilentId.secretKey" . }}
+      key: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientId.secretKey" . }}
 {{- end }}
 
 {{/*
 Renders the global.auth.instanceAdmin.clientIdSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.clientIdSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "INSTANCE_ADMIN_CLIENT_ID" }}
+    {{- .Values.global.auth.instanceAdmin.clientIdSecretKey | default "instance-admin-client-id" }}
 {{- end }}
 
 {{/*
@@ -203,7 +196,7 @@ Renders the auth.bootstrap.instanceAdmin.clientSecret environment variable
 Renders the global.auth.instanceAdmin.clientSecretSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey" }}
-    {{- .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "INSTANCE_ADMIN_CLIENT_SECRET" }}
+    {{- .Values.global.auth.instanceAdmin.clientSecretSecretKey | default "instance-admin-client-secret" }}
 {{- end }}
 
 {{/*
@@ -246,7 +239,7 @@ Renders the auth.bootstrap.security.jwtSignatureSecret environment variable
 Renders the global.auth.security.jwtSignatureSecretKey value
 */}}
 {{- define "airbyte.auth.bootstrap.security.jwtSignatureSecretKey" }}
-    {{- .Values.global.auth.security.jwtSignatureSecretKey | default "JWT_SIGNATURE_SECRET" }}
+    {{- .Values.global.auth.security.jwtSignatureSecretKey | default "jwt-signature-secret" }}
 {{- end }}
 
 {{/*
@@ -261,6 +254,42 @@ Renders the auth.bootstrap.security.jwtSignatureSecretKey environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.dataPlane.clientIdSecretKey value
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" }}
+    {{- .Values.global.auth.dataPlane.clientIdSecretKey | default "dataplane-client-id" }}
+{{- end }}
+
+{{/*
+Renders the auth.bootstrap.dataPlane.clientIdSecretKey environment variable
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey.env" }}
+- name: DATAPLANE_CLIENT_ID_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_ID_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the global.auth.dataPlane.clientSecretSecretKey value
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" }}
+    {{- .Values.global.auth.dataPlane.clientSecretSecretKey | default "dataplane-client-secret" }}
+{{- end }}
+
+{{/*
+Renders the auth.bootstrap.dataPlane.clientSecretSecretKey environment variable
+*/}}
+{{- define "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey.env" }}
+- name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+{{- end }}
+
+{{/*
 Renders the set of all auth.bootstrap environment variables
 */}}
 {{- define "airbyte.auth.bootstrap.envs" }}
@@ -268,12 +297,14 @@ Renders the set of all auth.bootstrap environment variables
 {{- include "airbyte.auth.bootstrap.managedSecretName.env" . }}
 {{- include "airbyte.auth.bootstrap.instanceAdmin.password.env" . }}
 {{- include "airbyte.auth.bootstrap.instanceAdmin.passwordSecretKey.env" . }}
-{{- include "airbyte.auth.bootstrap.instanceAdmin.cilentId.env" . }}
+{{- include "airbyte.auth.bootstrap.instanceAdmin.clientId.env" . }}
 {{- include "airbyte.auth.bootstrap.instanceAdmin.clientIdSecretKey.env" . }}
 {{- include "airbyte.auth.bootstrap.instanceAdmin.clientSecret.env" . }}
 {{- include "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey.env" . }}
 {{- include "airbyte.auth.bootstrap.security.jwtSignatureSecret.env" . }}
 {{- include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey.env" . }}
+{{- include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey.env" . }}
+{{- include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey.env" . }}
 {{- end }}
 
 {{/*
@@ -286,6 +317,8 @@ AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instan
 AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientIdSecretKey" . | quote }}
 AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientSecretSecretKey" . | quote }}
 AB_JWT_SIGNATURE_SECRET_KEY: {{ include "airbyte.auth.bootstrap.security.jwtSignatureSecretKey" . | quote }}
+DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientIdSecretKey" . | quote }}
+DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.auth.bootstrap.dataPlane.clientSecretSecretKey" . | quote }}
 {{- end }}
 
 {{/*
@@ -293,7 +326,7 @@ Renders the set of all auth.bootstrap secret variables
 */}}
 {{- define "airbyte.auth.bootstrap.secrets" }}
 AB_INSTANCE_ADMIN_PASSWORD: {{ include "airbyte.auth.bootstrap.instanceAdmin.password" . | quote }}
-AB_INSTANCE_ADMIN_CLIENT_ID: {{ include "airbyte.auth.bootstrap.instanceAdmin.cilentId" . | quote }}
+AB_INSTANCE_ADMIN_CLIENT_ID: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientId" . | quote }}
 AB_INSTANCE_ADMIN_CLIENT_SECRET: {{ include "airbyte.auth.bootstrap.instanceAdmin.clientSecret" . | quote }}
 AB_JWT_SIGNATURE_SECRET: {{ include "airbyte.auth.bootstrap.security.jwtSignatureSecret" . | quote }}
 {{- end }}
@@ -303,9 +336,9 @@ Renders the auth.identityProvider secret name
 */}}
 {{- define "airbyte.auth.identityProvider.secretName" }}
 {{- if .Values.global.auth.identityProvider.secretName }}
-    {{- .Values.global.auth.identityProvider.secretName | quote }}
+    {{- .Values.global.auth.identityProvider.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -313,7 +346,7 @@ Renders the auth.identityProvider secret name
 Renders the global.auth.identityProvider.type value
 */}}
 {{- define "airbyte.auth.identityProvider.type" }}
-    {{- .Values.global.auth.identityProvider.type }}
+    {{- .Values.global.auth.identityProvider.type | default "simple" }}
 {{- end }}
 
 {{/*
@@ -325,6 +358,50 @@ Renders the auth.identityProvider.type environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: IDENTITY_PROVIDER_TYPE
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.verifyIssuer value
+*/}}
+{{- define "airbyte.auth.identityProvider.verifyIssuer" }}
+	{{- if eq .Values.global.auth.identityProvider.verifyIssuer nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.auth.identityProvider.verifyIssuer }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.verifyIssuer environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.verifyIssuer.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.verifyAudience value
+*/}}
+{{- define "airbyte.auth.identityProvider.verifyAudience" }}
+	{{- if eq .Values.global.auth.identityProvider.verifyAudience nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.auth.identityProvider.verifyAudience }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.verifyAudience environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.verifyAudience.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE
 {{- end }}
 
 {{/*
@@ -414,14 +491,195 @@ Renders the auth.identityProvider.oidc.clientSecret environment variable
 {{- end }}
 
 {{/*
+Renders the global.auth.identityProvider.genericOidc.clientId value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.clientId" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.clientId }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.clientId environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.clientId.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.audience value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.audience" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.audience }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.audience environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.audience.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.issuer value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.issuer" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.issuer }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.issuer environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.issuer.env" }}
+- name: DEFAULT_REALM
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DEFAULT_REALM
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.endpoints.jwksEndpoint value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.endpoints.jwksEndpoint }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.endpoints.jwksEndpoint environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint.env" }}
+- name: AB_AIRBYTE_AUTH_JWKS_ENDPOINT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_JWKS_ENDPOINT
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.fields.subject value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.subject" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.fields.subject | default "sub" }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.fields.subject environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.subject.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.fields.email value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.email" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.fields.email | default "email" }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.fields.email environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.email.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.fields.name value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.name" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.fields.name | default "name" }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.fields.name environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.name.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME
+{{- end }}
+
+{{/*
+Renders the global.auth.identityProvider.genericOidc.fields.issuer value
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.issuer" }}
+    {{- .Values.global.auth.identityProvider.genericOidc.fields.issuer | default "iss" }}
+{{- end }}
+
+{{/*
+Renders the auth.identityProvider.genericOidc.fields.issuer environment variable
+*/}}
+{{- define "airbyte.auth.identityProvider.genericOidc.fields.issuer.env" }}
+- name: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER
+{{- end }}
+
+{{/*
 Renders the set of all auth.identityProvider environment variables
 */}}
 {{- define "airbyte.auth.identityProvider.envs" }}
 {{- include "airbyte.auth.identityProvider.type.env" . }}
+{{- include "airbyte.auth.identityProvider.verifyIssuer.env" . }}
+{{- include "airbyte.auth.identityProvider.verifyAudience.env" . }}
+{{- $opt := (include "airbyte.auth.identityProvider.type" .) }}
+
+{{- if eq $opt "oidc" }}
 {{- include "airbyte.auth.identityProvider.oidc.domain.env" . }}
 {{- include "airbyte.auth.identityProvider.oidc.appName.env" . }}
 {{- include "airbyte.auth.identityProvider.oidc.clientId.env" . }}
 {{- include "airbyte.auth.identityProvider.oidc.clientSecret.env" . }}
+{{- end }}
+
+{{- if eq $opt "generic-oidc" }}
+{{- include "airbyte.auth.identityProvider.genericOidc.clientId.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.audience.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.issuer.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.fields.subject.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.fields.email.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.fields.name.env" . }}
+{{- include "airbyte.auth.identityProvider.genericOidc.fields.issuer.env" . }}
+{{- end }}
+
 {{- end }}
 
 {{/*
@@ -429,16 +687,43 @@ Renders the set of all auth.identityProvider config map variables
 */}}
 {{- define "airbyte.auth.identityProvider.configVars" }}
 IDENTITY_PROVIDER_TYPE: {{ include "airbyte.auth.identityProvider.type" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER: {{ include "airbyte.auth.identityProvider.verifyIssuer" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE: {{ include "airbyte.auth.identityProvider.verifyAudience" . | quote }}
+{{- $opt := (include "airbyte.auth.identityProvider.type" .) }}
+
+{{- if eq $opt "oidc" }}
 OIDC_DOMAIN: {{ include "airbyte.auth.identityProvider.oidc.domain" . | quote }}
 OIDC_APP_NAME: {{ include "airbyte.auth.identityProvider.oidc.appName" . | quote }}
+{{- end }}
+
+{{- if eq $opt "generic-oidc" }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID: {{ include "airbyte.auth.identityProvider.genericOidc.clientId" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE: {{ include "airbyte.auth.identityProvider.genericOidc.audience" . | quote }}
+DEFAULT_REALM: {{ include "airbyte.auth.identityProvider.genericOidc.issuer" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT: {{ include "airbyte.auth.identityProvider.genericOidc.endpoints.authorizationServerEndpoint" . | quote }}
+AB_AIRBYTE_AUTH_JWKS_ENDPOINT: {{ include "airbyte.auth.identityProvider.genericOidc.endpoints.jwksEndpoint" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB: {{ include "airbyte.auth.identityProvider.genericOidc.fields.subject" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL: {{ include "airbyte.auth.identityProvider.genericOidc.fields.email" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME: {{ include "airbyte.auth.identityProvider.genericOidc.fields.name" . | quote }}
+AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER: {{ include "airbyte.auth.identityProvider.genericOidc.fields.issuer" . | quote }}
+{{- end }}
+
 {{- end }}
 
 {{/*
 Renders the set of all auth.identityProvider secret variables
 */}}
 {{- define "airbyte.auth.identityProvider.secrets" }}
+{{- $opt := (include "airbyte.auth.identityProvider.type" .) }}
+
+{{- if eq $opt "oidc" }}
 OIDC_CLIENT_ID: {{ include "airbyte.auth.identityProvider.oidc.clientId" . | quote }}
 OIDC_CLIENT_SECRET: {{ include "airbyte.auth.identityProvider.oidc.clientSecret" . | quote }}
+{{- end }}
+
+{{- if eq $opt "generic-oidc" }}
+{{- end }}
+
 {{- end }}
 
 {{/*
@@ -446,9 +731,9 @@ Renders the auth.instanceAdmin.enterprise secret name
 */}}
 {{- define "airbyte.auth.instanceAdmin.enterprise.secretName" }}
 {{- if .Values.global.auth.instanceAdmin.secretName }}
-    {{- .Values.global.auth.instanceAdmin.secretName | quote }}
+    {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -569,9 +854,9 @@ Renders the auth.jwt secret name
 */}}
 {{- define "airbyte.auth.jwt.secretName" }}
 {{- if .Values.global.auth.instanceAdmin.secretName }}
-    {{- .Values.global.auth.instanceAdmin.secretName | quote }}
+    {{- .Values.global.auth.instanceAdmin.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -579,7 +864,7 @@ Renders the auth.jwt secret name
 Renders the auth.jwt.jwtSignatureSecret secret key
 */}}
 {{- define "airbyte.auth.jwt.jwtSignatureSecret.secretKey" }}
-	{{- .Values.global.auth.security.jwtSignatureSecretSecretKey | default "JWT_SIGNATURE_SECRET" }}
+	{{- .Values.global.auth.security.jwtSignatureSecretSecretKey | default "jwt-signature-secret" }}
 {{- end }}
 
 {{/*
@@ -601,21 +886,14 @@ Renders the set of all auth.jwt environment variables
 {{- end }}
 
 {{/*
-Renders the auth.security secret name
-*/}}
-{{- define "airbyte.auth.security.secretName" }}
-{{- if .Values.global.auth.security.secretName }}
-    {{- .Values.global.auth.security.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.auth.security.cookieSecureSetting value
 */}}
 {{- define "airbyte.auth.security.cookieSecureSetting" }}
-    {{- .Values.global.auth.security.cookieSecureSetting | default true }}
+	{{- if eq .Values.global.auth.security.cookieSecureSetting nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.auth.security.cookieSecureSetting }}
+	{{- end }}
 {{- end }}
 
 {{/*

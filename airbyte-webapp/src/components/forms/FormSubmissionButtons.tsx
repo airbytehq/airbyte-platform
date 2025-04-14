@@ -1,6 +1,5 @@
 import { useFormContext, useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import { useEffectOnce } from "react-use";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
 import { Button } from "components/ui/Button";
@@ -13,6 +12,7 @@ interface FormSubmissionButtonsProps {
   cancelKey?: string;
   allowNonDirtyCancel?: boolean;
   allowNonDirtySubmit?: boolean;
+  allowInvalidSubmit?: boolean;
   onCancelClickCallback?: () => void;
   justify?: "flex-start" | "flex-end";
   reversed?: boolean;
@@ -24,6 +24,7 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   cancelKey = "form.cancel",
   allowNonDirtyCancel = false,
   allowNonDirtySubmit = false,
+  allowInvalidSubmit = false,
   onCancelClickCallback,
   justify = "flex-end",
   noCancel,
@@ -33,12 +34,6 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   // reset is a stable function so it's fine to get it from useFormContext
   const { reset } = useFormContext();
   const { isValid, isDirty, isSubmitting } = useFormState<FormConnectionFormValues>();
-
-  // need to trigger validation on mount to make error message exist
-  const { trigger } = useFormContext();
-  useEffectOnce(() => {
-    trigger("syncCatalog.streams");
-  });
 
   return (
     <FlexContainer justifyContent={justify} className={reversed ? styles.reversed : undefined}>
@@ -55,7 +50,11 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
           <FormattedMessage id={cancelKey} />
         </Button>
       )}
-      <Button type="submit" isLoading={isSubmitting} disabled={!isValid || (!isDirty && !allowNonDirtySubmit)}>
+      <Button
+        type="submit"
+        isLoading={isSubmitting}
+        disabled={(!isValid && !allowInvalidSubmit) || (!isDirty && !allowNonDirtySubmit)}
+      >
         <FormattedMessage id={submitKey} />
       </Button>
     </FlexContainer>

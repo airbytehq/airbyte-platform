@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.events
 
 import io.airbyte.commons.converters.ConnectorConfigUpdater
-import io.airbyte.protocol.models.AirbyteControlMessage
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteControlMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -17,8 +21,9 @@ private val logger = KotlinLogging.logger { }
  * control messages are processed before continuing with replication.
  */
 @Singleton
-class AirbyteControlMessageEventListener(private val connectorConfigUpdater: ConnectorConfigUpdater) :
-  ApplicationEventListener<ReplicationAirbyteMessageEvent> {
+class AirbyteControlMessageEventListener(
+  private val connectorConfigUpdater: ConnectorConfigUpdater,
+) : ApplicationEventListener<ReplicationAirbyteMessageEvent> {
   override fun onApplicationEvent(event: ReplicationAirbyteMessageEvent): Unit =
     when (event.airbyteMessageOrigin) {
       AirbyteMessageOrigin.DESTINATION -> acceptDstControlMessage(event.airbyteMessage.control, event.replicationContext)

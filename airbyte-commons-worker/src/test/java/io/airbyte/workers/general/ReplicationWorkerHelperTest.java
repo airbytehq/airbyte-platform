@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.general;
 
-import static io.airbyte.workers.test_utils.TestConfigHelpers.DESTINATION_IMAGE;
-import static io.airbyte.workers.test_utils.TestConfigHelpers.SOURCE_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE;
+import static io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -23,7 +23,6 @@ import io.airbyte.api.client.generated.DestinationApi;
 import io.airbyte.api.client.generated.SourceApi;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.commons.concurrency.VoidCallable;
-import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
@@ -36,13 +35,14 @@ import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
-import io.airbyte.protocol.models.AirbyteLogMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteLogMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 import io.airbyte.workers.context.ReplicationContext;
 import io.airbyte.workers.context.ReplicationFeatureFlags;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
@@ -58,6 +58,7 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
+import io.airbyte.workers.tracker.ThreadedTimeTracker;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import java.io.IOException;
@@ -137,7 +138,8 @@ class ReplicationWorkerHelperTest {
         streamStatusTrackerFactory,
         recordMapper,
         featureFlagClient,
-        destinationCatalogGenerator));
+        destinationCatalogGenerator,
+        mock(MetricClient.class)));
   }
 
   @AfterEach

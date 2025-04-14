@@ -6,13 +6,16 @@ package io.airbyte.test.utils;
 
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import dev.failsafe.Failsafe;
+import dev.failsafe.FailsafeException;
 import dev.failsafe.RetryPolicy;
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ActorDefinitionRequestBody;
@@ -23,6 +26,7 @@ import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
+import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
 import io.airbyte.api.client.model.generated.ConnectionCreate;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -43,6 +47,8 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.DestinationUpdate;
+import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobDebugInfoRead;
 import io.airbyte.api.client.model.generated.JobIdRequestBody;
@@ -53,6 +59,7 @@ import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.JobWithAttemptsRead;
 import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody;
+import io.airbyte.api.client.model.generated.LogFormatType;
 import io.airbyte.api.client.model.generated.NamespaceDefinitionType;
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference;
 import io.airbyte.api.client.model.generated.OperationCreate;
@@ -76,6 +83,7 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.SourceReadList;
+import io.airbyte.api.client.model.generated.SourceUpdate;
 import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.SyncMode;
@@ -83,11 +91,8 @@ import io.airbyte.api.client.model.generated.WebBackendConnectionRead;
 import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate;
-import io.airbyte.api.client.model.generated.WebhookConfigWrite;
 import io.airbyte.api.client.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody;
-import io.airbyte.api.client.model.generated.WorkspaceRead;
-import io.airbyte.api.client.model.generated.WorkspaceUpdate;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.string.Strings;
@@ -119,10 +124,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.sql.DataSource;
+import junit.framework.AssertionFailedError;
 import org.jooq.Record;
 import org.jooq.SQLDialect;
 import org.junit.jupiter.api.Assertions;
@@ -242,7 +249,6 @@ public class AcceptanceTestHarness {
   private String cloudSqlInstanceId;
   private String cloudSqlInstanceUsername;
   private String cloudSqlInstancePassword;
-  private String cloudSqlInstancePrivateIp;
   private String cloudSqlInstancePublicIp;
   private final RetryPolicy<Object> retryPolicy;
 
@@ -301,7 +307,8 @@ public class AcceptanceTestHarness {
         List.of(),
         List.of(),
         PUBLIC,
-        true);
+        true,
+        null);
     final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration(
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.OVERWRITE,
@@ -369,12 +376,12 @@ public class AcceptanceTestHarness {
       sourceDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           sourceDatabaseName);
       destinationDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           destinationDatabaseName);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
@@ -503,12 +510,13 @@ public class AcceptanceTestHarness {
     cloudSqlInstanceId = System.getenv("CLOUD_SQL_INSTANCE_ID");
     cloudSqlInstanceUsername = System.getenv("CLOUD_SQL_INSTANCE_USERNAME");
     cloudSqlInstancePassword = System.getenv("CLOUD_SQL_INSTANCE_PASSWORD");
-    cloudSqlInstancePrivateIp = System.getenv("CLOUD_SQL_INSTANCE_PRIVATE_IP");
     cloudSqlInstancePublicIp = System.getenv("CLOUD_SQL_INSTANCE_PUBLIC_IP");
   }
 
   private WorkflowClient getWorkflowClient() {
-    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null, null, null, null, null);
+    final TemporalUtils temporalUtils = new TemporalUtils(null, null, null,
+        null, null, null,
+        null, Optional.empty());
     final WorkflowServiceStubs temporalService = temporalUtils.createTemporalService(
         TemporalWorkflowUtils.getAirbyteTemporalOptions(TEMPORAL_HOST, new TemporalSdkTimeouts()),
         TemporalUtils.DEFAULT_NAMESPACE);
@@ -661,6 +669,7 @@ public class AcceptanceTestHarness {
         null,
         null,
         null,
+        null,
         null));
   }
 
@@ -693,6 +702,7 @@ public class AcceptanceTestHarness {
             null,
             create.getCatalogId(),
             create.getGeography(),
+            null,
             null,
             null,
             null,
@@ -734,6 +744,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -747,6 +758,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -778,6 +790,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -833,9 +846,25 @@ public class AcceptanceTestHarness {
             workspaceId,
             name,
             destinationDefId,
-            destinationConfig));
+            destinationConfig,
+            null));
     destinationIds.add(destination.getDestinationId());
     return destination;
+  }
+
+  public DestinationRead updateDestination(final UUID destinationId, final JsonNode updatedConfig, final String name) throws IOException {
+    final DestinationUpdate destinationUpdate = new DestinationUpdate(
+        destinationId,
+        updatedConfig,
+        name,
+        null);
+
+    final CheckConnectionRead checkResponse = apiClient.getDestinationApi().checkConnectionToDestinationForUpdate(destinationUpdate);
+    if (checkResponse.getStatus() != Status.SUCCEEDED) {
+      throw new RuntimeException("Check connection failed: " + checkResponse.getMessage());
+    }
+
+    return Failsafe.with(retryPolicy).get(() -> apiClient.getDestinationApi().updateDestination(destinationUpdate));
   }
 
   public CheckConnectionRead.Status checkDestination(final UUID destinationId) throws IOException {
@@ -868,6 +897,10 @@ public class AcceptanceTestHarness {
 
   public JsonNode getSourceDbConfig() {
     return getDbConfig(sourcePsql, false, false, sourceDatabaseName);
+  }
+
+  public JsonNode getSourceDbConfigWithHiddenPassword() {
+    return getDbConfig(sourcePsql, true, false, sourceDatabaseName);
   }
 
   public JsonNode getDestinationDbConfig() {
@@ -1017,9 +1050,26 @@ public class AcceptanceTestHarness {
             sourceConfig,
             workspaceId,
             name,
+            null,
             null)));
     sourceIds.add(source.getSourceId());
     return source;
+  }
+
+  public SourceRead updateSource(final UUID sourceId, final JsonNode updatedConfig, final String name) throws IOException {
+    final SourceUpdate sourceUpdate = new SourceUpdate(
+        sourceId,
+        updatedConfig,
+        name,
+        null,
+        null);
+
+    final CheckConnectionRead checkResponse = apiClient.getSourceApi().checkConnectionToSourceForUpdate(sourceUpdate);
+    if (checkResponse.getStatus() != Status.SUCCEEDED) {
+      throw new RuntimeException("Check connection failed: " + checkResponse.getMessage());
+    }
+
+    return Failsafe.with(retryPolicy).get(() -> apiClient.getSourceApi().updateSource(sourceUpdate));
   }
 
   public CheckConnectionRead checkSource(final UUID sourceId) {
@@ -1097,6 +1147,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             ConnectionStatus.DEPRECATED,
+            null,
             null,
             null,
             null,
@@ -1258,11 +1309,6 @@ public class AcceptanceTestHarness {
             new DestinationDefinitionIdWithWorkspaceId(UUID.randomUUID(), UUID.randomUUID()));
   }
 
-  public WorkspaceRead updateWorkspaceWebhookConfigs(final UUID workspaceId, final List<WebhookConfigWrite> webhookConfigs) throws Exception {
-    return Failsafe.with(retryPolicy).get(() -> apiClient.getWorkspaceApi()
-        .updateWorkspace(new WorkspaceUpdate(workspaceId, null, null, null, null, null, null, null, null, null, webhookConfigs)));
-  }
-
   public SourceDefinitionRead getSourceDefinition(final UUID sourceDefinitionId) throws IOException {
     return Failsafe.with(retryPolicy)
         .get(() -> apiClient.getSourceDefinitionApi().getSourceDefinition(new SourceDefinitionIdRequestBody(sourceDefinitionId)));
@@ -1329,6 +1375,7 @@ public class AcceptanceTestHarness {
             null,
             nonBreakingChangesPreference,
             backfillPreference,
+            null,
             null));
   }
 
@@ -1428,6 +1475,50 @@ public class AcceptanceTestHarness {
 
   public <T> TestFlagsSetter.FlagOverride<T> withFlag(final Flag<T> flag, final Context context, final T value) {
     return testFlagsSetter.withFlag(flag, value, context);
+  }
+
+  /**
+   * Validates that job logs exist, are in the correct format and contain entries from various
+   * participants. This method loops because not all participants may have reported by the time that a
+   * job is marked as done.
+   *
+   * @param jobId The ID of the job associated with the job logs.
+   * @param attemptNumber The attempt number of the job associated with the job logs.
+   */
+  public void validateLogs(final long jobId, final int attemptNumber) {
+    final RetryPolicy<?> retryPolicy = RetryPolicy.builder()
+        .handle(Exception.class, AssertionFailedError.class, org.opentest4j.AssertionFailedError.class)
+        .withDelay(Duration.ofSeconds(5))
+        .withMaxRetries(50)
+        .build();
+    try {
+      Failsafe.with(retryPolicy).run(() -> {
+        // Assert that job logs exist
+        final var attempt = getApiClient().getAttemptApi().getAttemptForJob(
+            new GetAttemptStatsRequestBody(jobId, attemptNumber));
+        // Structured logs should exist
+        assertEquals(LogFormatType.STRUCTURED, attempt.getLogType());
+        assertFalse(attempt.getLogs().getEvents().isEmpty());
+        assertTrue(attempt.getLogs().getLogLines().isEmpty());
+        // Assert that certain log lines are present in job logs to verify that all components can
+        // contribute
+        final List<String> logLines = List.of(
+            "APPLY Stage: CLAIM", // workload launcher
+            "----- START REPLICATION -----" // container orchestrator
+        );
+        validateLogLines(logLines, attempt);
+      });
+    } catch (final FailsafeException e) {
+      fail("Failed to validate logs: retries exceeded waiting for logs.", e);
+    }
+  }
+
+  public void validateLogLines(final List<String> logLines, final AttemptInfoRead attempt) {
+    logLines.forEach(logLine -> {
+      if (attempt.getLogs().getEvents().stream().noneMatch(e -> e.getMessage().startsWith(logLine))) {
+        fail("Job logs do not contain any lines that start with '" + logLine + "'.");
+      }
+    });
   }
 
 }

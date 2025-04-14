@@ -1,4 +1,5 @@
 @use "scss/variables";
+@use "scss/colors";
 
 .container {
   overflow: hidden;
@@ -17,4 +18,12 @@
   height: 100%;
   display: grid;
   grid-template-rows: 1fr auto;
+}
+
+.errorDetails {
+  white-space: pre-wrap;
+  font-family: monospace;
+  background-color: colors.$foreground;
+  padding: variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
 }

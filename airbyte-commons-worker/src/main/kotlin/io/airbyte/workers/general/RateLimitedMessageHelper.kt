@@ -1,8 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.protocol.models.AirbyteStreamStatusReason
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusReason
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 
 class RateLimitedMessageHelper {
   companion object {

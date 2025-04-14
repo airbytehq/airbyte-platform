@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -48,22 +49,23 @@ open class LocalTestingSecretPersistence(
   @Transactional
   @TransactionalAdvice("local-secrets")
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     initialize()
-    dslContext.query(
-      "INSERT INTO secrets(coordinate,payload) VALUES(?, ?) ON CONFLICT (coordinate) DO UPDATE SET payload = ?;",
-      coordinate.fullCoordinate,
-      payload,
-      payload,
-      coordinate.fullCoordinate,
-    ).execute()
+    dslContext
+      .query(
+        "INSERT INTO secrets(coordinate,payload) VALUES(?, ?) ON CONFLICT (coordinate) DO UPDATE SET payload = ?;",
+        coordinate.fullCoordinate,
+        payload,
+        payload,
+        coordinate.fullCoordinate,
+      ).execute()
   }
 
   @Transactional
   @TransactionalAdvice("local-secrets")
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     initialize()
     dslContext.execute("DELETE FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
   }

@@ -1,9 +1,12 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Workspace
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
-import io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -43,7 +46,7 @@ class WorkspaceRepositoryTest : AbstractConfigRepositoryTest() {
         notifications = null,
         firstSyncComplete = true,
         feedbackComplete = true,
-        geography = GeographyType.US,
+        dataplaneGroupId = UUID.randomUUID(),
         webhookOperationConfigs = null,
         notificationSettings = null,
         organizationId = UUID.randomUUID(),
@@ -74,7 +77,7 @@ class WorkspaceRepositoryTest : AbstractConfigRepositoryTest() {
         notifications = null,
         firstSyncComplete = true,
         feedbackComplete = true,
-        geography = GeographyType.US,
+        dataplaneGroupId = UUID.randomUUID(),
         webhookOperationConfigs = null,
         notificationSettings = null,
         organizationId = UUID.randomUUID(),
@@ -82,7 +85,7 @@ class WorkspaceRepositoryTest : AbstractConfigRepositoryTest() {
     workspaceRepository.save(workspace)
 
     workspace.name = "Updated Workspace"
-    workspace.geography = GeographyType.EU
+    workspace.dataplaneGroupId = UUID.randomUUID()
     workspaceRepository.update(workspace)
 
     val updatedWorkspace = workspaceRepository.findById(workspace.id!!)
@@ -106,7 +109,7 @@ class WorkspaceRepositoryTest : AbstractConfigRepositoryTest() {
         notifications = null,
         firstSyncComplete = true,
         feedbackComplete = true,
-        geography = GeographyType.US,
+        dataplaneGroupId = UUID.randomUUID(),
         webhookOperationConfigs = null,
         notificationSettings = null,
         organizationId = UUID.randomUUID(),

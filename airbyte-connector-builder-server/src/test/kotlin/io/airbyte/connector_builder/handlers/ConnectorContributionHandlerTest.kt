@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.handlers
@@ -35,11 +39,13 @@ class ConnectorContributionHandlerTest {
   fun `checkContribution returns details of an existing connector if found in target repository`() {
     every { anyConstructed<GithubContributionService>().checkIfConnectorExistsOnMain() } returns true
     every { anyConstructed<GithubContributionService>().readConnectorMetadataValue("name") } returns "Test Connector"
+    every { anyConstructed<GithubContributionService>().readConnectorDescription() } returns "This is a mocked test connector description."
 
     val response = connectorContributionHandler.checkContribution(requestBodyMock)
 
     assertTrue(response.connectorExists)
     assertEquals("Test Connector", response.connectorName)
+    assertEquals("This is a mocked test connector description.", response.connectorDescription)
     assertNotNull(response.githubUrl)
   }
 
@@ -51,6 +57,7 @@ class ConnectorContributionHandlerTest {
 
     assertFalse(response.connectorExists)
     assertNull(response.connectorName)
+    assertNull(response.connectorDescription)
     assertNull(response.githubUrl)
   }
 
@@ -77,23 +84,27 @@ class ConnectorContributionHandlerTest {
     every { githubContributionService.connectorIconPath } returns "iconPath"
     every { githubContributionService.connectorAcceptanceTestConfigPath } returns "acceptanceTestConfigPath"
     every { githubContributionService.connectorDocsPath } returns "docsPath"
+    every { githubContributionService.connectorCustomComponentsPath } returns "customComponentsPath"
     every { githubContributionService.checkFileExistsOnMain(any()) } returns false
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
-    assertEquals(6, filesToCommit.size)
-    assertEquals(setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath"), filesToCommit.keys)
+    assertEquals(7, filesToCommit.size)
+    assertEquals(
+      setOf("manifestPath", "readmePath", "metadataPath", "iconPath", "acceptanceTestConfigPath", "docsPath", "customComponentsPath"),
+      filesToCommit.keys,
+    )
   }
 
   @Test
-  fun `getFilesToCommitGenerationMap gets only manifest and metadata file if all files exist`() {
+  fun `getFilesToCommitGenerationMap gets only manifest and custom components file if all files exist`() {
     val contributionInfo = mockk<BuilderContributionInfo>(relaxed = true)
     val githubContributionService = mockk<GithubContributionService>(relaxed = true)
     every { githubContributionService.connectorManifestPath } returns "manifestPath"
-    every { githubContributionService.connectorMetadataPath } returns "metadataPath"
+    every { githubContributionService.connectorCustomComponentsPath } returns "customComponentsPath"
     every { githubContributionService.checkFileExistsOnMain(any()) } returns true
 
     val filesToCommit = connectorContributionHandler.getFilesToCommitGenerationMap(contributionInfo, githubContributionService)
     assertEquals(2, filesToCommit.size)
-    assertEquals(setOf("manifestPath", "metadataPath"), filesToCommit.keys)
+    assertEquals(setOf("manifestPath", "customComponentsPath"), filesToCommit.keys)
   }
 }

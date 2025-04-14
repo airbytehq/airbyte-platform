@@ -10,6 +10,7 @@ import com.azure.security.keyvault.secrets.SecretClientBuilder
 import com.azure.security.keyvault.secrets.models.KeyVaultSecret
 import com.azure.security.keyvault.secrets.models.SecretProperties
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -23,16 +24,19 @@ import java.time.Duration
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^azure_key_vault$")
 @Named("secretPersistence")
-class AzureKeyVaultPersistence(private val secretClient: AzureKeyVaultClient) : SecretPersistence {
+class AzureKeyVaultPersistence(
+  private val secretClient: AzureKeyVaultClient,
+) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
     val key = coordinate.fullCoordinate.replace("_", "-")
-    return secretClient.client.getSecret(
-      key,
-    ).value
+    return secretClient.client
+      .getSecret(
+        key,
+      ).value
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     val key = coordinate.fullCoordinate.replace("_", "-")
@@ -49,7 +53,7 @@ class AzureKeyVaultPersistence(private val secretClient: AzureKeyVaultClient) : 
     secretClient.client.setSecret(secret)
   }
 
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     val key = coordinate.fullCoordinate.replace("_", "-")
     secretClient.client
       .beginDeleteSecret(key)
@@ -99,7 +103,6 @@ class AzureKeyVaultClient(
           .clientId(clientId)
           .tenantId(tenantId)
           .build(),
-      )
-      .buildClient()
+      ).buildClient()
   }
 }

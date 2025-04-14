@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -68,17 +72,17 @@ open class OrganizationCustomerAttributesServiceDataImpl(
   }
 
   @VisibleForTesting
-  internal fun readFileContent(blob: Blob): Map<UUID, CustomerTier?> {
-    return try {
+  internal fun readFileContent(blob: Blob): Map<UUID, CustomerTier?> =
+    try {
       val content = blob.getContent()
       val jsonLines = String(content).lines().filter { it.isNotBlank() }
-      jsonLines.mapNotNull { parseJsonLine(it) }
+      jsonLines
+        .mapNotNull { parseJsonLine(it) }
         .associate { it.organizationId to it.customerTier }
     } catch (e: Exception) {
       logger.error(e) { "OrganizationCustomerAttributesServiceDataImpl Failed to read content of the file: ${blob.name}" }
       emptyMap()
     }
-  }
 
   @VisibleForTesting
   internal fun parseJsonLine(line: String): OrganizationCustomerTierMapping? {

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.google.common.hash.Hashing
@@ -8,10 +12,10 @@ import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateStats
-import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateStats
+import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.exception.InvalidChecksumException
 import io.airbyte.workers.general.StateCheckSumCountEventHandler.Companion.DUMMY_STATE_MESSAGE
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin

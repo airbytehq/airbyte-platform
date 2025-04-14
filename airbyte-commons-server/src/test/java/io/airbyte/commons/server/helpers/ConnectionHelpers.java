@@ -18,7 +18,6 @@ import io.airbyte.api.model.generated.ConnectionScheduleType;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationSnippetRead;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobStatus;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.SchemaChange;
@@ -26,6 +25,7 @@ import io.airbyte.api.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.SyncMode;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -173,11 +173,12 @@ public class ConnectionHelpers {
                                                               final UUID destinationId,
                                                               final List<UUID> operationIds,
                                                               final UUID sourceCatalogId,
-                                                              final Geography geography,
+                                                              final String geography,
                                                               final boolean breaking,
                                                               final Boolean notifySchemaChange,
                                                               final Boolean notifySchemaChangeByEmail,
-                                                              final SchemaChangeBackfillPreference backfillPreference) {
+                                                              final SchemaChangeBackfillPreference backfillPreference,
+                                                              final List<Tag> tags) {
 
     return new ConnectionRead()
         .connectionId(connectionId)
@@ -202,7 +203,8 @@ public class ConnectionHelpers {
         .breakingChange(breaking)
         .notifySchemaChanges(notifySchemaChange)
         .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
-        .backfillPreference(backfillPreference);
+        .backfillPreference(backfillPreference)
+        .tags(tags);
   }
 
   public static ConnectionRead generateExpectedConnectionRead(final StandardSync standardSync) {
@@ -212,11 +214,12 @@ public class ConnectionHelpers {
         standardSync.getDestinationId(),
         standardSync.getOperationIds(),
         standardSync.getSourceCatalogId(),
-        Enums.convertTo(standardSync.getGeography(), Geography.class),
+        standardSync.getGeography(),
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
         standardSync.getNotifySchemaChangesByEmail(),
-        Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
+        Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class),
+        standardSync.getTags().stream().map(apiPojoConverters::toApiTag).toList());
 
     if (standardSync.getSchedule() == null) {
       connectionRead.schedule(null);
@@ -248,7 +251,7 @@ public class ConnectionHelpers {
         .namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceCatalogId(standardSync.getSourceCatalogId())
-        .geography(apiPojoConverters.toApiGeography(standardSync.getGeography()))
+        .geography(standardSync.getGeography())
         .breakingChange(standardSync.getBreakingChange())
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());

@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.model.generated.AttemptInfoRead;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.CreateNewAttemptNumberResponse;
 import io.airbyte.api.model.generated.InternalOperationResult;
@@ -23,6 +22,7 @@ import io.airbyte.commons.server.errors.UnprocessableContentException;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
@@ -49,7 +49,7 @@ import io.airbyte.data.services.StreamAttemptMetadataService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.EnableResumableFullRefresh;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -228,9 +228,8 @@ public class AttemptHandler {
         .collect(Collectors.toSet());
   }
 
-  public AttemptInfoRead getAttemptForJob(final long jobId, final int attemptNo) throws IOException {
-    final Optional<AttemptInfoRead> read = jobPersistence.getAttemptForJob(jobId, attemptNo)
-        .map(jobConverter::getAttemptInfoRead);
+  public Attempt getAttemptForJob(final long jobId, final int attemptNo) throws IOException {
+    final Optional<Attempt> read = jobPersistence.getAttemptForJob(jobId, attemptNo);
 
     if (read.isEmpty()) {
       throw new IdNotFoundKnownException(

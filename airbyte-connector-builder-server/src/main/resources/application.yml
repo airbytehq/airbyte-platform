@@ -1,6 +1,6 @@
 micronaut:
   application:
-    name: airbyte-connector-builder-server
+    name: connector-builder-server
   caches:
     # used by the analytics tracking client to cache calls to resolve the deployment and identity (workspace) for
     # track events
@@ -13,8 +13,12 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -40,6 +44,9 @@ micronaut:
     v1/manifest/resolve:
       enable: true
       sensitive: false
+    v1/manifest/full_resolve:
+      enable: true
+      sensitive: false
     v1/stream/read:
       enable: true
       sensitive: false
@@ -48,11 +55,14 @@ micronaut:
       sensitive: false
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   connector-builder-server:
     github:
       airbyte-pat-token: ${BUILDER_GITHUB_AIRBYTE_PAT_TOKEN:}
     ai-assist:
       url-base: ${AI_ASSIST_URL_BASE:}
+    capabilities:
+      enable-unsafe-code: ${AIRBYTE_ENABLE_UNSAFE_CODE:false}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}
@@ -64,7 +74,7 @@ airbyte:
       service-account:
         credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
         email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   internal:
     api:
       auth-header:

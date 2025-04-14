@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
 import io.mockk.confirmVerified
@@ -181,8 +182,8 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
     confirmVerified(okHttpClient)
   }
 
-  fun successfulResponse(responseBody: String): okhttp3.Response {
-    return mockk {
+  fun successfulResponse(responseBody: String): okhttp3.Response =
+    mockk {
       every { isSuccessful } returns true
       every { body } returns
         mockk {
@@ -190,5 +191,4 @@ internal class RemoteDeclarativeManifestImageVersionsProviderTest {
         }
       justRun { close() }
     }
-  }
 }

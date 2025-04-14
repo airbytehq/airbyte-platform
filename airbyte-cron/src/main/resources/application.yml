@@ -17,8 +17,12 @@ micronaut:
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -32,10 +36,11 @@ airbyte:
     remote:
       base-url: ${CONNECTOR_REGISTRY_BASE_URL:}
       timeout-ms: ${CONNECTOR_REGISTRY_TIMEOUT_MS:30000}
+  license-key: ${AIRBYTE_LICENSE_KEY:}
   cron:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -64,6 +69,7 @@ airbyte:
       heartbeat-check-rate: PT1M
       not-started-check-rate: PT1M
       non-sync-age-check-rate: PT1M
+      queue-depth-check-rate: PT1M
       sync-age-check-rate: PT1M
       non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT4H} # Should be longer than the sum of the deadlines
       sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D} # Should be longer than the sum of the deadlines
@@ -90,7 +96,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
   jobs:
     connection-test-query: SELECT 1
     connection-timeout: 30000
@@ -101,7 +107,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
 
 docker:
   network: ${DOCKER_NETWORK:host}

@@ -1,5 +1,4 @@
 import { Combobox, ComboboxButton, ComboboxInput, ComboboxOption, ComboboxOptions } from "@headlessui/react";
-import { Float } from "@headlessui-float/react";
 import classNames from "classnames";
 import { Fragment, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
@@ -7,6 +6,7 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Icon } from "components/ui/Icon";
 import { Input } from "components/ui/Input";
+import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
@@ -65,15 +65,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
             [styles["addStreamForMappingComboBox--secondary"]]: secondary,
           })}
         >
-          <Float
-            adaptiveWidth
-            placement="bottom-start"
-            flip={5}
-            offset={-10} // this gives the same gap as our ListBox
-            autoUpdate={{
-              elementResize: false, // this will prevent render in wrong place after multiple open/close actions
-            }}
-          >
+          <FloatLayout adaptiveWidth flip={5} offset={-10}>
             <ComboboxInput as={Fragment}>
               {({ open }) => (
                 <Input
@@ -105,7 +97,7 @@ export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({
                 </ComboboxOption>
               ))}
             </ComboboxOptions>
-          </Float>
+          </FloatLayout>
         </Combobox>
       ) : mode !== "readonly" ? (
         <Tooltip

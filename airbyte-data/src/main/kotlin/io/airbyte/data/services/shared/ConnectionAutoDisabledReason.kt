@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.services.shared
 
 enum class ConnectionAutoDisabledReason {
@@ -10,4 +14,5 @@ enum class ConnectionAutoDisabledReason {
   INVOICE_MARKED_UNCOLLECTIBLE,
   INVALID_PAYMENT_METHOD,
   UNSUBSCRIBED,
+  MANUALLY_LOCKED,
 }

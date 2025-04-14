@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.auth.config
 
 import io.micronaut.context.annotation.Bean
@@ -11,7 +15,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 @MicronautTest(rebuildContext = true)
-@Property(name = "airbyte.deployment-mode", value = "OSS")
+@Property(name = "airbyte.edition", value = "community")
 class AuthConfigsTest {
   @get:Primary
   @get:Bean
@@ -50,9 +54,16 @@ class AuthConfigsTest {
   }
 
   @Test
-  @Property(name = "airbyte.edition", value = "PRO")
+  @Property(name = "airbyte.edition", value = "ENTERPRISE")
   fun `test Enterprise AuthConfigs sets mode to OIDC`() {
     Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
+  }
+
+  @Test
+  @Property(name = "airbyte.edition", value = "ENTERPRISE")
+  @Property(name = "airbyte.auth.identity-provider.type", value = SIMPLE)
+  fun `test Enterprise AuthConfigs sets mode to SIMPLE when doing simple auth`() {
+    Assertions.assertTrue(authConfigs.authMode == AuthMode.SIMPLE)
   }
 
   @Test
@@ -80,14 +91,13 @@ class AuthConfigsForCloudTest {
   lateinit var authConfigs: AuthConfigs
 
   @Test
-  @Property(name = "airbyte.deployment-mode", value = "CLOUD")
+  @Property(name = "airbyte.edition", value = "cloud")
   fun `test cloud environment sets mode to OIDC`() {
     Assertions.assertTrue(authConfigs.authMode == AuthMode.OIDC)
   }
 }
 
 @MicronautTest
-@Property(name = "airbyte.deployment-mode", value = "OSS")
 @Property(name = "airbyte.edition", value = "community")
 @Property(name = "micronaut.security.enabled", value = "true")
 class AuthConfigsForCommunityAuthTest {

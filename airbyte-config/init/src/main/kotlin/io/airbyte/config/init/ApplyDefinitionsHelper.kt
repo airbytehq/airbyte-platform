@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import com.google.common.annotations.VisibleForTesting
@@ -27,8 +28,8 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
 import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.context.annotation.Requires
@@ -383,19 +384,21 @@ class ApplyDefinitionsHelper(
       return destDefs
     }
 
-    return destDefs.stream().filter { def: ConnectorRegistryDestinationDefinition ->
-      val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
-      if (!isSupported) {
-        log.warn(
-          "Destination {} {} has an incompatible protocol version ({})... ignoring.",
-          def.destinationDefinitionId,
-          def.name,
-          def.spec.protocolVersion,
-        )
-        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
-      }
-      isSupported
-    }.toList()
+    return destDefs
+      .stream()
+      .filter { def: ConnectorRegistryDestinationDefinition ->
+        val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
+        if (!isSupported) {
+          log.warn(
+            "Destination {} {} has an incompatible protocol version ({})... ignoring.",
+            def.destinationDefinitionId,
+            def.name,
+            def.spec.protocolVersion,
+          )
+          trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
+        }
+        isSupported
+      }.toList()
   }
 
   private fun filterOutIncompatibleSourceDefs(
@@ -406,53 +409,55 @@ class ApplyDefinitionsHelper(
       return sourceDefs
     }
 
-    return sourceDefs.stream().filter { def: ConnectorRegistrySourceDefinition ->
-      val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
-      if (!isSupported) {
-        log.warn(
-          "Source {} {} has an incompatible protocol version ({})... ignoring.",
-          def.sourceDefinitionId,
-          def.name,
-          def.spec.protocolVersion,
-        )
-        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
-      }
-      isSupported
-    }.toList()
+    return sourceDefs
+      .stream()
+      .filter { def: ConnectorRegistrySourceDefinition ->
+        val isSupported = isProtocolVersionSupported(protocolVersionRange.get(), def.spec.protocolVersion)
+        if (!isSupported) {
+          log.warn(
+            "Source {} {} has an incompatible protocol version ({})... ignoring.",
+            def.sourceDefinitionId,
+            def.name,
+            def.spec.protocolVersion,
+          )
+          trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_PROTOCOL_VERSION)
+        }
+        isSupported
+      }.toList()
   }
 
   private fun filterOutIncompatibleSourceDefsWithCurrentAirbyteVersion(
     sourceDefs: List<ConnectorRegistrySourceDefinition>,
-  ): List<ConnectorRegistrySourceDefinition> {
-    return sourceDefs.stream().filter { def: ConnectorRegistrySourceDefinition ->
-      val isConnectorSupported = airbyteCompatibleConnectorsValidator.validate(def.sourceDefinitionId.toString(), def.dockerImageTag)
-      if (!isConnectorSupported.isValid) {
-        log.warn(isConnectorSupported.message)
-        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
-      }
-      isConnectorSupported.isValid
-    }.toList()
-  }
+  ): List<ConnectorRegistrySourceDefinition> =
+    sourceDefs
+      .stream()
+      .filter { def: ConnectorRegistrySourceDefinition ->
+        val isConnectorSupported = airbyteCompatibleConnectorsValidator.validate(def.sourceDefinitionId.toString(), def.dockerImageTag)
+        if (!isConnectorSupported.isValid) {
+          log.warn(isConnectorSupported.message)
+          trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
+        }
+        isConnectorSupported.isValid
+      }.toList()
 
   private fun filterOutIncompatibleDestinationDefsWithCurrentAirbyteVersion(
     destinationDefs: List<ConnectorRegistryDestinationDefinition>,
-  ): List<ConnectorRegistryDestinationDefinition> {
-    return destinationDefs.stream().filter { def: ConnectorRegistryDestinationDefinition ->
-      val isNewConnectorVersionSupported = airbyteCompatibleConnectorsValidator.validate(def.destinationDefinitionId.toString(), def.dockerImageTag)
-      if (!isNewConnectorVersionSupported.isValid) {
-        log.warn(isNewConnectorVersionSupported.message)
-        trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
-      }
-      isNewConnectorVersionSupported.isValid
-    }.toList()
-  }
+  ): List<ConnectorRegistryDestinationDefinition> =
+    destinationDefs
+      .stream()
+      .filter { def: ConnectorRegistryDestinationDefinition ->
+        val isNewConnectorVersionSupported = airbyteCompatibleConnectorsValidator.validate(def.destinationDefinitionId.toString(), def.dockerImageTag)
+        if (!isNewConnectorVersionSupported.isValid) {
+          log.warn(isNewConnectorVersionSupported.message)
+          trackDefinitionProcessed(def.dockerRepository, def.dockerImageTag, DefinitionProcessingFailureReason.INCOMPATIBLE_AIRBYTE_VERSION)
+        }
+        isNewConnectorVersionSupported.isValid
+      }.toList()
 
   private fun isProtocolVersionSupported(
     protocolVersionRange: AirbyteProtocolVersionRange,
     protocolVersion: String?,
-  ): Boolean {
-    return protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion))
-  }
+  ): Boolean = protocolVersionRange.isSupported(AirbyteProtocolVersion.getWithDefault(protocolVersion))
 
   private fun trackDefinitionProcessed(
     dockerRepository: String,
@@ -460,7 +465,7 @@ class ApplyDefinitionsHelper(
     outcome: DefinitionProcessingOutcome,
   ) {
     val attributes = getMetricAttributes(dockerRepository, dockerImageTag, outcome)
-    metricClient.count(OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED, 1, *attributes)
+    metricClient.count(metric = OssMetricsRegistry.CONNECTOR_REGISTRY_DEFINITION_PROCESSED, attributes = attributes)
   }
 
   companion object {

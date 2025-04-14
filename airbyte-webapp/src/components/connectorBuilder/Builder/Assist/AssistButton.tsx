@@ -7,6 +7,7 @@ import { MouseEventHandler, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { Button } from "components/ui/Button";
 import { IconColor } from "components/ui/Icon/types";
 import { Tooltip } from "components/ui/Tooltip";
@@ -32,7 +33,7 @@ import {
   parseAssistErrorToFormErrors,
   computeStreamResponse,
 } from "./assist";
-import { AssistData, BuilderFormInput, BuilderFormValues, useBuilderWatch } from "../../types";
+import { AssistData, BuilderFormInput, BuilderFormValues } from "../../types";
 
 /**
  * HELPERS
@@ -209,6 +210,7 @@ const useOptionalStreamData = (streamNum?: number) => {
 };
 
 export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
+  const streams = useBuilderWatch("formValues.streams");
   const { stream_name, stream_response } = useOptionalStreamData(streamNum);
 
   const config = assistButtonConfigs[assistKey];
@@ -219,6 +221,10 @@ export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum
 
   const { assistEnabled } = useConnectorBuilderFormState();
   if (!assistEnabled) {
+    return null;
+  }
+
+  if (streamNum && streams[streamNum].requestType === "async") {
     return null;
   }
 

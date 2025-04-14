@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.models
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
@@ -55,4 +59,5 @@ data class ReplicationActivityInput(
   val connectionContext: ConnectionContext? = null,
   val signalInput: String? = null,
   val networkSecurityTokens: List<String>? = null,
+  val includesFiles: Boolean? = false,
 )

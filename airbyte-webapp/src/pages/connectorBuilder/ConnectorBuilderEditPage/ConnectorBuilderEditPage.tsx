@@ -7,8 +7,9 @@ import { AnyObjectSchema } from "yup";
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState, useBuilderWatch } from "components/connectorBuilder/types";
+import { BuilderState } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
 import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
@@ -31,21 +32,24 @@ import styles from "./ConnectorBuilderEditPage.module.scss";
 
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
+    projectId,
     initialFormValues,
     failedInitialFormValueConversion,
     initialYaml,
     builderProject: {
-      builderProject: { name },
+      builderProject: { name, componentsFileContent },
       testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
-  const { storedMode } = useConnectorBuilderLocalStorage();
+  const { getStoredMode } = useConnectorBuilderLocalStorage();
   const values = {
-    mode: failedInitialFormValueConversion ? "yaml" : storedMode,
+    mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
+    customComponentsCode: componentsFileContent,
     name,
     view: "global" as const,
+    streamTab: "requester" as const,
     testStreamIndex: 0,
     testingValues: initialTestingValues,
   };
@@ -70,6 +74,7 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     defaultValues: defaultValues.current,
     mode: "onChange",
     resolver: yupResolver<AnyObjectSchema>(builderStateValidationSchema),
@@ -102,7 +107,6 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
 BaseForm.displayName = "BaseForm";
 
 const Panels = React.memo(() => {
-  const formValues = useBuilderWatch("formValues");
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
 
@@ -117,15 +121,7 @@ const Panels = React.memo(() => {
         })}
         panels={[
           {
-            children: (
-              <>
-                {mode === "yaml" ? (
-                  <YamlManifestEditor />
-                ) : (
-                  <Builder hasMultipleStreams={formValues.streams.length > 1} />
-                )}
-              </>
-            ),
+            children: <>{mode === "yaml" ? <YamlManifestEditor /> : <Builder />}</>,
             className: styles.leftPanel,
             minWidth: 350,
           },
@@ -138,7 +134,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [formValues.streams.length, mode, stateKey]
+    [mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

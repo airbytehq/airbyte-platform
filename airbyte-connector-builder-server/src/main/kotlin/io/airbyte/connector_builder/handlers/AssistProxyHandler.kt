@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.handlers
@@ -34,15 +35,23 @@ class AssistProxyHandler
      * Call the Assistant to get connector data
      */
     @Throws(ConnectorBuilderException::class)
-    fun process(requestBody: Map<String, Any>): Map<String, Any> {
+    fun process(
+      requestBody: Map<String, Any>,
+      waitForResponse: Boolean = true,
+    ): Map<String, Any> {
       val path = "/v1/process"
       val proxy = AssistProxy(this.proxyConfig)
 
       val jsonBody = Jsons.jsonNode(requestBody)
-      val result = proxy.post(path, jsonBody)
-      val response = Jsons.`object`(result, ProxyResponse::class.java) as ProxyResponse
-      response.tree = result
-      return response
+      return if (waitForResponse) {
+        val result = proxy.post(path, jsonBody)
+        val response = Jsons.`object`(result, ProxyResponse::class.java) as ProxyResponse
+        response.tree = result
+        response
+      } else {
+        proxy.postNoWait(path, jsonBody)
+        mapOf("status" to "sent")
+      }
     }
   }
 

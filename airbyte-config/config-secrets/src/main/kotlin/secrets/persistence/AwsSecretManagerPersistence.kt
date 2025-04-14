@@ -13,6 +13,7 @@ import com.amazonaws.services.secretsmanager.AWSSecretsManagerClientBuilder
 import com.amazonaws.services.secretsmanager.model.AWSSecretsManagerException
 import com.amazonaws.services.secretsmanager.model.CreateSecretRequest
 import com.amazonaws.services.secretsmanager.model.DeleteSecretRequest
+import com.amazonaws.services.secretsmanager.model.InvalidRequestException
 import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretRequest
@@ -20,6 +21,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.google.common.base.Preconditions
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -38,20 +40,34 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Requires(property = "airbyte.secret.persistence", pattern = "(?i)^aws_secret_manager$")
 @Named("secretPersistence")
-class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val awsCache: AwsCache) : SecretPersistence {
+class AwsSecretManagerPersistence(
+  private val awsClient: AwsClient,
+  private val awsCache: AwsCache,
+) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
+    if (coordinate !is AirbyteManagedSecretCoordinate) {
+      throw IllegalArgumentException("AWS Secret Manager requires a versioned secret coordinate.")
+    }
     var secretString = ""
     try {
-      logger.debug { "Reading secret ${coordinate.coordinateBase}" }
-      secretString = awsCache.cache.getSecretString(coordinate.coordinateBase)
+      logger.debug { "Reading secret ${coordinate.fullCoordinate}" }
+      secretString = awsCache.cache.getSecretString(coordinate.fullCoordinate)
     } catch (e: ResourceNotFoundException) {
-      logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+      logger.warn { "Secret ${coordinate.fullCoordinate} not found" }
+      // Attempt to use up old bad secrets
+      // If this is just a read, this should work
+      // If this is for an update, we should read the secret, return it, and then create a new correctly versioned one and delete the bad one.
+      try {
+        secretString = awsCache.cache.getSecretString(coordinate.coordinateBase)
+      } catch (e: ResourceNotFoundException) {
+        logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+      }
     }
     return secretString
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     Preconditions.checkArgument(payload.isNotEmpty(), "Payload shouldn't be empty")
@@ -66,17 +82,17 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
         // 1. Update and create are distinct actions, and we can't create over an already existing secret, so we should get an error and no-op
         // 2. If the secret does exist, we will get an error and no-op
         if (e.localizedMessage.contains("assumed-role")) {
-          logger.info { "AWS exception caught - Secret ${coordinate.coordinateBase} not found" }
+          logger.info { "AWS exception caught - Secret ${coordinate.fullCoordinate} not found" }
           ""
         } else {
           throw e
         }
       }
     if (existingSecret.isNotEmpty()) {
-      logger.debug { "Secret ${coordinate.coordinateBase} found updating payload." }
+      logger.debug { "Secret ${coordinate.fullCoordinate} found updating payload." }
       val request =
         UpdateSecretRequest()
-          .withSecretId(coordinate.coordinateBase)
+          .withSecretId(coordinate.fullCoordinate)
           .withSecretString(payload)
           .withDescription("Airbyte secret.")
 
@@ -86,31 +102,36 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
 
       // No tags on update
 
-      awsClient.client.updateSecret(request)
-    } else {
-      logger.debug { "Secret ${coordinate.coordinateBase} not found, creating a new one." }
-      val secretRequest =
-        CreateSecretRequest()
-          .withName(coordinate.coordinateBase)
-          .withSecretString(payload)
-          .withDescription("Airbyte secret.")
-
-      if (!awsClient.kmsKeyArn.isNullOrEmpty()) {
-        secretRequest.withKmsKeyId(awsClient.kmsKeyArn)
-      } else if (awsClient.serializedConfig?.kmsKeyArn != null) {
-        secretRequest.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
+      try {
+        awsClient.client.updateSecret(request)
+        return // We can return early here because we successfully updated
+      } catch (e: ResourceNotFoundException) {
+        logger.warn { "Secret ${coordinate.fullCoordinate} not found for update" }
+        // Otherwise we want to continue onwards.
       }
-
-      if (awsClient.tags.isNotEmpty()) {
-        for (tag in awsClient.tags) {
-          secretRequest.withTags(Tag().withKey(tag.key).withValue(tag.value))
-        }
-      } else if (awsClient.serializedConfig?.tagKey != null) {
-        secretRequest.withTags(Tag().withKey(awsClient.serializedConfig?.tagKey).withValue("true"))
-      }
-
-      awsClient.client.createSecret(secretRequest)
     }
+    // If we couldn't find a secret to update, we should create one.
+    val secretRequest =
+      CreateSecretRequest()
+        .withName(coordinate.fullCoordinate)
+        .withSecretString(payload)
+        .withDescription("Airbyte secret.")
+
+    if (!awsClient.kmsKeyArn.isNullOrEmpty()) {
+      secretRequest.withKmsKeyId(awsClient.kmsKeyArn)
+    } else if (awsClient.serializedConfig?.kmsKeyArn != null) {
+      secretRequest.withKmsKeyId(awsClient.serializedConfig?.kmsKeyArn)
+    }
+
+    if (awsClient.tags.isNotEmpty()) {
+      for (tag in awsClient.tags) {
+        secretRequest.withTags(Tag().withKey(tag.key).withValue(tag.value))
+      }
+    } else if (awsClient.serializedConfig?.tagKey != null) {
+      secretRequest.withTags(Tag().withKey(awsClient.serializedConfig?.tagKey).withValue("true"))
+    }
+
+    awsClient.client.createSecret(secretRequest)
   }
 
   /**
@@ -118,12 +139,26 @@ class AwsSecretManagerPersistence(private val awsClient: AwsClient, private val 
    *
    * @param coordinate SecretCoordinate to delete.
    */
-  override fun delete(coordinate: SecretCoordinate) {
-    awsClient.client.deleteSecret(
-      DeleteSecretRequest()
-        .withSecretId(coordinate.coordinateBase)
-        .withForceDeleteWithoutRecovery(true),
-    )
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
+    // Clean up the old bad secrets we might have left behind
+    deleteSecretId(coordinate.coordinateBase)
+    // Clean up the actual versioned secrets we left behind
+    deleteSecretId(coordinate.fullCoordinate)
+  }
+
+  private fun deleteSecretId(secretId: String) {
+    try {
+      awsClient.client.deleteSecret(
+        DeleteSecretRequest()
+          .withSecretId(secretId)
+          .withForceDeleteWithoutRecovery(true),
+      )
+    } catch (e: ResourceNotFoundException) {
+      logger.warn { "Secret $secretId not found" }
+    } catch (e: InvalidRequestException) {
+      // Was deleted in the UI.
+      logger.warn { "Secret $secretId is already deleted" }
+    }
   }
 }
 
@@ -179,33 +214,46 @@ class AwsClient(
     // let the SDK's default credential provider take over.
     if (serializedConfig == null) {
       logger.debug { "fetching access key/secret key based AWS secret manager" }
-      AWSSecretsManagerClientBuilder.standard().withRegion(awsRegion).apply {
-        if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
-          withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
-        }
-      }.build()
-    } else {
-      logger.debug { "fetching role based AWS secret manager" }
-      val stsClient =
-        AWSSecurityTokenServiceClientBuilder.standard().withRegion(awsRegion).apply {
+      AWSSecretsManagerClientBuilder
+        .standard()
+        .withRegion(awsRegion)
+        .apply {
           if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
             withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
           }
         }.build()
+    } else {
+      logger.debug { "fetching role based AWS secret manager" }
+      val stsClient =
+        AWSSecurityTokenServiceClientBuilder
+          .standard()
+          .withRegion(awsRegion)
+          .apply {
+            if (!awsAccessKey.isNullOrEmpty() && !awsSecretKey.isNullOrEmpty()) {
+              withCredentials(AWSStaticCredentialsProvider(BasicAWSCredentials(awsAccessKey, awsSecretKey)))
+            }
+          }.build()
 
       val credentialsProvider =
-        STSAssumeRoleSessionCredentialsProvider.Builder(roleArn, "airbyte")
+        STSAssumeRoleSessionCredentialsProvider
+          .Builder(roleArn, "airbyte")
           .withStsClient(stsClient)
           .withExternalId(externalId)
           .build()
 
-      AWSSecretsManagerClientBuilder.standard().withCredentials(credentialsProvider).withRegion(awsRegion).build()
+      AWSSecretsManagerClientBuilder
+        .standard()
+        .withCredentials(credentialsProvider)
+        .withRegion(awsRegion)
+        .build()
     }
   }
 }
 
 @Singleton
-class AwsCache(private val awsClient: AwsClient) {
+class AwsCache(
+  private val awsClient: AwsClient,
+) {
   val cache: SecretCache by lazy {
     SecretCache(awsClient.client)
   }

@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
@@ -15,7 +15,7 @@ import { syncEventSchema } from "../types";
 import { getStatusByEventType, getStatusIcon, titleIdMap } from "../utils";
 
 interface SyncEventProps {
-  event: InferType<typeof syncEventSchema>;
+  event: z.infer<typeof syncEventSchema>;
 }
 
 export const SyncEventItem: React.FC<SyncEventProps> = ({ event }) => {
@@ -33,7 +33,7 @@ export const SyncEventItem: React.FC<SyncEventProps> = ({ event }) => {
         <Box pt="xs">
           <FlexContainer gap="sm" alignItems="baseline">
             {jobStatus === "cancelled" && !!event.user && <UserCancelledDescription user={event.user} jobType="sync" />}
-            <JobStats {...event.summary} />
+            <JobStats summary={event.summary} />
           </FlexContainer>
         </Box>
       </ConnectionTimelineEventSummary>

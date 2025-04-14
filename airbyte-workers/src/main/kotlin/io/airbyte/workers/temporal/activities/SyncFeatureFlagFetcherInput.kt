@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.temporal.activities
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -16,12 +20,11 @@ data class SyncFeatureFlagFetcherInput(
       private val sourceDefinitionId: UUID? = null,
       val workspaceId: UUID? = null,
     ) {
-      fun build(): SyncFeatureFlagFetcherInput {
-        return SyncFeatureFlagFetcherInput(
+      fun build(): SyncFeatureFlagFetcherInput =
+        SyncFeatureFlagFetcherInput(
           connectionId!!,
           sourceDefinitionId!!,
           workspaceId!!,
         )
-      }
     }
 }

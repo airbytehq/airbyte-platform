@@ -7,4 +7,5 @@ package io.airbyte.metrics.reporter.model;
 public record LongRunningJobMetadata(
                                      String sourceDockerImage,
                                      String destinationDockerImage,
+                                     String workspaceId,
                                      String connectionId) {}

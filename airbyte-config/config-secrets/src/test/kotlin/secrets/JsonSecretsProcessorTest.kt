@@ -782,4 +782,45 @@ internal class JsonSecretsProcessorTest {
     val actual = processor.prepareSecretsForOutput(input, specs)
     Assertions.assertEquals(expected, actual)
   }
+
+  @Test
+  fun testSimplifySecrets() {
+    val secretPayload =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            "_secret",
+            "airbyte_secret_123abc",
+          ).build(),
+      )
+    val src =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            secretPayload,
+          ).build(),
+      )
+    val actual = processor.simplifySecretsForOutput(src, SCHEMA_ONE_LAYER)
+    val expected =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            "airbyte_secret_coordinate::airbyte_secret_123abc",
+          ).build(),
+      )
+    Assertions.assertEquals(expected, actual)
+  }
 }

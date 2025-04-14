@@ -1,6 +1,31 @@
 micronaut:
   application:
     name: airbyte-metrics-reporter
+  metrics:
+    enabled: ${MICROMETER_METRICS_ENABLED:false}
+    binders:
+      netty:
+        bytebuf-allocators:
+          enabled: false
+        channels:
+          enabled: false
+        queues:
+          # Turning this on causes compatibility issues with Micronaut ClientCredentialsClient,
+          # which is used to add auth tokens when using keycloak for internal service auth.
+          # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
+          enabled: false
+    export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
+      statsd:
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
+        flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        host: ${STATSD_HOST:localhost}
+        port: ${STATSD_PORT:8125}
+
   security:
     intercept-url-map:
       - pattern: /**
@@ -9,6 +34,10 @@ micronaut:
           - isAnonymous()
   server:
     port: 9000
+
+airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
 
 datasources:
   config:
@@ -19,7 +48,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
 
 jooq:
   datasources:

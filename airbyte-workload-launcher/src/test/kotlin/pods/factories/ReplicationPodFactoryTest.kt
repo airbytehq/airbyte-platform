@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package pods.factories
 
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
@@ -10,6 +14,7 @@ import io.airbyte.workers.pod.KubeContainerInfo
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
 import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
+import io.airbyte.workload.launcher.pods.factories.ProfilerContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
@@ -25,7 +30,6 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
-import pods.factories.ReplicationPodFactoryTest.Fixtures.resourceRequirements
 import java.util.UUID
 
 class ReplicationPodFactoryTest {
@@ -59,9 +63,17 @@ class ReplicationPodFactoryTest {
     val pod = Fixtures.createPodWithDefaults(fac)
     // the pod gets two new volumes: storage and local
     assertEquals(STORAGE_VOLUME_NAME, pod.spec.volumes[4].name)
-    assertEquals(STORAGE_CLAIM_NAME, pod.spec.volumes[4].persistentVolumeClaim.claimName)
+    assertEquals(
+      STORAGE_CLAIM_NAME,
+      pod.spec.volumes[4]
+        .persistentVolumeClaim.claimName,
+    )
     assertEquals(VolumeFactory.LOCAL_VOLUME_NAME, pod.spec.volumes[5].name)
-    assertEquals(VolumeFactory.LOCAL_CLAIM_NAME, pod.spec.volumes[5].persistentVolumeClaim.claimName)
+    assertEquals(
+      VolumeFactory.LOCAL_CLAIM_NAME,
+      pod.spec.volumes[5]
+        .persistentVolumeClaim.claimName,
+    )
 
     val initSpec = pod.spec.initContainers[0]
     val orchSpec = pod.spec.containers[0]
@@ -134,7 +146,7 @@ class ReplicationPodFactoryTest {
       )
     val nodeSelectionFactory: NodeSelectionFactory =
       mockk {
-        every { createResetNodeSelection(any(), any()) } returns expectedNodeSelection
+        every { createResetNodeSelection(any()) } returns expectedNodeSelection
       }
     val fac =
       Fixtures.defaultReplicationPodFactory.copy(
@@ -152,7 +164,8 @@ class ReplicationPodFactoryTest {
     val workloadSecurityContextProvider = WorkloadSecurityContextProvider(rootlessWorkload = true)
     val featureFlagClient = TestClient()
     val resourceRequirements =
-      io.airbyte.config.ResourceRequirements()
+      io.airbyte.config
+        .ResourceRequirements()
         .withCpuLimit("2")
         .withCpuRequest("1")
         .withMemoryLimit("200")
@@ -208,6 +221,7 @@ class ReplicationPodFactoryTest {
             destinationEnvVars = emptyList(),
             imagePullPolicy = "Always",
           ),
+        ProfilerContainerFactory(emptyList(), KubeContainerInfo("", "Always"), io.airbyte.config.ResourceRequirements()),
         volumeFactory = defaultVolumeFactory,
         workloadSecurityContextProvider = workloadSecurityContextProvider,
         serviceAccount = "test-sa",
@@ -232,10 +246,28 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars: List<EnvVar> = emptyList(),
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
+      enableAsyncProfiler: Boolean = false,
+      singleConnectorTest: Boolean = false,
+      socketTest: Boolean = false,
     ) = factory.create(
-      podName, allLabels, annotations, nodeSelectors, orchImage, sourceImage, destImage, orchResourceReqs,
-      sourceResourceReqs, destResourceReqs, orchRuntimeEnvVars, sourceRuntimeEnvVars, destRuntimeEnvVars,
-      isFileTransfer, workspaceId,
+      podName,
+      allLabels,
+      annotations,
+      nodeSelectors,
+      orchImage,
+      sourceImage,
+      destImage,
+      orchResourceReqs,
+      sourceResourceReqs,
+      destResourceReqs,
+      orchRuntimeEnvVars,
+      sourceRuntimeEnvVars,
+      destRuntimeEnvVars,
+      isFileTransfer,
+      workspaceId,
+      enableAsyncProfiler,
+      singleConnectorTest,
+      socketTest,
     )
 
     fun createResetWithDefaults(
@@ -253,8 +285,18 @@ class ReplicationPodFactoryTest {
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
     ) = factory.createReset(
-      podName, allLabels, annotations, nodeSelectors, orchImage, destImage, orchResourceReqs,
-      destResourceReqs, orchRuntimeEnvVars, destRuntimeEnvVars, isFileTransfer, workspaceId,
+      podName,
+      allLabels,
+      annotations,
+      nodeSelectors,
+      orchImage,
+      destImage,
+      orchResourceReqs,
+      destResourceReqs,
+      orchRuntimeEnvVars,
+      destRuntimeEnvVars,
+      isFileTransfer,
+      workspaceId,
     )
   }
 }

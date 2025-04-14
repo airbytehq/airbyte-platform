@@ -7,11 +7,12 @@ package io.airbyte.workers.internal;
 import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -19,8 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-import org.apache.commons.lang3.time.DurationFormatUtils;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +46,9 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(DestinationTimeoutMonitor.class);
   private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
 
-  private final AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
-  private final AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
-  private final AtomicReference<Long> timeSinceLastAction = new AtomicReference<>(null);
+  private final AtomicLong currentAcceptCallStartTime = new AtomicLong(-1);
+  private final AtomicLong currentNotifyEndOfInputCallStartTime = new AtomicLong(-1);
+  private final AtomicLong timeSinceLastAction = new AtomicLong(-1);
 
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;
@@ -159,7 +159,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * sense if there's a previous call to {@link #startAcceptTimer}.
    */
   public void resetAcceptTimer() {
-    currentAcceptCallStartTime.set(null);
+    currentAcceptCallStartTime.set(-1);
   }
 
   /**
@@ -185,7 +185,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * makes sense if there's a previous call to {@link #startNotifyEndOfInputTimer}.
    */
   public void resetNotifyEndOfInputTimer() {
-    currentNotifyEndOfInputCallStartTime.set(null);
+    currentNotifyEndOfInputCallStartTime.set(-1);
   }
 
   private void onTimeout(final CompletableFuture<Void> runnableFuture, final long threshold, final long timeSinceLastAction) {
@@ -214,28 +214,24 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     }
   }
 
-  private boolean hasTimedOut() {
+  public boolean hasTimedOut() {
     if (hasTimedOutOnAccept()) {
       return true;
     }
-    if (hasTimedOutOnNotifyEndOfInput()) {
-      return true;
-    }
-
-    return false;
+    return hasTimedOutOnNotifyEndOfInput();
   }
 
   private boolean hasTimedOutOnAccept() {
-    final Long startTime = currentAcceptCallStartTime.get();
+    final long startTime = currentAcceptCallStartTime.get();
 
-    if (startTime != null) {
+    if (startTime != -1) {
       // by the time we get here, currentAcceptCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from currentAcceptCallStartTime
       // but from startTime
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on accept call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;
@@ -245,16 +241,16 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnNotifyEndOfInput() {
-    final Long startTime = currentNotifyEndOfInputCallStartTime.get();
+    final long startTime = currentNotifyEndOfInputCallStartTime.get();
 
-    if (startTime != null) {
+    if (startTime != -1) {
       // by the time we get here, currentNotifyEndOfInputCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from
       // currentNotifyEndOfInputCallStartTime but from startTime
       final var timeSince = System.currentTimeMillis() - startTime;
       if (timeSince > timeout.toMillis()) {
         LOGGER.error("Destination has timed out on notifyEndOfInput call");
-        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT, 1,
+        metricClient.count(OssMetricsRegistry.WORKER_DESTINATION_NOTIFY_END_OF_INPUT_TIMEOUT,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()));
         timeSinceLastAction.set(timeSince);
         return true;
@@ -283,10 +279,10 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
 
     public TimeoutException(final long thresholdMs, final long timeSinceLastActionMs) {
       super(String.format("Last action %s ago, exceeding the threshold of %s.",
-          DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true),
-          DurationFormatUtils.formatDurationWords(thresholdMs, true, true)));
-      this.humanReadableThreshold = DurationFormatUtils.formatDurationWords(thresholdMs, true, true);
-      this.humanReadableTimeSinceLastAction = DurationFormatUtils.formatDurationWords(timeSinceLastActionMs, true, true);
+          DurationKt.formatMilli(timeSinceLastActionMs),
+          DurationKt.formatMilli(thresholdMs)));
+      this.humanReadableThreshold = DurationKt.formatMilli(thresholdMs);
+      this.humanReadableTimeSinceLastAction = DurationKt.formatMilli(timeSinceLastActionMs);
     }
 
   }
@@ -300,6 +296,14 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     }
 
     return lazyExecutorService;
+  }
+
+  public AtomicLong getTimeSinceLastAction() {
+    return timeSinceLastAction;
+  }
+
+  public Duration getTimeout() {
+    return timeout;
   }
 
 }

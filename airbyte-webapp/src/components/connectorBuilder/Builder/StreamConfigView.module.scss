@@ -43,7 +43,6 @@ $controlButtonWidth: 24px;
   border: none;
   padding: variables.$spacing-md;
   border-bottom: variables.$border-thick solid transparent;
-  color: colors.$grey-400;
   cursor: pointer;
   display: flex;
   gap: variables.$spacing-md;
@@ -51,8 +50,7 @@ $controlButtonWidth: 24px;
 }
 
 .selectedTab {
-  color: colors.$inverse;
-  border-bottom-color: colors.$yellow-900;
+  border-bottom-color: colors.$dark-blue;
 }
 
 .errorMessage {
@@ -100,4 +98,33 @@ $controlButtonWidth: 24px;
       cursor: default;
     }
   }
+}
+
+.streamNameInput {
+  & input {
+    font-weight: bold;
+    font-size: 15px;
+  }
+
+  width: auto;
+}
+
+.sticky {
+  position: sticky;
+  top: calc(-1 * variables.$spacing-xl);
+  z-index: 1;
+  background-color: colors.$backdrop;
+  padding: variables.$spacing-sm 0;
+}
+
+.relative {
+  position: relative;
+}
+
+.requestTypeOptions {
+  width: 50px;
+}
+
+.requestTypeButton {
+  background-color: colors.$foreground;
 }

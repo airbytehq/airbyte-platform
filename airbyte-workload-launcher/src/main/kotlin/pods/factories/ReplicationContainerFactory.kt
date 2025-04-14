@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
@@ -23,7 +27,7 @@ class ReplicationContainerFactory(
   @Named("writeEnvVars") private val destinationEnvVars: List<EnvVar>,
   @Value("\${airbyte.worker.job.kube.main.container.image-pull-policy}") private val imagePullPolicy: String,
 ) {
-  fun createOrchestrator(
+  internal fun createOrchestrator(
     resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,
@@ -44,7 +48,7 @@ class ReplicationContainerFactory(
       .build()
   }
 
-  fun createSource(
+  internal fun createSource(
     resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,
@@ -65,7 +69,7 @@ class ReplicationContainerFactory(
       .build()
   }
 
-  fun createDestination(
+  internal fun createDestination(
     resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,

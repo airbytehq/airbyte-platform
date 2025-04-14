@@ -15,7 +15,7 @@ import {
   updateDestination,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { DestinationRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import { DestinationRead, ScopedResourceRequirements, WebBackendConnectionListItem } from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -30,7 +30,8 @@ export const destinationsKeys = {
 interface ValuesProps {
   name: string;
   serviceType?: string;
-  connectionConfiguration?: ConnectionConfiguration;
+  connectionConfiguration: ConnectionConfiguration;
+  resourceAllocation?: ScopedResourceRequirements;
 }
 
 interface ConnectorProps {
@@ -92,7 +93,8 @@ const useCreateDestination = () => {
           name: values.name,
           destinationDefinitionId: destinationConnector?.destinationDefinitionId,
           workspaceId: workspace.workspaceId,
-          connectionConfiguration: values.connectionConfiguration,
+          connectionConfiguration: values.connectionConfiguration ?? {},
+          resourceAllocation: values.resourceAllocation,
         },
         requestOptions
       );
@@ -156,6 +158,7 @@ const useUpdateDestination = () => {
           name: updateDestinationPayload.values.name,
           destinationId: updateDestinationPayload.destinationId,
           connectionConfiguration: updateDestinationPayload.values.connectionConfiguration,
+          resourceAllocation: updateDestinationPayload.values.resourceAllocation,
         },
         requestOptions
       );

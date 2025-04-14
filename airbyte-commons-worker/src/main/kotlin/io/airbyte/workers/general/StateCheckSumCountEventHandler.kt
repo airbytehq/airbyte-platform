@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.general
 
 import com.google.common.hash.Hashing
@@ -18,11 +22,11 @@ import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.LogStreamNamesInSateMessage
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Workspace
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateStats
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
-import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateStats
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.exception.InvalidChecksumException
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.workers.internal.bookkeeping.getNameNamespacePair
@@ -465,9 +469,10 @@ class StateCheckSumCountEventHandler(
         } +
         if (includeStreamInLogs) {
           val namesAndCounts =
-            streamPlatformRecordCounts.map { (name, count) ->
-              " $name : $count"
-            }.joinToString("\n")
+            streamPlatformRecordCounts
+              .map { (name, count) ->
+                " $name : $count"
+              }.joinToString("\n")
           " Observed the following record counts per stream: \n$namesAndCounts"
         } else {
           ""

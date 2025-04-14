@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.worker
 
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
@@ -46,6 +50,7 @@ import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito
 import org.mockito.Mockito.doNothing
+import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.util.UUID
@@ -118,12 +123,11 @@ class ConnectorRolloutWorkflowImplTest {
     private val ROLLOUT_STRATEGY = ConnectorEnumRolloutStrategy.MANUAL
 
     @JvmStatic
-    fun exceptionProvider(): Stream<Arguments> {
-      return Stream.of(
+    fun exceptionProvider(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(ApplicationFailure::class.java, "Simulated ApplicationFailure"),
         Arguments.of(IllegalArgumentException::class.java, "Simulated IllegalArgumentException"),
       )
-    }
   }
 
   @BeforeEach
@@ -225,7 +229,7 @@ class ConnectorRolloutWorkflowImplTest {
     assertNotNull(failure)
 
     verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
-    verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
+    verify(getRolloutActivity, times(2)).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())
     verify(finalizeRolloutActivity, Mockito.never()).finalizeRollout(MockitoHelper.anyObject())
@@ -288,7 +292,7 @@ class ConnectorRolloutWorkflowImplTest {
     assertEquals(ConnectorEnumRolloutState.SUCCEEDED.toString(), result)
 
     verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
-    verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
+    verify(getRolloutActivity, times(2)).getRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity).promoteOrRollback(MockitoHelper.anyObject())
     verify(finalizeRolloutActivity).finalizeRollout(MockitoHelper.anyObject())
@@ -373,7 +377,7 @@ class ConnectorRolloutWorkflowImplTest {
     assertNotNull(failure)
 
     verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
-    verify(getRolloutActivity).getRollout(MockitoHelper.anyObject())
+    verify(getRolloutActivity, times(2)).getRollout(MockitoHelper.anyObject())
     verify(pauseRolloutActivity).pauseRollout(MockitoHelper.anyObject())
     verify(verifyDefaultVersionActivity, Mockito.never()).getAndVerifyDefaultVersion(MockitoHelper.anyObject())
     verify(promoteOrRollbackActivity, Mockito.never()).promoteOrRollback(MockitoHelper.anyObject())

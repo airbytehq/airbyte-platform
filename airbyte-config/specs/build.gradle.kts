@@ -15,10 +15,9 @@ dependencies {
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-json-validation"))
 
-  implementation(libs.commons.cli)
-  implementation(libs.commons.io)
   implementation(platform(libs.fasterxml))
   implementation(libs.bundles.jackson)
+  implementation(libs.kotlin.logging)
   implementation(libs.google.cloud.storage)
   implementation(libs.micronaut.cache.caffeine)
   implementation(libs.airbyte.protocol)

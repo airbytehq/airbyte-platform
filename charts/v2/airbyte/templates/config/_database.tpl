@@ -10,9 +10,9 @@ Renders the database secret name
 */}}
 {{- define "airbyte.database.secretName" }}
 {{- if .Values.global.database.secretName }}
-    {{- .Values.global.database.secretName | quote }}
+    {{- .Values.global.database.secretName }}
 {{- else }}
-    {{- .Release.Name }}-airbyte-secrets
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
@@ -156,7 +156,7 @@ Renders the set of all database config map variables
 {{- define "airbyte.database.configVars" }}
 DATABASE_HOST: {{ include "airbyte.database.host" . | quote }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
-DATABASE_URL: {{ (printf "jdbc:postgresql://%s:%d/%s" (include "airbyte.database.host" .) (int (include "airbyte.database.port" .)) (include "airbyte.database.name" .)) | quote }}
+DATABASE_URL: {{ include "airbyte.database.url" . | quote }}
 DATABASE_DB: {{ include "airbyte.database.name" . | quote }}
 {{- end }}
 
@@ -169,21 +169,14 @@ DATABASE_PASSWORD: {{ include "airbyte.database.password" . | quote }}
 {{- end }}
 
 {{/*
-Renders the database.migrations secret name
-*/}}
-{{- define "airbyte.database.migrations.secretName" }}
-{{- if .Values.global.migrations.secretName }}
-    {{- .Values.global.migrations.secretName | quote }}
-{{- else }}
-    {{- .Release.Name }}-airbyte-secrets
-{{- end }}
-{{- end }}
-
-{{/*
 Renders the global.migrations.runAtStartup value
 */}}
 {{- define "airbyte.database.migrations.runAtStartup" }}
-    {{- .Values.global.migrations.runAtStartup | default true }}
+	{{- if eq .Values.global.migrations.runAtStartup nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.migrations.runAtStartup }}
+	{{- end }}
 {{- end }}
 
 {{/*

@@ -17,10 +17,10 @@ import static org.mockito.Mockito.when;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -63,7 +63,7 @@ class HeartBeatTimeoutChaperoneTest {
 
     assertEquals("Last record seen 0 seconds ago, exceeding the threshold of 1 second.", thrown.getMessage());
 
-    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE, 1,
+    verify(metricClient, times(1)).count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE,
         new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
         new MetricAttribute(MetricTags.KILLED, "true"),
         new MetricAttribute(MetricTags.SOURCE_IMAGE, "docker image"));

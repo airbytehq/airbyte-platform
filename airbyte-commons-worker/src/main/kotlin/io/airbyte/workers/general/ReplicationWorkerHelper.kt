@@ -13,7 +13,6 @@ import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.concurrency.VoidCallable
-import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -32,15 +31,15 @@ import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClientFactory
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
@@ -68,11 +67,11 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
+import io.airbyte.workers.tracker.ThreadedTimeTracker
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpStatus
-import org.apache.commons.io.FileUtils
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.time.Duration
@@ -103,8 +102,8 @@ class ReplicationWorkerHelper(
   private val recordMapper: RecordMapper,
   private val featureFlagClient: FeatureFlagClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
+  private val metricClient: MetricClient,
 ) {
-  private val metricClient = MetricClientFactory.getMetricClient()
   private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
   private val replicationFailures: MutableList<FailureReason> = Collections.synchronizedList(mutableListOf())
   private val _cancelled = AtomicBoolean()
@@ -119,12 +118,13 @@ class ReplicationWorkerHelper(
     get() = _shouldAbort.get() || _cancelled.get()
 
   private var recordsRead: Long = 0
+  private var totalRecordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
-  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<out MapperConfig>>
+  private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<MapperConfig>>
 
   fun markCancelled(): Unit = _cancelled.set(true)
 
@@ -150,7 +150,7 @@ class ReplicationWorkerHelper(
       var lastSuccessfulHeartbeat: Instant = Instant.now()
       val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
       do {
-        ctx?.let {
+        ctx?.let { _ ->
           try {
             logger.debug { "Sending workload heartbeat" }
             workloadApiClient.workloadApi.workloadHeartbeat(
@@ -165,12 +165,12 @@ class ReplicationWorkerHelper(
              */
             if (e is GeneratedClientException && e.statusCode == HttpStatus.GONE.code) {
               logger.warn(e) { "Cancelling sync, workload is in a terminal state" }
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, 1, *metricAttrs.toTypedArray())
+              metricClient.count(metric = OssMetricsRegistry.HEARTBEAT_TERMINAL_SHUTDOWN, attributes = metricAttrs.toTypedArray())
               markCancelled()
               return@Runnable
             } else if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
               logger.warn(e) { "Have not been able to update heartbeat for more than the timeout duration, shutting down heartbeat" }
-              metricClient.count(OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, 1, *metricAttrs.toTypedArray())
+              metricClient.count(metric = OssMetricsRegistry.HEARTBEAT_CONNECTIVITY_FAILURE_SHUTDOWN, attributes = metricAttrs.toTypedArray())
               markFailed()
               abort()
               trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", e))
@@ -229,7 +229,7 @@ class ReplicationWorkerHelper(
     streamStatusCompletionTracker.startTracking(configuredAirbyteCatalog, supportRefreshes)
 
     if (configuredAirbyteCatalog.streams.isEmpty()) {
-      metricClient.count(OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, attributes = metricAttrs.toTypedArray())
     }
 
     val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(configuredAirbyteCatalog)
@@ -293,8 +293,8 @@ class ReplicationWorkerHelper(
     val context = requireNotNull(ctx)
 
     logger.info {
-      val bytes = FileUtils.byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-      "Total records read: $recordsRead ($bytes)"
+      val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+      "Total records read: $totalRecordsRead ($bytes)"
     }
 
     fieldSelector.reportMetrics(context.sourceId)
@@ -367,7 +367,7 @@ class ReplicationWorkerHelper(
           f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
       }
     ) {
-      metricClient.count(OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, attributes = metricAttrs.toTypedArray())
     }
 
     LineGobbler.endSection("REPLICATION")
@@ -388,40 +388,56 @@ class ReplicationWorkerHelper(
 
   @VisibleForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
-    val context = requireNotNull(ctx)
+    val context = requireNotNull(ctx) { "Context must not be null" }
+
+    updateRecordsCount()
 
     fieldSelector.filterSelectedFields(sourceRawMessage)
     fieldSelector.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
     streamStatusTracker.track(sourceRawMessage)
-    if (isAnalyticsMessage(sourceRawMessage)) {
-      analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
-    }
 
-    handleControlMessage(sourceRawMessage, context, AirbyteMessageOrigin.SOURCE)
-
-    recordsRead += 1
-    if (recordsRead % 5000 == 0L) {
-      logger.info {
-        val bytes = FileUtils.byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-        "Records read: $recordsRead ($bytes)"
+    return when (sourceRawMessage.type) {
+      Type.RECORD -> processRecordMessage(sourceRawMessage)
+      Type.STATE -> {
+        metricClient.count(
+          metric = OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE,
+          attributes = metricAttrs.toTypedArray(),
+        )
+        sourceRawMessage
+      }
+      else -> {
+        if (isAnalyticsMessage(sourceRawMessage)) {
+          analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
+        } else {
+          handleControlMessage(sourceRawMessage, context, AirbyteMessageOrigin.SOURCE)
+        }
+        sourceRawMessage
       }
     }
+  }
 
-    if (sourceRawMessage.type == Type.STATE) {
-      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, 1, *metricAttrs.toTypedArray())
+  private fun processRecordMessage(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
+    val adapter = AirbyteJsonRecordAdapter(sourceRawMessage)
+    applyTransformationMappers(adapter)
+    if (!adapter.shouldInclude()) {
+      messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
+      return null
     }
-
-    if (sourceRawMessage.type == Type.RECORD) {
-      val airbyteJsonRecordAdapter = AirbyteJsonRecordAdapter(sourceRawMessage)
-      applyTransformationMappers(airbyteJsonRecordAdapter)
-      if (!airbyteJsonRecordAdapter.shouldInclude()) {
-        messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
-        return null
-      }
-    }
-
     return sourceRawMessage
+  }
+
+  private fun updateRecordsCount() {
+    recordsRead++
+    totalRecordsRead += recordsRead
+
+    if (recordsRead == 5000L) {
+      logger.info {
+        val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        "Records read: $totalRecordsRead ($bytes)"
+      }
+      recordsRead = 0
+    }
   }
 
   private fun handleControlMessage(
@@ -449,9 +465,8 @@ class ReplicationWorkerHelper(
     }
 
     if (destinationRawMessage.type == Type.STATE) {
-      val airbyteStateMessage = destinationRawMessage.state
       syncPersistence.accept(context.connectionId, destinationRawMessage.state)
-      metricClient.count(OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, 1, *metricAttrs.toTypedArray())
+      metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, attributes = metricAttrs.toTypedArray())
     }
 
     handleControlMessage(destinationRawMessage, context, AirbyteMessageOrigin.DESTINATION)
@@ -562,3 +577,19 @@ private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
     add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
   }
 }
+
+private const val KB = 1_024L
+private const val MB = KB * KB
+private const val GB = MB * KB
+private const val TB = GB * KB
+private const val PB = TB * KB
+
+private fun byteCountToDisplaySize(size: Long): String =
+  when {
+    size > PB -> "${size.div(PB)} PB"
+    size > TB -> "${size.div(TB)} TB"
+    size > GB -> "${size.div(GB)} GB"
+    size > MB -> "${size.div(MB)} MB"
+    size > KB -> "${size.div(KB)} KB"
+    else -> "$size bytes"
+  }

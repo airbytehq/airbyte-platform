@@ -1,13 +1,14 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ActorType
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNotificationData
@@ -53,7 +54,7 @@ internal class SupportStateUpdaterTest {
         mActorDefinitionService,
         mSourceService,
         mDestinationService,
-        DeploymentMode.CLOUD,
+        Configs.AirbyteEdition.CLOUD,
         mBreakingChangesHelper,
         mBreakingChangeNotificationHelper,
         featureFlagClient,
@@ -67,14 +68,13 @@ internal class SupportStateUpdaterTest {
   private fun createBreakingChange(
     version: String,
     upgradeDeadline: String,
-  ): ActorDefinitionBreakingChange {
-    return ActorDefinitionBreakingChange()
+  ): ActorDefinitionBreakingChange =
+    ActorDefinitionBreakingChange()
       .withActorDefinitionId(ACTOR_DEFINITION_ID)
       .withVersion(Version(version))
       .withMessage("This is a breaking change for version $version")
       .withMigrationDocumentationUrl("https://docs.airbyte.com/migration#$version")
       .withUpgradeDeadline(upgradeDeadline)
-  }
 
   private fun createActorDefinitionVersion(version: String): ActorDefinitionVersion {
     return ActorDefinitionVersion()
@@ -393,7 +393,9 @@ internal class SupportStateUpdaterTest {
         listOf(v3MajorADV.versionId),
       )
     } returns
-      workspaceIds.stream().map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
+      workspaceIds
+        .stream()
+        .map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
         .toList()
     val latestBreakingChange =
       ActorDefinitionBreakingChange()
@@ -442,7 +444,9 @@ internal class SupportStateUpdaterTest {
         listOf(v3MajorADV.versionId),
       )
     } returns
-      workspaceIds.stream().map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
+      workspaceIds
+        .stream()
+        .map { id: UUID -> WorkspaceBreakingChangeInfo(id, listOf(UUID.randomUUID(), UUID.randomUUID()), listOf()) }
         .toList()
     val latestBreakingChange =
       ActorDefinitionBreakingChange()

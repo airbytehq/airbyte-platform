@@ -7,8 +7,8 @@ package io.airbyte.workers;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import java.io.Closeable;
 import java.io.IOException;
@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import kotlin.Pair;
 
 /**
  * Validates that AirbyteRecordMessage data conforms to the JSON schema defined by the source's
@@ -77,7 +77,7 @@ public class RecordSchemaValidator implements Closeable {
   public void validateSchema(
                              final AirbyteRecordMessage message,
                              final AirbyteStreamNameNamespacePair airbyteStream,
-                             final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+                             final ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<Set<String>, Integer>> validationErrors) {
     validationExecutor.execute(() -> {
       Set<String> errorMessages = validator.validateInitializedSchema(airbyteStream.toString(), message.getData());
       if (!errorMessages.isEmpty()) {
@@ -104,14 +104,14 @@ public class RecordSchemaValidator implements Closeable {
 
   private void updateValidationErrors(final Set<String> errorMessages,
                                       final AirbyteStreamNameNamespacePair airbyteStream,
-                                      final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors) {
+                                      final ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<Set<String>, Integer>> validationErrors) {
     validationErrors.compute(airbyteStream, (k, v) -> {
       if (v == null) {
-        return new ImmutablePair<>(errorMessages, 1);
+        return new Pair<>(errorMessages, 1);
       } else {
-        final var updatedErrorMessages = Stream.concat(v.getLeft().stream(), errorMessages.stream()).collect(Collectors.toSet());
-        final var updatedCount = v.getRight() + 1;
-        return new ImmutablePair<>(updatedErrorMessages, updatedCount);
+        final var updatedErrorMessages = Stream.concat(v.getFirst().stream(), errorMessages.stream()).collect(Collectors.toSet());
+        final var updatedCount = v.getSecond() + 1;
+        return new Pair<>(updatedErrorMessages, updatedCount);
       }
     });
   }

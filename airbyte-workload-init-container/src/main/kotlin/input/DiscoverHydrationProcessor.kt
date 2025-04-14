@@ -1,13 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.initContainer.system.FileClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags.CONNECTION_ID
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE
-import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.workers.DiscoverCatalogInputHydrator
+import io.airbyte.workers.hydration.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants
@@ -38,10 +42,14 @@ class DiscoverHydrationProcessor(
         val attrs =
           listOf(
             MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
-            MetricAttribute(CONNECTOR_TYPE, parsed.discoverCatalogInput.actorContext.actorType.toString()),
+            MetricAttribute(
+              CONNECTOR_TYPE,
+              parsed.discoverCatalogInput.actorContext.actorType
+                .toString(),
+            ),
             MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
           )
-        metricClient.count(OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1, *attrs.toTypedArray())
+        metricClient.count(metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, attributes = attrs.toTypedArray())
         throw e
       }
 

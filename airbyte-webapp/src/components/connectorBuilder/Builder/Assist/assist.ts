@@ -1,10 +1,13 @@
 import merge from "lodash/merge";
 
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
+import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
+import { BuilderFormValues } from "components/connectorBuilder/types";
+import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
-import { AssistV1ProcessRequestBody, KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
@@ -15,9 +18,6 @@ import {
   SpecConnectionSpecification,
 } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import { convertToBuilderFormValuesSync } from "../../convertManifestToBuilderForm";
-import { BuilderFormValues, useBuilderWatch } from "../../types";
 
 export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
 
@@ -87,9 +87,6 @@ export interface BuilderAssistInputStreamParams {
   stream_name: string;
   stream_response?: object;
 }
-type BuilderAssistUseProject = BuilderAssistCoreParams & BuilderAssistProjectMetadataParams;
-type BuilderAssistUseProjectStream = BuilderAssistUseProject & BuilderAssistInputStreamParams;
-
 export type BuilderAssistApiAllParams = BuilderAssistCoreParams &
   BuilderAssistProjectMetadataParams &
   BuilderAssistProjectMetadataParams &
@@ -122,7 +119,7 @@ export interface BuilderAssistManifestResponse extends BuilderAssistBaseResponse
 const useAssistProxyQuery = <T>(
   controller: string,
   enabled: boolean,
-  input: AssistV1ProcessRequestBody,
+  input: Record<string, unknown>,
   ignoreCacheKeys: Array<keyof BuilderAssistApiAllParams>
 ) => {
   const { params: globalParams } = useAssistGlobalContext();
@@ -147,18 +144,18 @@ const hasAllOf = <T>(params: T, keys: Array<keyof T>) => {
   return keys.every((key) => !!(params[key] as string)?.trim());
 };
 
-const useAssistGlobalContext = (): { params: BuilderAssistGlobalMetadataParams } => {
-  const params: BuilderAssistGlobalMetadataParams = {
+const useAssistGlobalContext = (): { params: Record<string, unknown> } => {
+  const params = {
     cdk_version: CDK_VERSION,
     workspace_id: useCurrentWorkspaceId(),
   };
   return { params };
 };
 
-const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequiredParams: boolean } => {
+const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
   const { assistEnabled, projectId, assistSessionId, jsonManifest } = useConnectorBuilderFormState();
   // session id on form
-  const params: BuilderAssistUseProject = {
+  const params = {
     docs_url: useBuilderWatch("formValues.assist.docsUrl"),
     openapi_spec_url: useBuilderWatch("formValues.assist.openapiSpecUrl"),
     app_name: useBuilderWatch("name") || "Connector",
@@ -174,7 +171,7 @@ const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequir
 
 const useAssistProjectStreamContext = (
   input: BuilderAssistInputStreamParams
-): { params: BuilderAssistUseProjectStream; hasRequiredParams: boolean } => {
+): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
   const { params: baseParams, hasRequiredParams: baseRequiredParams } = useAssistProjectContext();
   const params = { ...baseParams, ...input };
   const hasStream = hasAllOf(params, ["stream_name"]);
@@ -251,7 +248,7 @@ export interface BuilderAssistCreateConnectorResponse extends BuilderAssistBaseR
 
 export const useBuilderAssistCreateConnectorMutation = () => {
   const { params: globalParams } = useAssistGlobalContext();
-  return useAssistApiMutation<BuilderAssistCreateConnectorParams, BuilderAssistCreateConnectorResponse>(globalParams);
+  return useAssistApiMutation<Record<string, unknown>, BuilderAssistCreateConnectorResponse>(globalParams);
 };
 
 const assistErrorCodesToi18n = {
@@ -314,7 +311,7 @@ export const parseAssistErrorToFormErrors = (assistError: Error | null): AssistE
     return [];
   }
 
-  const validationErrors = details?.validation_errors;
+  const validationErrors = Array.isArray(details?.validation_errors) ? details.validation_errors : [];
   return validationErrors?.map(safeCastAssistValidationError) ?? [];
 };
 

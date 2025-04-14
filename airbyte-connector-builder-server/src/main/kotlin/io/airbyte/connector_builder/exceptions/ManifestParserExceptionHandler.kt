@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.exceptions
@@ -18,14 +19,11 @@ import jakarta.inject.Singleton
 @Produces
 @Singleton
 @Requires(classes = [ManifestParserException::class])
-class ManifestParserExceptionHandler :
-  ExceptionHandler<ManifestParserException?, HttpResponse<*>?> {
+class ManifestParserExceptionHandler : ExceptionHandler<ManifestParserException?, HttpResponse<*>?> {
   val helper: ExceptionHelper = ExceptionHelper()
 
   override fun handle(
     request: HttpRequest<*>?,
     exception: ManifestParserException?,
-  ): HttpResponse<*>? {
-    return helper.handle(request, exception)
-  }
+  ): HttpResponse<*>? = helper.handle(request, exception)
 }

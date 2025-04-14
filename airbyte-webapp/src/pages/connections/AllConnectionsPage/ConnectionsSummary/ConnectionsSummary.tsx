@@ -1,10 +1,16 @@
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
+import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 
-import { useConnectionList } from "core/api";
-import { JobStatus, WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import {
+  ConnectionStatusRead,
+  ConnectionSyncStatus,
+  JobStatus,
+  WebBackendConnectionListItem,
+} from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 
 import styles from "./ConnectionsSummary.module.scss";
 
@@ -36,24 +42,46 @@ export const isConnectionFailed = (
   connection.latestSyncJobStatus === JobStatus.cancelled ||
   connection.latestSyncJobStatus === JobStatus.incomplete;
 
-export const ConnectionsSummary: React.FC = () => {
-  const connections = useConnectionList()?.connections ?? [];
+export const isStatusEnabled = (
+  connectionStatus?: ConnectionStatusRead
+): connectionStatus is ConnectionStatusRead & {
+  status: Omit<ConnectionSyncStatus, typeof ConnectionSyncStatus.paused>;
+} => connectionStatus?.connectionSyncStatus !== ConnectionSyncStatus.paused;
 
-  const connectionsSummary = connections.reduce<Record<SummaryKey, number>>(
-    (acc, connection) => {
-      let status: SummaryKey;
+export const isStatusPaused = (
+  connectionStatus?: ConnectionStatusRead
+): connectionStatus is ConnectionStatusRead & { status: typeof ConnectionSyncStatus.paused } =>
+  connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.paused;
 
-      if (isConnectionPaused(connection)) {
-        status = "paused";
-      } else if (isConnectionRunning(connection)) {
-        status = "running";
-      } else if (isConnectionFailed(connection)) {
-        status = "failed";
+export const isStatusRunning = (
+  connectionStatus?: ConnectionStatusRead
+): connectionStatus is ConnectionStatusRead & { status: typeof ConnectionSyncStatus.running } =>
+  connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.running;
+
+export const isStatusFailed = (
+  connectionStatus?: ConnectionStatusRead
+): connectionStatus is ConnectionStatusRead & {
+  status: typeof ConnectionSyncStatus.failed | typeof ConnectionSyncStatus.incomplete;
+} =>
+  connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.failed ||
+  connectionStatus?.connectionSyncStatus === ConnectionSyncStatus.incomplete;
+
+const getSummaryFromStatuses = (statuses: ConnectionStatusRead[]) =>
+  statuses.reduce<Record<SummaryKey, number>>(
+    (acc, status) => {
+      let statusSummary: SummaryKey;
+
+      if (isStatusPaused(status)) {
+        statusSummary = "paused";
+      } else if (isStatusRunning(status)) {
+        statusSummary = "running";
+      } else if (isStatusFailed(status)) {
+        statusSummary = "failed";
       } else {
-        status = "healthy";
+        statusSummary = "healthy";
       }
 
-      acc[status] += 1;
+      acc[statusSummary] += 1;
       return acc;
     },
     {
@@ -64,6 +92,51 @@ export const ConnectionsSummary: React.FC = () => {
       paused: 0,
     }
   );
+
+const getSummaryFromConnections = (connections: WebBackendConnectionListItem[]) =>
+  connections.reduce<Record<SummaryKey, number>>(
+    (acc, connection) => {
+      let statusSummary: SummaryKey;
+
+      if (isConnectionPaused(connection)) {
+        statusSummary = "paused";
+      } else if (isConnectionRunning(connection)) {
+        statusSummary = "running";
+      } else if (isConnectionFailed(connection)) {
+        statusSummary = "failed";
+      } else {
+        statusSummary = "healthy";
+      }
+
+      acc[statusSummary] += 1;
+      return acc;
+    },
+    {
+      // order here governs render order
+      running: 0,
+      healthy: 0,
+      failed: 0,
+      paused: 0,
+    }
+  );
+
+export const ConnectionsSummary: React.FC<{
+  connections: WebBackendConnectionListItem[];
+  statuses?: ConnectionStatusRead[];
+}> = ({ connections, statuses = [] }) => {
+  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
+
+  const connectionsSummary = isAllConnectionsStatusEnabled
+    ? getSummaryFromStatuses(statuses)
+    : getSummaryFromConnections(connections);
+
+  const areStatusesLoading =
+    connections.length > 0 && // are there connections
+    Object.values(connectionsSummary).reduce((count, acc) => acc + count, 0) === 0; // but no summary counts;
+
+  if (areStatusesLoading) {
+    return <LoadingSkeleton className={styles.fixedHeight} />;
+  }
 
   const keys = Object.keys(connectionsSummary) as SummaryKey[];
   const parts: React.ReactNode[] = [];
@@ -87,5 +160,5 @@ export const ConnectionsSummary: React.FC = () => {
     }
   }
 
-  return <>{parts}</>;
+  return <div className={styles.fixedHeight}>{parts}</div>;
 };

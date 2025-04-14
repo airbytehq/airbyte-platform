@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionStatus;
@@ -40,11 +41,13 @@ import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent.FinalStatus;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
+import io.airbyte.data.services.shared.SchemaConfigUpdateEvent;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -283,6 +286,17 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
+  public void logSchemaConfigChangeEventInConnectionTimeline(final UUID connectionId,
+                                                             final AirbyteCatalogDiff airbyteCatalogDiff) {
+    try {
+      LOGGER.debug("Persisting schema config change event for connection: {} with diff: {}", connectionId, airbyteCatalogDiff);
+      final SchemaConfigUpdateEvent event = new SchemaConfigUpdateEvent(airbyteCatalogDiff);
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    } catch (final Exception e) {
+      LOGGER.error("Failed to persist schema config change event for connection: {}", connectionId, e);
+    }
+  }
+
   private void addPatchIfFieldIsChanged(final Map<String, Map<String, Object>> patches,
                                         final String fieldName,
                                         final Object oldValue,
@@ -350,11 +364,15 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  public boolean jobAssociatedUserIsAirbyteSupport(final JobRead job, final ConnectionEvent.Type eventType) {
-    // 1. Find timeline event associated with the job, and then get the associated user_id
-    final UUID userId = connectionTimelineEventService.findAssociatedUserForAJob(job, eventType);
-    // 2. Check if the user is Airbyte user
-    return isAirbyteUser(userId);
+  public Optional<User> getUserAssociatedWithJobTimelineEventType(final JobRead job, final ConnectionEvent.Type eventType) {
+    final Optional<UUID> userId = Optional.ofNullable(connectionTimelineEventService.findAssociatedUserForAJob(job, eventType));
+    return userId.flatMap(id -> {
+      try {
+        return userPersistence.getUser(id);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
   }
 
 }

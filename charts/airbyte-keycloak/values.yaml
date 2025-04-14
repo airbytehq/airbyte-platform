@@ -1,14 +1,12 @@
 ##  global.serviceAccountName Name of service account to be associated with service
-##  deploymentMode Determines deployment mode of airbyte
-##  secretName Overrides the secrate name with with credentials to S3 Bucket and logging
+##  global.edition Determines the edition of airbyte (community, enterprise, cloud)
+##  secretName Overrides the secret name with credentials to S3 Bucket and logging
 ##  database.secretName Name of database secret
 ##  database.secretValue Value of database password key stored in secret
 global:
   # serviceAccountName -- Service Account name override
   serviceAccountName: placeholderServiceAccount
   edition: community
-  # -- airbyte deployment mode
-  deploymentMode: oss
   secretName: ""
   database:
     secretName: ""
@@ -31,6 +29,8 @@ global:
 
 
 enabled: true
+
+serviceAccountName:
 
 bypassInit: false
 ##  image.repository The repository to use for the airbyte keycloak image.

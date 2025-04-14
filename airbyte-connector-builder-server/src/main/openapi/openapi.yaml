@@ -108,6 +108,29 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/manifest/full_resolve:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: Given a JSON manifest, returns a JSON manifest with all dynamic streams and all of the $refs and $parameters resolved and flattened
+      operationId: fullResolveManifest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FullResolveManifestRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResolveManifest"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/assist/v1/process:
     post:
       tags:
@@ -131,6 +154,30 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/assist/v1/warm:
+    post:
+      tags:
+        - connectorBuilderServer
+      summary: Assist server warming access point
+      operationId: assistV1Warm
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssistV1ProcessRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssistV1Process"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
   /v1/health:
     get:
       tags:
@@ -169,6 +216,9 @@ components:
         connector_name:
           type: string
           description: The name of the connector in Github, if it exists
+        connector_description:
+          type: string
+          description: The text description of the connector in Github, if it exists
         github_url:
           type: string
           description: The Github URL of the connector in the airbyte repository, if it exists
@@ -183,6 +233,8 @@ components:
         - github_token
         - manifest_yaml
         - base_image
+        - connector_description
+        - contribution_description
       properties:
         name:
           type: string
@@ -190,7 +242,7 @@ components:
         connector_image_name:
           type: string
           description: The name of the connector module, e.g. source-google-sheets
-        description:
+        connector_description:
           type: string
           description: Brief description of the connector and the API it integrates
         github_token:
@@ -199,9 +251,15 @@ components:
         manifest_yaml:
           type: string
           description: The connector manifest in YAML form
+        custom_components:
+          type: string
+          description: (Optional) The file contents for any custom python CDK components
         base_image:
           type: string
           description: The base image to use for the connector
+        contribution_description:
+          type: string
+          description: Message describing the content of the contribution, including any changes to the connector
     GenerateContributionResponse:
       type: object
       required:
@@ -261,10 +319,11 @@ components:
                       description: The RECORD AirbyteMessages coming from the read operation for this page
                       items:
                         type: object
-                        # $ref: "#/components/schemas/AirbyteProtocol/definitions/AirbyteRecordMessage"
                     request:
+                      description: The data request that produced the records
                       $ref: "#/components/schemas/HttpRequest"
                     response:
+                      description: The data response from which the records were produced
                       $ref: "#/components/schemas/HttpResponse"
               slice_descriptor:
                 type: object
@@ -273,27 +332,19 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/AirbyteStateMessage"
+              auxiliary_requests:
+                type: array
+                description: Non-data requests made at the slice level, e.g. creation / polling requests for async stream slices
+                items:
+                  $ref: "#/components/schemas/AuxiliaryRequest"
         test_read_limit_reached:
           type: boolean
           description: Whether the maximum number of request per slice or the maximum number of slices queried has been reached
         auxiliary_requests:
           type: array
+          description: Non-data requests made at the stream level, e.g. authentication, parent streams
           items:
-            type: object
-            required:
-              - description
-              - request
-              - response
-              - title
-            properties:
-              description:
-                type: string
-              request:
-                $ref: "#/components/schemas/HttpRequest"
-              response:
-                $ref: "#/components/schemas/HttpResponse"
-              title:
-                type: string
+            $ref: "#/components/schemas/AuxiliaryRequest"
         inferred_schema:
           type: object
           description: The narrowest JSON Schema against which every AirbyteRecord in the slices can validate successfully. This is inferred from reading every record in the output slices.
@@ -303,6 +354,35 @@ components:
         latest_config_update:
           type: object
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
+    AuxiliaryRequest:
+      type: object
+      required:
+        - description
+        - request
+        - response
+        - title
+        - type
+      properties:
+        description:
+          type: string
+        request:
+          $ref: "#/components/schemas/HttpRequest"
+        response:
+          $ref: "#/components/schemas/HttpResponse"
+        title:
+          type: string
+        type:
+          type: string
+          enum:
+            [
+              "HTTP",
+              "AUTH",
+              "PARENT_STREAM",
+              "ASYNC_CREATE",
+              "ASYNC_POLL",
+              "ASYNC_ABORT",
+              "ASYNC_DELETE",
+            ]
     StreamReadRequestBody:
       type: object
       required:
@@ -317,6 +397,9 @@ components:
         stream:
           type: string
           description: Name of the stream to read
+        custom_components_code:
+          type: string
+          description: The custom components code that should be used to run the connector
         form_generated_manifest:
           type: boolean
           description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
@@ -404,6 +487,31 @@ components:
         workspace_id:
           type: string
           description: ID of the workspace where the request is coming from
+    FullResolveManifestRequestBody:
+      type: object
+      required:
+        - manifest
+        - config
+      properties:
+        config:
+          $ref: "#/components/schemas/ConnectorConfig"
+        manifest:
+          $ref: "#/components/schemas/ConnectorManifest"
+        form_generated_manifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        stream_limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Maximum number of generated streams that will be returned to the client from the connector builder
+        project_id:
+          type: string
+          description: ID of the project where the request is coming from
+        workspace_id:
+          type: string
+          description: ID of the workspace where the request is coming from
     ResolveManifest:
       type: object
       required:
@@ -429,6 +537,13 @@ components:
         cdk_version:
           type: string
           description: The version of the CDK used by the server
+        capabilities:
+          type: object
+          description: The capabilities of the server
+          properties:
+            custom_code_execution:
+              type: boolean
+              description: Whether the server allows custom code execution
     ConnectorConfig:
       type: object
       description: The config blob containing the user inputs for testing

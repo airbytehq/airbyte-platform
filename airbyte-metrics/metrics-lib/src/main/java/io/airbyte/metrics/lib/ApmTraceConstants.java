@@ -177,6 +177,11 @@ public final class ApmTraceConstants {
      */
     public static final String WORKSPACE_ID_KEY = "workspace.id";
 
+    /**
+     * Name of the APM trace tag that holds the organization ID value associated with the trace.
+     */
+    public static final String ORGANIZATION_ID_KEY = "organization.id";
+
     private Tags() {}
 
   }

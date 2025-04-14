@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config
 
 import com.fasterxml.jackson.annotation.JsonIgnore
@@ -26,6 +27,7 @@ import java.io.Serializable
   "source_defined_primary_key",
   "namespace",
   "is_resumable",
+  "is_file_based",
 )
 data class AirbyteStream
   @JvmOverloads
@@ -46,6 +48,8 @@ data class AirbyteStream
     var namespace: String? = null,
     @JsonProperty("is_resumable")
     var isResumable: Boolean? = null,
+    @JsonProperty("is_file_based")
+    var isFileBased: Boolean? = null,
   ) : Serializable {
     fun withName(name: String): AirbyteStream {
       this.name = name
@@ -87,6 +91,8 @@ data class AirbyteStream
       return this
     }
 
+    fun withIsFileBased(isFileBased: Boolean?): AirbyteStream = also { it.isFileBased = isFileBased }
+
     @get:JsonIgnore
     val streamDescriptor: StreamDescriptor
       get() = StreamDescriptor().withName(name).withNamespace(namespace)
@@ -108,6 +114,8 @@ data class AirbyteStream
       var namespace: String? = null,
       @JsonProperty("is_resumable")
       var isResumable: Boolean? = null,
+      @JsonProperty("is_file_based")
+      var isFileBased: Boolean? = null,
     ) {
       fun build(): AirbyteStream =
         AirbyteStream(
@@ -119,6 +127,7 @@ data class AirbyteStream
           sourceDefinedPrimaryKey = sourceDefinedPrimaryKey,
           namespace = namespace,
           isResumable = isResumable,
+          isFileBased = isFileBased,
         )
     }
 

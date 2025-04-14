@@ -30,7 +30,7 @@ class InitContainerFactory(
   @Named("initContainerInfo") private val initContainerInfo: KubeContainerInfo,
   private val featureFlagClient: FeatureFlagClient,
 ) {
-  fun create(
+  internal fun create(
     resourceReqs: ResourceRequirements?,
     volumeMounts: List<VolumeMount>,
     runtimeEnvVars: List<EnvVar>,

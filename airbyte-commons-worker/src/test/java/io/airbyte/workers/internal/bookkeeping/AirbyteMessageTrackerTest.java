@@ -11,12 +11,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 import io.airbyte.config.FailureReason;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage.Type;
-import io.airbyte.protocol.models.Config;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type;
+import io.airbyte.protocol.models.v0.Config;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import io.airbyte.workers.helper.FailureHelper;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;

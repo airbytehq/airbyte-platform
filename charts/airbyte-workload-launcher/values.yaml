@@ -46,6 +46,7 @@ global:
       limits: {}
 
     kube:
+      serviceAccountName: airbyte-admin
       ## JOB_KUBE_ANNOTATIONS
       ## pod annotations of the sync job and the default pod annotations fallback for others jobs
       ##  jobs.kube.annotations [object] key/value annotations applied to kube jobs
@@ -79,6 +80,8 @@ global:
 enabled: true
 ##  workload-launcher.replicaCount Number of workload launcher replicas
 replicaCount: 1
+
+serviceAccountName:
 
 ##  workload-launcher.image.repository The repository to use for the airbyte workload launcher image.
 ##  workload-launcher.image.pullPolicy the pull policy to use for the airbyte workload launcher image
@@ -282,3 +285,9 @@ workloadApi: {}
 debug:
   enabled: false
   remoteDebugPort: 5005
+
+timeToDeletePods:
+  running: ""
+  succeeded: 10
+  ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
+  unsuccessful: 120

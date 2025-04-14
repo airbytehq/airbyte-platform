@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.AllowSpotInstances
@@ -23,7 +27,7 @@ data class NodeSelectionFactory(
   @Named("spotToleration") private val spotToleration: Toleration,
   @Named("infraFlagContexts") private val infraFlagContexts: List<Context>,
 ) {
-  fun createReplicationNodeSelection(
+  internal fun createReplicationNodeSelection(
     nodeSelectors: Map<String, String>,
     allLabels: Map<String, String>,
   ): NodeSelection {
@@ -47,10 +51,8 @@ data class NodeSelectionFactory(
     }
   }
 
-  fun createResetNodeSelection(
-    nodeSelectors: Map<String, String>,
-    allLabels: Map<String, String>,
-  ): NodeSelection = NodeSelection(nodeSelectors = nodeSelectors, tolerations = tolerations.toList(), podAffinity = null)
+  fun createResetNodeSelection(nodeSelectors: Map<String, String>): NodeSelection =
+    NodeSelection(nodeSelectors = nodeSelectors, tolerations = tolerations.toList(), podAffinity = null)
 
   private fun shouldAllowSpotInstances(allLabels: Map<String, String>) =
     featureFlagClient.boolVariation(AllowSpotInstances, buildSpotInstanceFeatureFlagContext(allLabels))
@@ -63,8 +65,8 @@ data class NodeSelectionFactory(
     return Multi(context)
   }
 
-  private fun buildSpotInstanceAffinity(): Affinity {
-    return AffinityBuilder()
+  private fun buildSpotInstanceAffinity(): Affinity =
+    AffinityBuilder()
       .withNewNodeAffinity()
       .withPreferredDuringSchedulingIgnoredDuringExecution(
         PreferredSchedulingTermBuilder()
@@ -75,12 +77,9 @@ data class NodeSelectionFactory(
               .withValues(spotToleration.value)
               .withOperator("In")
               .build(),
-          )
-          .endPreference()
+          ).endPreference()
           .withWeight(100)
           .build(),
-      )
-      .endNodeAffinity()
+      ).endNodeAffinity()
       .build()
-  }
 }

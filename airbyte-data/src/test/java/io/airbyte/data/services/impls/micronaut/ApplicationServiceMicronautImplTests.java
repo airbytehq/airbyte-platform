@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.micronaut;
 
-import static io.airbyte.data.services.impls.micronaut.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
+import static io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl.DEFAULT_AUTH_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -16,10 +16,12 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
+import io.airbyte.commons.auth.config.TokenExpirationConfig;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.data.config.InstanceAdminConfig;
+import io.airbyte.data.services.impls.data.ApplicationServiceMicronautImpl;
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator;
 import jakarta.ws.rs.BadRequestException;
 import java.io.IOException;
@@ -27,7 +29,6 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import org.apache.commons.lang3.NotImplementedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -35,9 +36,13 @@ class ApplicationServiceMicronautImplTests {
 
   private InstanceAdminConfig instanceAdminConfig;
 
+  private TokenExpirationConfig tokenExpirationConfig;
+
   private JwtTokenGenerator tokenGenerator;
 
   private String token;
+
+  private final String issuer = "https://example.com";
 
   @BeforeEach
   void setup() throws IOException {
@@ -48,6 +53,7 @@ class ApplicationServiceMicronautImplTests {
     instanceAdminConfig.setClientId("test-client-id");
     instanceAdminConfig.setClientSecret("test-client-secret");
     tokenGenerator = mock(JwtTokenGenerator.class);
+    tokenExpirationConfig = new TokenExpirationConfig();
     when(tokenGenerator.generateToken(any())).thenReturn(Optional.of(token));
   }
 
@@ -55,7 +61,9 @@ class ApplicationServiceMicronautImplTests {
   void testGetToken() {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
-        tokenGenerator);
+        tokenExpirationConfig,
+        tokenGenerator,
+        issuer);
 
     final var expectedRoles = new HashSet<>();
     expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
@@ -73,7 +81,9 @@ class ApplicationServiceMicronautImplTests {
   void testGetTokenWithInvalidCredentials() {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
-        tokenGenerator);
+        tokenExpirationConfig,
+        tokenGenerator,
+        issuer);
 
     assertThrows(BadRequestException.class, () -> applicationServer.getToken("test-client-id", "wrong-secret"));
   }
@@ -82,7 +92,9 @@ class ApplicationServiceMicronautImplTests {
   void testListingApplications() {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
-        tokenGenerator);
+        tokenExpirationConfig,
+        tokenGenerator,
+        issuer);
 
     final var applications = applicationServer.listApplicationsByUser(new AuthenticatedUser().withName("Test User"));
     assertEquals(1, applications.size());
@@ -92,18 +104,22 @@ class ApplicationServiceMicronautImplTests {
   void testCreateApplication() {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
-        tokenGenerator);
+        tokenExpirationConfig,
+        tokenGenerator,
+        issuer);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.createApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   @Test
   void testDeleteApplication() {
     final var applicationServer = new ApplicationServiceMicronautImpl(
         instanceAdminConfig,
-        tokenGenerator);
+        tokenExpirationConfig,
+        tokenGenerator,
+        issuer);
 
-    assertThrows(NotImplementedException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
+    assertThrows(UnsupportedOperationException.class, () -> applicationServer.deleteApplication(new AuthenticatedUser(), "Test Application"));
   }
 
   private JsonNode getTokenClaims(final String token) {

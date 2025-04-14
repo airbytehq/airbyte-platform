@@ -124,3 +124,5 @@ $gradient-secondary-stop: #{var(--color-orange-50)};
 $gradient-secondary: linear-gradient(90deg, $gradient-secondary-start, $gradient-secondary-stop);
 
 $gradient-light-background: linear-gradient(180deg, rgba(248, 248, 250, 50% /* grey-50 50% */) 0%, $foreground 90%);
+
+$border-color: var(--color-grey-100);

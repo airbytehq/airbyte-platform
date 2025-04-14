@@ -64,9 +64,9 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -533,7 +533,7 @@ class JobTrackerTest {
     final String jobId = "shouldBeLong";
     final int attemptId = 2;
     final ConfigType configType = ConfigType.REFRESH;
-    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L);
+    final Job previousJob = new Job(0, ConfigType.RESET_CONNECTION, null, null, null, null, null, 0L, 0L, true);
 
     final Map<String, Object> metadata = jobTracker.generateJobMetadata(jobId, configType, attemptId, Optional.of(previousJob));
     assertEquals(jobId, metadata.get("job_id"));

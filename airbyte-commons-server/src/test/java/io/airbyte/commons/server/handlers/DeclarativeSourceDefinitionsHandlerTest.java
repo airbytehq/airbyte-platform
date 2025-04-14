@@ -42,9 +42,10 @@ import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.data.services.DeclarativeManifestImageVersionService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +81,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
   private WorkspaceService workspaceService;
   private DeclarativeSourceManifestInjector manifestInjector;
   private ConnectorSpecification adaptedConnectorSpecification;
-  private ActorDefinitionConfigInjection configInjection;
+  private ActorDefinitionConfigInjection manifestConfigInjection;
   private AirbyteCompatibleConnectorsValidator airbyteCompatibleConnectorsValidator;
 
   private DeclarativeSourceDefinitionsHandler handler;
@@ -92,7 +93,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     workspaceService = mock(WorkspaceService.class);
     manifestInjector = mock(DeclarativeSourceManifestInjector.class);
     adaptedConnectorSpecification = mock(ConnectorSpecification.class);
-    configInjection = mock(ActorDefinitionConfigInjection.class);
+    manifestConfigInjection = mock(ActorDefinitionConfigInjection.class);
     airbyteCompatibleConnectorsValidator = mock(AirbyteCompatibleConnectorsValidator.class);
 
     handler =
@@ -137,7 +138,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
     givenSourceDefinitionAvailableInWorkspace();
     givenSourceIsDeclarative();
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(manifestConfigInjection));
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
     handler.createDeclarativeSourceDefinitionManifest(new DeclarativeSourceDefinitionCreateManifestRequestBody()
@@ -153,7 +154,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
         .withDescription(A_DESCRIPTION)
         .withManifest(A_MANIFEST)
         .withSpec(A_SPEC)),
-        eq(configInjection),
+        eq(List.of(manifestConfigInjection)),
         eq(adaptedConnectorSpecification),
         eq(AN_IMAGE_VERSION));
   }
@@ -219,7 +220,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
             .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
             .withManifest(A_MANIFEST)
             .withSpec(A_SPEC));
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(manifestConfigInjection);
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
     when(declarativeManifestImageVersionService.getDeclarativeManifestImageVersionByMajorVersion(0))
@@ -253,7 +254,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
             .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
             .withManifest(A_MANIFEST)
             .withSpec(A_SPEC));
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(manifestConfigInjection));
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
@@ -261,7 +262,7 @@ class DeclarativeSourceDefinitionsHandlerTest {
         new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION));
 
     verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
-    verify(connectorBuilderService, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
+    verify(connectorBuilderService, times(1)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, List.of(manifestConfigInjection),
         adaptedConnectorSpecification, AN_IMAGE_VERSION);
   }
 
@@ -277,13 +278,13 @@ class DeclarativeSourceDefinitionsHandlerTest {
             .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
             .withManifest(A_MANIFEST)
             .withSpec(A_SPEC));
-    when(manifestInjector.createConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(configInjection);
+    when(manifestInjector.createManifestConfigInjection(A_SOURCE_DEFINITION_ID, A_MANIFEST)).thenReturn(manifestConfigInjection);
     when(manifestInjector.createDeclarativeManifestConnectorSpecification(A_SPEC)).thenReturn(adaptedConnectorSpecification);
     when(manifestInjector.getCdkVersion(A_MANIFEST)).thenReturn(A_CDK_VERSION);
 
     assertThrows(BadRequestProblem.class, () -> handler.updateDeclarativeManifestVersion(
         new UpdateActiveManifestRequestBody().sourceDefinitionId(A_SOURCE_DEFINITION_ID).workspaceId(A_WORKSPACE_ID).version(A_VERSION)));
-    verify(connectorBuilderService, times(0)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, configInjection,
+    verify(connectorBuilderService, times(0)).setDeclarativeSourceActiveVersion(A_SOURCE_DEFINITION_ID, A_VERSION, List.of(manifestConfigInjection),
         adaptedConnectorSpecification, AN_IMAGE_VERSION);
     verify(manifestInjector, times(1)).getCdkVersion(A_MANIFEST);
   }

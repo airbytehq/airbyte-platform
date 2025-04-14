@@ -8,18 +8,19 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.protocol.models.ConnectorSpecification
-import io.airbyte.validation.json.JsonSchemaValidator
+import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.spyk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
@@ -33,20 +34,16 @@ internal class SecretsRepositoryWriterTest {
   private lateinit var secretsHydrator: RealSecretsHydrator
   private lateinit var secretsRepositoryReader: SecretsRepositoryReader
   private lateinit var metricClient: MetricClient
-  private lateinit var featureFlagClient: FeatureFlagClient
-  private lateinit var jsonSchemaValidator: JsonSchemaValidator
 
   @BeforeEach
   fun setup() {
     secretPersistence = spyk(MemorySecretPersistence())
     metricClient = mockk()
-    featureFlagClient = mockk()
 
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
         secretPersistence,
         metricClient,
-        featureFlagClient,
       )
     secretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)
@@ -54,19 +51,18 @@ internal class SecretsRepositoryWriterTest {
 
   @Test
   fun testDeleteSecrets() {
-    every { metricClient.count(any(), any()) } returns Unit
-    every { metricClient.count(any(), any(), any()) } returns Unit
+    every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
     val secret = "test-secret"
-    val coordinate = "existing_coordinate_v1"
-    secretPersistence.write(SecretCoordinate.fromFullCoordinate(coordinate), secret)
+    val coordinate = "airbyte_existing_coordinate_v1"
+    secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(coordinate)!!, secret)
     val config = injectCoordinate(coordinate)
     secretsRepositoryWriter.deleteFromConfig(
       config,
-      SPEC.connectionSpecification,
       null,
     )
-    verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(coordinate)) }
-    assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(coordinate)))
+    verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(coordinate)!!) }
+    assertEquals("", secretPersistence.read(AirbyteManagedSecretCoordinate.fromFullCoordinate(coordinate)!!))
     verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
   }
 
@@ -74,16 +70,15 @@ internal class SecretsRepositoryWriterTest {
   inner class TestUpdateSecrets {
     @BeforeEach
     fun setup() {
-      every { metricClient.count(any(), any()) } returns Unit
-      every { metricClient.count(any(), any(), any()) } returns Unit
-      every { featureFlagClient.boolVariation(any(), any()) } returns true
+      every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
+      every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
     }
 
     @Test
     fun testUpdateSecretSameValueShouldWriteNewCoordinateAndDelete() {
       val secret = "secret-1"
-      val oldCoordinate = "existing_coordinate_v1"
-      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), secret)
+      val oldCoordinate = "airbyte_existing_coordinate_v1"
+      secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!, secret)
 
       val updatedFullConfigNoSecretChange =
         Jsons.deserialize(
@@ -94,7 +89,7 @@ internal class SecretsRepositoryWriterTest {
 
       val oldPartialConfig = injectCoordinate(oldCoordinate)
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigNoSecretChange,
@@ -102,7 +97,7 @@ internal class SecretsRepositoryWriterTest {
           null,
         )
 
-      val newCoordinate = "existing_coordinate_v2"
+      val newCoordinate = "airbyte_existing_coordinate_v2"
       val expPartialConfig =
         Jsons.deserialize(
           """
@@ -111,19 +106,43 @@ internal class SecretsRepositoryWriterTest {
         )
       assertEquals(expPartialConfig, updatedPartialConfig)
 
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), secret) }
-      assertEquals(secret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
+      verify(exactly = 1) { secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate)!!, secret) }
+      assertEquals(secret, secretPersistence.read(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate)!!))
       verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-      verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
-      assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
+      verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!) }
+      assertEquals("", secretPersistence.read(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!))
       verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
     }
 
     @Test
+    fun testUpdateConfigWithNewSecret() {
+      val secret = "secret-1"
+      val oldCoordinate = "airbyte_existing_coordinate_v1"
+      secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!, secret)
+
+      val oldPartialConfig = injectCoordinate(oldCoordinate)
+      val newConfig = Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": \"$secret\", \"password2\": \"$secret\"}")
+
+      val customSecretPrefix = "custom_secret_"
+
+      val updatedPartialConfig =
+        secretsRepositoryWriter.updateFromConfigLegacy(
+          WORKSPACE_ID,
+          oldPartialConfig,
+          newConfig,
+          SPEC_WITH_NEW_SECRET.connectionSpecification,
+          null,
+          customSecretPrefix,
+        )
+
+      Assertions.assertTrue(updatedPartialConfig["password2"]["_secret"].asText().startsWith("airbyte_$customSecretPrefix"))
+    }
+
+    @Test
     fun testUpdateSecretNewValueShouldWriteNewCoordinateAndDelete() {
-      val oldCoordinate = "existing_coordinate_v1"
-      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate), "secret-1")
+      val oldCoordinate = "airbyte_existing_coordinate_v1"
+      secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!, "secret-1")
 
       val newSecret = "secret-2"
       val updatedFullConfigSecretChange =
@@ -135,7 +154,7 @@ internal class SecretsRepositoryWriterTest {
 
       val oldPartialConfig = injectCoordinate(oldCoordinate)
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigSecretChange,
@@ -143,7 +162,7 @@ internal class SecretsRepositoryWriterTest {
           null,
         )
 
-      val newCoordinate = "existing_coordinate_v2"
+      val newCoordinate = "airbyte_existing_coordinate_v2"
       val expPartialConfig =
         Jsons.deserialize(
           """
@@ -152,12 +171,12 @@ internal class SecretsRepositoryWriterTest {
         )
       assertEquals(expPartialConfig, updatedPartialConfig)
 
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), newSecret) }
-      assertEquals(newSecret, secretPersistence.read(SecretCoordinate.fromFullCoordinate(newCoordinate)))
+      verify(exactly = 1) { secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate)!!, newSecret) }
+      assertEquals(newSecret, secretPersistence.read(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate)!!))
       verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-      verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
-      assertEquals("", secretPersistence.read(SecretCoordinate.fromFullCoordinate(oldCoordinate)))
+      verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!) }
+      assertEquals("", secretPersistence.read(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!))
       verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
     }
 
@@ -169,12 +188,12 @@ internal class SecretsRepositoryWriterTest {
           { "properties": { "username": { "type": "string" }, "credentials": { "type" : "object", "properties" : { "client_id": { "type": "string", "airbyte_secret": true }, "password": { "type": "string", "airbyte_secret": true } } } } }  
           """.trimIndent(),
         )
-      val oldCoordinate1 = "existing-coordinate-0_v1"
+      val oldCoordinate1 = "airbyte_existing-coordinate-0_v1"
       val oldSecret1 = "abc"
-      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate1), oldSecret1)
-      val oldCoordinate2 = "existing-coordinate-1_v1"
+      secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate1)!!, oldSecret1)
+      val oldCoordinate2 = "airbyte_existing-coordinate-1_v1"
       val oldSecret2 = "def"
-      secretPersistence.write(SecretCoordinate.fromFullCoordinate(oldCoordinate2), oldSecret2)
+      secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate2)!!, oldSecret2)
       val oldPartialConfig =
         Jsons.deserialize(
           """
@@ -191,7 +210,7 @@ internal class SecretsRepositoryWriterTest {
         )
 
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           newFullConfig,
@@ -199,8 +218,8 @@ internal class SecretsRepositoryWriterTest {
           null,
         )
 
-      val newCoordinate1 = "existing-coordinate-0_v2"
-      val newCoordinate2 = "existing-coordinate-1_v2"
+      val newCoordinate1 = "airbyte_existing-coordinate-0_v2"
+      val newCoordinate2 = "airbyte_existing-coordinate-1_v2"
       val expPartialConfig =
         Jsons.deserialize(
           """
@@ -209,13 +228,13 @@ internal class SecretsRepositoryWriterTest {
         )
       assertEquals(expPartialConfig, updatedPartialConfig)
 
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate1), oldSecret1) }
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate2), newSecret) }
+      verify(exactly = 1) { secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate1)!!, oldSecret1) }
+      verify(exactly = 1) { secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate2)!!, newSecret) }
       verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
       verify { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-      verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate1)) }
-      verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate2)) }
+      verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate1)!!) }
+      verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate2)!!) }
       verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
       verify { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "true")) }
     }
@@ -227,14 +246,13 @@ internal class SecretsRepositoryWriterTest {
         SecretsRepositoryWriter(
           secretPersistence,
           metricClient,
-          featureFlagClient,
         )
 
       every { secretPersistence.write(any(), any()) } returns Unit
       every { secretPersistence.read(any()) } returns "something"
       every { secretPersistence.delete(any()) } throws RuntimeException("disable error")
 
-      val oldCoordinate = "existing_coordinate_v1"
+      val oldCoordinate = "airbyte_existing_coordinate_v1"
       val oldPartialConfig = injectCoordinate(oldCoordinate)
 
       val newSecret = "secret-2"
@@ -246,7 +264,7 @@ internal class SecretsRepositoryWriterTest {
         )
 
       assertDoesNotThrow {
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigSecretChange,
@@ -256,11 +274,11 @@ internal class SecretsRepositoryWriterTest {
       }
 
       // The new secret should still be written, despite the disable error.
-      val newCoordinate = "existing_coordinate_v2"
-      verify(exactly = 1) { secretPersistence.write(SecretCoordinate.fromFullCoordinate(newCoordinate), newSecret) }
+      val newCoordinate = "airbyte_existing_coordinate_v2"
+      verify(exactly = 1) { secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(newCoordinate)!!, newSecret) }
       verify(exactly = 1) { metricClient.count(OssMetricsRegistry.UPDATE_SECRET_DEFAULT_STORE, 1) }
 
-      verify(exactly = 1) { secretPersistence.delete(SecretCoordinate.fromFullCoordinate(oldCoordinate)) }
+      verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!) }
       // No metric is emitted because we were not successful.
       verify(exactly = 1) { metricClient.count(OssMetricsRegistry.DELETE_SECRET_DEFAULT_STORE, 1, MetricAttribute(MetricTags.SUCCESS, "false")) }
     }
@@ -391,9 +409,7 @@ internal class SecretsRepositoryWriterTest {
 //  }
 
   // this only works if the secrets store has one secret.
-  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate {
-    return secretPersistence.map.keys.first()
-  }
+  private fun getCoordinateFromSecretsStore(secretPersistence: MemorySecretPersistence): SecretCoordinate = secretPersistence.map.keys.first()
 
 //  @Test
 //  @Throws(JsonValidationException::class, IOException::class)
@@ -446,6 +462,15 @@ internal class SecretsRepositoryWriterTest {
             """.trimIndent(),
           ),
         )
+    private val SPEC_WITH_NEW_SECRET =
+      ConnectorSpecification()
+        .withConnectionSpecification(
+          Jsons.deserialize(
+            """
+            { "properties": { "username": { "type": "string" }, "password": { "type": "string", "airbyte_secret": true }, "password2": { "type": "string", "airbyte_secret": true } } }
+            """.trimIndent(),
+          ),
+        )
     private const val SECRET = "abc"
     private val FULL_CONFIG =
       Jsons.deserialize(
@@ -473,8 +498,7 @@ internal class SecretsRepositoryWriterTest {
     private const val TEST_WEBHOOK_NAME = "test-webhook-name"
     private const val TEST_AUTH_TOKEN = "test-auth-token"
 
-    private fun injectCoordinate(coordinate: String): JsonNode {
-      return Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
-    }
+    private fun injectCoordinate(coordinate: String): JsonNode =
+      Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"$coordinate\" } }")
   }
 }

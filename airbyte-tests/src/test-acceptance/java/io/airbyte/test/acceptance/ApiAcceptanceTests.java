@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.DestinationDefinitionSpecificationRead;
@@ -27,8 +26,6 @@ import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.SyncMode;
-import io.airbyte.commons.json.Jsons;
-import io.airbyte.db.jdbc.JdbcUtils;
 import io.airbyte.test.utils.AcceptanceTestHarness;
 import io.airbyte.test.utils.TestConnectionCreate;
 import io.micronaut.http.HttpStatus;
@@ -48,14 +45,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class tests api functionality.
- * <p>
- * Due to the number of tests here, this set runs only on the docker deployment for speed. The tests
- * here are disabled for Kubernetes as operations take much longer due to Kubernetes pod spin up
- * times and there is little value in re-running these tests since this part of the system does not
- * vary between deployments.
- * <p>
- * We order tests such that earlier tests test more basic behavior relied upon in later tests. e.g.
- * We test that we can create a destination before we test whether we can sync data to it.
  */
 @SuppressWarnings({"PMD.JUnitTestsShouldIncludeAssert", "SqlDialectInspection", "SqlNoDataSourceInspection",
   "PMD.AvoidDuplicateLiterals"})
@@ -144,21 +133,53 @@ class ApiAcceptanceTests {
   @DisabledIfEnvironmentVariable(named = IS_GKE,
                                  matches = TRUE,
                                  disabledReason = DUPLICATE_TEST_IN_GKE)
+  void testUpdateDestination() throws IOException {
+    final UUID destinationDefId = testHarness.getPostgresDestinationDefinitionId();
+    final JsonNode destinationConfig = testHarness.getDestinationDbConfig();
+    final String name = "AccTestDestinationDb-" + UUID.randomUUID();
+
+    final DestinationRead createdDestination = testHarness.createDestination(
+        name,
+        workspaceId,
+        destinationDefId,
+        destinationConfig);
+    final var expectedConfig = testHarness.getDestinationDbConfigWithHiddenPassword();
+    final var configKeys = List.of("schema", "password", "database", "port", "host", "ssl", "username");
+
+    final DestinationRead updatedDestination = testHarness.updateDestination(
+        createdDestination.getDestinationId(),
+        expectedConfig,
+        name + "-updated");
+
+    assertEquals(name + "-updated", updatedDestination.getName());
+    assertEquals(destinationDefId, updatedDestination.getDestinationDefinitionId());
+    assertEquals(workspaceId, updatedDestination.getWorkspaceId());
+    configKeys.forEach((key) -> {
+      if (expectedConfig.get(key).isNumber()) {
+        assertEquals(expectedConfig.get(key).asInt(), updatedDestination.getConnectionConfiguration().get(key).asInt());
+      } else {
+        assertEquals(expectedConfig.get(key).asText(), updatedDestination.getConnectionConfiguration().get(key).asText());
+      }
+    });
+  }
+
+  @Test
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DUPLICATE_TEST_IN_GKE)
   void testCreateSource() throws IOException {
     final String dbName = "acc-test-db";
     final UUID postgresSourceDefinitionId = testHarness.getPostgresSourceDefinitionId();
     final JsonNode sourceDbConfig = testHarness.getSourceDbConfig();
+
     final SourceRead response = testHarness.createSource(
         dbName,
         workspaceId,
         postgresSourceDefinitionId,
         sourceDbConfig);
-
-    final var expectedConfig = Jsons.jsonNode(sourceDbConfig);
+    final var expectedConfig = testHarness.getSourceDbConfigWithHiddenPassword();
     final var configKeys = List.of("password", "database", "port", "host", "ssl", "username");
 
-    // expect replacement of secret with magic string.
-    ((ObjectNode) expectedConfig).put(JdbcUtils.PASSWORD_KEY, "**********");
     assertEquals(dbName, response.getName());
     assertEquals(workspaceId, response.getWorkspaceId());
     assertEquals(postgresSourceDefinitionId, response.getSourceDefinitionId());
@@ -167,6 +188,40 @@ class ApiAcceptanceTests {
         assertEquals(expectedConfig.get(key).asInt(), response.getConnectionConfiguration().get(key).asInt());
       } else {
         assertEquals(expectedConfig.get(key).asText(), response.getConnectionConfiguration().get(key).asText());
+      }
+    });
+  }
+
+  @Test
+  @DisabledIfEnvironmentVariable(named = IS_GKE,
+                                 matches = TRUE,
+                                 disabledReason = DUPLICATE_TEST_IN_GKE)
+  void testUpdateSource() throws IOException {
+    final String dbName = "acc-test-db";
+    final UUID postgresSourceDefinitionId = testHarness.getPostgresSourceDefinitionId();
+    final JsonNode sourceDbConfig = testHarness.getSourceDbConfig();
+
+    final SourceRead response = testHarness.createSource(
+        dbName,
+        workspaceId,
+        postgresSourceDefinitionId,
+        sourceDbConfig);
+    final var expectedConfig = testHarness.getSourceDbConfigWithHiddenPassword();
+    final var configKeys = List.of("password", "database", "port", "host", "ssl", "username");
+
+    final SourceRead updateResponse = testHarness.updateSource(
+        response.getSourceId(),
+        expectedConfig,
+        dbName + "-updated");
+
+    assertEquals(dbName + "-updated", updateResponse.getName());
+    assertEquals(workspaceId, updateResponse.getWorkspaceId());
+    assertEquals(postgresSourceDefinitionId, updateResponse.getSourceDefinitionId());
+    configKeys.forEach((key) -> {
+      if (expectedConfig.get(key).isNumber()) {
+        assertEquals(expectedConfig.get(key).asInt(), updateResponse.getConnectionConfiguration().get(key).asInt());
+      } else {
+        assertEquals(expectedConfig.get(key).asText(), updateResponse.getConnectionConfiguration().get(key).asText());
       }
     });
   }

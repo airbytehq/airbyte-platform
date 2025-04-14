@@ -6,9 +6,6 @@ package io.airbyte.workload.auth
 
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
-import io.micronaut.security.authentication.AuthenticationException
-import io.micronaut.security.authentication.AuthenticationFailed
-import io.micronaut.security.authentication.AuthenticationFailureReason
 import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import org.reactivestreams.Publisher
@@ -65,10 +62,10 @@ class WorkloadTokenValidatorTest {
         httpRequest,
       )
 
+    // Passes to the next step without emitting anything.
     StepVerifier
       .create(responsePublisher)
-      .expectErrorMatches { t: Throwable -> matchUnsuccessfulResponse(t) }
-      .verify()
+      .verifyComplete()
   }
 
   @Test
@@ -97,8 +94,4 @@ class WorkloadTokenValidatorTest {
   }
 
   private fun matchSuccessfulResponse(authentication: Authentication): Boolean = authentication.name == WorkloadTokenValidator.WORKLOAD_API_USER
-
-  private fun matchUnsuccessfulResponse(t: Throwable): Boolean =
-    t::class == AuthenticationException::class &&
-      t.message == AuthenticationFailed(AuthenticationFailureReason.CREDENTIALS_DO_NOT_MATCH).message.get()
 }

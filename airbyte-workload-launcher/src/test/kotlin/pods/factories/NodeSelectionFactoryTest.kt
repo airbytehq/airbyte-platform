@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package pods.factories
 
 import io.airbyte.featureflag.AllowSpotInstances
@@ -35,7 +39,7 @@ class NodeSelectionFactoryTest {
     val nodeSelectionFactory = Fixtures.createNodeSelectionFactory(featureFlagClient = featureFlagClient)
     val nodeSelectors = mapOf("label" to "value")
 
-    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors, mapOf())
+    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors)
 
     assertEquals(Fixtures.defaultTolerations, nodeSelection.tolerations)
     assertEquals(nodeSelectors, nodeSelection.nodeSelectors)

@@ -1,18 +1,22 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.PlaneName
-import io.airbyte.featureflag.UseCustomK8sInitCheck
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import dev.failsafe.function.CheckedSupplier
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.FABRIC8_COMPLETED_REASON_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_COMPLETED_VALUE
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.KUBECTL_PHASE_FIELD_NAME
 import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.MAX_DELETION_TIMEOUT
+import io.airbyte.workload.launcher.pods.KubePodLauncher.Constants.VALID_INIT_CONTAINER_EXIT_CODES
 import io.fabric8.kubernetes.api.model.ContainerState
 import io.fabric8.kubernetes.api.model.DeletionPropagation
 import io.fabric8.kubernetes.api.model.Pod
@@ -24,7 +28,6 @@ import io.fabric8.kubernetes.client.dsl.PodResource
 import io.fabric8.kubernetes.client.readiness.Readiness
 import io.fabric8.kubernetes.client.utils.PodStatusUtil
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -44,31 +47,23 @@ class KubePodLauncher(
   private val metricClient: MetricClient,
   @Value("\${airbyte.worker.job.kube.namespace}") private val namespace: String?,
   @Named("kubernetesClientRetryPolicy") private val kubernetesClientRetryPolicy: RetryPolicy<Any>,
-  private val featureFlagClient: FeatureFlagClient,
-  @Property(name = "airbyte.data-plane-name") private val dataPlaneName: String?,
 ) {
-  fun create(pod: Pod): Pod {
-    return runKubeCommand(
+  fun create(pod: Pod): Pod =
+    runKubeCommand(
       {
-        kubernetesClient.pods()
+        kubernetesClient
+          .pods()
           .inNamespace(namespace)
           .resource(pod)
           .serverSideApply()
       },
       "pod_create",
     )
-  }
 
   fun waitForPodInitStartup(
     pod: Pod,
     waitDuration: Duration,
-  ) {
-    return if (shouldUseCustomK8sInitCheck()) {
-      waitForPodInitCustomCheck(pod, waitDuration)
-    } else {
-      waitForPodInitDefaultCheck(pod, waitDuration)
-    }
-  }
+  ) = waitForPodInit(pod, waitDuration)
 
   fun waitForPodInitComplete(
     pod: Pod,
@@ -83,7 +78,8 @@ class KubePodLauncher(
               { p: Pod? ->
                 p?.let {
                   p.status.initContainerStatuses.isNotEmpty() &&
-                    p.status.initContainerStatuses[0].state.terminated != null
+                    p.status.initContainerStatuses[0]
+                      .state.terminated != null
                 } ?: false
               },
               waitDuration.toMinutes(),
@@ -106,6 +102,10 @@ class KubePodLauncher(
       )
     }
 
+    val initContainerExitCode =
+      initializedPod.status.initContainerStatuses[0]
+        .state.terminated.exitCode
+
     val terminationReason =
       initializedPod
         .status
@@ -114,7 +114,7 @@ class KubePodLauncher(
         .terminated
         .reason
 
-    if (terminationReason != FABRIC8_COMPLETED_REASON_VALUE) {
+    if (terminationReason != FABRIC8_COMPLETED_REASON_VALUE && !VALID_INIT_CONTAINER_EXIT_CODES.contains(initContainerExitCode)) {
       throw RuntimeException(
         "Init container for Pod: ${pod.fullResourceName} did not complete successfully. " +
           "Actual termination reason: $terminationReason.",
@@ -122,34 +122,7 @@ class KubePodLauncher(
     }
   }
 
-  private fun shouldUseCustomK8sInitCheck() =
-    dataPlaneName.isNullOrBlank() ||
-      featureFlagClient.boolVariation(
-        UseCustomK8sInitCheck,
-        PlaneName(dataPlaneName),
-      )
-
-  private fun waitForPodInitDefaultCheck(
-    pod: Pod,
-    waitDuration: Duration,
-  ) {
-    runKubeCommand(
-      {
-        kubernetesClient
-          .resource(pod)
-          .waitUntilCondition(
-            { p: Pod ->
-              PodStatusUtil.isInitializing(p)
-            },
-            waitDuration.toMinutes(),
-            TimeUnit.MINUTES,
-          )
-      },
-      "wait",
-    )
-  }
-
-  private fun waitForPodInitCustomCheck(
+  private fun waitForPodInit(
     pod: Pod,
     waitDuration: Duration,
   ) {
@@ -162,7 +135,8 @@ class KubePodLauncher(
               { p: Pod ->
                 (
                   p.status.initContainerStatuses.isNotEmpty() &&
-                    p.status.initContainerStatuses[0].state.waiting == null
+                    p.status.initContainerStatuses[0]
+                      .state.waiting == null
                 )
               },
               waitDuration.toMinutes(),
@@ -192,7 +166,8 @@ class KubePodLauncher(
   ) {
     runKubeCommand(
       {
-        kubernetesClient.pods()
+        kubernetesClient
+          .pods()
           .inNamespace(namespace)
           .withLabels(labels)
           .waitUntilCondition(
@@ -233,7 +208,8 @@ class KubePodLauncher(
     try {
       return runKubeCommand(
         {
-          kubernetesClient.pods()
+          kubernetesClient
+            .pods()
             .inNamespace(namespace)
             .withLabels(labels)
             .list()
@@ -259,7 +235,8 @@ class KubePodLauncher(
             .list()
             .items
             .flatMap { p ->
-              kubernetesClient.pods()
+              kubernetesClient
+                .pods()
                 .inNamespace(namespace)
                 .resource(p)
                 .withPropagationPolicy(DeletionPropagation.FOREGROUND)
@@ -288,6 +265,15 @@ class KubePodLauncher(
       return false
     }
 
+    // Edge case of the init container exiting with specific error codes
+    // Those are configuration related errors that cause the main container to never start however, we did not fail
+    // because the launch was a success from a workload-infra pov
+    if (pod.status.initContainerStatuses[0]
+        .state.terminated.exitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE
+    ) {
+      return true
+    }
+
     // Get statuses for all "non-init" containers.
     val mainContainerStatuses =
       pod.status
@@ -308,7 +294,8 @@ class KubePodLauncher(
   }
 
   private fun listActivePods(labels: Map<String, String>): FilterWatchListDeletable<Pod, PodList, PodResource> {
-    return kubernetesClient.pods()
+    return kubernetesClient
+      .pods()
       .inNamespace(namespace)
       .withLabels(labels)
       .withoutField(KUBECTL_PHASE_FIELD_NAME, KUBECTL_COMPLETED_VALUE) // filters out completed pods
@@ -319,11 +306,15 @@ class KubePodLauncher(
     commandName: String,
   ): T {
     try {
-      return Failsafe.with(kubernetesClientRetryPolicy).get { -> kubeCommand() }
+      return Failsafe.with(kubernetesClientRetryPolicy).get(
+        object : CheckedSupplier<T> {
+          override fun get(): T = kubeCommand()
+        },
+      )
     } catch (e: Exception) {
       val attributes: List<MetricAttribute> = listOf(MetricAttribute("operation", commandName))
       val attributesArray = attributes.toTypedArray<MetricAttribute>()
-      metricClient.count(OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, 1, *attributesArray)
+      metricClient.count(metric = OssMetricsRegistry.WORKLOAD_LAUNCHER_KUBE_ERROR, attributes = attributesArray)
 
       throw e
     }
@@ -333,10 +324,17 @@ class KubePodLauncher(
     // Wait why is this named like this?
     // Explanation: Kubectl displays "Completed" but the selector expects "Succeeded"
     const val KUBECTL_COMPLETED_VALUE = "Succeeded"
+    const val KUBECTL_RUNNING_VALUE = "Running"
 
     // Explanation: Unlike Kubectl, Fabric8 shows and uses "Completed" for termination reasons
     const val FABRIC8_COMPLETED_REASON_VALUE = "Completed"
     const val KUBECTL_PHASE_FIELD_NAME = "status.phase"
     const val MAX_DELETION_TIMEOUT = 45L
+
+    val VALID_INIT_CONTAINER_EXIT_CODES =
+      setOf(
+        InitContainerConstants.SUCCESS_EXIT_CODE,
+        InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE,
+      )
   }
 }

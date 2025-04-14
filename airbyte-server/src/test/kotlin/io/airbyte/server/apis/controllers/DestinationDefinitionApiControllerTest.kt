@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope
@@ -88,7 +89,7 @@ internal class DestinationDefinitionApiControllerTest {
 
   @Test
   fun testGetDestinationDefinition() {
-    every { destinationDefinitionsHandler.getDestinationDefinition(any()) } returns DestinationDefinitionRead() andThenThrows
+    every { destinationDefinitionsHandler.getDestinationDefinition(any(), any()) } returns DestinationDefinitionRead() andThenThrows
       ConfigNotFoundException("", "")
 
     val path = "/api/v1/destination_definitions/get"

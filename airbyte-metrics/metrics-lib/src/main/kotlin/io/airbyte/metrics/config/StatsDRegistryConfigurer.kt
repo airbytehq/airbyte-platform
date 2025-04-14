@@ -4,15 +4,17 @@
 
 package io.airbyte.metrics.config
 
-import io.github.oshai.kotlinlogging.KotlinLogging
+import io.airbyte.commons.version.AirbyteVersion
 import io.micrometer.statsd.StatsdMeterRegistry
+import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Value
 import io.micronaut.core.annotation.Order
 import io.micronaut.core.order.Ordered
-import io.micronaut.core.util.StringUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
-private val logger = KotlinLogging.logger {}
+const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
+const val DATA_DOG_VERSION_TAG = "DD_VERSION"
 
 /**
  * Custom Micronaut {@link MeterRegistryConfigurer} used to ensure that a common set of tags are
@@ -24,53 +26,23 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 @Named("statsDRegistryConfigurer")
 @io.micronaut.configuration.metrics.annotation.RequiresMetrics
-class StatsDRegistryConfigurer :
-  io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer<StatsdMeterRegistry>,
+@Requires(property = "micronaut.metrics.export.statsd.enabled", value = "true", defaultValue = "false")
+class StatsDRegistryConfigurer(
+  @Value("\${micronaut.application.name}") private val applicationName: String,
+  private val airbyteVersion: AirbyteVersion,
+) : io.micronaut.configuration.metrics.aggregator.MeterRegistryConfigurer<StatsdMeterRegistry>,
   Ordered {
   override fun configure(meterRegistry: StatsdMeterRegistry?) {
-    meterRegistry?.let { registry ->
-      /*
-       * Use a LinkedHashSet to maintain order as items are added to the set. This ensures that the items
-       * are output as key1, value1, key2, value2, etc. in order to maintain the relationship between key
-       * value pairs.
-       */
-      val tags: MutableSet<String> = LinkedHashSet()
+    val serviceName = System.getenv().getOrDefault(DATA_DOG_SERVICE_TAG, applicationName)
+    val version = System.getenv().getOrDefault(DATA_DOG_VERSION_TAG, airbyteVersion.serialize())
 
-      possiblyAddTag(DATA_DOG_SERVICE_TAG, "service", tags)
-      possiblyAddTag(DATA_DOG_VERSION_TAG, "version", tags)
-
-      logger.debug { "Adding common tags to the StatsD Micrometer meter registry configuration: $tags" }
-
-      registry.config().commonTags(*tags.toTypedArray())
-    }
+    meterRegistry?.config()?.commonTags(
+      SERVICE_TAG,
+      serviceName,
+      VERSION_TAG,
+      version,
+    )
   }
 
-  override fun getType(): Class<StatsdMeterRegistry> {
-    return StatsdMeterRegistry::class.java
-  }
-
-  /**
-   * Safely adds the value associated with the provided environment variable if it exists and is not
-   * blank.
-   *
-   * @param envVar The name of the environment variable.
-   * @param tagName The name of the tag to add to the set if the environment variable is not blank.
-   * @param tags The set of tags.
-   */
-  private fun possiblyAddTag(
-    envVar: String,
-    tagName: String,
-    tags: MutableSet<String>,
-  ) {
-    val envVarValue = System.getenv(envVar)
-    if (StringUtils.isNotEmpty(envVarValue)) {
-      tags.add(tagName)
-      tags.add(envVarValue)
-    }
-  }
-
-  companion object {
-    const val DATA_DOG_SERVICE_TAG = "DD_SERVICE"
-    const val DATA_DOG_VERSION_TAG = "DD_VERSION"
-  }
+  override fun getType(): Class<StatsdMeterRegistry> = StatsdMeterRegistry::class.java
 }

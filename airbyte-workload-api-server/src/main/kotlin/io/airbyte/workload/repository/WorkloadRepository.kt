@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.repository
 
 import io.airbyte.workload.repository.domain.Workload
@@ -68,6 +72,31 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     @Expandable types: List<WorkloadType>?,
     createdBefore: OffsetDateTime?,
   ): List<Workload>
+
+  /**
+   * Claim transitions a workload into a claimed state and updates the deadline if the workload was pending.
+   * Claim returns the workload if it is in a valid claimed status by the dataplane (either from this call or if it was already claimed).
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       dataplane_id = :dataplaneId,
+       status = 'claimed',
+       deadline = case
+                    when status = 'pending' then :deadline
+                    else deadline
+                  end,
+       updated_at = now()
+      WHERE id = :id AND (status = 'pending' OR (status = 'claimed' AND dataplane_id = :dataplaneId))
+      RETURNING *
+    """,
+  )
+  fun claim(
+    @Id id: String,
+    dataplaneId: String,
+    deadline: OffsetDateTime,
+  ): Workload?
 
   fun update(
     @Id id: String,

@@ -1,15 +1,31 @@
 global:
   # -- Service Account name override
   serviceAccountName: &service-account-name "airbyte-admin"
-  # -- Deployment mode, whether or not render the default env vars and volumes in deployment spec
-  deploymentMode: "oss"
-  # -- Edition; "community" or "pro"
+  # -- Edition; "community" or "enterprise"
   edition: "community"
+
+  secretName: ""
 
   local: false
 
   cluster:
-    type: "control-plane" # or "data-plane"
+    type: "hybrid" # "control-plane" | "data-plane" | "hybrid"
+    secretName: ""
+
+    controlPlane: 
+      remoteDataPlaneServiceAccounts: {}
+
+      bootstrap:
+        dataPlane:
+          secretName: ""
+          clientIdSecretKey: ""
+          clientSecretSecretKey: ""
+
+    dataPlane:
+      id: "local"
+      controlPlaneAuthEndpoint: ""
+      serviceAccountEmail: ""
+      serviceAccountCredentialsPath: ""
 
   enterprise:
     # -- Secret name where an Airbyte license key is stored
@@ -38,8 +54,6 @@ global:
 
     # -- Admin user configuration
     instanceAdmin:
-      # -- Secret name where the instanceAdmin configuration is stored
-      secretName: "airbyte-auth-secrets"
       # -- The first name of the initial user
       firstName: ""
       # -- The last name of the initial user
@@ -54,10 +68,10 @@ global:
       # -- Secret name where the OIDC configuration is stored
       secretName: ""
       # -- The identity provider type (e.g. oidc)
-      type: "oidc"
+      type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      oidc:
+      oidc: 
         # -- OIDC application domain
         domain: ""
         # -- OIDC application name
@@ -66,6 +80,20 @@ global:
         clientIdSecretKey: ""
         # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
         clientSecretSecretKey: ""
+
+      # -- Generic OIDC configuration (required if `auth.identityProvider.type` is "generic-oidc")
+      genericOidc:
+        clientId: ""
+        audience: ""
+        issuer: ""
+        endpoints:
+          authorizationServerEndpoint: ""
+          jwksEndpoint: ""
+        fields:
+          subject: "sub"
+          email: "email"
+          name: "name"
+          issuer: "iss"
 
     # -- Security configuration
     security:
@@ -76,9 +104,16 @@ global:
 
       jwtSignatureSecretKey: ""
 
+    dataPlane:
+      clientIdSecretKey: ""
+      clientSecretSecretKey: ""
+
   api:
     authHeaderName: "X-Airbyte-Auth"
     
+  cloudApi:
+    url: ""
+
   # -- Environment variables
   env_vars: {}
 
@@ -121,16 +156,14 @@ global:
       minimumFlywayMigrationVersion: ""
 
   storage:
+    secretName: ""
     # -- The storage backend type. Supports s3, gcs, azure, minio (default)
     type: minio # default storage used
-    # -- Secret name where storage provider credentials are stored
-    #storageSecretName: "airbyte-config-secrets"
 
     # Minio
     minio:
       accessKeyId: minio 
       secretAccessKey: "minio123"
-      endpoint: "http://airbyte-minio-svc:9000"
 
     bucket: 
       log: airbyte-bucket
@@ -148,7 +181,8 @@ global:
     # GCS
     #gcs:
     #  projectId: <project-id>
-    #  credentialsJson: /secrets/gcs-log-creds/gcp.json
+    #  credentialsJson:  <base64-encoded>
+    #  credentialsJsonPath: /secrets/gcs-log-creds/gcp.json
 
     # Azure
     #azure:
@@ -191,39 +225,28 @@ global:
     httpAccessLogsEnabled: false
     log4jConfigFile: ""
 
-  email:
-    enabled: false
-    secretName: ""
-    client: "" # one of: sengrid
-
-    sendgrid:
-      apiKey: ""
-      apiKeySecretKey: ""
-
   connectorRegistry:
     seedProvider: "local"
 
   workloads:
     secretName: ""
+    namespace: "jobs"
 
     images:
       workloadInit: ""
       connectorSideCar: ""
       containerOrchestrator: ""
 
-    api:
-      bearerToken: "token"
-      bearerTokenSecretName: ""
-      bearerTokenSecretKey: ""
-
     containerOrchestrator:
-      javaOpts: []
-      secretMountPath: ""
+      secretName: ""
+      dataPlane:
+        secretName: ""
+        secretMountPath: ""
 
     queues:
-      check: []
-      discover: []
-      sync: []
+      check: [CHECK_CONNECTION]
+      discover: [DISCOVER_SCHEMA]
+      sync: [SYNC]
 
     pubSub:
       enabled: false
@@ -266,12 +289,19 @@ global:
     opts: []
 
   metrics:
-    # -- The metric client to configure globally. Supports "otel"
-    metricClient: ""
+    enabled: "false"
+    step: ""
 
-    micrometer:
-      enabled: false
-      statsdFlavor: "datadog" # datadog
+    otlp:
+      enabled: "false"
+      # -- The open-telemetry-collector endpoint that metrics will be sent to
+      collectorEndpoint: ""
+
+    statsd:
+      enabled: "false"
+      flavor: ""
+      host: ""
+      port: ""
 
     otel:
       resourceAttributes: {}
@@ -285,10 +315,6 @@ global:
         timeout: "30000"
         metricExportInterval: "10000"
     
-    statsd:
-      host: ""
-      port: ""
-
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -331,10 +357,16 @@ global:
 
       ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       # -- image pull secret to use for job pod
-      main_container_image_pull_secret: ""
+      mainContainerImagePullSecret: ""
 
       localVolume:
         enabled: false
+
+    errors:
+      reportingStrategy: "logging" 
+
+      #sentry:
+      #  dsn: ""
 
   topology:
     nodeSelectorLabel: "airbyte/node-pool"
@@ -447,6 +479,8 @@ webapp:
   # -- Number of webapp replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   ##  webapp.image.repository
   ##  webapp.image.pullPolicy
   ##  webapp.image.tag The airbyte webapp image tag. Defaults to the chart's AppVersion
@@ -455,6 +489,8 @@ webapp:
     repository: airbyte/webapp
     # -- The pull policy to use for the airbyte webapp image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the webapp pods
   podAnnotations: {}
@@ -668,123 +704,6 @@ webapp:
   # -- Supply extra env variables to main container using simplified notation
   env_vars: {}
 
-## @section Pod Sweeper parameters
-
-podSweeper:
-  enabled: true
-  image:
-    # -- The image repository to use for the pod sweeper
-    repository: airbyte/pod-sweeper
-    # -- The pull policy for the pod sweeper image
-    pullPolicy: IfNotPresent
-
-  replicaCount: 1
-
-  # -- Add extra annotations to the podSweeper pod
-  podAnnotations: {}
-
-  # -- Add extra labels to the podSweeper pod
-  podLabels: {}
-
-  # -- Security context for the container
-  podSecurityContext:
-    fsGroup: 1000
-
-  containerSecurityContext:
-    allowPrivilegeEscalation: false 
-    runAsNonRoot: true
-    runAsUser: 1000
-    runAsGroup: 1000
-    readOnlyRootFilesystem: false
-    capabilities:
-      drop: ["ALL"]
-    seccompProfile:
-      type: RuntimeDefault
-
-  livenessProbe:
-    # -- Enable livenessProbe on the podSweeper
-    enabled: true
-    # -- Initial delay seconds for livenessProbe
-    initialDelaySeconds: 5
-    # -- Period seconds for livenessProbe
-    periodSeconds: 30
-    # -- Timeout seconds for livenessProbe
-    timeoutSeconds: 1
-    # -- Failure threshold for livenessProbe
-    failureThreshold: 3
-    # -- Success threshold for livenessProbe
-    successThreshold: 1
-
-  readinessProbe:
-    # -- Enable readinessProbe on the podSweeper
-    enabled: true
-    # -- Initial delay seconds for readinessProbe
-    initialDelaySeconds: 5
-    # -- Period seconds for readinessProbe
-    periodSeconds: 30
-    # -- Timeout seconds for readinessProbe
-    timeoutSeconds: 1
-    # -- Failure threshold for readinessProbe
-    failureThreshold: 3
-    # -- Success threshold for readinessProbe
-    successThreshold: 1
-
-  ## Pod Sweeper app resource requests and limits
-  ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
-  ## We usually recommend not to specify default resources and to leave this as a conscious
-  ## choice for the user. This also increases chances charts run on environments with little
-  ## resources, such as Minikube. If you do want to specify resources, uncomment the following
-  ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  resources:
-    ## Example:
-    ## limits:
-    ##    cpu: 200m
-    ##    memory: 1Gi
-    # -- The resources limits for the podSweeper container
-    limits: {}
-    ## Examples:
-    ## requests:
-    ##    memory: 256Mi
-    ##    cpu: 250m
-    # -- The requested resources for the podSweeper container
-    requests: {}
-
-  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
-  nodeSelector: {}
-
-  # -- Tolerations for pod assignment, see https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
-  tolerations: []
-
-  # -- Affinity and anti-affinity for pod assignment, see https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
-  affinity: {}
-
-  ## Examples:
-  ## extraVolumeMounts:
-  ##   - name: tmpdir
-  ##     mountPath: /tmp
-  # -- Additional volumeMounts for podSweeper container(s).
-  extraVolumeMounts: []
-
-  ## Examples:
-  ## extraVolumes:
-  ##   - name: tmpdir
-  ##     emptyDir: {}
-  # -- Additional volumes for podSweeper pod(s).
-  extraVolumes: []
-
-  ##  Pod TTLs in minutes
-  ##  pod-sweeper will skip over pods with any status types with no TTL set (empty string)
-  ##  Pod Status docs: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#pod-phase
-  ##
-  ##  podSweeper.timeToDeletePods.running Time to remove pods on running status (minutes).
-  ##  podSweeper.timeToDeletePods.succeeded Time to remove pods on succeeded status (minutes).
-  ##  podSweeper.timeToDeletePods.unsuccessful Time to remove pods on neither running nor succeeded status (minutes).
-  timeToDeletePods:
-    running: ""
-    succeeded: 10
-    ## 2 hours - generally long enough for someone trying to reproduce an error to debug.
-    unsuccessful: 120
-
 ## @section Server parameters
 
 server:
@@ -792,7 +711,11 @@ server:
   # -- Number of server replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   deploymentStrategyType: Recreate
+
+  applications: ""
 
   image:
     # -- The repository to use for the airbyte server image.
@@ -806,6 +729,8 @@ server:
     type: ClusterIP
     port: 8001
     annotations: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the server pods
   podAnnotations: {}
@@ -987,11 +912,15 @@ worker:
   # -- Number of worker replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte worker image.
     repository: airbyte/worker
     # -- the pull policy to use for the airbyte worker image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the worker pods
   podAnnotations: {}
@@ -1128,11 +1057,29 @@ workloadLauncher:
   # -- Number of workload launcher replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte workload launcher image.
     repository: airbyte/workload-launcher
     # -- The pull policy to use for the airbyte workload launcher image
     pullPolicy: IfNotPresent
+
+  controlPlane:
+    tokenEndpoint: ""
+  
+  dataPlane:
+    secretName: ""
+    clientId: ""
+    clientIdSecretName: ""
+    clientIdSecretKey: ""
+    clientSecret: ""
+    clientSecretSecretName: ""
+    clientSecretSecretKey: ""
+
+  env_vars: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the workload launcher pods
   podAnnotations: {}
@@ -1254,6 +1201,9 @@ workloadLauncher:
   containerOrchestrator:
     # -- Enable or disable Orchestrator
     enabled: true
+
+    secretName: ""
+
     # -- Orchestrator image
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/container-orchestrator:{{ default .Chart.AppVersion .Values.global.image.tag }}"
@@ -1267,6 +1217,11 @@ workloadLauncher:
     # -- Workload init image
     # This is a template string that will be passed to the "tpl" helper.
     image: "airbyte/workload-init-container:{{ default .Chart.AppVersion .Values.global.image.tag }}"
+
+  connectorProfiler:
+    # -- Workload init image
+    # This is a template string that will be passed to the "tpl" helper.
+    image: "airbyte/async-profiler:{{ default .Chart.AppVersion .Values.global.image.tag }}"
 
   ## current no exist documentations
   activityMaxAttempt: ""
@@ -1284,11 +1239,15 @@ connectorRolloutWorker:
   # -- Number of connector rollout worker replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte connector rollout worker image.
     repository: airbyte/connector-rollout-worker
     # -- The pull policy to use for the airbyte connector rollout worker image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the connector rollout worker pods
   podAnnotations: {}
@@ -1429,11 +1388,15 @@ metrics:
   # -- Number of metrics-reporter replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte metrics-reporter image.
     repository: airbyte/metrics-reporter
     # -- The pull policy to use for the airbyte metrics-reporter image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the metrics-reporter pod
   podAnnotations: {}
@@ -1521,11 +1484,16 @@ metrics:
 
 airbyteBootloader:
   enabled: true
+
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte bootloader image.
     repository: airbyte/bootloader
     # -- The pull policy to use for the airbyte bootloader image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Add extra annotations to the bootloader pod
   podAnnotations: {}
@@ -1673,6 +1641,8 @@ temporal:
   # -- The number of temporal replicas to deploy
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The temporal image repository to use
     repository: temporalio/auto-setup
@@ -1696,17 +1666,6 @@ temporal:
 
   host: ""
 
-  cli:
-    address: ""
-    namespace: ""
-    tlsCert: ""
-    tlsKey: ""
-
-  cloud: 
-    namespace: 
-    clientCert: ""
-    clientKey: ""
-  
   sdk:
     rpc:
       timeout: "120s"
@@ -1721,6 +1680,11 @@ temporal:
     type: ClusterIP
     # -- The temporal port and exposed kubernetes port
     port: 7233
+
+  prometheus:
+    endpoint: ""
+
+  annotations: {}
 
   # -- Add extra annotations to the temporal pod
   podAnnotations: {}
@@ -1836,6 +1800,8 @@ temporalUi:
   enabled: false
   # -- The number of temporal-ui replicas to deploy
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The temporal-ui image repository to use
@@ -1973,6 +1939,7 @@ postgresql:
   ## image.repository Repository for airbyte-db statefulset
   image:
     repository: airbyte/db
+
   # -- Airbyte Postgresql username
   postgresqlUsername: airbyte
   # -- Airbyte Postgresql password
@@ -2016,6 +1983,7 @@ postgresql:
   affinity: {}
 
 minio:
+  enabled: true
   secretName: ""
 
   image:
@@ -2054,6 +2022,9 @@ cron:
   enabled: true
   # -- Number of cron replicas
   replicaCount: 1
+
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte cron image.
     repository: airbyte/cron
@@ -2068,6 +2039,8 @@ cron:
   ##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
   ##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
   workloadApi: {}
+
+  annotations: {}
 
   # -- Add extra annotations to the cron pods
   podAnnotations: {}
@@ -2240,11 +2213,15 @@ connectorBuilderServer:
   # -- Number of connector-builder-server replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte connector-builder-server image.
     repository: airbyte/connector-builder-server
     # -- The pull policy to use for the airbyte connector-builder-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2337,8 +2314,10 @@ connectorBuilderServer:
     enabled: false
     remoteDebugPort: 5005
 
+  aiAssistUrlBase: ""
+
 keycloak:
-  enabled: true
+  enabled: false
   env_vars: {}
 
   secretName: ""
@@ -2372,6 +2351,8 @@ keycloak:
     adminRealmSecretKey: ""
 
     adminCliClientId: ""
+
+  serviceAccountName:
 
   image:
     repository: airbyte/keycloak
@@ -2469,12 +2450,16 @@ keycloak:
     successThreshold: 1
 
 keycloakSetup:
-  enabled: true
+  enabled: false
   env_vars: {}
+
+  serviceAccountName:
 
   image:
     repository: airbyte/keycloak-setup
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2523,15 +2508,20 @@ workloadApiServer:
   enabled: true
 
   bearerToken: token
+  bearerTokenSecretName: ""
 
   # -- workload-api-server replicas
   replicaCount: 1
+
+  serviceAccountName:
 
   image:
     # -- The repository to use for the airbyte-workload-api-server image.
     repository: airbyte/workload-api-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:
@@ -2617,7 +2607,7 @@ workloadApiServer:
 
   service:
     type: ClusterIP
-    port: 8007
+    port: 8001
     annotations: {}
 
   # Configure the ingress resource that allows you to access the Airbyte Workload API, see http://kubernetes.io/docs/user-guide/ingress/
@@ -2654,11 +2644,15 @@ featureflagServer:
   # -- workload-api-server replicas
   replicaCount: 1
 
+  serviceAccountName:
+
   image:
     # -- The repository to use for the airbyte-workload-api-server image.
     repository: airbyte/featureflag-server
     # -- The pull policy to use for the airbyte-workload-api-server image
     pullPolicy: IfNotPresent
+
+  annotations: {}
 
   # -- Security context for the container
   podSecurityContext:

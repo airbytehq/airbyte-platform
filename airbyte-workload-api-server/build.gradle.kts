@@ -23,8 +23,6 @@ dependencies {
   implementation(libs.micronaut.http)
   implementation(libs.failsafe.okhttp)
   implementation(libs.jakarta.transaction.api)
-  implementation(libs.bundles.temporal)
-  implementation(libs.bundles.temporal.telemetry)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.micronaut.security)
@@ -36,12 +34,11 @@ dependencies {
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
   implementation(libs.bundles.datadog)
-  implementation(libs.jsoup)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
-  implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
@@ -80,7 +77,7 @@ airbyte {
         "SERVICE_NAME" to project.name,
         "TRACKING_STRATEGY" to "logging",
         "WORKLOAD_API_BEARER_TOKEN" to "ItsASecret",
-      )
+      ),
     )
   }
   docker {
@@ -94,7 +91,7 @@ tasks.named<Test>("test") {
       "AIRBYTE_VERSION" to "dev",
       "MICRONAUT_ENVIRONMENTS" to "test",
       "SERVICE_NAME" to project.name,
-    )
+    ),
   )
 }
 

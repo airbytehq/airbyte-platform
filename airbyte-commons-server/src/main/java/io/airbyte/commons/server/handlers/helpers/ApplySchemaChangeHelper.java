@@ -223,7 +223,8 @@ public class ApplySchemaChangeHelper {
       return false;
     }
     return (connectionRead.getNonBreakingChangesPreference() != null
-        && connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.IGNORE));
+        && (connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.IGNORE)
+            || connectionRead.getNonBreakingChangesPreference().equals(NonBreakingChangesPreference.DISABLE)));
   }
 
   public boolean containsChanges(final CatalogDiff diff) {

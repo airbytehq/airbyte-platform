@@ -19,7 +19,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.commons.io)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
@@ -48,7 +47,7 @@ val genConnectorBuilderServerApiClient =
   tasks.register<GenerateTask>("genConnectorBuilderServerApiClient") {
     val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/connectorbuilderserverapi/client"
 
-    inputs.file(connectorBuilderServerSpecFile)
+    inputs.file(connectorBuilderServerSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(clientOutputDir)
 
     generatorName = "kotlin"

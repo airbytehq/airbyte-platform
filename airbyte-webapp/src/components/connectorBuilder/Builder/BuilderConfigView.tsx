@@ -6,7 +6,7 @@ import { Heading } from "components/ui/Heading";
 import styles from "./BuilderConfigView.module.scss";
 
 interface BuilderConfigViewProps {
-  heading: string;
+  heading?: React.ReactNode;
   className?: string;
 }
 
@@ -17,9 +17,11 @@ export const BuilderConfigView: React.FC<React.PropsWithChildren<BuilderConfigVi
 }) => {
   return (
     <div className={classNames(styles.container, className)}>
-      <Heading className={styles.heading} as="h1">
-        {heading}
-      </Heading>
+      {heading && (
+        <Heading className={styles.heading} as="h1">
+          {heading}
+        </Heading>
+      )}
       {children}
     </div>
   );

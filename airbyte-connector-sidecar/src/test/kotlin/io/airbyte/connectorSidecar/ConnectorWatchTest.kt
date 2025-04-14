@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar
 
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
@@ -7,6 +11,7 @@ import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.workers.exception.WorkerException
@@ -75,6 +80,9 @@ class ConnectorWatchTest {
 
   private lateinit var connectorWatcher: ConnectorWatcher
 
+  @MockK
+  private lateinit var metricClient: MetricClient
+
   val workloadId = "workloadId"
 
   val checkInput = StandardCheckConnectionInput().withActorType(ActorType.SOURCE)
@@ -100,6 +108,7 @@ class ConnectorWatchTest {
           jobOutputDocStore,
           logContextFactory,
           heartbeatMonitor,
+          metricClient = metricClient,
         ),
       )
 
@@ -290,5 +299,24 @@ class ConnectorWatchTest {
       heartbeatMonitor.shouldAbort()
       heartbeatMonitor.stopHeartbeatThread()
     }
+  }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `bad doc store should still fail the workload`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+    every { jobOutputDocStore.write(any(), any()) } throws RuntimeException("Unable to Write")
+    every { workloadApi.workloadFailure(any()) } returns Unit
+
+    connectorWatcher.run()
+
+    verify { workloadApi.workloadFailure(any()) }
   }
 }

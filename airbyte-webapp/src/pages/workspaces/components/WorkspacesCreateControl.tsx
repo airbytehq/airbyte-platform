@@ -1,17 +1,8 @@
-/**
- * This should not be used in cloud until:
- * - all cloud users have an org
- * - all cloud users have permissions in configdb
- * - we are able to use the oss create workspace endpoint in cloud
-
- */
-
-import { UseMutateAsyncFunction } from "@tanstack/react-query";
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { useToggle } from "react-use";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -20,29 +11,24 @@ import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { Text } from "components/ui/Text";
 
-import { OrganizationRead, WorkspaceCreate, WorkspaceRead } from "core/api/types/AirbyteClient";
+import { useCreateWorkspace } from "core/api";
+import { OrganizationRead } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 import styles from "./WorkspacesCreateControl.module.scss";
 
-interface CreateWorkspaceFormValues {
-  name: string;
-  organizationId: string;
-}
-
-const OrganizationCreateWorkspaceFormValidationSchema = yup.object().shape({
-  name: yup.string().trim().required("form.empty.error"),
-  organizationId: yup.string().trim().required("form.empty.error"),
+const OrganizationCreateWorkspaceFormValidationSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  organizationId: z.string().trim().nonempty("form.empty.error"),
 });
 
-interface OrganizationWorkspacesCreateControlProps {
-  createWorkspace: UseMutateAsyncFunction<WorkspaceRead, unknown, WorkspaceCreate, unknown>;
-}
+type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
-export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateControlProps> = ({ createWorkspace }) => {
+export const WorkspacesCreateControl: React.FC = () => {
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
+  const { mutateAsync: createWorkspace } = useCreateWorkspace();
 
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
@@ -86,7 +72,7 @@ export const WorkspacesCreateControl: React.FC<OrganizationWorkspacesCreateContr
               name: "",
               organizationId: organizationsToCreateIn[0].organizationId,
             }}
-            schema={OrganizationCreateWorkspaceFormValidationSchema}
+            zodSchema={OrganizationCreateWorkspaceFormValidationSchema}
             onSubmit={onSubmit}
             onSuccess={onSuccess}
             onError={onError}

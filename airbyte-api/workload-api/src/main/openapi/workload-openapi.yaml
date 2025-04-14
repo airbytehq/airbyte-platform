@@ -17,7 +17,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadCancelRequest"
-        required: true
       responses:
         "204":
           description: Success
@@ -44,7 +43,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadClaimRequest"
-        required: true
       responses:
         "200":
           description: "Returns a boolean denoting whether claim was successful. True\
@@ -76,7 +74,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadCreateRequest"
-        required: true
       responses:
         "204":
           description: Successfully created workload
@@ -97,7 +94,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ExpiredDeadlineWorkloadListRequest"
-        required: true
       responses:
         "200":
           description: Success
@@ -116,7 +112,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadFailureRequest"
-        required: true
       responses:
         "204":
           description: Success
@@ -143,7 +138,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadHeartbeatRequest"
-        required: true
       responses:
         "204":
           description: Successfully heartbeated
@@ -171,7 +165,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadLaunchedRequest"
-        required: true
       responses:
         "204":
           description: Success
@@ -198,7 +191,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadListRequest"
-        required: true
       responses:
         "200":
           description: Success
@@ -217,7 +209,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LongRunningWorkloadRequest"
-        required: true
       responses:
         "200":
           description: Success
@@ -236,7 +227,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LongRunningWorkloadRequest"
-        required: true
       responses:
         "200":
           description: Success
@@ -244,6 +234,55 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
+  /api/v1/workload/queue/depth:
+    post:
+      tags:
+      - workload
+      summary: Count enqueued workloads matching a search criteria
+      operationId: countWorkloadQueueDepth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadQueueQueryRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadDepthResponse"
+  /api/v1/workload/queue/poll:
+    post:
+      tags:
+      - workload
+      summary: Poll for workloads to process
+      operationId: pollWorkloadQueue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadQueuePollRequest"
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadListResponse"
+  /api/v1/workload/queue/stats:
+    get:
+      tags:
+      - workload
+      summary: Count enqueued workloads grouped by logical queue
+      operationId: getWorkloadQueueStats
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkloadQueueStatsResponse"
   /api/v1/workload/running:
     put:
       tags:
@@ -255,7 +294,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadRunningRequest"
-        required: true
       responses:
         "204":
           description: Success
@@ -282,7 +320,6 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/WorkloadSuccessRequest"
-        required: true
       responses:
         "204":
           description: Success
@@ -420,6 +457,13 @@ components:
         signalInput:
           type: string
           nullable: true
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
     WorkloadCancelRequest:
       required:
       - reason
@@ -481,6 +525,17 @@ components:
         signalInput:
           type: string
           nullable: true
+        dataplaneGroup:
+          type: string
+          nullable: true
+    WorkloadDepthResponse:
+      required:
+      - count
+      type: object
+      properties:
+        count:
+          type: integer
+          format: int64
     WorkloadFailureRequest:
       required:
       - workloadId
@@ -558,6 +613,55 @@ components:
       - high
       - default
       x-type: String
+    WorkloadQueuePollRequest:
+      required:
+      - quantity
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+        quantity:
+          type: integer
+          format: int32
+    WorkloadQueueQueryRequest:
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+    WorkloadQueueStats:
+      required:
+      - enqueuedCount
+      type: object
+      properties:
+        dataplaneGroup:
+          type: string
+          nullable: true
+        priority:
+          nullable: true
+          allOf:
+          - $ref: "#/components/schemas/WorkloadPriority"
+        enqueuedCount:
+          type: integer
+          format: int64
+    WorkloadQueueStatsResponse:
+      required:
+      - stats
+      type: object
+      properties:
+        stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkloadQueueStats"
     WorkloadRunningRequest:
       required:
       - workloadId

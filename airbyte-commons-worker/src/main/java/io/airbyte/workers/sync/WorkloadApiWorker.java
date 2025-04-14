@@ -4,13 +4,12 @@
 
 package io.airbyte.workers.sync;
 
-import static io.airbyte.metrics.lib.MetricEmittingApps.WORKLOAD_LAUNCHER;
-
 import dev.failsafe.Failsafe;
 import dev.failsafe.RetryPolicy;
 import dev.failsafe.function.CheckedSupplier;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.logging.LogClientManager;
+import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -25,11 +24,11 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.exception.WorkloadLauncherException;
 import io.airbyte.workers.exception.WorkloadMonitorException;
-import io.airbyte.workers.general.ReplicationWorker;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.pod.Metadata;
+import io.airbyte.workers.workload.DataplaneGroupResolver;
 import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadConstants;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
@@ -58,11 +57,12 @@ import org.slf4j.LoggerFactory;
 /**
  * Worker implementation that uses workload API instead of starting kube pods directly.
  */
-public class WorkloadApiWorker implements ReplicationWorker {
+public class WorkloadApiWorker {
 
   private static final int HTTP_CONFLICT_CODE = HttpStatus.CONFLICT.getCode();
   private static final String DESTINATION = "destination";
   private static final String SOURCE = "source";
+  private static final String WORKLOAD_LAUNCHER = "workload-launcher";
 
   private static final Set<String> WORKLOAD_MONITOR = Set.of("workload-monitor-start", "workload-monitor-claim", "workload-monitor-heartbeat");
 
@@ -75,6 +75,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
   private final ReplicationActivityInput input;
   private final FeatureFlagClient featureFlagClient;
   private final LogClientManager logClientManager;
+  private final DataplaneGroupResolver dataplaneGroupResolver;
 
   private String workloadId = null;
 
@@ -84,7 +85,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
                            final WorkloadIdGenerator workloadIdGenerator,
                            final ReplicationActivityInput input,
                            final FeatureFlagClient featureFlagClient,
-                           final LogClientManager logClientManager) {
+                           final LogClientManager logClientManager,
+                           final DataplaneGroupResolver dataplaneGroupResolver) {
     this.jobOutputDocStore = jobOutputDocStore;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
@@ -92,10 +94,11 @@ public class WorkloadApiWorker implements ReplicationWorker {
     this.input = input;
     this.featureFlagClient = featureFlagClient;
     this.logClientManager = logClientManager;
+    this.dataplaneGroupResolver = dataplaneGroupResolver;
   }
 
-  @Override
-  @SuppressWarnings("PMD.AssignmentInOperand")
+  // TODO Migrate test before deleting to ensure we do not lose coverage
+  @Deprecated
   public ReplicationOutput run(final ReplicationInput replicationInput, final Path jobRoot) throws WorkerException {
     final String workloadId = createWorkload(replicationInput, jobRoot);
     waitForWorkload(workloadId);
@@ -107,6 +110,12 @@ public class WorkloadApiWorker implements ReplicationWorker {
     workloadId = workloadIdGenerator.generateSyncWorkloadId(replicationInput.getConnectionId(),
         Long.parseLong(replicationInput.getJobRunConfig().getJobId()),
         replicationInput.getJobRunConfig().getAttemptId().intValue());
+
+    final ConnectionContext context = replicationInput.getConnectionContext();
+    final String dataplaneGroup = dataplaneGroupResolver.resolveForSync(
+        context != null ? context.getOrganizationId() : null,
+        context != null ? context.getWorkspaceId() : replicationInput.getWorkspaceId(),
+        context != null ? context.getConnectionId() : replicationInput.getConnectionId());
 
     log.info("Creating workload {}", workloadId);
 
@@ -126,7 +135,8 @@ public class WorkloadApiWorker implements ReplicationWorker {
         WorkloadPriority.DEFAULT,
         replicationInput.getConnectionId().toString(),
         null,
-        replicationInput.getSignalInput());
+        replicationInput.getSignalInput(),
+        dataplaneGroup);
 
     // Create the workload
     try {
@@ -213,7 +223,7 @@ public class WorkloadApiWorker implements ReplicationWorker {
         throw new SourceException(workload.getTerminationReason(), e);
       } else if (DESTINATION.equals(workload.getTerminationSource())) {
         throw new DestinationException(workload.getTerminationReason(), e);
-      } else if (WORKLOAD_LAUNCHER.getApplicationName().equals(workload.getTerminationSource())) {
+      } else if (WORKLOAD_LAUNCHER.equals(workload.getTerminationSource())) {
         throw new WorkloadLauncherException(workload.getTerminationReason());
       } else if (workload.getTerminationSource() != null && WORKLOAD_MONITOR.contains(workload.getTerminationSource())) {
         throw new WorkloadMonitorException(workload.getTerminationReason());
@@ -223,7 +233,6 @@ public class WorkloadApiWorker implements ReplicationWorker {
     }
   }
 
-  @Override
   public void cancel() {
     try {
       if (workloadId != null) {

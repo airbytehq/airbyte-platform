@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connector.rollout.shared
 
 import io.airbyte.api.model.generated.ConnectorRolloutActorSelectionInfo
@@ -337,32 +341,29 @@ class RolloutProgressionDeciderTest {
     actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
     actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
     finalTargetRolloutPct: Int? = null,
-  ): ConnectorRolloutOutput {
-    return ConnectorRolloutOutput(
+  ): ConnectorRolloutOutput =
+    ConnectorRolloutOutput(
       state = ConnectorEnumRolloutState.IN_PROGRESS,
       finalTargetRolloutPct = finalTargetRolloutPct,
       actorSelectionInfo = actorSelectionInfo,
       actorSyncs = actorSyncs,
     )
-  }
 
   private fun createActorSyncInfo(
     nSucceeded: Int,
     nFailed: Int,
     nConnections: Int,
-  ): ConnectorRolloutActorSyncInfo {
-    return ConnectorRolloutActorSyncInfo()
+  ): ConnectorRolloutActorSyncInfo =
+    ConnectorRolloutActorSyncInfo()
       .numSucceeded(nSucceeded)
       .numFailed(nFailed)
       .numConnections(nConnections)
-  }
 
   private fun mockActorSelectionInfo(
     nActorsEligibleOrAlreadyPinned: Int = 1,
     nPinnedToConnectorRollout: Int = 1,
-  ): ConnectorRolloutActorSelectionInfo {
-    return ConnectorRolloutActorSelectionInfo()
+  ): ConnectorRolloutActorSelectionInfo =
+    ConnectorRolloutActorSelectionInfo()
       .numPinnedToConnectorRollout(nPinnedToConnectorRollout)
       .numActorsEligibleOrAlreadyPinned(nActorsEligibleOrAlreadyPinned)
-  }
 }

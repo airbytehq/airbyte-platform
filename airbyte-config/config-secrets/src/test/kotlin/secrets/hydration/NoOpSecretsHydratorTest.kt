@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test
 class NoOpSecretsHydratorTest {
   @Test
   fun `test secret hydration`() {
-    val coordinate = "secret_coordinate_v1"
+    val coordinate = "airbyte_secret_coordinate_v1"
     val hydrator = NoOpSecretsHydrator()
     val partialConfig = Jsons.jsonNode(mapOf("_secret" to coordinate))
     val hydratedConfig = hydrator.hydrateFromDefaultSecretPersistence(partialConfig)
@@ -20,7 +20,7 @@ class NoOpSecretsHydratorTest {
 
   @Test
   fun `test coordinate secret hydration`() {
-    val coordinate = "secret_coordinate_v1"
+    val coordinate = "airbyte_secret_coordinate_v1"
     val hydrator = NoOpSecretsHydrator()
     val secretCoordinate = Jsons.jsonNode(mapOf("_secret" to coordinate))
     val hydratedCoordinate = hydrator.hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate)

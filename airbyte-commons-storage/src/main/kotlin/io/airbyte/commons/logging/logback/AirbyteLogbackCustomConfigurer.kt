@@ -278,7 +278,7 @@ class AirbyteLogbackCustomConfigurer :
     val shutdownHook = DefaultShutdownHook().apply { context = loggerContext }
     Runtime.getRuntime().addShutdownHook(
       Thread {
-        stopAirbyteCloudStorageAppenderExecutorService()
+        AirbyteCloudStorageAppenderExecutorServiceHelper.stopAirbyteCloudStorageAppenderExecutorService()
         shutdownHook.run()
       },
     )

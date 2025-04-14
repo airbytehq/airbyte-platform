@@ -17,13 +17,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import io.airbyte.connector_builder.api.model.generated.AuxiliaryRequest;
 import io.airbyte.connector_builder.api.model.generated.StreamRead;
-import io.airbyte.connector_builder.api.model.generated.StreamReadAuxiliaryRequestsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadLogsInner;
 import io.airbyte.connector_builder.api.model.generated.StreamReadSlicesInner;
 import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.AirbyteCdkInvalidInputException;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -76,7 +76,7 @@ class AirbyteCdkRequesterImplTest {
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), configCaptor.capture(), any(), any()))
         .thenReturn(new AirbyteRecordMessage().withData(response));
 
-    final StreamRead streamRead = requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, recordLimit, pageLimit, sliceLimit);
+    final StreamRead streamRead = requester.readStream(A_MANIFEST, null, A_CONFIG, A_STATE, A_STREAM, recordLimit, pageLimit, sliceLimit);
 
     final boolean testReadLimitReached = mapper.convertValue(response.get("test_read_limit_reached"), new TypeReference<>() {});
     assertEquals(testReadLimitReached, streamRead.getTestReadLimitReached());
@@ -89,7 +89,7 @@ class AirbyteCdkRequesterImplTest {
     final List<StreamReadLogsInner> logs = mapper.convertValue(response.get("logs"), new TypeReference<>() {});
     assertEquals(logs, streamRead.getLogs());
 
-    final List<StreamReadAuxiliaryRequestsInner> auxiliaryRequests = mapper.convertValue(
+    final List<AuxiliaryRequest> auxiliaryRequests = mapper.convertValue(
         response.get("auxiliary_requests"), new TypeReference<>() {});
     assertEquals(auxiliaryRequests, streamRead.getAuxiliaryRequests());
 
@@ -136,7 +136,8 @@ class AirbyteCdkRequesterImplTest {
     when(commandRunner.runCommand(eq(READ_STREAM_COMMAND), any(), any(), any()))
         .thenReturn(
             new AirbyteRecordMessage().withData(new ObjectMapper().readTree("{\"streams\":[{\"name\": \"missing stream\", \"stream\": null}]}")));
-    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, null, A_LIMIT, A_LIMIT, A_LIMIT));
+    assertThrows(AirbyteCdkInvalidInputException.class, () -> requester.readStream(
+        A_MANIFEST, null, A_CONFIG, A_STATE, null, A_LIMIT, A_LIMIT, A_LIMIT));
   }
 
   @Test

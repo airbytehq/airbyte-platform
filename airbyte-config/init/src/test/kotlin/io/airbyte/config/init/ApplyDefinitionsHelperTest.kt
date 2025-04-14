@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.config.init
 
 import io.airbyte.commons.json.Jsons
@@ -29,12 +30,13 @@ import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
+import io.micrometer.core.instrument.Counter
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.justRun
@@ -104,7 +106,7 @@ internal class ApplyDefinitionsHelperTest {
     justRun { sourceService.updateStandardSourceDefinition(any()) }
     justRun { destinationService.writeConnectorMetadata(any(), any(), any()) }
     justRun { destinationService.updateStandardDestinationDefinition(any()) }
-    justRun { metricClient.count(any(), any(), *anyVararg<MetricAttribute>()) }
+    every { metricClient.count(metric = any(), value = any(), attributes = anyVararg<MetricAttribute>()) } returns mockk<Counter>()
     justRun { supportStateUpdater.updateSupportStates() }
   }
 

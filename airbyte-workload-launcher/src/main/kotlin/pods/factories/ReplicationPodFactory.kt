@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.featureflag.ANONYMOUS
@@ -20,13 +24,14 @@ data class ReplicationPodFactory(
   private val featureFlagClient: FeatureFlagClient,
   private val initContainerFactory: InitContainerFactory,
   private val replContainerFactory: ReplicationContainerFactory,
+  private val profilerContainerFactory: ProfilerContainerFactory,
   private val volumeFactory: VolumeFactory,
   private val workloadSecurityContextProvider: WorkloadSecurityContextProvider,
   @Value("\${airbyte.worker.job.kube.serviceAccount}") private val serviceAccount: String?,
   private val nodeSelectionFactory: NodeSelectionFactory,
   @Named("replicationImagePullSecrets") private val imagePullSecrets: List<LocalObjectReference>,
 ) {
-  fun create(
+  internal fun create(
     podName: String,
     allLabels: Map<String, String>,
     annotations: Map<String, String>,
@@ -43,38 +48,58 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
+    enableAsyncProfiler: Boolean = false,
+    singleConnectorTest: Boolean = false,
+    socketTest: Boolean = false,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
-    val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler, socketTest)
+    val initContainer =
+      initContainerFactory.create(
+        resourceReqs = orchResourceReqs,
+        volumeMounts = replicationVolumes.orchVolumeMounts,
+        runtimeEnvVars = orchRuntimeEnvVars,
+        workspaceId = workspaceId,
+      )
 
     val orchContainer =
       replContainerFactory.createOrchestrator(
-        orchResourceReqs,
-        replicationVolumes.orchVolumeMounts,
-        orchRuntimeEnvVars,
-        orchImage,
+        resourceReqs = orchResourceReqs,
+        volumeMounts = replicationVolumes.orchVolumeMounts,
+        runtimeEnvVars = orchRuntimeEnvVars,
+        image = orchImage,
       )
 
     val sourceContainer =
       replContainerFactory.createSource(
-        sourceResourceReqs,
-        replicationVolumes.sourceVolumeMounts,
-        sourceRuntimeEnvVars,
-        sourceImage,
+        resourceReqs = sourceResourceReqs,
+        volumeMounts = replicationVolumes.sourceVolumeMounts,
+        runtimeEnvVars = sourceRuntimeEnvVars,
+        image = sourceImage,
       )
 
     val destContainer =
       replContainerFactory.createDestination(
-        destResourceReqs,
-        replicationVolumes.destVolumeMounts,
-        destRuntimeEnvVars,
-        destImage,
+        resourceReqs = destResourceReqs,
+        volumeMounts = replicationVolumes.destVolumeMounts,
+        runtimeEnvVars = destRuntimeEnvVars,
+        image = destImage,
       )
 
     val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
+
+    val containers =
+      when {
+        singleConnectorTest -> mutableListOf(orchContainer)
+        socketTest -> mutableListOf(orchContainer, sourceContainer, destContainer)
+        else -> mutableListOf(orchContainer, sourceContainer, destContainer)
+      }
+
+    if (enableAsyncProfiler) {
+      containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
+    }
 
     return PodBuilder()
       .withApiVersion("v1")
@@ -89,19 +114,25 @@ data class ReplicationPodFactory(
       .withAutomountServiceAccountToken(true)
       .withRestartPolicy("Never")
       .withInitContainers(initContainer)
-      .withContainers(orchContainer, sourceContainer, destContainer)
+      .withShareProcessNamespace(enableAsyncProfiler)
+      .withContainers(containers)
       .withImagePullSecrets(imagePullSecrets)
       .withVolumes(replicationVolumes.allVolumes)
       .withNodeSelector<Any, Any>(nodeSelection.nodeSelectors)
       .withTolerations(nodeSelection.tolerations)
       .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
-      .withSecurityContext(workloadSecurityContextProvider.defaultPodSecurityContext())
-      .endSpec()
+      .withSecurityContext(
+        if (enableAsyncProfiler) {
+          workloadSecurityContextProvider.rootSecurityContext()
+        } else {
+          workloadSecurityContextProvider.defaultPodSecurityContext()
+        },
+      ).endSpec()
       .build()
   }
 
-  fun createReset(
+  internal fun createReset(
     podName: String,
     allLabels: Map<String, String>,
     annotations: Map<String, String>,
@@ -120,25 +151,31 @@ data class ReplicationPodFactory(
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
     val replicationVolumes = volumeFactory.replication(isFileTransfer)
-    val initContainer = initContainerFactory.create(orchResourceReqs, replicationVolumes.orchVolumeMounts, orchRuntimeEnvVars, workspaceId)
+    val initContainer =
+      initContainerFactory.create(
+        resourceReqs = orchResourceReqs,
+        volumeMounts = replicationVolumes.orchVolumeMounts,
+        runtimeEnvVars = orchRuntimeEnvVars,
+        workspaceId = workspaceId,
+      )
 
     val orchContainer =
       replContainerFactory.createOrchestrator(
-        orchResourceReqs,
-        replicationVolumes.orchVolumeMounts,
-        orchRuntimeEnvVars,
-        orchImage,
+        resourceReqs = orchResourceReqs,
+        volumeMounts = replicationVolumes.orchVolumeMounts,
+        runtimeEnvVars = orchRuntimeEnvVars,
+        image = orchImage,
       )
 
     val destContainer =
       replContainerFactory.createDestination(
-        destResourceReqs,
-        replicationVolumes.destVolumeMounts,
-        destRuntimeEnvVars,
-        destImage,
+        resourceReqs = destResourceReqs,
+        volumeMounts = replicationVolumes.destVolumeMounts,
+        runtimeEnvVars = destRuntimeEnvVars,
+        image = destImage,
       )
 
-    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors, allLabels)
+    val nodeSelection = nodeSelectionFactory.createResetNodeSelection(nodeSelectors)
 
     return PodBuilder()
       .withApiVersion("v1")

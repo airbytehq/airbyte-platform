@@ -8,6 +8,7 @@ export enum RoutePaths {
   Source = "source",
   Settings = "settings",
   ConnectorBuilder = "connector-builder",
+  EmbeddedWidget = "embedded-widget",
 }
 
 export enum DestinationPaths {
@@ -50,7 +51,7 @@ export enum SettingsRoutePaths {
   Workspace = "workspace",
   Organization = "organization",
   OrganizationMembers = "organizationMembers",
-  AccessManagement = "access-management",
+  WorkspaceMembers = "workspaceMembers",
   Applications = "applications",
   License = "license",
 }

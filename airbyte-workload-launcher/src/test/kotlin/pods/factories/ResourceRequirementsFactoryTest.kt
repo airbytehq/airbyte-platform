@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package pods.factories
 
 import io.airbyte.config.StandardCheckConnectionInput
@@ -87,8 +91,8 @@ class ResourceRequirementsFactoryTest {
     Assertions.assertEquals(reqs?.cpuRequest, result?.cpuRequest)
     Assertions.assertEquals(reqs?.memoryLimit, result?.memoryLimit)
     Assertions.assertEquals(reqs?.memoryRequest, result?.memoryRequest)
-    Assertions.assertEquals(fileTransferReqs.ephemeralStorageLimit, result?.ephemeralStorageLimit)
-    Assertions.assertEquals(fileTransferReqs.ephemeralStorageRequest, result?.ephemeralStorageRequest)
+    Assertions.assertEquals(reqs?.ephemeralStorageLimit ?: fileTransferReqs.ephemeralStorageLimit, result?.ephemeralStorageLimit)
+    Assertions.assertEquals(reqs?.ephemeralStorageRequest ?: fileTransferReqs.ephemeralStorageRequest, result?.ephemeralStorageRequest)
   }
 
   @ParameterizedTest

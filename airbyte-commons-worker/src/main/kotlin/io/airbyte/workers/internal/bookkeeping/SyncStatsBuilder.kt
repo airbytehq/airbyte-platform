@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:JvmName("SyncStatsBuilder")
 
 package io.airbyte.workers.internal.bookkeeping
@@ -13,38 +17,38 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
   val tracker = this
 
   // assume every stream with stats is in streamToEmittedRecords map
-  return getStreamToEmittedRecords().map { (stream, records) ->
-    val syncStats: SyncStats =
-      SyncStats()
-        .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
-        .withRecordsEmitted(records)
-        .withRecordsFilteredOut(tracker.getStreamToFilteredOutRecords()[stream])
-        .withBytesFilteredOut(tracker.getStreamToFilteredOutBytes()[stream])
-        .withSourceStateMessagesEmitted(null)
-        .withDestinationStateMessagesEmitted(null)
-        .apply {
-          if (hasReplicationCompleted) {
-            bytesCommitted = tracker.getStreamToEmittedBytes()[stream]?.minus(bytesFilteredOut)
-            recordsCommitted = tracker.getStreamToEmittedRecords()[stream]?.minus(recordsFilteredOut)
-          } else {
-            bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
-            recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
+  return getStreamToEmittedRecords()
+    .map { (stream, records) ->
+      val syncStats: SyncStats =
+        SyncStats()
+          .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
+          .withRecordsEmitted(records)
+          .withRecordsFilteredOut(tracker.getStreamToFilteredOutRecords()[stream])
+          .withBytesFilteredOut(tracker.getStreamToFilteredOutBytes()[stream])
+          .withSourceStateMessagesEmitted(null)
+          .withDestinationStateMessagesEmitted(null)
+          .apply {
+            if (hasReplicationCompleted) {
+              bytesCommitted = tracker.getStreamToEmittedBytes()[stream]?.minus(bytesFilteredOut)
+              recordsCommitted = tracker.getStreamToEmittedRecords()[stream]?.minus(recordsFilteredOut)
+            } else {
+              bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
+              recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
+            }
           }
-        }
 
-    StreamSyncStats()
-      .withStreamName(stream.name)
-      .withStreamNamespace(stream.namespace)
-      .withStats(syncStats)
-  }
-    .toList()
+      StreamSyncStats()
+        .withStreamName(stream.name)
+        .withStreamNamespace(stream.namespace)
+        .withStats(syncStats)
+    }.toList()
 }
 
 /**
  * Extract total stats from SyncStatsTracker.
  */
-fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats {
-  return SyncStats()
+fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats =
+  SyncStats()
     .withRecordsEmitted(getTotalRecordsEmitted())
     .withRecordsFilteredOut(getTotalRecordsFilteredOut())
     .withBytesEmitted(getTotalBytesEmitted())
@@ -64,4 +68,3 @@ fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats 
         recordsCommitted = getTotalRecordsCommitted()
       }
     }
-}

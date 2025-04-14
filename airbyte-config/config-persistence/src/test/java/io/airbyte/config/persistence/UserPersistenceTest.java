@@ -4,12 +4,14 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.AuthProvider;
 import io.airbyte.config.AuthUser;
 import io.airbyte.config.AuthenticatedUser;
-import io.airbyte.config.Geography;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
@@ -18,17 +20,21 @@ import io.airbyte.config.User;
 import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
+import org.jooq.exception.IntegrityConstraintViolationException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -46,6 +53,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
   private UserPersistence userPersistence;
   private WorkspaceService workspaceService;
   private OrganizationService organizationService;
+  private DataplaneGroupService dataplaneGroupService;
 
   @BeforeEach
   void setup() {
@@ -53,9 +61,11 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
-
+    final MetricClient metricClient = mock(MetricClient.class);
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
     workspaceService =
-        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService);
+        new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
+            metricClient, dataplaneGroupService);
     userPersistence = new UserPersistence(database);
     organizationService = new OrganizationServiceJooqImpl(database);
   }
@@ -72,6 +82,22 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
     private void setupTestData() throws IOException, JsonValidationException {
       // Create organization
       organizationService.writeOrganization(MockData.defaultOrganization());
+
+      // Create dataplane groups
+      for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
+          DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
+        try {
+          dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+              .withId(UUID.randomUUID())
+              .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+              .withName(geography)
+              .withEnabled(true)
+              .withTombstone(false));
+        } catch (final IntegrityConstraintViolationException e) {
+          continue;
+        }
+      }
+
       // write workspace table
       for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
         workspaceService.writeStandardWorkspaceNoSecrets(workspace);
@@ -194,7 +220,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(ORG.getOrganizationId())
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
 
     private static final StandardWorkspace WORKSPACE_2_ORG_1 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
@@ -203,7 +229,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(ORG.getOrganizationId())
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
 
     private static final StandardWorkspace WORKSPACE_3_ORG_2 = new StandardWorkspace()
         .withWorkspaceId(UUID.randomUUID())
@@ -212,7 +238,7 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(ORG_2.getOrganizationId())
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
 
     private static final AuthenticatedUser ORG_MEMBER_USER = new AuthenticatedUser()
         .withUserId(UUID.randomUUID())
@@ -291,6 +317,20 @@ class UserPersistenceTest extends BaseConfigDatabaseTest {
 
       organizationPersistence.createOrganization(ORG);
       organizationPersistence.createOrganization(ORG_2);
+
+      // Create dataplane groups
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(ORG.getOrganizationId())
+          .withName(WORKSPACE_1_ORG_1.getDefaultGeography())
+          .withEnabled(true)
+          .withTombstone(false));
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(ORG_2.getOrganizationId())
+          .withName(WORKSPACE_3_ORG_2.getDefaultGeography())
+          .withEnabled(true)
+          .withTombstone(false));
 
       for (final StandardWorkspace workspace : List.of(WORKSPACE_1_ORG_1, WORKSPACE_2_ORG_1, WORKSPACE_3_ORG_2)) {
         workspaceService.writeStandardWorkspaceNoSecrets(workspace);

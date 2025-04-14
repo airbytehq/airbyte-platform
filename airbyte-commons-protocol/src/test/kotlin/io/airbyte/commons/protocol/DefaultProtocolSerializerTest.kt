@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.protocol
 
 import io.airbyte.commons.json.Jsons
@@ -54,35 +58,39 @@ class DefaultProtocolSerializerTest {
             listOf(
               ProtocolConfiguredAirbyteStream()
                 .withStream(
-                  ProtocolAirbyteStream().withName(
-                    appendStreamName,
-                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                )
-                .withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
+                  ProtocolAirbyteStream()
+                    .withName(
+                      appendStreamName,
+                    ).withJsonSchema(Jsons.emptyObject())
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
-                  ProtocolAirbyteStream().withName(
-                    overwriteStreamName,
-                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                )
-                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                  ProtocolAirbyteStream()
+                    .withName(
+                      overwriteStreamName,
+                    ).withJsonSchema(Jsons.emptyObject())
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND else ProtocolDestinationSyncMode.OVERWRITE),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
-                  ProtocolAirbyteStream().withName(
-                    appendDedupStreamName,
-                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                )
-                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                  ProtocolAirbyteStream()
+                    .withName(
+                      appendDedupStreamName,
+                    ).withJsonSchema(Jsons.emptyObject())
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND_DEDUP),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
-                  ProtocolAirbyteStream().withName(
-                    overwriteDedupStreamName,
-                  ).withJsonSchema(Jsons.emptyObject()).withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                )
-                .withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                  ProtocolAirbyteStream()
+                    .withName(
+                      overwriteDedupStreamName,
+                    ).withJsonSchema(Jsons.emptyObject())
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND_DEDUP else ProtocolDestinationSyncMode.OVERWRITE),
             ),
           )

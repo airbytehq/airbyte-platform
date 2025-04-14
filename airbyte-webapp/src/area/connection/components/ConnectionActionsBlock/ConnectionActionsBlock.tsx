@@ -26,6 +26,7 @@ export const ConnectionActionsBlock: React.FC = () => {
   const { mode } = useConnectionFormService();
   const { connection, streamsByRefreshType } = useConnectionEditService();
   const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
+  const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);
   const { refreshStreams } = useConnectionSyncContext();
   const { openModal } = useModalService();
   const { registerNotification } = useNotificationService();
@@ -222,7 +223,7 @@ export const ConnectionActionsBlock: React.FC = () => {
             variant="danger"
             onClick={onDeleteButtonClick}
             data-id="open-delete-modal"
-            disabled={mode === "readonly"}
+            disabled={!canEditConnection} // "mode" of the connection is set by three things: (1) connection being deleted or not (2) RBAC to edit the connection (3) having an unlicensed connector.  The only one that matters here is (2).
           >
             <FormattedMessage id="tables.connectionDelete" />
           </Button>

@@ -13,6 +13,7 @@ import io.airbyte.data.repositories.Specifications
 import io.airbyte.data.services.JobService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
@@ -44,7 +45,7 @@ class JobServiceDataImpl(
       .findAll(
         Specifications.jobWithAssociatedAttempts(
           configTypes = configTypes.map { it.toEntity() }.toSet(),
-          scope = scope,
+          scopes = scope?.takeIf { it.isNotBlank() }?.let { setOf(it) } ?: emptySet(),
           statuses = statuses.map { it.toEntity() }.toSet(),
           createdAtStart = createdAtStart,
           createdAtEnd = createdAtEnd,
@@ -57,6 +58,20 @@ class JobServiceDataImpl(
       .toList()
   }
 
+  override fun findLatestJobPerScope(
+    configTypes: Set<JobConfig.ConfigType>,
+    scopes: Set<String>,
+    createdAtStart: OffsetDateTime,
+  ): List<Job> =
+    jobsRepository
+      .findLatestJobPerScope(
+        JobConfigType.sync.toString(),
+        scopes,
+        createdAtStart,
+      ).map { it.toConfigModel() }
+
+  override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
+
   override fun lastSuccessfulJobForScope(scope: String): Job? = jobsRepository.lastSuccessfulJobForScope(scope)?.toConfigModel()
 
   override fun countFailedJobsSinceLastSuccessForScope(scope: String): Int = jobsRepository.countFailedJobsSinceLastSuccessForScope(scope)
@@ -65,9 +80,7 @@ class JobServiceDataImpl(
     scope: String,
     jobId: Long,
     status: JobStatus,
-  ): Job? {
-    return jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
-  }
+  ): Job? = jobsRepository.getPriorJobWithStatusForScopeAndJobId(scope, jobId, status.toEntity())?.toConfigModel()
 
   private fun buildPageable(
     limit: Int,

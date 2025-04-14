@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pods
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -16,8 +20,10 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
+import io.airbyte.workers.input.getActorType
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.getOrganizationId
 import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
@@ -27,10 +33,6 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodNetworkSecurityLabeler
 import io.airbyte.workers.pod.ResourceConversionUtils
-import io.airbyte.workload.launcher.model.getActorType
-import io.airbyte.workload.launcher.model.getAttemptId
-import io.airbyte.workload.launcher.model.getJobId
-import io.airbyte.workload.launcher.model.getOrganizationId
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -43,7 +45,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
-import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
 
@@ -65,8 +66,8 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
-    every { replConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(replCustomSelectors)
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
+    every { replConfigs.workerIsolatedKubeNodeSelectors } returns replCustomSelectors
     val annotations = mapOf("annotation" to "value2")
     every { replConfigs.workerKubeAnnotations } returns annotations
     val ffClient: TestClient = mockk()
@@ -203,14 +204,14 @@ class PayloadKubeInputMapperTest {
     val checkCustomSelectors = mapOf("test-selector" to "custom-check")
     val checkConfigs: WorkerConfigs = mockk()
     every { checkConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { checkConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { checkConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { checkConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { checkConfigs.jobImagePullPolicy } returns pullPolicy
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
@@ -231,7 +232,7 @@ class PayloadKubeInputMapperTest {
       )
     val input: CheckConnectionInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.CheckConnectionInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.CheckConnectionInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
@@ -240,6 +241,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
@@ -288,8 +290,8 @@ class PayloadKubeInputMapperTest {
     )
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -317,13 +319,13 @@ class PayloadKubeInputMapperTest {
     val checkConfigs: WorkerConfigs = mockk()
     val discoverConfigs: WorkerConfigs = mockk()
     every { discoverConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { discoverConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { discoverConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { discoverConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { discoverConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { discoverConfigs.jobImagePullPolicy } returns pullPolicy
     val specConfigs: WorkerConfigs = mockk()
     val replConfigs: WorkerConfigs = mockk()
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
-    every { replConfigs.getworkerKubeNodeSelectors() } returns replSelectors
+    every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
 
     val mapper =
@@ -344,7 +346,7 @@ class PayloadKubeInputMapperTest {
       )
     val input: DiscoverCatalogInput = mockk()
 
-    mockkStatic("io.airbyte.workload.launcher.model.DiscoverCatalogInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.DiscoverCatalogInputExtensionsKt")
     val jobId = "415"
     val attemptId = 7654L
     val imageName = "image-name"
@@ -353,6 +355,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
@@ -402,8 +405,8 @@ class PayloadKubeInputMapperTest {
     )
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -429,8 +432,8 @@ class PayloadKubeInputMapperTest {
     val discoverConfigs: WorkerConfigs = mockk()
     val specConfigs: WorkerConfigs = mockk()
     every { specConfigs.workerKubeAnnotations } returns mapOf("annotation" to "value1")
-    every { specConfigs.workerIsolatedKubeNodeSelectors } returns Optional.of(checkCustomSelectors)
-    every { specConfigs.getworkerKubeNodeSelectors() } returns checkSelectors
+    every { specConfigs.workerIsolatedKubeNodeSelectors } returns checkCustomSelectors
+    every { specConfigs.workerKubeNodeSelectors } returns checkSelectors
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
     val replConfigs: WorkerConfigs = mockk()
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
@@ -464,11 +467,11 @@ class PayloadKubeInputMapperTest {
         every { workspaceId } returns workspaceId1
       }
     val expectedEnv = listOf(EnvVar("key-1", "value-1", null))
-    every { envVarFactory.specConnectorEnvVars(workloadId) } returns expectedEnv
+    every { envVarFactory.specConnectorEnvVars(launcherConfig, workloadId) } returns expectedEnv
     val jobRunConfig = mockk<JobRunConfig>()
 
     val input: SpecInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.SpecInputExtensionsKt")
     every { input.getJobId() } returns jobId
     every { input.getAttemptId() } returns attemptId
     every { input.jobRunConfig } returns jobRunConfig
@@ -496,8 +499,8 @@ class PayloadKubeInputMapperTest {
     assertEquals(if (customConnector) checkCustomSelectors else checkSelectors, result.nodeSelectors)
     assertEquals(namespace, result.kubePodInfo.namespace)
     assertEquals(podName, result.kubePodInfo.name)
-    assertEquals(imageName, result.kubePodInfo.mainContainerInfo.image)
-    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo.pullPolicy)
+    assertEquals(imageName, result.kubePodInfo.mainContainerInfo?.image)
+    assertEquals(pullPolicy, result.kubePodInfo.mainContainerInfo?.pullPolicy)
     assertEquals(expectedEnv, result.runtimeEnvVars)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs1), result.connectorReqs)
     assertEquals(ResourceConversionUtils.domainToApi(resourceReqs2), result.initReqs)
@@ -519,7 +522,7 @@ class PayloadKubeInputMapperTest {
     val orchestratorContainerInfo = KubeContainerInfo("orch-img", "Always")
     val reqs = ResourceRequirements()
     val resourceReqFactory = ResourceRequirementsFactory(reqs, reqs, reqs, reqs, reqs)
-    val workerConfigs = WorkerConfigs(reqs, emptyList(), emptyMap(), Optional.empty(), emptyMap(), emptyMap(), emptyList(), "Always")
+    val workerConfigs = WorkerConfigs(reqs, emptyList(), emptyMap(), null, emptyMap(), emptyMap(), emptyList(), "Always")
     val workloadId = "workload-1"
     val jobConfig =
       JobRunConfig().apply {
@@ -527,7 +530,7 @@ class PayloadKubeInputMapperTest {
         attemptId = 1
       }
 
-    every { envVarFactory.specConnectorEnvVars(any()) } returns emptyList()
+    every { envVarFactory.specConnectorEnvVars(any(), any()) } returns emptyList()
     every { envVarFactory.checkConnectorEnvVars(any(), any(), any()) } returns emptyList()
     every { envVarFactory.discoverConnectorEnvVars(any(), any(), any()) } returns emptyList()
     every { envVarFactory.orchestratorEnvVars(any(), any()) } returns emptyList()
@@ -555,20 +558,20 @@ class PayloadKubeInputMapperTest {
       }
 
     val specInput: SpecInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.SpecInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.SpecInputExtensionsKt")
     every { specInput.getJobId() } returns "job-1"
     every { specInput.getAttemptId() } returns 1
     every { specInput.jobRunConfig } returns jobConfig
     every { specInput.launcherConfig } returns testConfig
 
     val checkInput: CheckConnectionInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.CheckConnectionInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.CheckConnectionInputExtensionsKt")
     every { checkInput.jobRunConfig } returns jobConfig
     every { checkInput.launcherConfig } returns testConfig
     every { checkInput.checkConnectionInput } returns checkConnectionInput
 
     val discoverInput: DiscoverCatalogInput = mockk()
-    mockkStatic("io.airbyte.workload.launcher.model.DiscoverCatalogInputExtensionsKt")
+    mockkStatic("io.airbyte.workers.input.DiscoverCatalogInputExtensionsKt")
     every { discoverInput.getJobId() } returns "job-1"
     every { discoverInput.getAttemptId() } returns 1
     every { discoverInput.jobRunConfig } returns jobConfig
@@ -602,13 +605,13 @@ class PayloadKubeInputMapperTest {
       )
 
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
@@ -633,13 +636,13 @@ class PayloadKubeInputMapperTest {
         listOf(),
       )
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
@@ -651,13 +654,13 @@ class PayloadKubeInputMapperTest {
     testConfig.dockerImage = "my.registry.com/test-img"
 
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, checkInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
-      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo.image)
+      assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
     mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
       assertEquals("my.registry.com/test-img", it.sourceImage)

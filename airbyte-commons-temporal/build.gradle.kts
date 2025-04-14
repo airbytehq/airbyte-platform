@@ -14,7 +14,6 @@ dependencies {
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.temporal)
-  implementation(libs.bundles.apache)
   implementation(libs.failsafe)
   implementation(libs.kotlin.logging)
 
@@ -22,6 +21,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))

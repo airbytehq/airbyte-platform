@@ -1,15 +1,19 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage.Type
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
-import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.metrics.MetricClient
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
+import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationFeatureFlags
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -155,9 +159,7 @@ class ParallelStreamStatsTracker(
     }
   }
 
-  fun isChecksumValidationEnabled(): Boolean {
-    return checksumValidationEnabled
-  }
+  fun isChecksumValidationEnabled(): Boolean = checksumValidationEnabled
 
   private fun updateChecksumValidationStatus(
     streamStatsReliable: Boolean,
@@ -202,13 +204,12 @@ class ParallelStreamStatsTracker(
     origin: AirbyteMessageOrigin,
     stateMessage: AirbyteStateMessage,
     tracker: StreamStatsTracker,
-  ): Long {
-    return when (origin) {
+  ): Long =
+    when (origin) {
       AirbyteMessageOrigin.SOURCE -> tracker.getTrackedEmittedRecordsSinceLastStateMessage()
       AirbyteMessageOrigin.DESTINATION -> tracker.getTrackedEmittedRecordsSinceLastStateMessage(stateMessage)
       AirbyteMessageOrigin.INTERNAL -> 0
     }
-  }
 
   /**
    * Return [SyncStats] for the sync. SyncStats is the sum of the stats of all the streams.
@@ -232,7 +233,8 @@ class ParallelStreamStatsTracker(
       if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
         syncStatsCounters.estimatedBytesCount.get()
       } else {
-        streamSyncStats?.mapNotNull { it.stats.estimatedBytes }
+        streamSyncStats
+          ?.mapNotNull { it.stats.estimatedBytes }
           // mapNotNull with return an empty list if there are no non-null results
           // we want to treat an empty list as null for backwards compatability reasons,
           // specifically around treating a 0 and null differently
@@ -243,7 +245,8 @@ class ParallelStreamStatsTracker(
       if (!hasEstimatesErrors && expectedEstimateType == Type.SYNC) {
         syncStatsCounters.estimatedRecordCount.get()
       } else {
-        streamSyncStats?.mapNotNull { it.stats.estimatedRecords }
+        streamSyncStats
+          ?.mapNotNull { it.stats.estimatedRecords }
           // mapNotNull with return an empty list if there are no non-null results
           // we want to treat an empty list as null for backwards compatability reasons,
           // specifically around treating a 0 and null differently
@@ -269,45 +272,62 @@ class ParallelStreamStatsTracker(
    *        completed, emitted counts/bytes will be used as committed counts/bytes.
    * TODO make internal?
    */
-  fun getAllStreamSyncStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> {
-    return streamTrackers.values
+  fun getAllStreamSyncStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> =
+    streamTrackers.values
       // null name means that those are stats from global states or legacy states. We should not
       // report them as stream stats because a null stream doesn't exist.
       // We should still track them as this is how we track stats for legacy states, but they
       // should end up being reported as global sync stats only.
       .filter { it.nameNamespacePair.name != null }
       .map { it.toStreamSyncStats(hasReplicationCompleted) }
-  }
 
   override fun getStreamToCommittedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.committedBytesCount.get() }
+      .mapValues {
+        it.value.streamStats.committedBytesCount
+          .get()
+      }
 
   override fun getStreamToCommittedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.committedRecordsCount.get() }
+      .mapValues {
+        it.value.streamStats.committedRecordsCount
+          .get()
+      }
 
   override fun getStreamToEmittedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.emittedBytesCount.get() }
+      .mapValues {
+        it.value.streamStats.emittedBytesCount
+          .get()
+      }
 
   override fun getStreamToEmittedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.emittedRecordsCount.get() }
+      .mapValues {
+        it.value.streamStats.emittedRecordsCount
+          .get()
+      }
 
   override fun getStreamToFilteredOutRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.filteredOutRecords.get() }
+      .mapValues {
+        it.value.streamStats.filteredOutRecords
+          .get()
+      }
 
   override fun getStreamToFilteredOutBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
     streamTrackers
       .filterValues { it.nameNamespacePair.name != null }
-      .mapValues { it.value.streamStats.filteredOutBytesCount.get() }
+      .mapValues {
+        it.value.streamStats.filteredOutBytesCount
+          .get()
+      }
 
   override fun getStreamToEstimatedRecords(): Map<AirbyteStreamNameNamespacePair, Long> =
     if (hasEstimatesErrors) {
@@ -315,7 +335,10 @@ class ParallelStreamStatsTracker(
     } else {
       streamTrackers
         .filterValues { it.nameNamespacePair.name != null }
-        .mapValues { it.value.streamStats.estimatedRecordsCount.get() }
+        .mapValues {
+          it.value.streamStats.estimatedRecordsCount
+            .get()
+        }
     }
 
   override fun getStreamToEstimatedBytes(): Map<AirbyteStreamNameNamespacePair, Long> =
@@ -324,7 +347,10 @@ class ParallelStreamStatsTracker(
     } else {
       streamTrackers
         .filterValues { it.nameNamespacePair.name != null }
-        .mapValues { it.value.streamStats.estimatedBytesCount.get() }
+        .mapValues {
+          it.value.streamStats.estimatedBytesCount
+            .get()
+        }
     }
 
   override fun getTotalRecordsEmitted(): Long = getTotalStats().recordsEmitted ?: 0
@@ -354,7 +380,11 @@ class ParallelStreamStatsTracker(
 
   override fun getMeanSecondsToReceiveSourceStateMessage(): Long =
     computeMean(
-      getMean = { it.streamStats.maxSecondsToReceiveState.get().toDouble() },
+      getMean = {
+        it.streamStats.maxSecondsToReceiveState
+          .get()
+          .toDouble()
+      },
       getCount = { it.streamStats.sourceStateCount.get() - 1 },
     )
 
@@ -385,7 +415,11 @@ class ParallelStreamStatsTracker(
     stateCheckSumEventHandler.close(completedSuccessfully)
   }
 
-  private fun hasSourceStateErrors(): Boolean = streamTrackers.any { it.value.streamStats.unreliableStateOperations.get() }
+  private fun hasSourceStateErrors(): Boolean =
+    streamTrackers.any {
+      it.value.streamStats.unreliableStateOperations
+        .get()
+    }
 
   /**
    * Converts a [StreamStatsTracker] into a [StreamSyncStats].
@@ -464,14 +498,13 @@ class ParallelStreamStatsTracker(
   private fun computeMean(
     getMean: (StreamStatsTracker) -> Double,
     getCount: (StreamStatsTracker) -> Long,
-  ): Long {
-    return streamTrackers.values
+  ): Long =
+    streamTrackers.values
       .map {
         val count = getCount(it)
         val mean = getMean(it) * count
         Pair(mean, count)
-      }
-      .reduceOrNull { a, b -> Pair(a.first + b.first, a.second + b.second) }
+      }.reduceOrNull { a, b -> Pair(a.first + b.first, a.second + b.second) }
       ?.let {
         // avoid potential divide by zero error
         if (it.second >= 0) {
@@ -479,10 +512,8 @@ class ParallelStreamStatsTracker(
         } else {
           0
         }
-      }
-      ?.toLong()
+      }?.toLong()
       ?: 0
-  }
 }
 
 /**
@@ -495,7 +526,8 @@ inline fun <reified T : Any> getNameNamespacePair(type: T): AirbyteStreamNameNam
     is AirbyteRecordMessage -> AirbyteStreamNameNamespacePair(type.stream, type.namespace)
     is AirbyteEstimateTraceMessage -> AirbyteStreamNameNamespacePair(type.name, type.namespace)
     is AirbyteStateMessage ->
-      type.stream?.streamDescriptor
+      type.stream
+        ?.streamDescriptor
         ?.let { getNameNamespacePair(it) }
         ?: AirbyteStreamNameNamespacePair(null, null)
     else -> throw IllegalArgumentException("Unsupported type ${type::class.java}")

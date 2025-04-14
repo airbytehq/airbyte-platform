@@ -4,15 +4,19 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.STATE;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.select;
 
 import com.google.common.annotations.VisibleForTesting;
+import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
@@ -22,6 +26,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.impls.jooq.DbConverter;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -30,9 +35,12 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import java.io.IOException;
+import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
@@ -40,11 +48,15 @@ import org.jooq.JSONB;
 import org.jooq.Record;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * All db queries for the StandardSync resource. Also known as a Connection.
  */
 public class StandardSyncPersistence {
+
+  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private record StandardSyncIdsWithProtocolVersions(
                                                      UUID standardSyncId,
@@ -54,9 +66,11 @@ public class StandardSyncPersistence {
                                                      Version destinationProtocolVersion) {}
 
   private final ExceptionWrappingDatabase database;
+  private final DataplaneGroupService dataplaneGroupService;
 
-  public StandardSyncPersistence(final Database database) {
+  public StandardSyncPersistence(final Database database, final DataplaneGroupService dataplaneGroupService) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.dataplaneGroupService = dataplaneGroupService;
   }
 
   public StandardSync getStandardSync(final UUID connectionId) throws IOException, ConfigNotFoundException {
@@ -130,8 +144,7 @@ public class StandardSyncPersistence {
           .set(CONNECTION.UPDATED_AT, timestamp)
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
-          .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
-              io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+          .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
 
@@ -178,8 +191,7 @@ public class StandardSyncPersistence {
           .set(CONNECTION.RESOURCE_REQUIREMENTS,
               JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
-          .set(CONNECTION.GEOGRAPHY, Enums.toEnum(standardSync.getGeography().value(),
-              io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType.class).orElseThrow())
+          .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)
@@ -324,10 +336,12 @@ public class StandardSyncPersistence {
   private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
-          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
+          SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.NAME)
           .from(CONNECTION)
           // The schema management can be non-existent for a connection id, thus we need to do a left join
-          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID));
+          .leftJoin(SCHEMA_MANAGEMENT).on(SCHEMA_MANAGEMENT.CONNECTION_ID.eq(CONNECTION.ID))
+          .join(DATAPLANE_GROUP).on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID));
+
       if (configId.isPresent()) {
         return query.where(CONNECTION.ID.eq(configId.get())).fetch();
       }
@@ -348,7 +362,8 @@ public class StandardSyncPersistence {
       });
 
       final StandardSync standardSync =
-          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords);
+          DbConverter.buildStandardSync(record, connectionOperationIds(record.get(CONNECTION.ID)), notificationConfigurationRecords,
+              Collections.emptyList());
       if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
         throw new RuntimeException("unexpected schedule type mismatch");
       }
@@ -374,6 +389,31 @@ public class StandardSyncPersistence {
     }
 
     return ids;
+  }
+
+  @VisibleForTesting
+  UUID getDataplaneGroupIdFromGeography(StandardSync connection, String geography) {
+    UUID organizationId;
+    try {
+      organizationId = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)
+          .from(ACTOR)
+          .join(WORKSPACE)
+          .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+          .where(ACTOR.ID.eq(connection.getSourceId()))
+          .fetchOneInto(UUID.class));
+    } catch (IOException e) {
+      throw new IllegalStateException("No organization found for actor " + connection.getSourceId(), e);
+    }
+    try {
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(organizationId, geography).getId();
+    } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
+      log.error(
+          String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
+              organizationId, geography),
+          e);
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
+          .getId();
+    }
   }
 
 }

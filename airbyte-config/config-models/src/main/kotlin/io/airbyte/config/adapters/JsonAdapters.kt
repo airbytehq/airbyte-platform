@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.adapters
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -7,11 +11,13 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessageMeta
-import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMeta
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
 
-class JsonValueAdapter(private val node: JsonNode) : Value {
+class JsonValueAdapter(
+  private val node: JsonNode,
+) : Value {
   override fun asBoolean(): Boolean = node.asBoolean()
 
   override fun asNumber(): Number = node.asDouble()
@@ -19,7 +25,9 @@ class JsonValueAdapter(private val node: JsonNode) : Value {
   override fun asString(): String = node.asText()
 }
 
-data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : AirbyteRecord {
+data class AirbyteJsonRecordAdapter(
+  private val message: AirbyteMessage,
+) : AirbyteRecord {
   override val asProtocol: AirbyteMessage = message
   override val streamDescriptor: StreamDescriptor =
     StreamDescriptor()
@@ -74,9 +82,7 @@ data class AirbyteJsonRecordAdapter(private val message: AirbyteMessage) : Airby
     shouldInclude = value
   }
 
-  override fun shouldInclude(): Boolean {
-    return shouldInclude
-  }
+  override fun shouldInclude(): Boolean = shouldInclude
 
   private fun <T : Any> createNode(value: T): JsonNode =
     when (value) {

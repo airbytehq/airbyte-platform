@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -6,7 +10,7 @@ import io.airbyte.api.problems.throwable.generated.MapperSecretNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.RuntimeSecretsManagerRequiredProblem
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConfiguredMapper
@@ -28,6 +32,7 @@ import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.Mapper
 import io.airbyte.mappers.transformations.MapperSpec
+import io.airbyte.metrics.MetricClient
 import jakarta.inject.Inject
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -43,7 +48,8 @@ class MapperSecretHelper(
   private val secretsRepositoryReader: SecretsRepositoryReader,
   @Named("jsonSecretsProcessorWithCopy") private val secretsProcessor: JsonSecretsProcessor,
   private val featureFlagClient: FeatureFlagClient,
-  private val deploymentMode: DeploymentMode,
+  private val airbyteEdition: AirbyteEdition,
+  private val metricClient: MetricClient,
 ) {
   @Inject
   constructor(
@@ -54,7 +60,8 @@ class MapperSecretHelper(
     secretsRepositoryReader: SecretsRepositoryReader,
     @Named("jsonSecretsProcessorWithCopy") secretsProcessor: JsonSecretsProcessor,
     featureFlagClient: FeatureFlagClient,
-    deploymentMode: DeploymentMode,
+    airbyteEdition: AirbyteEdition,
+    metricClient: MetricClient,
   ) : this(
     mappers.associateBy { it.name },
     workspaceService,
@@ -63,22 +70,19 @@ class MapperSecretHelper(
     secretsRepositoryReader,
     secretsProcessor,
     featureFlagClient,
-    deploymentMode,
+    airbyteEdition,
+    metricClient,
   )
 
-  private fun getMapper(name: String): Mapper<MapperConfig> {
-    return mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
-  }
+  private fun getMapper(name: String): Mapper<MapperConfig> = mappers[name] ?: throw IllegalArgumentException("Mapper $name not found")
 
-  private fun specHasSecrets(spec: JsonNode): Boolean {
-    return SecretsHelpers.getSortedSecretPaths(spec).isNotEmpty()
-  }
+  private fun specHasSecrets(spec: JsonNode): Boolean = SecretsHelpers.getSortedSecretPaths(spec).isNotEmpty()
 
   internal fun shouldRequireRuntimePersistence(
     mapperConfig: MapperConfig,
     organizationId: UUID,
   ): Boolean {
-    if (deploymentMode != DeploymentMode.CLOUD) {
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
       return false
     }
 
@@ -98,7 +102,7 @@ class MapperSecretHelper(
       return null
     }
     val secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId)
-    return RuntimeSecretPersistence(secretPersistenceConfig)
+    return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
   }
 
   private fun assertConfigHasNoMaskedSecrets(
@@ -116,9 +120,7 @@ class MapperSecretHelper(
     mapperConfig: MapperConfig,
     workspaceId: UUID,
     organizationId: UUID,
-  ): MapperConfig {
-    return handleMapperConfigSecrets(mapperConfig, existingMapperConfig = null, workspaceId, organizationId)
-  }
+  ): MapperConfig = handleMapperConfigSecrets(mapperConfig, existingMapperConfig = null, workspaceId, organizationId)
 
   private fun handleMapperConfigSecrets(
     mapperConfig: MapperConfig,
@@ -153,7 +155,7 @@ class MapperSecretHelper(
             Jsons.jsonNode(mapperConfig.config()),
             mapperConfigSchema,
           )
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           workspaceId,
           persistedConfigAsJson!!,
           configWithSecrets,
@@ -163,7 +165,7 @@ class MapperSecretHelper(
       } else {
         val configWithSecrets = Jsons.jsonNode(mapperConfig.config())
         assertConfigHasNoMaskedSecrets(configWithSecrets, mapperConfig.id(), mapperName)
-        secretsRepositoryWriter.createFromConfig(
+        secretsRepositoryWriter.createFromConfigLegacy(
           workspaceId,
           configWithSecrets,
           mapperConfigSchema,
@@ -247,26 +249,24 @@ class MapperSecretHelper(
     return mapperInstance.spec().deserialize(ConfiguredMapper(mapperName, maskedConfig, mapperConfig.id()))
   }
 
-  private fun maskMapperSecretsForStream(stream: ConfiguredAirbyteStream): ConfiguredAirbyteStream {
-    return stream.copy(
+  private fun maskMapperSecretsForStream(stream: ConfiguredAirbyteStream): ConfiguredAirbyteStream =
+    stream.copy(
       mappers =
         stream.mappers.map {
           maskMapperConfigSecrets(it)
         },
     )
-  }
 
   /**
    * Given a catalog with mapper configurations, mask the secrets in the configurations.
    */
-  fun maskMapperSecrets(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog {
-    return catalog.copy(
+  fun maskMapperSecrets(catalog: ConfiguredAirbyteCatalog): ConfiguredAirbyteCatalog =
+    catalog.copy(
       streams =
         catalog.streams.map {
           maskMapperSecretsForStream(it)
         },
     )
-  }
 
   private fun tryHydrateConfigJson(
     persistedConfigJson: JsonNode?,

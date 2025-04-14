@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.templates
@@ -45,14 +49,15 @@ class ContributionTemplates {
     return writer.toString()
   }
 
+  @Suppress("UNCHECKED_CAST")
   fun getPaginatorTypeForStreamObject(streamObject: Map<String, Any>): String? {
     val paginator = streamObject["retriever"] as? Map<String, Any>
     val pagination = paginator?.get("paginator") as? Map<String, Any>
     return pagination?.get("type") as? String
   }
 
-  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> {
-    return streams?.map { stream ->
+  fun toTemplateStreams(streams: List<Map<String, Any>>?): List<TemplateStream> =
+    streams?.map { stream ->
       TemplateStream(
         name = stream["name"] as? String,
         primaryKey = primaryKeyToString(stream["primary_key"]),
@@ -60,12 +65,12 @@ class ContributionTemplates {
         incrementalSyncEnabled = stream["incremental_sync"] != null,
       )
     } ?: emptyList()
-  }
 
   fun getAllowedHosts(streams: List<Map<String, Any>>): List<String> {
     val hostnameRegex = Regex("^(?:https?://)?(?:www\\.)?([^/{}]+)")
 
     val hosts =
+      @Suppress("UNCHECKED_CAST")
       streams.mapNotNull { stream ->
         val retriever = stream["retriever"] as? Map<String, Any>
         val requester = retriever?.get("requester") as? Map<String, Any>
@@ -90,14 +95,14 @@ class ContributionTemplates {
    * - ["id", ["name", "age"]] -> "id.name.age"
    * - [["id"], ["name", "age"]] -> "id.name.age"
    */
-  fun primaryKeyToString(primaryKey: Any?): String {
-    return when (primaryKey) {
+  fun primaryKeyToString(primaryKey: Any?): String =
+    when (primaryKey) {
       is String -> primaryKey
       is List<*> -> primaryKey.joinToString(".") { primaryKeyToString(it) }
       else -> ""
     }
-  }
 
+  @Suppress("UNCHECKED_CAST")
   fun toTemplateSpecProperties(spec: Map<String, Any>): List<TemplateSpecProperty> {
     val connectionSpec = spec["connection_specification"] as Map<String, Any>
     val properties = connectionSpec["properties"] as? Map<String, Map<String, Any>>
@@ -124,7 +129,7 @@ class ContributionTemplates {
       mapOf(
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
       )
     return renderTemplateString("contribution_templates/readme.md.peb", context)
   }
@@ -138,7 +143,7 @@ class ContributionTemplates {
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
         "versionTag" to contributionInfo.versionTag,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
         "specProperties" to specProperties,
         "streams" to streams,
         "releaseDate" to contributionInfo.updateDate,
@@ -171,9 +176,7 @@ class ContributionTemplates {
     return renderTemplateString("contribution_templates/metadata.yaml.peb", context)
   }
 
-  fun renderIconSvg(): String {
-    return renderTemplateString("contribution_templates/icon.svg", emptyMap())
-  }
+  fun renderIconSvg(): String = renderTemplateString("contribution_templates/icon.svg", emptyMap())
 
   fun renderAcceptanceTestConfigYaml(contributionInfo: BuilderContributionInfo): String {
     val context = mapOf("connectorImageName" to contributionInfo.connectorImageName)
@@ -188,7 +191,8 @@ class ContributionTemplates {
       mapOf(
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
+        "contributionDescription" to contributionInfo.contributionDescription,
         "specProperties" to specProperties,
         "streams" to streams,
       )

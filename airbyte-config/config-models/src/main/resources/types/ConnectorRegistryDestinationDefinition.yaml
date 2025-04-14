@@ -30,7 +30,7 @@ properties:
     type: string
   spec:
     type: object
-    existingJavaType: io.airbyte.protocol.models.ConnectorSpecification
+    existingJavaType: io.airbyte.protocol.models.v0.ConnectorSpecification
   tombstone:
     description: if false, the configuration is active. if true, then this
       configuration is permanently off.
@@ -57,7 +57,7 @@ properties:
     type: string
     format: date
   resourceRequirements:
-    "$ref": ActorDefinitionResourceRequirements.yaml
+    "$ref": ScopedResourceRequirements.yaml
   protocolVersion:
     type: string
     description: the Airbyte Protocol version supported by the connector

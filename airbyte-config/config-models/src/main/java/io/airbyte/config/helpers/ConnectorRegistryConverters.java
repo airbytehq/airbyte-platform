@@ -24,7 +24,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.Date;
@@ -65,6 +65,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withEnterprise(def.getAbInternal() != null ? def.getAbInternal().getIsEnterprise() : false)
         .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements())
         .withMaxSecondsBetweenMessages(def.getMaxSecondsBetweenMessages());
@@ -91,6 +92,7 @@ public class ConnectorRegistryConverters {
         .withTombstone(def.getTombstone())
         .withPublic(def.getPublic())
         .withCustom(def.getCustom())
+        .withEnterprise(def.getAbInternal() != null ? def.getAbInternal().getIsEnterprise() : false)
         .withMetrics(metrics)
         .withResourceRequirements(def.getResourceRequirements());
   }

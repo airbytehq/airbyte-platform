@@ -1,12 +1,12 @@
 import classNames from "classnames";
 import debounce from "lodash/debounce";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 import { useParams } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { RadioButtonTiles } from "components/connection/CreateConnection/RadioButtonTiles";
 import { Form, FormControl } from "components/forms";
@@ -14,12 +14,13 @@ import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { LabelInfo } from "components/Label";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { ExternalLink } from "components/ui/Link";
+import { ExternalLink, Link } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 import { Spinner } from "components/ui/Spinner";
 import { Text } from "components/ui/Text";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils/useCurrentWorkspaceId";
 import {
   BuilderProjectWithManifest,
   GENERATE_CONTRIBUTION_NOTIFICATION_ID,
@@ -34,7 +35,9 @@ import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { useLocalStorage } from "core/utils/useLocalStorage";
+import { ToZodSchema } from "core/utils/zod";
 import { useNotificationService } from "hooks/services/Notification";
+import { RoutePaths, SourcePaths } from "pages/routePaths";
 import {
   useConnectorBuilderFormState,
   convertJsonToYaml,
@@ -42,7 +45,7 @@ import {
 
 import styles from "./PublishModal.module.scss";
 import { useExperiment } from "../../../hooks/services/Experiment";
-import { useBuilderWatch } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 const PUBLISH_TO_WORKSPACE_NOTIFICATION_ID = "publish-to-workspace-notification";
@@ -137,25 +140,29 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   } = useConnectorBuilderFormState();
   const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
   const connectorName = useBuilderWatch("name");
+  const workspaceId = useCurrentWorkspaceId();
   const { setValue } = useFormContext();
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   const minVersion = versions && versions.length > 0 ? Math.max(...versions.map((version) => version.version)) + 1 : 1;
 
   const schema = useMemo(
     () =>
-      yup.object().shape({
-        name: yup.string().required("form.empty.error").max(256, "connectorBuilder.maxLength"),
-        description: yup.string().max(256, "connectorBuilder.maxLength"),
-        useVersion: yup.bool().required(),
-        version: yup.number().min(minVersion).required(),
-      }),
+      z.object({
+        name: z.string().trim().nonempty("form.empty.error").max(256, "connectorBuilder.maxLength"),
+        description: z.string().max(256, "connectorBuilder.maxLength").optional(),
+        useVersion: z.boolean(),
+        version: z.number().min(minVersion),
+      } satisfies ToZodSchema<PublishToWorkspaceFormValues>),
     [minVersion]
   );
 
   const handleSubmit = async (values: PublishToWorkspaceFormValues) => {
     unregisterNotificationById(PUBLISH_TO_WORKSPACE_NOTIFICATION_ID);
     try {
+      let sourceDefinitionId: string;
       if (currentProject.sourceDefinitionId) {
+        sourceDefinitionId = currentProject.sourceDefinitionId;
         await releaseNewVersion({
           manifest,
           description: values.description ?? "",
@@ -163,6 +170,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
           projectId: currentProject.id,
           useAsActiveVersion: values.useVersion,
           version: values.version,
+          componentsFileContent: customComponentsCode,
         });
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.RELEASE_NEW_PROJECT_VERSION, {
           actionDescription: "User released a new version of a Connector Builder project",
@@ -170,12 +178,16 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
           projectId: currentProject.id,
         });
       } else {
-        await publishProject({
+        const response = await publishProject({
           manifest,
           name: values.name,
           description: values.description ?? "",
           projectId,
+          componentsFileContent: customComponentsCode,
         });
+
+        sourceDefinitionId = response.sourceDefinitionId;
+
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.PUBLISH_PROJECT, {
           actionDescription: "User published a Connector Builder project",
           projectId: currentProject.id,
@@ -185,12 +197,22 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
       // push name change upstream so it's updated
       setValue("name", values.name);
 
+      const publishedConnectorPath = `/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Source}/${SourcePaths.SelectSourceNew}/${sourceDefinitionId}`;
+
       registerNotification({
         id: PUBLISH_TO_WORKSPACE_NOTIFICATION_ID,
         text: (
           <FormattedMessage
             id="connectorBuilder.publishedMessage"
-            values={{ name: values.name, version: values.version }}
+            values={{
+              name: values.name,
+              version: values.version,
+              lnk: (linkText: ReactNode) => (
+                <Link to={publishedConnectorPath} opensInNewTab>
+                  {linkText}
+                </Link>
+              ),
+            }}
           />
         ),
         type: "success",
@@ -226,7 +248,7 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
         useVersion: true,
         version: minVersion,
       }}
-      schema={schema}
+      zodSchema={schema}
       onSubmit={handleSubmit}
     >
       <ModalBody>
@@ -320,7 +342,6 @@ interface ContributeToAirbyteFormProps {
 }
 
 const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ imageNameError, setImageNameError }) => {
-  const isEdit = useWatch({ name: "isEditing" });
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   return (
@@ -333,25 +354,13 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
-        name="description"
+        name="connectorDescription"
         fieldType="textarea"
-        label={formatMessage({
-          id: isEdit
-            ? "connectorBuilder.contribution.modal.changeDescription.label"
-            : "connectorBuilder.contribution.modal.connectorDescription.label",
-        })}
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.label" })}
         labelTooltip={
           <LabelInfo
-            label={formatMessage({
-              id: isEdit
-                ? "connectorBuilder.contribution.modal.changeDescription.label"
-                : "connectorBuilder.contribution.modal.connectorDescription.label",
-            })}
-            description={formatMessage({
-              id: isEdit
-                ? "connectorBuilder.contribution.modal.changeDescription.tooltip"
-                : "connectorBuilder.contribution.modal.connectorDescription.tooltip",
-            })}
+            label={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.label" })}
+            description={formatMessage({ id: "connectorBuilder.contribution.modal.connectorDescription.tooltip" })}
           />
         }
         onFocus={() => {
@@ -359,6 +368,18 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
             actionDescription: "User focused the description field in the Contribute to Airbyte modal",
           });
         }}
+        containerControlClassName={styles.formControl}
+      />
+      <FormControl<ContributeToAirbyteFormValues>
+        name="contributionDescription"
+        fieldType="textarea"
+        label={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.label" })}
+        labelTooltip={
+          <LabelInfo
+            label={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.label" })}
+            description={formatMessage({ id: "connectorBuilder.contribution.modal.contributionDescription.tooltip" })}
+          />
+        }
         containerControlClassName={styles.formControl}
       />
       <FormControl<ContributeToAirbyteFormValues>
@@ -400,7 +421,8 @@ const ContributeToAirbyteForm: React.FC<ContributeToAirbyteFormProps> = ({ image
 interface ContributeToAirbyteFormValues {
   name: string;
   connectorImageName: string;
-  description?: string;
+  connectorDescription: string;
+  contributionDescription: string;
   githubToken: string;
   isEditing: boolean;
 }
@@ -413,6 +435,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const { jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   // update the version so that the manifest reflects which CDK version was used to build it
   const jsonManifestWithCorrectedVersion = useMemo(
@@ -484,22 +507,25 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
 
     const jsonManifestWithDescription = {
       ...jsonManifestWithCorrectedVersion,
-      description: values.description,
+      description: values.connectorDescription,
     };
     const yamlManifest = convertJsonToYaml(jsonManifestWithDescription);
 
     const contribution = await generateContribution({
       name: values.name,
       connector_image_name: values.connectorImageName,
-      description: values.description,
+      connector_description: values.connectorDescription,
+      contribution_description: values.contributionDescription,
       github_token: values.githubToken,
       manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
       base_image: baseImage,
+      custom_components: customComponentsCode,
     });
     const newProject: BuilderProjectWithManifest = {
       name: values.name,
       manifest: jsonManifestWithDescription,
       yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
+      componentsFileContent: customComponentsCode,
       contributionPullRequestUrl: contribution.pull_request_url,
       contributionActorDefinitionId: contribution.actor_definition_id,
     };
@@ -527,7 +553,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
     if (mode === "yaml") {
       setValue("yaml", yamlManifest);
     } else {
-      setValue("formValues.description", values.description);
+      setValue("formValues.description", values.connectorDescription);
     }
 
     onClose();
@@ -538,28 +564,25 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       defaultValues={{
         name: connectorName,
         connectorImageName,
-        description: jsonManifest.description,
+        connectorDescription: jsonManifest.description,
         githubToken: "",
         isEditing: false,
       }}
-      schema={yup.object().shape({
-        name: yup.string().required("form.empty.error"),
-        connectorImageName: yup
+      zodSchema={z.object({
+        name: z.string().trim().nonempty("form.empty.error"),
+        connectorImageName: z
           .string()
-          .required("form.empty.error")
-          .test((value, { createError }) => {
-            if (!value) {
-              return createError({ message: "form.empty.error" });
-            }
-            if (imageNameError) {
-              return createError({ message: imageNameError, type: NON_I18N_ERROR_TYPE });
-            }
-            return true;
+          .trim()
+          .nonempty("form.empty.error")
+          .refine(() => !imageNameError, {
+            message: imageNameError || "form.empty.error",
+            params: { type: NON_I18N_ERROR_TYPE },
           }),
-        description: yup.string().required("form.empty.error"),
-        githubToken: yup.string().required("form.empty.error"),
-        isEditing: yup.boolean().required("form.empty.error"),
-      })}
+        connectorDescription: z.string().trim().nonempty("form.empty.error"),
+        contributionDescription: z.string().trim().nonempty("form.empty.error"),
+        githubToken: z.string().trim().nonempty("form.empty.error"),
+        isEditing: z.boolean(),
+      } satisfies ToZodSchema<ContributeToAirbyteFormValues>)}
       onSubmit={handleSubmit}
     >
       <ModalBody>
@@ -613,13 +636,15 @@ const ConnectorImageNameInput: React.FC<{
 
   const isContributeEditsEnabled = useExperiment("connectorBuilder.contributeEditsToMarketplace");
 
-  const updateErrorAndFooter = useCallback(
+  // update UI based on the result of checking the state of existing connector contributions
+  const handleContributionCheckRead = useCallback(
     (contributionCheck: CheckContributionRead) => {
       if (contributionCheck.connector_exists) {
         if (isContributeEditsEnabled) {
           setValue("isEditing", true);
-          // Set the name to match the existing name to avoid unnecessary changes
+          // Set the name and description to match the existing name to avoid unnecessary changes
           setValue("name", contributionCheck.connector_name);
+          setValue("connectorDescription", contributionCheck.connector_description);
           setFooter(
             formatMessage(
               { id: "connectorBuilder.contribution.modal.connectorAlreadyExists" },
@@ -663,7 +688,7 @@ const ConnectorImageNameInput: React.FC<{
     debouncedCheckContribution.cancel();
 
     if (!imageName) {
-      // don't need to set footer or error state, because the yup validation will take precedence here
+      // don't need to set footer or error state, because the zod validation will take precedence here
       return;
     }
 
@@ -675,7 +700,7 @@ const ConnectorImageNameInput: React.FC<{
 
     const cachedCheck = getCachedCheck({ connector_image_name: imageName });
     if (cachedCheck) {
-      updateErrorAndFooter(cachedCheck);
+      handleContributionCheckRead(cachedCheck);
       return;
     }
 
@@ -687,9 +712,16 @@ const ConnectorImageNameInput: React.FC<{
       if (result instanceof Error) {
         return;
       }
-      updateErrorAndFooter(result);
+      handleContributionCheckRead(result);
     });
-  }, [debouncedCheckContribution, formatMessage, getCachedCheck, imageName, setImageNameError, updateErrorAndFooter]);
+  }, [
+    debouncedCheckContribution,
+    formatMessage,
+    getCachedCheck,
+    imageName,
+    setImageNameError,
+    handleContributionCheckRead,
+  ]);
 
   // when imageNameError changes, trigger validation of the image name field
   useUpdateEffect(() => {

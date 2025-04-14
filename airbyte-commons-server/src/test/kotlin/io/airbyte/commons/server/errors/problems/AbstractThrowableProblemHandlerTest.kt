@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.errors.problems
 
 import io.airbyte.api.problems.AbstractThrowableProblem
@@ -29,29 +33,17 @@ internal class AbstractThrowableProblemHandlerTest {
 
   companion object {
     class TestProblemResponse : ProblemResponse {
-      override fun getStatus(): Int {
-        return 400
-      }
+      override fun getStatus(): Int = 400
 
-      override fun getTitle(): String {
-        return "test-problem"
-      }
+      override fun getTitle(): String = "test-problem"
 
-      override fun getDetail(): String {
-        return "test-problem-detail"
-      }
+      override fun getDetail(): String = "test-problem-detail"
 
-      override fun getData(): Any {
-        return mapOf("test-key" to "test-val")
-      }
+      override fun getData(): Any = mapOf("test-key" to "test-val")
 
-      override fun getType(): String {
-        return "errors:problem/test"
-      }
+      override fun getType(): String = "errors:problem/test"
 
-      override fun getDocumentationUrl(): String {
-        return "https://airbyte.com/docs"
-      }
+      override fun getDocumentationUrl(): String = "https://airbyte.com/docs"
     }
 
     class TestThrowableProblem : AbstractThrowableProblem(TestProblemResponse())

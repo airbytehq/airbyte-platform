@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
@@ -28,7 +28,7 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
 import java.util.UUID
 
-val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)

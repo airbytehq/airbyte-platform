@@ -14,10 +14,11 @@ import { BuilderRequestInjection } from "./BuilderRequestInjection";
 import { StreamReferenceField } from "./StreamReferenceField";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestSubstreamPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
-import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest, useBuilderWatch } from "../types";
+import { StreamPathFn, BuilderParentStream, builderParentStreamsToManifest, CreationRequesterPathFn } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 interface ParentStreamsSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -62,7 +63,7 @@ export const ParentStreamsSection: React.FC<ParentStreamsSectionProps> = ({ stre
         },
       }}
       copyConfig={{
-        path: "parentStreams",
+        path: streamFieldPath("parentStreams"),
         currentStreamIndex,
         componentName: label,
       }}

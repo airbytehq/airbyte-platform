@@ -15,6 +15,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
@@ -32,7 +33,6 @@ import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.AllowedHosts;
@@ -44,7 +44,6 @@ import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.FieldSelectionData;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.Notification;
 import io.airbyte.config.NotificationSettings;
@@ -54,6 +53,7 @@ import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.ScopeType;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType;
 import io.airbyte.config.SecretPersistenceCoordinate;
 import io.airbyte.config.SourceConnection;
@@ -68,13 +68,15 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
+import io.airbyte.config.Tag;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
 import io.airbyte.db.instance.configs.jooq.generated.enums.BackfillPreference;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -100,7 +102,8 @@ public class DbConverter {
    */
   public static StandardSync buildStandardSync(final Record record,
                                                final List<UUID> connectionOperationId,
-                                               final List<NotificationConfigurationRecord> notificationConfigurations) {
+                                               final List<NotificationConfigurationRecord> notificationConfigurations,
+                                               final List<TagRecord> tagRecords) {
     final boolean isWebhookNotificationEnabled = notificationConfigurations.stream()
         .filter(notificationConfiguration -> notificationConfiguration
             .getNotificationType() == NotificationType.webhook && notificationConfiguration.getEnabled())
@@ -110,6 +113,12 @@ public class DbConverter {
         .filter(notificationConfiguration -> notificationConfiguration
             .getNotificationType() == NotificationType.email && notificationConfiguration.getEnabled())
         .findAny().isPresent();
+
+    final List<Tag> tags = new ArrayList<>();
+    for (final TagRecord tagRecord : tagRecords) {
+      tags.add(new Tag().withTagId(tagRecord.getId()).withWorkspaceId(tagRecord.getWorkspaceId()).withName(tagRecord.getName())
+          .withColor(tagRecord.getColor()));
+    }
 
     return new StandardSync()
         .withConnectionId(record.get(CONNECTION.ID))
@@ -139,7 +148,10 @@ public class DbConverter {
             Jsons.deserialize(record.get(CONNECTION.RESOURCE_REQUIREMENTS).data(), ResourceRequirements.class))
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
-        .withGeography(Enums.toEnum(record.get(CONNECTION.GEOGRAPHY, String.class), Geography.class).orElseThrow())
+        .withGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
+            .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
+        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
+
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
@@ -148,7 +160,8 @@ public class DbConverter {
         .withCreatedAt(record.get(CONNECTION.CREATED_AT, OffsetDateTime.class).toEpochSecond())
         .withBackfillPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)).orElse(BackfillPreference.disabled).getLiteral(),
-                StandardSync.BackfillPreference.class).orElseThrow());
+                StandardSync.BackfillPreference.class).orElseThrow())
+        .withTags(tags);
   }
 
   private static ConfiguredAirbyteCatalog parseConfiguredAirbyteCatalog(final String configuredAirbyteCatalogString) {
@@ -184,8 +197,9 @@ public class DbConverter {
             : Jsons.deserialize(record.get(WORKSPACE.NOTIFICATION_SETTINGS).data(), NotificationSettings.class))
         .withFirstCompletedSync(record.get(WORKSPACE.FIRST_SYNC_COMPLETE))
         .withFeedbackDone(record.get(WORKSPACE.FEEDBACK_COMPLETE))
-        .withDefaultGeography(
-            Enums.toEnum(record.get(WORKSPACE.GEOGRAPHY, String.class), Geography.class).orElseThrow())
+        .withDefaultGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
+            .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
+        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()))
         .withOrganizationId(record.get(WORKSPACE.ORGANIZATION_ID))
@@ -221,7 +235,11 @@ public class DbConverter {
         .withSourceDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
-        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withUpdatedAt(record.get(ACTOR.UPDATED_AT).toEpochSecond())
+        .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**
@@ -238,7 +256,11 @@ public class DbConverter {
         .withDestinationDefinitionId(record.get(ACTOR.ACTOR_DEFINITION_ID))
         .withTombstone(record.get(ACTOR.TOMBSTONE))
         .withName(record.get(ACTOR.NAME))
-        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond());
+        .withCreatedAt(record.get(ACTOR.CREATED_AT).toEpochSecond())
+        .withUpdatedAt(record.get(ACTOR.UPDATED_AT).toEpochSecond())
+        .withResourceRequirements(record.get(ACTOR.RESOURCE_REQUIREMENTS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**
@@ -270,9 +292,10 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withEnterprise(record.get(ACTOR_DEFINITION.ENTERPRISE))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class))
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class))
         .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
@@ -295,12 +318,13 @@ public class DbConverter {
         .withTombstone(record.get(ACTOR_DEFINITION.TOMBSTONE))
         .withPublic(record.get(ACTOR_DEFINITION.PUBLIC))
         .withCustom(record.get(ACTOR_DEFINITION.CUSTOM))
+        .withEnterprise(record.get(ACTOR_DEFINITION.ENTERPRISE))
         .withMetrics(record.get(ACTOR_DEFINITION.METRICS) == null
             ? null
             : Jsons.deserialize(record.get(ACTOR_DEFINITION.METRICS).data(), ConnectorRegistryEntryMetrics.class))
         .withResourceRequirements(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS) == null
             ? null
-            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ActorDefinitionResourceRequirements.class));
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION.RESOURCE_REQUIREMENTS).data(), ScopedResourceRequirements.class));
   }
 
   /**
@@ -314,6 +338,7 @@ public class DbConverter {
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR_OAUTH_PARAMETER.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
+        .withOrganizationId(record.get(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID))
         .withDestinationDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
@@ -328,6 +353,7 @@ public class DbConverter {
         .withOauthParameterId(record.get(ACTOR_OAUTH_PARAMETER.ID))
         .withConfiguration(Jsons.deserialize(record.get(ACTOR_OAUTH_PARAMETER.CONFIGURATION).data()))
         .withWorkspaceId(record.get(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID))
+        .withOrganizationId(record.get(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID))
         .withSourceDefinitionId(record.get(ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID));
   }
 
@@ -419,6 +445,7 @@ public class DbConverter {
   public static ConnectorBuilderProject buildConnectorBuilderProjectWithoutManifestDraft(final Record record) {
     return new ConnectorBuilderProject()
         .withWorkspaceId(record.get(CONNECTOR_BUILDER_PROJECT.WORKSPACE_ID))
+        .withUpdatedAt(record.get(CONNECTOR_BUILDER_PROJECT.UPDATED_AT).toEpochSecond())
         .withBuilderProjectId(record.get(CONNECTOR_BUILDER_PROJECT.ID))
         .withName(record.get(CONNECTOR_BUILDER_PROJECT.NAME))
         .withHasDraft((Boolean) record.get("hasDraft"))
@@ -429,6 +456,7 @@ public class DbConverter {
             : Jsons.deserialize(record.get(CONNECTOR_BUILDER_PROJECT.TESTING_VALUES).data()))
         .withBaseActorDefinitionVersionId(record.get(CONNECTOR_BUILDER_PROJECT.BASE_ACTOR_DEFINITION_VERSION_ID))
         .withContributionPullRequestUrl(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_PULL_REQUEST_URL))
+        .withComponentsFileContent(record.get(CONNECTOR_BUILDER_PROJECT.COMPONENTS_FILE_CONTENT))
         .withContributionActorDefinitionId(record.get(CONNECTOR_BUILDER_PROJECT.CONTRIBUTION_ACTOR_DEFINITION_ID));
   }
 
@@ -453,7 +481,8 @@ public class DbConverter {
     return new DeclarativeManifest()
         .withActorDefinitionId(record.get(DECLARATIVE_MANIFEST.ACTOR_DEFINITION_ID))
         .withDescription(record.get(DECLARATIVE_MANIFEST.DESCRIPTION))
-        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION));
+        .withVersion(record.get(DECLARATIVE_MANIFEST.VERSION))
+        .withComponentsFileContent(record.get(DECLARATIVE_MANIFEST.COMPONENTS_FILE_CONTENT));
   }
 
   /**

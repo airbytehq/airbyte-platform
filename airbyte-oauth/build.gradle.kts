@@ -8,10 +8,9 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(libs.guava)
   implementation(libs.google.cloud.storage)
-  implementation(libs.bundles.apache)
   implementation(libs.aws.java.sdk.s3)
   implementation(libs.aws.java.sdk.sts)
-  implementation(libs.apache.commons.text)
+  implementation("com.hubspot.jinjava:jinjava:2.7.4")
 
   implementation(project(":oss:airbyte-api:problems-api"))
   implementation(project(":oss:airbyte-commons"))

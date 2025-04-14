@@ -19,10 +19,11 @@ import com.google.cloud.secretmanager.v1.SecretPayload
 import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -69,7 +70,7 @@ class GoogleSecretManagerPersistence(
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     writeWithExpiry(coordinate, payload)
@@ -84,13 +85,14 @@ class GoogleSecretManagerPersistence(
     const val LATEST = "latest"
 
     val replicationPolicy: Replication =
-      Replication.newBuilder()
+      Replication
+        .newBuilder()
         .setAutomatic(Replication.Automatic.newBuilder().build())
         .build()
   }
 
   override fun writeWithExpiry(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
     expiry: Instant?,
   ) {
@@ -100,12 +102,16 @@ class GoogleSecretManagerPersistence(
 
         var expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "false"))
         expiry?.let {
-          val expireTime = com.google.protobuf.Timestamp.newBuilder().setSeconds(it.epochSecond).build()
+          val expireTime =
+            com.google.protobuf.Timestamp
+              .newBuilder()
+              .setSeconds(it.epochSecond)
+              .build()
           secretBuilder.setExpireTime(expireTime)
           expTag = listOf(MetricAttribute(MetricTags.EXPIRE_SECRET, "true"))
         }
 
-        metricClient.count(OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, 1, *expTag.toTypedArray())
+        metricClient.count(metric = OssMetricsRegistry.CREATE_SECRET_DEFAULT_STORE, attributes = expTag.toTypedArray())
 
         logger.info { "GoogleSecretManagerPersistence createSecret coordinate=$coordinate expiry=$expiry" }
 
@@ -138,14 +144,14 @@ class GoogleSecretManagerPersistence(
     client.addSecretVersion(name, secretPayload)
   }
 
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
     }
   }
 
-  override fun disable(coordinate: SecretCoordinate) {
+  override fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretVersionName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       val request = ListSecretVersionsRequest.newBuilder().setParent(secretVersionName.toString()).build()
@@ -174,7 +180,8 @@ class GoogleSecretManagerServiceClient(
     val credentialsByteStream = ByteArrayInputStream(gcpCredentialsJson.toByteArray(StandardCharsets.UTF_8))
     val credentials = ServiceAccountCredentials.fromStream(credentialsByteStream)
     val clientSettings =
-      SecretManagerServiceSettings.newBuilder()
+      SecretManagerServiceSettings
+        .newBuilder()
         .setCredentialsProvider(FixedCredentialsProvider.create(credentials))
         .build()
     return SecretManagerServiceClient.create(clientSettings)

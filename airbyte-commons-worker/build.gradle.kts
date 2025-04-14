@@ -26,11 +26,7 @@ dependencies {
   implementation(libs.temporal.sdk) {
     exclude(module = "guava")
   }
-  implementation(libs.apache.ant)
-  implementation(libs.apache.commons.text)
   implementation(libs.bundles.datadog)
-  implementation(libs.commons.io)
-  implementation(libs.bundles.apache)
   implementation(libs.failsafe.okhttp)
   implementation(libs.google.cloud.storage)
   implementation(libs.okhttp)
@@ -38,6 +34,7 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.s3)
   implementation(libs.sts)
+  implementation(libs.kotlin.coroutines)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -65,7 +62,6 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-  testAnnotationProcessor(libs.jmh.annotations)
 
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
@@ -79,8 +75,6 @@ dependencies {
   testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
-  testImplementation(libs.jmh.core)
-  testImplementation(libs.jmh.annotations)
   testImplementation(libs.docker.java)
   testImplementation(libs.docker.java.transport.httpclient5)
   testImplementation(libs.reactor.test)
@@ -90,6 +84,7 @@ dependencies {
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.logback)
+  testImplementation(libs.kotlin.coroutines.test)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testRuntimeOnly(libs.javax.databind)

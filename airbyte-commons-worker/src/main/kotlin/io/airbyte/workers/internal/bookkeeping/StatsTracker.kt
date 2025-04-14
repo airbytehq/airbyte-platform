@@ -1,15 +1,19 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping
 
 import com.google.common.hash.HashFunction
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
-import io.airbyte.metrics.lib.MetricClient
-import io.airbyte.metrics.lib.OssMetricsRegistry
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.LocalDateTime
@@ -129,16 +133,12 @@ class StreamStatsTracker(
    * avoid having to traverse the map to get the global count.
    */
   fun trackRecord(recordMessage: AirbyteRecordMessage) {
-    // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
     val estimatedBytesSize: Long =
       if (!useFileTransfer) {
-        Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+        getRecordSize(recordMessage)
       } else {
-        recordMessage.additionalProperties["file"]?.let {
-          logger.info { "Received a file transfer record: $it" }
-          val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
-          fileTransferInformations.bytes
-        } ?: Jsons.getEstimatedByteSize(recordMessage.data).toLong()
+        // Note: to get file and metadata size, use plus instead of elvis
+        getFileSize(recordMessage) ?: getRecordSize(recordMessage)
       }
 
     // Update the current emitted stats
@@ -159,6 +159,20 @@ class StreamStatsTracker(
       emittedBytesCount.addAndGet(estimatedBytesSize)
     }
   }
+
+  private fun getFileSize(recordMessage: AirbyteRecordMessage): Long? =
+    if (recordMessage.fileReference != null) {
+      recordMessage.fileReference.fileSizeBytes
+    } else {
+      // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
+      recordMessage.additionalProperties["file"]?.let {
+        logger.info { "Received a file transfer record: $it" }
+        val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
+        fileTransferInformations.bytes
+      }
+    }
+
+  private fun getRecordSize(recordMessage: AirbyteRecordMessage): Long = Jsons.getEstimatedByteSize(recordMessage.data).toLong()
 
   /**
    * Bookkeeping for when a state is read from the source.
@@ -188,7 +202,7 @@ class StreamStatsTracker(
       logger.info {
         "State collision detected for stream name(${nameNamespacePair.name}), stream namespace(${nameNamespacePair.namespace})"
       }
-      metricClient.count(OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE)
       return
     }
 
@@ -238,14 +252,14 @@ class StreamStatsTracker(
 
     val stateId: Int = stateMessage.getStateIdForStatsTracking()
     if (!stateIds.contains(stateId)) {
-      metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION)
       logger.warn {
         "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
           "$stateId not found in the stored stateIds"
       }
       return
     } else if (stagedStatsList.isEmpty()) {
-      metricClient.count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+      metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION)
       logger.warn {
         "Unexpected state from destination for stream ${nameNamespacePair.namespace}:${nameNamespacePair.name}, " +
           "stagedStatsList is empty"
@@ -271,10 +285,14 @@ class StreamStatsTracker(
 
       // Increment committed stats as we are un-staging stats
       streamStats.committedBytesCount.addAndGet(
-        stagedStats.emittedStatsCounters.emittedBytesCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+        stagedStats.emittedStatsCounters.emittedBytesCount
+          .get()
+          .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
       )
       streamStats.committedRecordsCount.addAndGet(
-        stagedStats.emittedStatsCounters.remittedRecordsCount.get().minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+        stagedStats.emittedStatsCounters.remittedRecordsCount
+          .get()
+          .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
       )
 
       if (stagedStats.stateId == stateId) {
@@ -304,9 +322,7 @@ class StreamStatsTracker(
       estimatedRecordsCount.set(msg.rowEstimate)
     }
 
-  fun getTrackedEmittedRecordsSinceLastStateMessage(): Long {
-    return previousEmittedStats.remittedRecordsCount.get()
-  }
+  fun getTrackedEmittedRecordsSinceLastStateMessage(): Long = previousEmittedStats.remittedRecordsCount.get()
 
   fun getTrackedEmittedRecordsSinceLastStateMessage(stateMessage: AirbyteStateMessage): Long {
     val stateId = stateMessage.getStateIdForStatsTracking()
@@ -326,9 +342,7 @@ class StreamStatsTracker(
     return stagedStats?.emittedStatsCounters?.filteredOutRecords?.get() ?: 0
   }
 
-  fun areStreamStatsReliable(): Boolean {
-    return !streamStats.unreliableStateOperations.get()
-  }
+  fun areStreamStatsReliable(): Boolean = !streamStats.unreliableStateOperations.get()
 }
 
 fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =

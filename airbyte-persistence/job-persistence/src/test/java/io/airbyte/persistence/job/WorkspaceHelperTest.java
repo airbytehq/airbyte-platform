@@ -185,7 +185,8 @@ class WorkspaceHelperTest {
         JobStatus.PENDING,
         System.currentTimeMillis(),
         System.currentTimeMillis(),
-        System.currentTimeMillis());
+        System.currentTimeMillis(),
+        true);
     when(jobPersistence.getJob(jobId)).thenReturn(job);
 
     final UUID jobWorkspace = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);

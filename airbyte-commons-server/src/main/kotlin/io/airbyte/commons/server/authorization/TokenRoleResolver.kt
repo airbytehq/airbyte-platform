@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.commons.auth.AuthRole
@@ -33,7 +37,8 @@ class RbacTokenRoleResolver(
 
     return mutableSetOf(AuthRole.AUTHENTICATED_USER.name).apply {
       try {
-        addAll(rbacRoleHelper.getRbacRoles(authUserId, httpRequest))
+        val headerMap: Map<String, String> = httpRequest.headers.asMap(String::class.java, String::class.java)
+        addAll(rbacRoleHelper.getRbacRoles(authUserId, headerMap))
       } catch (e: Exception) {
         logger.error(e) { "Failed to resolve roles for authUserId $authUserId" }
       }

@@ -39,8 +39,8 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
-      id: "2",
-      createdAt: 1728936015,
+      id: "3",
+      createdAt: 1728936020,
       eventType: ConnectionEventType.CONNECTION_DISABLED,
       connectionId: mockConnection.connectionId,
       summary: {
@@ -48,8 +48,8 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
-      id: "2",
-      createdAt: 1728936015,
+      id: "4",
+      createdAt: 1728936025,
       eventType: ConnectionEventType.CONNECTION_DISABLED,
       connectionId: mockConnection.connectionId,
       summary: {
@@ -57,8 +57,26 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
-      id: "3",
-      createdAt: 1728936020,
+      id: "5",
+      createdAt: 1728936030,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "UNSUBSCRIBED",
+      },
+    },
+    {
+      id: "6",
+      createdAt: 1728936035,
+      eventType: ConnectionEventType.CONNECTION_DISABLED,
+      connectionId: mockConnection.connectionId,
+      summary: {
+        disabledReason: "MANUALLY_LOCKED",
+      },
+    },
+    {
+      id: "7",
+      createdAt: 1728936040,
       eventType: ConnectionEventType.SYNC_STARTED,
       connectionId: mockConnection.connectionId,
       user: {
@@ -73,8 +91,8 @@ describe("#validateAndMapEvent", () => {
       },
     },
     {
-      id: "4",
-      createdAt: 1728936040,
+      id: "8",
+      createdAt: 1728936045,
       eventType: ConnectionEventType.SYNC_CANCELLED,
       connectionId: mockConnection.connectionId,
       user: {

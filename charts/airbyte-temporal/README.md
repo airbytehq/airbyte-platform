@@ -28,7 +28,7 @@ Helm chart to deploy airbyte-temporal
 | global.configMapName | string | `""` |  |
 | global.database.secretName | string | `""` |  |
 | global.database.secretValue | string | `""` |  |
-| global.deploymentMode | string | `"oss"` |  |
+| global.edition       | string | `"community"`                 |  |
 | global.extraContainers | list | `[]` |  |
 | global.extraLabels | object | `{}` |  |
 | global.extraSelectorLabels | object | `{}` |  |

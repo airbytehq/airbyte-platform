@@ -1,8 +1,15 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.persistence
 
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_EU
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
-import io.airbyte.config.Geography
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
@@ -11,6 +18,7 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl
@@ -25,6 +33,7 @@ import io.mockk.every
 import io.mockk.mockk
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
+import org.jooq.exception.IntegrityConstraintViolationException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.testcontainers.containers.PostgreSQLContainer
@@ -73,6 +82,21 @@ open class RepositoryTestSetup {
       // this line is what runs the migrations
       val database = databaseProviders.createNewConfigsDatabase()
 
+      val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database)
+      listOf(GEOGRAPHY_EU, GEOGRAPHY_US, GEOGRAPHY_AUTO).forEach {
+        try {
+          dataplaneGroupService.writeDataplaneGroup(
+            DataplaneGroup()
+              .withId(UUID.randomUUID())
+              .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+              .withName(it)
+              .withEnabled(true)
+              .withTombstone(false),
+          )
+        } catch (_: IntegrityConstraintViolationException) {
+        }
+      }
+
       val workspaceId = UUID.randomUUID()
       val workspaceService =
         WorkspaceServiceJooqImpl(
@@ -81,12 +105,14 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
+          mockk(),
+          dataplaneGroupService,
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(
         StandardWorkspace()
           .withWorkspaceId(workspaceId)
-          .withDefaultGeography(Geography.US)
+          .withDefaultGeography(GEOGRAPHY_US)
           .withName("")
           .withSlug("")
           .withInitialSetupComplete(true)
@@ -104,9 +130,8 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
-          mockk(),
-          mockk(),
           actorDefinitionUpdate,
+          mockk(),
         )
 
       val sourceDefinitionId = UUID.randomUUID()
@@ -147,10 +172,8 @@ open class RepositoryTestSetup {
           database,
           mockk(),
           mockk(),
-          mockk(),
-          mockk(),
-          mockk(),
           actorDefinitionUpdate,
+          mockk(),
         )
 
       val destinationDefinitionId = UUID.randomUUID()
@@ -181,11 +204,11 @@ open class RepositoryTestSetup {
           .withWorkspaceId(workspaceId),
       )
 
-      val connectionRepo = StandardSyncPersistence(database)
+      val connectionRepo = StandardSyncPersistence(database, dataplaneGroupService)
       connectionRepo.writeStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
-          .withGeography(Geography.US)
+          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
@@ -195,7 +218,7 @@ open class RepositoryTestSetup {
       connectionRepo.writeStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
-          .withGeography(Geography.US)
+          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
@@ -210,7 +233,5 @@ open class RepositoryTestSetup {
     }
   }
 
-  fun <T> getRepository(clazz: Class<T>): T {
-    return context.getBean(clazz)
-  }
+  fun <T> getRepository(clazz: Class<T>): T = context.getBean(clazz)
 }

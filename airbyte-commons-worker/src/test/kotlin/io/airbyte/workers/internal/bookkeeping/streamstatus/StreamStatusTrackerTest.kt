@@ -1,16 +1,20 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.AirbyteStreamStatusRateLimitedReason
-import io.airbyte.protocol.models.AirbyteStreamStatusReason
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusRateLimitedReason
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusReason
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.airbyte.workers.internal.bookkeeping.events.StreamStatusUpdateEvent
@@ -27,7 +31,7 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.stream.Stream
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
 
 class StreamStatusTrackerTest {
   private lateinit var tracker: StreamStatusTracker
@@ -387,8 +391,8 @@ class StreamStatusTrackerTest {
 
   companion object {
     @JvmStatic
-    fun runStateTransitionMatrix(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateTransitionMatrix(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null, ApiEnum.RUNNING),
         Arguments.of(null, ApiEnum.RATE_LIMITED),
         Arguments.of(null, ApiEnum.COMPLETE),
@@ -400,18 +404,16 @@ class StreamStatusTrackerTest {
         Arguments.of(ApiEnum.RUNNING, ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.RUNNING, ApiEnum.INCOMPLETE),
       )
-    }
 
     @JvmStatic
-    fun runStateValues(): Stream<Arguments> {
-      return Stream.of(
+    fun runStateValues(): Stream<Arguments> =
+      Stream.of(
         Arguments.of(null),
         Arguments.of(ApiEnum.RUNNING),
         Arguments.of(ApiEnum.RATE_LIMITED),
         Arguments.of(ApiEnum.COMPLETE),
         Arguments.of(ApiEnum.INCOMPLETE),
       )
-    }
   }
 
   object Fixtures {
@@ -509,8 +511,7 @@ class StreamStatusTrackerTest {
                 .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
                 .withStreamDescriptor(
                   streamDescriptor1,
-                )
-                .withReasons(
+                ).withReasons(
                   listOf(
                     AirbyteStreamStatusReason()
                       .withType(AirbyteStreamStatusReason.AirbyteStreamStatusReasonType.RATE_LIMITED)

@@ -10,12 +10,12 @@ import { ExternalLink } from "components/ui/Link";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader/PageHeaderWithNavigation";
 import { Text } from "components/ui/Text";
 
-import { useEnterpriseSourceStubsList } from "core/api";
+import { useListEnterpriseStubsForWorkspace } from "core/api";
 import { EnterpriseSourceStubType } from "core/domain/connector";
 import { useAirbyteTheme } from "hooks/theme/useAirbyteTheme";
 import { RoutePaths } from "pages/routePaths";
 
-import blurred_source_form from "./blurred_source_form.png";
+import blurred_source_form from "./blurred_source_form.webp";
 import styles from "./EnterpriseSourcePage.module.scss";
 
 // Set up URL with basic tracking parameters
@@ -29,7 +29,8 @@ const appendConnectorTracking = (name: string) => {
 export const EnterpriseSourcePage: React.FC = () => {
   const { theme } = useAirbyteTheme();
   const params = useParams<{ workspaceId: string; id: string }>();
-  const { enterpriseSourceDefinitionsMap } = useEnterpriseSourceStubsList();
+  const { enterpriseSourceDefinitionsMap } = useListEnterpriseStubsForWorkspace();
+
   const enterpriseSource = params.id
     ? (enterpriseSourceDefinitionsMap.get(params.id) as EnterpriseSourceStubType)
     : undefined;
@@ -65,13 +66,15 @@ export const EnterpriseSourcePage: React.FC = () => {
         <FlexContainer className={styles.blurredForm}>
           <img
             src={blurred_source_form}
-            alt="Blurred connector form"
+            alt=""
             className={classNames(styles.backgroundImage, {
               [styles.backgroundImageDark]: theme === "airbyteThemeDark",
             })}
           />
           <FlexContainer className={styles.content}>
-            <Text size="lg">Interested in this Connector?</Text>
+            <Text size="lg">
+              <FormattedMessage id="connector.enterprise.interest" />
+            </Text>
             <ExternalLink
               variant="button"
               opensInNewTab

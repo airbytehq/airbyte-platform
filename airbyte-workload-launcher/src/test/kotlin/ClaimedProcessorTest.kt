@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.generated.infrastructure.ServerException
@@ -47,8 +51,7 @@ class ClaimedProcessorTest {
       ClaimedProcessor(
         apiClient = apiClient,
         pipe = launchPipeline,
-        metricPublisher = mockk(relaxed = true),
-        dataplaneId = "dataplane1",
+        metricClient = mockk(relaxed = true),
         parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,
         backoffDuration = 1.milliseconds.toKotlinDuration().toJavaDuration(),
@@ -59,7 +62,7 @@ class ClaimedProcessorTest {
   @Test
   fun `test retrieve and process when there are no workload to resume`() {
     every { workloadApi.workloadList(any()) } returns WorkloadListResponse(listOf())
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(0) }
   }
@@ -73,7 +76,7 @@ class ClaimedProcessorTest {
           Workload("2", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
         ),
       )
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(2) }
     verify(exactly = 2) { launchPipeline.buildPipeline(any()) }
@@ -85,7 +88,7 @@ class ClaimedProcessorTest {
     every { workloadApi.workloadList(any()) } throws ServerException("Message shouldn't matter here", statusCode)
 
     assertThrows<ServerException> {
-      claimedProcessor.retrieveAndProcess()
+      claimedProcessor.retrieveAndProcess("dataplane1")
     }
     verify(exactly = 0) { claimProcessorTracker.trackNumberOfClaimsToResume(any()) }
   }
@@ -94,17 +97,17 @@ class ClaimedProcessorTest {
   fun `test retrieve and process recovers after network issues`() {
     every { workloadApi.workloadList(any()) }
       .throwsMany(
-        (1..5).flatMap {
-          listOf(
-            ServerException("oops", 500),
-            ServerException("oops", 502),
-            SocketException(),
-            ConnectException(),
-            SocketTimeoutException(),
-          )
-        }.toList(),
-      )
-      .andThenAnswer {
+        (1..5)
+          .flatMap {
+            listOf(
+              ServerException("oops", 500),
+              ServerException("oops", 502),
+              SocketException(),
+              ConnectException(),
+              SocketTimeoutException(),
+            )
+          }.toList(),
+      ).andThenAnswer {
         WorkloadListResponse(
           listOf(
             Workload("1", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
@@ -113,7 +116,7 @@ class ClaimedProcessorTest {
           ),
         )
       }
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(3) }
     verify(exactly = 3) { launchPipeline.buildPipeline(any()) }

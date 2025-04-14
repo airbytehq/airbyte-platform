@@ -1,13 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -142,14 +146,18 @@ class NamespacingMapper
   }
 
 @VisibleForTesting
-data class NamespaceStreamName(val namespace: String?, val streamName: String)
+data class NamespaceStreamName(
+  val namespace: String?,
+  val streamName: String,
+)
 
 private fun formatNamespace(
   sourceNamespace: String?,
   namespaceFormat: String?,
 ): String? {
   var result: String? = ""
-  namespaceFormat?.takeIf { it.isNotBlank() }
+  namespaceFormat
+    ?.takeIf { it.isNotBlank() }
     ?.let { format ->
       val replaceWith = sourceNamespace?.takeIf { it.isNotBlank() } ?: ""
       result = format.replace("\${SOURCE_NAMESPACE}", replaceWith)

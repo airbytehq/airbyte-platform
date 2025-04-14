@@ -1,7 +1,7 @@
 import cloneDeep from "lodash/cloneDeep";
 import debounce from "lodash/debounce";
 import { Range } from "monaco-editor";
-import React, { useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import { AnyObjectSchema } from "yup";
 
 import { removeEmptyProperties } from "core/utils/form";
@@ -12,35 +12,31 @@ import {
 
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
+import { ComponentsView } from "./ComponentsView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { BuilderFormValues, convertToManifest, useBuilderWatch } from "../types";
+import { BuilderFormValues, convertToManifest } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
-
-interface BuilderProps {
-  hasMultipleStreams: boolean;
-}
+import { useBuilderWatch } from "../useBuilderWatch";
 
 function getView(
-  selectedView: "global" | "inputs" | { streamNum: number; streamId: string },
-  hasMultipleStreams: boolean
+  selectedView: "global" | "inputs" | "components" | { streamNum: number; streamId: string },
+  scrollToTop: () => void
 ) {
   switch (selectedView) {
     case "global":
       return <GlobalConfigView />;
     case "inputs":
       return <InputsView />;
+    case "components":
+      return <ComponentsView />;
     default:
       // re-mount on changing stream
       return (
-        <StreamConfigView
-          streamNum={selectedView.streamNum}
-          key={selectedView.streamId}
-          hasMultipleStreams={hasMultipleStreams}
-        />
+        <StreamConfigView streamNum={selectedView.streamNum} key={selectedView.streamId} scrollToTop={scrollToTop} />
       );
   }
 }
@@ -49,7 +45,7 @@ function cleanFormValues(values: unknown, builderFormValidationSchema: AnyObject
   return builderFormValidationSchema.cast(removeEmptyProperties(cloneDeep(values))) as unknown as BuilderFormValues;
 }
 
-export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
+export const Builder: React.FC = () => {
   const { validateAndTouch } = useBuilderErrors();
   const {
     blockedOnInvalidState,
@@ -64,6 +60,16 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
 
   const streams = useBuilderWatch("formValues.streams");
   const { builderFormValidationSchema } = useBuilderValidationSchema();
+
+  // Create a reference to the builder view div for scrolling
+  const builderViewRef = React.useRef<HTMLDivElement>(null);
+
+  // Function to scroll the builder view to the top
+  const scrollToTop = useCallback(() => {
+    if (builderViewRef.current) {
+      builderViewRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
 
   const debouncedUpdateJsonManifest = useMemo(
     () =>
@@ -83,7 +89,7 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
 
   const selectedView = useMemo(
     () =>
-      view !== "global" && view !== "inputs"
+      view !== "global" && view !== "inputs" && view !== "components"
         ? {
             streamNum: view,
             streamId: streams[view]?.id ?? view,
@@ -102,7 +108,9 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
     () => (
       <div className={styles.container}>
         <BuilderSidebar />
-        <div className={styles.builderView}>{getView(selectedView, hasMultipleStreams)}</div>
+        <div className={styles.builderView} ref={builderViewRef}>
+          {getView(selectedView, scrollToTop)}
+        </div>
         {newUserInputContext && (
           <InputForm
             inputInEditing={newInputInEditing()}
@@ -132,6 +140,6 @@ export const Builder: React.FC<BuilderProps> = ({ hasMultipleStreams }) => {
         )}
       </div>
     ),
-    [selectedView, hasMultipleStreams, newUserInputContext, setNewUserInputContext]
+    [selectedView, newUserInputContext, setNewUserInputContext, scrollToTop]
   );
 };

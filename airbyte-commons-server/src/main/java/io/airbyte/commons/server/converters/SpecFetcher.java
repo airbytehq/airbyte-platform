@@ -6,7 +6,7 @@ package io.airbyte.commons.server.converters;
 
 import com.google.common.base.Preconditions;
 import io.airbyte.commons.server.scheduler.SynchronousResponse;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 
 /**
  * Convert between API and internal versions of spec models.

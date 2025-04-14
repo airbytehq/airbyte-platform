@@ -1,3 +1,4 @@
+{{- if .Values.worker.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -7,6 +8,8 @@ metadata:
     {{- if .Values.worker.extraLabels }}
     {{ toYaml (mergeOverwrite .Values.worker.extraLabels .Values.global.extraLabels) | nindent 4 }}
     {{- end }}
+  annotations:
+    {{ toYaml .Values.worker.annotations | nindent 4 }}
 spec:
   replicas: {{ .Values.worker.replicaCount }}
   selector:
@@ -23,14 +26,14 @@ spec:
         {{ toYaml (mergeOverwrite .Values.worker.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.worker.podLabels }}
-          {{- include "common.tplvalues.render" (dict "value" .Values.worker.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.worker.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.worker.serviceAccountName }}
       automountServiceAccountToken: true
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -39,13 +42,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.worker.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.worker.nodeSelector "context" $) | nindent 8 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.nodeSelector "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.worker.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.worker.tolerations "context" $) | nindent 8 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.tolerations "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.worker.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.worker.affinity "context" $) | nindent 8 }}
       {{- end }}
       {{- if .Values.worker.extraInitContainers }}
       initContainers:
@@ -61,13 +64,17 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.worker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
+        {{- end }}
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
@@ -77,10 +84,15 @@ spec:
         {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.worker.envs" . | nindent 8 }}
+        {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- end }}
+
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret
@@ -174,9 +186,9 @@ spec:
         securityContext: {{- toYaml .Values.worker.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
         - name: gcs-log-creds-volume
-          mountPath: /secrets/gcs-log-creds
+          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
           readOnly: true
         {{- end }}
         {{- if .Values.worker.extraVolumeMounts }}
@@ -193,10 +205,13 @@ spec:
       {{- end }}
       securityContext: {{- toYaml .Values.worker.podSecurityContext | nindent 8 }}
       volumes:
-      {{- if and (eq .Values.global.deploymentMode "oss") (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+      {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
+          items:
+            - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
+              path: "gcp.json"
       {{- end }}
       {{- if .Values.worker.extraVolumes }}
 {{- toYaml .Values.worker.extraVolumes | nindent 6 }}
@@ -204,3 +219,4 @@ spec:
       {{- if .Values.global.extraVolumes }}
 {{- toYaml .Values.global.extraVolumes | nindent 6 }}
       {{- end }}
+{{- end }}

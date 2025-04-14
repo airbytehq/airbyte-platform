@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { Box } from "components/ui/Box";
 import { IconType } from "components/ui/Icon";
@@ -13,9 +13,8 @@ import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
 import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { jobStartedEventSchema } from "../types";
 import { titleIdMap } from "../utils";
-
 interface JobStartEventItemProps {
-  event: InferType<typeof jobStartedEventSchema>;
+  event: z.infer<typeof jobStartedEventSchema>;
 }
 
 export const JobStartEventItem: React.FC<JobStartEventItemProps> = ({ event }) => {

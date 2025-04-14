@@ -5,6 +5,8 @@
 package io.airbyte.commons.server.support;
 
 import io.airbyte.config.AuthenticatedUser;
+import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Interface for retrieving the User associated with the current request.
@@ -12,5 +14,7 @@ import io.airbyte.config.AuthenticatedUser;
 public interface CurrentUserService {
 
   AuthenticatedUser getCurrentUser();
+
+  Optional<UUID> getCurrentUserIdIfExists();
 
 }

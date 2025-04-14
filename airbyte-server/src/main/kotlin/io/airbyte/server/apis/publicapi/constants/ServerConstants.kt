@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.constants
@@ -23,6 +23,10 @@ const val SOURCES_WITH_ID_PATH = "$SOURCES_PATH/{sourceId}"
 const val DESTINATIONS_PATH = "$ROOT_PATH/v1/destinations"
 const val DESTINATIONS_WITH_ID_PATH = "$DESTINATIONS_PATH/{destinationId}"
 const val OAUTH_PATH = "$ROOT_PATH/v1/oauth"
+const val REGIONS_PATH = "$ROOT_PATH/v1/regions"
+const val REGIONS_WITH_ID_PATH = "$REGIONS_PATH/{regionId}"
+const val DATAPLANES_PATH = "$ROOT_PATH/v1/regions/{regionId}/dataplanes"
+const val DATAPLANES_WITH_ID_PATH = "$DATAPLANES_PATH/{dataplaneId}"
 const val WORKSPACES_PATH = "$ROOT_PATH/v1/workspaces"
 const val WORKSPACES_WITH_ID_PATH = "$WORKSPACES_PATH/{workspaceId}"
 const val WORKSPACES_WITH_ID_AND_OAUTH_PATH = "$WORKSPACES_WITH_ID_PATH/oauth_credentials"
@@ -30,6 +34,7 @@ const val PERMISSIONS_PATH = "$ROOT_PATH/v1/permissions"
 const val PERMISSIONS_WITH_ID_PATH = "$PERMISSIONS_PATH/{permissionId}"
 const val USERS_PATH = "$ROOT_PATH/v1/users"
 const val ORGANIZATIONS_PATH = "$ROOT_PATH/v1/organizations"
+const val TAGS_PATH = "$ROOT_PATH/v1/tags"
 
 val POST = io.micronaut.http.HttpMethod.POST.name
 val GET = io.micronaut.http.HttpMethod.GET.name

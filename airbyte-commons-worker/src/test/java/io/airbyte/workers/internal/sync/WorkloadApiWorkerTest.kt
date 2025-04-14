@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.sync
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -5,7 +9,7 @@ import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.ConnectionStatus
-import io.airbyte.api.client.model.generated.Geography
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.logging.DEFAULT_LOG_FILENAME
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.storage.StorageClient
@@ -98,6 +102,9 @@ internal class WorkloadApiWorkerTest {
         replicationActivityInput,
         featureFlagClient,
         logClientManager,
+        mockk {
+          every { resolveForSync(any(), any(), any()) } returns GEOGRAPHY_US
+        },
       )
   }
 
@@ -123,7 +130,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
@@ -154,7 +161,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.FAILURE)
@@ -186,7 +193,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } throws ServerException(statusCode = 409)
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
@@ -215,7 +222,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns mockWorkload(WorkloadStatus.SUCCESS)
@@ -241,7 +248,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
@@ -271,7 +278,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
@@ -301,7 +308,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns
@@ -331,7 +338,7 @@ internal class WorkloadApiWorkerTest {
         syncCatalog = AirbyteCatalog(listOf()),
         status = ConnectionStatus.ACTIVE,
         breakingChange = false,
-        geography = Geography.US,
+        geography = GEOGRAPHY_US,
       )
     every { workloadApi.workloadCreate(any()) } returns Unit
     every { workloadApi.workloadGet(workloadId) } returns

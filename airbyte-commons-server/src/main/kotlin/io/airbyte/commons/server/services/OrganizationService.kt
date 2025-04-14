@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.services
 
 import io.airbyte.analytics.BillingTrackingHelper
@@ -6,11 +10,11 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.StateConflictProblem
-import io.airbyte.commons.server.ConnectionId
-import io.airbyte.commons.server.OrganizationId
 import io.airbyte.config.OrganizationPaymentConfig
 import io.airbyte.config.OrganizationPaymentConfig.PaymentStatus
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
+import io.airbyte.domain.models.ConnectionId
+import io.airbyte.domain.models.OrganizationId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -97,6 +101,7 @@ open class OrganizationServiceImpl(
     }
 
     orgPaymentConfig.paymentStatus = PaymentStatus.DISABLED
+    orgPaymentConfig.gracePeriodEndAt = null
     organizationPaymentConfigRepository.savePaymentConfig(orgPaymentConfig)
 
     disableAllConnections(organizationId, ConnectionAutoDisabledReason.INVALID_PAYMENT_METHOD)

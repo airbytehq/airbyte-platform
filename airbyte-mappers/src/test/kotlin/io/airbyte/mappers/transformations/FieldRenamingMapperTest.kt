@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.core.type.TypeReference
@@ -10,8 +14,8 @@ import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.FieldRenamingConfig
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,8 +34,8 @@ class FieldRenamingMapperTest {
   @Inject
   lateinit var mapper: FieldRenamingMapper
 
-  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord {
-    return AirbyteJsonRecordAdapter(
+  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord =
+    AirbyteJsonRecordAdapter(
       AirbyteMessage()
         .withType(AirbyteMessage.Type.RECORD)
         .withRecord(
@@ -42,11 +46,8 @@ class FieldRenamingMapperTest {
             .withData(Jsons.jsonNode(recordData)),
         ),
     )
-  }
 
-  private fun createConfiguredMapper(config: FieldRenamingConfig): FieldRenamingMapperConfig {
-    return FieldRenamingMapperConfig(mapperType, null, config)
-  }
+  private fun createConfiguredMapper(config: FieldRenamingConfig): FieldRenamingMapperConfig = FieldRenamingMapperConfig(mapperType, null, config)
 
   @Test
   fun `should rename field when original field exists`() {
@@ -112,10 +113,29 @@ class FieldRenamingMapperTest {
     @Test
     fun `should return expected spec`() {
       val spec = mapper.spec().jsonSchema()
-      assertEquals(mapper.name, spec.get("properties").get("name").get("const").asText()!!)
+      assertEquals(
+        mapper.name,
+        spec
+          .get("properties")
+          .get("name")
+          .get("const")
+          .asText()!!,
+      )
       assertTrue(spec.get("properties").contains("documentationUrl"))
-      assertTrue(spec.get("properties").get("config").get("properties").contains(FieldRenamingMapper.ORIGINAL_FIELD_NAME))
-      assertTrue(spec.get("properties").get("config").get("properties").contains(FieldRenamingMapper.NEW_FIELD_NAME))
+      assertTrue(
+        spec
+          .get("properties")
+          .get("config")
+          .get("properties")
+          .contains(FieldRenamingMapper.ORIGINAL_FIELD_NAME),
+      )
+      assertTrue(
+        spec
+          .get("properties")
+          .get("config")
+          .get("properties")
+          .contains(FieldRenamingMapper.NEW_FIELD_NAME),
+      )
     }
 
     // If making changes to the mapper spec, ensure this test passes without modifying the examples to guarantee backward compatibility.

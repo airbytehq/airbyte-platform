@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.connectorSidecar
 
 import com.google.common.annotations.VisibleForTesting
@@ -13,6 +17,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
+import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
@@ -53,6 +58,7 @@ class ConnectorWatcher(
   private val jobOutputDocStore: JobOutputDocStore,
   private val logContextFactory: SidecarLogContextFactory,
   private val heartbeatMonitor: HeartbeatMonitor,
+  private val metricClient: MetricClient,
 ) {
   @PostConstruct
   fun run() {
@@ -174,16 +180,28 @@ class ConnectorWatcher(
     input: SidecarInput,
     e: Exception,
   ) {
-    logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
-    val connectorOutput =
-      when (input.operationType) {
-        SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
-        SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
-        SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
-      }
-    jobOutputDocStore.write(input.workloadId, connectorOutput)
-    failWorkload(input.workloadId, connectorOutput.failureReason)
-    exitInternalError()
+    try {
+      logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
+      val connectorOutput =
+        when (input.operationType) {
+          SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
+          SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
+          SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
+        }
+      jobOutputDocStore.write(input.workloadId, connectorOutput)
+      failWorkload(input.workloadId, connectorOutput.failureReason)
+    } catch (e: Exception) {
+      failWorkload(
+        input.workloadId,
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withExternalMessage("Unable to persist the job Output, check the document store credentials.")
+          .withInternalMessage(e.message)
+          .withStacktrace(e.stackTraceToString()),
+      )
+    } finally {
+      exitInternalError()
+    }
   }
 
   @VisibleForTesting
@@ -205,6 +223,7 @@ class ConnectorWatcher(
       Optional.empty(),
       InvalidLineFailureConfiguration(false),
       gsonPksExtractor,
+      metricClient,
     )
   }
 

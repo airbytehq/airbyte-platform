@@ -6,7 +6,6 @@ const nameLabel = "[data-testid='connector-name-label']";
 const nameInput = "[data-testid='connector-name-input']";
 const urlBaseInput = "[name='formValues.global.urlBase']";
 const addStreamButton = "[data-testid='add-stream']";
-const apiKeyInput = "input[name='connectionConfiguration.api_key']";
 const togglePaginationInput = "[data-testid='toggle-formValues.streams.0.paginator']";
 const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.streams.0.parameterizedRequests']";
 const parameterizedRequestsCursorInput = "[name='formValues.streams.0.parameterizedRequests.0.cursor_field']";
@@ -16,7 +15,6 @@ const streamUrlPathFromForm = "[name='formValues.streams.0.urlPath']";
 const recordSelectorToggle = "[data-testid='toggle-formValues.streams.0.recordSelector']";
 const recordSelectorFieldPathInput = "[data-testid='tag-input-formValues.streams.0.recordSelector.fieldPath'] input";
 const authType = "[data-testid='formValues.global.authenticator.type']";
-const testInputsButton = "[data-testid='test-inputs']";
 const limitInput = "[name='formValues.streams.0.paginator.strategy.page_size']";
 const injectLimitInto = "[data-testid$='paginator.pageSizeOption.inject_into']";
 const injectLimitFieldName = "[name='formValues.streams.0.paginator.pageSizeOption.field_name']";
@@ -28,6 +26,8 @@ const testStreamButton = "[data-testid='read-stream']";
 const sliceDropdown = '[data-testid="tag-select-slice"]';
 
 export const goToConnectorBuilderCreatePage = () => {
+  // Clear any stored connector chat builder params before visiting
+  window.sessionStorage.removeItem("launch-connector-builder");
   cy.visit("/connector-builder/create");
 };
 
@@ -69,15 +69,10 @@ export const selectActiveVersion = (name: string, version: number) => {
 };
 
 export const goToView = (view: string) => {
+  // First ensure we're on the correct page
+  cy.url().should("include", "/connector-builder");
+  // Then click the navigation button
   cy.get(`button[data-testid=navbutton-${view}]`, { timeout: 20000 }).click();
-};
-
-export const openTestInputs = () => {
-  cy.get(testInputsButton).click();
-};
-
-export const enterTestInputs = ({ apiKey }: { apiKey: string }) => {
-  cy.get(apiKeyInput).type(apiKey);
 };
 
 export const goToTestPage = (page: number) => {

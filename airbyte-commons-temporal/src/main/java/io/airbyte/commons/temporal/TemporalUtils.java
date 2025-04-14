@@ -6,12 +6,14 @@ package io.airbyte.commons.temporal;
 
 import static io.airbyte.commons.logging.LogMdcHelperKt.DEFAULT_LOG_FILENAME;
 
+import io.airbyte.commons.duration.DurationKt;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.factories.TemporalCloudConfig;
 import io.airbyte.commons.temporal.factories.TemporalSelfHostedConfig;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsFactory;
 import io.airbyte.commons.temporal.factories.WorkflowServiceStubsTimeouts;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micronaut.context.annotation.Property;
 import io.micronaut.context.annotation.Value;
 import io.temporal.api.namespace.v1.NamespaceConfig;
@@ -25,8 +27,8 @@ import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,13 +60,14 @@ public class TemporalUtils {
                        @Value("${temporal.cloud.namespace}") final String temporalCloudNamespace,
                        @Value("${temporal.host}") final String temporalHost,
                        @Property(name = "temporal.retention",
-                                 defaultValue = "30") final Integer temporalRetentionInDays) {
+                                 defaultValue = "30") final Integer temporalRetentionInDays,
+                       final Optional<MeterRegistry> meterRegistry) {
     this.temporalCloudEnabled = Objects.requireNonNullElse(temporalCloudEnabled, false);
     this.temporalCloudConfig = new TemporalCloudConfig(temporalCloudClientCert, temporalCloudClientKey, temporalCloudHost, temporalCloudNamespace);
     this.workflowServiceStubsFactory = new WorkflowServiceStubsFactory(
         temporalCloudConfig,
         new TemporalSelfHostedConfig(temporalHost, this.temporalCloudEnabled ? temporalCloudNamespace : DEFAULT_NAMESPACE),
-        this.temporalCloudEnabled);
+        this.temporalCloudEnabled, meterRegistry.orElse(null));
     this.temporalRetentionInDays = temporalRetentionInDays;
   }
 
@@ -124,14 +127,14 @@ public class TemporalUtils {
     final var currentRetentionGrpcDuration = client.describeNamespace(describeNamespaceRequest).getConfig().getWorkflowExecutionRetentionTtl();
     final var currentRetention = Duration.ofSeconds(currentRetentionGrpcDuration.getSeconds());
     final var workflowExecutionTtl = Duration.ofDays(temporalRetentionInDays);
-    final var humanReadableWorkflowExecutionTtl = DurationFormatUtils.formatDurationWords(workflowExecutionTtl.toMillis(), true, true);
+    final var humanReadableWorkflowExecutionTtl = DurationKt.formatMilli(workflowExecutionTtl.toMillis());
 
     if (currentRetention.equals(workflowExecutionTtl)) {
       log.info("Workflow execution TTL already set for namespace " + DEFAULT_NAMESPACE + ". Remains unchanged as: "
           + humanReadableWorkflowExecutionTtl);
     } else {
       final var newGrpcDuration = com.google.protobuf.Duration.newBuilder().setSeconds(workflowExecutionTtl.getSeconds()).build();
-      final var humanReadableCurrentRetention = DurationFormatUtils.formatDurationWords(currentRetention.toMillis(), true, true);
+      final var humanReadableCurrentRetention = DurationKt.formatMilli(currentRetention.toMillis());
       final var namespaceConfig = NamespaceConfig.newBuilder().setWorkflowExecutionRetentionTtl(newGrpcDuration).build();
       final var updateNamespaceRequest = UpdateNamespaceRequest.newBuilder().setNamespace(DEFAULT_NAMESPACE).setConfig(namespaceConfig).build();
       log.info("Workflow execution TTL differs for namespace " + DEFAULT_NAMESPACE + ". Changing from (" + humanReadableCurrentRetention + ") to ("

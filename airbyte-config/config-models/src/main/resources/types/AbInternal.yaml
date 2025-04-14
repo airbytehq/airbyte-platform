@@ -10,3 +10,7 @@ properties:
   sl:
     type: integer
     description: The internal standards of support for a connector
+  isEnterprise:
+    type: boolean
+    description: whether this connector is only available with an enterprise license
+    default: false

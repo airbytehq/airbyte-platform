@@ -107,10 +107,11 @@ public class DefaultJobCreator implements JobCreator {
                                       final StandardDestinationDefinition destinationDefinition,
                                       final ActorDefinitionVersion sourceDefinitionVersion,
                                       final ActorDefinitionVersion destinationDefinitionVersion,
-                                      final UUID workspaceId)
+                                      final UUID workspaceId,
+                                      final boolean isScheduled)
       throws IOException {
     final SyncResourceRequirements syncResourceRequirements =
-        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
+        getSyncResourceRequirements(workspaceId, Optional.of(source), destination, standardSync, sourceDefinition, destinationDefinition, false);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -136,11 +137,13 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, isScheduled);
   }
 
   @Override
-  public Optional<Long> createRefreshConnection(final StandardSync standardSync,
+  public Optional<Long> createRefreshConnection(final SourceConnection source,
+                                                final DestinationConnection destination,
+                                                final StandardSync standardSync,
                                                 final String sourceDockerImageName,
                                                 final Version sourceProtocolVersion,
                                                 final String destinationDockerImageName,
@@ -161,7 +164,7 @@ public class DefaultJobCreator implements JobCreator {
     }
 
     final SyncResourceRequirements syncResourceRequirements =
-        getSyncResourceRequirements(workspaceId, standardSync, sourceDefinition, destinationDefinition, false);
+        getSyncResourceRequirements(workspaceId, Optional.of(source), destination, standardSync, sourceDefinition, destinationDefinition, false);
 
     final RefreshConfig refreshConfig = new RefreshConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -196,7 +199,7 @@ public class DefaultJobCreator implements JobCreator {
         .withConfigType(ConfigType.REFRESH)
         .withRefresh(refreshConfig);
 
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   @VisibleForTesting
@@ -231,7 +234,7 @@ public class DefaultJobCreator implements JobCreator {
     CatalogTransforms.updateCatalogForReset(streamsToReset, configuredAirbyteCatalog);
 
     final var resetResourceRequirements =
-        getSyncResourceRequirements(workspaceId, standardSync, RESET_SOURCE_DEFINITION, destinationDefinition, true);
+        getSyncResourceRequirements(workspaceId, null, destination, standardSync, RESET_SOURCE_DEFINITION, destinationDefinition, true);
 
     final JobResetConnectionConfig resetConnectionConfig = new JobResetConnectionConfig()
         .withNamespaceDefinition(standardSync.getNamespaceDefinition())
@@ -252,10 +255,12 @@ public class DefaultJobCreator implements JobCreator {
     final JobConfig jobConfig = new JobConfig()
         .withConfigType(ConfigType.RESET_CONNECTION)
         .withResetConnection(resetConnectionConfig);
-    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig);
+    return jobPersistence.enqueueJob(standardSync.getConnectionId().toString(), jobConfig, false);
   }
 
   private SyncResourceRequirements getSyncResourceRequirements(final UUID workspaceId,
+                                                               final Optional<SourceConnection> source,
+                                                               final DestinationConnection destination,
                                                                final StandardSync standardSync,
                                                                final StandardSourceDefinition sourceDefinition,
                                                                final StandardDestinationDefinition destinationDefinition,
@@ -272,7 +277,7 @@ public class DefaultJobCreator implements JobCreator {
     final Optional<String> sourceType = getSourceType(sourceDefinition);
     final ResourceRequirements mergedOrchestratorResourceReq = getOrchestratorResourceRequirements(standardSync, sourceType, variant, ffContext);
     final ResourceRequirements mergedDstResourceReq =
-        getDestinationResourceRequirements(standardSync, destinationDefinition, sourceType, variant, ffContext);
+        getDestinationResourceRequirements(standardSync, destination, destinationDefinition, sourceType, variant, ffContext);
 
     final var syncResourceRequirements = new SyncResourceRequirements()
         .withConfigKey(new SyncResourceRequirementsKey().withVariant(variant).withSubType(sourceType.orElse(null)))
@@ -280,7 +285,14 @@ public class DefaultJobCreator implements JobCreator {
         .withOrchestrator(mergedOrchestratorResourceReq);
 
     if (!isReset) {
-      final ResourceRequirements mergedSrcResourceReq = getSourceResourceRequirements(standardSync, sourceDefinition, variant, ffContext);
+      if (source == null || source.isEmpty()) {
+        log.error(
+            "`source` is expected for all jobs except reset, but was not present. "
+                + "Resource requirements set for the source are being skipped.");
+        return syncResourceRequirements;
+      }
+      final ResourceRequirements mergedSrcResourceReq =
+          getSourceResourceRequirements(standardSync, source.get(), sourceDefinition, variant, ffContext);
       syncResourceRequirements
           .withSource(mergedSrcResourceReq);
     }
@@ -326,14 +338,16 @@ public class DefaultJobCreator implements JobCreator {
   }
 
   private ResourceRequirements getSourceResourceRequirements(final StandardSync standardSync,
+                                                             final SourceConnection source,
                                                              final StandardSourceDefinition sourceDefinition,
                                                              final String variant,
                                                              final Context ffContext) {
     final ResourceRequirements defaultSrcRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition), variant);
 
-    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirements(
+    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirementsForJobType(
         standardSync.getResourceRequirements(),
+        source.getResourceRequirements(),
         sourceDefinition != null ? sourceDefinition.getResourceRequirements() : null,
         defaultSrcRssReqs,
         JobType.SYNC);
@@ -344,6 +358,7 @@ public class DefaultJobCreator implements JobCreator {
   }
 
   private ResourceRequirements getDestinationResourceRequirements(final StandardSync standardSync,
+                                                                  final DestinationConnection destination,
                                                                   final StandardDestinationDefinition destinationDefinition,
                                                                   final Optional<String> sourceType,
                                                                   final String variant,
@@ -351,8 +366,9 @@ public class DefaultJobCreator implements JobCreator {
     final ResourceRequirements defaultDstRssReqs =
         resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, sourceType, variant);
 
-    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirements(
+    final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirementsForJobType(
         standardSync.getResourceRequirements(),
+        destination.getResourceRequirements(),
         destinationDefinition.getResourceRequirements(),
         defaultDstRssReqs,
         JobType.SYNC);

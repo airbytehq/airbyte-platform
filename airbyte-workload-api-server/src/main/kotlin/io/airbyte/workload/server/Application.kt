@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.server
 
 import io.micronaut.runtime.Micronaut.build
@@ -17,7 +21,11 @@ import io.swagger.v3.oas.annotations.servers.Server
 class Application {
   companion object {
     @JvmStatic fun main(args: Array<String>) {
-      build(*args).deduceCloudEnvironment(false).deduceEnvironment(false).mainClass(Application::class.java).start()
+      build(*args)
+        .deduceCloudEnvironment(false)
+        .deduceEnvironment(false)
+        .mainClass(Application::class.java)
+        .start()
     }
   }
 }

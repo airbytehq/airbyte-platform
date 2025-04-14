@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.handler
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -5,9 +9,12 @@ import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.model.generated.SignalInput
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
-import io.airbyte.metrics.lib.MetricAttribute
+import io.airbyte.config.WorkloadPriority
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.domain.WorkloadLabel
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
@@ -21,12 +28,15 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.signalApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyApi
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailedSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
-import io.airbyte.workload.metrics.CustomMetricPublisher
+import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
+import io.micrometer.core.instrument.Counter
 import io.mockk.Called
 import io.mockk.Runs
 import io.mockk.clearAllMocks
@@ -42,14 +52,19 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toJavaDuration
 import io.airbyte.config.SignalInput as ConfigSignalInput
 
 class WorkloadHandlerImplTest {
-  val now = OffsetDateTime.now()
+  private val now: OffsetDateTime = OffsetDateTime.now()
 
   @BeforeEach
   fun reset() {
@@ -58,7 +73,7 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test active statuses are complete`() {
+  fun `verify active statuses doesn't contain terminal statuses`() {
     assertEquals(
       setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
       WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
@@ -69,7 +84,7 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test get workload`() {
+  fun `getWorkload returns the expected workload`() {
     val domainWorkload =
       Workload(
         id = WORKLOAD_ID,
@@ -90,13 +105,13 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found`() {
+  fun `getWorkload throws NotFoundException if the workload isn't found`() {
     every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
     assertThrows<NotFoundException> { workloadHandler.getWorkload(WORKLOAD_ID) }
   }
 
   @Test
-  fun `test create workload`() {
+  fun `createWorkload saves the expected workload`() {
     val workloadLabel1 = WorkloadLabel("key1", "value1")
     val workloadLabel2 = WorkloadLabel("key2", "value2")
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
@@ -116,6 +131,8 @@ class WorkloadHandlerImplTest {
       UUID.randomUUID(),
       now.plusHours(2),
       signalInput = "signal payload",
+      "queue-name-1",
+      WorkloadPriority.DEFAULT,
     )
     verify {
       workloadRepository.save(
@@ -133,7 +150,9 @@ class WorkloadHandlerImplTest {
             it.mutexKey == "mutex-this" &&
             it.type == WorkloadType.SYNC &&
             it.deadline!! == now.plusHours(2) &&
-            it.signalInput == "signal payload"
+            it.signalInput == "signal payload" &&
+            it.dataplaneGroup == "queue-name-1" &&
+            it.priority == 0
         },
       )
     }
@@ -143,7 +162,19 @@ class WorkloadHandlerImplTest {
   fun `test create workload id conflict`() {
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(true)
     assertThrows<ConflictException> {
-      workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+      workloadHandler.createWorkload(
+        WORKLOAD_ID,
+        null,
+        "",
+        "",
+        "mutex-this",
+        io.airbyte.config.WorkloadType.SYNC,
+        UUID.randomUUID(),
+        now,
+        "",
+        "queue-name-1",
+        WorkloadPriority.DEFAULT,
+      )
     }
   }
 
@@ -172,7 +203,19 @@ class WorkloadHandlerImplTest {
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
-    workloadHandler.createWorkload(WORKLOAD_ID, null, "", "", "mutex-this", io.airbyte.config.WorkloadType.SYNC, UUID.randomUUID(), now, "")
+    workloadHandler.createWorkload(
+      WORKLOAD_ID,
+      null,
+      "",
+      "",
+      "mutex-this",
+      io.airbyte.config.WorkloadType.SYNC,
+      UUID.randomUUID(),
+      now,
+      "",
+      "queue-name-1",
+      WorkloadPriority.DEFAULT,
+    )
     verify {
       workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
       workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
@@ -196,6 +239,8 @@ class WorkloadHandlerImplTest {
         logPath = "/log/path",
         mutexKey = "mutex-this",
         type = WorkloadType.DISCOVER,
+        dataplaneGroup = "queue-name-1",
+        priority = 0,
       )
     every { workloadRepository.search(any(), any(), any()) }.returns(listOf(domainWorkload))
     val workloads = workloadHandler.getWorkloads(listOf("dataplane1"), listOf(ApiWorkloadStatus.CLAIMED, ApiWorkloadStatus.FAILURE), null)
@@ -205,6 +250,8 @@ class WorkloadHandlerImplTest {
     assertEquals("/log/path", workloads[0].logPath)
     assertEquals("mutex-this", workloads[0].mutexKey)
     assertEquals(io.airbyte.config.WorkloadType.DISCOVER, workloads[0].type)
+    assertEquals("queue-name-1", workloads[0].dataplaneGroup)
+    assertEquals(WorkloadPriority.DEFAULT, workloads[0].priority)
   }
 
   @ParameterizedTest
@@ -238,98 +285,47 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found when claiming workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
+  fun `claiming a workload unsuccesfully returns false`() {
+    every { workloadRepository.claim(WORKLOAD_ID, any(), any()) }.returns(null)
+    assertFalse { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
   }
 
   @Test
-  fun `test claiming workload has already been claimed by another plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = "otherDataplaneId",
-          status = WorkloadStatus.CLAIMED,
-        ),
+  fun `claiming a workload successfully returns true`() {
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        dataplaneId = DATAPLANE_ID,
+        status = WorkloadStatus.CLAIMED,
       ),
     )
-    assertFalse(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertTrue(result)
+    verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
-  fun `test claiming pending workload has already been claimed by the same plane`() {
-    every { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }.returns(Unit)
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.PENDING,
-        ),
+  fun `test claiming a workload successfully`() {
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(
+      Fixtures.workload(
+        id = WORKLOAD_ID,
+        status = WorkloadStatus.CLAIMED,
+        dataplaneId = DATAPLANE_ID,
       ),
     )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertTrue(result)
+    verify(exactly = 1) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
-  fun `test claiming claimed workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.CLAIMED,
-        ),
-      ),
-    )
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now))
-  }
-
-  @Test
-  fun `test claiming running workload has already been claimed by the same plane`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = DATAPLANE_ID,
-          status = WorkloadStatus.RUNNING,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["RUNNING", "LAUNCHED", "SUCCESS", "FAILURE", "CANCELLED"])
-  fun `test claiming workload that is not pending`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now) }
-  }
-
-  @Test
-  fun `test successful claim`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = null,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), any(), ofType(WorkloadStatus::class), eq(now.plusMinutes(20))) } just Runs
-
-    assertTrue(workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now.plusMinutes(20)))
-
-    verify { workloadRepository.update(WORKLOAD_ID, DATAPLANE_ID, WorkloadStatus.CLAIMED, eq(now.plusMinutes(20))) }
+  fun `test claiming a workload unsuccessfully`() {
+    every { workloadRepository.claim(WORKLOAD_ID, DATAPLANE_ID, any()) }.returns(null)
+    val result = workloadHandler.claimWorkload(WORKLOAD_ID, DATAPLANE_ID, now)
+    assertFalse(result)
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) }
   }
 
   @Test
@@ -367,6 +363,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -388,6 +385,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -409,6 +407,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApiFailingSignal()
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
@@ -430,14 +429,20 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL.metricName, any(), any()) } returns Unit
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
+    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, any(), any()) } returns mockk<Counter>()
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
     verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
     verify {
       metricClient.count(
-        OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-        MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-        MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+        metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+        value = 1,
+        attributes =
+          arrayOf(
+            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
+            any(),
+          ),
       )
     }
   }
@@ -452,6 +457,7 @@ class WorkloadHandlerImplTest {
         ),
       ),
     )
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
 
     workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
     verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again", null) }
@@ -492,6 +498,7 @@ class WorkloadHandlerImplTest {
     )
 
     every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
+    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
     mockApi()
 
     workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
@@ -733,21 +740,81 @@ class WorkloadHandlerImplTest {
 
   @Test
   fun `offsetDateTime method should always return current time`() {
-    val workloadHandlerImpl = WorkloadHandlerImpl(mockk<WorkloadRepository>(), mockk<AirbyteApiClient>(), mockk<CustomMetricPublisher>())
+    val workloadHandlerImpl =
+      WorkloadHandlerImpl(
+        mockk<WorkloadRepository>(),
+        mockk<WorkloadQueueRepository>(),
+        mockk<AirbyteApiClient>(),
+        mockk<MetricClient>(),
+        mockk<FeatureFlagClient>(),
+        Fixtures.redeliveryWindow.toJavaDuration(),
+      )
     val offsetDateTime = workloadHandlerImpl.offsetDateTime()
     Thread.sleep(10)
     val offsetDateTimeAfter10Ms = workloadHandlerImpl.offsetDateTime()
     assertTrue(offsetDateTimeAfter10Ms.isAfter(offsetDateTime))
   }
 
+  @ParameterizedTest
+  @MethodSource("pendingWorkloadMatrix")
+  fun `poll workloads returns enqueued workloads (separate table enabled)`(
+    group: String,
+    priority: Int,
+    domainWorkloads: List<Workload>,
+  ) {
+    every { workloadQueueRepository.pollWorkloadQueue(group, priority, 10, any()) }.returns(domainWorkloads)
+    val result = workloadHandler.pollWorkloadQueue(group, WorkloadPriority.fromInt(priority), 10)
+    val expected = domainWorkloads.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("countPendingWorkloadMatrix")
+  fun `count workload queue depth returns count of enqueued workloads (separate table enabled)`(
+    group: String,
+    priority: Int,
+    count: Long,
+  ) {
+    every { workloadQueueRepository.countEnqueuedWorkloads(group, priority) }.returns(count)
+    val result = workloadHandler.countWorkloadQueueDepth(group, WorkloadPriority.fromInt(priority))
+
+    assertEquals(count, result)
+  }
+
+  @ParameterizedTest
+  @MethodSource("workloadStatsMatrix")
+  fun `get workload queue stats returns stats with enqueued workloads for each logical queue (dataplane group x priority) (separate table enabled)`(
+    stats: List<WorkloadQueueStats>,
+  ) {
+    every { workloadQueueRepository.getEnqueuedWorkloadStats() }.returns(stats)
+    val result = workloadHandler.getWorkloadQueueStats()
+    val expected = stats.map { it.toApi() }
+
+    assertEquals(expected, result)
+  }
+
   object Fixtures {
     val workloadRepository = mockk<WorkloadRepository>()
-    val metricClient: CustomMetricPublisher = mockk(relaxed = true)
+    val workloadQueueRepository = mockk<WorkloadQueueRepository>()
+    val metricClient: MetricClient = mockk(relaxed = true)
     private val airbyteApi: AirbyteApiClient = mockk()
+    val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
     val signalApi: SignalApi = mockk()
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
-    val workloadHandler = spyk(WorkloadHandlerImpl(workloadRepository, airbyteApi, metricClient))
+    val redeliveryWindow: Duration = 30.minutes
+    val workloadHandler =
+      spyk(
+        WorkloadHandlerImpl(
+          workloadRepository,
+          workloadQueueRepository,
+          airbyteApi,
+          metricClient,
+          featureFlagClient,
+          redeliveryWindow.toJavaDuration(),
+        ),
+      )
 
     val configSignalInput =
       ConfigSignalInput(
@@ -778,11 +845,15 @@ class WorkloadHandlerImplTest {
     fun verifyFailedSignal() {
       verify {
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_SIGNAL.metricName,
-          MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
-          any(),
-          MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-          any(),
+          metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
+          value = 1,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.WORKFLOW_TYPE, signalInput.workflowType),
+              any(),
+              MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
+              any(),
+            ),
         )
       }
     }
@@ -798,6 +869,8 @@ class WorkloadHandlerImplTest {
       type: WorkloadType = WorkloadType.SYNC,
       createdAt: OffsetDateTime = OffsetDateTime.now(),
       signalPayload: String? = "",
+      dataplaneGroup: String? = "",
+      priority: Int? = 0,
     ): Workload =
       Workload(
         id = id,
@@ -810,6 +883,36 @@ class WorkloadHandlerImplTest {
         type = type,
         createdAt = createdAt,
         signalInput = signalPayload,
+        dataplaneGroup = dataplaneGroup,
+        priority = priority,
+      )
+  }
+
+  companion object {
+    @JvmStatic
+    fun pendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, listOf(Fixtures.workload("1"), Fixtures.workload("2"), Fixtures.workload("3"))),
+        Arguments.of("group-2", 1, listOf(Fixtures.workload("1"), Fixtures.workload("3"))),
+        Arguments.of("group-3", 0, listOf(Fixtures.workload("4"))),
+        Arguments.of("group-1", 1, listOf(Fixtures.workload("1"), Fixtures.workload("2"))),
+      )
+
+    @JvmStatic
+    fun countPendingWorkloadMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of("group-1", 0, 10),
+        Arguments.of("group-2", 1, 9),
+        Arguments.of("group-3", 0, 0),
+        Arguments.of("group-1", 1, 124124124),
+      )
+
+    @JvmStatic
+    fun workloadStatsMatrix(): List<Arguments> =
+      listOf(
+        Arguments.of(listOf(WorkloadQueueStats("group-1", 0, 10), WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-3", 0, 0))),
+        Arguments.of(listOf(WorkloadQueueStats("group-2", 1, 9), WorkloadQueueStats("group-1", 1, 124124124))),
+        Arguments.of(listOf(WorkloadQueueStats("group-3", 0, 0))),
       )
   }
 }

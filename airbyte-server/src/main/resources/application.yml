@@ -46,9 +46,15 @@ micronaut:
           # which is used to add auth tokens when using keycloak for internal service auth.
           # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
           enabled: false
-    export:
-      statsd:
+      web:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
+    export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
+      statsd:
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
@@ -56,6 +62,13 @@ micronaut:
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
+    token:
+      jwt:
+        enabled: ${API_AUTHORIZATION_ENABLED:false}
+        signatures:
+          secret:
+            generator:
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
   server:
     port: 8001
     cors:
@@ -100,23 +113,28 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
+  applications:
+    type: ${AB_AIRBYTE_APPLICATIONS:}
   auth:
+    token-expiration:
+      application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
+      dataplane-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_DATAPLANE:5}
+    token-issuer: ${WEBAPP_URL}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
       first-name: ${INITIAL_USER_FIRST_NAME:}
       last-name: ${INITIAL_USER_LAST_NAME:}
       password: ${INITIAL_USER_PASSWORD:}
     identity-provider:
-      type: ${IDENTITY_PROVIDER_TYPE:}
-      oidc:
-        endpoints:
-          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
-          user-info-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
-          client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_USER_INFO_ENDPOINT:}
-          fields:
-            sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:sub}
-            email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:email}
-            name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_FIELDS_SUB:name}
+      verify-issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER:false}
+      verify-audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE:false}
+      issuers:
+        - ${WEBAPP_URL}
+        - ${DEFAULT_REALM}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ISSUER:}
+      audiences:
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_AUDIENCE:airbyte-server}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -157,8 +175,6 @@ airbyte:
       wait_between_rollout_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS:60}
       wait_between_sync_results_queries_seconds: ${CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS:10}
       rollout_expiration_seconds: ${CONNECTOR_ROLLOUT_EXPIRATION_SECONDS:360}
-
-  deployment-mode: ${DEPLOYMENT_MODE:OSS}
   support-email-domains:
     oss: ""
     cloud: "airbyte.io"
@@ -411,7 +427,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
   local-secrets:
     connection-test-query: SELECT 1
@@ -423,7 +439,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     pool-name: config-pool
 
 endpoints:

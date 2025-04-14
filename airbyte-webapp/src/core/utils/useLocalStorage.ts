@@ -12,7 +12,6 @@ export interface AssistLocalStorageProject {
 
 // Represents all the data we store in localStorage across the airbyte app
 interface AirbyteLocalStorage {
-  connectorBuilderEditorView: BuilderState["mode"];
   connectorBuilderInputsWarning: boolean;
   connectorBuilderPublishWarning: boolean;
   connectorBuilderRecordView: "json" | "table";
@@ -26,6 +25,7 @@ interface AirbyteLocalStorage {
   "airbyte_connection-additional-details": boolean;
   "airbyte_ai-assist-projects": Record<string, AssistLocalStorageProject>;
   "airbyte_last-sso-company-identifier": string;
+  "airbyte_connector-builder-modes": Record<string, BuilderState["mode"]>;
 }
 
 /*

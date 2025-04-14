@@ -5,9 +5,12 @@
 package io.airbyte.config.persistence;
 
 import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.config.AuthenticatedUser;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
@@ -15,14 +18,17 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +48,9 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
 
   private void setupTestData() throws Exception {
     final UserPersistence userPersistence = new UserPersistence(database);
+    final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
+        .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
     organizationPersistence.createOrganization(MockData.defaultOrganization());
     final WorkspaceService workspaceService = new WorkspaceServiceJooqImpl(
@@ -49,7 +58,9 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
         mock(TestClient.class),
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
-        mock(SecretPersistenceConfigService.class));
+        mock(SecretPersistenceConfigService.class),
+        mock(MetricClient.class),
+        dataplaneGroupService);
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace);

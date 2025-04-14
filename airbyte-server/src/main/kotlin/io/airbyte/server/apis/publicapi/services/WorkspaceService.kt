@@ -1,17 +1,26 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
 
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
+import io.airbyte.api.model.generated.NotificationItem
+import io.airbyte.api.model.generated.NotificationSettings
+import io.airbyte.api.model.generated.NotificationType
 import io.airbyte.api.model.generated.Pagination
+import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.api.model.generated.WorkspaceUpdateName
+import io.airbyte.api.model.generated.WorkspaceUpdate
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
+import io.airbyte.publicApi.server.generated.models.NotificationConfig
+import io.airbyte.publicApi.server.generated.models.NotificationsConfig
+import io.airbyte.publicApi.server.generated.models.WebhookNotificationConfig
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceResponse
@@ -85,6 +94,7 @@ open class WorkspaceServiceImpl(
   private val workspacesHandler: WorkspacesHandler,
   @Value("\${airbyte.api.host}") open val publicApiHost: String,
   private val currentUserService: CurrentUserService,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkspaceService {
   companion object {
     private val log = LoggerFactory.getLogger(WorkspaceServiceImpl::class.java)
@@ -98,11 +108,18 @@ open class WorkspaceServiceImpl(
     val organizationId = DEFAULT_ORGANIZATION_ID
 
     val workspaceCreate =
-      WorkspaceCreate().name(
-        workspaceCreateRequest.name,
-      ).email(currentUserService.currentUser.email).organizationId(organizationId)
+      WorkspaceCreate()
+        .name(workspaceCreateRequest.name)
+        .email(currentUserService.currentUser.email)
+        .organizationId(organizationId)
+        .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
+    if (workspaceCreateRequest.regionId != null) {
+      workspaceCreate.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).name
+    }
+
     val result =
-      kotlin.runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
+      kotlin
+        .runCatching { workspacesHandler.createWorkspace(workspaceCreate) }
         .onFailure {
           log.error("Error for createWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -143,12 +160,20 @@ open class WorkspaceServiceImpl(
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): WorkspaceResponse {
     val workspaceUpdate =
-      WorkspaceUpdateName().apply {
+      WorkspaceUpdate().apply {
         this.name = workspaceUpdateRequest.name
         this.workspaceId = workspaceId
+        this.notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig()
       }
+    if (workspaceUpdateRequest.regionId != null) {
+      workspaceUpdate.apply {
+        this.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).name
+      }
+    }
+
     val result =
-      kotlin.runCatching { workspacesHandler.updateWorkspaceName(workspaceUpdate) }
+      kotlin
+        .runCatching { workspacesHandler.updateWorkspace(workspaceUpdate) }
         .onFailure {
           log.error("Error for updateWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -188,7 +213,8 @@ open class WorkspaceServiceImpl(
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
     val result =
-      kotlin.runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.getWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for getWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -229,7 +255,8 @@ open class WorkspaceServiceImpl(
     val workspaceIdRequestBody = WorkspaceIdRequestBody()
     workspaceIdRequestBody.workspaceId = workspaceId
     val result =
-      kotlin.runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.deleteWorkspace(workspaceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteWorkspace", it)
           ConfigClientErrorHandler.handleError(it)
@@ -275,7 +302,8 @@ open class WorkspaceServiceImpl(
     listResourcesForWorkspacesRequestBody.pagination = pagination
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
     val result =
-      kotlin.runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
+      kotlin
+        .runCatching { workspacesHandler.listWorkspacesPaginated(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listWorkspaces", it)
           ConfigClientErrorHandler.handleError(it)
@@ -327,7 +355,62 @@ open class WorkspaceServiceImpl(
   override fun controllerSetWorkspaceOverrideOAuthParams(
     workspaceId: UUID?,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest?,
-  ): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
+  ): Response = Response.status(Response.Status.NOT_IMPLEMENTED).build()
+}
+
+fun NotificationsConfig.toNotificationSettings() =
+  NotificationSettings()
+    .sendOnFailure(failure?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSuccess(success?.toNotificationItem(enableEmailByDefault = false))
+    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabled(syncDisabled?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem(enableEmailByDefault = true))
+
+private fun NotificationsConfig?.toInternalNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .NotificationsConfig()
+      .success(it.success?.toInternalNotificationConfig())
+      .failure(it.failure?.toInternalNotificationConfig())
+      .connectionUpdate(it.connectionUpdate?.toInternalNotificationConfig())
+      .connectionUpdateActionRequired(it.connectionUpdateActionRequired?.toInternalNotificationConfig())
+      .syncDisabled(it.syncDisabled?.toInternalNotificationConfig())
+      .syncDisabledWarning(it.syncDisabledWarning?.toInternalNotificationConfig())
   }
+
+private fun NotificationConfig?.toInternalNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .NotificationConfig()
+      .email(it.email?.toInternalEmailNotificationConfig())
+      .webhook(it.webhook?.toInternalWebhookNotificationConfig())
+  }
+
+private fun EmailNotificationConfig?.toInternalEmailNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .EmailNotificationConfig()
+      .enabled(it.enabled)
+  }
+
+private fun WebhookNotificationConfig?.toInternalWebhookNotificationConfig() =
+  this?.let {
+    io.airbyte.api.model.generated
+      .WebhookNotificationConfig()
+      .enabled(it.enabled)
+      .url(it.url)
+  }
+
+private fun NotificationConfig.toNotificationItem(enableEmailByDefault: Boolean): NotificationItem {
+  val item = NotificationItem()
+  if (this.webhook?.enabled == true) {
+    item.addNotificationTypeItem(NotificationType.SLACK)
+    item.slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+  }
+
+  if (this.email?.enabled == true || (enableEmailByDefault && this.email == null)) {
+    item.addNotificationTypeItem(NotificationType.CUSTOMERIO)
+  }
+  return item
 }

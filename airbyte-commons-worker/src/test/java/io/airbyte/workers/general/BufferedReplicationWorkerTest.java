@@ -10,10 +10,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import io.airbyte.commons.converters.ThreadedTimeTracker;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.workers.internal.FieldSelector;
+import io.airbyte.workers.tracker.ThreadedTimeTracker;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,7 +28,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
         analyticsMessageTracker, "workload-id", airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
-        recordMapper, featureFlagClient, destinationCatalogGenerator));
+        recordMapper, featureFlagClient, destinationCatalogGenerator, metricClient));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -43,7 +43,8 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         streamStatusCompletionTracker,
         BufferConfiguration.withPollTimeout(1),
         metricClient,
-        replicationInput);
+        replicationInput,
+        metricClient);
   }
 
   // BufferedReplicationWorkerTests.

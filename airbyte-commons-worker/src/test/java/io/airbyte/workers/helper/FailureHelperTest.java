@@ -15,12 +15,12 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
-import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import io.temporal.api.enums.v1.RetryState;
 import io.temporal.failure.ActivityFailure;
 import java.util.List;
@@ -64,7 +64,7 @@ class FailureHelperTest {
 
   private static final AirbyteTraceMessage TRACE_MESSAGE = AirbyteMessageUtils.createErrorTraceMessage(
       "trace message error",
-      Double.valueOf(123),
+      123.0,
       AirbyteErrorTraceMessage.FailureType.SYSTEM_ERROR);
 
   @Test
@@ -94,7 +94,7 @@ class FailureHelperTest {
     final var oneMbString = String.format("%1048576s", "");
 
     final var traceMsg = new AirbyteTraceMessage()
-        .withType(io.airbyte.protocol.models.AirbyteTraceMessage.Type.ERROR)
+        .withType(io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ERROR)
         .withError(new AirbyteErrorTraceMessage()
             .withFailureType(AirbyteErrorTraceMessage.FailureType.CONFIG_ERROR)
             .withMessage(oneMbString)
@@ -104,10 +104,10 @@ class FailureHelperTest {
 
     final var result = FailureHelper.genericFailure(traceMsg, Long.valueOf(667), 0);
 
-    assertTrue(oneMbString.length() > FailureHelper.MAX_MSG_LENGTH);
-    assertEquals(FailureHelper.MAX_MSG_LENGTH, result.getExternalMessage().length());
-    assertEquals(FailureHelper.MAX_MSG_LENGTH, result.getInternalMessage().length());
-    assertEquals(FailureHelper.MAX_STACK_TRACE_LENGTH, result.getStacktrace().length());
+    assertTrue(oneMbString.length() > FailureHelperKt.MAX_MSG_LENGTH);
+    assertEquals(FailureHelperKt.MAX_MSG_LENGTH, result.getExternalMessage().length());
+    assertEquals(FailureHelperKt.MAX_MSG_LENGTH, result.getInternalMessage().length());
+    assertEquals(FailureHelperKt.MAX_STACK_TRACE_LENGTH, result.getStacktrace().length());
   }
 
   @Test
@@ -255,7 +255,7 @@ class FailureHelperTest {
   void testOrderedFailures() {
     final List<FailureReason> failureReasonList =
         FailureHelper.orderedFailures(Set.of(TRACE_FAILURE_REASON_2, TRACE_FAILURE_REASON, EXCEPTION_FAILURE_REASON));
-    assertEquals(failureReasonList.get(0), TRACE_FAILURE_REASON);
+    assertEquals(failureReasonList.get(0), EXCEPTION_FAILURE_REASON);
   }
 
   @Test
@@ -291,9 +291,9 @@ class FailureHelperTest {
     assertTrue(longStr2.length() > maxWidth);
     assertTrue(longStr3.length() > maxWidth);
 
-    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr1, maxWidth).length());
-    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr2, maxWidth).length());
-    assertEquals(maxWidth, FailureHelper.truncateWithPlatformMessage(longStr3, maxWidth).length());
+    assertEquals(maxWidth, FailureHelperKt.truncateWithPlatformMessage(longStr1, maxWidth).length());
+    assertEquals(maxWidth, FailureHelperKt.truncateWithPlatformMessage(longStr2, maxWidth).length());
+    assertEquals(maxWidth, FailureHelperKt.truncateWithPlatformMessage(longStr3, maxWidth).length());
   }
 
   @Test
@@ -303,14 +303,14 @@ class FailureHelperTest {
     final var shortStr3 = "abcde";
     final var shortStr4 = String.format("%10s", "");
 
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, 10));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, 0));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, -1));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr1, -24));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr2, 10));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr3, 3));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr3, 5));
-    assertDoesNotThrow(() -> FailureHelper.truncateWithPlatformMessage(shortStr4, 10));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr1, 10));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr1, 0));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr1, -1));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr1, -24));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr2, 10));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr3, 3));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr3, 5));
+    assertDoesNotThrow(() -> FailureHelperKt.truncateWithPlatformMessage(shortStr4, 10));
   }
 
 }

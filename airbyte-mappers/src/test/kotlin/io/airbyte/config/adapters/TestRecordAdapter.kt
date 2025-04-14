@@ -1,14 +1,20 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.adapters
 
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteRecordMessageMeta
-import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMeta
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
 
-class TestValueAdapter(private val value: Any) : Value {
+class TestValueAdapter(
+  private val value: Any,
+) : Value {
   override fun asBoolean(): Boolean = value as Boolean
 
   override fun asNumber(): Number = value as Number
@@ -16,10 +22,17 @@ class TestValueAdapter(private val value: Any) : Value {
   override fun asString(): String = value.toString()
 }
 
-class TestRecordAdapter(override val streamDescriptor: StreamDescriptor, data: Map<String, Any>) : AirbyteRecord {
+class TestRecordAdapter(
+  override val streamDescriptor: StreamDescriptor,
+  data: Map<String, Any>,
+) : AirbyteRecord {
   private var shouldInclude = true
 
-  data class Change(val fieldName: String, val change: AirbyteRecord.Change, val reason: AirbyteRecord.Reason)
+  data class Change(
+    val fieldName: String,
+    val change: AirbyteRecord.Change,
+    val reason: AirbyteRecord.Reason,
+  )
 
   private val data: MutableMap<String, Any> = data.toMutableMap()
   private val _changes: MutableList<Change> = mutableListOf()
@@ -82,7 +95,5 @@ class TestRecordAdapter(override val streamDescriptor: StreamDescriptor, data: M
     shouldInclude = value
   }
 
-  override fun shouldInclude(): Boolean {
-    return shouldInclude
-  }
+  override fun shouldInclude(): Boolean = shouldInclude
 }

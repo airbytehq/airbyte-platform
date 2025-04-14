@@ -24,8 +24,8 @@ import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationS
 import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
+import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
-import { GeneralWorkspaceSettingsPage } from "./SettingsPage/GeneralWorkspaceSettingsPage";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
 import { LicenseSettingsPage } from "./SettingsPage/pages/LicenseDetailsPage/LicenseSettingsPage";
@@ -33,6 +33,8 @@ import { MetricsPage } from "./SettingsPage/pages/MetricsPage";
 import { NotificationPage } from "./SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "./SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "./SettingsPage/pages/Organization/OrganizationMembersPage";
+import { GeneralWorkspaceSettingsPage } from "./SettingsPage/Workspace/GeneralWorkspaceSettingsPage";
+import { WorkspaceMembersPage } from "./SettingsPage/Workspace/WorkspaceMembersPage";
 import { WorkspaceRead } from "../core/api/types/AirbyteClient";
 
 const DefaultView = React.lazy(() => import("./DefaultView"));
@@ -65,10 +67,14 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     [workspace.workspaceId, workspace.customerId]
   );
   useAnalyticsRegisterValues(analyticsContext);
-  useAnalyticsIdentifyUser(workspace.workspaceId, {
-    protocol: window.location.protocol,
-    isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
-  });
+  const userTraits = useMemo(
+    () => ({
+      protocol: window.location.protocol,
+      isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
+    }),
+    []
+  );
+  useAnalyticsIdentifyUser(workspace.workspaceId, userTraits);
 };
 
 const MainViewRoutes: React.FC = () => {
@@ -110,9 +116,10 @@ const MainViewRoutes: React.FC = () => {
             {applicationSupport !== "none" && (
               <Route path={SettingsRoutePaths.Applications} element={<ApplicationSettingsView />} />
             )}
-            {canViewWorkspaceSettings && multiWorkspaceUI && (
-              <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
-            )}
+            <Route path={SettingsRoutePaths.Workspace} element={<GeneralWorkspaceSettingsPage />} />
+            {canViewWorkspaceSettings && multiWorkspaceUI ? (
+              <Route path={SettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
+            ) : null}
             {canViewWorkspaceSettings && (
               <>
                 <Route path={SettingsRoutePaths.Source} element={<SourcesPage />} />
@@ -134,7 +141,6 @@ const MainViewRoutes: React.FC = () => {
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
-
           <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
         </Routes>
       </DefaultErrorBoundary>
@@ -235,6 +241,7 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
+      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

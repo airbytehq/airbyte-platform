@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.mappers.transformations
 
 import io.airbyte.commons.json.Jsons
@@ -15,7 +19,7 @@ import io.airbyte.config.mapper.configs.AesPadding
 import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
-import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -178,26 +182,49 @@ class EncryptionMapperTest {
   fun `testing aes options`() {
     AesMode.entries.forEach { mode ->
       val validConfigCount: Int =
-        AesPadding.entries.map { padding ->
-          // verify that if schema rejects config for which we cannot instantiate a Cipher
-          try {
-            Cipher.getInstance("AES/$mode/$padding")
-            assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
-            return@map 1
-          } catch (e: Exception) {
-            assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
-            return@map 0
-          }
-        }.sum()
+        AesPadding.entries
+          .map { padding ->
+            // verify that if schema rejects config for which we cannot instantiate a Cipher
+            try {
+              Cipher.getInstance("AES/$mode/$padding")
+              assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
+              return@map 1
+            } catch (e: Exception) {
+              assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
+              return@map 0
+            }
+          }.sum()
 
       // Making sure that each mode has at least one valid config
       assertTrue(validConfigCount > 0, "No valid config found for $mode")
     }
   }
 
+  @Test
+  fun `testing aes schema rejects invalid key`() {
+    assertThrows<EncryptionConfigException> {
+      runTestSchemaForAES(AesMode.CBC, AesPadding.PKCS5Padding, "invalid key")
+    }
+  }
+
+  @Test
+  fun `testing aes schema accepts valid key`() {
+    assertDoesNotThrow {
+      runTestSchemaForAES(AesMode.CBC, AesPadding.PKCS5Padding, "2b7e151628aed2a6abf7158809cf4f3c")
+    }
+  }
+
+  @Test
+  fun `testing aes schema does not fail on secret references`() {
+    assertDoesNotThrow {
+      runTestSchemaForAES(AesMode.CBC, AesPadding.PKCS5Padding)
+    }
+  }
+
   private fun runTestSchemaForAES(
     mode: AesMode,
     padding: AesPadding,
+    key: String? = null,
   ) {
     encryptionMapper.schema(
       EncryptionMapperConfig(
@@ -208,7 +235,7 @@ class EncryptionMapperTest {
             targetField = "field",
             mode = mode,
             padding = padding,
-            key = AirbyteSecret.Reference("some ref"),
+            key = if (key != null) AirbyteSecret.Hydrated(key) else AirbyteSecret.Reference("some ref"),
           ),
       ),
       SlimStream(listOf(Field("field", FieldType.STRING))),
@@ -300,6 +327,28 @@ class EncryptionMapperTest {
 
       val decryptedValue = decryptRSA(it.get("testRsa_encrypted").asString(), rsaConfig, keyPair.private)
       assertEquals("to encrypt", decryptedValue)
+    }
+  }
+
+  @Test
+  fun `testing rsa encryption schema rejects config with invalid key`() {
+    val rsaConfig =
+      RsaEncryptionConfig(
+        algorithm = "RSA",
+        targetField = "test",
+        fieldNameSuffix = "_encrypted",
+        publicKey = "invalid key",
+      )
+    val config =
+      EncryptionMapperConfig(
+        config = rsaConfig,
+      )
+
+    assertThrows<EncryptionConfigException> {
+      encryptionMapper.schema(
+        config,
+        SlimStream(listOf(Field("test", FieldType.STRING))),
+      )
     }
   }
 

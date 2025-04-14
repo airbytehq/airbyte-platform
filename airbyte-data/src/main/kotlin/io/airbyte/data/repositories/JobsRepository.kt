@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Job
@@ -6,6 +10,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
+import java.time.OffsetDateTime
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface JobsRepository : PageableRepository<Job, Long> {
@@ -43,6 +48,18 @@ interface JobsRepository : PageableRepository<Job, Long> {
     FROM jobs
     WHERE scope = :scope
       AND status = 'succeeded'
+    ORDER BY created_at ASC
+    LIMIT 1
+    """,
+  )
+  fun firstSuccessfulJobForScope(scope: String): Job?
+
+  @Query(
+    """
+    SELECT *
+    FROM jobs
+    WHERE scope = :scope
+      AND status = 'succeeded'
     ORDER BY created_at DESC
     LIMIT 1
     """,
@@ -69,4 +86,21 @@ interface JobsRepository : PageableRepository<Job, Long> {
     jobId: Long,
     status: JobStatus,
   ): Job?
+
+  @Query(
+    """
+    SELECT DISTINCT ON (scope) *
+    FROM jobs
+    WHERE scope IN (:scopes)
+      AND config_type::text = :configType
+      AND created_at >= :createdAtStart
+    ORDER BY scope, created_at DESC
+  """,
+    nativeQuery = true,
+  )
+  fun findLatestJobPerScope(
+    configType: String,
+    scopes: Set<String>,
+    createdAtStart: OffsetDateTime,
+  ): List<Job>
 }

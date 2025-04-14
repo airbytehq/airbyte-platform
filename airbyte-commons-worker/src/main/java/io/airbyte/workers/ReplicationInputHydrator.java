@@ -25,15 +25,11 @@ import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.client.model.generated.SaveStreamAttemptMetadataRequestBody;
-import io.airbyte.api.client.model.generated.ScopeType;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfig;
-import io.airbyte.api.client.model.generated.SecretPersistenceConfigGetRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
 import io.airbyte.api.client.model.generated.SyncInput;
 import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.StateConverter;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -44,17 +40,19 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogTransforms;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClient;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator;
+import io.airbyte.workers.hydration.SecretHydrationContext;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.JobInput;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
@@ -77,8 +75,8 @@ public class ReplicationInputHydrator {
 
   private final AirbyteApiClient airbyteApiClient;
   private final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper;
-  private final SecretsRepositoryReader secretsRepositoryReader;
   private final MapperSecretHydrationHelper mapperSecretHydrationHelper;
+  private final ConnectorSecretsHydrator connectorSecretsHydrator;
   private final ReplicationInputMapper mapper;
   private final Boolean useRuntimeSecretPersistence;
 
@@ -90,19 +88,19 @@ public class ReplicationInputHydrator {
 
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
-                                  final SecretsRepositoryReader secretsRepositoryReader,
                                   final MapperSecretHydrationHelper mapperSecretHydrationHelper,
                                   final BackfillHelper backfillHelper,
                                   final CatalogClientConverters catalogClientConverters,
                                   final ReplicationInputMapper mapper,
                                   final MetricClient metricClient,
+                                  final ConnectorSecretsHydrator connectorSecretsHydrator,
                                   final Boolean useRuntimeSecretPersistence) {
     this.airbyteApiClient = airbyteApiClient;
     this.backfillHelper = backfillHelper;
     this.catalogClientConverters = catalogClientConverters;
     this.resumableFullRefreshStatsHelper = resumableFullRefreshStatsHelper;
-    this.secretsRepositoryReader = secretsRepositoryReader;
     this.mapperSecretHydrationHelper = mapperSecretHydrationHelper;
+    this.connectorSecretsHydrator = connectorSecretsHydrator;
     this.mapper = mapper;
     this.metricClient = metricClient;
     this.useRuntimeSecretPersistence = useRuntimeSecretPersistence;
@@ -159,8 +157,9 @@ public class ReplicationInputHydrator {
         new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
 
     final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    final boolean useFileTransfer = sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
-        && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType()));
+    final boolean useFileTransfer =
+        sourceActorConfig != null && (sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
+            && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType())));
 
     if (useFileTransfer && !resolvedDestinationVersion.getSupportFileTransfer()) {
       final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
@@ -202,48 +201,37 @@ public class ReplicationInputHydrator {
     }
 
     // Hydrate the secrets.
+    final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
+    final UUID workspaceId = replicationActivityInput.getConnectionContext().getWorkspaceId();
+    final SecretHydrationContext hydrationContext = new SecretHydrationContext(organizationId, workspaceId);
+
     final JsonNode fullDestinationConfig;
     final JsonNode fullSourceConfig;
-    final UUID organizationId = replicationActivityInput.getConnectionContext().getOrganizationId();
 
-    // If the organization is configured to use "run time secrets management" aka "bring your own
-    // secrets manager", then we must look up their secrets config and hydrate from there.
-    // TODO: The runtime secrets client and the default secrets client should implement the same
-    // interface, so we can avoid this conditional look up and delegation in the hydrator itself and do
-    // it at the injection layer.
-    if (useRuntimeSecretPersistence && organizationId != null) {
-      try {
-        final RuntimeSecretPersistence runtimeSecretPersistence = getRuntimeSecretPersistence(organizationId);
-        fullSourceConfig = secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getSourceConfiguration(),
-            runtimeSecretPersistence);
-        fullDestinationConfig =
-            secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(replicationActivityInput.getDestinationConfiguration(),
-                runtimeSecretPersistence);
-      } catch (final IOException e) {
-        throw new RuntimeException(e);
-      }
-    } else { // use default configured persistence
-      try {
-        fullSourceConfig = secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getSourceConfiguration());
-      } catch (final SecretCoordinateException e) {
-        metricClient.count(
-            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
-            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getSourceLauncherConfig().getDockerImage()),
-            new MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
-            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getSourceLauncherConfig().getConnectionId().toString()));
-        throw e;
-      }
-      try {
-        fullDestinationConfig =
-            secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(replicationActivityInput.getDestinationConfiguration());
-      } catch (final SecretCoordinateException e) {
-        metricClient.count(
-            OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, 1,
-            new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getDestinationLauncherConfig().getDockerImage()),
-            new MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
-            new MetricAttribute(CONNECTION_ID, replicationActivityInput.getDestinationLauncherConfig().getConnectionId().toString()));
-        throw e;
-      }
+    try {
+      final ConfigWithSecretReferences destConfig =
+          InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(replicationActivityInput.getDestinationConfiguration());
+      fullDestinationConfig = connectorSecretsHydrator.hydrateConfig(destConfig, hydrationContext);
+    } catch (final SecretCoordinateException e) {
+      metricClient.count(
+          OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+          new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getDestinationLauncherConfig().getDockerImage()),
+          new MetricAttribute(CONNECTOR_TYPE, ActorType.DESTINATION.toString()),
+          new MetricAttribute(CONNECTION_ID, replicationActivityInput.getDestinationLauncherConfig().getConnectionId().toString()));
+      throw e;
+    }
+
+    try {
+      final ConfigWithSecretReferences sourceConfig =
+          InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(replicationActivityInput.getSourceConfiguration());
+      fullSourceConfig = connectorSecretsHydrator.hydrateConfig(sourceConfig, hydrationContext);
+    } catch (final SecretCoordinateException e) {
+      metricClient.count(
+          OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+          new MetricAttribute(CONNECTOR_IMAGE, replicationActivityInput.getSourceLauncherConfig().getDockerImage()),
+          new MetricAttribute(CONNECTOR_TYPE, ActorType.SOURCE.toString()),
+          new MetricAttribute(CONNECTION_ID, replicationActivityInput.getSourceLauncherConfig().getConnectionId().toString()));
+      throw e;
     }
 
     // Hydrate mapper secrets
@@ -256,13 +244,6 @@ public class ReplicationInputHydrator {
         .withCatalog(hydratedCatalog)
         .withState(state)
         .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
-  }
-
-  private RuntimeSecretPersistence getRuntimeSecretPersistence(final UUID organizationId) throws IOException {
-    final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
-        new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
-    return new RuntimeSecretPersistence(
-        fromApiSecretPersistenceConfig(secretPersistenceConfig));
   }
 
   @VisibleForTesting
@@ -351,17 +332,6 @@ public class ReplicationInputHydrator {
           jobInfo.getJob().getResetConfig().getStreamsToReset().stream().map(ApiClientConverters::toInternal).toList();
       CatalogTransforms.updateCatalogForReset(streamsToReset, catalog);
     }
-  }
-
-  private io.airbyte.config.SecretPersistenceConfig fromApiSecretPersistenceConfig(final SecretPersistenceConfig apiSecretPersistenceConfig) {
-    return new io.airbyte.config.SecretPersistenceConfig()
-        .withScopeType(Enums.convertTo(apiSecretPersistenceConfig.getScopeType(), io.airbyte.config.ScopeType.class))
-        .withScopeId(apiSecretPersistenceConfig.getScopeId())
-        .withConfiguration(Jsons.deserializeToStringMap(apiSecretPersistenceConfig.getConfiguration()))
-        .withSecretPersistenceType(
-            Enums.convertTo(
-                apiSecretPersistenceConfig.getSecretPersistenceType(),
-                io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType.class));
   }
 
 }

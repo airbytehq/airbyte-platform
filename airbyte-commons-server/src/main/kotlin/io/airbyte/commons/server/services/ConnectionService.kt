@@ -1,13 +1,17 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.services
 
 import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.commons.server.ConnectionId
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.config.Job
 import io.airbyte.config.JobStatus
 import io.airbyte.config.StandardSync
 import io.airbyte.data.services.shared.ConnectionAutoDisabledReason
+import io.airbyte.domain.models.ConnectionId
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging

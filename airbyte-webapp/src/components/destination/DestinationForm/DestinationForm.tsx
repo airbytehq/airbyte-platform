@@ -17,7 +17,7 @@ export interface DestinationFormValues {
   name: string;
   serviceType: string;
   destinationDefinitionId?: string;
-  connectionConfiguration?: ConnectionConfiguration;
+  connectionConfiguration: ConnectionConfiguration;
 }
 
 interface DestinationFormProps {

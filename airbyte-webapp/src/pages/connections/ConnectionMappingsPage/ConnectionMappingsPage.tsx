@@ -1,12 +1,15 @@
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormChangeTracker } from "components/forms/FormChangeTracker";
 import { PageContainer } from "components/PageContainer";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
+import { links } from "core/utils/links";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -34,6 +37,7 @@ const ConnectionMappingsPageContent = () => {
   const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+
   const handleValidations = async () => {
     const validations = await Promise.allSettled(
       Object.entries(streamsWithMappings).flatMap(([_streamName, mappers]) =>
@@ -73,8 +77,14 @@ const ConnectionMappingsPageContent = () => {
             <Heading as="h3" size="sm">
               <FormattedMessage id="connections.mappings.title" />
             </Heading>
+            <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
             {showSubmissionButtons && (
               <FlexContainer>
+                <ExternalLink href={links.connectionMappings}>
+                  <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
+                    <FormattedMessage id="connections.mappings.docsLink" />
+                  </Button>
+                </ExternalLink>
                 <Button
                   variant="secondary"
                   onClick={clear}

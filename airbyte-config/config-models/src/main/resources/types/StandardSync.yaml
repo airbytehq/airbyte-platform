@@ -122,7 +122,10 @@ properties:
   resourceRequirements:
     "$ref": ResourceRequirements.yaml
   geography:
-    "$ref": Geography.yaml
+    type: string
+  dataplaneGroupId:
+    type: string
+    format: uuid
   breakingChange:
     type: boolean
   # TODO: reduce clutter by grouping these preferences into some logical structure
@@ -148,3 +151,7 @@ properties:
   createdAt:
     type: integer
     format: int64
+  tags:
+    type: array
+    items:
+      $ref: Tag.yaml

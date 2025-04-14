@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -7,13 +11,14 @@ import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionOutput
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
+import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel
@@ -31,6 +36,7 @@ class CheckCommand(
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
   private val metricClient: MetricClient,
+  private val dataplaneGroupResolver: DataplaneGroupResolver,
 ) : WorkloadCommandBase<CheckConnectionInput>(
     airbyteApiClient = airbyteApiClient,
     workloadClient = workloadClient,
@@ -52,6 +58,12 @@ class CheckCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.checkConnectionInput.actorContext.workspaceId
+    val dataplaneGroup =
+      dataplaneGroupResolver.resolveForCheck(
+        organizationId = input.checkConnectionInput.actorContext.organizationId,
+        workspaceId = workspaceId,
+        actorId = input.checkConnectionInput.actorContext.actorId,
+      )
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -69,6 +81,7 @@ class CheckCommand(
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,
+      dataplaneGroup = dataplaneGroup,
     )
   }
 
@@ -83,14 +96,18 @@ class CheckCommand(
             StandardCheckConnectionOutput()
               .withStatus(StandardCheckConnectionOutput.Status.FAILED)
               .withMessage(failureReason.externalMessage),
-          )
-          .withFailureReason(failureReason)
+          ).withFailureReason(failureReason)
       }
 
     metricClient.count(
-      OssMetricsRegistry.SIDECAR_CHECK,
-      1,
-      MetricAttribute(MetricTags.STATUS, if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success"),
+      metric = OssMetricsRegistry.SIDECAR_CHECK,
+      attributes =
+        arrayOf(
+          MetricAttribute(
+            MetricTags.STATUS,
+            if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success",
+          ),
+        ),
     )
 
     return output

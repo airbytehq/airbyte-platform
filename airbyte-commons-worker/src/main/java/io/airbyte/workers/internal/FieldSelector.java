@@ -8,9 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import java.lang.invoke.MethodHandles;
@@ -25,8 +25,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import kotlin.Pair;
 import kotlin.text.Regex;
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +43,7 @@ public class FieldSelector {
    * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
    * concurrently for performance.
    */
-  private final ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
+  private final ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<Set<String>, Integer>> validationErrors = new ConcurrentHashMap<>();
   private final ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors = new ConcurrentHashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, List<String>> streamToSelectedFields = new HashMap<>();
   private final Map<AirbyteStreamNameNamespacePair, Set<String>> streamToAllFields = new HashMap<>();
@@ -129,8 +129,8 @@ public class FieldSelector {
     } else {
       log.info("Schema validation was performed to a max of 10 records with errors per stream.");
       validationErrors.forEach((stream, errorPair) -> {
-        log.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errorPair.getLeft());
-        metricReporter.trackSchemaValidationErrors(stream, errorPair.getLeft());
+        log.warn("Schema validation errors found for stream {}. Error messages: {}", stream, errorPair.getFirst());
+        metricReporter.trackSchemaValidationErrors(stream, errorPair.getFirst());
       });
     }
     unexpectedFields.forEach((stream, unexpectedFieldNames) -> {
@@ -207,7 +207,7 @@ public class FieldSelector {
     final AirbyteRecordMessage record = message.getRecord();
     final AirbyteStreamNameNamespacePair messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record);
     // avoid noise by validating only if the stream has less than 10 records with validation errors
-    final boolean streamHasLessThenTenErrs = validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getRight() < 10;
+    final boolean streamHasLessThenTenErrs = validationErrors.get(messageStream) == null || validationErrors.get(messageStream).getSecond() < 10;
     if (streamHasLessThenTenErrs) {
       recordSchemaValidator.validateSchema(record, messageStream, validationErrors);
       final Set<String> unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.get(messageStream));

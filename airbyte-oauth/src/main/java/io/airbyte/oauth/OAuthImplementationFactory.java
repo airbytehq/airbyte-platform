@@ -63,7 +63,7 @@ import io.airbyte.oauth.flows.google.GoogleDriveOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSearchConsoleOAuthFlow;
 import io.airbyte.oauth.flows.google.GoogleSheetsOAuthFlow;
 import io.airbyte.oauth.flows.google.YouTubeAnalyticsOAuthFlow;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.net.http.HttpClient;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -139,6 +139,7 @@ public class OAuthImplementationFactory {
     builder.put("airbyte/source-zendesk-talk", new ZendeskTalkOAuthFlow(httpClient));
     builder.put("airbyte/destination-snowflake", new DestinationSnowflakeOAuthFlow(httpClient));
     builder.put("airbyte/destination-google-sheets", new DestinationGoogleSheetsOAuthFlow(httpClient));
+    builder.put("airbyte/destination-cobra", new SalesforceOAuthFlow(httpClient));
     oauthFlowMapping = builder.build();
   }
 

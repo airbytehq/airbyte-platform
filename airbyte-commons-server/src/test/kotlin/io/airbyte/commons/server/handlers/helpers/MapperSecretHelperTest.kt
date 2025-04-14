@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.commons.server.handlers.helpers
 
 import com.fasterxml.jackson.databind.node.ObjectNode
@@ -7,7 +11,7 @@ import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.config.AirbyteSecret
-import io.airbyte.config.Configs.DeploymentMode
+import io.airbyte.config.Configs
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.ScopeType
@@ -32,6 +36,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.mappers.transformations.EncryptionMapper
 import io.airbyte.mappers.transformations.HashingMapper
 import io.airbyte.mappers.transformations.Mapper
+import io.airbyte.metrics.MetricClient
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -56,6 +61,7 @@ internal class MapperSecretHelperTest {
   private val secretsRepositoryReader = mockk<SecretsRepositoryReader>()
   private val secretsProcessor = mockk<JsonSecretsProcessor>()
   private val featureFlagClient = mockk<TestClient>()
+  private val metricClient = mockk<MetricClient>(relaxed = true)
 
   private val hashingMapper = HashingMapper()
   private val encryptionMapper = EncryptionMapper()
@@ -69,7 +75,8 @@ internal class MapperSecretHelperTest {
       secretsRepositoryReader = secretsRepositoryReader,
       featureFlagClient = featureFlagClient,
       secretsProcessor = secretsProcessor,
-      deploymentMode = DeploymentMode.CLOUD,
+      airbyteEdition = Configs.AirbyteEdition.CLOUD,
+      metricClient = metricClient,
     )
 
   @BeforeEach
@@ -95,7 +102,12 @@ internal class MapperSecretHelperTest {
       )
     val catalogWithSecrets = generateCatalogWithMapper(mapperConfig)
 
-    val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
+    val configSpec =
+      encryptionMapper
+        .spec()
+        .jsonSchema()
+        .get("properties")
+        .get("config")
     val configNoSecrets =
       Jsons.jsonNode(
         mapOf(
@@ -108,7 +120,12 @@ internal class MapperSecretHelperTest {
       )
 
     every {
-      secretsRepositoryWriter.createFromConfig(eq(WORKSPACE_ID), eq(Jsons.jsonNode(mapperConfig.config())), eq(configSpec), any())
+      secretsRepositoryWriter.createFromConfigLegacy(
+        eq(WORKSPACE_ID),
+        eq(Jsons.jsonNode(mapperConfig.config())),
+        eq(configSpec),
+        any(),
+      )
     } returns configNoSecrets
 
     val catalogWithoutSecrets = mapperSecretHelper.createAndReplaceMapperSecrets(WORKSPACE_ID, catalogWithSecrets)
@@ -125,9 +142,22 @@ internal class MapperSecretHelperTest {
           ),
       )
 
-    assertEquals(expectedConfig, catalogWithoutSecrets.streams.first().mappers.first())
+    assertEquals(
+      expectedConfig,
+      catalogWithoutSecrets.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
-    verify { secretsRepositoryWriter.createFromConfig(eq(WORKSPACE_ID), eq(Jsons.jsonNode(mapperConfig.config())), eq(configSpec), any()) }
+    verify {
+      secretsRepositoryWriter.createFromConfigLegacy(
+        eq(WORKSPACE_ID),
+        eq(Jsons.jsonNode(mapperConfig.config())),
+        eq(configSpec),
+        any(),
+      )
+    }
   }
 
   @Test
@@ -137,7 +167,13 @@ internal class MapperSecretHelperTest {
     val catalog = generateCatalogWithMapper(mapperConfig)
 
     val resultingCatalog = mapperSecretHelper.createAndReplaceMapperSecrets(WORKSPACE_ID, catalog)
-    assertEquals(mapperConfig, resultingCatalog.streams.first().mappers.first())
+    assertEquals(
+      mapperConfig,
+      resultingCatalog.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
     verify(exactly = 0) {
       secretPersistenceConfigService.get(any(), any())
@@ -159,7 +195,12 @@ internal class MapperSecretHelperTest {
           ),
       )
 
-    val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
+    val configSpec =
+      encryptionMapper
+        .spec()
+        .jsonSchema()
+        .get("properties")
+        .get("config")
     val maskedConfig =
       Jsons.jsonNode(
         mapOf(
@@ -188,7 +229,13 @@ internal class MapperSecretHelperTest {
           ),
       )
 
-    assertEquals(expectedConfig, maskedCatalog.streams.first().mappers.first())
+    assertEquals(
+      expectedConfig,
+      maskedCatalog.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
     verify { secretsProcessor.prepareSecretsForOutput(Jsons.jsonNode(mapperConfig.config()), configSpec) }
   }
@@ -232,7 +279,12 @@ internal class MapperSecretHelperTest {
 
     every { secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(eq(persistedConfigJson), any()) } returns hydratedPersistedConfigJson
 
-    val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
+    val configSpec =
+      encryptionMapper
+        .spec()
+        .jsonSchema()
+        .get("properties")
+        .get("config")
     val resolvedUpdatedConfigJson = maskedUpdatedConfigJson.deepCopy().put("key", SECRET_VALUE)
 
     every { secretsProcessor.copySecrets(hydratedPersistedConfigJson, maskedUpdatedConfigJson, configSpec) } returns resolvedUpdatedConfigJson
@@ -243,15 +295,21 @@ internal class MapperSecretHelperTest {
       )
 
     every {
-      secretsRepositoryWriter.updateFromConfig(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
+      secretsRepositoryWriter.updateFromConfigLegacy(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
     } returns Jsons.jsonNode(expectedMapperConfig.config())
     val res = mapperSecretHelper.updateAndReplaceMapperSecrets(WORKSPACE_ID, persistedCatalog, catalogWithMaskedSecrets)
-    assertEquals(expectedMapperConfig, res.streams.first().mappers.first())
+    assertEquals(
+      expectedMapperConfig,
+      res.streams
+        .first()
+        .mappers
+        .first(),
+    )
 
     verify {
       secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(eq(persistedConfigJson), any())
       secretsProcessor.copySecrets(hydratedPersistedConfigJson, maskedUpdatedConfigJson, configSpec)
-      secretsRepositoryWriter.updateFromConfig(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
+      secretsRepositoryWriter.updateFromConfigLegacy(eq(WORKSPACE_ID), eq(persistedConfigJson), eq(resolvedUpdatedConfigJson), eq(configSpec), any())
     }
   }
 
@@ -294,7 +352,12 @@ internal class MapperSecretHelperTest {
         ),
       )
 
-    val configSpec = encryptionMapper.spec().jsonSchema().get("properties").get("config")
+    val configSpec =
+      encryptionMapper
+        .spec()
+        .jsonSchema()
+        .get("properties")
+        .get("config")
     every { secretsProcessor.prepareSecretsForOutput(Jsons.jsonNode(referencedMapperConfig.config()), configSpec) } returns maskedConfig
 
     assertThrows<MapperSecretNotFoundProblem> {
@@ -332,7 +395,8 @@ internal class MapperSecretHelperTest {
         secretsRepositoryReader = secretsRepositoryReader,
         featureFlagClient = featureFlagClient,
         secretsProcessor = secretsProcessor,
-        deploymentMode = DeploymentMode.OSS,
+        airbyteEdition = Configs.AirbyteEdition.COMMUNITY,
+        metricClient = metricClient,
       )
 
     val mapperConfig =

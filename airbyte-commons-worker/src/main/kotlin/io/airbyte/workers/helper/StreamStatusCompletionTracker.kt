@@ -5,10 +5,10 @@
 package io.airbyte.workers.helper
 
 import io.airbyte.config.ConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteMapper
 import jakarta.inject.Singleton
@@ -59,8 +59,8 @@ class StreamStatusCompletionTracker(
   private fun streamDescriptorsToCompleteStatusMessage(
     streamDescriptors: Set<StreamDescriptor>,
     namespacingMapper: AirbyteMapper,
-  ): List<AirbyteMessage> {
-    return streamDescriptors.map {
+  ): List<AirbyteMessage> =
+    streamDescriptors.map {
       namespacingMapper.mapMessage(
         AirbyteMessage()
           .withType(AirbyteMessage.Type.TRACE)
@@ -76,7 +76,6 @@ class StreamStatusCompletionTracker(
           ),
       )
     }
-  }
 }
 
 /**
@@ -89,11 +88,10 @@ class StreamStatusMap : HashMap<StreamDescriptor, Boolean>() {
    * Determines of the map contains an entry for the [StreamDescriptor].  It handles [StreamDescriptor] instances
    * with either a `null` or empty `namespace` value when checking for the value in the map.
    */
-  fun containsStream(descriptor: StreamDescriptor): Boolean {
-    return if (descriptor.namespace == null) {
+  fun containsStream(descriptor: StreamDescriptor): Boolean =
+    if (descriptor.namespace == null) {
       containsKey(descriptor) || containsKey(StreamDescriptor().withName(descriptor.name).withNamespace(""))
     } else {
       containsKey(descriptor)
     }
-  }
 }

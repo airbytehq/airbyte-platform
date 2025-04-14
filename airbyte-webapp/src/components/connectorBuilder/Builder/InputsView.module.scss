@@ -3,12 +3,16 @@
 
 .itemLabel {
   flex-grow: 1;
+
+  & > div {
+    margin-bottom: 0;
+  }
 }
 
 .itemButton {
   background: none !important;
   border: none !important;
-  padding: variables.$spacing-xs;
+  padding: 0 !important;
 }
 
 .inputsDescription {
@@ -25,13 +29,8 @@
 .inputCard {
   display: flex;
   align-items: center;
-  padding: variables.$spacing-sm variables.$spacing-md;
+  padding: variables.$spacing-sm variables.$spacing-md variables.$spacing-md;
   gap: variables.$spacing-md;
-  cursor: grab;
-
-  &:hover {
-    background-color: colors.$grey-50;
-  }
 
   &[aria-pressed="true"] {
     background-color: colors.$blue-40;
@@ -49,4 +48,34 @@
       cursor: default;
     }
   }
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.dragHandle {
+  cursor: grab;
+  outline: none;
+
+  &:focus-visible {
+    outline: auto; /* Keeps accessibility intact */
+  }
+
+  &:hover {
+    color: colors.$grey-400;
+  }
+}
+
+.dragging {
+  cursor: grabbing;
+  color: colors.$grey-400;
+}
+
+.inputControl {
+  padding-bottom: 0;
+}
+
+.unsupportedInputTypeAction {
+  color: colors.$dark-blue;
 }

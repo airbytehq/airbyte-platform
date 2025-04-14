@@ -2,7 +2,7 @@
 @use "scss/variables";
 @use "scss/z-indices";
 
-$border-radius: variables.$border-radius-lg;
+$border-radius: variables.$border-radius-sm;
 
 // ------- <table/> --------
 .table {
@@ -15,11 +15,23 @@ $border-radius: variables.$border-radius-lg;
   will-change: opacity;
 
   &--default {
-    box-shadow: variables.$box-shadow;
+    border: variables.$border-thin solid colors.$border-color;
   }
 
   &--empty {
     height: 100%;
+  }
+
+  .viewMoreButton {
+    color: colors.$blue;
+    background-color: colors.$foreground;
+    border: none;
+    cursor: pointer;
+    padding: variables.$spacing-md variables.$spacing-lg;
+    font-size: variables.$font-size-sm;
+    line-height: 1.2;
+    font-weight: 400;
+    border-radius: $border-radius;
   }
 }
 

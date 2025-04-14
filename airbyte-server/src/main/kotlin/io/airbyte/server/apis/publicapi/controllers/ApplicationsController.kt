@@ -1,10 +1,11 @@
 /*
- * Copyright (c) 2024 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
@@ -31,14 +32,14 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.Optional
-
-const val TOKEN_EXPIRATION_TIME: Long = 180
+import kotlin.time.Duration.Companion.minutes
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @Requires(bean = ApplicationService::class)
 open class ApplicationsController(
   private val applicationService: ApplicationService,
+  private val tokenExpirationConfig: TokenExpirationConfig,
   private val currentUserService: CurrentUserService,
   private val trackingHelper: TrackingHelper,
 ) : PublicApplicationsApi {
@@ -70,7 +71,7 @@ open class ApplicationsController(
     val user: AuthenticatedUser = currentUserService.currentUser
 
     // process and monitor the request
-    val application: Optional<Application> =
+    val application: Application? =
       trackingHelper.callWithTracker(
         {
           applicationService.deleteApplication(user, applicationId)
@@ -80,7 +81,7 @@ open class ApplicationsController(
         user.userId,
       )
 
-    if (application.isEmpty) {
+    if (application == null) {
       throw ResourceNotFoundProblem(
         detail = "The application with the provided id was not found.",
         data = null,
@@ -90,28 +91,27 @@ open class ApplicationsController(
     return Response
       .status(Response.Status.OK.statusCode)
       .entity(
-        toApplicationRead(application.get()),
-      )
-      .build()
+        toApplicationRead(application),
+      ).build()
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Secured(SecurityRule.IS_ANONYMOUS)
-  override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response {
-    return Response
+  override fun publicGetAccessToken(applicationTokenRequestWithGrant: ApplicationTokenRequestWithGrant): Response =
+    Response
       .status(Response.Status.OK.statusCode)
       .entity(
         PublicAccessTokenResponse(
           accessToken =
             applicationService
-              .getToken(applicationTokenRequestWithGrant.clientId, applicationTokenRequestWithGrant.clientSecret),
+              .getToken(
+                clientId = applicationTokenRequestWithGrant.clientId,
+                clientSecret = applicationTokenRequestWithGrant.clientSecret,
+              ),
           PublicAccessTokenResponse.TokenType.BEARER,
-          // This is longer for pro, but there's no reason for the terraform provider/sdks to not just get a new token every 3 min
-          TOKEN_EXPIRATION_TIME,
+          tokenExpirationConfig.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
         ),
-      )
-      .build()
-  }
+      ).build()
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetApplication(applicationId: String): Response {
@@ -123,10 +123,9 @@ open class ApplicationsController(
         {
           applicationService
             .listApplicationsByUser(user)
-            .stream()
-            .filter { app -> app.id.equals(applicationId) }
-            .map { app -> toApplicationRead(app) }
-            .findFirst()
+            .firstOrNull { app -> app.id == applicationId }
+            ?.let { app -> toApplicationRead(app) }
+            .let { Optional.ofNullable(it) }
         },
         APPLICATIONS_PATH_WITH_ID,
         GET,
@@ -156,9 +155,7 @@ open class ApplicationsController(
         {
           applicationService
             .listApplicationsByUser(user)
-            .stream()
             .map { app -> toApplicationRead(app) }
-            .toList()
         },
         APPLICATIONS_PATH,
         GET,
@@ -171,7 +168,6 @@ open class ApplicationsController(
         ApplicationReadList(
           applications = applications,
         ),
-      )
-      .build()
+      ).build()
   }
 }

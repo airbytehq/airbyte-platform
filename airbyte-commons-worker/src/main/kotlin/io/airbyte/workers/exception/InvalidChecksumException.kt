@@ -4,7 +4,9 @@
 
 package io.airbyte.workers.exception
 
-class InvalidChecksumException(message: String) : WorkerException(message) {
+class InvalidChecksumException(
+  message: String,
+) : WorkerException(message) {
   companion object {
     @Suppress("ConstPropertyName")
     @java.io.Serial

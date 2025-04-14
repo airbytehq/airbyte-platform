@@ -9,9 +9,11 @@ import LoadingPage from "components/LoadingPage";
 import { QueryProvider } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 import { AnalyticsProvider } from "core/services/analytics";
+import { HockeyStackAnalytics } from "core/services/analytics/HockeyStackAnalytics";
 import { defaultCloudFeatures, FeatureService } from "core/services/features";
 import { I18nProvider } from "core/services/i18n";
 import { BlockerService } from "core/services/navigation";
+import { DrawerContextProvider } from "core/services/ui/DrawerService";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { FormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -30,9 +32,11 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <FeatureService features={defaultCloudFeatures}>
           <CloudAuthService>
             <ModalServiceProvider>
-              <HelmetProvider>
-                <ZendeskProvider>{children}</ZendeskProvider>
-              </HelmetProvider>
+              <DrawerContextProvider>
+                <HelmetProvider>
+                  <ZendeskProvider>{children}</ZendeskProvider>
+                </HelmetProvider>
+              </DrawerContextProvider>
             </ModalServiceProvider>
           </CloudAuthService>
         </FeatureService>
@@ -51,10 +55,12 @@ const App: React.FC = () => {
               <Suspense fallback={<LoadingPage />}>
                 <DefaultErrorBoundary>
                   <AnalyticsProvider>
-                    <Services>
-                      <DeployPreviewMessage />
-                      <Routing />
-                    </Services>
+                    <HockeyStackAnalytics>
+                      <Services>
+                        <DeployPreviewMessage />
+                        <Routing />
+                      </Services>
+                    </HockeyStackAnalytics>
                   </AnalyticsProvider>
                 </DefaultErrorBoundary>
               </Suspense>

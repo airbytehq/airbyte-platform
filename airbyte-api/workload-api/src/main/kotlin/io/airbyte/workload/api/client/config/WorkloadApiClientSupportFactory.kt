@@ -7,9 +7,11 @@ package io.airbyte.workload.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.UserAgentInterceptor
 import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
+import io.airbyte.api.client.auth.DataplaneAccessTokenInterceptor
+import io.airbyte.api.client.config.ClientApiType
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
+import io.airbyte.metrics.MetricClient
 import io.airbyte.workload.api.client.auth.WorkloadApiAuthenticationInterceptor
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -43,17 +45,16 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.workload-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.workload-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: MeterRegistry?,
-  ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(
+    metricClient: MetricClient,
+  ): RetryPolicy<Response> =
+    generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
-      meterRegistry = meterRegistry,
-      metricPrefix = "workload-api-client",
+      metricClient = metricClient,
+      clientApiType = ClientApiType.WORKLOAD,
       clientRetryExceptions = clientRetryExceptions,
     )
-  }
 
   @Singleton
   @Named("workloadApiOkHttpClient")
@@ -62,12 +63,21 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     @Named("workloadApiAuthenticationInterceptor") workloadApiAuthenticationInterceptor: WorkloadApiAuthenticationInterceptor,
+    dataplaneAccessTokenInterceptor: DataplaneAccessTokenInterceptor?,
     @Named("userAgentInterceptor") userAgentInterceptor: UserAgentInterceptor,
     @Named("airbyteAuthHeaderInterceptor") airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
   ): OkHttpClient {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    builder.addInterceptor(workloadApiAuthenticationInterceptor)
-    builder.addInterceptor(airbyteAuthHeaderInterceptor)
+    // If a dataplaneAccessTokenInterceptor is available, use it. Otherwise, fall back on the
+    // workloadApiAuthenticationInterceptor which still uses the workload API bearer token from
+    // the environment. This is still necessary for non-dataplane applications that call the
+    // workload API, like the airbyte-cron.
+    if (dataplaneAccessTokenInterceptor != null) {
+      builder.addInterceptor(dataplaneAccessTokenInterceptor)
+    } else {
+      builder.addInterceptor(workloadApiAuthenticationInterceptor)
+      builder.addInterceptor(airbyteAuthHeaderInterceptor) // TODO(parker) look into removing this, may not be doing anything?
+    }
     builder.addInterceptor(userAgentInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
     builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))

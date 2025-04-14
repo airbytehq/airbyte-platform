@@ -12,6 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ErrorWithJobInfo } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
@@ -93,6 +94,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
+  const workspaceId = useCurrentWorkspaceId();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -191,15 +193,19 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const connector = isEditMode ? props.connector : undefined;
   const connectorId = connector ? getConnectorId(connector) : undefined;
 
+  const isConnectorEntitled = connector?.isEntitled === true;
+
   // Fill form with existing connector values otherwise set the default service name
-  const formValues = useMemo(
-    () => (isEditMode && connector ? connector : { name: selectedConnectorDefinition?.name }),
-    [isEditMode, connector, selectedConnectorDefinition?.name]
-  );
+  const formValues = useMemo(() => {
+    if (isEditMode && connector) {
+      return connector;
+    }
+    return { name: selectedConnectorDefinition?.name };
+  }, [isEditMode, connector, selectedConnectorDefinition?.name]);
 
   return (
     <ConnectorForm
-      canEdit={canEditConnector}
+      canEdit={canEditConnector && (isConnectorEntitled || !connector)}
       trackDirtyChanges
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
@@ -270,6 +276,17 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               }}
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
+              onCopyConfig={() => {
+                const values = getValues();
+                const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
+                return {
+                  name: values.name,
+                  workspaceId,
+                  definitionId,
+                  config: values.connectionConfiguration as Record<string, unknown>,
+                  schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
+                };
+              }}
             />
           </>
         )

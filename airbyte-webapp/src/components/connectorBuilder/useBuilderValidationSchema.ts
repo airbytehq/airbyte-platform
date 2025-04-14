@@ -1,10 +1,12 @@
+import { parse } from "graphql";
 import { load } from "js-yaml";
 import isObject from "lodash/isObject";
 import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
-import { AnyObject } from "yup/lib/types";
+import { AnyObject, SchemaLike } from "yup/lib/types";
+import { z } from "zod";
 
 import {
   ListPartitionRouter,
@@ -16,6 +18,7 @@ import { FORM_PATTERN_ERROR } from "core/form/types";
 
 import {
   API_KEY_AUTHENTICATOR,
+  BuilderFormInput,
   BuilderStream,
   CURSOR_PAGINATION,
   CUSTOM_PARTITION_ROUTER,
@@ -27,11 +30,19 @@ import {
   SESSION_TOKEN_REQUEST_API_KEY_AUTHENTICATOR,
   SUBSTREAM_PARTITION_ROUTER,
   isYamlString,
+  JWT_AUTHENTICATOR,
 } from "./types";
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
 const REQUIRED_ERROR = "form.empty.error";
 const strip = (schema: MixedSchema) => schema.strip();
+
+const ifRequestType = (requestType: BuilderStream["requestType"], schema: SchemaLike) =>
+  yup.mixed().when("requestType", {
+    is: requestType,
+    then: schema,
+    otherwise: strip,
+  });
 
 export const useBuilderValidationSchema = () => {
   const { formatMessage } = useIntl();
@@ -100,6 +111,72 @@ export const useBuilderValidationSchema = () => {
     [formatMessage]
   );
 
+  const parentStreamSchema = useMemo(
+    () =>
+      maybeYamlSchema(
+        yup
+          .array(
+            yup.object().shape({
+              parent_key: yup.string().required(REQUIRED_ERROR),
+              parentStreamReference: yup.string().required(REQUIRED_ERROR),
+              partition_field: yup.string().required(REQUIRED_ERROR),
+              request_option: nonPathRequestOptionSchema,
+              incremental_dependency: yup.boolean().default(false),
+            })
+          )
+          .notRequired()
+          .default(undefined),
+        (parsedYaml, createError) =>
+          validatePartitionRouterTypes(parsedYaml as SimpleRetrieverPartitionRouter, createError, [
+            SUBSTREAM_PARTITION_ROUTER,
+            CUSTOM_PARTITION_ROUTER,
+          ])
+      ),
+    [validatePartitionRouterTypes]
+  );
+
+  const parameterizedRequestsSchema = useMemo(
+    () =>
+      maybeYamlSchema(
+        yup
+          .array(
+            yup.object().shape({
+              cursor_field: yup.string().required(REQUIRED_ERROR),
+              values: yup.object().shape({
+                value: yup.mixed().when("type", {
+                  is: "list",
+                  then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                  otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+                }),
+              }),
+              request_option: nonPathRequestOptionSchema,
+            })
+          )
+          .notRequired()
+          .default(undefined),
+        (parsedYaml, createError) => {
+          const partitionRouter = parsedYaml as SimpleRetrieverPartitionRouter;
+
+          const typeValidationResult = validatePartitionRouterTypes(
+            partitionRouter,
+            createError,
+            [LIST_PARTITION_ROUTER],
+            formatMessage({ id: "connectorBuilder.partitionRouter.customRouter" })
+          );
+
+          if (typeValidationResult !== true) {
+            return typeValidationResult;
+          }
+
+          return validateListPartitionRouterValues(
+            partitionRouter as ListPartitionRouter | ListPartitionRouter[],
+            createError
+          );
+        }
+      ),
+    [formatMessage, validateListPartitionRouterValues, validatePartitionRouterTypes]
+  );
+
   const authenticatorSchema = useAuthenticatorSchema();
 
   const globalSchema = useMemo(
@@ -125,80 +202,93 @@ export const useBuilderValidationSchema = () => {
               return allStreamNames.filter((name: string) => name === value).length === 1;
             }
           ),
-        urlPath: yup.string().required(REQUIRED_ERROR),
-        primaryKey: yup.array().of(yup.string()),
-        httpMethod: httpMethodSchema,
-        requestOptions: requestOptionsSchema,
         schema: jsonString,
-        recordSelector: maybeYamlSchema(recordSelectorSchema),
-        paginator: maybeYamlSchema(paginatorSchema),
-        parentStreams: maybeYamlSchema(
-          yup
-            .array(
-              yup.object().shape({
-                parent_key: yup.string().required(REQUIRED_ERROR),
-                parentStreamReference: yup.string().required(REQUIRED_ERROR),
-                partition_field: yup.string().required(REQUIRED_ERROR),
-                request_option: nonPathRequestOptionSchema,
-                incremental_dependency: yup.boolean().default(false),
-              })
-            )
-            .notRequired()
-            .default(undefined),
-          (parsedYaml, createError) =>
-            validatePartitionRouterTypes(parsedYaml as SimpleRetrieverPartitionRouter, createError, [
-              SUBSTREAM_PARTITION_ROUTER,
-              CUSTOM_PARTITION_ROUTER,
-            ])
-        ),
-        parameterizedRequests: maybeYamlSchema(
-          yup
-            .array(
-              yup.object().shape({
-                cursor_field: yup.string().required(REQUIRED_ERROR),
-                values: yup.object().shape({
-                  value: yup.mixed().when("type", {
-                    is: "list",
-                    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                    otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-                  }),
-                }),
-                request_option: nonPathRequestOptionSchema,
-              })
-            )
-            .notRequired()
-            .default(undefined),
-          (parsedYaml, createError) => {
-            const partitionRouter = parsedYaml as SimpleRetrieverPartitionRouter;
-
-            const typeValidationResult = validatePartitionRouterTypes(
-              partitionRouter,
-              createError,
-              [LIST_PARTITION_ROUTER],
-              formatMessage({ id: "connectorBuilder.partitionRouter.customRouter" })
-            );
-
-            if (typeValidationResult !== true) {
-              return typeValidationResult;
-            }
-
-            return validateListPartitionRouterValues(
-              partitionRouter as ListPartitionRouter | ListPartitionRouter[],
-              createError
-            );
-          }
-        ),
-        transformations: maybeYamlSchema(transformationsSchema),
-        errorHandler: maybeYamlSchema(errorHandlerSchema),
-        incrementalSync: maybeYamlSchema(incrementalSyncSchema),
         unknownFields: yamlSchema((parsedYaml, createError) => {
           if (Array.isArray(parsedYaml) || !isObject(parsedYaml)) {
             return createError({ message: formatMessage({ id: "connectorBuilder.unknownFields.nonObjectError" }) });
           }
           return true;
         }),
+
+        // synchronous stream fields
+        urlPath: ifRequestType("sync", yup.string().required(REQUIRED_ERROR)),
+        primaryKey: ifRequestType("sync", yup.array().of(yup.string())),
+        httpMethod: ifRequestType("sync", httpMethodSchema),
+        requestOptions: ifRequestType("sync", requestOptionsSchema),
+        recordSelector: ifRequestType("sync", maybeYamlSchema(recordSelectorSchema)),
+        paginator: ifRequestType("sync", maybeYamlSchema(paginatorSchema)),
+        parentStreams: ifRequestType("sync", parentStreamSchema),
+        parameterizedRequests: ifRequestType("sync", parameterizedRequestsSchema),
+        transformations: ifRequestType("sync", maybeYamlSchema(transformationsSchema)),
+        errorHandler: ifRequestType("sync", maybeYamlSchema(errorHandlerSchema)),
+        incrementalSync: ifRequestType("sync", maybeYamlSchema(incrementalSyncSchema)),
+
+        // async stream fields
+        creationRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            incrementalSync: maybeYamlSchema(incrementalSyncSchema),
+            parentStreams: parentStreamSchema,
+            parameterizedRequests: parameterizedRequestsSchema,
+            authenticator: maybeYamlSchema(authenticatorSchema),
+          })
+        ),
+        pollingRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            statusExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            statusMapping: yup.object().shape({
+              completed: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              failed: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              running: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              timeout: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+            }),
+            downloadTargetExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
+            pollingTimeout: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: "number",
+                then: yup
+                  .number()
+                  .integer("connectorBuilder.asyncStream.polling.timeout.number.integer")
+                  .required(REQUIRED_ERROR)
+                  .min(1, "connectorBuilder.asyncStream.polling.timeout.number.min"),
+                otherwise: interpolationString,
+              }),
+            }),
+          })
+        ),
+        downloadRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            primaryKey: yup.array().of(yup.string()),
+            transformations: maybeYamlSchema(transformationsSchema),
+            recordSelector: maybeYamlSchema(recordSelectorSchema),
+            paginator: maybeYamlSchema(paginatorSchema),
+            downloadExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
+          })
+        ),
       }),
-    [formatMessage, validateListPartitionRouterValues, validatePartitionRouterTypes]
+    [formatMessage, parameterizedRequestsSchema, parentStreamSchema, authenticatorSchema]
   );
 
   const builderFormValidationSchema = useMemo(
@@ -208,6 +298,52 @@ export const useBuilderValidationSchema = () => {
         streams: yup.array().min(1).of(streamSchema),
       }),
     [globalSchema, streamSchema]
+  );
+
+  const testingValuesSchema = useMemo(
+    () =>
+      yup
+        .object()
+        .shape({})
+        .when("formValues.inputs", (inputs: BuilderFormInput[], schema) => {
+          if (!inputs) {
+            return schema; // If inputs are not available, return the existing schema
+          }
+
+          // Build the dynamic schema for `testingValues`
+          const fields: Record<string, yup.AnySchema> = {};
+
+          inputs.forEach((input: BuilderFormInput) => {
+            let fieldSchema: yup.AnySchema;
+
+            switch (input.definition.type) {
+              case "string":
+                fieldSchema = yup.string();
+                break;
+              case "number":
+              case "integer":
+                fieldSchema = yup.number().transform((value) => (isNaN(value) ? undefined : value));
+                break;
+              case "boolean":
+                fieldSchema = yup.boolean();
+                break;
+              case "array":
+                fieldSchema = yup.array().of(yup.string());
+                break;
+              default:
+                fieldSchema = yup.mixed().test("invalid-type", `Invalid type: ${input.definition.type}`, () => false);
+            }
+
+            if (input.required) {
+              fieldSchema = fieldSchema.required(REQUIRED_ERROR);
+            }
+
+            fields[input.key] = fieldSchema;
+          });
+
+          return yup.object().shape(fields);
+        }),
+    []
   );
 
   const builderStateValidationSchema = useMemo(
@@ -221,12 +357,13 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs"
+            'Must be "global", "inputs", "components", or a number',
+            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
           ),
         testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
+        testingValues: testingValuesSchema,
       }),
-    [builderFormValidationSchema]
+    [builderFormValidationSchema, testingValuesSchema]
   );
 
   return {
@@ -234,6 +371,7 @@ export const useBuilderValidationSchema = () => {
     streamSchema,
     builderFormValidationSchema,
     builderStateValidationSchema,
+    testingValuesSchema,
   };
 };
 
@@ -261,6 +399,22 @@ export const jsonString = yup.string().test({
   message: "connectorBuilder.invalidJSON",
 });
 
+export const zodJsonString = z.string().refine(
+  (val) => {
+    if (!val) {
+      return true;
+    }
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  {
+    message: "connectorBuilder.invalidJSON",
+  }
+);
 const nonArrayJsonString = jsonString.test({
   test: (val: string | undefined) => {
     if (!val) {
@@ -283,7 +437,16 @@ const nonPathRequestOptionSchema = yup
   .object()
   .shape({
     inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value).filter((val) => val !== "path")),
-    field_name: yup.string().required(REQUIRED_ERROR),
+    field_name: yup.mixed().when("inject_into", {
+      is: (val: string) => val !== "body_json",
+      then: yup.string().required(REQUIRED_ERROR),
+      otherwise: strip,
+    }),
+    field_path: yup.mixed().when("inject_into", {
+      is: (val: string) => val === "body_json",
+      then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+      otherwise: strip,
+    }),
   })
   .notRequired()
   .default(undefined);
@@ -349,6 +512,22 @@ const requestOptionsSchema = yup.object().shape({
       .when("type", {
         is: (val: string) => val === "string_freeform",
         then: yup.string(),
+      })
+      .when("type", {
+        is: (val: string) => val === "graphql",
+        then: yup
+          .string()
+          .test("is-valid-graphql", "connectorBuilder.requestOptions.graphqlQuery.invalidSyntax", (value) => {
+            if (!value) {
+              return true;
+            }
+            try {
+              parse(value);
+              return true;
+            } catch {
+              return false;
+            }
+          }),
       }),
   }),
 });
@@ -419,8 +598,15 @@ const useAuthenticatorSchema = () => {
       yup.object({
         type: yup.string().required(REQUIRED_ERROR),
         inject_into: apiKeyInjectIntoSchema,
-        token_refresh_endpoint: yup.mixed().when("type", {
-          is: (value: string) => value === OAUTH_AUTHENTICATOR || value === DeclarativeOAuthAuthenticatorType,
+        token_refresh_endpoint: yup.mixed().when(["type", "refresh_token_updater"], {
+          is: (type: string, refreshTokenUpdater: unknown) => {
+            if (type === OAUTH_AUTHENTICATOR) {
+              return true;
+            } else if (type === DeclarativeOAuthAuthenticatorType && !!refreshTokenUpdater) {
+              return true;
+            }
+            return false;
+          },
           then: yup.string().required(REQUIRED_ERROR),
           otherwise: strip,
         }),
@@ -447,6 +633,7 @@ const useAuthenticatorSchema = () => {
             access_token_key: yup.string().required(REQUIRED_ERROR),
             access_token_headers: keyValueListSchema,
             access_token_params: keyValueListSchema,
+            access_token_value: yup.string(),
             auth_code_key: yup.string(),
             client_id_key: yup.string(),
             client_secret_key: yup.string(),
@@ -513,6 +700,63 @@ const useAuthenticatorSchema = () => {
           }),
           otherwise: strip,
         }),
+        secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        algorithm: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        token_duration: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup
+            .number()
+            .integer()
+            .min(0, "connectorBuilder.authentication.jwt.tokenDuration")
+            .max(172_800, "connectorBuilder.authentication.jwt.tokenDuration"),
+          otherwise: strip,
+        }),
+        base64_encode_secret_key: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.boolean(),
+          otherwise: strip,
+        }),
+        additional_jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        additional_jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: keyValueListSchema,
+          otherwise: strip,
+        }),
+        jwt_headers: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            kid: yup.string().optional(),
+            typ: yup.string().optional(),
+            cty: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        jwt_payload: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.object().shape({
+            iss: yup.string().optional(),
+            sub: yup.string().optional(),
+            aud: yup.string().optional(),
+          }),
+          otherwise: strip,
+        }),
+        header_prefix: yup.mixed().when("type", {
+          is: JWT_AUTHENTICATOR,
+          then: yup.string().optional(),
+          otherwise: strip,
+        }),
       }),
     [formatMessage]
   );
@@ -537,9 +781,14 @@ const paginatorSchema = yup
       .shape({
         inject_into: yup.mixed().oneOf(injectIntoOptions.map((option) => option.value)),
         field_name: yup.mixed().when("inject_into", {
-          is: "path",
-          then: strip,
-          otherwise: yup.string().required(REQUIRED_ERROR),
+          is: (val: string) => val !== "body_json" && val !== "path",
+          then: yup.string().required(REQUIRED_ERROR),
+          otherwise: strip,
+        }),
+        field_path: yup.mixed().when("inject_into", {
+          is: "body_json",
+          then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+          otherwise: strip,
         }),
       })
       .notRequired()

@@ -197,11 +197,13 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         >
                           <table
                             class="<removed-for-snapshot-test>"
+                            context="[object Object]"
                             data-testid="sync-catalog-table"
                             style="border-spacing: 0;"
                           >
                             <thead
                               class="<removed-for-snapshot-test>"
+                              context="[object Object]"
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
@@ -220,6 +222,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                         aria-checked="mixed"
                                         data-testid="sync-namespace-checkbox"
                                         type="checkbox"
+                                      />
+                                      <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
                                       />
                                       <div
                                         class="<removed-for-snapshot-test>"
@@ -312,6 +318,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="0"
                                 data-item-index="0"
                                 data-known-size="40"
@@ -334,6 +341,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           aria-checked="mixed"
                                           data-testid="sync-namespace-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -419,6 +430,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="1"
                                 data-item-index="1"
                                 data-known-size="40"
@@ -441,6 +453,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -495,6 +511,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:rk:"
+                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -513,7 +530,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -546,6 +563,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="2"
                                 data-item-index="2"
                                 data-known-size="40"
@@ -568,6 +586,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -622,6 +644,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:rn:"
+                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -640,7 +663,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -673,6 +696,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="3"
                                 data-item-index="3"
                                 data-known-size="40"
@@ -694,6 +718,10 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button
@@ -968,11 +996,13 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                         >
                           <table
                             class="<removed-for-snapshot-test>"
+                            context="[object Object]"
                             data-testid="sync-catalog-table"
                             style="border-spacing: 0;"
                           >
                             <thead
                               class="<removed-for-snapshot-test>"
+                              context="[object Object]"
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
@@ -991,6 +1021,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                         aria-checked="mixed"
                                         data-testid="sync-namespace-checkbox"
                                         type="checkbox"
+                                      />
+                                      <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
                                       />
                                       <div
                                         class="<removed-for-snapshot-test>"
@@ -1083,6 +1117,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="0"
                                 data-item-index="0"
                                 data-known-size="40"
@@ -1105,6 +1140,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           aria-checked="mixed"
                                           data-testid="sync-namespace-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -1190,6 +1229,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="1"
                                 data-item-index="1"
                                 data-known-size="40"
@@ -1212,6 +1252,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -1266,6 +1310,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1c:"
+                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -1284,7 +1329,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -1317,6 +1362,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="2"
                                 data-item-index="2"
                                 data-known-size="40"
@@ -1339,6 +1385,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -1393,6 +1443,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
                                       id="headlessui-listbox-button-:r1f:"
+                                      type="button"
                                     >
                                       <span
                                         class="<removed-for-snapshot-test>"
@@ -1411,7 +1462,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       />
                                     </button>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(0px,5px);"
+                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
                                   </div>
                                 </td>
@@ -1444,6 +1495,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="3"
                                 data-item-index="3"
                                 data-known-size="40"
@@ -1465,6 +1517,10 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button

@@ -1,10 +1,10 @@
-ARG JAVA_WORKER_BASE_IMAGE_VERSION=3.0.0
+ARG JAVA_BASE_IMAGE_VERSION=3.3.4
 
 FROM scratch as builder
 WORKDIR /app
 ADD airbyte-app.tar /app
 
-FROM airbyte/airbyte-base-java-worker-image:${JAVA_WORKER_BASE_IMAGE_VERSION}
+FROM airbyte/airbyte-base-java-image:${JAVA_BASE_IMAGE_VERSION}
 
 # Don't change this manually.  Bump version expects to make moves based on this string
 ARG VERSION=dev

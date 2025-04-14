@@ -11,9 +11,11 @@ import com.google.common.collect.Lists;
 import datadog.trace.api.Trace;
 import io.airbyte.api.model.generated.ActorDefinitionVersionRead;
 import io.airbyte.api.model.generated.AirbyteCatalog;
+import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.AirbyteStream;
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration;
+import io.airbyte.api.model.generated.CatalogConfigDiff;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionCreate;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -37,6 +39,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.SourceSnippetRead;
 import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
+import io.airbyte.api.model.generated.Tag;
 import io.airbyte.api.model.generated.WebBackendConnectionCreate;
 import io.airbyte.api.model.generated.WebBackendConnectionListItem;
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody;
@@ -54,6 +57,8 @@ import io.airbyte.commons.lang.MoreBooleans;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
+import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
+import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -122,6 +127,8 @@ public class WebBackendConnectionsHandler {
   private final CatalogConverter catalogConverter;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
   private final ApiPojoConverters apiPojoConverters;
+  private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private final CatalogConfigDiffHelper catalogConfigDiffHelper;
 
   public WebBackendConnectionsHandler(final ActorDefinitionVersionHandler actorDefinitionVersionHandler,
                                       final ConnectionsHandler connectionsHandler,
@@ -142,7 +149,9 @@ public class WebBackendConnectionsHandler {
                                       final CatalogConverter catalogConverter,
                                       final ApplySchemaChangeHelper applySchemaChangeHelper,
                                       final ApiPojoConverters apiPojoConverters,
-                                      final DestinationCatalogGenerator destinationCatalogGenerator) {
+                                      final DestinationCatalogGenerator destinationCatalogGenerator,
+                                      final ConnectionTimelineEventHelper connectionTimelineEventHelper,
+                                      final CatalogConfigDiffHelper catalogConfigDiffHelper) {
     this.actorDefinitionVersionHandler = actorDefinitionVersionHandler;
     this.connectionsHandler = connectionsHandler;
     this.stateHandler = stateHandler;
@@ -163,6 +172,8 @@ public class WebBackendConnectionsHandler {
     this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.apiPojoConverters = apiPojoConverters;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
+    this.connectionTimelineEventHelper = connectionTimelineEventHelper;
+    this.catalogConfigDiffHelper = catalogConfigDiffHelper;
   }
 
   public WebBackendWorkspaceStateResult getWorkspaceState(final WebBackendWorkspaceState webBackendWorkspaceState) throws IOException {
@@ -320,9 +331,7 @@ public class WebBackendConnectionsHandler {
         .schemaChange(schemaChange)
         .sourceActorDefinitionVersion(sourceActorDefinitionVersionRead)
         .destinationActorDefinitionVersion(destinationActorDefinitionVersionRead)
-        // Temporarily set to an empty list:
-        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
-        .tags(Collections.emptyList());
+        .tags(standardSync.getTags().stream().map(this::buildTag).toList());
 
     latestSyncJob.ifPresent(job -> {
       listItem.setLatestSyncJobCreatedAt(job.createdAt());
@@ -330,6 +339,10 @@ public class WebBackendConnectionsHandler {
     });
 
     return listItem;
+  }
+
+  private Tag buildTag(final io.airbyte.config.Tag tag) {
+    return new Tag().tagId(tag.getTagId()).workspaceId(tag.getWorkspaceId()).name(tag.getName()).color(tag.getColor());
   }
 
   /*
@@ -409,9 +422,7 @@ public class WebBackendConnectionsHandler {
         .createdAt(connectionRead.getCreatedAt())
         .nonBreakingChangesPreference(connectionRead.getNonBreakingChangesPreference())
         .backfillPreference(connectionRead.getBackfillPreference())
-        // Temporarily set to an empty list:
-        // https://github.com/airbytehq/airbyte-internal-issues/issues/11253
-        .tags(Collections.emptyList());
+        .tags(connectionRead.getTags());
   }
 
   // todo (cgardens) - This logic is a headache to follow it stems from the internal data model not
@@ -647,6 +658,8 @@ public class WebBackendConnectionsHandler {
 
     // If there have been changes to the sync catalog, check whether these changes result in or fix a
     // broken connection
+    CatalogConfigDiff catalogConfigDiff = null; // Config diff
+    CatalogDiff schemaDiff = null; // Schema diff
     if (webBackendConnectionPatch.getSyncCatalog() != null) {
       // Get the most recent actor catalog fetched for this connection's source and the newly updated sync
       // catalog
@@ -655,8 +668,8 @@ public class WebBackendConnectionsHandler {
       final AirbyteCatalog newAirbyteCatalog = webBackendConnectionPatch.getSyncCatalog();
       // Get the diff between these two catalogs to check for breaking changes
       if (mostRecentActorCatalog.isPresent()) {
-        final io.airbyte.protocol.models.AirbyteCatalog mostRecentAirbyteCatalog =
-            Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.AirbyteCatalog.class);
+        final io.airbyte.protocol.models.v0.AirbyteCatalog mostRecentAirbyteCatalog =
+            Jsons.object(mostRecentActorCatalog.get().getCatalog(), io.airbyte.protocol.models.v0.AirbyteCatalog.class);
         final StandardSourceDefinition sourceDefinition =
             sourceService.getSourceDefinitionFromSource(originalConnectionRead.getSourceId());
         final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(
@@ -667,6 +680,15 @@ public class WebBackendConnectionsHandler {
             connectionsHandler.getDiff(newAirbyteCatalog, catalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion),
                 catalogConverter.toConfiguredInternal(newAirbyteCatalog), connectionId);
         breakingChange = applySchemaChangeHelper.containsBreakingChange(catalogDiff);
+
+        final AirbyteCatalog mostRecentSourceCatalog = catalogConverter.toApi(mostRecentAirbyteCatalog, sourceVersion);
+        // Get the schema diff between the current raw catalog and the most recent source catalog
+        schemaDiff = connectionsHandler.getDiff(originalConnectionRead, mostRecentSourceCatalog);
+        // Get the catalog config diff between the current sync config and new sync config
+        catalogConfigDiff = catalogConfigDiffHelper.getCatalogConfigDiff(
+            mostRecentSourceCatalog,
+            originalConnectionRead.getSyncCatalog(),
+            newAirbyteCatalog);
       }
     }
 
@@ -683,8 +705,12 @@ public class WebBackendConnectionsHandler {
 
     // persist the update and set the connectionRead to the updated form.
     final ConnectionRead updatedConnectionRead = connectionsHandler.updateConnection(connectionPatch, null, false);
-    // TODO: if syncCatalog is included in the patch, we need to calculate the diff and log a
-    // schema_config_change event in connection timeline.
+    // log a schema_config_change event in connection timeline.
+    final AirbyteCatalogDiff airbyteCatalogDiff = catalogConfigDiffHelper.getAirbyteCatalogDiff(schemaDiff, catalogConfigDiff);
+    if (airbyteCatalogDiff != null) {
+      connectionTimelineEventHelper.logSchemaConfigChangeEventInConnectionTimeline(connectionId, airbyteCatalogDiff);
+    }
+
     // detect if any streams need to be reset based on the patch and initial catalog, if so, reset them
     resetStreamsIfNeeded(webBackendConnectionPatch, oldConfiguredCatalog, updatedConnectionRead, originalConnectionRead);
     /*
@@ -847,6 +873,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
     connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
+    connectionCreate.tags(webBackendConnectionCreate.getTags());
 
     return connectionCreate;
   }
@@ -883,6 +910,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());
     connectionPatch.backfillPreference(webBackendConnectionPatch.getBackfillPreference());
     connectionPatch.breakingChange(breakingChange);
+    connectionPatch.tags(webBackendConnectionPatch.getTags());
 
     connectionPatch.operationIds(finalOperationIds);
 

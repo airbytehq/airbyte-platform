@@ -1,4 +1,4 @@
-import { JobRead, LogRead, SynchronousJobRead } from "core/api/types/AirbyteClient";
+import { JobRead, LogEvents, LogRead, SynchronousJobRead } from "core/api/types/AirbyteClient";
 
 import { JobWithAttempts } from "../types/jobs";
 
@@ -7,8 +7,13 @@ export const isClearJob = (job: SynchronousJobRead | JobWithAttempts | JobRead):
     ? job.configType === "clear" || job.configType === "reset_connection"
     : job.job.configType === "clear" || job.job.configType === "reset_connection";
 
-type SyncrhonousJobReadWithFormattedLogs = SynchronousJobRead & { logType: "formatted"; logs: LogRead };
+type SynchronousJobReadWithFormattedLogs = SynchronousJobRead & { logType: "formatted"; logs: LogRead };
+type SynchronousJobReadWithStructuredLogs = SynchronousJobRead & { logType: "structured"; logs: LogEvents };
 
-export function jobHasFormattedLogs(job: SynchronousJobRead): job is SyncrhonousJobReadWithFormattedLogs {
+export function jobHasFormattedLogs(job: SynchronousJobRead): job is SynchronousJobReadWithFormattedLogs {
   return job.logType === "formatted";
+}
+
+export function jobHasStructuredLogs(job: SynchronousJobRead): job is SynchronousJobReadWithStructuredLogs {
+  return job.logType === "structured";
 }

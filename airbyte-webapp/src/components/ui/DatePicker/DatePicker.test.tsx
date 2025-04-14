@@ -22,14 +22,14 @@ describe(`${toEquivalentLocalTime.name}`, () => {
     jest.useRealTimers();
   });
 
-  // Seems silly, but dayjs has a bug when formatting years, so this is a useful test:
+  // There was a bug in dayjs when formatting years, so this test stays relevant to catch any regressions:
   // https://github.com/iamkun/dayjs/issues/1745
   it("handles a date in the year 1", () => {
     const TEST_UTC_TIMESTAMP = "0001-12-01T09:00:00Z";
 
     const result = toEquivalentLocalTime(TEST_UTC_TIMESTAMP);
 
-    expect(result).toEqual(undefined);
+    expect(result).toEqual(new Date("0001-12-01T16:45:00.000Z"));
   });
 
   it("handles an invalid date", () => {

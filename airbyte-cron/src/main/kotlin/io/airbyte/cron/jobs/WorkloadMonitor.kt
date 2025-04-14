@@ -5,12 +5,12 @@
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.annotations.Instrument
 import io.airbyte.metrics.annotations.Tag
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadListRequest
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
@@ -44,6 +44,7 @@ open class WorkloadMonitor(
     const val CHECK_NON_SYNC_TIMEOUT = "workload-monitor-non-sync-timeout"
     const val CHECK_START = "workload-monitor-start"
     const val CHECK_SYNC_TIMEOUT = "workload-monitor-sync-timeout"
+    const val WORKLOAD_QUEUE_DEPTH = "workload-monitor-queue-depth"
     val DEFAULT_TIME_PROVIDER: (ZoneId) -> OffsetDateTime = OffsetDateTime::now
   }
 
@@ -165,6 +166,26 @@ open class WorkloadMonitor(
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
   }
 
+  @Trace
+  @Instrument(
+    start = "WORKLOAD_MONITOR_RUN",
+    end = "WORKLOAD_MONITOR_DONE",
+    duration = "WORKLOAD_MONITOR_DURATION",
+    tags = [Tag(key = MetricTags.CRON_TYPE, value = WORKLOAD_QUEUE_DEPTH)],
+  )
+  @Scheduled(fixedRate = "\${airbyte.workload.monitor.queue-depth-check-rate}")
+  open fun workloadQueueDepthMonitoring() {
+    val queueStats = workloadApiClient.workloadApi.getWorkloadQueueStats()
+    queueStats.stats.forEach {
+      metricClient.gauge(
+        OssMetricsRegistry.WORKLOAD_QUEUE_SIZE,
+        it.enqueuedCount.toDouble(),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, it.dataplaneGroup ?: "unknown"),
+        MetricAttribute(MetricTags.PRIORITY_TAG, it.priority?.name ?: "none"),
+      )
+    }
+  }
+
   private fun failWorkloads(
     workloads: List<Workload>,
     reason: String,
@@ -186,11 +207,13 @@ open class WorkloadMonitor(
         logger.warn(e) { "Failed to cancel workload ${it.id}" }
       } finally {
         metricClient.count(
-          OssMetricsRegistry.WORKLOADS_CANCEL,
-          1,
-          MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
-          MetricAttribute(MetricTags.STATUS, status),
-          MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
+          metric = OssMetricsRegistry.WORKLOADS_CANCEL,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.CANCELLATION_SOURCE, source),
+              MetricAttribute(MetricTags.STATUS, status),
+              MetricAttribute(MetricTags.WORKLOAD_TYPE, it.type.value),
+            ),
         )
       }
     }

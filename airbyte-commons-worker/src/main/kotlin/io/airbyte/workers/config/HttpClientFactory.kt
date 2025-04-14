@@ -13,7 +13,5 @@ import java.net.http.HttpClient
 class HttpClientFactory {
   @Singleton
   @Named("webhookHttpClient")
-  fun webhookHttpClient(): HttpClient {
-    return HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
-  }
+  fun webhookHttpClient(): HttpClient = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build()
 }

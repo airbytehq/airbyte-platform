@@ -16,8 +16,10 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -25,6 +27,7 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionTy
 import io.airbyte.db.instance.configs.jooq.generated.enums.SupportLevel;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -58,7 +61,9 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private static final UUID WORKSPACE_ID_1 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID_2 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID_3 = UUID.randomUUID();
+  private static final UUID DEFAULT_DATAPLANE_GROUP_ID = UUID.randomUUID();
   private WorkspaceService workspaceService;
+  private static DataplaneGroupService dataplaneGroupService;
 
   @BeforeAll
   static void setUpAll() throws SQLException, IOException {
@@ -76,17 +81,17 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .values(DST_DEF_VER_ID, DST_DEF_ID, "airbyte/destination", "tag", JSONB.valueOf("{}"), SupportLevel.community, 100L)
         .execute());
 
-    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
-
     // create workspace
     database.transaction(
         ctx -> ctx
             .insertInto(WORKSPACE, WORKSPACE.ID, WORKSPACE.NAME, WORKSPACE.SLUG, WORKSPACE.INITIAL_SETUP_COMPLETE, WORKSPACE.TOMBSTONE,
-                WORKSPACE.ORGANIZATION_ID)
-            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false, DEFAULT_ORGANIZATION_ID)
-            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false, DEFAULT_ORGANIZATION_ID)
-            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 2 is tombstoned!
-            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true, DEFAULT_ORGANIZATION_ID) // note that workspace 3 is tombstoned!
+                WORKSPACE.ORGANIZATION_ID, WORKSPACE.DATAPLANE_GROUP_ID)
+            .values(WORKSPACE_ID_0, "ws-0", "ws-0", true, false, DEFAULT_ORGANIZATION_ID, DEFAULT_DATAPLANE_GROUP_ID)
+            .values(WORKSPACE_ID_1, "ws-1", "ws-1", true, false, DEFAULT_ORGANIZATION_ID, DEFAULT_DATAPLANE_GROUP_ID)
+            // note that workspace 2 is tombstoned!
+            .values(WORKSPACE_ID_2, "ws-2", "ws-2", true, true, DEFAULT_ORGANIZATION_ID, DEFAULT_DATAPLANE_GROUP_ID)
+            // note that workspace 3 is tombstoned!
+            .values(WORKSPACE_ID_3, "ws-3", "ws-3", true, true, DEFAULT_ORGANIZATION_ID, DEFAULT_DATAPLANE_GROUP_ID)
             .execute());
     // create actors
     database.transaction(
@@ -101,13 +106,19 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
     // create connections
     database.transaction(
         ctx -> ctx.insertInto(CONNECTION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION,
-            CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL)
-            .values(ACTOR_ID_0, ACTOR_ID_1, CONN_ID_0, NamespaceDefinitionType.source, "CONN-0", JSONB.valueOf("{}"), true)
-            .values(ACTOR_ID_0, ACTOR_ID_2, CONN_ID_1, NamespaceDefinitionType.source, "CONN-1", JSONB.valueOf("{}"), true)
-            .values(ACTOR_ID_1, ACTOR_ID_2, CONN_ID_2, NamespaceDefinitionType.source, "CONN-2", JSONB.valueOf("{}"), true)
-            .values(ACTOR_ID_1, ACTOR_ID_2, CONN_ID_3, NamespaceDefinitionType.source, "CONN-3", JSONB.valueOf("{}"), true)
-            .values(ACTOR_ID_2, ACTOR_ID_3, CONN_ID_4, NamespaceDefinitionType.source, "CONN-4", JSONB.valueOf("{}"), true)
-            .values(ACTOR_ID_3, ACTOR_ID_1, CONN_ID_5, NamespaceDefinitionType.source, "CONN-5", JSONB.valueOf("{}"), true)
+            CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_0, ACTOR_ID_1, CONN_ID_0, NamespaceDefinitionType.source, "CONN-0", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_0, ACTOR_ID_2, CONN_ID_1, NamespaceDefinitionType.source, "CONN-1", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_1, ACTOR_ID_2, CONN_ID_2, NamespaceDefinitionType.source, "CONN-2", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_1, ACTOR_ID_2, CONN_ID_3, NamespaceDefinitionType.source, "CONN-3", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_2, ACTOR_ID_3, CONN_ID_4, NamespaceDefinitionType.source, "CONN-4", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
+            .values(ACTOR_ID_3, ACTOR_ID_1, CONN_ID_5, NamespaceDefinitionType.source, "CONN-5", JSONB.valueOf("{}"), true,
+                DEFAULT_DATAPLANE_GROUP_ID)
             .execute());
     // create jobs
     final OffsetDateTime currentTs = OffsetDateTime.now();
@@ -122,21 +133,28 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .values(7L, currentTs.minusHours(50), CONN_ID_4.toString())
         .values(8L, currentTs.minusHours(70), CONN_ID_5.toString())
         .execute());
+
+    new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
+
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
   }
 
   @BeforeEach
-  void beforeEach() {
+  void beforeEach() throws IOException {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final MetricClient metricClient = mock(MetricClient.class);
 
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient,
+        dataplaneGroupService);
   }
 
   @Test

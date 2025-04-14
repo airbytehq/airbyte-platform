@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.DestinationInfo;
@@ -26,15 +27,12 @@ import io.airbyte.notification.messages.SourceInfo;
 import io.airbyte.notification.messages.SyncSummary;
 import io.airbyte.notification.messages.WorkspaceInfo;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import org.apache.commons.io.IOUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -96,7 +94,9 @@ class SlackNotificationClientTest {
         Instant.MIN,
         Instant.MAX,
         0, 0, 0, 0, 0, 0,
-        "");
+        "",
+        null,
+        null);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
@@ -113,7 +113,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        null,
+        null);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
@@ -129,7 +131,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        FailureReason.FailureType.CONFIG_ERROR,
+        FailureReason.FailureOrigin.DESTINATION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobFailure(summary, null));
@@ -147,7 +151,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        null,
+        null);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobSuccess(summary, null));
@@ -180,7 +186,9 @@ class SlackNotificationClientTest {
         null,
         null,
         0, 0, 0, 0, 0, 0,
-        "job description.");
+        "job description.",
+        null,
+        null);
     assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
@@ -211,7 +219,9 @@ class SlackNotificationClientTest {
         null,
         null,
         0, 0, 0, 0, 0, 0,
-        "job description.");
+        "job description.",
+        null,
+        null);
 
     assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }
@@ -275,6 +285,36 @@ class SlackNotificationClientTest {
         diff);
 
     assertTrue(client.notifySchemaDiffToApply(notification, recipient));
+  }
+
+  @Test
+  void testNotifySchemaDiffToApplyWhenPropagationDisabled() {
+    final UUID connectionId = UUID.randomUUID();
+    final UUID sourceId = UUID.randomUUID();
+    final CatalogDiff diff = new CatalogDiff();
+    final String workspaceName = "";
+    final String workspaceUrl = "http://airbyte.io/workspaces/123";
+    final String connectionName = "PSQL ->> BigQuery";
+    final String sourceName = "";
+    final String sourceUrl = "http://airbyte.io/workspaces/123/source/456";
+    final boolean isBreaking = false;
+    final String connectionUrl = "http://airbyte.io/your_connection";
+    final String recipient = "";
+
+    final String expectedNotificationMessage = "Airbyte detected schema changes for '<http://airbyte.io/your_connection|PSQL -&gt;&gt; BigQuery>'.";
+    server.createContext(TEST_PATH, new ServerHandler(expectedNotificationMessage));
+    final SlackNotificationClient client =
+        new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
+
+    final UUID workpaceId = UUID.randomUUID();
+    final SchemaUpdateNotification notification = new SchemaUpdateNotification(
+        new WorkspaceInfo(workpaceId, workspaceName, workspaceUrl),
+        new ConnectionInfo(connectionId, connectionName, connectionUrl),
+        new SourceInfo(sourceId, sourceName, sourceUrl),
+        isBreaking,
+        diff);
+
+    assertTrue(client.notifySchemaDiffToApplyWhenPropagationDisabled(notification, recipient));
   }
 
   @Test
@@ -440,8 +480,7 @@ class SlackNotificationClientTest {
 
     @Override
     public void handle(final HttpExchange t) throws IOException {
-      final InputStream is = t.getRequestBody();
-      final String body = IOUtils.toString(is, Charset.defaultCharset());
+      final String body = new String(t.getRequestBody().readAllBytes());
       LOGGER.info("Received: '{}'", body);
       JsonNode message = null;
       try {

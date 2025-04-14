@@ -1,0 +1,42 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+:export {
+  tooltipZindex: z-indices.$tooltip;
+  greenVar: colors.$green-300;
+  blueVar: colors.$blue-400;
+  yellowVar: colors.$yellow-600;
+  redVar: colors.$red-400;
+  gridLine: colors.$grey-100;
+  axisLabel: colors.$grey-400;
+  barHover: colors.$blue-40;
+}
+
+.connectionsGraph {
+  &__loadingSkeleton {
+    height: 120px;
+  }
+
+  &__statusIndicator {
+    width: 10px;
+    height: 14px;
+    border-radius: 2px;
+
+    &--success {
+      background-color: colors.$green-300;
+    }
+
+    &--partialSuccess {
+      background-color: colors.$yellow-600;
+    }
+
+    &--failure {
+      background-color: colors.$red-400;
+    }
+
+    &--running {
+      background-color: colors.$blue-400;
+    }
+  }
+}

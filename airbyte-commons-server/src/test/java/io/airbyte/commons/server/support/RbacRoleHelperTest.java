@@ -13,12 +13,11 @@ import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.micronaut.http.HttpRequest;
-import io.micronaut.http.netty.NettyHttpHeaders;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Stream;
@@ -32,7 +31,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -46,17 +44,12 @@ class RbacRoleHelperTest {
   private AuthenticationHeaderResolver mHeaderResolver;
   @Mock
   private PermissionPersistence mPermissionPersistence;
-  @Mock
-  private HttpRequest mRequest;
-  @Mock
-  private NettyHttpHeaders mHeaders;
 
   private RbacRoleHelper rbacRoleHelper;
 
   @BeforeEach
   void setUp() {
     rbacRoleHelper = new RbacRoleHelper(mHeaderResolver, mPermissionPersistence);
-    Mockito.lenient().when(mRequest.getHeaders()).thenReturn(mHeaders);
   }
 
   @ParameterizedTest
@@ -107,7 +100,7 @@ class RbacRoleHelperTest {
       expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
     }
 
-    final Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    final Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
 
     Assertions.assertEquals(expectedRoles, actualRoles);
   }
@@ -128,7 +121,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_READER);
 
-    Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
 
     // minimum common permission is reader, so expect only reader auth role set.
     Assertions.assertEquals(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_READER), actualRoles);
@@ -137,7 +130,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_ADMIN);
 
-    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     Assertions.assertEquals(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_EDITOR), actualRoles);
 
     // now add organization IDs into the mix.
@@ -151,7 +144,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_MEMBER);
 
-    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     final Set<String> expectedRoles = new HashSet<>();
     // still expect editor as minimum workspace role set
     expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_EDITOR));
@@ -164,7 +157,7 @@ class RbacRoleHelperTest {
 
     when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(UUID.randomUUID().toString()));
 
-    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     Assertions.assertEquals(expectedRoles, actualRoles);
 
     // now make target user auth id match AUTH_USER_ID.
@@ -172,7 +165,7 @@ class RbacRoleHelperTest {
 
     when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(AUTH_USER_ID));
 
-    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     expectedRoles.add(AuthRoleConstants.SELF);
     Assertions.assertEquals(expectedRoles, actualRoles);
   }
@@ -191,7 +184,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(null); // should cause overall role to be NONE
 
-    Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
 
     // one workspace of the three has no permission, so expect NONE
     Assertions.assertEquals(Set.of(WorkspaceAuthRole.NONE.getLabel()), actualRoles);
@@ -206,7 +199,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
         .thenReturn(null);
 
-    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     Assertions.assertEquals(Set.of(OrganizationAuthRole.NONE.getLabel()), actualRoles);
   }
 
@@ -242,7 +235,7 @@ class RbacRoleHelperTest {
     when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_ADMIN);
 
-    final Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, mRequest));
+    final Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
     final Set<String> expectedRoles = Set.of(
         WorkspaceAuthRole.WORKSPACE_ADMIN.getLabel(),
         WorkspaceAuthRole.WORKSPACE_EDITOR.getLabel(),

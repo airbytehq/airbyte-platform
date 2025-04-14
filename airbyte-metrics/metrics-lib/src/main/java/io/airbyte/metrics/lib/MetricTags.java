@@ -57,6 +57,7 @@ public class MetricTags {
   public static final String NOTIFICATION_TRIGGER = "notification_trigger";
   public static final String NOTIFICATION_CLIENT = "notification_client";
   public static final String RELEASE_STAGE = "release_stage";
+  public static final String SECRET_COORDINATES_UPDATED = "secret_coordinates_updated";
   public static final String SOURCE_ID = "source_id";
   public static final String SOURCE_DEFINITION_ID = "source_definition_id";
   public static final String SOURCE_IMAGE = "source_image";
@@ -72,6 +73,7 @@ public class MetricTags {
   public static final String CLIENT_ID = "client_id";
   public static final String LOG_CLIENT_TYPE = "log_client_type";
   public static final String MALFORMED_LOG_LINE_LENGTH = "malformed_log_line_length";
+  public static final String PROMPT_LENGTH = "prompt_length";
 
   // payload metric tags
   public static final String URI_NULL = "uri_null";
@@ -81,6 +83,21 @@ public class MetricTags {
   public static final String IS_MATCH = "is_match";
   public static final String IS_MISS = "is_miss";
   public static final String TASK_QUEUE = "task_queue";
+
+  // workload tags
+  public static final String DATA_PLANE_ID_TAG = "data_plane_id";
+  public static final String DATA_PLANE_GROUP_TAG = "data_plane_group";
+  public static final String KUBE_COMMAND_TYPE_TAG = "kube_command_type";
+  public static final String KUBE_POD_TYPE_TAG = "kube_pod_type";
+  public static final String MUTEX_KEY_TAG = "mutex_key";
+  public static final String PRIORITY_TAG = "priority";
+  public static final String QUEUE_NAME_TAG = "queue_name";
+  public static final String STAGE_NAME_TAG = "stage_name";
+  public static final String STATUS_TAG = "status";
+  public static final String WORKLOAD_CANCEL_REASON_TAG = "cancel_reason";
+  public static final String WORKLOAD_CANCEL_SOURCE_TAG = "cancel_source";
+  public static final String WORKLOAD_ID_TAG = "workload_id";
+  public static final String WORKLOAD_TYPE_TAG = "workload_type";
 
   public static String getReleaseStage(final ReleaseStage stage) {
     return stage != null ? stage.value() : UNKNOWN;

@@ -13,6 +13,7 @@ export const enum Namespace {
   STREAM_SELECTION = "StreamSelection",
   FORM = "Form",
   ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
+  CONNECTIONS = "Connections",
 }
 
 export const enum Action {
@@ -56,6 +57,7 @@ export const enum Action {
   API_URL_CREATE = "ApiUrlCreated",
   AUTHENTICATION_METHOD_SELECT = "AuthenticationMethodSelect",
   GLOBAL_CONFIGURATION_SELECT = "GlobalConfigurationSelect",
+  COMPONENTS_SELECT = "ComponentsSelect",
   USER_INPUTS_SELECT = "UserInputsSelect",
   USER_INPUT_CREATE = "UserInputCreate",
   USER_INPUT_EDIT = "UserInputEdit",
@@ -95,6 +97,12 @@ export const enum Action {
   CONNECTOR_BUILDER_ASSIST_DISABLED = "ConnectorBuilderAssistDisabled",
   CONNECTOR_BUILDER_ASSIST_SUGGESTION_VIEWED = "ConnectorBuilderAssistSuggestionViewed",
   CONNECTOR_BUILDER_ASSIST_SUGGESTION_ACCEPTED = "ConnectorBuilderAssistSuggestionAccepted",
+
+  // Connections Actions
+  CONNECTIONS_GRAPH_DRAWER_OPENED = "ConnectionGraphDrawerOpened",
+  CONNECTIONS_GRAPH_DRAWER_LOADED = "ConnectionGraphDrawerLoaded",
+  SYNC_FAILURE_EXPLANATION_OPENED = "SyncFailureExplanationOpened",
+  REFRESH_FAILURE_EXPLANATION_OPENED = "RefreshFailureExplanationOpened",
 }
 
 export type EventParams = Record<string, unknown>;

@@ -1,10 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.launcher.pipeline.stages.model
 
+import io.airbyte.featureflag.Context
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import kotlin.time.TimeSource
 
 /**
  * Input/Output object for LaunchPipeline.
@@ -25,12 +31,17 @@ sealed class StageIO {
  * @param msg - input msg
  * @param logCtx - string key value pairs to add to logging context
  * @param payload - workload payload
+ * @param ffContext - feature flag context derived from the input payload
  */
 data class LaunchStageIO(
   override val msg: LauncherInput,
   override val logCtx: Map<String, String> = mapOf(),
   var payload: WorkloadPayload? = null,
-) : StageIO()
+  var ffContext: Context? = null,
+  var receivedAt: TimeSource.Monotonic.ValueTimeMark? = null,
+) : StageIO() {
+  val workloadId = msg.workloadId
+}
 
 sealed class WorkloadPayload
 

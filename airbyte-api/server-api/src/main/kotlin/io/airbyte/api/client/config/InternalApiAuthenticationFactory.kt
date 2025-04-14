@@ -7,10 +7,12 @@ package io.airbyte.api.client.config
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
+import io.airbyte.api.client.auth.DataplaneAccessTokenInterceptor
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.commons.micronaut.EnvConstants
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micrometer.core.instrument.MeterRegistry
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Primary
 import io.micronaut.context.annotation.Prototype
@@ -33,9 +35,7 @@ class InternalApiAuthenticationFactory {
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun testInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
-  ): String {
-    return airbyteApiAuthHeaderValue
-  }
+  ): String = airbyteApiAuthHeaderValue
 
   @Singleton
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
@@ -44,9 +44,7 @@ class InternalApiAuthenticationFactory {
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun controlPlaneInternalApiAuthToken(
     @Value("\${airbyte.internal-api.auth-header.value}") airbyteApiAuthHeaderValue: String,
-  ): String {
-    return airbyteApiAuthHeaderValue
-  }
+  ): String = airbyteApiAuthHeaderValue
 
   /**
    * Generate an auth token based on configs. This is called by the Api Client's requestInterceptor
@@ -60,13 +58,13 @@ class InternalApiAuthenticationFactory {
   @Prototype
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [EnvConstants.DATA_PLANE])
-  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class])
+  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class, DataplaneAccessTokenInterceptor::class])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun dataPlaneInternalApiAuthToken(
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,
     @Value("\${airbyte.data.plane.service-account.email}") dataPlaneServiceAccountEmail: String,
     @Value("\${airbyte.data.plane.service-account.credentials-path}") dataPlaneServiceAccountCredentialsPath: String,
-    meterRegistry: MeterRegistry?,
+    metricClient: MetricClient,
   ): String {
     return try {
       val now = Date()
@@ -74,7 +72,8 @@ class InternalApiAuthenticationFactory {
         Date(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(JWT_TTL_MINUTES.toLong()))
       // Build the JWT payload
       val token: JWTCreator.Builder =
-        JWT.create()
+        JWT
+          .create()
           .withIssuedAt(now)
           .withExpiresAt(expTime)
           .withIssuer(dataPlaneServiceAccountEmail)
@@ -87,12 +86,14 @@ class InternalApiAuthenticationFactory {
       val stream = FileInputStream(dataPlaneServiceAccountCredentialsPath)
       val cred = ServiceAccountCredentials.fromStream(stream)
       val key = cred.privateKey as RSAPrivateKey
-      val algorithm: com.auth0.jwt.algorithms.Algorithm = com.auth0.jwt.algorithms.Algorithm.RSA256(null, key)
+      val algorithm: com.auth0.jwt.algorithms.Algorithm =
+        com.auth0.jwt.algorithms.Algorithm
+          .RSA256(null, key)
       val signedToken = token.sign(algorithm)
-      meterRegistry?.counter("api-client.auth-token.success")?.increment()
+      metricClient.count(metric = OssMetricsRegistry.API_CLIENT_AUTH_TOKEN_SUCCESS)
       return "Bearer $signedToken"
     } catch (e: Exception) {
-      meterRegistry?.counter("api-client.auth-token.failure")?.increment()
+      metricClient.count(metric = OssMetricsRegistry.API_CLIENT_AUTH_TOKEN_FAILURE)
       logger.error(e) { "An issue occurred while generating a data plane auth token. Defaulting to empty string." }
       ""
     }

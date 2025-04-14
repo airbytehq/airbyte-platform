@@ -16,19 +16,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ActorDefinitionResourceRequirements;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationSyncMode;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
+import io.airbyte.config.Organization;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ResourceRequirements;
+import io.airbyte.config.ScopedResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -46,6 +48,7 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.OrganizationService;
@@ -53,6 +56,7 @@ import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
@@ -67,7 +71,8 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -82,6 +87,8 @@ import org.junit.jupiter.api.Test;
 class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID workspaceId = UUID.randomUUID();
+  private static final UUID dataplaneGroupId = UUID.randomUUID();
+  private static final String mockVersion = "0.2.2";
 
   private StandardSyncPersistence standardSyncPersistence;
 
@@ -90,6 +97,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   private DestinationService destinationService;
   private WorkspaceService workspaceService;
   private OperationService operationService;
+  private DataplaneGroupService dataplaneGroupService;
 
   private StandardSourceDefinition sourceDef1;
   private StandardSourceDefinition sourceDefAlpha;
@@ -107,14 +115,27 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws Exception {
     truncateAllTables();
 
-    standardSyncPersistence = new StandardSyncPersistence(database);
+    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(MockData.defaultOrganization());
+
+    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(dataplaneGroupId)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withEnabled(true)
+        .withTombstone(false));
+
+    standardSyncPersistence = new StandardSyncPersistence(database, dataplaneGroupService);
 
     final var featureFlagClient = mock(TestClient.class);
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final var secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final var secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final var connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
-    connectionService = new ConnectionServiceJooqImpl(database);
+    final var metricClient = mock(MetricClient.class);
+
+    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
         connectionService,
@@ -124,29 +145,26 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         connectionService,
-        actorDefinitionVersionUpdater);
+        actorDefinitionVersionUpdater,
+        metricClient);
+
     workspaceService = new WorkspaceServiceJooqImpl(
         database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
-        secretPersistenceConfigService);
+        secretPersistenceConfigService,
+        metricClient,
+        dataplaneGroupService);
     operationService = new OperationServiceJooqImpl(database);
-
-    final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test
@@ -155,7 +173,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     final StandardSync sync = createStandardSync(source1, destination1);
     standardSyncPersistence.writeStandardSync(sync);
 
-    final StandardSync expectedSync = Jsons.clone(sync);
+    final StandardSync expectedSync = Jsons.clone(sync).withDataplaneGroupId(dataplaneGroupId);
     assertEquals(expectedSync, standardSyncPersistence.getStandardSync(sync.getConnectionId()));
 
     final SchemaManagementRecord schemaManagementRecord = getSchemaManagementByConnectionId(sync.getConnectionId());
@@ -175,9 +193,11 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     final List<StandardSync> expected = List.of(
         Jsons.clone(sync1)
-            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE),
+            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+            .withDataplaneGroupId(dataplaneGroupId),
         Jsons.clone(sync2)
-            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE));
+            .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
+            .withDataplaneGroupId(dataplaneGroupId));
 
     assertEquals(expected, standardSyncPersistence.listStandardSync());
   }
@@ -303,6 +323,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         List.of(workspaceId),
         null,
         null,
+        null,
         true,
         1000,
         0
@@ -368,7 +389,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
   @Test
   void testListConnectionsByActorDefinitionIdAndType() throws IOException, JsonValidationException {
     createBaseObjects();
-    final var expectedSync = createStandardSync(source1, destination1);
+    final var expectedSync = createStandardSync(source1, destination1).withDataplaneGroupId(dataplaneGroupId);
     final List<StandardSync> actualSyncs = connectionService.listConnectionsByActorDefinitionIdAndType(
         destination1.getDestinationDefinitionId(),
         ActorType.DESTINATION.value(), false, false);
@@ -436,6 +457,85 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
     assertEquals(Status.DEPRECATED, sync4.getStatus());
   }
 
+  @Test
+  void testGetDataplaneGroupIdFromGeography() throws IOException, JsonValidationException {
+    String geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
+    UUID newDataplaneGroupId = UUID.randomUUID();
+    UUID newWorkspaceId = UUID.randomUUID();
+    UUID newOrganizationId = UUID.randomUUID();
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(new Organization().withOrganizationId(newOrganizationId).withEmail("test@test.test").withName("test"));
+
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(newDataplaneGroupId)
+        .withOrganizationId(newOrganizationId)
+        .withName(geography)
+        .withEnabled(true)
+        .withTombstone(false));
+
+    final StandardWorkspace workspace = new StandardWorkspace()
+        .withWorkspaceId(newWorkspaceId)
+        .withName("Another Workspace")
+        .withSlug("another-workspace")
+        .withInitialSetupComplete(true)
+        .withTombstone(false)
+        .withDefaultGeography(geography)
+        .withOrganizationId(newOrganizationId);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    SourceConnection source = createSourceConnection(newWorkspaceId, createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    source.withSourceId(source.getSourceId());
+
+    DestinationConnection destination = createDestinationConnection(
+        newWorkspaceId, createStandardDestDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    destination.withDestinationId(destination.getDestinationId());
+
+    StandardSync connection = createStandardSync(source, destination);
+
+    UUID result = standardSyncPersistence.getDataplaneGroupIdFromGeography(connection, geography);
+
+    assertEquals(newDataplaneGroupId, result);
+  }
+
+  @Test
+  void testGetDataplaneGroupIdFromGeography_FallbackToDefault() throws IOException, JsonValidationException {
+    // No dataplane group exists for this org;
+    // we should fall back to the default org's default dataplane group ID
+    final UUID newWorkspaceId = UUID.randomUUID();
+    final UUID newOrganizationId = UUID.randomUUID();
+    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
+    organizationService.writeOrganization(new Organization().withOrganizationId(newOrganizationId).withEmail("test@test.test").withName("test"));
+    final String geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
+
+    final StandardWorkspace workspace = new StandardWorkspace()
+        .withWorkspaceId(newWorkspaceId)
+        .withName("Another Workspace")
+        .withSlug("another-workspace")
+        .withInitialSetupComplete(true)
+        .withTombstone(false)
+        .withDefaultGeography(geography)
+        .withOrganizationId(newOrganizationId);
+    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+
+    SourceConnection source = createSourceConnection(newWorkspaceId, createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    source.withSourceId(source.getSourceId());
+
+    DestinationConnection destination = createDestinationConnection(
+        newWorkspaceId, createStandardDestDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE));
+    destination.withDestinationId(destination.getDestinationId());
+
+    final UUID newConnectionId = UUID.randomUUID();
+    StandardSync connection = mock(StandardSync.class);
+    connection.setConnectionId(newConnectionId);
+    connection.setSourceId(source.getSourceId());
+    connection.setDestinationId(destination.getDestinationId());
+    connection.setGeography(geography);
+
+    UUID result = standardSyncPersistence.getDataplaneGroupIdFromGeography(connection, geography);
+
+    assertEquals(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, geography).getId(), result);
+  }
+
   private void createBaseObjects() throws IOException, JsonValidationException {
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceId)
@@ -443,11 +543,11 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     workspaceService.writeStandardWorkspaceNoSecrets(workspace);
 
-    sourceDef1 = createStandardSourceDefinition("0.2.2", ReleaseStage.GENERALLY_AVAILABLE);
+    sourceDef1 = createStandardSourceDefinition(mockVersion, ReleaseStage.GENERALLY_AVAILABLE);
     source1 = createSourceConnection(workspaceId, sourceDef1);
 
     final StandardSourceDefinition sourceDef2 = createStandardSourceDefinition("1.1.0", ReleaseStage.GENERALLY_AVAILABLE);
@@ -477,7 +577,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion sourceDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(sourceDefId)
         .withDockerImageTag("tag-1")
@@ -502,7 +602,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withTombstone(false)
         .withPublic(true)
         .withCustom(false)
-        .withResourceRequirements(new ActorDefinitionResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
+        .withResourceRequirements(new ScopedResourceRequirements().withDefault(new ResourceRequirements().withCpuRequest("2")));
     final ActorDefinitionVersion destDefVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(destDefId)
         .withDockerImageTag("tag-3")
@@ -557,7 +657,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
         .withNamespaceFormat("")
         .withPrefix("")
         .withStatus(Status.ACTIVE)
-        .withGeography(Geography.AUTO)
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withCreatedAt(OffsetDateTime.now().toEpochSecond())
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)

@@ -26,7 +26,7 @@
   padding: variables.$spacing-md;
   display: flex;
   align-items: center;
-  gap: variables.$spacing-sm;
+  gap: variables.$spacing-md;
   overflow: hidden;
 }
 
@@ -75,8 +75,22 @@
 
 .streamViewText {
   color: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .emptyStreamViewText {
   color: colors.$grey-300;
+}
+
+.streamViewButtonContent {
+  width: 100%;
+}
+
+.asyncBadge {
+  background-color: colors.$grey-50;
+  color: colors.$grey-400;
+  padding: variables.$spacing-xs variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
 }

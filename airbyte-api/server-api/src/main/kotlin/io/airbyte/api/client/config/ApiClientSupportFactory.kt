@@ -7,7 +7,7 @@ package io.airbyte.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.auth.AirbyteApiInterceptor
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
-import io.micrometer.core.instrument.MeterRegistry
+import io.airbyte.metrics.MetricClient
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -19,21 +19,20 @@ import org.openapitools.client.infrastructure.ClientException
 import org.openapitools.client.infrastructure.ServerException
 import java.io.IOException
 import java.lang.Exception
-import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
+
+private val CLIENT_RETRY_EXCEPTIONS: List<Class<out Exception>> =
+  listOf(
+    IllegalStateException::class.java,
+    IOException::class.java,
+    UnsupportedOperationException::class.java,
+    ClientException::class.java,
+    ServerException::class.java,
+  )
 
 @Factory
 class ApiClientSupportFactory {
-  companion object {
-    private val clientRetryExceptions: List<Class<out Exception>> =
-      listOf(
-        IllegalStateException::class.java,
-        IOException::class.java,
-        UnsupportedOperationException::class.java,
-        ClientException::class.java,
-        ServerException::class.java,
-      )
-  }
-
   @Singleton
   @Named("airbyteApiClientRetryPolicy")
   @Requires(property = "airbyte.internal-api.base-path")
@@ -41,17 +40,16 @@ class ApiClientSupportFactory {
     @Value("\${airbyte.internal-api.retries.delay-seconds:2}") retryDelaySeconds: Long,
     @Value("\${airbyte.internal-api.retries.max:5}") maxRetries: Int,
     @Value("\${airbyte.internal-api.jitter-factor:.25}") jitterFactor: Double,
-    meterRegistry: MeterRegistry?,
-  ): RetryPolicy<Response> {
-    return generateDefaultRetryPolicy(
+    metricClient: MetricClient,
+  ): RetryPolicy<Response> =
+    generateDefaultRetryPolicy(
       retryDelaySeconds = retryDelaySeconds,
       jitterFactor = jitterFactor,
       maxRetries = maxRetries,
-      meterRegistry = meterRegistry,
-      metricPrefix = "api-client",
-      clientRetryExceptions = clientRetryExceptions,
+      metricClient = metricClient,
+      clientApiType = ClientApiType.SERVER,
+      clientRetryExceptions = CLIENT_RETRY_EXCEPTIONS,
     )
-  }
 
   @Singleton
   @Named("airbyteApiOkHttpClient")
@@ -60,11 +58,26 @@ class ApiClientSupportFactory {
     @Value("\${airbyte.internal-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.internal-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     interceptors: List<AirbyteApiInterceptor>,
-  ): OkHttpClient {
-    val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    interceptors.forEach(builder::addInterceptor)
-    builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
-    builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
-    return builder.build()
-  }
+  ): OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .apply {
+        interceptors.forEach { addInterceptor(it) }
+        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
+      }.build()
+
+  @Singleton
+  @Named("airbyteApiOkHttpClientWithoutInterceptors")
+  @Requires(property = "airbyte.internal-api.base-path")
+  fun airbyteApiOkHttpClientWithoutInterceptors(
+    @Value("\${airbyte.internal-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
+    @Value("\${airbyte.internal-api.read-timeout-seconds}") readTimeoutSeconds: Long,
+  ): OkHttpClient =
+    OkHttpClient
+      .Builder()
+      .apply {
+        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
+      }.build()
 }

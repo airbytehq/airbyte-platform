@@ -19,7 +19,12 @@ import {
   updateSource,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
-import { AirbyteCatalog, SourceRead, WebBackendConnectionListItem } from "../types/AirbyteClient";
+import {
+  AirbyteCatalog,
+  ScopedResourceRequirements,
+  SourceRead,
+  WebBackendConnectionListItem,
+} from "../types/AirbyteClient";
 import { useRequestErrorHandler } from "../useRequestErrorHandler";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -34,8 +39,8 @@ export const sourcesKeys = {
 interface ValuesProps {
   name: string;
   serviceType?: string;
-  connectionConfiguration?: ConnectionConfiguration;
-  frequency?: string;
+  connectionConfiguration: ConnectionConfiguration;
+  resourceAllocation?: ScopedResourceRequirements;
 }
 
 interface ConnectorProps {
@@ -95,6 +100,7 @@ const useCreateSource = () => {
             sourceDefinitionId: sourceConnector?.sourceDefinitionId,
             workspaceId: workspace.workspaceId,
             connectionConfiguration: values.connectionConfiguration,
+            resourceAllocation: values.resourceAllocation,
           },
           requestOptions
         );
@@ -162,6 +168,7 @@ const useUpdateSource = () => {
           name: updateSourcePayload.values.name,
           sourceId: updateSourcePayload.sourceId,
           connectionConfiguration: updateSourcePayload.values.connectionConfiguration,
+          resourceAllocation: updateSourcePayload.values.resourceAllocation,
         },
         requestOptions
       );

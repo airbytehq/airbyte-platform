@@ -1,6 +1,6 @@
 global:
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
+  edition: community
   deploymentStrategyType: RollingUpdate
   configMapName: ""
   secretName: ""
@@ -25,6 +25,8 @@ global:
 enabled: true
 ##  replicaCount Number of server replicas
 replicaCount: 1
+
+serviceAccountName:
 
 ##  image.repository The repository to use for the airbyte server image.
 ##  image.pullPolicy the pull policy to use for the airbyte server image

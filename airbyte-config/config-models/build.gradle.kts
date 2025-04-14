@@ -15,6 +15,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-featureflag"))
 
   implementation(platform(libs.fasterxml))
@@ -23,9 +24,7 @@ dependencies {
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
   implementation(libs.micronaut.kotlin.extension.functions)
-  implementation(libs.bundles.apache)
   implementation(libs.airbyte.protocol)
-  implementation(libs.commons.io)
   implementation(libs.kotlin.logging)
 
   testImplementation(libs.bundles.junit)

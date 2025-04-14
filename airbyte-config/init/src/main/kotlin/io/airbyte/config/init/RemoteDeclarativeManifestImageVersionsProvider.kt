@@ -1,5 +1,10 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.config.init
 
+import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.version.Version
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion
@@ -20,7 +25,7 @@ class RemoteDeclarativeManifestImageVersionsProvider(
   }
 
   override fun getLatestDeclarativeManifestImageVersions(): List<DeclarativeManifestImageVersion> {
-    val repository = "airbyte/source-declarative-manifest"
+    val repository = AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE
     val items = getTagsAndShasForRepository(repository)
 
     val semverStandardVersionTags = items.filter { (imageVersion, _) -> imageVersion.matches(Regex("""^\d+\.\d+\.\d+$""")) }
@@ -71,7 +76,5 @@ class RemoteDeclarativeManifestImageVersionsProvider(
     return tagsAndShas
   }
 
-  private fun getMajorVersion(version: String): Int {
-    return version.split(".")[0].toInt()
-  }
+  private fun getMajorVersion(version: String): Int = version.split(".")[0].toInt()
 }

@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workload.repository.domain
 
 import io.micronaut.core.annotation.Nullable
@@ -38,7 +42,5 @@ data class WorkloadLabel(
     return result
   }
 
-  override fun toString(): String {
-    return "WorkloadLabel(id=$id, key='$key', value='$value')"
-  }
+  override fun toString(): String = "WorkloadLabel(id=$id, key='$key', value='$value')"
 }

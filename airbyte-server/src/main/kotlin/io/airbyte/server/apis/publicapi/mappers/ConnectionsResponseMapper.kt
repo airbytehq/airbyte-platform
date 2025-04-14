@@ -1,11 +1,12 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.mappers
 
 import io.airbyte.api.model.generated.ConnectionRead
 import io.airbyte.api.model.generated.ConnectionReadList
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.publicApi.server.generated.models.ConnectionsResponse
 import io.airbyte.server.apis.publicapi.constants.CONNECTIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.INCLUDE_DELETED
@@ -35,20 +36,22 @@ object ConnectionsResponseMapper {
     limit: Int,
     offset: Int,
     apiHost: String,
+    airbyteEdition: AirbyteEdition,
   ): ConnectionsResponse {
     val uriBuilder =
-      PaginationMapper.getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
-        .queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+      PaginationMapper
+        .getBuilder(apiHost, removePublicApiPathPrefix(CONNECTIONS_PATH))
         .queryParam(INCLUDE_DELETED, includeDeleted)
 
-    if (workspaceIds.isNotEmpty()) uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    if (workspaceIds.isNotEmpty()) {
+      uriBuilder.queryParam(WORKSPACE_IDS, PaginationMapper.uuidListToQueryString(workspaceIds))
+    }
     return ConnectionsResponse(
       next = PaginationMapper.getNextUrl(connectionReadList.connections, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
       data =
-        connectionReadList.connections.map {
-            connectionRead: ConnectionRead ->
-          ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId)
+        connectionReadList.connections.map { connectionRead: ConnectionRead ->
+          ConnectionReadMapper.from(connectionRead, connectionRead.workspaceId, airbyteEdition)
         },
     )
   }

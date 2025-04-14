@@ -13,11 +13,9 @@ import static io.airbyte.db.instance.jobs.jooq.generated.Tables.SYNC_STATS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.text.Names;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
@@ -35,8 +33,6 @@ import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobStatusSummary;
-import io.airbyte.config.JobWithStatusAndTimestamp;
-import io.airbyte.config.JobsRecordsCommitted;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.PersistenceHelpers;
@@ -56,7 +52,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -70,8 +65,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.JSONB;
@@ -131,27 +124,18 @@ public class DefaultJobPersistence implements JobPersistence {
   private static final String ATTEMPT_SELECT =
       "SELECT job_id," + ATTEMPT_FIELDS + "FROM attempts WHERE job_id = ? AND attempt_number = ?";
   // not static because job history test case manipulates these.
-  private final int jobHistoryMinimumAgeInDays;
-  private final int jobHistoryMinimumRecency;
-  private final int jobHistoryExcessiveNumberOfJobs;
   private final ExceptionWrappingDatabase jobDatabase;
   private final Supplier<Instant> timeSupplier;
 
   @VisibleForTesting
   DefaultJobPersistence(final Database jobDatabase,
-                        final Supplier<Instant> timeSupplier,
-                        final int minimumAgeInDays,
-                        final int excessiveNumberOfJobs,
-                        final int minimumRecencyCount) {
+                        final Supplier<Instant> timeSupplier) {
     this.jobDatabase = new ExceptionWrappingDatabase(jobDatabase);
     this.timeSupplier = timeSupplier;
-    jobHistoryMinimumAgeInDays = minimumAgeInDays;
-    jobHistoryExcessiveNumberOfJobs = excessiveNumberOfJobs;
-    jobHistoryMinimumRecency = minimumRecencyCount;
   }
 
   public DefaultJobPersistence(final Database jobDatabase) {
-    this(jobDatabase, Instant::now, 30, 500, 10);
+    this(jobDatabase, Instant::now);
   }
 
   private static String jobSelectAndJoin(final String jobsSubquery) {
@@ -164,6 +148,7 @@ public class DefaultJobPersistence implements JobPersistence {
         + "jobs.started_at AS job_started_at,\n"
         + "jobs.created_at AS job_created_at,\n"
         + "jobs.updated_at AS job_updated_at,\n"
+        + "jobs.is_scheduled AS is_scheduled,\n"
         + ATTEMPT_FIELDS
         + "FROM " + jobsSubquery + " LEFT OUTER JOIN attempts ON jobs.id = attempts.job_id ";
   }
@@ -426,7 +411,8 @@ public class DefaultJobPersistence implements JobPersistence {
         JobStatus.valueOf(record.get("job_status", String.class).toUpperCase()),
         Optional.ofNullable(record.get("job_started_at")).map(value -> getEpoch(record, "started_at")).orElse(null),
         getEpoch(record, "job_created_at"),
-        getEpoch(record, "job_updated_at"));
+        getEpoch(record, "job_updated_at"),
+        record.get("is_scheduled", Boolean.class));
   }
 
   private static JobConfig parseJobConfigFromString(final String jobConfigString) {
@@ -574,12 +560,13 @@ public class DefaultJobPersistence implements JobPersistence {
    * @param scope key that will be used to determine if two jobs should not be run at the same time;
    *        it is the primary id of the standard sync (StandardSync#connectionId)
    * @param jobConfig configuration for the job
+   * @param isScheduled whether the job is scheduled or not
    * @return job id, if a job is enqueued. no job is enqueued if there is already a job of that type
    *         in the queue.
    * @throws IOException when interacting with the db
    */
   @Override
-  public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig) throws IOException {
+  public Optional<Long> enqueueJob(final String scope, final JobConfig jobConfig, final boolean isScheduled) throws IOException {
     LOGGER.info("enqueuing pending job for scope: {}", scope);
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -594,8 +581,8 @@ public class DefaultJobPersistence implements JobPersistence {
 
     return jobDatabase.query(
         ctx -> ctx.fetch(
-            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config) "
-                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB) "
+            "INSERT INTO jobs(config_type, scope, created_at, updated_at, status, config, is_scheduled) "
+                + "SELECT CAST(? AS JOB_CONFIG_TYPE), ?, ?, ?, CAST(? AS JOB_STATUS), CAST(? as JSONB), ? "
                 + queueingRequest
                 + "RETURNING id ",
             toSqlName(jobConfig.getConfigType()),
@@ -603,12 +590,14 @@ public class DefaultJobPersistence implements JobPersistence {
             now,
             now,
             toSqlName(JobStatus.PENDING),
-            Jsons.serialize(jobConfig)))
+            Jsons.serialize(jobConfig),
+            isScheduled))
         .stream()
         .findFirst()
         .map(r -> r.getValue("id", Long.class));
   }
 
+  // TODO: This is unused outside of test. Need to remove it.
   @Override
   public void resetJob(final long jobId) throws IOException {
     // TODO: stop using LocalDateTime
@@ -736,20 +725,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public void setAttemptTemporalWorkflowInfo(final long jobId,
-                                             final int attemptNumber,
-                                             final String temporalWorkflowId,
-                                             final String processingTaskQueue)
-      throws IOException {
-    jobDatabase.query(ctx -> ctx.execute(
-        " UPDATE attempts SET temporal_workflow_id = ? , processing_task_queue = ? WHERE job_id = ? AND attempt_number = ?",
-        temporalWorkflowId,
-        processingTaskQueue,
-        jobId,
-        attemptNumber));
-  }
-
-  @Override
   public Optional<Attempt> getAttemptForJob(final long jobId, final int attemptNumber) throws IOException {
     final var result = jobDatabase.query(ctx -> ctx.fetch(
         ATTEMPT_SELECT,
@@ -780,7 +755,7 @@ public class DefaultJobPersistence implements JobPersistence {
       }
 
       final List<StreamSyncStats> streamSyncStats = output.getSync().getStandardSyncSummary().getStreamStats();
-      if (CollectionUtils.isNotEmpty(streamSyncStats)) {
+      if (streamSyncStats != null && !streamSyncStats.isEmpty()) {
         saveToStreamStatsTableBatch(now, output.getSync().getStandardSyncSummary().getStreamStats(), attemptId, connectionId, ctx);
       }
       return null;
@@ -863,7 +838,10 @@ public class DefaultJobPersistence implements JobPersistence {
       return Map.of();
     }
 
-    final var jobIdsStr = StringUtils.join(jobIds, ',');
+    final var jobIdsStr = jobIds.stream()
+        .map(Object::toString)
+        .collect(Collectors.joining(","));
+
     return jobDatabase.query(ctx -> {
       // Instead of one massive join query, separate this query into two queries for better readability
       // for now.
@@ -937,17 +915,17 @@ public class DefaultJobPersistence implements JobPersistence {
     });
   }
 
-  public Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
-                                      final String configId,
-                                      final int limit,
-                                      final int offset,
-                                      final List<JobStatus> statuses,
-                                      final OffsetDateTime createdAtStart,
-                                      final OffsetDateTime createdAtEnd,
-                                      final OffsetDateTime updatedAtStart,
-                                      final OffsetDateTime updatedAtEnd,
-                                      final String orderByField,
-                                      final String orderByMethod)
+  private Result<Record> listJobsQuery(final Set<ConfigType> configTypes,
+                                       final String configId,
+                                       final int limit,
+                                       final int offset,
+                                       final List<JobStatus> statuses,
+                                       final OffsetDateTime createdAtStart,
+                                       final OffsetDateTime createdAtEnd,
+                                       final OffsetDateTime updatedAtStart,
+                                       final OffsetDateTime updatedAtEnd,
+                                       final String orderByField,
+                                       final String orderByMethod)
       throws IOException {
     final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
     return jobDatabase.query(ctx -> {
@@ -1039,19 +1017,18 @@ public class DefaultJobPersistence implements JobPersistence {
     });
   }
 
-  @Override
-  @Trace
-  public List<Job> listJobs(final Set<ConfigType> configTypes,
-                            final String configId,
-                            final int limit,
-                            final int offset,
-                            final List<JobStatus> statuses,
-                            final OffsetDateTime createdAtStart,
-                            final OffsetDateTime createdAtEnd,
-                            final OffsetDateTime updatedAtStart,
-                            final OffsetDateTime updatedAtEnd,
-                            final String orderByField,
-                            final String orderByMethod)
+  @VisibleForTesting
+  List<Job> listJobs(final Set<ConfigType> configTypes,
+                     final String configId,
+                     final int limit,
+                     final int offset,
+                     final List<JobStatus> statuses,
+                     final OffsetDateTime createdAtStart,
+                     final OffsetDateTime createdAtEnd,
+                     final OffsetDateTime updatedAtStart,
+                     final OffsetDateTime updatedAtEnd,
+                     final String orderByField,
+                     final String orderByMethod)
       throws IOException {
     final SortField<OffsetDateTime> orderBy = getJobOrderBy(orderByField, orderByMethod);
     return jobDatabase.query(ctx -> {
@@ -1078,25 +1055,8 @@ public class DefaultJobPersistence implements JobPersistence {
     });
   }
 
-  @Override
-  public List<Job> listJobs(final Set<ConfigType> configTypes,
-                            final List<UUID> workspaceIds,
-                            final int limit,
-                            final int offset,
-                            final List<JobStatus> statuses,
-                            final OffsetDateTime createdAtStart,
-                            final OffsetDateTime createdAtEnd,
-                            final OffsetDateTime updatedAtStart,
-                            final OffsetDateTime updatedAtEnd,
-                            final String orderByField,
-                            final String orderByMethod)
-      throws IOException {
-    return getJobsFromResult(listJobsQuery(configTypes, workspaceIds, limit, offset, statuses, createdAtStart, createdAtEnd, updatedAtStart,
-        updatedAtEnd, orderByField, orderByMethod));
-  }
-
-  @Override
-  public List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
+  @VisibleForTesting
+  List<Job> listJobs(final ConfigType configType, final Instant attemptEndedAtTimestamp) throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
     final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
@@ -1213,26 +1173,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public List<Job> listJobsWithStatus(final JobStatus status) throws IOException {
-    return listJobsWithStatus(Sets.newHashSet(ConfigType.values()), status);
-  }
-
-  @Override
-  public List<Job> listJobsWithStatus(final Set<ConfigType> configTypes, final JobStatus status) throws IOException {
-    return jobDatabase.query(ctx -> getJobsFromResult(ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(config_type AS VARCHAR) IN " + toSqlInFragment(configTypes) + AND
-            + "CAST(jobs.status AS VARCHAR) = ? "
-            + ORDER_BY_JOB_TIME_ATTEMPT_TIME,
-            toSqlName(status))));
-  }
-
-  @Override
-  public List<Job> listJobsWithStatus(final ConfigType configType, final JobStatus status) throws IOException {
-    return listJobsWithStatus(Sets.newHashSet(configType), status);
-  }
-
-  @Override
   public List<Job> listJobsForConnectionWithStatuses(final UUID connectionId, final Set<ConfigType> configTypes, final Set<JobStatus> statuses)
       throws IOException {
     return jobDatabase.query(ctx -> getJobsFromResult(ctx
@@ -1263,80 +1203,18 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
-  public List<JobsRecordsCommitted> listRecordsCommittedForConnectionAfterTimestamp(final UUID connectionId,
-                                                                                    final Instant attemptEndedAtTimestamp)
-      throws IOException {
-    // TODO: stop using LocalDateTime
-    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(attemptEndedAtTimestamp);
-
-    return jobDatabase.query(ctx -> ctx.fetch(
-        "SELECT "
-            + "jobs.id AS job_id,"
-            + "attempts.attempt_number AS attempt_number,"
-            + "attempts.output -> 'sync' -> 'standardSyncSummary' -> 'totalStats' -> 'recordsCommitted' as records_committed, "
-            + "attempts.ended_at AS attempt_ended_at "
-            + "FROM jobs "
-            + "JOIN attempts ON jobs.id = attempts.job_id "
-            + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
-            + SCOPE_CLAUSE
-            + "CAST(jobs.status AS VARCHAR) = ? AND "
-            + "attempts.ended_at > ? "
-            + "ORDER BY attempts.ended_at ASC",
-        connectionId.toString(),
-        toSqlName(JobStatus.SUCCEEDED),
-        timeConvertedIntoLocalDateTime))
-        .stream()
-        .map(r -> new JobsRecordsCommitted(
-            r.get("attempt_number", int.class),
-            r.get("job_id", long.class),
-            Optional.ofNullable(r.get("records_committed"))
-                .map(value -> r.get("records_committed", Long.class))
-                .orElse(null),
-            Optional.ofNullable(r.get("attempt_ended_at"))
-                .map(value -> getEpoch(r, "attempt_ended_at"))
-                .orElse(null)))
-        .toList();
-  }
-
-  @Override
-  public List<JobWithStatusAndTimestamp> listJobStatusAndTimestampWithConnection(final UUID connectionId,
-                                                                                 final Set<ConfigType> configTypes,
-                                                                                 final Instant jobCreatedAtTimestamp)
-      throws IOException {
-    // TODO: stop using LocalDateTime
-    // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
-    final LocalDateTime timeConvertedIntoLocalDateTime = convertInstantToLocalDataTime(jobCreatedAtTimestamp);
-
-    final String JobStatusSelect = "SELECT id, status, created_at, updated_at FROM jobs ";
-    return jobDatabase.query(ctx -> ctx
-        .fetch(JobStatusSelect + WHERE
-            + SCOPE_CLAUSE
-            + "CAST(config_type AS VARCHAR) in " + toSqlInFragment(configTypes) + AND
-            + "created_at >= ? ORDER BY created_at DESC", connectionId.toString(), timeConvertedIntoLocalDateTime))
-        .stream()
-        .map(r -> new JobWithStatusAndTimestamp(
-            r.get("id", Long.class),
-            JobStatus.valueOf(r.get("status", String.class).toUpperCase()),
-            r.get("created_at", Long.class) / 1000,
-            r.get("updated_at", Long.class) / 1000))
-        .toList();
-  }
-
-  @Override
   public Optional<Job> getLastReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
-            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + "jobs.status <> CAST(? AS job_status) "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   /**
@@ -1348,28 +1226,29 @@ public class DefaultJobPersistence implements JobPersistence {
    */
   @Override
   public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException {
+    final String query = "SELECT id FROM jobs "
+        + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        + SCOPE_WITHOUT_AND_CLAUSE + AND + "is_scheduled = true "
+        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
+
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
-            + SCOPE_WITHOUT_AND_CLAUSE
-            + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
-            connectionId.toString())
+        .fetch(query, connectionId.toString())
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   @Override
   public Optional<Job> getLastSyncJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
-            + "scope = ? "
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type IN " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+            + "AND scope = ? "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString())
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   /**
@@ -1385,7 +1264,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) jobs.scope, jobs.created_at, jobs.status "
             + " FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+            + WHERE + "jobs.config_type IN " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + "ORDER BY scope, created_at DESC")
         .stream()
@@ -1405,8 +1284,8 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     return jobDatabase.query(ctx -> ctx
-        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+        .fetch("SELECT DISTINCT ON (scope) id FROM jobs "
+            + WHERE + "jobs.config_type in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + AND + JOB_STATUS_IS_NON_TERMINAL
             + "ORDER BY scope, created_at DESC")
@@ -1423,8 +1302,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException {
 
     return jobDatabase.query(ctx -> ctx
-        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES)
+        .fetch("SELECT DISTINCT ON (scope) id FROM jobs "
+            + WHERE + "jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES)
             + AND + "jobs.scope = '" + connectionId + "'"
             + AND + JOB_STATUS_IS_NON_TERMINAL
             + "ORDER BY scope, created_at DESC LIMIT 1")
@@ -1444,36 +1323,20 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getFirstReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
-            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + "jobs.status <> CAST(? AS job_status) "
             + "ORDER BY jobs.created_at ASC LIMIT 1",
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
-  @Override
-  public Optional<Job> getNextJob() throws IOException {
-    // rules:
-    // 1. get oldest, pending job
-    // 2. job is excluded if another job of the same scope is already running
-    // 3. job is excluded if another job of the same scope is already incomplete
-    return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.status AS VARCHAR) = 'pending' AND "
-            + "jobs.scope NOT IN ( SELECT scope FROM jobs WHERE status = 'running' OR status = 'incomplete' ) "
-            + "ORDER BY jobs.created_at ASC LIMIT 1")
-        .stream()
-        .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
-  }
-
-  @Override
-  public List<AttemptWithJobInfo> listAttemptsWithJobInfo(final ConfigType configType, final Instant attemptEndedAtTimestamp, final int limit)
+  @VisibleForTesting
+  List<AttemptWithJobInfo> listAttemptsWithJobInfo(final ConfigType configType, final Instant attemptEndedAtTimestamp, final int limit)
       throws IOException {
     // TODO: stop using LocalDateTime
     // https://github.com/airbytehq/airbyte-platform-internal/issues/10815
@@ -1483,19 +1346,6 @@ public class DefaultJobPersistence implements JobPersistence {
         toSqlName(configType),
         timeConvertedIntoLocalDateTime,
         limit)));
-  }
-
-  @Override
-  public void updateJobConfig(Long jobId, JobConfig config) throws IOException {
-    jobDatabase.query(ctx -> {
-
-      ctx.update(JOBS)
-          .set(JOBS.CONFIG, JSONB.valueOf(Jsons.serialize(config)))
-          .set(JOBS.UPDATED_AT, OffsetDateTime.now())
-          .where(JOBS.ID.eq(jobId))
-          .execute();
-      return null;
-    });
   }
 
   @Override
@@ -1617,35 +1467,6 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   /**
-   * Purge job history from N days ago. Only purge jobs that are not the last job for the connection.
-   */
-  @Override
-  public void purgeJobHistory() {
-    purgeJobHistory(LocalDateTime.now());
-  }
-
-  /**
-   * Purge job history from N days before a given date. Only purge jobs that are not the last job for
-   * the connection.
-   *
-   * @param asOfDate date to purge before
-   */
-  @VisibleForTesting
-  public void purgeJobHistory(final LocalDateTime asOfDate) {
-    try {
-      final String jobHistoryPurgeSql = MoreResources.readResource("job_history_purge.sql");
-      // interval '?' days cannot use a ? bind, so we're using %d instead.
-      final String sql = String.format(jobHistoryPurgeSql, (jobHistoryMinimumAgeInDays - 1));
-      jobDatabase.query(ctx -> ctx.execute(sql,
-          asOfDate.format(DateTimeFormatter.ofPattern("YYYY-MM-dd")),
-          jobHistoryExcessiveNumberOfJobs,
-          jobHistoryMinimumRecency));
-    } catch (final IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  /**
    * Removes unsupported unicode characters (as defined by Postgresql) from the provided input string.
    *
    * @param value A string that may contain unsupported unicode values.
@@ -1713,10 +1534,6 @@ public class DefaultJobPersistence implements JobPersistence {
 
     ASC,
     DESC;
-
-    public static boolean contains(final String method) {
-      return Arrays.stream(OrderByMethod.values()).anyMatch(enumMethod -> enumMethod.name().equals(method));
-    }
 
   }
 

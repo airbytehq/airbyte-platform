@@ -34,6 +34,120 @@ paths:
       security: []
       x-speakeasy-alias: getHealthCheck
       x-speakeasy-group: Health
+  /config_templates:
+    get:
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateListResponse'
+          description: List all Applications a User has permission to view.
+        '403':
+          description: Not allowed
+      operationId: listConfigTemplates
+      summary: List config templates
+      x-speakeasy-alias: listConfigTemplates
+      x-speakeasy-group: ConfigTemplates
+      parameters:
+      - name: organizationId
+        description: ID of the organization
+        schema:
+          format: UUID
+          type: string
+        in: query
+        required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigTemplateCreateRequestBody'
+        required: true
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateCreateResponse'
+          description: Create a config template.
+        '403':
+          description: Not allowed
+      operationId: createConfigTemplate
+      summary: Create config template
+      x-speakeasy-alias: createConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+  /config_templates/{configTemplateId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigTemplateUpdateRequestBody'
+        required: true
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateUpdateResponse'
+          description: Successfully updated config template
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateConfigTemplate
+      x-speakeasy-alias: updateConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+      summary: Update a config template
+      parameters:
+      - name: configTemplateId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+    get:
+      tags:
+      - public_config_templates
+      - public
+      - ConfigTemplates
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigTemplateRead'
+          description: Get an TODO.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getConfigTemplate
+      x-speakeasy-alias: getConfigTemplate
+      x-speakeasy-group: ConfigTemplates
+      summary: Get TODO
+      parameters:
+      - name: configTemplateId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
   /applications:
     get:
       tags:
@@ -411,6 +525,273 @@ paths:
         type: integer
       in: path
       required: true
+  /regions:
+    get:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionsResponse'
+          description: List all regions for the organization
+        '403':
+          description: Not allowed
+      operationId: listRegions
+      summary: List regions
+      x-speakeasy-alias: listRegions
+      x-speakeasy-group: Regions
+      parameters:
+      - name: organizationId
+        description: The UUID of the organization to list regions for
+        schema:
+          type: string
+          format: uuid
+        in: query
+        required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionCreateRequest'
+        required: true
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully created region
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+      operationId: createRegion
+      summary: Create a region
+      x-speakeasy-alias: createRegion
+      x-speakeasy-group: Dataplanes
+  /regions/{regionId}:
+    get:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Get a region by the id in the path
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getRegion
+      x-speakeasy-alias: getRegion
+      x-speakeasy-group: Regions
+      summary: Get a region
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegionPatchRequest'
+        required: true
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully updated region
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateRegion
+      x-speakeasy-alias: updateRegion
+      x-speakeasy-group: Dataplanes
+      summary: Update a region
+    delete:
+      tags:
+      - public_regions
+      - public
+      - Regions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegionResponse'
+          description: Successfully deleted region
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteRegion
+      x-speakeasy-alias: deleteRegion
+      x-speakeasy-group: Regions
+      summary: Delete a region
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+  /regions/{regionId}/dataplanes:
+    get:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplanesResponse'
+          description: List all dataplanes for the region
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listDataplanes
+      summary: List dataplanes
+      x-speakeasy-alias: listDataplanes
+      x-speakeasy-group: Dataplanes
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataplaneCreateRequest'
+        required: true
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneCreateResponseBody'
+          description: Successfully created dataplane
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: createDataplane
+      summary: Create a dataplane
+      x-speakeasy-alias: createDataplane
+      x-speakeasy-group: Dataplanes
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+  /regions/{regionId}/dataplanes/{dataplaneId}:
+    get:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Get a dataplane by the id in the path
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getDataplane
+      x-speakeasy-alias: getDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Get a dataplane
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataplanePatchRequest'
+        required: true
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Successfully updated dataplane
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateDataplane
+      x-speakeasy-alias: updateDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Update a dataplane
+    delete:
+      tags:
+      - public_dataplanes
+      - public
+      - Dataplanes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DataplaneResponse'
+          description: Successfully deleted dataplane
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteDataplane
+      x-speakeasy-alias: deleteDataplane
+      x-speakeasy-group: Dataplanes
+      summary: Delete a dataplane
+    parameters:
+    - name: regionId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
+    - name: dataplaneId
+      schema:
+        type: string
+        format: uuid
+      in: path
+      required: true
   /connector_definitions:
     get:
       tags:
@@ -448,6 +829,411 @@ paths:
         example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
         in: query
         required: false
+  /workspaces/{workspaceId}/definitions/declarative_sources:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_declarative_source_definitions
+      - public
+      - DeclarativeSourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarativeSourceDefinitionsResponse'
+          description: Successful operation
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listDeclarativeSourceDefinitions
+      x-speakeasy-alias: listDeclarativeSourceDefinitions
+      x-speakeasy-group: DeclarativeSourceDefinitions
+      summary: List declarative source definitions.
+    post:
+      summary: Create a declarative source definition.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#create
+      operationId: createDeclarativeSourceDefinition
+      x-speakeasy-alias: createDeclarativeSourceDefinition
+      x-speakeasy-group: DeclarativeSourceDefinitions
+      tags:
+      - public_declarative_source_definitions
+      - public
+      - DeclarativeSourceDefinitions
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarativeSourceDefinitionResponse'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeclarativeSourceDefinitionRequest'
+  /workspaces/{workspaceId}/definitions/declarative_sources/{definitionId}:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    - name: definitionId
+      x-speakeasy-match: id
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_declarative_source_definitions
+      - public
+      - DeclarativeSourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarativeSourceDefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getDeclarativeSourceDefinition
+      x-speakeasy-alias: getDeclarativeSourceDefinition
+      x-speakeasy-group: DeclarativeSourceDefinitions
+      summary: Get declarative source definition details.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#read
+    put:
+      tags:
+      - public_declarative_source_definitions
+      - public
+      - DeclarativeSourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeclarativeSourceDefinitionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarativeSourceDefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateDeclarativeSourceDefinition
+      x-speakeasy-alias: updateDeclarativeSourceDefinition
+      x-speakeasy-group: DeclarativeSourceDefinitions
+      summary: Update declarative source definition details.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#update
+    delete:
+      tags:
+      - public_declarative_source_definitions
+      - public
+      - DeclarativeSourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeclarativeSourceDefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteDeclarativeSourceDefinition
+      x-speakeasy-alias: deleteDeclarativeSourceDefinition
+      x-speakeasy-group: DeclarativeSourceDefinitions
+      summary: Delete a declarative source definition.
+      x-speakeasy-entity-operation: DeclarativeSourceDefinition#delete
+  /workspaces/{workspaceId}/definitions/sources:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_source_definitions
+      - public
+      - SourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionsResponse'
+          description: Successful operation
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listSourceDefinitions
+      x-speakeasy-alias: listSourceDefinitions
+      x-speakeasy-group: SourceDefinitions
+      summary: List source definitions.
+    post:
+      operationId: createSourceDefinition
+      x-speakeasy-alias: createSourceDefinition
+      x-speakeasy-group: SourceDefinitions
+      summary: Create a source definition.
+      x-speakeasy-entity-operation: SourceDefinition#create
+      tags:
+      - public_source_definitions
+      - public
+      - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDefinitionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+  /workspaces/{workspaceId}/definitions/sources/{definitionId}:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    - name: definitionId
+      x-speakeasy-match: id
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_source_definitions
+      - public
+      - SourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getSourceDefinition
+      x-speakeasy-alias: getSourceDefinition
+      x-speakeasy-group: SourceDefinitions
+      summary: Get source definition details.
+      x-speakeasy-entity-operation: SourceDefinition#read
+    put:
+      tags:
+      - public_source_definitions
+      - public
+      - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDefinitionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateSourceDefinition
+      x-speakeasy-alias: updateSourceDefinition
+      x-speakeasy-group: SourceDefinitions
+      summary: Update source definition details.
+      x-speakeasy-entity-operation: SourceDefinition#update
+    delete:
+      tags:
+      - public_source_definitions
+      - public
+      - SourceDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteSourceDefinition
+      x-speakeasy-alias: deleteSourceDefinition
+      x-speakeasy-group: SourceDefinitions
+      summary: Delete a source definition.
+      x-speakeasy-entity-operation: SourceDefinition#delete
+  /workspaces/{workspaceId}/definitions/destinations:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_destination_definitions
+      - public
+      - DestinationDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionsResponse'
+          description: Successful operation
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listDestinationDefinitions
+      x-speakeasy-alias: listDestinationDefinitions
+      x-speakeasy-group: DestinationDefinitions
+      summary: List destination definitions.
+    post:
+      operationId: createDestinationDefinition
+      x-speakeasy-alias: createDestinationDefinition
+      x-speakeasy-group: DestinationDefinitions
+      summary: Create a destination definition.
+      x-speakeasy-entity-operation: DestinationDefinition#create
+      tags:
+      - public_destination_definitions
+      - public
+      - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDefinitionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+  /workspaces/{workspaceId}/definitions/destinations/{definitionId}:
+    parameters:
+    - name: workspaceId
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    - name: definitionId
+      x-speakeasy-match: id
+      schema:
+        format: uuid
+        type: string
+      in: path
+      required: true
+    get:
+      tags:
+      - public_destination_definitions
+      - public
+      - DestinationDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getDestinationDefinition
+      x-speakeasy-alias: getDestinationDefinition
+      x-speakeasy-group: DestinationDefinitions
+      summary: Get destination definition details.
+      x-speakeasy-entity-operation: DestinationDefinition#read
+    put:
+      tags:
+      - public_destination_definitions
+      - public
+      - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDefinitionRequest'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateDestinationDefinition
+      x-speakeasy-alias: updateDestinationDefinition
+      x-speakeasy-group: DestinationDefinitions
+      summary: Update destination definition details.
+      x-speakeasy-entity-operation: DestinationDefinition#update
+    delete:
+      tags:
+      - public_destination_definitions
+      - public
+      - DestinationDefinitions
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefinitionResponse'
+          description: Success
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteDestinationDefinition
+      x-speakeasy-alias: deleteDestinationDefinition
+      x-speakeasy-group: DestinationDefinitions
+      summary: Delete a destination definition.
+      x-speakeasy-entity-operation: DestinationDefinition#delete
   /sources:
     get:
       tags:
@@ -577,6 +1363,14 @@ paths:
       x-speakeasy-alias: getSource
       x-speakeasy-group: Sources
       summary: Get Source details
+      parameters:
+      - in: query
+        name: includeSecretCoordinates
+        schema:
+          type: boolean
+        required: false
+        description: Rather than return *** for secret properties include the secret
+          coordinate information
     patch:
       tags:
       - public_sources
@@ -828,6 +1622,14 @@ paths:
       x-speakeasy-alias: getDestination
       x-speakeasy-group: Destinations
       summary: Get Destination details
+      parameters:
+      - in: query
+        name: includeSecretCoordinates
+        schema:
+          type: boolean
+        required: false
+        description: Rather than return *** for secret properties include the secret
+          coordinate information
     delete:
       tags:
       - public_destinations
@@ -1061,6 +1863,16 @@ paths:
       - name: workspaceIds
         description: The UUIDs of the workspaces you wish to list connections for.
           Empty list will retrieve all allowed workspaces.
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        in: query
+        required: false
+      - name: tagIds
+        description: The UUIDs of the tags you wish to list connections for. Empty
+          list will retrieve all connections.
         schema:
           type: array
           items:
@@ -1673,6 +2485,161 @@ paths:
       operationId: listUsersWithinAnOrganization
       x-speakeasy-alias: listUsersWithinAnOrganization
       x-speakeasy-group: Users
+  /tags:
+    get:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: List all tags
+      description: Lists all tags
+      parameters:
+      - name: workspaceIds
+        in: query
+        schema:
+          type: array
+          items:
+            format: uuid
+            type: string
+        required: false
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagsResponse'
+          description: List Tags.
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: listTags
+      x-speakeasy-alias: listTags
+      x-speakeasy-group: Tags
+    post:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Create a tag
+      description: Create a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreateRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '409':
+          description: Tag with same name already exists
+      operationId: createTag
+      x-speakeasy-alias: createTag
+      x-speakeasy-group: Tags
+  /tags/{tagId}:
+    parameters:
+    - name: tagId
+      schema:
+        $ref: '#/components/schemas/TagId'
+      in: path
+      required: true
+    get:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Get a tag
+      description: Get a tag
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: getTag
+      x-speakeasy-alias: getTag
+      x-speakeasy-group: Tags
+    delete:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Delete a tag
+      description: Delete a tag
+      responses:
+        '204':
+          description: The resource was deleted successfully
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: deleteTag
+      x-speakeasy-alias: deleteTag
+      x-speakeasy-group: Tags
+    patch:
+      tags:
+      - public_tags
+      - public
+      - Tags
+      summary: Update a tag
+      description: Update a tag
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagPatchRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+          description: Successful operation
+        '400':
+          description: Invalid data
+        '403':
+          description: Not allowed
+        '404':
+          description: Not found
+      operationId: updateTag
+      x-speakeasy-alias: updateTag
+      x-speakeasy-group: Tags
+  /embedded/widget:
+    post:
+      operationId: null
+      summary: Get a token for Airbyte Embedded
+      x-speakeasy-group: EmbeddedWidget
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddedWidgetRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Success
+      tags:
+      - public
+      - embedded_widget
 components:
   responses:
     InitiateOauthResponse:
@@ -1687,7 +2654,17 @@ components:
       type: string
       format: uuid
       x-speakeasy-component: true
+    DeclarativeManifest:
+      x-speakeasy-component: true
+      x-speakeasy-type-override: any
+      description: Low code CDK manifest JSON object
+      type: object
+    ManifestVersion:
+      x-speakeasy-component: true
+      type: integer
+      format: int64
     SourceConfiguration:
+      type: object
       description: The values required to configure the source. The schema for this
         must match the schema return by source_definition_specifications/get for the
         source.
@@ -1695,12 +2672,36 @@ components:
         user: charles
       x-speakeasy-component: true
     DestinationConfiguration:
+      type: object
       description: The values required to configure the destination. The schema for
         this must match the schema return by destination_definition_specifications/get
         for the destinationDefinition.
       example:
         user: charles
       x-speakeasy-component: true
+    TagId:
+      type: string
+      format: uuid
+      x-speakeasy-component: true
+    Tag:
+      description: A tag that can be associated with a connection. Useful for grouping
+        and organizing connections in a workspace.
+      type: object
+      x-speakeasy-component: true
+      required:
+      - tagId
+      - workspaceId
+      - name
+      - color
+      properties:
+        tagId:
+          $ref: '#/components/schemas/TagId'
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+        name:
+          type: string
+        color:
+          type: string
     OrganizationId:
       type: string
       format: uuid
@@ -1899,6 +2900,7 @@ components:
           EQUAL: '#/components/schemas/RowFilteringOperationEqual'
           NOT: '#/components/schemas/RowFilteringOperationNot'
       x-speakeasy-component: true
+      x-airbyte-circular-ref: true
     RowFilteringMapperConfiguration:
       title: Row Filtering
       type: object
@@ -1985,6 +2987,67 @@ components:
       items:
         $ref: '#/components/schemas/SelectedFieldInfo'
       x-speakeasy-component: true
+    ScopedResourceRequirements:
+      x-speakeasy-component: true
+      description: actor or actor definition specific resource requirements. if default
+        is set, these are the requirements that should be set for ALL jobs run for
+        this actor definition. it is overriden by the job type specific configurations.
+        if not set, the platform will use defaults. these values will be overriden
+        by configuration at the connection level.
+      type: object
+      additionalProperties: false
+      properties:
+        default:
+          $ref: '#/components/schemas/ResourceRequirements'
+        jobSpecific:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobTypeResourceLimit'
+    JobTypeResourceLimit:
+      x-speakeasy-component: true
+      description: sets resource requirements for a specific job type for an actor
+        or actor definition. these values override the default, if both are set.
+      type: object
+      additionalProperties: false
+      required:
+      - jobType
+      - resourceRequirements
+      properties:
+        jobType:
+          $ref: '#/components/schemas/JobType'
+        resourceRequirements:
+          $ref: '#/components/schemas/ResourceRequirements'
+    JobType:
+      x-speakeasy-component: true
+      description: enum that describes the different types of jobs that the platform
+        runs.
+      type: string
+      enum:
+      - get_spec
+      - check_connection
+      - discover_schema
+      - sync
+      - reset_connection
+      - connection_updater
+      - replicate
+    ResourceRequirements:
+      x-speakeasy-component: true
+      description: optional resource requirements to run workers (blank for unbounded
+        allocations)
+      type: object
+      properties:
+        cpu_request:
+          type: string
+        cpu_limit:
+          type: string
+        memory_request:
+          type: string
+        memory_limit:
+          type: string
+        ephemeral_storage_request:
+          type: string
+        ephemeral_storage_limit:
+          type: string
     OAuthConfiguration:
       description: The values required to configure OAuth flows. The schema for this
         must match the `OAuthConfigSpecification.oauthUserInputFromConnectorConfigSpecification`
@@ -2159,7 +3222,12 @@ components:
         schedule:
           $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
-          $ref: '#/components/schemas/GeographyEnum'
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency
+            on Community and Enterprise connections. This will be supported on Cloud
+            until May 31, at which time all connections will use the dataResidency
+            of their associated workspace.
+          type: string
         namespaceDefinition:
           $ref: '#/components/schemas/NamespaceDefinitionEnum'
         namespaceFormat:
@@ -2174,10 +3242,15 @@ components:
           description: Prefix that will be prepended to the name of each stream when
             it is written to the destination (ex. “airbyte_” causes “projects” =>
             “airbyte_projects”).
+          default: ''
         nonBreakingSchemaUpdatesBehavior:
           $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum'
         status:
           $ref: '#/components/schemas/ConnectionStatusEnum'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2192,7 +3265,12 @@ components:
         schedule:
           $ref: '#/components/schemas/AirbyteApiConnectionSchedule'
         dataResidency:
-          $ref: '#/components/schemas/GeographyEnumNoDefault'
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency
+            on Community and Enterprise connections. This will be supported on Cloud
+            until May 31, at which time all connections will use the dataResidency
+            of their associated workspace.
+          type: string
         namespaceDefinition:
           $ref: '#/components/schemas/NamespaceDefinitionEnumNoDefault'
         namespaceFormat:
@@ -2211,6 +3289,10 @@ components:
           $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnumNoDefault'
         status:
           $ref: '#/components/schemas/ConnectionStatusEnum'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2275,6 +3357,8 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Source
       x-speakeasy-param-suppress-computed-diff: true
@@ -2289,6 +3373,8 @@ components:
           type: string
         configuration:
           $ref: '#/components/schemas/SourceConfiguration'
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Source
       x-speakeasy-param-suppress-computed-diff: true
@@ -2307,9 +3393,38 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Source
       x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    TagCreateRequest:
+      required:
+      - name
+      - color
+      - workspaceId
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+      x-speakeasy-entity: Tag
+      x-speakeasy-component: true
+    TagPatchRequest:
+      required:
+      - name
+      - color
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+      x-speakeasy-entity: Tag
       x-speakeasy-component: true
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
@@ -2383,6 +3498,7 @@ components:
       - dataResidency
       - configurations
       - createdAt
+      - tags
       properties:
         connectionId:
           format: UUID
@@ -2403,7 +3519,7 @@ components:
         schedule:
           $ref: '#/components/schemas/ConnectionScheduleResponse'
         dataResidency:
-          $ref: '#/components/schemas/GeographyEnum'
+          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: '#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum'
         namespaceDefinition:
@@ -2417,6 +3533,10 @@ components:
         createdAt:
           format: int64
           type: integer
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
       x-speakeasy-entity: Connection
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2458,21 +3578,6 @@ components:
       - manual
       - cron
       - basic
-      x-speakeasy-component: true
-    GeographyEnum:
-      type: string
-      enum:
-      - auto
-      - us
-      - eu
-      default: auto
-      x-speakeasy-component: true
-    GeographyEnumNoDefault:
-      type: string
-      enum:
-      - auto
-      - us
-      - eu
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: string
@@ -2550,6 +3655,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -2588,6 +3695,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -2626,6 +3735,31 @@ components:
       - source
       - destination
       x-speakeasy-component: true
+    TagResponse:
+      title: Root Type for TagResponse
+      description: Provides details of a single tag.
+      type: object
+      required:
+      - tagId
+      - name
+      - color
+      - workspaceId
+      properties:
+        tagId:
+          $ref: '#/components/schemas/TagId'
+        name:
+          type: string
+        color:
+          description: A hexadecimal color value
+          type: string
+        workspaceId:
+          $ref: '#/components/schemas/WorkspaceId'
+      example:
+        tagId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
+        name: Analytics Team
+        color: FF5733
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+      x-speakeasy-component: true
     DestinationCreateRequest:
       required:
       - name
@@ -2646,6 +3780,8 @@ components:
           type: string
         configuration:
           $ref: '#/components/schemas/DestinationConfiguration'
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
@@ -2657,6 +3793,8 @@ components:
           type: string
         configuration:
           $ref: '#/components/schemas/DestinationConfiguration'
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
@@ -2671,6 +3809,8 @@ components:
           type: string
         configuration:
           $ref: '#/components/schemas/DestinationConfiguration'
+        resourceAllocation:
+          $ref: '#/components/schemas/ScopedResourceRequirements'
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-speakeasy-entity: Destination
       x-speakeasy-param-suppress-computed-diff: true
@@ -2687,17 +3827,25 @@ components:
           description: ID of organization to add workspace to.
           format: uuid
           type: string
+        notifications:
+          $ref: '#/components/schemas/NotificationsConfig'
+        regionId:
+          type: string
+          format: uuid
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
     WorkspaceUpdateRequest:
-      required:
-      - name
       type: object
       properties:
         name:
           description: Name of the workspace
           type: string
+        notifications:
+          $ref: '#/components/schemas/NotificationsConfig'
+        regionId:
+          type: string
+          format: uuid
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2709,6 +3857,7 @@ components:
       - workspaceId
       - name
       - dataResidency
+      - notifications
       properties:
         workspaceId:
           format: UUID
@@ -2716,7 +3865,59 @@ components:
         name:
           type: string
         dataResidency:
-          $ref: '#/components/schemas/GeographyEnum'
+          type: string
+        notifications:
+          $ref: '#/components/schemas/NotificationsConfig'
+      x-speakeasy-entity: Workspace
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationsConfig:
+      description: Configures workspace notifications.
+      type: object
+      properties:
+        failure:
+          $ref: '#/components/schemas/NotificationConfig'
+        success:
+          $ref: '#/components/schemas/NotificationConfig'
+        connectionUpdate:
+          $ref: '#/components/schemas/NotificationConfig'
+        connectionUpdateActionRequired:
+          $ref: '#/components/schemas/NotificationConfig'
+        syncDisabled:
+          $ref: '#/components/schemas/NotificationConfig'
+        syncDisabledWarning:
+          $ref: '#/components/schemas/NotificationConfig'
+      x-speakeasy-entity: Workspace
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    NotificationConfig:
+      description: Configures a notification.
+      type: object
+      properties:
+        email:
+          $ref: '#/components/schemas/EmailNotificationConfig'
+        webhook:
+          $ref: '#/components/schemas/WebhookNotificationConfig'
+      x-speakeasy-entity: Workspace
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    WebhookNotificationConfig:
+      description: Configures a webhook notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        url:
+          type: string
+      x-speakeasy-entity: Workspace
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    EmailNotificationConfig:
+      description: Configures an email notification.
+      type: object
+      properties:
+        enabled:
+          type: boolean
       x-speakeasy-entity: Workspace
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -2969,6 +4170,129 @@ components:
           items:
             $ref: '#/components/schemas/ConnectorDefinitionResponse'
       x-speakeasy-component: true
+    CreateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-speakeasy-component: true
+      required:
+      - workspaceId
+      - name
+      - manifest
+      properties:
+        name:
+          type: string
+        manifest:
+          $ref: '#/components/schemas/DeclarativeManifest'
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-speakeasy-component: true
+      required:
+      - name
+      - manifest
+      properties:
+        version:
+          $ref: '#/components/schemas/ManifestVersion'
+        manifest:
+          $ref: '#/components/schemas/DeclarativeManifest'
+    DeclarativeSourceDefinitionsResponse:
+      title: Root Type for DeclarativeSourceDefinitionsResponse
+      description: ''
+      x-speakeasy-component: true
+      required:
+      - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeclarativeSourceDefinitionResponse'
+    DeclarativeSourceDefinitionResponse:
+      type: object
+      x-speakeasy-component: true
+      required:
+      - id
+      - name
+      - manifest
+      - version
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        manifest:
+          $ref: '#/components/schemas/DeclarativeManifest'
+        version:
+          $ref: '#/components/schemas/ManifestVersion'
+    CreateDefinitionRequest:
+      type: object
+      x-speakeasy-component: true
+      required:
+      - name
+      - dockerRepository
+      - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+          format: uri
+    UpdateDefinitionRequest:
+      type: object
+      x-speakeasy-component: true
+      required:
+      - name
+      - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerImageTag:
+          type: string
+    DefinitionsResponse:
+      title: Root Type for DefinitionsResponse
+      description: ''
+      x-speakeasy-component: true
+      required:
+      - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DefinitionResponse'
+    DefinitionResponse:
+      title: Root Type for DefinitionResponse
+      description: Provides details of a single connector definition.
+      type: object
+      x-speakeasy-component: true
+      required:
+      - id
+      - name
+      - dockerRepository
+      - dockerImageTag
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse
       description: ''
@@ -2991,6 +4315,18 @@ components:
           workspaceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
           name: Acme Company
           dataResidency: auto
+      x-speakeasy-component: true
+    TagsResponse:
+      title: Root Type for TagsResponse
+      description: ''
+      required:
+      - data
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
       x-speakeasy-component: true
     StreamConfiguration:
       description: Configurations for a single stream.
@@ -3035,6 +4371,7 @@ components:
       properties:
         streams:
           type: array
+          format: set
           items:
             $ref: '#/components/schemas/StreamConfiguration'
       x-speakeasy-component: true
@@ -3076,6 +4413,7 @@ components:
     ConnectionSyncModeEnum:
       enum:
       - full_refresh_overwrite
+      - full_refresh_overwrite_deduped
       - full_refresh_append
       - incremental_append
       - incremental_deduped_history
@@ -3085,4 +4423,128 @@ components:
       enum:
       - source
       - destination
+      x-speakeasy-component: true
+    RegionCreateRequest:
+      type: object
+      required:
+      - name
+      - organizationId
+      - enabled
+      properties:
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionResponse:
+      type: object
+      required:
+      - regionId
+      - name
+      - organizationId
+      - enabled
+      - createdAt
+      - updatedAt
+      properties:
+        regionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-speakeasy-entity: Region
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionsResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegionResponse'
+      x-speakeasy-component: true
+    DataplaneCreateRequest:
+      type: object
+      required:
+      - name
+      - enabled
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplaneResponse:
+      type: object
+      required:
+      - dataplaneId
+      - name
+      - regionId
+      - enabled
+      - createdAt
+      - updatedAt
+      properties:
+        dataplaneId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        regionId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-speakeasy-entity: Dataplane
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanesResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataplaneResponse'
       x-speakeasy-component: true

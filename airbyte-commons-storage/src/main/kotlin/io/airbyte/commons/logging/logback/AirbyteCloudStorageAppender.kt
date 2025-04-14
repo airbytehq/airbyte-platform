@@ -6,13 +6,9 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
-import com.fasterxml.jackson.databind.module.SimpleModule
+import ch.qos.logback.core.status.ErrorStatus
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
-import io.airbyte.commons.jackson.MoreMappers
-import io.airbyte.commons.logging.LogEvents
-import io.airbyte.commons.logging.StackTraceElementSerializer
-import io.airbyte.commons.logging.toLogEvent
 import io.airbyte.commons.storage.AzureStorageClient
 import io.airbyte.commons.storage.AzureStorageConfig
 import io.airbyte.commons.storage.DocumentType
@@ -32,19 +28,9 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-
-private val objectMapper = MoreMappers.initMapper()
-
-/**
- * Shared executor service used to reduce the number of threads created to handle
- * uploading log data to remote storage.
- */
-private val executorService =
-  Executors.newScheduledThreadPool(
-    EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
-    ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
-  )
 
 /**
  * Builds the ID of the uploaded file.  This is typically the path in blob storage.
@@ -65,13 +51,48 @@ fun createFileId(
   return "${baseId.trim('/')}/${timestamp}_${hostname}_${uniqueIdentifier.replace("-", "")}$STRUCTURED_LOG_FILE_EXTENSION"
 }
 
-/**
- * Stops the shared executor service.  This method should be called from a JVM shutdown hook
- * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
- */
-fun stopAirbyteCloudStorageAppenderExecutorService() {
-  executorService.shutdownNow()
-  executorService.awaitTermination(30, TimeUnit.SECONDS)
+object AirbyteCloudStorageAppenderExecutorServiceHelper {
+  /**
+   * Shared executor service used to reduce the number of threads created to handle
+   * uploading log data to remote storage.
+   */
+  private val executorService =
+    Executors.newScheduledThreadPool(
+      EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
+      ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
+    )
+
+  /**
+   * Schedules a runnable task on the underlying executor service.
+   *
+   * @param runnable The task to be executed.
+   * @param initDelay The time to delay first execution.
+   * @param period The period between successive executions.
+   * @param unit The time unit of the initialDelay and period parameters
+   * @return A [ScheduledFuture] representing pending completion of the series of repeated tasks.
+   */
+  fun scheduleTask(
+    runnable: Runnable,
+    initDelay: Long,
+    period: Long,
+    unit: TimeUnit,
+  ): ScheduledFuture<*> = executorService.scheduleAtFixedRate(runnable, initDelay, period, unit)
+
+  /**
+   * Stops the shared executor service.  This method should be called from a JVM shutdown hook
+   * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
+   */
+  fun stopAirbyteCloudStorageAppenderExecutorService() {
+    executorService.shutdownNow()
+    executorService.awaitTermination(30, TimeUnit.SECONDS)
+  }
+
+  init {
+    // Enable cancellation of tasks to prevent executor queue from growing unbounded
+    if (executorService is ScheduledThreadPoolExecutor) {
+      executorService.removeOnCancelPolicy = true
+    }
+  }
 }
 
 /**
@@ -88,22 +109,24 @@ class AirbyteCloudStorageAppender(
 ) : AppenderBase<ILoggingEvent>() {
   private val buffer = LinkedBlockingQueue<ILoggingEvent>()
   private var currentStorageId: String = createFileId(baseId = baseStorageId)
+  private val encoder = AirbyteLogEventEncoder()
   private val uploadLock = Any()
+  private lateinit var uploadTask: ScheduledFuture<*>
 
   override fun start() {
     super.start()
-    executorService.scheduleAtFixedRate(this::upload, period, period, unit)
-    val structuredLogEventModule = SimpleModule()
-    structuredLogEventModule.addSerializer(StackTraceElement::class.java, StackTraceElementSerializer())
-    objectMapper.registerModule(structuredLogEventModule)
+    encoder.start()
+    uploadTask = AirbyteCloudStorageAppenderExecutorServiceHelper.scheduleTask(this::upload, period, period, unit)
   }
 
   override fun stop() {
     try {
       super.stop()
+      uploadTask.cancel(false)
     } finally {
       // Do one final upload attempt to ensure that all logs are published
       upload()
+      encoder.stop()
     }
   }
 
@@ -112,17 +135,21 @@ class AirbyteCloudStorageAppender(
   }
 
   private fun upload() {
-    synchronized(uploadLock) {
-      val events = mutableListOf<ILoggingEvent>()
-      buffer.drainTo(events)
+    try {
+      synchronized(uploadLock) {
+        val events = mutableListOf<ILoggingEvent>()
+        buffer.drainTo(events)
 
-      if (events.isNotEmpty()) {
-        val document = objectMapper.writeValueAsString(LogEvents(events = events.map(ILoggingEvent::toLogEvent)))
-        storageClient.write(id = currentStorageId, document = document)
+        if (events.isNotEmpty()) {
+          val document = encoder.bulkEncode(loggingEvents = events)
+          storageClient.write(id = currentStorageId, document = document)
 
-        // Move to next file to avoid overwriting in log storage that doesn't support append mode
-        this.currentStorageId = createFileId(baseId = baseStorageId)
+          // Move to next file to avoid overwriting in log storage that doesn't support append mode
+          this.currentStorageId = createFileId(baseId = baseStorageId)
+        }
       }
+    } catch (t: Throwable) {
+      addStatus(ErrorStatus("Failed to upload logs to cloud storage location $currentStorageId.", this, t))
     }
   }
 }
@@ -196,6 +223,7 @@ internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucke
     workloadOutput = "",
     activityPayload = "",
     auditLogging = storageConfig[EnvVar.STORAGE_BUCKET_AUDIT_LOGGING] ?: "",
+    profilerOutput = "",
   )
 
 private fun buildStorageConfig(): Map<EnvVar, String> =

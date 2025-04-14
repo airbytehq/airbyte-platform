@@ -1,12 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.internal.stateaggregator
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.State
 import io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
+import io.airbyte.protocol.models.v0.StreamDescriptor
 
 interface StateAggregator {
   fun ingest(stateMessage: AirbyteStateMessage)

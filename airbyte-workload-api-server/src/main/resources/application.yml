@@ -25,19 +25,26 @@ micronaut:
         client:
           percentiles: "0.95"
     export:
+      otlp:
+        enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}
+        step: ${MICROMETER_METRICS_STEP:PT30S}
+        url: ${OTEL_COLLECTOR_ENDPOINT:`http://localhost:4318/v1/metrics`}
       statsd:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: ${MICROMETER_METRICS_STATSD_ENABLED:false}
         flavor: ${MICROMETER_METRICS_STATSD_FLAVOR:datadog}
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
-    enabled: ${API_AUTHORIZATION_ENABLED:true}
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
     token:
+      enabled: ${API_AUTHORIZATION_ENABLED:false}
       jwt:
-        bearer:
-          secret: ${WORKLOAD_API_BEARER_TOKEN:}
+        signatures:
+          secret:
+            generator:
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
     oauth2:
       clients:
         keycloak:
@@ -58,6 +65,8 @@ micronaut:
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
+  edition: ${AIRBYTE_EDITION:COMMUNITY}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}
@@ -73,7 +82,10 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-
+  workload-api:
+    workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
+    bearer-token:
+      secret: ${WORKLOAD_API_BEARER_TOKEN:}
 endpoints:
   beans:
     enabled: true
@@ -116,26 +128,8 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
-
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-  self-hosted:
-    host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
-    namespace: ${TEMPORAL_NAMESPACE:default}
-  sdk:
-    timeouts:
-      max-time-to-connect: 120s
-      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
-      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
-      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
 
 logger:
   levels:
@@ -144,7 +138,6 @@ logger:
     io.grpc: INFO
     io.fabric8.kubernetes.client: INFO
     io.netty: INFO
-    io.temporal: INFO
 #   Uncomment to help resolve issues with conditional beans
 #    io.micronaut.context.condition: DEBUG
 #   Uncomment to help resolve issues with security beans

@@ -19,7 +19,6 @@ dependencies {
 
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
-  implementation(libs.commons.io)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.ws.rs.api)
   implementation(libs.jakarta.validation.api)
@@ -44,10 +43,11 @@ dependencies {
 
 val airbyteApiProblemsSpecFile = "$projectDir/src/main/openapi/api-problems.yaml"
 
-val genAirbyteApiProblems = tasks.register<GenerateTask>("genAirbyteApiProblems") {
+val genAirbyteApiProblems =
+  tasks.register<GenerateTask>("genAirbyteApiProblems") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/api/problems"
 
-    inputs.file(airbyteApiProblemsSpecFile)
+    inputs.file(airbyteApiProblemsSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(serverOutputDir)
 
     generatorName = "jaxrs-spec"
@@ -61,21 +61,23 @@ val genAirbyteApiProblems = tasks.register<GenerateTask>("genAirbyteApiProblems"
 
     generateApiDocumentation = false
 
-    configOptions = mapOf(
-        "enumPropertyNaming"  to "UPPERCASE",
-        "generatePom"         to "false",
-        "interfaceOnly"       to "true",
-        "useJakartaEe"        to "true",
-    )
+    configOptions =
+      mapOf(
+        "enumPropertyNaming" to "UPPERCASE",
+        "generatePom" to "false",
+        "interfaceOnly" to "true",
+        "useJakartaEe" to "true",
+        "hideGenerationTimestamp" to "true",
+      )
 
     doLast {
-        // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
-        delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
+      // Remove unnecessary invoker classes to avoid Micronaut picking them up and registering them as beans
+      delete("${outputDir.get()}/src/gen/java/${invokerPackage.get().replace(".", "/").replace("-","_")}")
 
-        val generatedModelPath = "${outputDir.get()}/src/gen/java/${modelPackage.get().replace(".", "/").replace("-", "_")}"
-        generateProblemThrowables(generatedModelPath)
+      val generatedModelPath = "${outputDir.get()}/src/gen/java/${modelPackage.get().replace(".", "/").replace("-", "_")}"
+      generateProblemThrowables(generatedModelPath)
     }
-}
+  }
 
 sourceSets {
   main {
@@ -97,13 +99,12 @@ sourceSets {
   }
 }
 
-
 tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs = listOf("-parameters")
 }
 
 tasks.named("compileKotlin") {
-    dependsOn(genAirbyteApiProblems)
+  dependsOn(genAirbyteApiProblems)
 }
 
 // uses afterEvaluate because at configuration time, the kspKotlin task does not exist.
@@ -117,41 +118,43 @@ afterEvaluate {
 // still runs into spotbug issues. Working theory is that
 // generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
-    enabled = false
+  enabled = false
 }
 
 private fun generateProblemThrowables(problemsOutputDir: String) {
-    val dir = file(problemsOutputDir)
+  val dir = file(problemsOutputDir)
 
-    val throwableDir = File("${getLayout().buildDirectory.get()}/generated/api/problems/src/gen/kotlin/throwable")
-    if (!throwableDir.exists()) {
-        throwableDir.mkdirs()
+  val throwableDir = File("${getLayout().buildDirectory.get()}/generated/api/problems/src/gen/kotlin/throwable")
+  if (!throwableDir.exists()) {
+    throwableDir.mkdirs()
+  }
+
+  dir.walk().forEach { errorFile ->
+    if (errorFile.name.endsWith("ProblemResponse.java")) {
+      val errorFileText = errorFile.readText()
+      val problemName: String = "public class (\\S+)ProblemResponse ".toRegex().find(errorFileText)!!.destructured.component1()
+      var dataFieldType: String = "private (@Valid )?\n(\\S+) data;".toRegex().find(errorFileText)!!.destructured.component2()
+      var dataFieldImport = "import io.airbyte.api.problems.model.generated.$dataFieldType"
+
+      if (dataFieldType == "Object") {
+        dataFieldType = "Any"
+        dataFieldImport = ""
+      }
+
+      val responseClassName = "${problemName}ProblemResponse"
+      val throwableClassName = "${problemName}Problem"
+
+      val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt")
+      val throwableText =
+        template
+          .readText()
+          .replace("<problem-class-name>", responseClassName)
+          .replace("<problem-throwable-class-name>", throwableClassName)
+          .replace("<problem-data-class-import>", dataFieldImport)
+          .replace("<problem-data-class-name>", dataFieldType)
+
+      val throwableFile = File(throwableDir, "$throwableClassName.kt")
+      throwableFile.writeText(throwableText)
     }
-
-    dir.walk().forEach { errorFile ->
-        if (errorFile.name.endsWith("ProblemResponse.java")) {
-            val errorFileText = errorFile.readText()
-            val problemName: String = "public class (\\S+)ProblemResponse ".toRegex().find(errorFileText)!!.destructured.component1()
-            var dataFieldType: String = "private (@Valid )?\n(\\S+) data;".toRegex().find(errorFileText)!!.destructured.component2()
-            var dataFieldImport = "import io.airbyte.api.problems.model.generated.$dataFieldType"
-
-            if (dataFieldType == "Object") {
-                dataFieldType = "Any"
-                dataFieldImport = ""
-            }
-
-            val responseClassName = "${problemName}ProblemResponse"
-            val throwableClassName = "${problemName}Problem"
-
-            val template = File("$projectDir/src/main/resources/templates/ThrowableProblem.kt.txt")
-            val throwableText = template.readText()
-                .replace("<problem-class-name>", responseClassName)
-                .replace("<problem-throwable-class-name>", throwableClassName)
-                .replace("<problem-data-class-import>", dataFieldImport)
-                .replace("<problem-data-class-name>", dataFieldType)
-
-            val throwableFile = File(throwableDir, "$throwableClassName.kt")
-            throwableFile.writeText(throwableText)
-        }
-    }
+  }
 }

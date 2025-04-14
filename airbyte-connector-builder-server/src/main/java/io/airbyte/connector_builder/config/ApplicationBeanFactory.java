@@ -10,8 +10,10 @@ import io.airbyte.connector_builder.command_runner.SynchronousCdkCommandRunner;
 import io.airbyte.connector_builder.command_runner.SynchronousPythonCdkCommandRunner;
 import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.AirbyteFileWriterImpl;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.micronaut.context.annotation.Factory;
+import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.File;
@@ -27,6 +29,14 @@ import java.util.stream.Collectors;
  */
 @Factory
 public class ApplicationBeanFactory {
+
+  private final Boolean enableUnsafeCodeGlobalOverride;
+
+  @SuppressWarnings("LineLength")
+  public ApplicationBeanFactory(
+                                @Value("${airbyte.connector-builder-server.capabilities.enable-unsafe-code}") final Boolean enableUnsafeCodeGlobalOverride) {
+    this.enableUnsafeCodeGlobalOverride = enableUnsafeCodeGlobalOverride;
+  }
 
   private String getPython() {
     final var cdkPython = EnvVar.CDK_PYTHON.fetch();
@@ -48,14 +58,15 @@ public class ApplicationBeanFactory {
    * Defines the instantiation of the SynchronousPythonCdkCommandRunner.
    */
   @Singleton
-  public SynchronousCdkCommandRunner synchronousPythonCdkCommandRunner() {
+  public SynchronousCdkCommandRunner synchronousPythonCdkCommandRunner(final MetricClient metricClient) {
     return new SynchronousPythonCdkCommandRunner(
         new AirbyteFileWriterImpl(),
         // This should eventually be constructed via DI.
-        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(),
+        VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(metricClient),
         this.getPython(),
         this.getCdkEntrypoint(),
-        this.getPythonPath());
+        this.getPythonPath(),
+        enableUnsafeCodeGlobalOverride);
   }
 
   private String getPythonPath() {

@@ -24,8 +24,6 @@ export const FormControls: React.FC<React.PropsWithChildren> = ({ children }) =>
   const { trackFormChange, clearFormChange } = useFormChangeTrackerService();
 
   useEffect(() => {
-    // <Form /> component remounts with <FormChangeTracker /> on schema refresh,
-    // so we need to start tracking changes again manually
     if (schemaHasBeenRefreshed) {
       /**
        * force validation of the form after schema refresh to highlight errors,

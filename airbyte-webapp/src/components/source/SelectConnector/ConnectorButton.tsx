@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
 
-import { MetricIcon } from "components/connector/ConnectorQualityMetrics";
+import { convertToConnectorDefinitionWithMetrics, MetricIcon } from "components/connector/ConnectorQualityMetrics";
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -25,8 +25,8 @@ interface ConnectorButtonProps<T extends ConnectorDefinitionOrEnterpriseStub> {
 
 const EnterpriseBadge = () => {
   return (
-    <span className={styles.supportLevel}>
-      <SupportLevelBadge supportLevel="enterprise" custom={false} className={styles.enterpriseBadge} />
+    <span>
+      <SupportLevelBadge supportLevel="enterprise" custom={false} />
     </span>
   );
 };
@@ -56,15 +56,13 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
         // Conditionally render the metrics only if it is not an EnterpriseSourceStub
         showMetrics && !("isEnterprise" in definition) && (
           <FlexContainer className={styles.metrics}>
-            <MetricIcon metric="success" connectorDefinition={definition} />
-            <MetricIcon metric="usage" connectorDefinition={definition} />
+            <MetricIcon metric="success" connectorDefinition={convertToConnectorDefinitionWithMetrics(definition)} />
+            <MetricIcon metric="usage" connectorDefinition={convertToConnectorDefinitionWithMetrics(definition)} />
           </FlexContainer>
         )
       }
-      {
-        // Conditionally render the support level badge only if it is an EnterpriseSourceStub
-        "isEnterprise" in definition ? <EnterpriseBadge /> : null
-      }
+      {(("isEnterprise" in definition && definition.isEnterprise === true) ||
+        ("enterprise" in definition && definition.enterprise === true)) && <EnterpriseBadge />}
     </button>
   );
 };

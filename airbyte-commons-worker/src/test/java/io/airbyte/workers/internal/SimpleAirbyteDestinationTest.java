@@ -8,8 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

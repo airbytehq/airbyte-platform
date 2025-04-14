@@ -163,9 +163,9 @@ public class SlackNotificationClient extends NotificationClient {
                                            *Failure reason:*
 
                                            ```
-                                           %s
+                                           [%s] %s
                                            ```
-                                           """, summary.getErrorMessage()));
+                                           """, summary.getErrorType(), summary.getErrorMessage()));
     }
     final Section summarySection = notification.addSection();
     summarySection.setText(String.format("""
@@ -298,6 +298,36 @@ public class SlackNotificationClient extends NotificationClient {
         Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
     final String message = String.format(
         "The upstream schema of '%s' has changed. Please review and approve the changes to reflect them in your connection.",
+        notification.getConnectionInfo().getName());
+
+    final Notification slackNotification =
+        buildSchemaDiffToApplyNotification(notification.getWorkspace().getName(), notification.getSourceInfo().getName(), summary, header, message,
+            notification.getWorkspace().getUrl(), notification.getSourceInfo().getUrl());
+
+    final String webhookUrl = config.getWebhook();
+    if (!StringUtils.isEmpty(webhookUrl)) {
+      try {
+        LOGGER.info("Sending JSON...");
+        return notifyJson(slackNotification.toJsonNode());
+      } catch (final IOException e) {
+        LOGGER.error("Failed to send notification", e);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean notifySchemaDiffToApplyWhenPropagationDisabled(final SchemaUpdateNotification notification,
+                                                                final String recipient) {
+    LOGGER.info("Sending slack notification to apply schema changes...");
+    final String summary = buildSummary(notification.getCatalogDiff());
+    // The following header and message are consistent with the email notification template.
+    final String header = String.format("Airbyte detected schema changes for '%s'.",
+        Notification.createLink(notification.getConnectionInfo().getName(), notification.getConnectionInfo().getUrl()));
+    final String message = String.format(
+        "The upstream schema of '%s' has changed. Airbyte has automatically disabled your connections according to your propagation setting. "
+            + "Please review and approve the changes, then re-enable your connection to continue syncing.",
         notification.getConnectionInfo().getName());
 
     final Notification slackNotification =

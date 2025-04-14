@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
@@ -6,9 +10,11 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.workers.input.isReset
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.sync.WorkloadClient
+import io.airbyte.workers.workload.DataplaneGroupResolver
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.airbyte.workload.api.client.model.generated.WorkloadCreateRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadLabel
@@ -29,6 +35,7 @@ class DiscoverCommand(
   @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
   private val workloadIdGenerator: WorkloadIdGenerator,
   private val logClientManager: LogClientManager,
+  private val dataplaneGroupResolver: DataplaneGroupResolver,
 ) : WorkloadCommandBase<DiscoverCatalogInput>(
     airbyteApiClient = airbyteApiClient,
     workloadClient = workloadClient,
@@ -46,7 +53,7 @@ class DiscoverCommand(
     input: DiscoverCatalogInput,
     signalPayload: String?,
   ): String {
-    if (isAutoRefresh(input) && discoverAutoRefreshWindow == Duration.INFINITE) {
+    if (input.launcherConfig.isReset() || (isAutoRefresh(input) && discoverAutoRefreshWindow == Duration.INFINITE)) {
       return NOOP_DISCOVER_PLACEHOLDER_ID
     }
     return super.start(input, signalPayload)
@@ -91,6 +98,12 @@ class DiscoverCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.discoverCatalogInput.actorContext.workspaceId
+    val dataplaneGroup =
+      dataplaneGroupResolver.resolveForDiscover(
+        organizationId = input.discoverCatalogInput.actorContext.organizationId,
+        workspaceId = workspaceId,
+        actorId = input.discoverCatalogInput.actorContext.actorId,
+      )
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
@@ -99,14 +112,19 @@ class DiscoverCommand(
           WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId),
           WorkloadLabel(Metadata.ATTEMPT_LABEL_KEY, attemptNumber.toString()),
           WorkloadLabel(Metadata.WORKSPACE_LABEL_KEY, workspaceId.toString()),
-          WorkloadLabel(Metadata.ACTOR_TYPE, ActorType.SOURCE.toString().toString()),
-          WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, input.discoverCatalogInput.actorContext.actorId.toString()),
+          WorkloadLabel(Metadata.ACTOR_TYPE, ActorType.SOURCE.toString()),
+          WorkloadLabel(
+            Metadata.ACTOR_ID_LABEL_KEY,
+            input.discoverCatalogInput.actorContext.actorId
+              .toString(),
+          ),
         ),
       workloadInput = serializedInput,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
       type = WorkloadType.DISCOVER,
       priority = decode(input.launcherConfig.priority.toString())!!,
       signalInput = signalPayload,
+      dataplaneGroup = dataplaneGroup,
     )
   }
 

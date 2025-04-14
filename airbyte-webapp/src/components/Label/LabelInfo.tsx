@@ -1,4 +1,3 @@
-import { JSONSchema7Type } from "json-schema";
 import React from "react";
 import { FormattedMessage } from "react-intl";
 
@@ -8,7 +7,7 @@ import styles from "./LabelInfo.module.scss";
 
 interface LabelInfoProps {
   label?: React.ReactNode;
-  examples?: JSONSchema7Type;
+  examples?: unknown;
   description?: string | React.ReactNode;
   options?: Array<{ title: string; description?: string }>;
 }

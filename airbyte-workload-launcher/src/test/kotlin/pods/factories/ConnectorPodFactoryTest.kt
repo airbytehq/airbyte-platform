@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package pods.factories
 
 import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
@@ -65,9 +69,17 @@ class ConnectorPodFactoryTest {
 
     // the pod gets two new volumes: storage and local
     assertEquals(STORAGE_VOLUME_NAME, pod.spec.volumes[2].name)
-    assertEquals(STORAGE_CLAIM_NAME, pod.spec.volumes[2].persistentVolumeClaim.claimName)
+    assertEquals(
+      STORAGE_CLAIM_NAME,
+      pod.spec.volumes[2]
+        .persistentVolumeClaim.claimName,
+    )
     assertEquals(VolumeFactory.LOCAL_VOLUME_NAME, pod.spec.volumes[3].name)
-    assertEquals(VolumeFactory.LOCAL_CLAIM_NAME, pod.spec.volumes[3].persistentVolumeClaim.claimName)
+    assertEquals(
+      VolumeFactory.LOCAL_CLAIM_NAME,
+      pod.spec.volumes[3]
+        .persistentVolumeClaim.claimName,
+    )
 
     val sidecarSpec = pod.spec.containers[0]
     val mainSpec = pod.spec.containers[1]

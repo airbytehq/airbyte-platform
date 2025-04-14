@@ -1,26 +1,33 @@
 import { useIntl } from "react-intl";
 
 import { AssistButton } from "./Assist/AssistButton";
+import { AuthPath } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { BuilderRequestBody, concatPath, useBuilderWatch } from "../types";
+import { BuilderRequestBody, concatPath } from "../types";
+import { useBuilderWatch } from "../useBuilderWatch";
 
 type RequestOptionSectionProps =
   | {
       inline: false;
-      basePath: `formValues.streams.${number}.requestOptions`;
+      basePath:
+        | `formValues.streams.${number}.requestOptions`
+        | `formValues.streams.${number}.creationRequester.requestOptions`
+        | `formValues.streams.${number}.pollingRequester.requestOptions`
+        | `formValues.streams.${number}.downloadRequester.requestOptions`;
       currentStreamIndex: number;
     }
   | {
       inline: true;
-      basePath: "formValues.global.authenticator.login_requester.requestOptions";
+      basePath: `${AuthPath}.login_requester.requestOptions`;
     };
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
   const { formatMessage } = useIntl();
-  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody"));
+
+  const bodyValue = useBuilderWatch(concatPath(props.basePath, "requestBody")) as BuilderRequestBody;
 
   const getBodyOptions = (): Array<OneOfOption<BuilderRequestBody>> => [
     {
@@ -82,6 +89,21 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         />
       ),
     },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery" }),
+      default: {
+        type: "graphql",
+        value: "query {\n  resource {\n    field \n  }\n}",
+      },
+      children: (
+        <BuilderField
+          type="graphql"
+          path={concatPath(props.basePath, "requestBody.value")}
+          label={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.value" })}
+          tooltip={formatMessage({ id: "connectorBuilder.requestOptions.graphqlQuery.tooltip" })}
+        />
+      ),
+    },
   ];
 
   const content = (
@@ -109,12 +131,11 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
   ) : (
     <BuilderCard
       copyConfig={{
-        path: "requestOptions",
+        path: props.basePath,
         currentStreamIndex: props.currentStreamIndex,
         componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
       labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
-      label="Request Options"
     >
       {content}
     </BuilderCard>

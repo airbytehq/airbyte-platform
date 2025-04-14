@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Airbyte, Inc., all rights reserved.
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
 package io.airbyte.server.apis.publicapi.services
@@ -25,6 +25,7 @@ import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.publicApi.server.generated.models.SourcesResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.helpers.toInternal
 import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
 import io.micronaut.context.annotation.Secondary
@@ -52,7 +53,10 @@ interface SourceService {
 
   fun deleteSource(sourceId: UUID)
 
-  fun getSource(sourceId: UUID): SourceResponse
+  fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse
 
   fun getSourceSchema(
     sourceId: UUID,
@@ -97,9 +101,11 @@ open class SourceServiceImpl(
     sourceCreateOss.workspaceId = sourceCreateRequest.workspaceId
     sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
     sourceCreateOss.secretId = sourceCreateRequest.secretId
+    sourceCreateOss.resourceAllocation = sourceCreateRequest.resourceAllocation?.toInternal()
 
     val result =
-      kotlin.runCatching { sourceHandler.createSourceWithOptionalSecret(sourceCreateOss) }
+      kotlin
+        .runCatching { sourceHandler.createSourceWithOptionalSecret(sourceCreateOss) }
         .onFailure {
           log.error("Error for createSource", it)
           ConfigClientErrorHandler.handleError(it)
@@ -120,9 +126,11 @@ open class SourceServiceImpl(
         .sourceId(sourceId)
         .connectionConfiguration(sourcePutRequest.configuration)
         .name(sourcePutRequest.name)
+        .resourceAllocation(sourcePutRequest.resourceAllocation?.toInternal())
 
     val result =
-      kotlin.runCatching { sourceHandler.updateSource(sourceUpdate) }
+      kotlin
+        .runCatching { sourceHandler.updateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for updateSource", it)
           ConfigClientErrorHandler.handleError(it)
@@ -144,9 +152,11 @@ open class SourceServiceImpl(
         .connectionConfiguration(sourcePatchRequest.configuration)
         .name(sourcePatchRequest.name)
         .secretId(sourcePatchRequest.secretId)
+        .resourceAllocation(sourcePatchRequest.resourceAllocation?.toInternal())
 
     val result =
-      kotlin.runCatching { sourceHandler.partialUpdateSource(sourceUpdate) }
+      kotlin
+        .runCatching { sourceHandler.partialUpdateSource(sourceUpdate) }
         .onFailure {
           log.error("Error for partialUpdateSource", it)
           ConfigClientErrorHandler.handleError(it)
@@ -162,7 +172,8 @@ open class SourceServiceImpl(
   override fun deleteSource(sourceId: UUID) {
     val sourceIdRequestBody = SourceIdRequestBody().sourceId(sourceId)
     val result =
-      kotlin.runCatching { sourceHandler.deleteSource(sourceIdRequestBody) }
+      kotlin
+        .runCatching { sourceHandler.deleteSource(sourceIdRequestBody) }
         .onFailure {
           log.error("Error for deleteSource", it)
           ConfigClientErrorHandler.handleError(it)
@@ -173,12 +184,16 @@ open class SourceServiceImpl(
   /**
    * Gets a source by ID.
    */
-  override fun getSource(sourceId: UUID): SourceResponse {
+  override fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse {
     val sourceIdRequestBody = SourceIdRequestBody()
     sourceIdRequestBody.sourceId = sourceId
 
     val result =
-      kotlin.runCatching { sourceHandler.getSource(sourceIdRequestBody) }
+      kotlin
+        .runCatching { sourceHandler.getSource(sourceIdRequestBody, includeSecretCoordinates == true) }
         .onFailure {
           log.error("Error for getSource", it)
           ConfigClientErrorHandler.handleError(it)
@@ -197,7 +212,8 @@ open class SourceServiceImpl(
     val sourceDiscoverSchemaRequestBody = SourceDiscoverSchemaRequestBody().sourceId(sourceId).disableCache(disableCache)
 
     val result =
-      kotlin.runCatching { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
+      kotlin
+        .runCatching { schedulerHandler.discoverSchemaForSourceFromSourceId(sourceDiscoverSchemaRequestBody) }
         .onFailure {
           log.error("Error for getSourceSchema", it)
           ConfigClientErrorHandler.handleError(it)
@@ -234,7 +250,8 @@ open class SourceServiceImpl(
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
 
     val result =
-      kotlin.runCatching { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
+      kotlin
+        .runCatching { sourceHandler.listSourcesForWorkspaces(listResourcesForWorkspacesRequestBody) }
         .onFailure {
           log.error("Error for listSourcesForWorkspaces", it)
           ConfigClientErrorHandler.handleError(it)
@@ -251,7 +268,6 @@ open class SourceServiceImpl(
     )
   }
 
-  override fun controllerInitiateOAuth(initiateOauthRequest: InitiateOauthRequest?): Response {
-    return Response.status(Response.Status.NOT_IMPLEMENTED).build()
-  }
+  override fun controllerInitiateOAuth(initiateOauthRequest: InitiateOauthRequest?): Response =
+    Response.status(Response.Status.NOT_IMPLEMENTED).build()
 }

@@ -376,8 +376,10 @@ public class UserHandler {
       if (!authUserExists) {
         // Keep keycloak clean by deleting the user if it doesn't exist in our auth_user table is not
         // allowed to sign in
-        final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
-        authRealm.ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
+        final String authRealm = userAuthenticationResolver.resolveRealm();
+        if (authRealm != null) {
+          externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), authRealm);
+        }
       }
       throw new SSORequiredProblem();
     }
@@ -437,8 +439,11 @@ public class UserHandler {
 
     // (2) Delete the user from other auth realms
     LOGGER.info("Deleting user with email {} from other auth realms...", existingUser.getEmail());
-    final Optional<String> newRealm = userAuthenticationResolver.resolveRealm();
-    externalUserService.deleteUserByEmailOnOtherRealms(existingUser.getEmail(), newRealm.get());
+    final String newRealm = userAuthenticationResolver.resolveRealm();
+    if (newRealm == null) {
+      throw new IllegalStateException("No new realm found for user " + existingUser.getUserId());
+    }
+    externalUserService.deleteUserByEmailOnOtherRealms(existingUser.getEmail(), newRealm);
 
     // (3) Replace the existing auth user with the new one
     LOGGER.info("Replacing existing auth users with new one ({})...", incomingJwtUser.getAuthUserId());
@@ -515,16 +520,16 @@ public class UserHandler {
     }
 
     // (3b2) This isn't a first-time SSO sign in and/or the user already exists
-    userAuthenticationResolver.resolveRealm().ifPresent(realm -> externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm));
+    final var realm = userAuthenticationResolver.resolveRealm();
+    if (realm != null) {
+      externalUserService.deleteUserByExternalId(incomingJwtUser.getAuthUserId(), realm);
+    }
     throw new UserAlreadyExistsProblem(new ProblemEmailData().email(existingUser.getEmail()));
   }
 
   private AuthenticatedUser resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
     final AuthenticatedUser incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
-    if (!incomingJwtUser.getAuthUserId().equals(userAuthIdRequestBody.getAuthUserId())) {
-      throw new IllegalArgumentException("JWT token doesn't match the auth id from the request body.");
-    }
     return incomingJwtUser;
   }
 
@@ -630,8 +635,12 @@ public class UserHandler {
   }
 
   private Optional<Organization> getSsoOrganizationIfExists() throws IOException {
-    final Optional<String> authRealm = userAuthenticationResolver.resolveRealm();
-    return authRealm.isPresent() ? organizationPersistence.getOrganizationBySsoConfigRealm(authRealm.get()) : Optional.empty();
+    final var authRealm = userAuthenticationResolver.resolveRealm();
+    if (authRealm == null) {
+      return Optional.empty();
+    }
+
+    return organizationPersistence.getOrganizationBySsoConfigRealm(authRealm);
   }
 
   private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType)

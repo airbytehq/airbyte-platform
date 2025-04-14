@@ -58,8 +58,6 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResourceRequirements;
-import io.airbyte.config.ScopeType;
-import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -72,23 +70,25 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets;
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.lib.MetricAttribute;
-import io.airbyte.metrics.lib.MetricClientFactory;
+import io.airbyte.metrics.MetricAttribute;
+import io.airbyte.metrics.MetricClient;
+import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.metrics.lib.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobCreator;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -96,8 +96,8 @@ import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.factory.SyncJobFactory;
 import io.airbyte.persistence.job.tracker.JobTracker;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
@@ -147,7 +147,7 @@ public class SchedulerHandler {
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
   private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
-  private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final SecretPersistenceService secretPersistenceService;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private final SourceService sourceService;
@@ -155,6 +155,8 @@ public class SchedulerHandler {
 
   private final CatalogConverter catalogConverter;
   private final ApplySchemaChangeHelper applySchemaChangeHelper;
+  private final MetricClient metricClient;
+  private final SecretStorageService secretStorageService;
 
   @VisibleForTesting
   public SchedulerHandler(final ActorDefinitionService actorDefinitionService,
@@ -179,13 +181,15 @@ public class SchedulerHandler {
                           final JobTracker jobTracker,
                           final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
-                          final SecretPersistenceConfigService secretPersistenceConfigService,
+                          final SecretPersistenceService secretPersistenceService,
                           final StreamRefreshesHandler streamRefreshesHandler,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper,
                           final SourceService sourceService,
                           final DestinationService destinationService,
                           final CatalogConverter catalogConverter,
-                          final ApplySchemaChangeHelper applySchemaChangeHelper) {
+                          final ApplySchemaChangeHelper applySchemaChangeHelper,
+                          final MetricClient metricClient,
+                          final SecretStorageService secretStorageService) {
     this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
@@ -206,7 +210,7 @@ public class SchedulerHandler {
     this.jobFactory = jobFactory;
     this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.workspaceService = workspaceService;
-    this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.secretPersistenceService = secretPersistenceService;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
     this.jobCreationAndStatusUpdateHelper = new JobCreationAndStatusUpdateHelper(
@@ -215,11 +219,14 @@ public class SchedulerHandler {
         connectionService,
         jobNotifier,
         jobTracker,
-        connectionTimelineEventHelper);
+        connectionTimelineEventHelper,
+        metricClient);
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.catalogConverter = catalogConverter;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
+    this.metricClient = metricClient;
+    this.secretStorageService = secretStorageService;
   }
 
   public CheckConnectionRead checkSourceConnectionFromSourceId(final SourceIdRequestBody sourceIdRequestBody)
@@ -277,7 +284,11 @@ public class SchedulerHandler {
     final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(updatedSource.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, updatedSource.getWorkspaceId(), updatedSource.getSourceId());
-    jsonSchemaValidator.ensure(sourceVersion.getSpec().getConnectionSpecification(), updatedSource.getConfiguration());
+
+    // validate the provided updated config
+    jsonSchemaValidator.ensure(
+        sourceVersion.getSpec().getConnectionSpecification(),
+        sourceUpdate.getConnectionConfiguration());
 
     final SourceCoreConfig sourceCoreConfig = new SourceCoreConfig()
         .sourceId(updatedSource.getSourceId())
@@ -342,7 +353,11 @@ public class SchedulerHandler {
         destinationService.getStandardDestinationDefinition(updatedDestination.getDestinationDefinitionId());
     final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper.getDestinationVersion(destinationDef,
         updatedDestination.getWorkspaceId(), updatedDestination.getDestinationId());
-    jsonSchemaValidator.ensure(destinationVersion.getSpec().getConnectionSpecification(), updatedDestination.getConfiguration());
+
+    // validate the provided updated config
+    jsonSchemaValidator.ensure(
+        destinationVersion.getSpec().getConnectionSpecification(),
+        destinationUpdate.getConnectionConfiguration());
 
     final DestinationCoreConfig destinationCoreConfig = new DestinationCoreConfig()
         .destinationId(updatedDestination.getDestinationId())
@@ -503,7 +518,7 @@ public class SchedulerHandler {
     if (sourceAutoPropagateChange.getWorkspaceId() == null
         || sourceAutoPropagateChange.getCatalogId() == null
         || sourceAutoPropagateChange.getCatalog() == null) {
-      MetricClientFactory.getMetricClient().count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT, 1,
+      metricClient.count(OssMetricsRegistry.MISSING_APPLY_SCHEMA_CHANGE_INPUT,
           new MetricAttribute(MetricTags.SOURCE_ID, sourceAutoPropagateChange.getSourceId().toString()));
       log.warn("Missing required fields for applying schema change. sourceId: {}, workspaceId: {}, catalogId: {}, catalog: {}",
           sourceAutoPropagateChange.getSourceId(), sourceAutoPropagateChange.getWorkspaceId(), sourceAutoPropagateChange.getCatalogId(),
@@ -563,7 +578,7 @@ public class SchedulerHandler {
     if (response.isSuccess()) {
       final ActorCatalog catalog = catalogService.getActorCatalogById(response.getOutput());
       final AirbyteCatalog persistenceCatalog = Jsons.object(catalog.getCatalog(),
-          io.airbyte.protocol.models.AirbyteCatalog.class);
+          io.airbyte.protocol.models.v0.AirbyteCatalog.class);
       sourceDiscoverSchemaRead.catalog(catalogConverter.toApi(persistenceCatalog, sourceVersion));
       sourceDiscoverSchemaRead.catalogId(response.getOutput());
     }
@@ -639,7 +654,7 @@ public class SchedulerHandler {
 
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
     } else {
-      final long jobId = jobFactory.createSync(jobCreate.getConnectionId());
+      final long jobId = jobFactory.createSync(jobCreate.getConnectionId(), jobCreate.getIsScheduled());
 
       log.info("New job created, with id: " + jobId);
       final Job job = jobPersistence.getJob(jobId);
@@ -650,6 +665,7 @@ public class SchedulerHandler {
   }
 
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) throws IOException {
+    log.info("Canceling job {}", jobIdRequestBody.getId());
     return submitCancellationToWorker(jobIdRequestBody.getId());
   }
 
@@ -696,6 +712,8 @@ public class SchedulerHandler {
     final Job job = jobPersistence.getJob(jobId);
 
     final ManualOperationResult cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.getScope()));
+    log.info("Cancellation result for job {}: failingReason={} errorCode={}",
+        jobId, cancellationResult.getFailingReason(), cancellationResult.getErrorCode());
     if (cancellationResult.getFailingReason() != null) {
       throw new IllegalStateException(cancellationResult.getFailingReason());
     }
@@ -704,6 +722,7 @@ public class SchedulerHandler {
     for (final Attempt attempt : job.getAttempts()) {
       attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
     }
+    log.info("Adding connection timeline event for job {} attemptStats={}", jobId, attemptStats);
     connectionTimelineEventHelper.logJobCancellationEventInConnectionTimeline(job, attemptStats);
     // query same job ID again to get updated job info after cancellation
     return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
@@ -761,7 +780,7 @@ public class SchedulerHandler {
   }
 
   /**
-   * Wrapper around {@link SecretsRepositoryWriter#createFromConfig}.
+   * Wrapper around {@link SecretsRepositoryWriter#createEphemeralFromConfig}.
    *
    * @param workspaceId workspaceId
    * @param connectionConfiguration connectionConfiguration
@@ -771,22 +790,13 @@ public class SchedulerHandler {
   @SuppressWarnings("PMD.PreserveStackTrace")
   private JsonNode sanitizePartialConfig(final UUID workspaceId,
                                          final JsonNode connectionConfiguration,
-                                         final ConnectorSpecification connectorSpecification)
-      throws IOException, ConfigNotFoundException {
-    // split out secrets
-    final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-      final SecretPersistenceConfig secretPersistenceConfig;
-      try {
-        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(),
-          new RuntimeSecretPersistence(secretPersistenceConfig));
-    } else {
-      return secretsRepositoryWriter.createEphemeralFromConfig(connectionConfiguration, connectorSpecification.getConnectionSpecification(), null);
-    }
+                                         final ConnectorSpecification connectorSpecification) {
+    final Optional<UUID> secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(workspaceId)).map(SecretStorage::getIdJava);
+    final ConfigWithProcessedSecrets configWithProcessedSecrets =
+        SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+            connectionConfiguration, connectorSpecification.getConnectionSpecification(), secretStorageId.orElse(null));
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
+    return secretsRepositoryWriter.createEphemeralFromConfig(configWithProcessedSecrets, secretPersistence);
   }
 
 }

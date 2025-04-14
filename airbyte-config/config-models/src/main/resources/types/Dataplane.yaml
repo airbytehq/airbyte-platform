@@ -1,0 +1,39 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/Dataplane.yaml
+title: Dataplane
+description: dataplane entry
+type: object
+required:
+  - id
+  - dataplane_group_id
+  - name
+  - enabled
+  - created_at
+  - updated_at
+  - tombstone
+additionalProperties: true
+properties:
+  id:
+    type: string
+    format: uuid
+    description: Unique ID of the data plane
+  dataplane_group_id:
+    type: string
+    format: uuid
+    description: Dataplane group to which the data plane is assigned
+  name:
+    type: string
+    description: Name of the dataplane
+  enabled:
+    type: boolean
+    description: Whether the dataplane is enabled
+  created_at:
+    type: integer
+    format: int64
+  updated_at:
+    type: integer
+    format: int64
+  tombstone:
+    type: boolean
+    description: Whether the dataplane is marked as deleted

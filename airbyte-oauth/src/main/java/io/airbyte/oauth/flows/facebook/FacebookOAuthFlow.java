@@ -22,12 +22,12 @@ import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Following docs from
- * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow
+ * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow.
  */
 public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
 
-  private static final String ACCESS_TOKEN_URL = "https://graph.facebook.com/v19.0/oauth/access_token";
-  private static final String AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v19.0/dialog/oauth";
+  private static final String ACCESS_TOKEN_URL = "https://graph.facebook.com/v21.0/oauth/access_token";
+  private static final String AUTH_CODE_TOKEN_URL = "https://www.facebook.com/v21.0/dialog/oauth";
   private static final String ACCESS_TOKEN = "access_token";
 
   public FacebookOAuthFlow(final HttpClient httpClient) {

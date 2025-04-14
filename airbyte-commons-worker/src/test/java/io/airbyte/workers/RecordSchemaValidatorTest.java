@@ -7,14 +7,13 @@ package io.airbyte.workers;
 import static org.junit.Assert.assertEquals;
 
 import io.airbyte.commons.resources.MoreResources;
-import io.airbyte.config.StandardSync;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.Jsons;
-import io.airbyte.workers.test_utils.AirbyteMessageUtils;
-import io.airbyte.workers.test_utils.TestConfigHelpers;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteStream;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
+import io.airbyte.workers.testutils.AirbyteMessageUtils;
+import io.airbyte.workers.testutils.TestConfigHelpers;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.tuple.ImmutablePair;
+import kotlin.Pair;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -40,13 +39,13 @@ class RecordSchemaValidatorTest {
   private static final AirbyteMessage INVALID_RECORD_1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, 3);
   private static final AirbyteMessage INVALID_RECORD_2 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, Map.of(FIELD_NAME, true));
 
-  private ConcurrentMap<AirbyteStreamNameNamespacePair, ImmutablePair<Set<String>, Integer>> validationErrors;
+  private ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<Set<String>, Integer>> validationErrors;
   private ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> uncountedValidationErrors;
 
   @BeforeEach
   void setup() {
-    final ImmutablePair<StandardSync, ReplicationInput> syncPair = TestConfigHelpers.createReplicationConfig();
-    replicationInput = syncPair.getValue();
+    final var syncPair = TestConfigHelpers.createReplicationConfig();
+    replicationInput = syncPair.getSecond();
     validationErrors = new ConcurrentHashMap<>();
     uncountedValidationErrors = new ConcurrentHashMap<>();
   }
@@ -82,7 +81,7 @@ class RecordSchemaValidatorTest {
         validationErrors));
     executorService.awaitTermination(3, TimeUnit.SECONDS);
     assertEquals(1, validationErrors.size());
-    assertEquals(2, (int) validationErrors.get(AIRBYTE_STREAM_NAME_NAMESPACE_PAIR).getRight());
+    assertEquals(2, (int) validationErrors.get(AIRBYTE_STREAM_NAME_NAMESPACE_PAIR).getSecond());
   }
 
   @Test

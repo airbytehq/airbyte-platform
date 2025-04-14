@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
+
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
@@ -45,7 +46,6 @@ internal class OrganizationApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testUpdateOrganization() {
     every { organizationsHandler.updateOrganization(any()) } returns OrganizationRead()
 
@@ -54,7 +54,6 @@ internal class OrganizationApiControllerTest {
   }
 
   @Test
-  @Throws(Exception::class)
   fun testCreateOrganization() {
     every { organizationsHandler.createOrganization(any()) } returns OrganizationRead()
 

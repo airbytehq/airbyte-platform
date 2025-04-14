@@ -19,7 +19,7 @@ public interface SyncJobFactory {
    * @param connectionId connection id
    * @return job id
    */
-  Long createSync(UUID connectionId);
+  Long createSync(UUID connectionId, boolean isScheduled);
 
   /**
    * Create refresh job for given connection id.

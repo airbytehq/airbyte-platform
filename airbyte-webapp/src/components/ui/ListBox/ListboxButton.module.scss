@@ -1,0 +1,56 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.listboxButton {
+  width: 100%;
+  cursor: pointer;
+  background-color: initial;
+  color: colors.$dark-blue;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
+  text-align: left;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: variables.$spacing-md;
+  font-size: variables.$font-size-lg;
+  line-height: 1.4;
+  min-height: 36px;
+
+  &:disabled {
+    border-color: colors.$grey-100;
+    cursor: not-allowed;
+  }
+
+  &[aria-expanded="true"] {
+    border-color: colors.$blue;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: colors.$grey-300;
+  }
+
+  &:focus:not(:disabled) {
+    border-color: colors.$blue;
+  }
+
+  &:hover:not(:disabled)[aria-expanded="true"] {
+    border-color: colors.$blue;
+  }
+
+  &--error {
+    border-color: colors.$red-200;
+
+    &:hover:not(:disabled) {
+      border-color: colors.$red;
+    }
+  }
+
+  .disabledText {
+    color: colors.$grey-300;
+  }
+
+  &__content {
+    width: 100%;
+  }
+}

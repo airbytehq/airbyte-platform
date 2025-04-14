@@ -1,6 +1,6 @@
 global:
   serviceAccountName: placeholderServiceAccount
-  deploymentMode: oss
+  edition: community
   configMapName: ""
   secretName: ""
   extraContainers: []
@@ -23,6 +23,8 @@ global:
 enabled: true
 ##  webapp.replicaCount Number of webapp replicas
 replicaCount: 1
+
+serviceAccountName:
 
 ##  webapp.image.repository The repository to use for the airbyte webapp image.
 ##  webapp.image.pullPolicy the pull policy to use for the airbyte webapp image

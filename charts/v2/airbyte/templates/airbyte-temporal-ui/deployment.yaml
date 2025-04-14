@@ -22,14 +22,14 @@ spec:
         {{ toYaml (mergeOverwrite .Values.temporalUi.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
         {{- end }}
         {{- if .Values.temporalUi.podLabels}}
-          {{- include "common.tplvalues.render" (dict "value" .Values.temporalUi.podLabels "context" $) | nindent 8 }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.podLabels "context" $) | nindent 8 }}
         {{- end }}
       {{- if .Values.temporalUi.podAnnotations }}
       annotations:
-        {{- include "common.tplvalues.render" (dict "value" .Values.temporalUi.podAnnotations "context" $) | nindent 8 }}
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.temporalUi.serviceAccountName }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
@@ -37,13 +37,13 @@ spec:
         {{- end }}
       {{- end }}
       {{- if .Values.temporalUi.nodeSelector }}
-      nodeSelector: {{- include "common.tplvalues.render" (dict "value" .Values.temporalUi.nodeSelector "context" $) | nindent 6 }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.nodeSelector "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.temporalUi.tolerations }}
-      tolerations: {{- include "common.tplvalues.render" (dict "value" .Values.temporalUi.tolerations "context" $) | nindent 6 }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.tolerations "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.temporalUi.affinity }}
-      affinity: {{- include "common.tplvalues.render" (dict "value" .Values.temporalUi.affinity "context" $) | nindent 6 }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.temporalUi.affinity "context" $) | nindent 6 }}
       {{- end }}
       {{- if .Values.temporalUi.extraInitContainers }}
       initContainers:

@@ -1,184 +1,77 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.server.services
 
-import io.airbyte.api.model.generated.ActorType
-import io.airbyte.api.model.generated.WorkloadPriority
-import io.airbyte.api.problems.model.generated.ProblemMessageData
-import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.config.ConfigScopeType
-import io.airbyte.config.Geography
-import io.airbyte.config.StandardSync
-import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.DestinationService
-import io.airbyte.data.services.ScopedConfigurationService
-import io.airbyte.data.services.SourceService
-import io.airbyte.data.services.WorkspaceService
-import io.airbyte.data.services.shared.NetworkSecurityTokenKey
-import io.airbyte.featureflag.CloudProvider
-import io.airbyte.featureflag.CloudProviderRegion
-import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Context
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.GeographicRegion
-import io.airbyte.featureflag.Multi
-import io.airbyte.featureflag.Priority
-import io.airbyte.featureflag.Priority.Companion.HIGH_PRIORITY
-import io.airbyte.featureflag.WorkloadApiRouting
-import io.airbyte.featureflag.Workspace
+import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
+import io.airbyte.config.Dataplane
+import io.airbyte.data.services.DataplaneCredentialsService
+import io.airbyte.data.services.DataplaneService
+import io.airbyte.data.services.DataplaneTokenService
+import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
-import jakarta.validation.constraints.NotNull
+import org.jooq.exception.DataAccessException
 import java.util.UUID
 
 @Singleton
-class DataplaneService(
-  private val connectionService: ConnectionService,
-  private val workspaceService: WorkspaceService,
-  private val sourceService: SourceService,
-  private val destinationService: DestinationService,
-  private val featureFlagClient: FeatureFlagClient,
-  private val scopedConfigurationService: ScopedConfigurationService,
+open class DataplaneService(
+  private val dataplaneDataService: DataplaneService,
+  private val dataplaneCredentialsService: DataplaneCredentialsService,
+  private val dataplaneTokenService: DataplaneTokenService,
 ) {
-  /**
-   * Get queue name from given data. Pulled from the WorkloadService.
-   */
-  fun getQueueName(
-    connectionId: UUID?,
-    actorType: ActorType?,
-    actorId: UUID?,
-    workspaceId: UUID?,
-    priority: @NotNull WorkloadPriority,
-  ): String {
-    val connection = connectionId?.let { connectionService.getStandardSync(connectionId) }
-    val resolvedWorkspaceId = workspaceId ?: resolveWorkspaceId(connection, actorType, actorId)
-    val geography = getGeography(connection, resolvedWorkspaceId)
+  fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials = dataplaneCredentialsService.createCredentials(dataplaneId)
 
-    val context =
-      when (hasNetworkSecurityTokenConfig(resolvedWorkspaceId)) {
-        true -> {
-          buildNetworkSecurityTokenFeatureFlagContext(
-            workspaceId = resolvedWorkspaceId,
-            connectionId = connectionId,
-            geography = geography,
-          )
-        }
-        false -> {
-          buildFeatureFlagContext(
-            workspaceId = resolvedWorkspaceId,
-            connectionId = connectionId,
-            geography = geography,
-            priority = priority,
-          )
-        }
+  fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
+
+  fun updateDataplane(
+    dataplaneId: UUID,
+    updatedName: String?,
+    updatedEnabled: Boolean?,
+  ): Dataplane {
+    val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
+
+    val updatedDataplane =
+      existingDataplane.apply {
+        updatedName?.let { name = it }
+        updatedEnabled?.let { enabled = it }
       }
-    return featureFlagClient.stringVariation(WorkloadApiRouting, Multi(context))
+
+    return writeDataplane(updatedDataplane)
   }
 
-  private fun resolveWorkspaceId(
-    connection: StandardSync?,
-    actorType: ActorType?,
-    actorId: UUID?,
-  ): UUID? {
-    return connection?.let {
-      destinationService.getDestinationConnection(connection.destinationId).workspaceId
-    } ?: actorType?.let {
-      when (actorType) {
-        ActorType.SOURCE -> sourceService.getSourceConnection(actorId).workspaceId
-        ActorType.DESTINATION -> destinationService.getDestinationConnection(actorId).workspaceId
-        else -> null
+  @Transactional("config")
+  open fun deleteDataplane(dataplaneId: UUID): Dataplane {
+    val existingDataplane = dataplaneDataService.getDataplane(dataplaneId)
+    val tombstonedDataplane =
+      existingDataplane.apply {
+        tombstone = true
       }
-    }
+
+    dataplaneCredentialsService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneCredentialsService.deleteCredentials(it.id) }
+    return writeDataplane(tombstonedDataplane)
   }
 
-  /**
-   * Given a connectionId and workspaceId, attempt to resolve geography.
-   */
-  private fun getGeography(
-    connection: StandardSync?,
-    workspaceId: UUID?,
-  ): Geography {
+  fun getToken(
+    clientId: String,
+    clientSecret: String,
+  ): String = dataplaneTokenService.getToken(clientId, clientSecret)
+
+  fun getDataplaneFromClientId(clientId: String): Dataplane {
+    val dataplaneId = dataplaneCredentialsService.getDataplaneId(clientId)
+    return dataplaneDataService.getDataplane(dataplaneId)
+  }
+
+  fun writeDataplane(dataplane: Dataplane): Dataplane {
     try {
-      return connection?.let {
-        connection.geography
-      } ?: workspaceId?.let {
-        workspaceService.getGeographyForWorkspace(workspaceId)
-      } ?: Geography.AUTO
-    } catch (e: Exception) {
-      throw BadRequestProblem(ProblemMessageData().message("Unable to find geography of for connection [$connection], workspace [$workspaceId]"))
+      return dataplaneDataService.writeDataplane(dataplane)
+    } catch (e: DataAccessException) {
+      if (e.message?.contains("duplicate key value violates unique constraint") == true &&
+        e.message?.contains("dataplane_dataplane_group_id_name_key") == true
+      ) {
+        throw DataplaneNameAlreadyExistsProblem()
+      }
+      throw e
     }
-  }
-
-  private fun hasNetworkSecurityTokenConfig(workspaceId: UUID?): Boolean {
-    return workspaceId?.let {
-      scopedConfigurationService.getScopedConfigurations(
-        NetworkSecurityTokenKey,
-        mapOf(ConfigScopeType.WORKSPACE to workspaceId),
-      ).isNotEmpty()
-    } ?: false
-  }
-
-  /**
-   * Build the feature flag context for network security token.
-   * Uses geographic region (new).
-   */
-  private fun buildNetworkSecurityTokenFeatureFlagContext(
-    workspaceId: UUID?,
-    connectionId: UUID?,
-    geography: Geography,
-    priority: WorkloadPriority = WorkloadPriority.DEFAULT,
-  ): MutableList<Context> {
-    val context =
-      mutableListOf(
-        GeographicRegion(geography.toGeographicRegion()),
-        CloudProvider(CloudProvider.AWS),
-        CloudProviderRegion(CloudProviderRegion.AWS_US_EAST_1),
-      )
-
-    workspaceId?.let {
-      context.add(Workspace(workspaceId))
-    }
-
-    connectionId?.let {
-      context.add(Connection(connectionId))
-    }
-
-    if (WorkloadPriority.HIGH == priority) {
-      context.add(Priority(HIGH_PRIORITY))
-    }
-
-    return context
-  }
-}
-
-/**
- * Builds the old feature flag context for routing.
- * Uses geography.
- */
-private fun buildFeatureFlagContext(
-  workspaceId: UUID?,
-  connectionId: UUID?,
-  geography: Geography,
-  priority: WorkloadPriority = WorkloadPriority.DEFAULT,
-): MutableList<Context> {
-  val context = mutableListOf<Context>(io.airbyte.featureflag.Geography(geography.toString()))
-
-  workspaceId?.let {
-    context.add(Workspace(workspaceId))
-  }
-
-  connectionId?.let {
-    context.add(Connection(connectionId))
-  }
-
-  if (WorkloadPriority.HIGH == priority) {
-    context.add(Priority(HIGH_PRIORITY))
-  }
-
-  return context
-}
-
-fun Geography.toGeographicRegion(): String {
-  return when (this) {
-    Geography.AUTO -> GeographicRegion.US
-    Geography.US -> GeographicRegion.US
-    Geography.EU -> GeographicRegion.EU
   }
 }

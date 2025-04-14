@@ -1,12 +1,16 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
-import io.airbyte.metrics.lib.MetricAttribute
-import io.airbyte.metrics.lib.MetricClient
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.metrics.lib.OssMetricsRegistry
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
@@ -117,10 +121,12 @@ class ReplicationHydrationProcessor(
     transformedCatalog.errors.entries.forEach { streamErrors ->
       streamErrors.value.values.forEach { streamError ->
         metricClient.count(
-          OssMetricsRegistry.MAPPER_ERROR,
-          1,
-          MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
-          MetricAttribute(MetricTags.FAILURE_TYPE, streamError.type.name),
+          metric = OssMetricsRegistry.MAPPER_ERROR,
+          attributes =
+            arrayOf(
+              MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
+              MetricAttribute(MetricTags.FAILURE_TYPE, streamError.type.name),
+            ),
         )
       }
     }

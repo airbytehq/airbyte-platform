@@ -12,6 +12,8 @@ import ch.qos.logback.core.boolex.EventEvaluatorBase
  * in the [ILoggingEvent]'s MDC.  This class is necessary because as of Logback 1.5.13, the
  * JaninoEvaluator has been removed with no replacement for security reasons.
  */
-class AirbyteMdcEvaluator(private val contextKey: String) : EventEvaluatorBase<ILoggingEvent>() {
+class AirbyteMdcEvaluator(
+  private val contextKey: String,
+) : EventEvaluatorBase<ILoggingEvent>() {
   override fun evaluate(event: ILoggingEvent): Boolean = event.mdcPropertyMap[contextKey].isNullOrEmpty()
 }

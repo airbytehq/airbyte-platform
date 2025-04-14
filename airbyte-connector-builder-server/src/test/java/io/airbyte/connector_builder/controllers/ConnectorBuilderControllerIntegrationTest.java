@@ -25,11 +25,13 @@ import io.airbyte.connector_builder.exceptions.ConnectorBuilderException;
 import io.airbyte.connector_builder.file_writer.MockAirbyteFileWriterImpl;
 import io.airbyte.connector_builder.handlers.AssistProxyHandler;
 import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
+import io.airbyte.connector_builder.handlers.FullResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
 import io.airbyte.connector_builder.requester.AirbyteCdkRequesterImpl;
 import io.airbyte.connector_builder.templates.ContributionTemplates;
+import io.airbyte.metrics.MetricClient;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import java.io.ByteArrayInputStream;
@@ -74,7 +76,7 @@ class ConnectorBuilderControllerIntegrationTest {
   void setup() {
     this.healthHandler = mock(HealthHandler.class);
     this.writer = new MockAirbyteFileWriterImpl();
-    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory();
+    this.streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(mock(MetricClient.class));
     this.contributionTemplates = new ContributionTemplates();
     this.assistProxyHandler = mock(AssistProxyHandler.class);
   }
@@ -103,7 +105,8 @@ class ConnectorBuilderControllerIntegrationTest {
     final SynchronousCdkCommandRunner commandRunner = new MockSynchronousPythonCdkCommandRunner(
         this.writer, this.streamFactory, shouldThrow, exitCode, inputStream, errorStream, outputStream);
     final AirbyteCdkRequesterImpl requester = new AirbyteCdkRequesterImpl(commandRunner);
-    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new StreamHandler(requester),
+    return new ConnectorBuilderController(this.healthHandler, new ResolveManifestHandler(requester), new FullResolveManifestHandler(requester),
+        new StreamHandler(requester),
         new ConnectorContributionHandler(contributionTemplates, null), this.assistProxyHandler);
   }
 

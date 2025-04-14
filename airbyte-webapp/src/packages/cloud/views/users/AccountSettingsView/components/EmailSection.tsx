@@ -1,6 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 
@@ -8,13 +8,11 @@ import { useCurrentUser } from "core/services/auth";
 
 import styles from "./EmailSection.module.scss";
 
-const emailFormSchema = yup.object({
-  email: yup.string().required("form.empty.error"),
+const emailFormSchema = z.object({
+  email: z.string().email("form.empty.error"),
 });
 
-export interface EmailFormValues {
-  email: string;
-}
+type EmailFormValues = z.infer<typeof emailFormSchema>;
 
 export const EmailSection: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -25,7 +23,7 @@ export const EmailSection: React.FC = () => {
       defaultValues={{
         email: user.email,
       }}
-      schema={emailFormSchema}
+      zodSchema={emailFormSchema}
     >
       <FormControl<EmailFormValues>
         containerControlClassName={styles.emailControl}

@@ -3,7 +3,7 @@ import { useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
 import * as yup from "yup";
-import { SchemaOf } from "yup";
+import { z } from "zod";
 
 import { Form } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -19,15 +19,12 @@ import { FeatureItem, useFeature } from "core/services/features";
 import { AddUserModalBody } from "./AddUserModalBody";
 import { useListUsersToAdd } from "./useListUsersToAdd";
 
-export interface AddUserFormValues {
-  email: string;
-  permission: PermissionType;
-}
-
-const ValidationSchema: SchemaOf<AddUserFormValues> = yup.object().shape({
-  email: yup.string().email("form.email.error").required(),
-  permission: yup.mixed().oneOf(Object.values(PermissionType)).required(),
+const ValidationSchema = z.object({
+  email: z.string().trim().email("form.email.error"),
+  permission: z.nativeEnum(PermissionType),
 });
+
+export type AddUserFormValues = z.infer<typeof ValidationSchema>;
 
 const SubmissionButton: React.FC = () => {
   const { isSubmitting, isValid } = useFormState();
@@ -88,7 +85,7 @@ export const AddUserModal: React.FC<{ onSubmit: () => void; scope: ScopeType }> 
 
   return (
     <Form<AddUserFormValues>
-      schema={ValidationSchema}
+      zodSchema={ValidationSchema}
       defaultValues={{ email: "", permission: PermissionType.workspace_admin }}
       onSubmit={onInviteSubmit}
     >

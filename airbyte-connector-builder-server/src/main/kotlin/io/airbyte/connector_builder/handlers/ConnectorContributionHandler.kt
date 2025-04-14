@@ -1,3 +1,7 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
 @file:Suppress("ktlint:standard:package-name")
 
 package io.airbyte.connector_builder.handlers
@@ -36,11 +40,22 @@ class ConnectorContributionHandler(
 
     // Check for existing connector
     val connectorExists = githubContributionService.checkIfConnectorExistsOnMain()
-    val connectorName = githubContributionService.readConnectorMetadataValue("name")
-    val connectorPath = if (connectorExists) "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}" else null
+
+    // only fetch connector name, description, and Github url if connector exists
+    val (connectorName, connectorDescription, connectorPath) =
+      if (connectorExists) {
+        Triple(
+          githubContributionService.readConnectorMetadataValue("name"),
+          githubContributionService.readConnectorDescription(),
+          "airbytehq/airbyte/tree/master/airbyte-integrations/connectors/${request.connectorImageName}",
+        )
+      } else {
+        Triple(null, null, null)
+      }
 
     return CheckContributionRead().apply {
       this.connectorName = connectorName
+      this.connectorDescription = connectorDescription
       githubUrl = connectorPath
       this.connectorExists = connectorExists
     }
@@ -57,23 +72,24 @@ class ConnectorContributionHandler(
   fun getFilesToCommitGenerationMap(
     contributionInfo: BuilderContributionInfo,
     githubContributionService: GithubContributionService,
-  ): Map<String, () -> String> {
-    // Always generate the manifest and metadata files
+  ): Map<String, () -> String?> {
+    // Always generate and overwrite the manifest and custom components python file
+    // If the value of the map is null (in the case of an optional file), this will delete the file if it exists
     val filesToCommit =
       mutableMapOf(
         githubContributionService.connectorManifestPath to { contributionInfo.manifestYaml },
-        githubContributionService.connectorMetadataPath to {
-          contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService)
-        },
+        githubContributionService.connectorCustomComponentsPath to { contributionInfo.customComponents },
       )
 
-    // Others - generate if not pre-existing
+    // Do not regenerate these if they already exist
     val createIfNotExistsFiles =
       listOf(
         githubContributionService.connectorReadmePath to { contributionTemplates.renderContributionReadmeMd(contributionInfo) },
         githubContributionService.connectorIconPath to { contributionTemplates.renderIconSvg() },
         githubContributionService.connectorAcceptanceTestConfigPath to { contributionTemplates.renderAcceptanceTestConfigYaml(contributionInfo) },
         githubContributionService.connectorDocsPath to { contributionTemplates.renderContributionDocsMd(contributionInfo) },
+        githubContributionService.connectorMetadataPath to
+          { contributionTemplates.renderContributionMetadataYaml(contributionInfo, githubContributionService) },
       )
 
     createIfNotExistsFiles.forEach { (filePath, generationFunction) ->
@@ -96,9 +112,11 @@ class ConnectorContributionHandler(
       connectorName = generateContributionRequestBody.name,
       connectorImageName = generateContributionRequestBody.connectorImageName,
       actorDefinitionId = actorDefinitionId,
-      description = generateContributionRequestBody.description,
+      connectorDescription = generateContributionRequestBody.connectorDescription,
+      contributionDescription = generateContributionRequestBody.contributionDescription,
       githubToken = generateContributionRequestBody.githubToken,
       manifestYaml = generateContributionRequestBody.manifestYaml,
+      customComponents = generateContributionRequestBody.customComponents,
       baseImage = generateContributionRequestBody.baseImage,
       versionTag = "0.0.1",
       authorUsername = authorUsername,
@@ -128,13 +146,12 @@ class ConnectorContributionHandler(
       .actorDefinitionId(UUID.fromString(contributionInfo.actorDefinitionId))
   }
 
-  private fun convertGithubExceptionToContributionException(e: HttpException): Exception {
-    return when (e.responseCode) {
+  private fun convertGithubExceptionToContributionException(e: HttpException): Exception =
+    when (e.responseCode) {
       401 -> InvalidGithubTokenProblem()
       409 -> InsufficientGithubTokenPermissionsProblem(e)
       else -> GithubContributionFailedProblem(GithubContributionProblemData().status(e.responseCode).message(e.message))
     }
-  }
 
   private fun convertToContributionException(e: Exception): Exception {
     logger.error(e) { "Failed to generate contribution" }
