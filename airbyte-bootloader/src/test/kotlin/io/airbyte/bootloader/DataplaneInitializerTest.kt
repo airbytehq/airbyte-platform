@@ -146,7 +146,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
+    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }

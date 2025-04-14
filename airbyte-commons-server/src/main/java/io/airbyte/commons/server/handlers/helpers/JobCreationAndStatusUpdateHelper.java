@@ -197,7 +197,7 @@ public class JobCreationAndStatusUpdateHelper {
     final List<ReleaseStage> releaseStages = getJobToReleaseStages(job);
     final var releaseStagesOrdered = orderByReleaseStageAsc(releaseStages);
     final var connectionId = job.getScope() == null ? null : UUID.fromString(job.getScope());
-    final var geography = connectionService.getGeographyForConnection(connectionId);
+    final var geography = connectionService.getDataplaneGroupNameForConnection(connectionId);
     final var parsedAttemptNumber = parseAttemptNumberOrNull(attemptNumber);
 
     final List<MetricAttribute> baseMetricAttributes = new ArrayList<>();

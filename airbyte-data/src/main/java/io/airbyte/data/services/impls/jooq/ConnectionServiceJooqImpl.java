@@ -560,7 +560,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    * @throws IOException exception while interacting with the db
    */
   @Override
-  public String getGeographyForConnection(final UUID connectionId) throws IOException {
+  public String getDataplaneGroupNameForConnection(final UUID connectionId) throws IOException {
     final List<String> geographyString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
         .from(CONNECTION)
         .leftJoin(DATAPLANE_GROUP)
@@ -1213,13 +1213,13 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       throw new IllegalStateException("No organization found for actor " + connection.getSourceId(), e);
     }
     try {
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(organizationId, geography).getId();
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(organizationId, geography).getId();
     } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
       log.error(
           String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
               organizationId, geography),
           e);
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
           .getId();
     }
   }

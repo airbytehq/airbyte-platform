@@ -30,16 +30,16 @@ open class DataplaneGroupServiceDataImpl(
         ConfigNotFoundException(ConfigSchema.DATAPLANE_GROUP, id)
       }.toConfigModel()
 
-  override fun getDataplaneGroupByOrganizationIdAndGeography(
+  override fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
-    geography: String,
+    name: String,
   ): DataplaneGroup =
     repository
-      .findAllByOrganizationIdAndNameIgnoreCase(organizationId, geography)
+      .findAllByOrganizationIdAndNameIgnoreCase(organizationId, name)
       .ifEmpty {
         listOf(
           repository
-            .findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, geography)
+            .findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, name)
             // We have a uniqueness constraint on (organizationId, name) so can just return the first
             .first(),
         )

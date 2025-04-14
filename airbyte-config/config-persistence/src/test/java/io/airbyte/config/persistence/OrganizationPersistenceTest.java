@@ -59,7 +59,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     dataplaneGroupService = mock(DataplaneGroupService.class);
-    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
     final var metricClient = mock(MetricClient.class);

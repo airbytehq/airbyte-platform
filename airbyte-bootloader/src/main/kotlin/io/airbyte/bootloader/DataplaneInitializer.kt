@@ -41,7 +41,7 @@ class DataplaneInitializer(
     val group =
       when (edition) {
         AirbyteEdition.CLOUD ->
-          groupService.getDataplaneGroupByOrganizationIdAndGeography(
+          groupService.getDataplaneGroupByOrganizationIdAndName(
             DEFAULT_ORGANIZATION_ID,
             GEOGRAPHY_US,
           )

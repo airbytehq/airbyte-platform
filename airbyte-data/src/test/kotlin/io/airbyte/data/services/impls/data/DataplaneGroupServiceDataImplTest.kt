@@ -104,7 +104,11 @@ class DataplaneGroupServiceDataImplTest {
 
     every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) } returns listOf(dataplaneGroup)
 
-    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndGeography(mockOrganizationId, mockGeography)
+    val retrievedDataplaneGroup =
+      dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(
+        mockOrganizationId,
+        mockGeography,
+      )
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
 
     verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }
@@ -119,7 +123,7 @@ class DataplaneGroupServiceDataImplTest {
     every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) } returns emptyList()
 
     assertThrows<NoSuchElementException> {
-      dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndGeography(mockOrganizationId, mockGeography)
+      dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockGeography)
     }
 
     verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }
@@ -146,7 +150,7 @@ class DataplaneGroupServiceDataImplTest {
     every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) } returns emptyList()
     every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) } returns listOf(dataplaneGroup)
 
-    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndGeography(mockOrganizationId, mockGeography)
+    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockGeography)
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
 
     verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }

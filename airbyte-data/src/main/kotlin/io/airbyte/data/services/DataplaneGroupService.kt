@@ -16,9 +16,9 @@ interface DataplaneGroupService {
   /**
    * Get the dataplane group by geography .
    */
-  fun getDataplaneGroupByOrganizationIdAndGeography(
+  fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
-    geography: String,
+    name: String,
   ): DataplaneGroup
 
   /**

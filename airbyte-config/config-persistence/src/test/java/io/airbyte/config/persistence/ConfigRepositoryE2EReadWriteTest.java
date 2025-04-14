@@ -845,7 +845,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetGeographyForConnection() throws IOException {
     final StandardSync sync = MockData.standardSyncs().get(0);
     final String expected = sync.getGeography();
-    final String actual = connectionService.getGeographyForConnection(sync.getConnectionId());
+    final String actual = connectionService.getDataplaneGroupNameForConnection(sync.getConnectionId());
 
     assertEquals(expected, actual);
   }

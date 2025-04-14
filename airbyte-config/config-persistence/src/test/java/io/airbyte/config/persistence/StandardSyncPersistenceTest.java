@@ -533,7 +533,7 @@ class StandardSyncPersistenceTest extends BaseConfigDatabaseTest {
 
     UUID result = standardSyncPersistence.getDataplaneGroupIdFromGeography(connection, geography);
 
-    assertEquals(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, geography).getId(), result);
+    assertEquals(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, geography).getId(), result);
   }
 
   private void createBaseObjects() throws IOException, JsonValidationException {
