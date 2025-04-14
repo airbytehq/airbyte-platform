@@ -51,7 +51,6 @@ data class ReplicationPodFactory(
     enableAsyncProfiler: Boolean = false,
     singleConnectorTest: Boolean = false,
     socketTest: Boolean = false,
-    exposedOrchestratorPorts: List<Int> = emptyList(),
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -71,7 +70,6 @@ data class ReplicationPodFactory(
         volumeMounts = replicationVolumes.orchVolumeMounts,
         runtimeEnvVars = orchRuntimeEnvVars,
         image = orchImage,
-        exposedOrchestratorPorts = exposedOrchestratorPorts,
       )
 
     val sourceContainer =
@@ -148,7 +146,6 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
-    exposedOrchestratorPorts: List<Int>,
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -168,7 +165,6 @@ data class ReplicationPodFactory(
         volumeMounts = replicationVolumes.orchVolumeMounts,
         runtimeEnvVars = orchRuntimeEnvVars,
         image = orchImage,
-        exposedOrchestratorPorts = exposedOrchestratorPorts,
       )
 
     val destContainer =

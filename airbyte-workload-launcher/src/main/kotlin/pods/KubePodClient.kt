@@ -10,7 +10,6 @@ import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEOUT
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableAsyncProfiler
-import io.airbyte.featureflag.ExposedOrchestratorPorts
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.SingleContainerTest
 import io.airbyte.featureflag.SocketTest
@@ -76,7 +75,6 @@ class KubePodClient(
     val enableAsyncProfiler = featureFlagClient.boolVariation(EnableAsyncProfiler, Connection(replicationInput.connectionId))
     val singleConnectorTest = featureFlagClient.boolVariation(SingleContainerTest, Connection(replicationInput.connectionId))
     val socketTest = featureFlagClient.boolVariation(SocketTest, Connection(replicationInput.connectionId))
-    val exposedPorts = featureFlagClient.stringVariation(ExposedOrchestratorPorts, Connection(replicationInput.connectionId))
     var pod =
       replicationPodFactory.create(
         podName = kubeInput.podName,
@@ -97,12 +95,6 @@ class KubePodClient(
         enableAsyncProfiler = enableAsyncProfiler,
         singleConnectorTest = singleConnectorTest,
         socketTest = socketTest,
-        exposedOrchestratorPorts =
-          exposedPorts
-            .split(",")
-            .filterNot { p -> p.isEmpty() }
-            .map { p -> p.toInt() }
-            .toList(),
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
@@ -143,7 +135,6 @@ class KubePodClient(
         networkSecurityTokens = replicationInput.networkSecurityTokens,
       )
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
-    val exposedPorts = featureFlagClient.stringVariation(ExposedOrchestratorPorts, Connection(replicationInput.connectionId))
 
     var pod =
       replicationPodFactory.createReset(
@@ -159,12 +150,6 @@ class KubePodClient(
         destRuntimeEnvVars = kubeInput.destinationRuntimeEnvVars,
         isFileTransfer = replicationInput.useFileTransfer,
         workspaceId = replicationInput.workspaceId,
-        exposedOrchestratorPorts =
-          exposedPorts
-            .split(",")
-            .filterNot { p -> p.isEmpty() }
-            .map { p -> p.toInt() }
-            .toList(),
       )
 
     logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }

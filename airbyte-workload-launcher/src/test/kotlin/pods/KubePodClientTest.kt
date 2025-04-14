@@ -10,7 +10,6 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.EnableAsyncProfiler
-import io.airbyte.featureflag.ExposedOrchestratorPorts
 import io.airbyte.featureflag.SingleContainerTest
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.featureflag.TestClient
@@ -152,7 +151,6 @@ class KubePodClientTest {
     every { featureFlagClient.boolVariation(EnableAsyncProfiler, any()) } returns false
     every { featureFlagClient.boolVariation(SingleContainerTest, any()) } returns false
     every { featureFlagClient.boolVariation(SocketTest, any()) } returns false
-    every { featureFlagClient.stringVariation(ExposedOrchestratorPorts, any()) } returns ""
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput
     every { mapper.toKubeInput(WORKLOAD_ID, discoverInput, sharedLabels) } returns connectorKubeInput
@@ -246,8 +244,6 @@ class KubePodClientTest {
         sourceRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
         destinationRuntimeEnvVars = listOf(EnvVar("name", "value", null)),
       )
-    val exposedPorts = listOf(9090, 9091, 9092)
-    every { featureFlagClient.stringVariation(ExposedOrchestratorPorts, any()) } returns exposedPorts.joinToString(separator = ",")
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns kubeInput
     every {
       replicationPodFactory.create(
@@ -269,7 +265,6 @@ class KubePodClientTest {
         false,
         false,
         false,
-        exposedPorts,
       )
     } returns pod
     client.launchReplication(
@@ -373,7 +368,6 @@ class KubePodClientTest {
         kubeInput.destinationRuntimeEnvVars,
         false,
         workspaceId,
-        emptyList(),
       )
     } returns pod
     client.launchReset(
@@ -402,7 +396,6 @@ class KubePodClientTest {
         any(),
         any(),
         any(),
-        any(),
       )
     } returns Pod()
     every { launcher.create(any()) } throws RuntimeException("bang")
@@ -417,7 +410,6 @@ class KubePodClientTest {
     every { mapper.toKubeInput(WORKLOAD_ID, replInput, any()) } returns replicationKubeInput
     every {
       replicationPodFactory.createReset(
-        any(),
         any(),
         any(),
         any(),

@@ -85,8 +85,6 @@ object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migration
 
 object CoRoutineBufferedReplicationWorker : Temporary<Boolean>(key = "platform.coroutine-buffered-replication-worker", default = false)
 
-object ExposedOrchestratorPorts : Temporary<String>(key = "platform.exposed-orchestrator-ports", default = "")
-
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {
