@@ -717,12 +717,10 @@ class SourceDefinitionsHandlerTest {
         .sourceDefinition(create)
         .scopeId(workspaceId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
-        .workspaceId(workspaceId);
+        .workspaceId(null); // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        customCreateForWorkspace.getWorkspaceId()))
-            .thenReturn(sourceDefinitionVersion);
+        create.getDocumentationUrl(), workspaceId)).thenReturn(sourceDefinitionVersion);
 
     final SourceDefinitionRead expectedRead = new SourceDefinitionRead()
         .name(newSourceDefinition.getName())
@@ -747,7 +745,7 @@ class SourceDefinitionsHandlerTest {
     assertEquals(expectedRead, actualRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
-        customCreateForWorkspace.getWorkspaceId());
+        workspaceId);
     verify(sourceService).writeCustomConnectorMetadata(
         newSourceDefinition
             .withCustom(true)
@@ -757,25 +755,33 @@ class SourceDefinitionsHandlerTest {
         workspaceId,
         ScopeType.WORKSPACE);
 
-    final UUID organizationId = UUID.randomUUID();
+    // TODO: custom connectors for organizations are not currently supported. Jobs currently require an
+    // explicit workspace ID to resolve a dataplane group where the job should run. We can uncomment
+    // this section of the test once we support resolving a default dataplane group for a given
+    // organization ID.
 
-    final CustomSourceDefinitionCreate customCreateForOrganization = new CustomSourceDefinitionCreate()
-        .sourceDefinition(create)
-        .scopeId(organizationId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
-
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        null))
-            .thenReturn(sourceDefinitionVersion);
-
-    sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForOrganization);
-
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        null);
-    verify(sourceService).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
-        sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
+    // final UUID organizationId = UUID.randomUUID();
+    //
+    // final CustomSourceDefinitionCreate customCreateForOrganization = new
+    // CustomSourceDefinitionCreate()
+    // .sourceDefinition(create)
+    // .scopeId(organizationId)
+    // .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+    //
+    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(),
+    // create.getDockerImageTag(),
+    // create.getDocumentationUrl(),
+    // null))
+    // .thenReturn(sourceDefinitionVersion);
+    //
+    // sourceDefinitionsHandler.createCustomSourceDefinition(customCreateForOrganization);
+    //
+    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(),
+    // create.getDockerImageTag(),
+    // create.getDocumentationUrl(),
+    // null);
+    // verify(sourceService).writeCustomConnectorMetadata(newSourceDefinition.withCustom(true).withDefaultVersionId(null),
+    // sourceDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }

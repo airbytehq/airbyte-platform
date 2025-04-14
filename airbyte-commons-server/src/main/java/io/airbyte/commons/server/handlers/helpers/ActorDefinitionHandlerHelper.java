@@ -78,7 +78,7 @@ public class ActorDefinitionHandlerHelper {
   public ActorDefinitionVersion defaultDefinitionVersionFromCreate(final String dockerRepository,
                                                                    final String dockerImageTag,
                                                                    final URI documentationUrl,
-                                                                   final @Nullable UUID workspaceId)
+                                                                   final UUID workspaceId)
       throws IOException {
     final ConnectorSpecification spec = getSpecForImage(
         dockerRepository,

@@ -235,7 +235,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
   @Override
   public SynchronousResponse<ConnectorSpecification> createGetSpecJob(final String dockerImage,
                                                                       final boolean isCustomConnector,
-                                                                      final @Nullable UUID workspaceId) {
+                                                                      final UUID workspaceId) {
     final JobGetSpecConfig jobSpecConfig = new JobGetSpecConfig().withDockerImage(dockerImage).withIsCustomConnector(isCustomConnector);
 
     final UUID jobId = UUID.randomUUID();
