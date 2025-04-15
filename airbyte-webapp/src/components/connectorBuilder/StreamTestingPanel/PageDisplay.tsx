@@ -38,7 +38,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   const { formatMessage } = useIntl();
 
   const mode = useBuilderWatch("mode");
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
   const {
     streamRead,
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
@@ -47,7 +47,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
   } = useConnectorBuilderTestRead();
   const { setTestReadSettingsOpen } = useConnectorBuilderFormManagementState();
 
-  const autoImportSchema = useAutoImportSchema(testStreamIndex);
+  const autoImportSchema = useAutoImportSchema(testStreamId);
 
   const formattedRequest = useMemo(() => formatForDisplay(page.request), [page.request]);
   const formattedResponse = useMemo(() => formatForDisplay(page.response), [page.response]);
@@ -104,7 +104,7 @@ export const PageDisplay: React.FC<PageDisplayProps> = ({ page, className, infer
               <SchemaDiffView
                 inferredSchema={inferredSchema}
                 incompatibleErrors={incompatibleSchemaErrors}
-                key={testStreamIndex}
+                key={testStreamId.index}
               />
             ),
             "data-testid": "tag-tab-detected-schema",

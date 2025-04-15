@@ -24,6 +24,7 @@ export interface Experiments {
   "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.declarativeOauth": boolean;
+  "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -53,6 +54,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.contributeEditsToMarketplace": true,
   "connectorBuilder.customComponents": false,
   "connectorBuilder.declarativeOauth": true,
+  "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
