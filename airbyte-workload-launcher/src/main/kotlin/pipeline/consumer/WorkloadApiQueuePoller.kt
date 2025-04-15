@@ -39,7 +39,6 @@ class WorkloadApiQueuePoller(
   private val pollSizeItems: Int,
   private val pollIntervalSeconds: Long,
   private val priority: WorkloadPriority,
-  private val dataplaneName: String,
 ) {
   @Volatile
   private var suspended = true
