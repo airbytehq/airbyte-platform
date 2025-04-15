@@ -1270,6 +1270,7 @@ minio:
     rootUser: minio
     rootPassword: minio123
   storage:
+    storageClass: standard
     volumeClaimValue: 500Mi
 
 cron:
