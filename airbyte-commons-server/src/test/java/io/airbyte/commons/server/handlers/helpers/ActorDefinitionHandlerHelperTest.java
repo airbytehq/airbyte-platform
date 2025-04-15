@@ -40,7 +40,7 @@ import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.micronaut.http.uri.UriBuilder;
 import java.io.IOException;
 import java.net.URI;

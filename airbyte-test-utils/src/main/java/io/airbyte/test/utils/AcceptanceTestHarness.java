@@ -26,6 +26,7 @@ import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration;
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration;
 import io.airbyte.api.client.model.generated.AttemptInfoRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
+import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
 import io.airbyte.api.client.model.generated.ConnectionCreate;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.ConnectionRead;
@@ -46,6 +47,7 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionUpdate;
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.DestinationRead;
 import io.airbyte.api.client.model.generated.DestinationSyncMode;
+import io.airbyte.api.client.model.generated.DestinationUpdate;
 import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody;
 import io.airbyte.api.client.model.generated.JobConfigType;
 import io.airbyte.api.client.model.generated.JobDebugInfoRead;
@@ -81,6 +83,7 @@ import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.SourceRead;
 import io.airbyte.api.client.model.generated.SourceReadList;
+import io.airbyte.api.client.model.generated.SourceUpdate;
 import io.airbyte.api.client.model.generated.StreamStatusListRequestBody;
 import io.airbyte.api.client.model.generated.StreamStatusReadList;
 import io.airbyte.api.client.model.generated.SyncMode;
@@ -246,7 +249,6 @@ public class AcceptanceTestHarness {
   private String cloudSqlInstanceId;
   private String cloudSqlInstanceUsername;
   private String cloudSqlInstancePassword;
-  private String cloudSqlInstancePrivateIp;
   private String cloudSqlInstancePublicIp;
   private final RetryPolicy<Object> retryPolicy;
 
@@ -305,7 +307,8 @@ public class AcceptanceTestHarness {
         List.of(),
         List.of(),
         PUBLIC,
-        true);
+        true,
+        null);
     final AirbyteStreamConfiguration expectedStreamConfig = new AirbyteStreamConfiguration(
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.OVERWRITE,
@@ -373,12 +376,12 @@ public class AcceptanceTestHarness {
       sourceDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           sourceDatabaseName);
       destinationDataSource = GKEPostgresConfig.getDataSource(
           cloudSqlInstanceUsername,
           cloudSqlInstancePassword,
-          cloudSqlInstancePrivateIp,
+          cloudSqlInstancePublicIp,
           destinationDatabaseName);
       // seed database.
       GKEPostgresConfig.runSqlScript(Path.of(MoreResources.readResourceAsFile(postgresSqlInitFile).toURI()), getSourceDatabase());
@@ -507,7 +510,6 @@ public class AcceptanceTestHarness {
     cloudSqlInstanceId = System.getenv("CLOUD_SQL_INSTANCE_ID");
     cloudSqlInstanceUsername = System.getenv("CLOUD_SQL_INSTANCE_USERNAME");
     cloudSqlInstancePassword = System.getenv("CLOUD_SQL_INSTANCE_PASSWORD");
-    cloudSqlInstancePrivateIp = System.getenv("CLOUD_SQL_INSTANCE_PRIVATE_IP");
     cloudSqlInstancePublicIp = System.getenv("CLOUD_SQL_INSTANCE_PUBLIC_IP");
   }
 
@@ -850,6 +852,21 @@ public class AcceptanceTestHarness {
     return destination;
   }
 
+  public DestinationRead updateDestination(final UUID destinationId, final JsonNode updatedConfig, final String name) throws IOException {
+    final DestinationUpdate destinationUpdate = new DestinationUpdate(
+        destinationId,
+        updatedConfig,
+        name,
+        null);
+
+    final CheckConnectionRead checkResponse = apiClient.getDestinationApi().checkConnectionToDestinationForUpdate(destinationUpdate);
+    if (checkResponse.getStatus() != Status.SUCCEEDED) {
+      throw new RuntimeException("Check connection failed: " + checkResponse.getMessage());
+    }
+
+    return Failsafe.with(retryPolicy).get(() -> apiClient.getDestinationApi().updateDestination(destinationUpdate));
+  }
+
   public CheckConnectionRead.Status checkDestination(final UUID destinationId) throws IOException {
     return apiClient.getDestinationApi()
         .checkConnectionToDestination(new DestinationIdRequestBody(destinationId)).getStatus();
@@ -880,6 +897,10 @@ public class AcceptanceTestHarness {
 
   public JsonNode getSourceDbConfig() {
     return getDbConfig(sourcePsql, false, false, sourceDatabaseName);
+  }
+
+  public JsonNode getSourceDbConfigWithHiddenPassword() {
+    return getDbConfig(sourcePsql, true, false, sourceDatabaseName);
   }
 
   public JsonNode getDestinationDbConfig() {
@@ -1033,6 +1054,22 @@ public class AcceptanceTestHarness {
             null)));
     sourceIds.add(source.getSourceId());
     return source;
+  }
+
+  public SourceRead updateSource(final UUID sourceId, final JsonNode updatedConfig, final String name) throws IOException {
+    final SourceUpdate sourceUpdate = new SourceUpdate(
+        sourceId,
+        updatedConfig,
+        name,
+        null,
+        null);
+
+    final CheckConnectionRead checkResponse = apiClient.getSourceApi().checkConnectionToSourceForUpdate(sourceUpdate);
+    if (checkResponse.getStatus() != Status.SUCCEEDED) {
+      throw new RuntimeException("Check connection failed: " + checkResponse.getMessage());
+    }
+
+    return Failsafe.with(retryPolicy).get(() -> apiClient.getSourceApi().updateSource(sourceUpdate));
   }
 
   public CheckConnectionRead checkSource(final UUID sourceId) {

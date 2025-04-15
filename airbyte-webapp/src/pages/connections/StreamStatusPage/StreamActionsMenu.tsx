@@ -56,7 +56,7 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
     };
   }, [catalogStream?.config?.destinationSyncMode, catalogStream?.config?.syncMode, destinationSupportsRefreshes]);
 
-  const showRefreshOption = canMerge || canTruncate;
+  const hasIncremental = canMerge || canTruncate;
 
   if (!catalogStream) {
     return null;
@@ -67,15 +67,16 @@ export const StreamActionsMenu: React.FC<StreamActionsMenuProps> = ({ streamName
       displayName: formatMessage({ id: "connection.stream.actions.edit" }),
       value: "editStream",
     },
-    ...(showRefreshOption
-      ? [
-          {
-            displayName: formatMessage({ id: "connection.stream.actions.refreshStream" }),
-            value: "refreshStream",
-            disabled: disableSyncActions,
-          },
-        ]
-      : []),
+    {
+      displayName: formatMessage({ id: "connection.stream.actions.refreshStream" }),
+      value: "refreshStream",
+      disabled: disableSyncActions || !destinationSupportsRefreshes || !hasIncremental,
+      tooltipContent: !destinationSupportsRefreshes
+        ? formatMessage({ id: "connection.stream.actions.refreshDisabled.destinationNotSupported" })
+        : !hasIncremental
+        ? formatMessage({ id: "connection.stream.actions.refreshDisabled.streamNotIncremental" })
+        : undefined,
+    },
     {
       displayName: formatMessage({
         id: "connection.stream.actions.clearData",

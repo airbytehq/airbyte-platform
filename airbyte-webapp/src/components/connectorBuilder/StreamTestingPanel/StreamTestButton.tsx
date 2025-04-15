@@ -4,6 +4,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -15,22 +16,30 @@ import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamTestButtonProps {
   queueStreamRead: () => void;
+  cancelStreamRead: () => void;
   hasTestingValuesErrors: boolean;
   setTestingValuesInputOpen: (open: boolean) => void;
   hasResolveErrors: boolean;
   isStreamTestQueued: boolean;
   isStreamTestRunning: boolean;
+  isStreamTestStale: boolean;
   className?: string;
+  forceDisabled?: boolean;
+  requestType: "sync" | "async";
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   queueStreamRead,
+  cancelStreamRead,
   hasTestingValuesErrors,
   setTestingValuesInputOpen,
   hasResolveErrors,
   isStreamTestQueued,
   isStreamTestRunning,
+  isStreamTestStale,
   className,
+  forceDisabled,
+  requestType,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
@@ -48,7 +57,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const isLoading = isStreamTestQueued || isStreamTestRunning;
 
-  let buttonDisabled = false;
+  let buttonDisabled = forceDisabled || false;
   let showWarningIcon = false;
   let tooltipContent = isLoading ? (
     <FormattedMessage id="connectorBuilder.testRead.running" />
@@ -56,6 +65,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     <FlexContainer direction="column" gap="md" alignItems="center">
       <FormattedMessage id="connectorBuilder.testRead" />
       <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
+      {isStreamTestStale && <FormattedMessage id="connectorBuilder.testRead.stale" />}
     </FlexContainer>
   );
 
@@ -88,7 +98,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const testButton = (
     <Button
-      className={classNames(styles.testButton, className)}
+      className={classNames(styles.testButton, className, { [styles.pulsate]: isStreamTestStale })}
       size="sm"
       onClick={executeTestRead}
       disabled={buttonDisabled}
@@ -102,11 +112,36 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
     </Button>
   );
 
-  return tooltipContent !== undefined ? (
-    <Tooltip control={testButton} containerClassName={styles.testButtonTooltipContainer}>
-      {tooltipContent}
-    </Tooltip>
-  ) : (
-    testButton
+  const finalTooltipContent =
+    requestType === "async" ? (
+      <FlexContainer direction="column" alignItems="center">
+        {tooltipContent ?? null}
+        <Text italicized className={styles.longRequestWarning} size="sm">
+          <FormattedMessage id="connectorBuilder.asyncStream.longRequestWarning" />
+        </Text>
+      </FlexContainer>
+    ) : (
+      tooltipContent
+    );
+
+  return (
+    <FlexContainer>
+      {finalTooltipContent !== undefined ? (
+        <Tooltip control={testButton} containerClassName={styles.testButtonTooltipContainer}>
+          {finalTooltipContent}
+        </Tooltip>
+      ) : (
+        testButton
+      )}
+      <Button
+        variant="secondary"
+        size="sm"
+        disabled={!isLoading}
+        onClick={cancelStreamRead}
+        data-testid="cancel-stream-read"
+      >
+        <FormattedMessage id="connectorBuilder.cancel" />
+      </Button>
+    </FlexContainer>
   );
 };

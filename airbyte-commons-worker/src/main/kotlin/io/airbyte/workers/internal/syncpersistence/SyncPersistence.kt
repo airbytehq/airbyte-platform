@@ -17,9 +17,9 @@ import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
 import io.airbyte.workers.internal.bookkeeping.getTotalStats

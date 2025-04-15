@@ -21,8 +21,8 @@ import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.ProtocolConverters;
-import io.airbyte.protocol.models.AirbyteCatalog;
 import io.airbyte.protocol.models.Jsons;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -82,11 +82,11 @@ class CatalogDiffHelpersTest {
     final JsonNode schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
     final JsonNode schema2 = Jsons.deserialize(readResource("diffs/valid_schema2.json"));
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema1),
-        new io.airbyte.protocol.models.AirbyteStream().withName("accounts").withJsonSchema(Jsons.emptyObject())));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema1),
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName("accounts").withJsonSchema(Jsons.emptyObject())));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema2),
-        new io.airbyte.protocol.models.AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject())));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema2),
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(SALES).withJsonSchema(Jsons.emptyObject())));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
@@ -152,9 +152,9 @@ class CatalogDiffHelpersTest {
     final JsonNode schema1 = Jsons.deserialize(readResource(COMPANIES_INVALID));
     final JsonNode schema2 = Jsons.deserialize(readResource(COMPANIES_VALID));
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
@@ -175,9 +175,9 @@ class CatalogDiffHelpersTest {
     final JsonNode schema1 = Jsons.deserialize(readResource(COMPANIES_INVALID));
     final JsonNode schema2 = Jsons.deserialize(readResource(COMPANIES_INVALID));
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema2)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema2, List.of(SyncMode.FULL_REFRESH)), SyncMode.FULL_REFRESH,
@@ -195,9 +195,9 @@ class CatalogDiffHelpersTest {
     final JsonNode schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
     final JsonNode breakingSchema = Jsons.deserialize(readResource("diffs/breaking_change_schema.json"));
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream(new AirbyteStream(USERS, schema1, List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,
@@ -220,9 +220,9 @@ class CatalogDiffHelpersTest {
     final JsonNode schema1 = Jsons.deserialize(readResource(VALID_SCHEMA_JSON));
     final JsonNode breakingSchema = Jsons.deserialize(readResource("diffs/breaking_change_schema.json"));
     final AirbyteCatalog catalog1 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(schema1)));
     final AirbyteCatalog catalog2 = new AirbyteCatalog().withStreams(List.of(
-        new io.airbyte.protocol.models.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
+        new io.airbyte.protocol.models.v0.AirbyteStream().withName(USERS).withJsonSchema(breakingSchema)));
 
     final ConfiguredAirbyteCatalog configuredAirbyteCatalog = new ConfiguredAirbyteCatalog().withStreams(List.of(
         new ConfiguredAirbyteStream(new AirbyteStream(SALES, schema1, List.of(SyncMode.INCREMENTAL)), SyncMode.INCREMENTAL,

@@ -22,6 +22,7 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
   private val scope1 = "scope1"
   private val scope2 = "scope2"
   private val scope3 = "scope3"
+  private val scope4 = "scope4"
   private val config = Jsons.jsonNode(mapOf<String, String>())
   private var nextCreatedAt = OffsetDateTime.of(2021, 1, 1, 0, 0, 0, 0, ZoneOffset.UTC)
 
@@ -39,11 +40,12 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     id: Int,
     scope: String,
     status: JobStatus,
+    configType: JobConfigType = JobConfigType.sync,
   ) = Job(
     id = id.toLong(),
     scope = scope,
     status = status,
-    configType = JobConfigType.sync,
+    configType = configType,
     config = config,
     createdAt = nextCreatedAt,
   ).also { nextCreatedAt = nextCreatedAt.plusDays(1) }
@@ -149,5 +151,81 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
       result2?.id.shouldBe(4)
       result3.shouldBe(null)
     }
+  }
+
+  @Nested
+  inner class FindLatestJobPerScope {
+    @Test
+    fun `returns latest job per scope matching config type and createdAt`() {
+      val jobs =
+        listOf(
+          // scope1
+          createJob(1, scope1, JobStatus.failed), // older
+          createJob(2, scope1, JobStatus.succeeded), // newer
+          // scope2
+          createJob(3, scope2, JobStatus.running), // only one
+          // scope3
+          createJob(4, scope3, JobStatus.failed), // before threshold
+          createJob(5, scope3, JobStatus.succeeded), // after threshold
+        )
+
+      jobsRepository.saveAll(jobs)
+
+      val createdAtThreshold = OffsetDateTime.of(2021, 1, 2, 0, 0, 0, 0, ZoneOffset.UTC)
+      val result =
+        jobsRepository.findLatestJobPerScope(
+          configType = JobConfigType.sync.toString(),
+          scopes = setOf(scope1, scope2, scope3),
+          createdAtStart = createdAtThreshold,
+        )
+
+      // should return:
+      // - scope1: job 2 (created Jan 2)
+      // - scope2: job 3 (created Jan 3)
+      // - scope3: job 5 (created Jan 5)
+      result.size.shouldBe(3)
+
+      result.find { it.scope == scope1 }!!.id.shouldBe(2)
+      result.find { it.scope == scope2 }!!.id.shouldBe(3)
+      result.find { it.scope == scope3 }!!.id.shouldBe(5)
+    }
+  }
+
+  @Test
+  fun `returns latest job per scope matching config type and createdAt`() {
+    val jobs =
+      listOf(
+        // job 1 is before threshold
+        createJob(1, scope1, JobStatus.failed),
+        createJob(2, scope1, JobStatus.succeeded),
+        createJob(3, scope2, JobStatus.running),
+        // job 4 is older than job 5 so shouldn't be included
+        createJob(4, scope3, JobStatus.succeeded),
+        createJob(5, scope3, JobStatus.failed),
+        // job 6's config doesn't match
+        createJob(6, scope3, JobStatus.succeeded, JobConfigType.refresh),
+        // job 7's scope doesn't match
+        createJob(7, scope4, JobStatus.succeeded),
+      )
+
+    jobsRepository.saveAll(jobs)
+
+    val createdAtThreshold = OffsetDateTime.of(2021, 1, 2, 0, 0, 0, 0, ZoneOffset.UTC)
+    val result =
+      jobsRepository.findLatestJobPerScope(
+        configType = JobConfigType.sync.toString(),
+        scopes = setOf(scope1, scope2, scope3),
+        createdAtStart = createdAtThreshold,
+      )
+
+    // should return:
+    // - scope1: job 2 (created Jan 2)
+    // - scope2: job 3 (created Jan 3)
+    // - scope3: job 5 (created Jan 5)
+    result.size.shouldBe(3)
+
+    result.find { it.scope == scope1 }!!.id.shouldBe(2)
+    result.find { it.scope == scope2 }!!.id.shouldBe(3)
+    result.find { it.scope == scope3 }!!.id.shouldBe(5)
   }
 }

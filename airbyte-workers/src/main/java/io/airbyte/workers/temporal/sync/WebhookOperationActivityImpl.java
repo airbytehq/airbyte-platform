@@ -27,7 +27,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
-import io.airbyte.workers.helper.SecretPersistenceConfigHelper;
+import io.airbyte.workers.helper.SecretPersistenceConfigConvertersKt;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -91,7 +91,7 @@ public class WebhookOperationActivityImpl implements WebhookOperationActivity {
         final SecretPersistenceConfig secretPersistenceConfig = airbyteApiClient.getSecretPersistenceConfigApi().getSecretsPersistenceConfig(
             new SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, organizationId));
         final RuntimeSecretPersistence runtimeSecretPersistence =
-            SecretPersistenceConfigHelper.fromApiSecretPersistenceConfig(secretPersistenceConfig, metricClient);
+            new RuntimeSecretPersistence(SecretPersistenceConfigConvertersKt.toModel(secretPersistenceConfig), metricClient);
         fullWebhookConfigJson =
             secretsRepositoryReader.hydrateConfigFromRuntimeSecretPersistence(input.getWorkspaceWebhookConfigs(), runtimeSecretPersistence);
       } catch (final IOException e) {

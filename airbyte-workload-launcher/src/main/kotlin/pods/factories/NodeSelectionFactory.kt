@@ -27,7 +27,7 @@ data class NodeSelectionFactory(
   @Named("spotToleration") private val spotToleration: Toleration,
   @Named("infraFlagContexts") private val infraFlagContexts: List<Context>,
 ) {
-  fun createReplicationNodeSelection(
+  internal fun createReplicationNodeSelection(
     nodeSelectors: Map<String, String>,
     allLabels: Map<String, String>,
   ): NodeSelection {
@@ -51,10 +51,8 @@ data class NodeSelectionFactory(
     }
   }
 
-  fun createResetNodeSelection(
-    nodeSelectors: Map<String, String>,
-    allLabels: Map<String, String>,
-  ): NodeSelection = NodeSelection(nodeSelectors = nodeSelectors, tolerations = tolerations.toList(), podAffinity = null)
+  fun createResetNodeSelection(nodeSelectors: Map<String, String>): NodeSelection =
+    NodeSelection(nodeSelectors = nodeSelectors, tolerations = tolerations.toList(), podAffinity = null)
 
   private fun shouldAllowSpotInstances(allLabels: Map<String, String>) =
     featureFlagClient.boolVariation(AllowSpotInstances, buildSpotInstanceFeatureFlagContext(allLabels))

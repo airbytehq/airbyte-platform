@@ -30,7 +30,7 @@ export const destinationsKeys = {
 interface ValuesProps {
   name: string;
   serviceType?: string;
-  connectionConfiguration?: ConnectionConfiguration;
+  connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
 }
 
@@ -93,7 +93,7 @@ const useCreateDestination = () => {
           name: values.name,
           destinationDefinitionId: destinationConnector?.destinationDefinitionId,
           workspaceId: workspace.workspaceId,
-          connectionConfiguration: values.connectionConfiguration,
+          connectionConfiguration: values.connectionConfiguration ?? {},
           resourceAllocation: values.resourceAllocation,
         },
         requestOptions

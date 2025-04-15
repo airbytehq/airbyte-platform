@@ -10,7 +10,7 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.data.services.shared.DataSourceUnwrapper
 import io.airbyte.db.Database
-import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck
+import io.airbyte.db.check.JobsDatabaseAvailabilityCheck
 import io.airbyte.db.factory.DatabaseCheckFactory
 import io.airbyte.db.init.DatabaseInitializer
 import io.airbyte.db.instance.DatabaseConstants
@@ -150,15 +150,15 @@ class DatabaseBeanFactory {
   @Singleton
   @Named("configsDatabaseMigrator")
   fun configsDatabaseMigrator(
-    @Named("configDatabase") configDatabase: Database?,
-    @Named("configFlyway") configFlyway: Flyway?,
+    @Named("configDatabase") configDatabase: Database,
+    @Named("configFlyway") configFlyway: Flyway,
   ): DatabaseMigrator = ConfigsDatabaseMigrator(configDatabase, configFlyway)
 
   @Singleton
   @Named("jobsDatabaseMigrator")
   fun jobsDatabaseMigrator(
-    @Named("jobsDatabase") jobsDatabase: Database?,
-    @Named("jobsFlyway") jobsFlyway: Flyway?,
+    @Named("jobsDatabase") jobsDatabase: Database,
+    @Named("jobsFlyway") jobsFlyway: Flyway,
   ): DatabaseMigrator = JobsDatabaseMigrator(jobsDatabase, jobsFlyway)
 
   @Singleton

@@ -8,13 +8,12 @@ import io.airbyte.api.model.generated.AirbyteCatalog
 import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
-import io.airbyte.api.model.generated.Geography
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
-import io.airbyte.publicApi.server.generated.models.GeographyEnum
 import io.airbyte.publicApi.server.generated.models.NamespaceDefinitionEnum
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -40,7 +39,7 @@ class ConnectionCreateMapperTest {
         namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
         namespaceFormat = "test",
         prefix = "test",
-        dataResidency = GeographyEnum.US,
+        dataResidency = GEOGRAPHY_US,
         schedule =
           AirbyteApiConnectionSchedule(
             scheduleType = ScheduleTypeEnum.CRON,
@@ -58,7 +57,7 @@ class ConnectionCreateMapperTest {
         this.namespaceDefinition = NamespaceDefinitionType.DESTINATION
         this.namespaceFormat = "test"
         this.prefix = "test"
-        this.geography = Geography.US
+        this.geography = GEOGRAPHY_US
         this.scheduleType = ConnectionScheduleType.CRON
         this.sourceCatalogId = catalogId
         this.syncCatalog = catalog

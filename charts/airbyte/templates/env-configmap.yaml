@@ -59,7 +59,7 @@ data:
   KEYCLOAK_INTERNAL_HOST: localhost # just a placeholder so that nginx template is valid - shouldn't be used when edition isn't "pro"
   {{- end }}
 
-  CONNECTOR_BUILDER_API_HOST: {{ .Release.Name }}-airbyte-connector-builder-server-svc:{{ index .Values "connector-builder-server" "service" "port" }}
+  CONNECTOR_BUILDER_API_HOST: {{ ternary (printf "%s-airbyte-connector-builder-server-svc:%d" .Release.Name (index .Values "connector-builder-server" "service" "port" | int)) "localhost" (index .Values "connector-builder-server" "enabled") }}
 
   {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
     {{- if $airbyteYmlDict }}
@@ -168,3 +168,5 @@ data:
   PUB_SUB_ENABLED: "false"
   PUB_SUB_TOPIC_NAME: ""
   ENTERPRISE_SOURCE_STUBS_URL: {{ .Values.server.env_vars.ENTERPRISE_SOURCE_STUBS_URL | default "https://connectors.airbyte.com/files/resources/connector_stubs/v1/connector_stubs.json" }}
+
+  CONTROL_PLANE_TOKEN_ENDPOINT: http://{{ .Release.Name }}-airbyte-server-svc:{{ .Values.server.service.port }}/api/v1/dataplanes/token

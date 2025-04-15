@@ -31,9 +31,9 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.persistence.StreamRefreshesRepository
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.saveStreamsToRefresh
+import io.airbyte.config.secrets.toInlined
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
-import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -402,28 +402,22 @@ class TemporalClient(
    *
    * @param jobId job id
    * @param attempt attempt
+   * @param workspaceId workspace id
    * @param config spec config
    * @return spec output
    */
   fun submitGetSpec(
     jobId: UUID,
     attempt: Int,
-    workspaceId: UUID?,
+    workspaceId: UUID,
     config: JobGetSpecConfig,
   ): TemporalResponse<ConnectorJobOutput> {
     val jobRunConfig = TemporalWorkflowUtils.createJobRunConfig(jobId, attempt)
-    // Since SPEC happens before a connector is created, it is expected for a SPEC job to not have a
-    // workspace id unless it is a custom connector.
-    //
-    // This differs from CHECK/DISCOVER/REPLICATION which always have a workspace id thus requiring,
-    // downstream FF checks to null check the workspace before adding the context or failing. Thus, we
-    // default the workspace to simplify this process.
-    val resolvedWorkspaceId = workspaceId ?: ANONYMOUS
     val launcherConfig =
       IntegrationLauncherConfig()
         .withJobId(jobId.toString())
         .withAttemptId(attempt.toLong())
-        .withWorkspaceId(resolvedWorkspaceId)
+        .withWorkspaceId(workspaceId)
         .withDockerImage(config.getDockerImage())
         .withIsCustomConnector(config.getIsCustomConnector())
 
@@ -460,10 +454,10 @@ class TemporalClient(
 
     val input =
       StandardCheckConnectionInput()
-        .withActorType(config.getActorType())
-        .withActorId(config.getActorId())
-        .withConnectionConfiguration(config.getConnectionConfiguration())
-        .withResourceRequirements(config.getResourceRequirements())
+        .withActorType(config.actorType)
+        .withActorId(config.actorId)
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
+        .withResourceRequirements(config.resourceRequirements)
         .withActorContext(context)
         .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId))
 
@@ -504,7 +498,7 @@ class TemporalClient(
         .withPriority(priority)
     val input =
       StandardDiscoverCatalogInput()
-        .withConnectionConfiguration(config.getConnectionConfiguration())
+        .withConnectionConfiguration(config.connectionConfiguration.toInlined().value)
         .withSourceId(config.getSourceId())
         .withConnectorVersion(config.getConnectorVersion())
         .withConfigHash(config.getConfigHash())

@@ -25,6 +25,8 @@ enabled: true
 ##  temporal.replicaCount The number of temporal replicas to deploy
 replicaCount: 1
 
+serviceAccountName:
+
 ##  temporal.image.repository The temporal image repository to use
 ##  temporal.image.pullPolicy The pull policy for the temporal image
 ##  temporal.image.tag The temporal image tag to use

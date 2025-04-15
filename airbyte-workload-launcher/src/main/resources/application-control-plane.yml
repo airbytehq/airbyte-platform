@@ -11,7 +11,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     pool-name: config-pool
 
 jooq:

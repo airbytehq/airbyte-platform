@@ -36,6 +36,7 @@ micronaut:
     port: 9000
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
 
 datasources:
@@ -47,7 +48,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
 
 jooq:
   datasources:

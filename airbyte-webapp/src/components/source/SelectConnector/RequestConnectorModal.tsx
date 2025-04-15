@@ -1,21 +1,26 @@
 import React from "react";
 import { useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
 import { ModalBody, ModalFooter } from "components/ui/Modal";
 
+import { ConnectorType } from "core/api/types/AirbyteClient";
 import { useNotificationService } from "hooks/services/Notification";
 import useRequestConnector from "hooks/services/useRequestConnector";
 
-interface ConnectorRequest {
-  connectorType: "source" | "destination";
-  name: string;
-  additionalInfo?: string;
-  email: string;
-}
+const validationSchema = z.object({
+  connectorType: z.nativeEnum(ConnectorType),
+  name: z.string().trim().nonempty("form.empty.error"),
+  additionalInfo: z.string().optional(),
+  email: z.string().email("form.empty.error"),
+});
+
+type ConnectorRequest = z.infer<typeof validationSchema>;
+
+const RequestControl = FormControl<ConnectorRequest>;
 
 interface RequestConnectorModalProps {
   onSubmit: () => void;
@@ -24,15 +29,6 @@ interface RequestConnectorModalProps {
   workspaceEmail?: string;
   searchedConnectorName?: string;
 }
-
-const validationSchema = yup.object().shape({
-  connectorType: yup.mixed().oneOf(["source", "destination"]),
-  name: yup.string().required("form.empty.error"),
-  additionalInfo: yup.string(),
-  email: yup.string().email("form.email.error").required("form.empty.error"),
-});
-
-const RequestControl = FormControl<ConnectorRequest>;
 
 export const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
   onSubmit,
@@ -63,7 +59,7 @@ export const RequestConnectorModal: React.FC<RequestConnectorModalProps> = ({
         additionalInfo: "",
         email: workspaceEmail ?? "",
       }}
-      schema={validationSchema}
+      zodSchema={validationSchema}
       onSubmit={onSubmitBtnClick}
       trackDirtyChanges
     >

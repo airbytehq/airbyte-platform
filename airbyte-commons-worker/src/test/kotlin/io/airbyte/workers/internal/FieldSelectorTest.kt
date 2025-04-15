@@ -10,8 +10,8 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerUtils
 import io.mockk.mockk

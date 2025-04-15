@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "airbyte-data-plane.fullname" . }}
+  labels:
+    {{- include "airbyte-data-plane.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.workloadLauncher.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte-data-plane.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      {{- with .Values.workloadLauncher.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "airbyte-data-plane.labels" . | nindent 8 }}
+        {{- with .Values.workloadLauncher.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "airbyte-data-plane.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.workloadLauncher.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.workloadLauncher.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env: 
+            {{- if .Values.workloadLauncher.debug.enabled }}
+            - name: JAVA_TOOL_OPTIONS
+              value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadLauncher.debug.remoteDebugPort }},server=y,suspend=n"
+            {{- end}}
+
+            {{- if (or (eq .Values.edition "community") (eq .Values.edition "pro") (eq .Values.edition "enterprise")) }}
+            - name: AIRBYTE_API_AUTH_HEADER_VALUE
+              value: "Internal worker"
+            {{- end }}
+
+            {{- include "airbyte-data-plane.common.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.dataPlane.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.jobs.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.jobs.errors.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.keycloak.client.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.logging.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.metrics.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.micronaut.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.storage.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.secretsManager.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.temporal.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.temporal.worker.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.tracking.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.worker.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloadApiServer.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloads.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloads.queues.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloads.resources.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloadLauncher.envs" . | nindent 12 }}
+            {{- include "airbyte-data-plane.workloadLauncher.images.envs" . | nindent 12 }}
+
+            {{- if (eq .Values.edition "enterprise") }}
+            {{- include "airbyte-data-plane.enterprise.envs" . | nindent 12 }}
+            {{- end }}
+
+            {{- if (eq .Values.edition "cloud") }}
+            {{- include "airbyte-data-plane.temporal.cloud.envs" . | nindent 12 }}
+            {{- end }}
+
+            {{- if .Values.workloadLauncher.env }}
+            {{- toYaml .Values.workloadLauncher.env | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: heartbeat
+              containerPort: {{ .Values.workloadLauncher.heartbeatPort }}
+          livenessProbe:
+            {{- toYaml .Values.workloadLauncher.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.workloadLauncher.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.workloadLauncher.resources | nindent 12 }}
+          {{- with .Values.workloadLauncher.volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- with .Values.workloadLauncher.volumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workloadLauncher.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workloadLauncher.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.workloadLauncher.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

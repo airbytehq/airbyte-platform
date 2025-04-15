@@ -1,24 +1,24 @@
 import React, { useEffect } from "react";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
-import { AnySchema } from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
-import { OrganizationUpdateRequestBody } from "core/api/types/AirbyteClient";
+import { useFeature, FeatureItem } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
+import { RegionsTable } from "./components/RegionsTable";
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
 
-const organizationValidationSchema = yup.object().shape<Record<keyof OrganizationFormValues, AnySchema>>({
-  organizationName: yup.string().trim().required("form.empty.error"),
-  email: yup.string().email("form.email.error").trim().required("form.empty.error"),
+const organizationValidationSchema = z.object({
+  organizationName: z.string().trim().nonempty("form.empty.error"),
+  email: z.string().email("form.email.error"),
 });
 
-type OrganizationFormValues = Pick<OrganizationUpdateRequestBody, "organizationName" | "email">;
+type OrganizationFormValues = z.infer<typeof organizationValidationSchema>;
 
 export const UpdateOrganizationSettingsForm: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
@@ -29,6 +29,7 @@ export const UpdateOrganizationSettingsForm: React.FC = () => {
 const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {
   const organization = useOrganization(organizationId);
   const { mutateAsync: updateOrganization } = useUpdateOrganization();
+  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataGeographies);
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
@@ -65,7 +66,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
           type: "error",
         });
       }}
-      schema={organizationValidationSchema}
+      zodSchema={organizationValidationSchema}
       defaultValues={{ organizationName: organization.organizationName, email: organization.email }}
       disabled={!canUpdateOrganization}
     >
@@ -80,6 +81,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         name="email"
         labelTooltip={formatMessage({ id: "settings.organizationSettings.email.description" })}
       />
+      {supportsRegionsTable && <RegionsTable />}
       {canUpdateOrganization && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );

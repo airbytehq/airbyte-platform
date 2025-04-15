@@ -9,7 +9,7 @@ import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.SyncMode;
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import io.airbyte.workers.helper.AirbyteMessageExtractor;
 import io.airbyte.workers.internal.exception.SourceException;
 import java.util.List;

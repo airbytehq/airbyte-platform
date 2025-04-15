@@ -80,6 +80,8 @@ enabled: true
 ##  connector-rollout-worker.replicaCount Number of connector-rollout-worker replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  connector-rollout-worker.image.repository The repository to use for the airbyte connector-rollout-worker image.
 ##  connector-rollout-worker.image.pullPolicy the pull policy to use for the airbyte connector-rollout-worker image
 ##  connector-rollout-worker.image.tag The airbyte connector-rollout-worker image tag. Defaults to the chart's AppVersion

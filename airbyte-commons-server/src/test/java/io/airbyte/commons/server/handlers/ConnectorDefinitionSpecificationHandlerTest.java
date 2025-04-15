@@ -31,10 +31,10 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.protocol.models.AdvancedAuth;
-import io.airbyte.protocol.models.AdvancedAuth.AuthFlowType;
-import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.AdvancedAuth;
+import io.airbyte.protocol.models.v0.AdvancedAuth.AuthFlowType;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
@@ -248,8 +248,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
                     .withDocumentationUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
                     .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
                     .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
-                    .withSupportedDestinationSyncModes(List.of(io.airbyte.protocol.models.DestinationSyncMode.APPEND,
-                        io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.DestinationSyncMode.OVERWRITE)))
+                    .withSupportedDestinationSyncModes(List.of(io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND,
+                        io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.v0.DestinationSyncMode.OVERWRITE)))
                 .withSupportsRefreshes(supportsRefreshes));
 
     final DestinationDefinitionSpecificationRead response =
@@ -288,7 +288,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
                     .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
                     .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
                     .withSupportedDestinationSyncModes(
-                        List.of(io.airbyte.protocol.models.DestinationSyncMode.APPEND, io.airbyte.protocol.models.DestinationSyncMode.APPEND_DEDUP)))
+                        List.of(io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND,
+                            io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP)))
                 .withSupportsRefreshes(supportsRefreshes));
 
     final DestinationDefinitionSpecificationRead response =

@@ -1,6 +1,6 @@
 import Anser from "anser";
 import classNames from "classnames";
-import React, { HTMLAttributes, useEffect, useRef } from "react";
+import React, { HTMLAttributes, useEffect, useRef, useState } from "react";
 import Highlighter from "react-highlight-words";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso, ItemContent, VirtuosoHandle } from "react-virtuoso";
@@ -62,6 +62,8 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
   showStructuredLogs,
 }) => {
   const listRef = useRef<VirtuosoHandle | null>(null);
+  const selectedContent = useRef<null | string>(null);
+  const [isSelectingAsState, setIsSelectingAsState] = useState(false);
   const highlightedRowIndex = scrollTo;
 
   useEffect(() => {
@@ -69,6 +71,16 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
       listRef.current?.scrollIntoView({ index: scrollTo, align: "center" });
     }
   }, [scrollTo]);
+
+  function handlePointerDown() {
+    setIsSelectingAsState(true);
+  }
+
+  function handlePointerUp() {
+    setIsSelectingAsState(false);
+    const selection = window.getSelection()?.toString();
+    selectedContent.current = selection && selection !== "" ? selection : null;
+  }
 
   return (
     <div className={styles.virtualLogs}>
@@ -81,7 +93,10 @@ const VirtualLogsUnmemoized: React.FC<VirtualLogsProps> = ({
       {logLines && (
         <Virtuoso<CleanedLogLines[number], RowContext>
           ref={listRef}
+          onPointerDown={handlePointerDown}
+          onPointerUp={handlePointerUp}
           initialTopMostItemIndex={{ index: "LAST" }}
+          overscan={isSelectingAsState ? { main: 999999, reverse: 999999 } : { main: 100, reverse: 100 }}
           followOutput={
             // smooth scroll unless there's an error, the appearance of the error message decreases
             // the logs viewport area which invalides the target scroll position during a smooth

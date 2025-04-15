@@ -8,7 +8,12 @@ import {
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderState, DeclarativeOAuthAuthenticatorType, extractInterpolatedConfigKey } from "./types";
+import {
+  BuilderState,
+  BuilderStreamTab,
+  DeclarativeOAuthAuthenticatorType,
+  extractInterpolatedConfigKey,
+} from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 
 export const useBuilderErrors = () => {
@@ -24,12 +29,23 @@ export const useBuilderErrors = () => {
 
   // Returns true if the react hook form has errors, and false otherwise.
   // If limitToViews is provided, the error check is limited to only those views.
-  const hasErrors = useCallback((limitToViews?: BuilderView[]) => {
+  const hasErrors = useCallback((limitToViews?: BuilderView[], limitToStreamTab?: BuilderStreamTab): boolean => {
     const builderViewToErrorPaths = getBuilderViewToErrorPaths(errorsRef.current);
-    if (limitToViews) {
-      return limitToViews.filter((view) => view in builderViewToErrorPaths).length > 0;
+    const viewFilteredViewToErrorPaths = limitToViews
+      ? (Object.fromEntries(
+          Object.entries(builderViewToErrorPaths).filter(([view]) => {
+            const parsedView = !isNaN(Number(view)) ? Number(view) : view;
+            return limitToViews.includes(parsedView as BuilderView);
+          })
+        ) as Record<BuilderView, string[]>)
+      : builderViewToErrorPaths;
+
+    if (limitToStreamTab) {
+      return Object.values(viewFilteredViewToErrorPaths).some((errorPaths) =>
+        errorPaths.some((errorPath) => getStreamTabFromErrorPath(errorPath) === limitToStreamTab)
+      );
     }
-    return Object.keys(builderViewToErrorPaths).length > 0;
+    return Object.keys(viewFilteredViewToErrorPaths).length > 0;
   }, []);
 
   const getErrorPathAndView = useCallback(
@@ -106,6 +122,7 @@ export const useBuilderErrors = () => {
         if (errorPathAndView) {
           setValue("view", errorPathAndView.view);
           setScrollToField(errorPathAndView.errorPath);
+          setValue("streamTab", getStreamTabFromErrorPath(errorPathAndView.errorPath));
           return;
         }
 
@@ -113,6 +130,7 @@ export const useBuilderErrors = () => {
         if (oAuthErrorPathAndView) {
           setValue("view", oAuthErrorPathAndView.view);
           setScrollToField(oAuthErrorPathAndView.errorPath);
+          setValue("streamTab", getStreamTabFromErrorPath(oAuthErrorPathAndView.errorPath));
           return;
         }
         callback?.();
@@ -122,6 +140,25 @@ export const useBuilderErrors = () => {
   );
 
   return { hasErrors, validateAndTouch };
+};
+
+const getStreamTabFromErrorPath = (errorPath: string): BuilderStreamTab | undefined => {
+  const pattern = /^formValues\.streams\.\d+\.([^.]+)/;
+  const match = errorPath.match(pattern);
+  const streamField = match ? match[1] : null;
+  if (!streamField) {
+    return undefined;
+  }
+  if (streamField === "schema") {
+    return "schema";
+  }
+  if (streamField === "pollingRequester") {
+    return "polling";
+  }
+  if (streamField === "downloadRequester") {
+    return "download";
+  }
+  return "requester";
 };
 
 const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>) => {

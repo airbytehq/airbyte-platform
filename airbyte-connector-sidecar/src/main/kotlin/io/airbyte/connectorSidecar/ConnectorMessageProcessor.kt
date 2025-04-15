@@ -19,11 +19,11 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
-import io.airbyte.protocol.models.AirbyteCatalog
-import io.airbyte.protocol.models.AirbyteConnectionStatus
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.AirbyteCatalog
+import io.airbyte.protocol.models.v0.AirbyteConnectionStatus
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper

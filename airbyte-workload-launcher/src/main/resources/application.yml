@@ -31,8 +31,12 @@ micronaut:
       type: cached
       n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
       core-pool-size: 0
-
 airbyte:
+  auth:
+    control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
+    dataplane-client-id: ${DATAPLANE_CLIENT_ID}
+    dataplane-client-secret: ${DATAPLANE_CLIENT_SECRET}
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   pod-sweeper:
     # Time-to-live (in minutes) for running pods. Empty string (mapped to null) by default,
     # meaning running pods are preserved indefinitely.
@@ -53,6 +57,13 @@ airbyte:
   container:
     rootless-workload: ${ROOTLESS_WORKLOAD:false}
   control-plane-auth-endpoint: ${CONTROL_PLANE_AUTH_ENDPOINT:}
+  data-plane-credentials:
+    client-id: ${DATAPLANE_CLIENT_ID}
+    client-id-secret-key: ${DATAPLANE_CLIENT_ID_SECRET_KEY}
+    client-id-secret-name: ${DATAPLANE_CLIENT_ID_SECRET_NAME}
+    client-secret: ${DATAPLANE_CLIENT_SECRET}
+    client-secret-secret-key: ${DATAPLANE_CLIENT_SECRET_SECRET_KEY}
+    client-secret-secret-name: ${DATAPLANE_CLIENT_SECRET_SECRET_NAME}
   data-plane-id: ${DATA_PLANE_ID}
   data-plane-name: ${DATA_PLANE_NAME:default-data-plane}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
@@ -88,17 +99,22 @@ airbyte:
       delay-seconds: ${WORKLOAD_API_RETRY_DELAY_SECONDS:2}
       max: ${WORKLOAD_API_MAX_RETRIES:5}
   workload-launcher:
+    heartbeat-rate: PT30S
     geography: ${WORKLOAD_LAUNCHER_GEOGRAPHY:auto}
     workload-start-timeout: ${WORKLOAD_LAUNCHER_WORKLOAD_START_TIMEOUT:PT5H}
-    parallelism-max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
-    temporal:
-      default-queue:
-        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
-        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
-      high-priority-queue:
-        parallelism: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
-        workflow-parallelism: ${WORKLOAD_LAUNCHER_WORKFLOW_PARALLELISM:10}
+    parallelism:
+      default-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      high-priority-queue: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      max-surge: ${WORKLOAD_PARALLELISM_MAX_SURGE:10}
     network-policy-introspection: false
+    consumer:
+      queue-task-cap: ${WORKLOAD_CONSUMER_QUEUE_TASK_CAP:5}
+      default-queue:
+        poll-interval-seconds: ${WORKLOAD_DEFAULT_PRIO_POLL_FREQUENCY:1}
+        poll-size-items: ${WORKLOAD_DEFAULT_PRIO_POLL_SIZE:10}
+      high-priority-queue:
+        poll-interval-seconds: ${WORKLOAD_HIGH_PRIO_POLL_FREQUENCY:1}
+        poll-size-items: ${WORKLOAD_HIGH_PRIO_POLL_SIZE:10}
   secret:
     persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
     store:
@@ -146,6 +162,7 @@ airbyte:
     write-key: ${SEGMENT_WRITE_KEY:}
   version: ${AIRBYTE_VERSION}
   container.orchestrator:
+    enable-unsafe-code: ${AIRBYTE_ENABLE_UNSAFE_CODE:false}
     java-opts: ${CONTAINER_ORCHESTRATOR_JAVA_OPTS:}
   role: ${AIRBYTE_ROLE:}
   worker:
@@ -320,22 +337,6 @@ endpoints:
     enabled: true
     sensitive: false
 
-temporal:
-  cloud:
-    client:
-      cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
-      key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
-    enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
-  host: ${TEMPORAL_HOST:`airbyte-temporal:7233`}
-  retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
-  sdk:
-    timeouts:
-      rpc-timeout: ${TEMPORAL_SDK_RPC_TIMEOUT:60s}
-      rpc-long-poll-timeout: ${TEMPORAL_SDK_RPC_LONG_POLL_TIMEOUT:70s}
-      rpc-query-timeout: ${TEMPORAL_SDK_RPC_QUERY_TIMEOUT:10s}
-
 logger:
   levels:
     com.zaxxer.hikari: ERROR
@@ -343,7 +344,6 @@ logger:
     io.grpc: INFO
     io.fabric8.kubernetes.client: INFO
     io.netty: INFO
-    io.temporal: INFO
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
 

@@ -9,7 +9,7 @@
 Renders the global.workloads.containerOrchestrator.secretName value
 */}}
 {{- define "airbyte.workloads.containerOrchestrator.secretName" }}
-    {{- .Values.global.workloads.containerOrchestrator.secretName }}
+    {{- .Values.global.workloads.containerOrchestrator.secretName | default .Values.global.secretName }}
 {{- end }}
 
 {{/*
@@ -57,6 +57,24 @@ Renders the workloads.containerOrchestrator.dataPlane.secretName environment var
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
+{{- end }}
+
+{{/*
+Renders the global.workloads.containerOrchestrator.dataPlane.secretKey value
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" }}
+    {{- .Values.global.workloads.containerOrchestrator.dataPlane.secretKey | default "sa.json" }}
+{{- end }}
+
+{{/*
+Renders the workloads.containerOrchestrator.dataPlane.secretKey environment variable
+*/}}
+{{- define "airbyte.workloads.containerOrchestrator.dataPlane.secretKey.env" }}
+- name: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
 {{- end }}
 
 {{/*
@@ -153,7 +171,11 @@ Renders the workloads.namespace environment variable
 Renders the global.workloads.pubSub.enabled value
 */}}
 {{- define "airbyte.workloads.pubSub.enabled" }}
-    {{- .Values.global.workloads.pubSub.enabled | default false }}
+	{{- if eq .Values.global.workloads.pubSub.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.workloads.pubSub.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -192,6 +214,7 @@ Renders the set of all workloads environment variables
 {{- include "airbyte.workloads.containerOrchestrator.secretName.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretName.env" . }}
+{{- include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.javaOpts.env" . }}
 {{- include "airbyte.workloads.containerOrchestrator.secretMountPath.env" . }}
 {{- include "airbyte.workloads.kubernetesClientMaxIdleConnections.env" . }}
@@ -208,6 +231,7 @@ Renders the set of all workloads config map variables
 CONTAINER_ORCHESTRATOR_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.secretName" . | quote }}
 CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" . | quote }}
 CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretName" . | quote }}
+CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" . | quote }}
 CONTAINER_ORCHESTRATOR_JAVA_OPTS: {{ include "airbyte.workloads.containerOrchestrator.javaOpts" . | quote }}
 CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH: {{ include "airbyte.workloads.containerOrchestrator.secretMountPath" . | quote }}
 KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS: {{ include "airbyte.workloads.kubernetesClientMaxIdleConnections" . | quote }}
@@ -293,7 +317,11 @@ DATA_SYNC_TASK_QUEUES: {{ include "airbyte.workloads.queues.sync" . | quote }}
 Renders the global.workloads.resources.useConnectorResourceDefaults value
 */}}
 {{- define "airbyte.workloads.resources.useConnectorResourceDefaults" }}
-    {{- .Values.global.workloads.resources.useConnectorResourceDefaults | default true }}
+	{{- if eq .Values.global.workloads.resources.useConnectorResourceDefaults nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.workloads.resources.useConnectorResourceDefaults }}
+	{{- end }}
 {{- end }}
 
 {{/*

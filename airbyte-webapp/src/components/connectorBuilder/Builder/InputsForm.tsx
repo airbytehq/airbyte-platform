@@ -1,7 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import escapeStringRegexp from "escape-string-regexp";
 import { useContext, useMemo } from "react";
-import { FormProvider, UseFormSetValue, useForm, useFormContext, useWatch } from "react-hook-form";
+import { FieldValues, FormProvider, UseFormSetValue, useForm, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useEffectOnce } from "react-use";
 import * as yup from "yup";
@@ -17,7 +17,7 @@ import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/Connec
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput, BuilderFormValues, BuilderState } from "../types";
+import { BuilderFormInput, BuilderFormValues } from "../types";
 
 export const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "date", "date-time"] as const;
 
@@ -84,8 +84,8 @@ export const InputForm = ({
   if (!setValue || !watch) {
     throw new Error("rhf context not available");
   }
-  const formValues = watch("formValues");
-  const testingValues = watch("testingValues");
+  const formValues: BuilderFormValues = watch("formValues");
+  const testingValues: ConnectorBuilderProjectTestingValues = watch("testingValues");
   const usedKeys = useMemo(() => formValues.inputs.map((input) => input.key), [formValues.inputs]);
   const inputInEditValidation = useMemo(
     () =>
@@ -180,7 +180,7 @@ export const InputForm = ({
 function adjustTestingValues(
   newInput: BuilderFormInput,
   previousInput: BuilderFormInput | undefined,
-  setValue: UseFormSetValue<BuilderState>,
+  setValue: UseFormSetValue<FieldValues>,
   testingValues: ConnectorBuilderProjectTestingValues | undefined
 ) {
   const defaultValue = newInput.definition.default ?? (newInput.definition.type === "boolean" ? false : undefined);
@@ -213,7 +213,7 @@ function adjustTestingValues(
 
 async function adjustBuilderInputs(
   inputInEditing: InputInEditing,
-  setValue: UseFormSetValue<BuilderState>,
+  setValue: UseFormSetValue<FieldValues>,
   formValues: BuilderFormValues,
   newInput: BuilderFormInput
 ) {
@@ -233,7 +233,7 @@ async function updateInputKeyAndReferences(
   previousKey: string,
   newInput: BuilderFormInput,
   formValues: BuilderFormValues,
-  setValue: UseFormSetValue<BuilderState>
+  setValue: UseFormSetValue<FieldValues>
 ) {
   const newInputs = formValues.inputs.map((input) => (input.key === previousKey ? newInput : input));
 

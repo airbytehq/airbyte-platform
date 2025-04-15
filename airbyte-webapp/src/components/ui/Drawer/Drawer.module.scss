@@ -1,0 +1,64 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/z-indices";
+
+.drawer {
+  &__container {
+    z-index: z-indices.$drawer;
+    position: fixed;
+    right: 0;
+    top: 0;
+    width: 600px;
+    max-width: 100vw;
+    display: flex;
+    justify-content: flex-end;
+    isolation: isolate;
+
+    &:focus-visible {
+      outline: none;
+    }
+  }
+
+  &__header {
+    padding-top: variables.$spacing-lg;
+    width: 100%;
+    position: sticky;
+    top: 0;
+    background-color: colors.$foreground;
+    z-index: 1;
+  }
+
+  &__content {
+    position: relative;
+    height: 100vh;
+    width: 100%;
+    background-color: colors.$foreground;
+    box-shadow: variables.$box-shadow-left;
+    overflow-y: auto;
+  }
+
+  &__childContainer {
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  &--enterFrom {
+    transform: translateX(100%);
+  }
+
+  &--enterTo {
+    transform: translateX(0);
+  }
+
+  &--leaveFrom {
+    transform: translateX(0);
+  }
+
+  &--leaveTo {
+    transform: translateX(100%);
+  }
+
+  &--transitioning {
+    transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+}

@@ -62,8 +62,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     every { kubernetesClient.pods() } throws IllegalStateException()
@@ -155,8 +153,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -195,8 +191,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -238,8 +232,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -279,8 +271,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<KubernetesClientException> {
@@ -322,8 +312,6 @@ class KubePodLauncherTest {
         metricClient,
         "namespace",
         kubernetesClientRetryPolicy,
-        mockk(),
-        null,
       )
 
     assertThrows<RuntimeException> {

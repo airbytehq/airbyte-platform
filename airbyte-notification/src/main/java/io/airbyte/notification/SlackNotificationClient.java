@@ -163,9 +163,9 @@ public class SlackNotificationClient extends NotificationClient {
                                            *Failure reason:*
 
                                            ```
-                                           %s
+                                           [%s] %s
                                            ```
-                                           """, summary.getErrorMessage()));
+                                           """, summary.getErrorType(), summary.getErrorMessage()));
     }
     final Section summarySection = notification.addSection();
     summarySection.setText(String.format("""

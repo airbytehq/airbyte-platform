@@ -19,6 +19,7 @@ import com.google.cloud.secretmanager.v1.SecretPayload
 import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -69,7 +70,7 @@ class GoogleSecretManagerPersistence(
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     writeWithExpiry(coordinate, payload)
@@ -91,7 +92,7 @@ class GoogleSecretManagerPersistence(
   }
 
   override fun writeWithExpiry(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
     expiry: Instant?,
   ) {
@@ -143,14 +144,14 @@ class GoogleSecretManagerPersistence(
     client.addSecretVersion(name, secretPayload)
   }
 
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
     }
   }
 
-  override fun disable(coordinate: SecretCoordinate) {
+  override fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretVersionName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       val request = ListSecretVersionsRequest.newBuilder().setParent(secretVersionName.toString()).build()

@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@8.6.12",
   "engines": {
-    "node": "20.11.0",
+    "node": "20.19.0",
     "pnpm": "8.6.12"
   },
   "scripts": {
@@ -57,7 +57,7 @@
     "@floating-ui/react-dom": "^1.0.0",
     "@headlessui-float/react": "^0.11.2",
     "@headlessui/react": "2.2.0",
-    "@hookform/resolvers": "^2.9.11",
+    "@hookform/resolvers": "2.9.11",
     "@inline-svg-unique-id/react": "^1.2.3",
     "@monaco-editor/react": "^4.4.5",
     "@tanstack/react-query": "^4.29.5",
@@ -69,6 +69,8 @@
     "@types/segment-analytics": "^0.0.36",
     "@types/semver": "^7.3.13",
     "@types/uuid": "^9.0.6",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
     "anser": "^2.1.1",
     "any-base": "^1.1.0",
     "broadcast-channel": "^7.0.0",
@@ -84,6 +86,7 @@
     "graphql": "^16.10.0",
     "js-yaml": "^4.1.0",
     "json-schema": "^0.4.0",
+    "json-schema-to-ts": "^3.1.0",
     "keycloak-js": "^23.0.7",
     "launchdarkly-js-client-sdk": "^3.1.0",
     "lodash": "^4.17.21",
@@ -124,7 +127,8 @@
     "unified": "^10.1.2",
     "uuid": "^9.0.1",
     "victory-vendor": "36.6.8",
-    "yup": "^0.32.11"
+    "yup": "^0.32.11",
+    "zod": "3.24.1"
   },
   "devDependencies": {
     "@airbyte/eslint-plugin": "link:packages/eslint-plugin",
@@ -207,7 +211,7 @@
     "mime-types": "^2.1.35",
     "node-fetch": "^2.6.9",
     "optionator": "^0.9.3",
-    "orval": "^6.19.1",
+    "orval": "7.7.0",
     "pg-promise": "^10.15.4",
     "prettier": "^3.0.3",
     "react-select-event": "^5.5.0",

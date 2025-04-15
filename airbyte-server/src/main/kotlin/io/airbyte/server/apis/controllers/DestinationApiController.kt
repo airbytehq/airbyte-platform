@@ -6,7 +6,6 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.DestinationApi
 import io.airbyte.api.model.generated.CheckConnectionRead
-import io.airbyte.api.model.generated.DestinationCloneRequestBody
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
@@ -61,12 +60,6 @@ open class DestinationApiController(
         destinationUpdate,
       )
     }
-
-  @Post(uri = "/clone")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun cloneDestination(
-    @Body destinationCloneRequestBody: DestinationCloneRequestBody,
-  ): DestinationRead? = execute { destinationHandler.cloneDestination(destinationCloneRequestBody) }
 
   @Post(uri = "/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

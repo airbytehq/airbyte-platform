@@ -14,10 +14,10 @@ import { Input } from "components/ui/Input";
 import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { RadioButton } from "components/ui/RadioButton";
 import { Text } from "components/ui/Text";
+import { TextHighlighter } from "components/ui/TextHighlighter";
 import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./CatalogComboBox.module.scss";
-import { TextHighlighter } from "../TextHighlighter";
 
 interface BaseProps {
   options: Option[];

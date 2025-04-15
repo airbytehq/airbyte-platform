@@ -9,8 +9,8 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -60,15 +60,16 @@ interface StreamViewButtonProps {
   id: string;
   name: string;
   num: number;
+  async: boolean;
 }
-const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) => {
+const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num, async }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
-  const testWarnings = useMemo(() => getStreamTestWarnings(name), [getStreamTestWarnings, name]);
+  const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
 
   return (
     <ViewSelectButton
@@ -76,6 +77,7 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) =>
       selected={view === num}
       showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
       onClick={() => {
+        setValue("streamTab", "requester");
         setValue("view", num);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected",
@@ -84,13 +86,16 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num }) =>
         });
       }}
     >
-      {name && name.trim() ? (
-        <Text className={styles.streamViewText}>{name}</Text>
-      ) : (
-        <Text className={styles.emptyStreamViewText}>
-          <FormattedMessage id="connectorBuilder.emptyName" />
-        </Text>
-      )}
+      <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
+        {name && name.trim() ? (
+          <Text className={styles.streamViewText}>{name}</Text>
+        ) : (
+          <Text className={styles.emptyStreamViewText}>
+            <FormattedMessage id="connectorBuilder.emptyName" />
+          </Text>
+        )}
+        {async && <Text className={styles.asyncBadge}>async</Text>}
+      </FlexContainer>
     </ViewSelectButton>
   );
 };
@@ -110,7 +115,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
-  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
 
   return (
     <Sidebar yamlSelected={false}>
@@ -192,8 +197,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         </FlexContainer>
 
         <div className={styles.streamList}>
-          {formValues.streams.map(({ name, id }, num) => (
-            <StreamViewButton key={num} id={id} name={name} num={num} />
+          {formValues.streams.map(({ name, id, requestType }, num) => (
+            <StreamViewButton key={num} id={id} name={name} num={num} async={requestType === "async"} />
           ))}
         </div>
       </FlexContainer>

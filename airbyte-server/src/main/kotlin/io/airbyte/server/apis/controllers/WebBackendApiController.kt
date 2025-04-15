@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendCronExpressionDescription
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
+import io.airbyte.api.model.generated.WebBackendGeographiesListRequest
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
 import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
@@ -134,7 +135,14 @@ open class WebBackendApiController(
   @Post("/geographies/list")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun webBackendListGeographies(): WebBackendGeographiesListResult? = execute(Callable { webBackendGeographiesHandler.listGeographiesOSS() })
+  override fun webBackendListGeographies(
+    @Body webBackendGeographiesListRequest: WebBackendGeographiesListRequest,
+  ): WebBackendGeographiesListResult? =
+    execute(
+      Callable {
+        webBackendGeographiesHandler.listGeographies(webBackendGeographiesListRequest.organizationId)
+      },
+    )
 
   @Post("/connections/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

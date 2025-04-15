@@ -300,4 +300,23 @@ class ConnectorWatchTest {
       heartbeatMonitor.stopHeartbeatThread()
     }
   }
+
+  @ParameterizedTest
+  @EnumSource(OperationType::class)
+  fun `bad doc store should still fail the workload`(operationType: OperationType) {
+    val output =
+      ConnectorJobOutput()
+        .withCheckConnection(StandardCheckConnectionOutput().withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED))
+
+    every { connectorWatcher.readFile(FileConstants.SIDECAR_INPUT_FILE) } returns
+      Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
+
+    every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
+    every { jobOutputDocStore.write(any(), any()) } throws RuntimeException("Unable to Write")
+    every { workloadApi.workloadFailure(any()) } returns Unit
+
+    connectorWatcher.run()
+
+    verify { workloadApi.workloadFailure(any()) }
+  }
 }

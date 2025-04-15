@@ -6,7 +6,7 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.Assertions;

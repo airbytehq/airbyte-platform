@@ -7,6 +7,7 @@ package io.airbyte.api.client.config
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTCreator
 import com.google.auth.oauth2.ServiceAccountCredentials
+import io.airbyte.api.client.auth.DataplaneAccessTokenInterceptor
 import io.airbyte.api.client.auth.KeycloakAccessTokenInterceptor
 import io.airbyte.commons.micronaut.EnvConstants
 import io.airbyte.metrics.MetricClient
@@ -57,7 +58,7 @@ class InternalApiAuthenticationFactory {
   @Prototype
   @Requires(property = "airbyte.acceptance.test.enabled", value = "false", defaultValue = "false")
   @Requires(env = [EnvConstants.DATA_PLANE])
-  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class])
+  @Requires(missingBeans = [KeycloakAccessTokenInterceptor::class, DataplaneAccessTokenInterceptor::class])
   @Named(INTERNAL_API_AUTH_TOKEN_BEAN_NAME)
   fun dataPlaneInternalApiAuthToken(
     @Value("\${airbyte.control.plane.auth-endpoint}") controlPlaneAuthEndpoint: String,

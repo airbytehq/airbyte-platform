@@ -11,11 +11,11 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,6 +24,9 @@ import java.util.UUID;
 public interface DestinationService {
 
   StandardDestinationDefinition getStandardDestinationDefinition(UUID destinationDefinitionId)
+      throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  StandardDestinationDefinition getStandardDestinationDefinition(UUID destinationDefinitionId, boolean includeTombstone)
       throws JsonValidationException, IOException, ConfigNotFoundException;
 
   StandardDestinationDefinition getDestinationDefinitionFromDestination(UUID destinationId);
@@ -45,6 +48,8 @@ public interface DestinationService {
       throws IOException, JsonValidationException, ConfigNotFoundException;
 
   DestinationConnection getDestinationConnection(UUID destinationId) throws JsonValidationException, IOException, ConfigNotFoundException;
+
+  Optional<DestinationConnection> getDestinationConnectionIfExists(UUID destinationId);
 
   void writeDestinationConnectionNoSecrets(DestinationConnection partialDestination) throws IOException;
 
@@ -71,18 +76,10 @@ public interface DestinationService {
 
   List<DestinationConnection> listDestinationsWithIds(final List<UUID> destinationIds) throws IOException;
 
-  DestinationConnection getDestinationConnectionWithSecrets(UUID destinationId) throws JsonValidationException, ConfigNotFoundException, IOException;
-
-  void writeDestinationConnectionWithSecrets(
-                                             DestinationConnection destination,
-                                             ConnectorSpecification connectorSpecification)
-      throws JsonValidationException, IOException, ConfigNotFoundException;
-
   void tombstoneDestination(
                             final String name,
                             final UUID workspaceId,
-                            final UUID destinationId,
-                            final ConnectorSpecification spec)
+                            final UUID destinationId)
       throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

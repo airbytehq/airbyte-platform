@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { useFormState, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation } from "react-router-dom";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionHandler } from "components/forms/Form";
@@ -23,13 +23,11 @@ import { SSO_LOGIN_REQUIRED_STATE } from "packages/cloud/services/auth/CloudAuth
 
 import styles from "./SSOIdentifierPage.module.scss";
 
-interface CompanyIdentifierValues {
-  companyIdentifier: string;
-}
-
-const schema = yup.object().shape({
-  companyIdentifier: yup.string().trim().required("form.empty.error"),
+const schema = z.object({
+  companyIdentifier: z.string().trim().nonempty("form.empty.error"),
 });
+
+type CompanyIdentifierValues = z.infer<typeof schema>;
 
 export const SSOIdentifierPage = () => {
   const [lastSsoCompanyIdentifier, setLastSsoCompanyIdentifier] = useLocalStorage(
@@ -60,7 +58,7 @@ export const SSOIdentifierPage = () => {
       <Form<CompanyIdentifierValues>
         onSubmit={handleSubmit}
         defaultValues={{ companyIdentifier: lastSsoCompanyIdentifier }}
-        schema={schema}
+        zodSchema={schema}
       >
         <Box mb="md">
           <Heading as="h1" size="xl" color="blue">

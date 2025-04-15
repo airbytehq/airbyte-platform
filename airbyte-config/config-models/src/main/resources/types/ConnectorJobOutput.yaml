@@ -21,7 +21,7 @@ properties:
     type: string
     format: uuid
   spec:
-    existingJavaType: io.airbyte.protocol.models.ConnectorSpecification
+    existingJavaType: io.airbyte.protocol.models.v0.ConnectorSpecification
   connectorConfigurationUpdated:
     description: A boolean indicating whether the configuration was updated during the job, e.g. if an AirbyteConfigControlMessage was received.
     type: boolean

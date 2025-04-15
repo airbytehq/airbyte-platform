@@ -33,7 +33,7 @@ class ResourceRequirementsFactory(
     val sourceReqs =
       if (input.useFileTransfer) {
         input.getSourceResourceReqs()?.let {
-          ResourceRequirementsUtils.mergeResourceRequirements(fileTransferReqs, it)
+          ResourceRequirementsUtils.mergeResourceRequirements(it, fileTransferReqs)
         } ?: fileTransferReqs
       } else {
         input.getSourceResourceReqs()

@@ -30,7 +30,7 @@ describe("ErrorDetails", () => {
     const result = await render(
       <ErrorDetails
         error={
-          new HttpProblem({ method: "get", url: "/some-url" }, 404, {
+          new HttpProblem({ method: "GET", url: "/some-url" }, 404, {
             type: "error:dont-panic" as any,
             title: "Don't panic" as any,
             documentationUrl: "https://airbyte.dev/dont-panic",

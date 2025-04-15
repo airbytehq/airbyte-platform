@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE;
 import static io.airbyte.commons.version.AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.CONNECTOR_BUILDER_PROJECT_ID_KEY;
 import static io.airbyte.metrics.lib.ApmTraceConstants.Tags.WORKSPACE_ID_KEY;
@@ -22,6 +23,8 @@ import io.airbyte.api.model.generated.ConnectorBuilderHttpResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectDetailsRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody;
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveResponse;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead;
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList;
@@ -66,8 +69,10 @@ import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.connectorbuilderserver.api.client.generated.ConnectorBuilderServerApi;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.AuxiliaryRequest;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.FullResolveManifestRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpRequest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.HttpResponse;
+import io.airbyte.connectorbuilderserver.api.client.model.generated.ResolveManifest;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
@@ -86,8 +91,8 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
-import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.core.util.CollectionUtils;
 import jakarta.annotation.Nullable;
@@ -273,10 +278,13 @@ public class ConnectorBuilderProjectsHandler {
       throws IOException {
     final UUID id = uuidSupplier.get();
 
-    connectorBuilderService.writeBuilderProjectDraft(id, projectCreate.getWorkspaceId(), projectCreate.getBuilderProject().getName(),
+    connectorBuilderService.writeBuilderProjectDraft(id,
+        projectCreate.getWorkspaceId(),
+        projectCreate.getBuilderProject().getName(),
         new ObjectMapper().valueToTree(projectCreate.getBuilderProject().getDraftManifest()),
         projectCreate.getBuilderProject().getComponentsFileContent(),
-        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(), projectCreate.getBuilderProject().getContributionPullRequestUrl(),
+        projectCreate.getBuilderProject().getBaseActorDefinitionVersionId(),
+        projectCreate.getBuilderProject().getContributionPullRequestUrl(),
         projectCreate.getBuilderProject().getContributionActorDefinitionId());
 
     return buildIdResponseFromId(id, projectCreate.getWorkspaceId());
@@ -443,7 +451,7 @@ public class ConnectorBuilderProjectsHandler {
     final ActorDefinitionVersion defaultVersion = new ActorDefinitionVersion()
         .withActorDefinitionId(actorDefinitionId)
         .withDockerImageTag(getImageVersionForManifest(manifest).getImageVersion())
-        .withDockerRepository("airbyte/source-declarative-manifest")
+        .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
         .withSpec(connectorSpecification)
         .withProtocolVersion(DEFAULT_AIRBYTE_PROTOCOL_VERSION.serialize())
         .withReleaseStage(ReleaseStage.CUSTOM)
@@ -498,6 +506,7 @@ public class ConnectorBuilderProjectsHandler {
           new StreamReadRequestBody(existingHydratedTestingValues,
               requestBody.getManifest(),
               requestBody.getStreamName(),
+              requestBody.getCustomComponentsCode(),
               requestBody.getFormGeneratedManifest(),
               requestBody.getBuilderProjectId().toString(),
               requestBody.getRecordLimit(),
@@ -523,6 +532,25 @@ public class ConnectorBuilderProjectsHandler {
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
+  }
+
+  public ConnectorBuilderProjectFullResolveResponse fullResolveManifestBuilderProject(final ConnectorBuilderProjectFullResolveRequestBody requestBody)
+      throws ConfigNotFoundException, IOException {
+    final ConnectorBuilderProject project = connectorBuilderService.getConnectorBuilderProject(requestBody.getBuilderProjectId(), false);
+    final Optional<SecretPersistenceConfig> secretPersistenceConfig = getSecretPersistenceConfig(project.getWorkspaceId());
+    final JsonNode existingHydratedTestingValues =
+        getHydratedTestingValues(project, secretPersistenceConfig.orElse(null)).orElse(Jsons.emptyObject());
+
+    final FullResolveManifestRequestBody fullResolveManifestRequestBody =
+        new FullResolveManifestRequestBody(existingHydratedTestingValues,
+            requestBody.getManifest(),
+            requestBody.getFormGeneratedManifest(),
+            requestBody.getStreamLimit(),
+            requestBody.getBuilderProjectId().toString(),
+            requestBody.getWorkspaceId().toString());
+    final ResolveManifest resolveManifest = connectorBuilderServerApiClient.fullResolveManifest(fullResolveManifestRequestBody);
+    final ConnectorBuilderProjectFullResolveResponse builderProjectResolveManifest = convertResolveManifest(resolveManifest);
+    return builderProjectResolveManifest;
   }
 
   public BuilderProjectForDefinitionResponse getConnectorBuilderProjectForDefinitionId(final BuilderProjectForDefinitionRequestBody requestBody)
@@ -552,6 +580,22 @@ public class ConnectorBuilderProjectsHandler {
         .auxiliaryRequests(mapGlobalAuxiliaryRequests(streamRead))
         .inferredSchema(streamRead.getInferredSchema())
         .inferredDatetimeFormats(streamRead.getInferredDatetimeFormats());
+  }
+
+  /**
+   * Converts the provided {@code ResolveManifest} object into a
+   * {@code ConnectorBuilderProjectFullResolveResponse} object.
+   * <p>
+   * This method maps manifest property from the {@code resolveManifest} instance.
+   *
+   * @param resolveManifest the {@code ResolveManifest} instance containing the original data to be
+   *        converted.
+   * @return a new {@code ConnectorBuilderProjectFullResolveResponse} instance populated with the
+   *         mapped value from {@code resolveManifest}.
+   */
+  private ConnectorBuilderProjectFullResolveResponse convertResolveManifest(final ResolveManifest resolveManifest) {
+    return new ConnectorBuilderProjectFullResolveResponse()
+        .manifest(resolveManifest.getManifest());
   }
 
   /**
@@ -690,9 +734,9 @@ public class ConnectorBuilderProjectsHandler {
 
     final var secretPersistence = secretPersistenceConfig.map(c -> new RuntimeSecretPersistence(c, metricClient)).orElse(null);
     if (existingTestingValues.isPresent()) {
-      return secretsRepositoryWriter.updateFromConfig(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
+      return secretsRepositoryWriter.updateFromConfigLegacy(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }
-    return secretsRepositoryWriter.createFromConfig(workspaceId, updatedTestingValues, spec, secretPersistence);
+    return secretsRepositoryWriter.createFromConfigLegacy(workspaceId, updatedTestingValues, spec, secretPersistence);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {
@@ -723,8 +767,9 @@ public class ConnectorBuilderProjectsHandler {
   public DeclarativeManifestBaseImageRead getDeclarativeManifestBaseImage(final DeclarativeManifestRequestBody declarativeManifestRequestBody) {
     final JsonNode declarativeManifest = declarativeManifestRequestBody.getManifest();
     final DeclarativeManifestImageVersion declarativeManifestImageVersion = getImageVersionForManifest(declarativeManifest);
-    final String baseImage = String.format("docker.io/airbyte/source-declarative-manifest:%s@%s", declarativeManifestImageVersion.getImageVersion(),
-        declarativeManifestImageVersion.getImageSha());
+    final String baseImage =
+        String.format("docker.io/%s:%s@%s", AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE, declarativeManifestImageVersion.getImageVersion(),
+            declarativeManifestImageVersion.getImageSha());
     return new DeclarativeManifestBaseImageRead().baseImage(baseImage);
   }
 

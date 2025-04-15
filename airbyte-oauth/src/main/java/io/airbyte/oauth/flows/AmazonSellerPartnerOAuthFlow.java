@@ -10,7 +10,7 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData;
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.oauth.BaseOAuth2Flow;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URISyntaxException;

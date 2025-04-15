@@ -10,8 +10,8 @@ import {
   getFilteredRowModel,
 } from "@tanstack/react-table";
 import classNames from "classnames";
-import React, { PropsWithChildren, useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import React, { PropsWithChildren, useMemo, useState } from "react";
+import { FormattedMessage, useIntl } from "react-intl";
 import { TableVirtuoso, TableComponents, ItemProps } from "react-virtuoso";
 
 import { Text } from "components/ui/Text";
@@ -40,6 +40,8 @@ export interface TableProps<T> {
   stickyHeaders?: boolean;
   getRowClassName?: (data: T) => string | undefined;
   initialSortBy?: Array<{ id: string; desc: boolean }>;
+  showTableToggle?: boolean;
+  initialExpandedRows?: number;
   /**
    * If true, the table will be rendered using react-virtuoso. Defaults to false.
    */
@@ -76,6 +78,8 @@ export const Table = <T,>({
   virtualized = false,
   virtualizedProps,
   customEmptyPlaceholder,
+  showTableToggle = false,
+  initialExpandedRows = 6,
 }: PropsWithChildren<TableProps<T>>) => {
   const table = useReactTable({
     columns,
@@ -237,6 +241,9 @@ export const Table = <T,>({
     </tbody>
   );
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const { formatMessage } = useIntl();
+
   return virtualized ? (
     <TableVirtuoso<T>
       // the parent container should have exact height to make "AutoSizer" work properly
@@ -266,10 +273,21 @@ export const Table = <T,>({
         <EmptyPlaceholder />
       ) : (
         <tbody>
-          {rows.map((row) => (
-            <TableRow key={`table-row-${row.id}`} row={row} />
-          ))}
+          {!showTableToggle || isExpanded
+            ? rows.map((row) => <TableRow key={`table-row-${row.id}`} row={row} />)
+            : rows.slice(0, initialExpandedRows).map((row) => <TableRow key={`table-row-${row.id}`} row={row} />)}
         </tbody>
+      )}
+      {showTableToggle && rows.length > initialExpandedRows && (
+        <button
+          type="button"
+          className={styles.viewMoreButton}
+          onClick={() => {
+            setIsExpanded((prev) => !prev);
+          }}
+        >
+          {formatMessage({ id: isExpanded ? "tables.viewLess" : "tables.viewMore" })}
+        </button>
       )}
     </table>
   );

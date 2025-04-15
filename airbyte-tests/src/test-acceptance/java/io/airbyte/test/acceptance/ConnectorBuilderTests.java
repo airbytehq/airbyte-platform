@@ -239,10 +239,11 @@ public class ConnectorBuilderTests {
   }
 
   private static SourceRead createSource(final UUID sourceDefinitionId) throws IOException {
+    final JsonNode config = new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}");
     return apiClient.getSourceApi().createSource(
         new SourceCreate(
             sourceDefinitionId,
-            new ObjectMapper().readTree("{\"__injected_declarative_manifest\": {}\n}"),
+            config,
             workspaceId,
             "A custom declarative source",
             null,

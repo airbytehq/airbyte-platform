@@ -8,6 +8,7 @@ export enum RoutePaths {
   Source = "source",
   Settings = "settings",
   ConnectorBuilder = "connector-builder",
+  EmbeddedWidget = "embedded-widget",
 }
 
 export enum DestinationPaths {

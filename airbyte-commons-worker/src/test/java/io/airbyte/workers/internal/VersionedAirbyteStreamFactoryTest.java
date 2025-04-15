@@ -22,12 +22,10 @@ import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory;
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV1Deserializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
 import io.airbyte.commons.version.Version;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.AirbyteLogMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteLogMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.io.BufferedReader;
@@ -79,7 +77,6 @@ class VersionedAirbyteStreamFactoryTest {
     @Test
     void testValid() {
       final AirbyteMessage record1 = AirbyteMessageUtils.createRecordMessage(STREAM_NAME, FIELD_NAME, "green");
-
       final Stream<AirbyteMessage> messageStream = stringToMessageStream(Jsons.serialize(record1));
       final Stream<AirbyteMessage> expectedStream = Stream.of(record1);
 
@@ -265,8 +262,8 @@ class VersionedAirbyteStreamFactoryTest {
     @BeforeEach
     void beforeEach() {
       serDeProvider = spy(new AirbyteMessageSerDeProvider(
-          List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
-          List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer())));
+          List.of(new AirbyteMessageV0Deserializer()),
+          List.of(new AirbyteMessageV0Serializer())));
       serDeProvider.initialize();
 
       final AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(

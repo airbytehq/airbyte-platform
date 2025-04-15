@@ -25,8 +25,8 @@ describe("Source main actions", () => {
     cy.intercept("/api/v1/sources/create").as("createSource");
     createPostgresSource("Test source cypress");
 
-    cy.wait("@createSource", { timeout: 30000 }).then((interception) => {
-      assert("include", `/source/${interception.response?.body.Id}`);
+    cy.wait("@createSource", { timeout: 30000 }).then(({ response }) => {
+      cy.url().should("include", `/source/${response?.body.sourceId}`);
     });
   });
 

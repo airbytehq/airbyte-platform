@@ -5,8 +5,8 @@
 package io.airbyte.commons.server.helpers;
 
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.protocol.models.AdvancedAuth;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.AdvancedAuth;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;

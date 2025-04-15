@@ -1,5 +1,5 @@
 import React from "react";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { ClearRunningItem } from "./ClearRunningItem";
 import { RefreshRunningItem } from "./RefreshRunningItem";
@@ -7,7 +7,7 @@ import { SyncRunningItem } from "./SyncRunningItem";
 import { jobRunningSchema } from "../types";
 
 interface RunningJobItemProps {
-  event: InferType<typeof jobRunningSchema>;
+  event: z.infer<typeof jobRunningSchema>;
 }
 
 export const RunningJobItem: React.FC<RunningJobItemProps> = React.memo(({ event }) => {

@@ -1004,8 +1004,6 @@ internal class ConnectorRolloutHandlerTest {
     every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(createMockActorDefinitionVersion())
-    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
-    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
     every { userPersistence.getUser(any()) } returns
       Optional.of(
@@ -1028,8 +1026,6 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
       connectorRolloutService.writeConnectorRollout(any())
       userPersistence.getUser(any())
     }
@@ -1104,8 +1100,6 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutClient.doRollout(any()) } just Runs
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
-    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
 
     connectorRolloutHandler.manualDoConnectorRolloutUpdate(connectorRolloutWorkflowUpdate)
 
@@ -1114,8 +1108,6 @@ internal class ConnectorRolloutHandlerTest {
       connectorRolloutClient.doRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
@@ -1139,8 +1131,6 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
       every { connectorRolloutClient.startRollout(any()) } just Runs
-      every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
-      every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
     every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
 
@@ -1151,8 +1141,6 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
         connectorRolloutClient.startRollout(any())
-        rolloutActorFinder.getActorSelectionInfo(any(), any())
-        rolloutActorFinder.getSyncInfoForPinnedActors(any())
       }
       connectorRolloutClient.finalizeRollout(any())
     }
@@ -1179,8 +1167,6 @@ internal class ConnectorRolloutHandlerTest {
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
       every { connectorRolloutClient.startRollout(any()) } just Runs
-      every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
-      every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
     }
     every { connectorRolloutClient.finalizeRollout(any()) } returns Unit
 
@@ -1191,8 +1177,6 @@ internal class ConnectorRolloutHandlerTest {
       actorDefinitionService.getActorDefinitionVersion(any())
       if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
         connectorRolloutClient.startRollout(any())
-        rolloutActorFinder.getActorSelectionInfo(any(), any())
-        rolloutActorFinder.getSyncInfoForPinnedActors(any())
       }
       connectorRolloutClient.finalizeRollout(any())
     }
@@ -1219,8 +1203,6 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(emptyList(), 0, 0, 0, 0)
-    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns mapOf(UUID.randomUUID() to ActorSyncJobInfo(0, 0, 0))
 
     val result = connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutWorkflowUpdate)
 
@@ -1230,8 +1212,6 @@ internal class ConnectorRolloutHandlerTest {
       connectorRolloutClient.pauseRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 
@@ -1255,8 +1235,6 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutClient.pauseRollout(any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { rolloutActorFinder.getActorSelectionInfo(any(), any()) } returns ActorSelectionInfo(listOf(), 0, 0, 0, 0)
-    every { rolloutActorFinder.getSyncInfoForPinnedActors(any()) } returns emptyMap()
 
     val result = connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutWorkflowUpdate)
 
@@ -1266,8 +1244,6 @@ internal class ConnectorRolloutHandlerTest {
       connectorRolloutClient.pauseRollout(any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
-      rolloutActorFinder.getActorSelectionInfo(any(), any())
-      rolloutActorFinder.getSyncInfoForPinnedActors(any())
     }
   }
 

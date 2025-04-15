@@ -18,7 +18,7 @@ metadata:
       {{- include "airbyte.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 4 }}
     {{- end }}
 spec:
-  serviceAccountName: {{ .Values.global.serviceAccountName }}
+  serviceAccountName: {{ default .Values.global.serviceAccountName .Values.serviceAccountName }}
   {{- if .Values.global.imagePullSecrets }}
   imagePullSecrets:
     {{- range .Values.global.imagePullSecrets }}
@@ -134,6 +134,10 @@ spec:
         - name: AB_JWT_SIGNATURE_SECRET
           value: {{ .Values.global.auth.jwtSignatureSecret | quote }}
         {{- end }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_KEY
+          value: dataplane-client-id
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+          value: dataplane-client-secret
 
         {{- include "airbyte.database.envs" . | nindent 8 }}
 

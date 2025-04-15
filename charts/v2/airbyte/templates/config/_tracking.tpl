@@ -9,7 +9,11 @@
 Renders the global.tracking.enabled value
 */}}
 {{- define "airbyte.tracking.enabled" }}
-    {{- .Values.global.tracking.enabled | default true }}
+	{{- if eq .Values.global.tracking.enabled nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.tracking.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*

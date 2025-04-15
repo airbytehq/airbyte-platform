@@ -28,20 +28,12 @@ interface JobService {
   ): List<Job>
 
   /**
-   * List jobs with the given filters.
+   * List the latest job per scope with the given filters.
    */
-  fun listJobsForScopes(
+  fun findLatestJobPerScope(
     configTypes: Set<ConfigType>,
-    scope: Set<String>,
-    limit: Int,
-    offset: Int,
-    statuses: List<JobStatus>,
-    createdAtStart: OffsetDateTime?,
-    createdAtEnd: OffsetDateTime?,
-    updatedAtStart: OffsetDateTime?,
-    updatedAtEnd: OffsetDateTime?,
-    orderByField: String? = "createdAt",
-    orderByMethod: String? = "desc",
+    scopes: Set<String>,
+    createdAtStart: OffsetDateTime,
   ): List<Job>
 
   /**

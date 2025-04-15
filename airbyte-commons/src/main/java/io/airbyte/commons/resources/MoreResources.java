@@ -30,7 +30,10 @@ public class MoreResources {
    * @param resourceName name of resource
    * @return contents of the resource as a string
    * @throws IOException throw if failure while reading resource
+   *
+   * @deprecated replace with {@link io.airbyte.commons.resources.Resources#read(String) }
    */
+  @Deprecated
   public static String readResource(final String resourceName) throws IOException {
     final URL resource = Resources.getResource(resourceName);
     return Resources.toString(resource, StandardCharsets.UTF_8);

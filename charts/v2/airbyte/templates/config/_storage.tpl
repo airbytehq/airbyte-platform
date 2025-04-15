@@ -168,28 +168,28 @@ Renders the storage.s3.accessKeyId environment variable
 {{- end }}
 
 {{/*
-Renders the global.storage.s3.secretAccesskey value
+Renders the global.storage.s3.secretAccessKey value
 */}}
-{{- define "airbyte.storage.s3.secretAccesskey" }}
-    {{- .Values.global.storage.s3.secretAccesskey }}
+{{- define "airbyte.storage.s3.secretAccessKey" }}
+    {{- .Values.global.storage.s3.secretAccessKey }}
 {{- end }}
 
 {{/*
-Renders the storage.s3.secretAccesskey secret key
+Renders the storage.s3.secretAccessKey secret key
 */}}
-{{- define "airbyte.storage.s3.secretAccesskey.secretKey" }}
-	{{- .Values.global.storage.s3.secretAccesskeySecretKey | default "AWS_SECRET_ACCESS_KEY" }}
+{{- define "airbyte.storage.s3.secretAccessKey.secretKey" }}
+	{{- .Values.global.storage.s3.secretAccessKeySecretKey | default "AWS_SECRET_ACCESS_KEY" }}
 {{- end }}
 
 {{/*
-Renders the storage.s3.secretAccesskey environment variable
+Renders the storage.s3.secretAccessKey environment variable
 */}}
-{{- define "airbyte.storage.s3.secretAccesskey.env" }}
+{{- define "airbyte.storage.s3.secretAccessKey.env" }}
 - name: AWS_SECRET_ACCESS_KEY
   valueFrom:
     secretKeyRef:
       name: {{ include "airbyte.storage.secretName" . }}
-      key: {{ include "airbyte.storage.s3.secretAccesskey.secretKey" . }}
+      key: {{ include "airbyte.storage.s3.secretAccessKey.secretKey" . }}
 {{- end }}
 
 {{/*
@@ -332,7 +332,11 @@ Renders the storage.minio.endpoint environment variable
 Renders the global.storage.minio.s3PathStyleAccess value
 */}}
 {{- define "airbyte.storage.minio.s3PathStyleAccess" }}
-    {{- .Values.global.storage.minio.s3PathStyleAccess | default true }}
+	{{- if eq .Values.global.storage.minio.s3PathStyleAccess nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.storage.minio.s3PathStyleAccess }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -377,7 +381,7 @@ Renders the set of all storage environment variables
 {{- include "airbyte.storage.s3.region.env" . }}
 {{- include "airbyte.storage.s3.authenticationType.env" . }}
 {{- include "airbyte.storage.s3.accessKeyId.env" . }}
-{{- include "airbyte.storage.s3.secretAccesskey.env" . }}
+{{- include "airbyte.storage.s3.secretAccessKey.env" . }}
 {{- end }}
 
 {{- end }}
@@ -433,7 +437,7 @@ AWS_SECRET_ACCESS_KEY: {{ include "airbyte.storage.minio.secretAccessKey" . | qu
 
 {{- if eq $opt "s3" }}
 AWS_ACCESS_KEY_ID: {{ include "airbyte.storage.s3.accessKeyId" . | quote }}
-AWS_SECRET_ACCESS_KEY: {{ include "airbyte.storage.s3.secretAccesskey" . | quote }}
+AWS_SECRET_ACCESS_KEY: {{ include "airbyte.storage.s3.secretAccessKey" . | quote }}
 {{- end }}
 
 {{- end }}

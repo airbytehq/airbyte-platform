@@ -12,7 +12,7 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseMigrationCheck
-import io.airbyte.db.check.impl.JobsDatabaseAvailabilityCheck
+import io.airbyte.db.check.JobsDatabaseAvailabilityCheck
 import io.airbyte.db.factory.DSLContextFactory
 import io.airbyte.db.factory.DatabaseCheckFactory
 import io.airbyte.db.instance.DatabaseConstants
@@ -117,8 +117,8 @@ class DatabaseBeanFactory {
   @Named("configsDatabaseMigrationCheck")
   fun configsDatabaseMigrationCheck(
     @Named("config") dslContext: DSLContext,
-    @Named("configFlyway") configsFlyway: Flyway?,
-    @Value("\${airbyte.flyway.configs.minimum-migration-version}") configsDatabaseMinimumFlywayMigrationVersion: String?,
+    @Named("configFlyway") configsFlyway: Flyway,
+    @Value("\${airbyte.flyway.configs.minimum-migration-version}") configsDatabaseMinimumFlywayMigrationVersion: String,
     @Value("\${airbyte.flyway.configs.initialization-timeout-ms}") configsDatabaseInitializationTimeoutMs: Long,
   ): DatabaseMigrationCheck {
     log.info { "${"Configs database configuration: {} {}"} $configsDatabaseMinimumFlywayMigrationVersion $configsDatabaseInitializationTimeoutMs" }
@@ -135,8 +135,8 @@ class DatabaseBeanFactory {
   @Named("jobsDatabaseMigrationCheck")
   fun jobsDatabaseMigrationCheck(
     @Named("config") dslContext: DSLContext,
-    @Named("jobsFlyway") jobsFlyway: Flyway?,
-    @Value("\${airbyte.flyway.jobs.minimum-migration-version}") jobsDatabaseMinimumFlywayMigrationVersion: String?,
+    @Named("jobsFlyway") jobsFlyway: Flyway,
+    @Value("\${airbyte.flyway.jobs.minimum-migration-version}") jobsDatabaseMinimumFlywayMigrationVersion: String,
     @Value("\${airbyte.flyway.jobs.initialization-timeout-ms}") jobsDatabaseInitializationTimeoutMs: Long,
   ): DatabaseMigrationCheck =
     DatabaseCheckFactory

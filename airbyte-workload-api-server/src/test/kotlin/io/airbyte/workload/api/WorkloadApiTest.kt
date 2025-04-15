@@ -6,7 +6,6 @@ package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.temporal.WorkflowClientWrapped
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
@@ -26,6 +25,7 @@ import io.airbyte.workload.handler.WorkloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImpl
 import io.micrometer.core.instrument.MeterRegistry
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry
+import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.env.Environment
 import io.micronaut.http.HttpRequest
@@ -40,12 +40,12 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
-import io.temporal.client.WorkflowClient
 import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
+@Property(name = "airbyte.workload-api.workload-redelivery-window", value = "PT30M")
 @MicronautTest(environments = [Environment.TEST])
 class WorkloadApiTest(
   @Client("/") val client: HttpClient,
@@ -53,11 +53,11 @@ class WorkloadApiTest(
   @Singleton
   fun mockMeterRegistry(): MeterRegistry = SimpleMeterRegistry()
 
-  private val workloadService = mockk<WorkloadService>()
+  private val workloadQueueService = mockk<WorkloadQueueService>()
 
-  @MockBean(WorkloadService::class)
-  @Replaces(WorkloadService::class)
-  fun workloadService(): WorkloadService = workloadService
+  @MockBean(WorkloadQueueService::class)
+  @Replaces(WorkloadQueueService::class)
+  fun workloadService(): WorkloadQueueService = workloadQueueService
 
   private val workloadHandler = mockk<WorkloadHandlerImpl>()
 
@@ -65,31 +65,20 @@ class WorkloadApiTest(
   @Replaces(WorkloadHandler::class)
   fun workloadHandler(): WorkloadHandler = workloadHandler
 
-  private val workflowClient = mockk<WorkflowClient>()
-
-  @MockBean(WorkflowClient::class)
-  @Replaces(WorkflowClient::class)
-  fun workflowClient(): WorkflowClient = workflowClient
-
-  private val workloadClientWrapped = mockk<WorkflowClientWrapped>()
   private val airbyteApiClient: AirbyteApiClient = mockk()
 
   @MockBean(AirbyteApiClient::class)
   @Replaces(AirbyteApiClient::class)
   fun airbyteApiClient(): AirbyteApiClient = airbyteApiClient
 
-  @MockBean(WorkflowClientWrapped::class)
-  @Replaces(WorkflowClientWrapped::class)
-  fun workloadClientWrapped(): WorkflowClientWrapped = workloadClientWrapped
-
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
     every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
-    every { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
     verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
-    verify(exactly = 1) { workloadService.create(any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @Test

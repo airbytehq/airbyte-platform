@@ -2,7 +2,7 @@
 
 This directory contains the manifest-only connector for `{{connectorImageName}}`.
 
-{{ description }}
+{{ connectorDescription }}
 
 
 ## Usage

@@ -16,6 +16,9 @@ properties:
   destinationDefinitionId:
     type: string
     format: uuid
+  organizationId:
+    type: string
+    format: uuid
   workspaceId:
     type: string
     format: uuid

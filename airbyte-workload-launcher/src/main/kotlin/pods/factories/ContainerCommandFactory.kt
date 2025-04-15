@@ -21,7 +21,7 @@ import io.airbyte.workers.pod.FileConstants.TERMINATION_MARKER_FILE
  * Factory for generating/templating the main shell scripts we use as the entry points in our containers.
  * Factor out into Singleton as necessary.
  */
-object ContainerCommandFactory {
+internal object ContainerCommandFactory {
   // WARNING: Fragile. Coupled to our conventions on building, unpacking and naming our executables.
   private const val SIDE_CAR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-connector-sidecar"
   private const val ORCHESTRATOR_APPLICATION_EXECUTABLE = "/app/airbyte-app/bin/airbyte-container-orchestrator"

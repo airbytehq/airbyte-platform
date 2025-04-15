@@ -10,7 +10,12 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace, useGetOrganizationSubscriptionInfo } from "core/api";
+import {
+  useCurrentOrganizationInfo,
+  useCurrentWorkspace,
+  useGetOrganizationSubscriptionInfo,
+  useOrganization,
+} from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
@@ -29,6 +34,7 @@ export const OrganizationBillingPage: React.FC = () => {
   const { formatCredits } = useFormatCredits();
 
   const { organizationId } = useCurrentWorkspace();
+  const { email } = useOrganization(organizationId);
   const { billing } = useCurrentOrganizationInfo();
   const { data: subscriptionInfo } = useGetOrganizationSubscriptionInfo(
     organizationId,
@@ -52,7 +58,9 @@ export const OrganizationBillingPage: React.FC = () => {
             <FlexItem>
               <Text size="sm">
                 <ExternalLink
-                  href={links.billingNotificationsForm.replace("{organizationId}", organizationId)}
+                  href={links.billingNotificationsForm
+                    .replace("{organizationId}", organizationId)
+                    .replace("{email}", email ?? "")}
                   opensInNewTab
                 >
                   <FlexContainer alignItems="center" gap="xs">

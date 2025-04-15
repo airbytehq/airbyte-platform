@@ -269,7 +269,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         refreshSchemaOutput,
         syncInput.getConnectionContext(),
         signalInput,
-        syncInput.getNetworkSecurityTokens());
+        syncInput.getNetworkSecurityTokens(),
+        syncInput.getIncludesFiles());
   }
 
 }

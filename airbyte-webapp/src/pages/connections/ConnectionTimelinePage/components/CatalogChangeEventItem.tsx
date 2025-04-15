@@ -1,12 +1,12 @@
 import { useMemo } from "react";
 import { FormattedDate, FormattedList, FormattedMessage, useIntl } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { CatalogConfigDiff, StreamFieldStatusChanged } from "core/api/types/AirbyteClient";
+import { CatalogConfigDiff, FieldDataTypeDiff, StreamFieldStatusChanged } from "core/api/types/AirbyteClient";
 import { useModalService } from "hooks/services/Modal";
 
 import styles from "./CatalogChangeEventItem.module.scss";
@@ -18,16 +18,24 @@ import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
 import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
 import { schemaConfigUpdateEventSchema } from "../types";
 import { transformCatalogDiffToCatalogConfigDiff } from "../utils";
-
 export interface CatalogConfigDiffExtended extends CatalogConfigDiff {
   streamsAdded?: StreamFieldStatusChanged[];
   streamsRemoved?: StreamFieldStatusChanged[];
   fieldsAdded?: StreamFieldStatusChanged[];
   fieldsRemoved?: StreamFieldStatusChanged[];
+  fieldsDataTypeChanged?: FieldDataTypeDiff[];
 }
 
+type FieldChangeType = Pick<
+  CatalogConfigDiffExtended,
+  "fieldsAdded" | "fieldsRemoved" | "fieldsDisabled" | "fieldsEnabled"
+>;
+
+const isFieldChange = (key: keyof CatalogConfigDiffExtended) =>
+  key === "fieldsAdded" || key === "fieldsRemoved" || key === "fieldsDisabled" || key === "fieldsEnabled";
+
 interface CatalogChangeEventItemProps {
-  event: InferType<typeof schemaConfigUpdateEventSchema>;
+  event: z.infer<typeof schemaConfigUpdateEventSchema>;
 }
 
 export const CatalogChangeEventItem: React.FC<CatalogChangeEventItemProps> = ({ event }) => {
@@ -47,11 +55,18 @@ export const CatalogChangeEventItem: React.FC<CatalogChangeEventItemProps> = ({ 
 
   const schemaMessage = useMemo(() => {
     const parts = Object.entries(mergedCatalogConfigDiff)
-      .filter(([_, value]) => value?.length > 0)
+      .filter(([_, value]) => Array.isArray(value) && value.length > 0)
       .map(([key]) =>
         formatMessage(
           { id: `connection.timeline.connection_schema_update.${key}` },
-          { count: mergedCatalogConfigDiff[key as keyof CatalogConfigDiffExtended]?.length }
+          {
+            count: isFieldChange(key as keyof CatalogConfigDiffExtended)
+              ? mergedCatalogConfigDiff[key as keyof FieldChangeType]?.reduce(
+                  (acc, curr) => acc + (curr?.fields?.length ?? 0),
+                  0
+                )
+              : mergedCatalogConfigDiff[key as keyof CatalogConfigDiffExtended]?.length ?? 0,
+          }
         )
       );
 
@@ -69,8 +84,12 @@ export const CatalogChangeEventItem: React.FC<CatalogChangeEventItemProps> = ({ 
             </Text>
             <Text size="lg" color="grey400">
               {!!event.user ? <TimelineEventUser user={event.user} /> : <FormattedMessage id="general.airbyte" />}
-              <span className={styles.dot} />
-              <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
+              {event.createdAt && (
+                <>
+                  <span className={styles.dot} />
+                  <FormattedDate value={event.createdAt * 1000} timeStyle="short" dateStyle="medium" />
+                </>
+              )}
             </Text>
           </FlexContainer>
         </FlexContainer>

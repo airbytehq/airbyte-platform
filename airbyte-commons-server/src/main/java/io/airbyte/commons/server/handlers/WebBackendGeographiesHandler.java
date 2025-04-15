@@ -4,11 +4,15 @@
 
 package io.airbyte.commons.server.handlers;
 
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult;
+import io.airbyte.commons.constants.OrganizationConstantsKt;
+import io.airbyte.config.DataplaneGroup;
+import io.airbyte.data.services.DataplaneGroupService;
 import jakarta.inject.Singleton;
-import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
@@ -20,19 +24,26 @@ import java.util.Collections;
 @Singleton
 public class WebBackendGeographiesHandler {
 
-  public WebBackendGeographiesListResult listGeographiesOSS() {
-    // for now, OSS only supports AUTO. This can evolve to account for complex OSS use cases, but for
-    // now we expect OSS deployments to use a single default Task Queue for scheduling syncs in a vast
-    // majority of cases.
-    return new WebBackendGeographiesListResult().geographies(
-        Collections.singletonList(Geography.AUTO));
+  private final DataplaneGroupService dataplaneGroupService;
+
+  public WebBackendGeographiesHandler(final DataplaneGroupService dataplaneGroupService) {
+    this.dataplaneGroupService = dataplaneGroupService;
   }
 
-  /**
-   * Only called by the wrapped Cloud API to enable multi-cloud.
-   */
-  public WebBackendGeographiesListResult listGeographiesCloud() {
-    return new WebBackendGeographiesListResult().geographies(Arrays.asList(Geography.values()));
+  public WebBackendGeographiesListResult listGeographies(final UUID organizationId) {
+    return new WebBackendGeographiesListResult().geographies(getDataplaneGroupNames(organizationId));
+  }
+
+  List<String> getDataplaneGroupNames(final UUID organizationId) {
+    final List<DataplaneGroup> defaultOrgGroups =
+        dataplaneGroupService.listDataplaneGroups(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), false);
+    final List<DataplaneGroup> orgGroups =
+        dataplaneGroupService.listDataplaneGroups(organizationId, false);
+
+    return Stream.concat(defaultOrgGroups.stream(), orgGroups.stream())
+        .map(DataplaneGroup::getName)
+        .distinct()
+        .collect(Collectors.toList());
   }
 
 }

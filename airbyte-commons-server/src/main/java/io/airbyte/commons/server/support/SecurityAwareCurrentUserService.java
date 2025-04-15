@@ -58,7 +58,7 @@ public class SecurityAwareCurrentUserService implements CurrentUserService {
   @Override
   public Optional<UUID> getCurrentUserIdIfExists() {
     try {
-      return Optional.of(UUID.fromString(getCurrentUser().getAuthUserId()));
+      return Optional.of(getCurrentUser().getUserId());
     } catch (final Exception e) {
       log.error("Unable to get current user associated with the request", e);
       return Optional.empty();

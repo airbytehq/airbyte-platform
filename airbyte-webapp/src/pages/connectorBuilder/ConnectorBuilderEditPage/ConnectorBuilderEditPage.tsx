@@ -49,6 +49,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     customComponentsCode: componentsFileContent,
     name,
     view: "global" as const,
+    streamTab: "requester" as const,
     testStreamIndex: 0,
     testingValues: initialTestingValues,
   };
@@ -73,6 +74,7 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     defaultValues: defaultValues.current,
     mode: "onChange",
     resolver: yupResolver<AnyObjectSchema>(builderStateValidationSchema),
@@ -105,7 +107,6 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
 BaseForm.displayName = "BaseForm";
 
 const Panels = React.memo(() => {
-  const formValues = useBuilderWatch("formValues");
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
 
@@ -120,15 +121,7 @@ const Panels = React.memo(() => {
         })}
         panels={[
           {
-            children: (
-              <>
-                {mode === "yaml" ? (
-                  <YamlManifestEditor />
-                ) : (
-                  <Builder hasMultipleStreams={formValues.streams.length > 1} />
-                )}
-              </>
-            ),
+            children: <>{mode === "yaml" ? <YamlManifestEditor /> : <Builder />}</>,
             className: styles.leftPanel,
             minWidth: 350,
           },
@@ -141,7 +134,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [formValues.streams.length, mode, stateKey]
+    [mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

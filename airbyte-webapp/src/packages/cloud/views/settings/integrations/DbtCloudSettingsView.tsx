@@ -1,6 +1,6 @@
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -21,15 +21,12 @@ import { useNotificationService } from "hooks/services/Notification";
 
 import { useDbtTokenRemovalModal } from "./useDbtTokenRemovalModal";
 
-const ServiceTokenFormSchema = yup.object().shape({
-  authToken: yup.string().trim().required("form.empty.error"),
-  accessUrl: yup.string().trim().optional(),
+const ServiceTokenFormSchema = z.object({
+  authToken: z.string().trim().nonempty("form.empty.error"),
+  accessUrl: z.string().trim().optional(),
 });
 
-interface DbtConfigurationFormValues {
-  authToken: string;
-  accessUrl?: string;
-}
+type DbtConfigurationFormValues = z.infer<typeof ServiceTokenFormSchema>;
 
 export const DbtCloudSettingsView: React.FC = () => {
   const formatError = useFormatError();
@@ -101,7 +98,7 @@ export const DbtCloudSettingsView: React.FC = () => {
               onSubmit={onSubmit}
               onSuccess={onSuccess}
               onError={onError}
-              schema={ServiceTokenFormSchema}
+              zodSchema={ServiceTokenFormSchema}
               disabled={!canUpdateWorkspace}
             >
               <FormControl

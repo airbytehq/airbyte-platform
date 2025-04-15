@@ -9,16 +9,17 @@ import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Text } from "components/ui/Text";
 
-import { HttpError } from "core/api";
+import { HttpError, useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
+  useSelectedPageAndSlice,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
+import { AuxiliaryRequestsDisplay } from "./AuxiliaryRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
@@ -45,10 +46,13 @@ export const StreamTester: React.FC<{
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
     queuedStreamRead,
     queueStreamRead,
+    cancelStreamRead,
+    testStreamRequestType,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const testStreamIndex = useBuilderWatch("testStreamIndex");
-  const auxiliaryRequests = streamReadData?.auxiliary_requests;
+  const { selectedSlice } = useSelectedPageAndSlice();
+  const globalAuxiliaryRequests = streamReadData?.auxiliary_requests;
 
   const streamName = streamNames[testStreamIndex];
 
@@ -65,12 +69,18 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const { getStreamTestWarnings, getStreamTestMetadataStatus } = useStreamTestMetadata();
-  const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+  const { getStreamTestWarnings, getStreamTestMetadataStatus, getStreamHasCustomType } = useStreamTestMetadata();
+  const streamTestWarnings = useMemo(
+    () => getStreamTestWarnings(streamName, true),
+    [getStreamTestWarnings, streamName]
+  );
   const streamTestMetadataStatus = useMemo(
     () => getStreamTestMetadataStatus(streamName),
     [getStreamTestMetadataStatus, streamName]
   );
+  const streamHasCustomType = getStreamHasCustomType(streamName);
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 
   const logNumByType = useMemo(
     () =>
@@ -99,13 +109,23 @@ export const StreamTester: React.FC<{
     [streamReadData?.logs, streamTestWarnings.length]
   );
 
-  const hasAuxiliaryRequests = auxiliaryRequests && auxiliaryRequests.length > 0;
-  const hasRegularRequests =
+  const hasGlobalAuxiliaryRequests = globalAuxiliaryRequests && globalAuxiliaryRequests.length > 0;
+  const hasSlices =
     streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
 
-  const SECONDARY_PANEL_SIZE = 0.5;
+  const sliceAuxiliaryRequests = useMemo(() => {
+    if (!hasSlices || selectedSlice === undefined) {
+      return undefined;
+    }
+    return streamReadData.slices[selectedSlice]?.auxiliary_requests;
+  }, [hasSlices, selectedSlice, streamReadData?.slices]);
+
+  const hasSliceAuxiliaryRequests = sliceAuxiliaryRequests && sliceAuxiliaryRequests.length > 0;
+  const hasAnyAuxiliaryRequests = hasGlobalAuxiliaryRequests || hasSliceAuxiliaryRequests;
+
+  const SECONDARY_PANEL_SIZE = 0.25;
   const logsFlex = logNumByType.error > 0 || logNumByType.warning > 0 ? SECONDARY_PANEL_SIZE : 0;
-  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
+  const auxiliaryRequestsFlex = hasAnyAuxiliaryRequests && !hasSlices ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -134,6 +154,10 @@ export const StreamTester: React.FC<{
         </Text>
       )}
 
+      {cantProcessCustomComponents && (
+        <Message type="error" text={formatMessage({ id: "connectorBuilder.warnings.containsCustomComponent" })} />
+      )}
+
       <StreamTestButton
         queueStreamRead={() => {
           queueStreamRead();
@@ -142,12 +166,17 @@ export const StreamTester: React.FC<{
             stream_name: streamName,
           });
         }}
+        cancelStreamRead={cancelStreamRead}
         hasTestingValuesErrors={hasTestingValuesErrors}
         setTestingValuesInputOpen={setTestingValuesInputOpen}
         hasResolveErrors={Boolean(resolveErrorMessage)}
         isStreamTestQueued={queuedStreamRead}
         isStreamTestRunning={isFetching}
-        className={!streamTestMetadataStatus || streamTestMetadataStatus.isStale ? styles.pulsateButton : undefined}
+        isStreamTestStale={
+          !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+        }
+        forceDisabled={cantProcessCustomComponents}
+        requestType={testStreamRequestType}
       />
 
       {resolveErrorMessage !== undefined && (
@@ -209,7 +238,7 @@ export const StreamTester: React.FC<{
           {
             children: (
               <>
-                {hasRegularRequests && (
+                {hasSlices && (
                   <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
                 )}
               </>
@@ -240,13 +269,17 @@ export const StreamTester: React.FC<{
                 },
               ]
             : []),
-          ...(hasAuxiliaryRequests
+          ...(hasAnyAuxiliaryRequests
             ? [
                 {
                   children: (
-                    // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
-                    // to reset the selected request index in case the number of requests differs between streams
-                    <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
+                    // key causes AuxiliaryRequestsDisplay to re-mount when the selected stream or slice changes
+                    <AuxiliaryRequestsDisplay
+                      key={`requests_${streamName}_${selectedSlice}`}
+                      globalRequests={globalAuxiliaryRequests}
+                      sliceRequests={sliceAuxiliaryRequests}
+                      sliceIndex={selectedSlice}
+                    />
                   ),
                   minWidth: 0,
                   flex: auxiliaryRequestsFlex,
@@ -254,7 +287,7 @@ export const StreamTester: React.FC<{
                     <Splitter
                       label={formatMessage(
                         { id: "connectorBuilder.auxiliaryRequests" },
-                        { count: auxiliaryRequests.length }
+                        { count: (globalAuxiliaryRequests?.length || 0) + (sliceAuxiliaryRequests?.length || 0) }
                       )}
                     />
                   ),

@@ -19,6 +19,9 @@ properties:
   workspaceId:
     type: string
     format: uuid
+  organizationId:
+    type: string
+    format: uuid
   configuration:
     description: Integration specific blob. Must be a valid JSON string.
     type: object

@@ -24,7 +24,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSourceDefinition.SourceType;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import jakarta.annotation.Nullable;
 import java.util.Collections;
 import java.util.Date;

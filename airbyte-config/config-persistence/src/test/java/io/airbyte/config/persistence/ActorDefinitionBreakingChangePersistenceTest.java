@@ -17,8 +17,6 @@ import io.airbyte.config.BreakingChangeScope.ScopeType;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -33,7 +31,7 @@ import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -122,8 +120,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
     truncateAllTables();
 
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     final ConnectionService connectionService = mock(ConnectionService.class);
@@ -136,8 +132,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         new SourceServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
             secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
@@ -151,9 +145,6 @@ class ActorDefinitionBreakingChangePersistenceTest extends BaseConfigDatabaseTes
         new DestinationServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
                 featureFlagClient,

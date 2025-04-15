@@ -7,8 +7,7 @@ package io.airbyte.commons.auth.config
 import io.airbyte.config.Configs
 import io.airbyte.config.Configs.AirbyteEdition
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Primary
-import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
 
 /**
@@ -34,20 +33,16 @@ enum class AuthMode {
   NONE,
 }
 
+const val SIMPLE = "simple"
+
 @Factory
 class AuthModeFactory(
   private val airbyteEdition: Configs.AirbyteEdition,
+  @Property(name = "micronaut.security.enabled")
+  private val securityEnabled: Boolean = false,
+  @Property(name = "airbyte.auth.identity-provider.type")
+  private val identityProviderType: String? = null,
 ) {
-  /**
-   * When the Airbyte edition is set to `community` and Micronaut Security is enabled, the
-   * `SIMPLE` auth mode is used regardless of the deployment mode or other configurations.
-   */
-  @Singleton
-  @Requires(property = "airbyte.edition", value = "community")
-  @Requires(property = "micronaut.security.enabled", value = "true")
-  @Primary
-  fun communityAuthMode(): AuthMode = AuthMode.SIMPLE
-
   /**
    * The default auth mode is determined by the deployment mode and edition.
    */
@@ -55,8 +50,15 @@ class AuthModeFactory(
   fun defaultAuthMode(): AuthMode =
     when (airbyteEdition) {
       AirbyteEdition.CLOUD -> AuthMode.OIDC
-      AirbyteEdition.ENTERPRISE -> AuthMode.OIDC
-      AirbyteEdition.COMMUNITY -> AuthMode.NONE
+      AirbyteEdition.ENTERPRISE -> {
+        when (identityProviderType) {
+          SIMPLE -> AuthMode.SIMPLE
+          else -> AuthMode.OIDC
+        }
+      }
+      AirbyteEdition.COMMUNITY -> {
+        if (securityEnabled) AuthMode.SIMPLE else AuthMode.NONE
+      }
       else -> throw IllegalStateException("Unknown or unspecified Airbyte edition: $airbyteEdition")
     }
 }

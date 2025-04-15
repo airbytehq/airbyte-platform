@@ -21,6 +21,7 @@ import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder
 import com.google.common.base.Preconditions
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -44,6 +45,9 @@ class AwsSecretManagerPersistence(
   private val awsCache: AwsCache,
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
+    if (coordinate !is AirbyteManagedSecretCoordinate) {
+      throw IllegalArgumentException("AWS Secret Manager requires a versioned secret coordinate.")
+    }
     var secretString = ""
     try {
       logger.debug { "Reading secret ${coordinate.fullCoordinate}" }
@@ -63,7 +67,7 @@ class AwsSecretManagerPersistence(
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     Preconditions.checkArgument(payload.isNotEmpty(), "Payload shouldn't be empty")
@@ -135,7 +139,7 @@ class AwsSecretManagerPersistence(
    *
    * @param coordinate SecretCoordinate to delete.
    */
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     // Clean up the old bad secrets we might have left behind
     deleteSecretId(coordinate.coordinateBase)
     // Clean up the actual versioned secrets we left behind

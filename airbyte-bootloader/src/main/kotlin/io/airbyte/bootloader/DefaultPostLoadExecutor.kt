@@ -25,7 +25,6 @@ private val log = KotlinLogging.logger {}
 class DefaultPostLoadExecutor(
   private val applyDefinitionsHelper: ApplyDefinitionsHelper,
   @param:Named("localDeclarativeSourceUpdater") private val declarativeSourceUpdater: DeclarativeSourceUpdater,
-  private val authSecretInitializer: AuthKubernetesSecretInitializer?,
 ) : PostLoadExecutor {
   override fun execute() {
     log.info { "Updating connector definitions" }
@@ -33,13 +32,5 @@ class DefaultPostLoadExecutor(
     log.info { "Done updating connector definitions" }
     declarativeSourceUpdater.apply()
     log.info { "Loaded seed data." }
-
-    if (authSecretInitializer != null) {
-      log.info { "Initializing auth secrets" }
-      authSecretInitializer.initializeSecrets()
-      log.info { "Done initializing auth secrets" }
-    } else {
-      log.info { "Auth secret initializer not present. Skipping." }
-    }
   }
 }

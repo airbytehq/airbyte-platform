@@ -16,6 +16,9 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.ReplicationAttemptSummary;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.featureflag.CoRoutineBufferedReplicationWorker;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -25,6 +28,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.BufferedReplicationWorker;
 import io.airbyte.workers.general.ReplicationWorkerFactory;
+import io.airbyte.workers.general.buffered.worker.ReplicationWorkerK;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.internal.exception.DestinationException;
 import io.airbyte.workers.internal.exception.SourceException;
@@ -44,6 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.ToDoubleFunction;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.BuildersKt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,6 +83,7 @@ public class ReplicationJobOrchestrator {
   private final JobOutputDocStore jobOutputDocStore;
   private final String workloadId;
   private final MetricClient metricClient;
+  private final FeatureFlagClient featureFlagClient;
 
   public ReplicationJobOrchestrator(final ReplicationInput replicationInput,
                                     @Named("workloadId") final String workloadId,
@@ -85,7 +92,8 @@ public class ReplicationJobOrchestrator {
                                     final ReplicationWorkerFactory replicationWorkerFactory,
                                     final WorkloadApiClient workloadApiClient,
                                     final JobOutputDocStore jobOutputDocStore,
-                                    final MetricClient metricClient) {
+                                    final MetricClient metricClient,
+                                    final FeatureFlagClient featureFlagClient) {
     this.replicationInput = replicationInput;
     this.workloadId = workloadId;
     this.workspaceRoot = workspaceRoot;
@@ -94,6 +102,7 @@ public class ReplicationJobOrchestrator {
     this.workloadApiClient = workloadApiClient;
     this.jobOutputDocStore = jobOutputDocStore;
     this.metricClient = metricClient;
+    this.featureFlagClient = featureFlagClient;
   }
 
   @Trace(operationName = JOB_ORCHESTRATOR_OPERATION_NAME)
@@ -107,15 +116,19 @@ public class ReplicationJobOrchestrator {
         Map.of(JOB_ID_KEY, jobRunConfig.getJobId(),
             DESTINATION_DOCKER_IMAGE_KEY, destinationLauncherConfig.getDockerImage(),
             SOURCE_DOCKER_IMAGE_KEY, sourceLauncherConfig.getDockerImage()));
-    final BufferedReplicationWorker replicationWorker =
-        replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {},
-            workloadId);
+    boolean shouldUseNewReplicationWorker =
+        featureFlagClient.boolVariation(CoRoutineBufferedReplicationWorker.INSTANCE, new Connection(replicationInput.getConnectionId()));
 
     log.info("Running replication worker...");
     final var jobRoot = TemporalUtils.getJobRoot(workspaceRoot,
         jobRunConfig.getJobId(), jobRunConfig.getAttemptId());
 
-    final ReplicationOutput replicationOutput = run(replicationWorker, replicationInput, jobRoot, workloadId);
+    final ReplicationOutput replicationOutput = shouldUseNewReplicationWorker
+        ? run(replicationWorkerFactory.createK(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {}, workloadId),
+            replicationInput, jobRoot, workloadId)
+        : run(replicationWorkerFactory.create(replicationInput, jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, () -> {}, workloadId),
+            replicationInput, jobRoot, workloadId);
+
     jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput);
     updateStatusInWorkloadApi(replicationOutput, workloadId);
 
@@ -132,6 +145,53 @@ public class ReplicationJobOrchestrator {
 
     log.info("Returning output...");
     return Optional.of(Jsons.serialize(replicationOutput));
+  }
+
+  private ReplicationOutput run(final ReplicationWorkerK replicationWorker,
+                                final ReplicationInput replicationInput,
+                                final Path jobRoot,
+                                final String workloadId)
+      throws InterruptedException {
+
+    return BuildersKt.runBlocking(
+        EmptyCoroutineContext.INSTANCE,
+        (scope, continuation) -> {
+          final Long jobId = Long.parseLong(jobRunConfig.getJobId());
+          final Integer attemptNumber = Math.toIntExact(jobRunConfig.getAttemptId());
+          final List<MetricAttribute> attributes = buildMetricAttributes(replicationInput, jobId, attemptNumber);
+          try {
+            return replicationWorker.run(replicationInput, jobRoot, continuation);
+          } catch (final DestinationException e) {
+            try {
+              failWorkload(workloadId, Optional.of(FailureHelper.destinationFailure(e, jobId, attemptNumber)));
+            } catch (final IOException ioe) {
+              e.addSuppressed(ioe);
+            }
+            attributes.add(new MetricAttribute(STATUS_ATTRIBUTE, FAILED_STATUS));
+            throw e;
+          } catch (final SourceException e) {
+            try {
+              failWorkload(workloadId, Optional.of(FailureHelper.sourceFailure(e, jobId, attemptNumber)));
+            } catch (final IOException ioe) {
+              e.addSuppressed(ioe);
+            }
+            attributes.add(new MetricAttribute(STATUS_ATTRIBUTE, FAILED_STATUS));
+            throw e;
+          } catch (final WorkerException e) {
+            try {
+              failWorkload(workloadId, Optional.of(FailureHelper.platformFailure(e, jobId, attemptNumber)));
+            } catch (final IOException ioe) {
+              e.addSuppressed(ioe);
+            }
+            attributes.add(new MetricAttribute(STATUS_ATTRIBUTE, FAILED_STATUS));
+            throw new RuntimeException(e);
+          } finally {
+            if (attributes.stream().noneMatch(a -> STATUS_ATTRIBUTE.equalsIgnoreCase(a.getKey()))) {
+              attributes.add(new MetricAttribute(STATUS_ATTRIBUTE, SUCCESS_STATUS));
+            }
+            metricClient.count(OssMetricsRegistry.SYNC_STATUS, attributes.toArray(new MetricAttribute[0]));
+          }
+        });
   }
 
   @VisibleForTesting

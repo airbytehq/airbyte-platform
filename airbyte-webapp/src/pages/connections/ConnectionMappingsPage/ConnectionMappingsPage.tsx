@@ -5,9 +5,11 @@ import { PageContainer } from "components/PageContainer";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
+import { links } from "core/utils/links";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
@@ -78,6 +80,11 @@ const ConnectionMappingsPageContent = () => {
             <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
             {showSubmissionButtons && (
               <FlexContainer>
+                <ExternalLink href={links.connectionMappings}>
+                  <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
+                    <FormattedMessage id="connections.mappings.docsLink" />
+                  </Button>
+                </ExternalLink>
                 <Button
                   variant="secondary"
                   onClick={clear}

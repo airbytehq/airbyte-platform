@@ -21,9 +21,9 @@ import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamState
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk

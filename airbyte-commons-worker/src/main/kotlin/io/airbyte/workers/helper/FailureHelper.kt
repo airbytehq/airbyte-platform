@@ -12,7 +12,7 @@ import io.airbyte.config.AttemptFailureSummary
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.exception.ResourceConstraintException
 import io.airbyte.workers.exception.WorkloadLauncherException
 import io.airbyte.workers.exception.WorkloadMonitorException

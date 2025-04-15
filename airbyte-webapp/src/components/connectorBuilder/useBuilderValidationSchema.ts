@@ -5,7 +5,8 @@ import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
-import { AnyObject } from "yup/lib/types";
+import { AnyObject, SchemaLike } from "yup/lib/types";
+import { z } from "zod";
 
 import {
   ListPartitionRouter,
@@ -35,6 +36,13 @@ import {
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
 const REQUIRED_ERROR = "form.empty.error";
 const strip = (schema: MixedSchema) => schema.strip();
+
+const ifRequestType = (requestType: BuilderStream["requestType"], schema: SchemaLike) =>
+  yup.mixed().when("requestType", {
+    is: requestType,
+    then: schema,
+    otherwise: strip,
+  });
 
 export const useBuilderValidationSchema = () => {
   const { formatMessage } = useIntl();
@@ -103,6 +111,72 @@ export const useBuilderValidationSchema = () => {
     [formatMessage]
   );
 
+  const parentStreamSchema = useMemo(
+    () =>
+      maybeYamlSchema(
+        yup
+          .array(
+            yup.object().shape({
+              parent_key: yup.string().required(REQUIRED_ERROR),
+              parentStreamReference: yup.string().required(REQUIRED_ERROR),
+              partition_field: yup.string().required(REQUIRED_ERROR),
+              request_option: nonPathRequestOptionSchema,
+              incremental_dependency: yup.boolean().default(false),
+            })
+          )
+          .notRequired()
+          .default(undefined),
+        (parsedYaml, createError) =>
+          validatePartitionRouterTypes(parsedYaml as SimpleRetrieverPartitionRouter, createError, [
+            SUBSTREAM_PARTITION_ROUTER,
+            CUSTOM_PARTITION_ROUTER,
+          ])
+      ),
+    [validatePartitionRouterTypes]
+  );
+
+  const parameterizedRequestsSchema = useMemo(
+    () =>
+      maybeYamlSchema(
+        yup
+          .array(
+            yup.object().shape({
+              cursor_field: yup.string().required(REQUIRED_ERROR),
+              values: yup.object().shape({
+                value: yup.mixed().when("type", {
+                  is: "list",
+                  then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+                  otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
+                }),
+              }),
+              request_option: nonPathRequestOptionSchema,
+            })
+          )
+          .notRequired()
+          .default(undefined),
+        (parsedYaml, createError) => {
+          const partitionRouter = parsedYaml as SimpleRetrieverPartitionRouter;
+
+          const typeValidationResult = validatePartitionRouterTypes(
+            partitionRouter,
+            createError,
+            [LIST_PARTITION_ROUTER],
+            formatMessage({ id: "connectorBuilder.partitionRouter.customRouter" })
+          );
+
+          if (typeValidationResult !== true) {
+            return typeValidationResult;
+          }
+
+          return validateListPartitionRouterValues(
+            partitionRouter as ListPartitionRouter | ListPartitionRouter[],
+            createError
+          );
+        }
+      ),
+    [formatMessage, validateListPartitionRouterValues, validatePartitionRouterTypes]
+  );
+
   const authenticatorSchema = useAuthenticatorSchema();
 
   const globalSchema = useMemo(
@@ -128,80 +202,93 @@ export const useBuilderValidationSchema = () => {
               return allStreamNames.filter((name: string) => name === value).length === 1;
             }
           ),
-        urlPath: yup.string().required(REQUIRED_ERROR),
-        primaryKey: yup.array().of(yup.string()),
-        httpMethod: httpMethodSchema,
-        requestOptions: requestOptionsSchema,
         schema: jsonString,
-        recordSelector: maybeYamlSchema(recordSelectorSchema),
-        paginator: maybeYamlSchema(paginatorSchema),
-        parentStreams: maybeYamlSchema(
-          yup
-            .array(
-              yup.object().shape({
-                parent_key: yup.string().required(REQUIRED_ERROR),
-                parentStreamReference: yup.string().required(REQUIRED_ERROR),
-                partition_field: yup.string().required(REQUIRED_ERROR),
-                request_option: nonPathRequestOptionSchema,
-                incremental_dependency: yup.boolean().default(false),
-              })
-            )
-            .notRequired()
-            .default(undefined),
-          (parsedYaml, createError) =>
-            validatePartitionRouterTypes(parsedYaml as SimpleRetrieverPartitionRouter, createError, [
-              SUBSTREAM_PARTITION_ROUTER,
-              CUSTOM_PARTITION_ROUTER,
-            ])
-        ),
-        parameterizedRequests: maybeYamlSchema(
-          yup
-            .array(
-              yup.object().shape({
-                cursor_field: yup.string().required(REQUIRED_ERROR),
-                values: yup.object().shape({
-                  value: yup.mixed().when("type", {
-                    is: "list",
-                    then: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
-                    otherwise: yup.string().required(REQUIRED_ERROR).matches(INTERPOLATION_PATTERN, FORM_PATTERN_ERROR),
-                  }),
-                }),
-                request_option: nonPathRequestOptionSchema,
-              })
-            )
-            .notRequired()
-            .default(undefined),
-          (parsedYaml, createError) => {
-            const partitionRouter = parsedYaml as SimpleRetrieverPartitionRouter;
-
-            const typeValidationResult = validatePartitionRouterTypes(
-              partitionRouter,
-              createError,
-              [LIST_PARTITION_ROUTER],
-              formatMessage({ id: "connectorBuilder.partitionRouter.customRouter" })
-            );
-
-            if (typeValidationResult !== true) {
-              return typeValidationResult;
-            }
-
-            return validateListPartitionRouterValues(
-              partitionRouter as ListPartitionRouter | ListPartitionRouter[],
-              createError
-            );
-          }
-        ),
-        transformations: maybeYamlSchema(transformationsSchema),
-        errorHandler: maybeYamlSchema(errorHandlerSchema),
-        incrementalSync: maybeYamlSchema(incrementalSyncSchema),
         unknownFields: yamlSchema((parsedYaml, createError) => {
           if (Array.isArray(parsedYaml) || !isObject(parsedYaml)) {
             return createError({ message: formatMessage({ id: "connectorBuilder.unknownFields.nonObjectError" }) });
           }
           return true;
         }),
+
+        // synchronous stream fields
+        urlPath: ifRequestType("sync", yup.string().required(REQUIRED_ERROR)),
+        primaryKey: ifRequestType("sync", yup.array().of(yup.string())),
+        httpMethod: ifRequestType("sync", httpMethodSchema),
+        requestOptions: ifRequestType("sync", requestOptionsSchema),
+        recordSelector: ifRequestType("sync", maybeYamlSchema(recordSelectorSchema)),
+        paginator: ifRequestType("sync", maybeYamlSchema(paginatorSchema)),
+        parentStreams: ifRequestType("sync", parentStreamSchema),
+        parameterizedRequests: ifRequestType("sync", parameterizedRequestsSchema),
+        transformations: ifRequestType("sync", maybeYamlSchema(transformationsSchema)),
+        errorHandler: ifRequestType("sync", maybeYamlSchema(errorHandlerSchema)),
+        incrementalSync: ifRequestType("sync", maybeYamlSchema(incrementalSyncSchema)),
+
+        // async stream fields
+        creationRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            incrementalSync: maybeYamlSchema(incrementalSyncSchema),
+            parentStreams: parentStreamSchema,
+            parameterizedRequests: parameterizedRequestsSchema,
+            authenticator: maybeYamlSchema(authenticatorSchema),
+          })
+        ),
+        pollingRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            statusExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            statusMapping: yup.object().shape({
+              completed: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              failed: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              running: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+              timeout: yup.array().of(yup.string()).min(1, REQUIRED_ERROR),
+            }),
+            downloadTargetExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
+            pollingTimeout: yup.object().shape({
+              value: yup.mixed().when("type", {
+                is: "number",
+                then: yup
+                  .number()
+                  .integer("connectorBuilder.asyncStream.polling.timeout.number.integer")
+                  .required(REQUIRED_ERROR)
+                  .min(1, "connectorBuilder.asyncStream.polling.timeout.number.min"),
+                otherwise: interpolationString,
+              }),
+            }),
+          })
+        ),
+        downloadRequester: ifRequestType(
+          "async",
+          yup.object().shape({
+            url: yup.string().required(REQUIRED_ERROR),
+            httpMethod: httpMethodSchema,
+            requestOptions: requestOptionsSchema,
+            errorHandler: maybeYamlSchema(errorHandlerSchema),
+            primaryKey: yup.array().of(yup.string()),
+            transformations: maybeYamlSchema(transformationsSchema),
+            recordSelector: maybeYamlSchema(recordSelectorSchema),
+            paginator: maybeYamlSchema(paginatorSchema),
+            downloadExtractor: yup.object().shape({
+              field_path: yup.array().of(yup.string()),
+            }),
+            authenticator: maybeYamlSchema(authenticatorSchema),
+          })
+        ),
       }),
-    [formatMessage, validateListPartitionRouterValues, validatePartitionRouterTypes]
+    [formatMessage, parameterizedRequestsSchema, parentStreamSchema, authenticatorSchema]
   );
 
   const builderFormValidationSchema = useMemo(
@@ -312,6 +399,22 @@ export const jsonString = yup.string().test({
   message: "connectorBuilder.invalidJSON",
 });
 
+export const zodJsonString = z.string().refine(
+  (val) => {
+    if (!val) {
+      return true;
+    }
+    try {
+      JSON.parse(val);
+      return true;
+    } catch {
+      return false;
+    }
+  },
+  {
+    message: "connectorBuilder.invalidJSON",
+  }
+);
 const nonArrayJsonString = jsonString.test({
   test: (val: string | undefined) => {
     if (!val) {

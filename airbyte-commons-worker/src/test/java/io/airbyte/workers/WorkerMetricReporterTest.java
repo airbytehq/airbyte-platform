@@ -12,7 +12,7 @@ import static org.mockito.Mockito.verify;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import java.util.HashSet;
 import org.junit.jupiter.api.Test;
 

@@ -197,10 +197,6 @@ enum class OssMetricsRegistry(
     metricName = "job_succeeded_by_release_stage",
     metricDescription = "increments when a job succeeds. jobs are double counted as this is tagged by release stage.",
   ),
-  JSON_STRING_LENGTH(
-    metricName = "json_string_length",
-    metricDescription = "string length of a raw json string",
-  ),
   KUBE_POD_PROCESS_CREATE_TIME_MILLISECS(
     metricName = "kube_pod_process_create_time_millisecs",
     metricDescription = "time taken to create a new kube pod process",
@@ -695,6 +691,18 @@ enum class OssMetricsRegistry(
     metricName = "workload_launcher_rehydrate_failure",
     metricDescription = "tracks whenever the launcher rehydrate process failed",
   ),
+  WORKLOAD_LAUNCHER_NON_STAGE_FAILURE(
+    metricName = "workload_launcher_non_stage_failure",
+    metricDescription = "Count of launcher errors occurring outside the staged pipeline",
+  ),
+  WORKLOAD_QUEUE_CONSUMER_FAILURE(
+    metricName = "workload_queue_consumer_failure",
+    metricDescription = "Count of errors in the consumer",
+  ),
+  WORKLOAD_QUEUE_MESSAGES_POLLED(
+    metricName = "workload_queue_messages_polled",
+    metricDescription = "Count of messages polled",
+  ),
   WORKLOAD_QUEUE_SIZE(
     metricName = "workload_queue_size",
     metricDescription = "used to track the queue size launcher does not processes a workload successfully",
@@ -742,6 +750,10 @@ enum class OssMetricsRegistry(
   WORKLOAD_STAGE_DURATION(
     metricName = "workload_stage_duration",
     metricDescription = "a distribution of the duration of a workload stage",
+  ),
+  WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE(
+    metricName = "workload_time_to_transition_from_create",
+    metricDescription = "time for a workload to transition to a given state",
   ),
   PODS_DELETED_FOR_MUTEX_KEY(
     metricName = "workload_pods_deleted_for_mutex_key",

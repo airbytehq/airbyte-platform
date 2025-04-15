@@ -146,7 +146,7 @@ class ReplicationPodFactoryTest {
       )
     val nodeSelectionFactory: NodeSelectionFactory =
       mockk {
-        every { createResetNodeSelection(any(), any()) } returns expectedNodeSelection
+        every { createResetNodeSelection(any()) } returns expectedNodeSelection
       }
     val fac =
       Fixtures.defaultReplicationPodFactory.copy(
@@ -246,6 +246,9 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars: List<EnvVar> = emptyList(),
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
+      enableAsyncProfiler: Boolean = false,
+      singleConnectorTest: Boolean = false,
+      socketTest: Boolean = false,
     ) = factory.create(
       podName,
       allLabels,
@@ -262,7 +265,9 @@ class ReplicationPodFactoryTest {
       destRuntimeEnvVars,
       isFileTransfer,
       workspaceId,
-      false,
+      enableAsyncProfiler,
+      singleConnectorTest,
+      socketTest,
     )
 
     fun createResetWithDefaults(

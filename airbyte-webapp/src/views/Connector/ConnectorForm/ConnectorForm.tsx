@@ -84,7 +84,7 @@ export const ConnectorForm: React.FC<ConnectorFormProps> = (props) => {
   return (
     <Form
       trackDirtyChanges={props.trackDirtyChanges}
-      defaultValues={initialValues as ConnectorFormValues<object>}
+      defaultValues={initialValues}
       schema={validationSchema as AnyObjectSchema}
       onSubmit={onFormSubmit}
       disabled={!canEdit}

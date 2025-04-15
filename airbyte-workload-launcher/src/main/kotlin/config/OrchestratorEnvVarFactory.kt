@@ -28,6 +28,7 @@ class OrchestratorEnvVarFactory(
   @Named("orchestratorSecretsEnvMap") private val secretsEnvMap: Map<String, EnvVarSource>,
   @Named("airbyteMetadataEnvMap") private val airbyteMetadataEnvMap: Map<String, String>,
   @Named("featureFlagEnvMap") private val ffEnvVars: Map<String, String>,
+  @Named("dataplaneCredentialsSecretsEnvMap") private val dataplaneCredentialsSecretsEnvMap: Map<String, EnvVarSource>,
 ) {
   /**
    * The list of environment variables to be passed to the orchestrator.
@@ -76,7 +77,7 @@ class OrchestratorEnvVarFactory(
     envMap.putAll(micronautEnvMap)
 
     val secretEnvVars =
-      secretsEnvMap.toRefEnvVarList()
+      (secretsEnvMap + dataplaneCredentialsSecretsEnvMap).toRefEnvVarList()
 
     val envVars =
       envMap

@@ -166,8 +166,10 @@ public class DeclarativeSourceDefinitionsHandler {
         connectorBuilderService.getCurrentlyActiveDeclarativeManifestsByActorDefinitionId(requestBody.getSourceDefinitionId());
 
     return new DeclarativeManifestsReadList().manifestVersions(existingVersions
-        .map(manifest -> new DeclarativeManifestVersionRead().description(
-            manifest.getDescription()).version(manifest.getVersion()).isActive(manifest.getVersion().equals(activeVersion.getVersion())))
+        .map(manifest -> new DeclarativeManifestVersionRead()
+            .description(manifest.getDescription())
+            .version(manifest.getVersion())
+            .isActive(manifest.getVersion().equals(activeVersion.getVersion())))
         .sorted(Comparator.comparingLong(DeclarativeManifestVersionRead::getVersion)).collect(Collectors.toList()));
   }
 

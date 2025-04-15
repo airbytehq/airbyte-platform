@@ -5,9 +5,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -56,7 +53,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.cron.MicronautCronRunner"
+    mainClass = "io.airbyte.cron.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(

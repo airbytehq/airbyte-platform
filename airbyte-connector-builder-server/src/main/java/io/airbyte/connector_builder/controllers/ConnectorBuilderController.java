@@ -9,6 +9,7 @@ import static io.airbyte.commons.auth.AuthRoleConstants.AUTHENTICATED_USER;
 import io.airbyte.connector_builder.api.generated.V1Api;
 import io.airbyte.connector_builder.api.model.generated.CheckContributionRead;
 import io.airbyte.connector_builder.api.model.generated.CheckContributionRequestBody;
+import io.airbyte.connector_builder.api.model.generated.FullResolveManifestRequestBody;
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionRequestBody;
 import io.airbyte.connector_builder.api.model.generated.GenerateContributionResponse;
 import io.airbyte.connector_builder.api.model.generated.HealthCheckRead;
@@ -18,6 +19,7 @@ import io.airbyte.connector_builder.api.model.generated.StreamRead;
 import io.airbyte.connector_builder.api.model.generated.StreamReadRequestBody;
 import io.airbyte.connector_builder.handlers.AssistProxyHandler;
 import io.airbyte.connector_builder.handlers.ConnectorContributionHandler;
+import io.airbyte.connector_builder.handlers.FullResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.HealthHandler;
 import io.airbyte.connector_builder.handlers.ResolveManifestHandler;
 import io.airbyte.connector_builder.handlers.StreamHandler;
@@ -27,6 +29,7 @@ import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
 import io.micronaut.http.annotation.Post;
+import io.micronaut.http.server.cors.CrossOrigin;
 import io.micronaut.scheduling.TaskExecutors;
 import io.micronaut.scheduling.annotation.ExecuteOn;
 import io.micronaut.security.annotation.Secured;
@@ -44,17 +47,20 @@ public class ConnectorBuilderController implements V1Api {
   private final HealthHandler healthHandler;
   private final StreamHandler streamHandler;
   private final ResolveManifestHandler resolveManifestHandler;
+  private final FullResolveManifestHandler fullResolveManifestHandler;
   private final ConnectorContributionHandler connectorContributionHandler;
   private final AssistProxyHandler assistProxyHandler;
 
   public ConnectorBuilderController(final HealthHandler healthHandler,
                                     final ResolveManifestHandler resolveManifestHandler,
+                                    final FullResolveManifestHandler fullResolveManifestHandler,
                                     final StreamHandler streamHandler,
                                     final ConnectorContributionHandler connectorContributionHandler,
                                     final AssistProxyHandler assistProxyHandler) {
     this.healthHandler = healthHandler;
     this.streamHandler = streamHandler;
     this.resolveManifestHandler = resolveManifestHandler;
+    this.fullResolveManifestHandler = fullResolveManifestHandler;
     this.connectorContributionHandler = connectorContributionHandler;
     this.assistProxyHandler = assistProxyHandler;
   }
@@ -105,13 +111,33 @@ public class ConnectorBuilderController implements V1Api {
   }
 
   @Override
+  @Post(uri = "/manifest/full_resolve",
+        produces = MediaType.APPLICATION_JSON)
+  @Secured({AUTHENTICATED_USER})
+  @ExecuteOn(TaskExecutors.IO)
+  public ResolveManifest fullResolveManifest(@Body final FullResolveManifestRequestBody fullResolveManifestRequestBody) {
+    return fullResolveManifestHandler.fullResolveManifest(fullResolveManifestRequestBody);
+  }
+
+  @Override
   @Post(uri = "/v1/assist/v1/process",
         consumes = MediaType.APPLICATION_JSON,
         produces = MediaType.APPLICATION_JSON)
   @Secured({AUTHENTICATED_USER})
   @ExecuteOn(TaskExecutors.IO)
   public Map<String, Object> assistV1Process(@Body final Map<String, Object> requestBody) {
-    return assistProxyHandler.process(requestBody);
+    return assistProxyHandler.process(requestBody, true);
+  }
+
+  @Override
+  @Post(uri = "/v1/assist/v1/warm",
+        consumes = MediaType.APPLICATION_JSON,
+        produces = MediaType.APPLICATION_JSON)
+  @Secured(SecurityRule.IS_ANONYMOUS)
+  @CrossOrigin("*")
+  @ExecuteOn(TaskExecutors.IO)
+  public Map<String, Object> assistV1Warm(@Body final Map<String, Object> requestBody) {
+    return assistProxyHandler.process(requestBody, false);
   }
 
 }

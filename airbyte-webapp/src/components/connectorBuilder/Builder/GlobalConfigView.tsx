@@ -35,7 +35,7 @@ export const GlobalConfigView: React.FC = () => {
             }}
           />
         </BuilderCard>
-        <AuthenticationSection />
+        <AuthenticationSection authPath="formValues.global.authenticator" />
       </BuilderConfigView>
     </fieldset>
   );

@@ -4,6 +4,9 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt.getWorkspaceWithFixedGeography;
+import static io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt.validateWorkspace;
+import static io.airbyte.config.helpers.NotificationSettingsHelpersKt.patchNotificationSettingsWithDefaultValue;
 import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -18,13 +21,9 @@ import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesByUserRequestBody;
 import io.airbyte.api.model.generated.ListWorkspacesInOrganizationRequestBody;
 import io.airbyte.api.model.generated.NotificationConfig;
-import io.airbyte.api.model.generated.NotificationItem;
-import io.airbyte.api.model.generated.NotificationSettings;
-import io.airbyte.api.model.generated.NotificationType;
 import io.airbyte.api.model.generated.NotificationsConfig;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
-import io.airbyte.api.model.generated.UserRead;
 import io.airbyte.api.model.generated.WebhookNotificationConfig;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceCreateWithId;
@@ -36,10 +35,7 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.api.problems.model.generated.ProblemMessageData;
-import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem;
-import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem;
-import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.random.RandomKt;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
@@ -49,7 +45,6 @@ import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.errors.InternalServerKnownException;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.slug.Slug;
@@ -180,12 +175,13 @@ public class WorkspacesHandler {
     final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
     // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final io.airbyte.config.Geography defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
-        ? Enums.convertTo(workspaceCreateWithId.getDefaultGeography(), io.airbyte.config.Geography.class)
-        : io.airbyte.config.Geography.AUTO;
+    final String defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
+        ? workspaceCreateWithId.getDefaultGeography()
+        : DataplaneConstantsKt.GEOGRAPHY_AUTO;
 
     // NotificationSettings from input will be patched with default values.
-    final NotificationSettings notificationSettings = patchNotificationSettingsWithDefaultValue(workspaceCreateWithId);
+    final io.airbyte.config.NotificationSettings notificationSettings =
+        patchNotificationSettingsWithDefaultValue(NotificationSettingsConverter.toConfig(workspaceCreateWithId.getNotificationSettings()));
 
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(workspaceCreateWithId.getId())
@@ -199,8 +195,8 @@ public class WorkspacesHandler {
         .withDisplaySetupWizard(displaySetupWizard != null ? displaySetupWizard : false)
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
-        .withNotificationSettings(NotificationSettingsConverter.toConfig(notificationSettings))
-        .withDefaultGeography(defaultGeography)
+        .withNotificationSettings(notificationSettings)
+        .withDefaultGeography(getDefaultGeographyForAirbyteEdition(defaultGeography))
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
         .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
@@ -208,31 +204,9 @@ public class WorkspacesHandler {
       workspace.withEmail(email);
     }
 
-    validateWorkspace(workspace);
+    validateWorkspace(workspace, airbyteEdition);
 
     return persistStandardWorkspace(workspace);
-  }
-
-  public WorkspaceRead createDefaultWorkspaceForUser(final UserRead user, final Optional<Organization> organization)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
-    // if user already had a default workspace, throw an exception
-    if (user.getDefaultWorkspaceId() != null) {
-      throw new IllegalArgumentException(
-          String.format("User %s already has a default workspace %s", user.getUserId(), user.getDefaultWorkspaceId()));
-    }
-    final String companyName = user.getCompanyName();
-    final String email = user.getEmail();
-    final Boolean news = user.getNews();
-    // otherwise, create a default workspace for this user
-    final WorkspaceCreate workspaceCreate = new WorkspaceCreate()
-        .name(WorkspaceHelpersKt.getDefaultWorkspaceName(organization, companyName, email))
-        .organizationId(organization.map(Organization::getOrganizationId).orElse(null))
-        .email(email)
-        .news(news)
-        .anonymousDataCollection(false)
-        .securityUpdates(false)
-        .displaySetupWizard(true);
-    return createWorkspace(workspaceCreate);
   }
 
   public void deleteWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -256,46 +230,6 @@ public class WorkspacesHandler {
     }
     persistedWorkspace.withTombstone(true);
     persistStandardWorkspace(persistedWorkspace);
-  }
-
-  private NotificationSettings patchNotificationSettingsWithDefaultValue(final WorkspaceCreateWithId workspaceCreateWithId) {
-    final NotificationSettings notificationSettings = new NotificationSettings()
-        .sendOnSuccess(new NotificationItem().notificationType(List.of()))
-        .sendOnFailure(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnConnectionUpdate(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnConnectionUpdateActionRequired(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnSyncDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnSyncDisabledWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnBreakingChangeWarning(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO))
-        .sendOnBreakingChangeSyncsDisabled(new NotificationItem().addNotificationTypeItem(NotificationType.CUSTOMERIO));
-    if (workspaceCreateWithId.getNotificationSettings() != null) {
-      final NotificationSettings inputNotificationSettings = workspaceCreateWithId.getNotificationSettings();
-      if (inputNotificationSettings.getSendOnSuccess() != null) {
-        notificationSettings.setSendOnSuccess(inputNotificationSettings.getSendOnSuccess());
-      }
-      if (inputNotificationSettings.getSendOnFailure() != null) {
-        notificationSettings.setSendOnFailure(inputNotificationSettings.getSendOnFailure());
-      }
-      if (inputNotificationSettings.getSendOnConnectionUpdate() != null) {
-        notificationSettings.setSendOnConnectionUpdate(inputNotificationSettings.getSendOnConnectionUpdate());
-      }
-      if (inputNotificationSettings.getSendOnConnectionUpdateActionRequired() != null) {
-        notificationSettings.setSendOnConnectionUpdateActionRequired(inputNotificationSettings.getSendOnConnectionUpdateActionRequired());
-      }
-      if (inputNotificationSettings.getSendOnSyncDisabled() != null) {
-        notificationSettings.setSendOnSyncDisabled(inputNotificationSettings.getSendOnSyncDisabled());
-      }
-      if (inputNotificationSettings.getSendOnSyncDisabledWarning() != null) {
-        notificationSettings.setSendOnSyncDisabledWarning(inputNotificationSettings.getSendOnSyncDisabledWarning());
-      }
-      if (inputNotificationSettings.getSendOnBreakingChangeWarning() != null) {
-        notificationSettings.setSendOnBreakingChangeWarning(inputNotificationSettings.getSendOnBreakingChangeWarning());
-      }
-      if (inputNotificationSettings.getSendOnBreakingChangeSyncsDisabled() != null) {
-        notificationSettings.setSendOnBreakingChangeSyncsDisabled(inputNotificationSettings.getSendOnBreakingChangeSyncsDisabled());
-      }
-    }
-    return notificationSettings;
   }
 
   public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
@@ -455,15 +389,16 @@ public class WorkspacesHandler {
     LOGGER.debug("Initial WorkspaceRead: {}", WorkspaceConverter.domainToApiModel(workspace));
 
     applyPatchToStandardWorkspace(workspace, workspacePatch);
+    workspace.setNotificationSettings(patchNotificationSettingsWithDefaultValue(workspace.getNotificationSettings()));
     validateWorkspacePatch(workspace, workspacePatch);
-    validateWorkspace(workspace);
+    validateWorkspace(workspace, airbyteEdition);
 
     LOGGER.debug("Patched Workspace before persisting: {}", workspace);
 
     if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
-      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
+      workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
     } else {
       // We're saving new webhook configs, so we need to persist the secrets.
       persistStandardWorkspace(workspace);
@@ -487,7 +422,7 @@ public class WorkspacesHandler {
 
     // NOTE: it's safe (and necessary) to use the NoSecrets variant because we never hydrated them in
     // the first place.
-    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -500,7 +435,7 @@ public class WorkspacesHandler {
     final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     persistedWorkspace
         .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
-    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
+    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
     return buildWorkspaceReadFromId(workspaceId);
   }
 
@@ -542,42 +477,6 @@ public class WorkspacesHandler {
     }
 
     return resolvedSlug;
-  }
-
-  private void validateWorkspace(final StandardWorkspace workspace) {
-    if (workspace.getNotificationSettings() != null) {
-      final io.airbyte.config.NotificationSettings settings = workspace.getNotificationSettings();
-      validateNotificationItem(settings.getSendOnSuccess(), "success");
-      validateNotificationItem(settings.getSendOnFailure(), "failure");
-      validateNotificationItem(settings.getSendOnConnectionUpdate(), "connectionUpdate");
-      validateNotificationItem(settings.getSendOnConnectionUpdateActionRequired(), "connectionUpdateActionRequired");
-      validateNotificationItem(settings.getSendOnSyncDisabled(), "syncDisabled");
-      validateNotificationItem(settings.getSendOnSyncDisabledWarning(), "syncDisabledWarning");
-    }
-  }
-
-  private void validateNotificationItem(final io.airbyte.config.NotificationItem item, final String notificationName) {
-    if (item == null) {
-      return;
-    }
-
-    if (item.getNotificationType() != null && item.getNotificationType().contains(Notification.NotificationType.SLACK)) {
-      if (item.getSlackConfiguration() == null || Strings.isNullOrEmpty(item.getSlackConfiguration().getWebhook())) {
-        throw new NotificationMissingUrlProblem(
-            new ProblemMessageData().message(String.format("The '%s' notification is enabled but is missing a URL.", notificationName)));
-      }
-    }
-
-    // email notifications for connectionUpdateActionRequired and syncDisabled can't be disabled.
-    // this rule only applies to Airbyte Cloud, because OSS doesn't support email notifications.
-    if (airbyteEdition == Configs.AirbyteEdition.CLOUD) {
-      if ("connectionUpdateActionRequired".equals(notificationName) || "syncDisabled".equals(notificationName)) {
-        if (!item.getNotificationType().contains(Notification.NotificationType.CUSTOMERIO)) {
-          throw new NotificationRequiredProblem(
-              new ProblemMessageData().message(String.format("The '%s' email notification can't be disabled", notificationName)));
-        }
-      }
-    }
   }
 
   private void validateWorkspacePatch(final StandardWorkspace persistedWorkspace, final WorkspaceUpdate workspacePatch) {
@@ -623,7 +522,7 @@ public class WorkspacesHandler {
     }
 
     if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(apiPojoConverters.toPersistenceGeography(workspacePatch.getDefaultGeography()));
+      workspace.setDefaultGeography(getDefaultGeographyForAirbyteEdition(workspacePatch.getDefaultGeography()));
     }
     if (workspacePatch.getName() != null) {
       workspace.setName(workspacePatch.getName());
@@ -722,8 +621,16 @@ public class WorkspacesHandler {
   @SuppressWarnings("PMD.PreserveStackTrace")
   private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    workspaceService.writeWorkspaceWithSecrets(workspace);
+
+    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
     return WorkspaceConverter.domainToApiModel(workspace);
+  }
+
+  private String getDefaultGeographyForAirbyteEdition(final String geography) {
+    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(geography)) {
+      return DataplaneConstantsKt.GEOGRAPHY_US;
+    }
+    return geography;
   }
 
 }

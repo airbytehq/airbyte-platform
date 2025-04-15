@@ -8,17 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.protocol.models.AirbyteControlMessage;
-import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage.Type;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteControlMessage;
+import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

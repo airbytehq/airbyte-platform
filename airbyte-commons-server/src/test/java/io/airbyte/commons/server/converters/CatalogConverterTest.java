@@ -28,7 +28,7 @@ import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.FieldType;
 import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.mappers.helpers.MapperHelperKt;
-import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
@@ -250,7 +250,7 @@ class CatalogConverterTest {
   void testDiscoveredToApiDefaultSyncModesSourceCursorNoFullRefresh() throws JsonValidationException {
     final AirbyteCatalog persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
     persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true)
-        .withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.INCREMENTAL));
+        .withSupportedSyncModes(List.of(io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL));
     final var actualStreamConfig = catalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
     final var actualSyncMode = actualStreamConfig.getSyncMode();
     final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();

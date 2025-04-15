@@ -1,5 +1,6 @@
 @use "scss/colors";
 @use "scss/variables";
+@use "scss/mixins";
 @use "scss/connection/stream-status-colors";
 
 .status {
@@ -29,6 +30,20 @@
 }
 
 .circleLoader {
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
+}
+
+@keyframes pulsate {
+  0% {
+    transform: scale(1);
+  }
+
+  100% {
+    transform: scale(0.7);
+  }
+}
+
+.undefinedPulse {
+  animation: pulsate 3s ease-in-out alternate infinite;
 }

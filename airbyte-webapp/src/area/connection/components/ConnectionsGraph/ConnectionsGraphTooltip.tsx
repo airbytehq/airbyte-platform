@@ -1,7 +1,8 @@
 import classNames from "classnames";
-import { FormattedDate, FormattedDateTimeRange, FormattedMessage } from "react-intl";
+import { FormattedDate, FormattedMessage } from "react-intl";
 import { ContentType } from "recharts/types/component/Tooltip";
 
+import { FormattedTimeRange } from "components/FormattedTimeRange";
 import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -9,7 +10,7 @@ import { Text } from "components/ui/Text";
 
 import styles from "./ConnectionsGraph.module.scss";
 
-type SyncType = "success" | "failure" | "partialSuccess";
+type SyncType = "success" | "failure" | "partialSuccess" | "running";
 
 export const ConnectionsGraphTooltip: ContentType<number, string> = ({ active, payload }) => {
   if (!active) {
@@ -21,8 +22,9 @@ export const ConnectionsGraphTooltip: ContentType<number, string> = ({ active, p
   const failureCount = payload?.[0]?.payload?.failure;
   const successCount = payload?.[0]?.payload?.success;
   const partialSuccessCount = payload?.[0]?.payload?.partialSuccess;
+  const runningCount = payload?.[0]?.payload?.running;
   const lookbackUnit = payload?.[0]?.payload?.lookbackConfig.unit;
-  const anySyncsHappened = !!successCount || !!failureCount || !!partialSuccessCount;
+  const anySyncsHappened = !!successCount || !!failureCount || !!partialSuccessCount || !!runningCount;
 
   return (
     <Card noPadding>
@@ -46,15 +48,23 @@ export const ConnectionsGraphTooltip: ContentType<number, string> = ({ active, p
                 <FormattedDate value={startDate} day="numeric" month="long" year="numeric" />
               </Text>
               <Text color="grey">
-                <FormattedDateTimeRange from={startDate} to={endDate} hour="numeric" minute="numeric" />
+                <FormattedTimeRange from={startDate} to={endDate} />
               </Text>
             </FlexContainer>
           )}
-          {!!successCount && successCount > 0 && (
+          {!!runningCount && runningCount > 0 && (
             <FlexContainer gap="sm">
-              <TooltipColorIndicator syncType="success" />
+              <TooltipColorIndicator syncType="running" />
               <Text color="grey">
-                <FormattedMessage id="connections.graph.successfulJobsCount" values={{ count: successCount }} />
+                <FormattedMessage id="connections.graph.runningSyncsCount" values={{ count: runningCount }} />
+              </Text>
+            </FlexContainer>
+          )}
+          {!!failureCount && failureCount > 0 && (
+            <FlexContainer gap="sm">
+              <TooltipColorIndicator syncType="failure" />
+              <Text color="grey">
+                <FormattedMessage id="connections.graph.failedSyncsCount" values={{ count: failureCount }} />
               </Text>
             </FlexContainer>
           )}
@@ -63,17 +73,17 @@ export const ConnectionsGraphTooltip: ContentType<number, string> = ({ active, p
               <TooltipColorIndicator syncType="partialSuccess" />
               <Text color="grey">
                 <FormattedMessage
-                  id="connections.graph.partialSuccessfulJobsCount"
+                  id="connections.graph.partialSuccessfulSyncsCount"
                   values={{ count: partialSuccessCount }}
                 />
               </Text>
             </FlexContainer>
           )}
-          {!!failureCount && failureCount > 0 && (
+          {!!successCount && successCount > 0 && (
             <FlexContainer gap="sm">
-              <TooltipColorIndicator syncType="failure" />
+              <TooltipColorIndicator syncType="success" />
               <Text color="grey">
-                <FormattedMessage id="connections.graph.failedJobsCount" values={{ count: failureCount }} />
+                <FormattedMessage id="connections.graph.successfulSyncsCount" values={{ count: successCount }} />
               </Text>
             </FlexContainer>
           )}

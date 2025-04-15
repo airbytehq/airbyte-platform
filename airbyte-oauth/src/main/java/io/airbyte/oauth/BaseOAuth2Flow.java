@@ -13,7 +13,7 @@ import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.random.RandomKt;
 import io.airbyte.config.ConfigSchema;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

@@ -1,28 +1,23 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
-import { SchemaOf } from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { DataResidencyDropdown } from "components/forms/DataResidencyDropdown";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 
 import { useCurrentWorkspace, useInvalidateWorkspace, useUpdateWorkspace } from "core/api";
-import { Geography } from "core/api/types/AirbyteClient";
 import { FeatureItem, useFeature } from "core/services/features";
 import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
-interface WorkspaceFormValues {
-  name: string;
-  defaultGeography?: Geography;
-}
-
-const ValidationSchema: SchemaOf<WorkspaceFormValues> = yup.object().shape({
-  name: yup.string().required("form.empty.error"),
-  defaultGeography: yup.mixed<Geography>().optional(),
+const ValidationSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  defaultGeography: z.string().optional(),
 });
+
+type WorkspaceFormValues = z.infer<typeof ValidationSchema>;
 
 export const UpdateWorkspaceSettingsForm: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -67,7 +62,7 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
         name,
         defaultGeography,
       }}
-      schema={ValidationSchema}
+      zodSchema={ValidationSchema}
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}
@@ -81,7 +76,7 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
           id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
         })}
       />
-      {supportsDataResidency && <DataResidencyDropdown labelId="settings.defaultGeography" name="defaultGeography" />}
+      {supportsDataResidency && <DataResidencyDropdown labelId="settings.region" name="defaultGeography" />}
       {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );

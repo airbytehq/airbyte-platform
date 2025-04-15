@@ -8,8 +8,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.lang.Exceptions
 import io.airbyte.commons.resources.MoreResources
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.persistence.SecretPersistence
-import io.airbyte.protocol.models.ConnectorSpecification
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import java.io.IOException
 import java.util.Arrays
 import java.util.UUID
@@ -21,8 +22,8 @@ import java.util.function.Consumer
  */
 interface SecretsTestCase {
   val name: String
-  val firstSecretMap: Map<SecretCoordinate, String>
-  val secondSecretMap: Map<SecretCoordinate, String>
+  val firstSecretMap: Map<AirbyteManagedSecretCoordinate, String>
+  val secondSecretMap: Map<AirbyteManagedSecretCoordinate, String>
   val persistenceUpdater: Consumer<SecretPersistence>
   val spec: ConnectorSpecification
     get() =

@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.internal.bookkeeping.streamstatus
 
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.StreamDescriptor
 
 data class StreamStatusKey(
   var streamNamespace: String?,
