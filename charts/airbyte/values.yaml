@@ -10,6 +10,9 @@ global:
 
   airbyteYml: ""
 
+  logging:
+    level: "info"
+
   enterprise:
     # -- Secret name where an Airbyte license key is stored
     secretName: "airbyte-config-secrets"
