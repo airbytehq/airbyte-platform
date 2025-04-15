@@ -135,6 +135,11 @@ interface ScopedConfigurationService {
   ): List<ScopedConfiguration>
 
   /**
+   * List scoped configurations for an origin type.
+   */
+  fun listScopedConfigurations(originType: ConfigOriginType): List<ScopedConfiguration>
+
+  /**
    * List scoped configurations with given origin values for an origin type.
    */
   fun listScopedConfigurationsWithOrigins(
