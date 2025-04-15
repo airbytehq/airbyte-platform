@@ -161,8 +161,8 @@ spec:
       {{ toYaml .Values.global.extraContainers | nindent 8 }}
       {{- end }}
       securityContext: {{- toYaml .Values.keycloak.podSecurityContext | nindent 10 }}
-      volumes:
       {{- if .Values.keycloak.extraVolumes }}
+      volumes:
       {{ toYaml .Values.keycloak.extraVolumes | nindent 8 }}
       {{- end }}
   volumeClaimTemplates:
