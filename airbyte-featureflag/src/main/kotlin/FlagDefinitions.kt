@@ -191,3 +191,5 @@ object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-she
 object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
 
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
+
+object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
