@@ -24,6 +24,7 @@ import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
+import { isStreamDynamicStream } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -32,7 +33,8 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
+  const { streamNames, dynamicStreamNames, isResolving, resolveErrorMessage, resolveError } =
+    useConnectorBuilderFormState();
   const {
     streamRead: {
       data: streamReadData,
@@ -50,11 +52,12 @@ export const StreamTester: React.FC<{
     testStreamRequestType,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
   const { selectedSlice } = useSelectedPageAndSlice();
   const globalAuxiliaryRequests = streamReadData?.auxiliary_requests;
 
-  const streamName = streamNames[testStreamIndex];
+  const streamIsDynamic = isStreamDynamicStream(testStreamId);
+  const streamName = streamIsDynamic ? dynamicStreamNames[testStreamId.index] : streamNames[testStreamId.index];
 
   const analyticsService = useAnalyticsService();
 
@@ -159,6 +162,7 @@ export const StreamTester: React.FC<{
       )}
 
       <StreamTestButton
+        variant={streamIsDynamic ? "secondary" : undefined}
         queueStreamRead={() => {
           queueStreamRead();
           analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
