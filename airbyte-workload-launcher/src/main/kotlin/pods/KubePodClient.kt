@@ -97,7 +97,7 @@ class KubePodClient(
         socketTest = socketTest,
       )
 
-    logger.info { "Launching replication pod: ${kubeInput.podName} with containers:" }
+    logger.info { "Launching replication pod: ${kubeInput.podName} (selectors = ${kubeInput.nodeSelectors}) with containers:" }
     logger.info { "[source] image: ${kubeInput.sourceImage} resources: ${kubeInput.sourceReqs}" }
     logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
     logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
@@ -152,7 +152,7 @@ class KubePodClient(
         workspaceId = replicationInput.workspaceId,
       )
 
-    logger.info { "Launching reset pod: ${kubeInput.podName} with containers:" }
+    logger.info { "Launching reset pod: ${kubeInput.podName} (selectors = ${kubeInput.nodeSelectors}) with containers:" }
     logger.info { "[destination] image: ${kubeInput.destinationImage} resources: ${kubeInput.destinationReqs}" }
     logger.info { "[orchestrator] image: ${kubeInput.orchestratorImage} resources: ${kubeInput.orchestratorReqs}" }
 
