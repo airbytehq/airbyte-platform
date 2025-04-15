@@ -296,7 +296,8 @@ class SchemaManagementTests {
             existingStreamAndConfig.getStream().getDefaultCursorField(),
             existingStreamAndConfig.getStream().getSourceDefinedPrimaryKey(),
             existingStreamAndConfig.getStream().getNamespace(),
-            existingStreamAndConfig.getStream().isResumable()),
+            existingStreamAndConfig.getStream().isResumable(),
+            existingStreamAndConfig.getStream().isFileBased()),
         new AirbyteStreamConfiguration(
             existingStreamAndConfig.getConfig().getSyncMode(),
             existingStreamAndConfig.getConfig().getDestinationSyncMode(),
@@ -326,7 +327,8 @@ class SchemaManagementTests {
             List.of(),
             List.of(),
             "public",
-            true),
+            true,
+            null),
         new AirbyteStreamConfiguration(
             SyncMode.FULL_REFRESH,
             DestinationSyncMode.OVERWRITE,

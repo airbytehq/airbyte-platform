@@ -4,47 +4,40 @@
 
 package io.airbyte.server.apis.controllers
 
-import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
+import io.airbyte.api.model.generated.DataplaneInitRequestBody
+import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
+import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.config.DataplaneGroup
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.jooq.exception.DataAccessException
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import java.time.OffsetDateTime
-import java.util.Optional
 import java.util.UUID
-import io.airbyte.data.services.DataplaneService as DataDataplaneService
 import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
 class DataplaneControllerTest {
   companion object {
-    private val dataDataplaneService = mockk<DataDataplaneService>()
-    private val serverDataplaneService = mockk<ServerDataplaneService>()
-    private val currentUserService = mockk<CurrentUserService>()
-    private val dataplaneController = DataplaneController(dataDataplaneService, serverDataplaneService, currentUserService)
+    private val dataplaneService = mockk<ServerDataplaneService>()
+    private val dataplaneGroupService = mockk<DataplaneGroupService>()
+    private val dataplaneController =
+      DataplaneController(
+        dataplaneService,
+        dataplaneGroupService,
+      )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
-    private const val DATAPLANE_NAME_CONSTRAINT_VIOLATION_MESSAGE =
-      "duplicate key value violates unique constraint: dataplane_dataplane_group_id_name_key"
-  }
-
-  @Test
-  fun `writeDataplane with a duplicate name returns a problem`() {
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataDataplaneService.writeDataplane(any()) } throws DataAccessException(DATAPLANE_NAME_CONSTRAINT_VIOLATION_MESSAGE)
-
-    val dataplaneCreateRequestBody = DataplaneCreateRequestBody().dataplaneGroupId(MOCK_DATAPLANE_GROUP_ID)
-
-    assertThrows<DataplaneNameAlreadyExistsProblem> {
-      dataplaneController.createDataplane(dataplaneCreateRequestBody)
-    }
   }
 
   @Test
@@ -53,13 +46,12 @@ class DataplaneControllerTest {
     val newName = "new name"
     val newEnabled = true
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataDataplaneService.getDataplane(any()) } returns mockDataplane
-    every { dataDataplaneService.writeDataplane(any()) } returns
+    every { dataplaneService.updateDataplane(any(), any(), any()) } returns
       mockDataplane.apply {
         name = newName
         enabled = newEnabled
       }
+
     val updatedDataplane =
       dataplaneController.updateDataplane(
         DataplaneUpdateRequestBody()
@@ -74,33 +66,17 @@ class DataplaneControllerTest {
   }
 
   @Test
-  fun `updateDataplane with a duplicate name returns a problem`() {
-    val mockDataplane = createDataplane()
-
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataDataplaneService.getDataplane(any()) } returns mockDataplane
-    every { dataDataplaneService.writeDataplane(any()) } throws DataAccessException(DATAPLANE_NAME_CONSTRAINT_VIOLATION_MESSAGE)
-
-    assertThrows<DataplaneNameAlreadyExistsProblem> {
-      dataplaneController.updateDataplane(DataplaneUpdateRequestBody().dataplaneId(mockDataplane.id))
-    }
-  }
-
-  @Test
   fun `deleteDataplane tombstones dataplane`() {
     val mockDataplane = createDataplane()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataDataplaneService.getDataplane(any()) } returns mockDataplane
-    every { dataDataplaneService.writeDataplane(mockDataplane.apply { tombstone = true }) } returns
-      mockDataplane.apply { tombstone = true }
+    every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneDeleteRequestBody =
       DataplaneDeleteRequestBody().dataplaneId(mockDataplane.id)
 
     dataplaneController.deleteDataplane(dataplaneDeleteRequestBody)
 
-    verify { dataDataplaneService.writeDataplane(mockDataplane.apply { tombstone = true }) }
+    verify { dataplaneService.deleteDataplane(mockDataplane.id) }
   }
 
   @Test
@@ -108,8 +84,7 @@ class DataplaneControllerTest {
     val dataplaneId1 = UUID.randomUUID()
     val dataplaneId2 = UUID.randomUUID()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataDataplaneService.listDataplanes(MOCK_DATAPLANE_GROUP_ID, false) } returns
+    every { dataplaneService.listDataplanes(MOCK_DATAPLANE_GROUP_ID) } returns
       listOf(
         createDataplane(dataplaneId1),
         createDataplane(dataplaneId2),
@@ -122,14 +97,155 @@ class DataplaneControllerTest {
     assert(responseDataplanes[1].dataplaneId == dataplaneId2)
   }
 
-  private fun createDataplane(id: UUID? = null): Dataplane =
+  @Test
+  fun `getDataplaneToken returns a valid token`() {
+    val clientId = "test-client-id"
+    val clientSecret = "test-client-secret"
+    val expectedToken = "test-token"
+
+    every { dataplaneService.getToken(clientId, clientSecret) } returns expectedToken
+
+    val requestBody = DataplaneTokenRequestBody().clientId(clientId).clientSecret(clientSecret)
+    val accessToken = dataplaneController.getDataplaneToken(requestBody)
+
+    assert(accessToken.accessToken == expectedToken)
+  }
+
+  @Test
+  fun `heartbeatDataplane returns expected dataplane information`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneHeartbeatRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.heartbeatDataplane(req)
+
+    val expected = DataplaneHeartbeatResponse()
+    expected.dataplaneName = dataplane.name
+    expected.dataplaneId = dataplane.id
+    expected.dataplaneEnabled = dataplane.enabled
+    expected.dataplaneGroupName = dataplaneGroup.name
+    expected.dataplaneGroupId = dataplaneGroup.id
+
+    Assertions.assertEquals(expected, result)
+  }
+
+  @Test
+  fun `initializeDataplane returns information needed for dataplane initialization`() {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneInitRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.initializeDataplane(req)
+
+    val expected = DataplaneInitResponse()
+    expected.dataplaneName = dataplane.name
+    expected.dataplaneId = dataplane.id
+    expected.dataplaneEnabled = dataplane.enabled
+    expected.dataplaneGroupName = dataplaneGroup.name
+    expected.dataplaneGroupId = dataplaneGroup.id
+
+    Assertions.assertEquals(expected, result)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "true,true,true",
+      "true,false,false",
+      "false,true,false",
+      "false,false,false",
+    ],
+  )
+  fun `initialize returns enabled if both dataplane and dataplane groups are enabled`(
+    dataplaneEnabled: Boolean,
+    dataplaneGroupEnabled: Boolean,
+    expected: Boolean,
+  ) {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneInitRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.initializeDataplane(req)
+
+    Assertions.assertEquals(result.dataplaneEnabled, expected)
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+    value = [
+      "true,true,true",
+      "true,false,false",
+      "false,true,false",
+      "false,false,false",
+    ],
+  )
+  fun `heartbeat returns enabled if both dataplane and dataplane groups are enabled`(
+    dataplaneEnabled: Boolean,
+    dataplaneGroupEnabled: Boolean,
+    expected: Boolean,
+  ) {
+    val clientId = "test-client-id"
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
+    val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
+
+    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
+
+    val req = DataplaneHeartbeatRequestBody()
+    req.clientId = clientId
+
+    val result = dataplaneController.heartbeatDataplane(req)
+
+    Assertions.assertEquals(result.dataplaneEnabled, expected)
+  }
+
+  private fun createDataplane(
+    id: UUID? = null,
+    enabled: Boolean = false,
+  ): Dataplane =
     io.airbyte.data.repositories.entities
       .Dataplane(
         id = id ?: UUID.randomUUID(),
         dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID,
         name = "Test Dataplane",
-        enabled = false,
-        updatedBy = UUID.randomUUID(),
+        enabled = enabled,
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+        tombstone = false,
+      ).toConfigModel()
+
+  private fun createDataplaneGroup(
+    id: UUID? = null,
+    enabled: Boolean = false,
+  ): DataplaneGroup =
+    io.airbyte.data.repositories.entities
+      .DataplaneGroup(
+        id = id ?: UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        name = "Test Dataplane Group",
+        enabled = enabled,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
         tombstone = false,

@@ -39,7 +39,7 @@ export const sourcesKeys = {
 interface ValuesProps {
   name: string;
   serviceType?: string;
-  connectionConfiguration?: ConnectionConfiguration;
+  connectionConfiguration: ConnectionConfiguration;
   resourceAllocation?: ScopedResourceRequirements;
 }
 

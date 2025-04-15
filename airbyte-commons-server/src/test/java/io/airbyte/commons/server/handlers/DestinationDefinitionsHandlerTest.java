@@ -21,7 +21,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.ActorDefinitionIdWithScope;
 import io.airbyte.api.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.model.generated.DestinationDefinitionCreate;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId;
 import io.airbyte.api.model.generated.DestinationDefinitionRead;
 import io.airbyte.api.model.generated.DestinationDefinitionReadList;
@@ -72,7 +71,7 @@ import io.airbyte.featureflag.HideActorDefinitionFromList;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.Workspace;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
@@ -416,7 +415,7 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("getDestinationDefinition should return the right destination")
   void testGetDestination()
       throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
-    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true))
         .thenReturn(destinationDefinition);
     when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -438,11 +437,8 @@ class DestinationDefinitionsHandlerTest {
             .jobSpecific(Collections.emptyList()))
         .language(destinationDefinitionVersion.getLanguage());
 
-    final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody = new DestinationDefinitionIdRequestBody()
-        .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
-
     final DestinationDefinitionRead actualDestinationDefinitionRead =
-        destinationDefinitionsHandler.getDestinationDefinition(destinationDefinitionIdRequestBody);
+        destinationDefinitionsHandler.getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true);
 
     assertEquals(expectedDestinationDefinitionRead, actualDestinationDefinitionRead);
   }
@@ -487,7 +483,7 @@ class DestinationDefinitionsHandlerTest {
   void testGetDefinitionWithGrantForWorkspace()
       throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException {
     when(workspaceService.workspaceCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), workspaceId)).thenReturn(true);
-    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true))
         .thenReturn(destinationDefinition);
     when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -527,7 +523,7 @@ class DestinationDefinitionsHandlerTest {
         ScopeType.WORKSPACE.value())).thenReturn(true);
     when(actorDefinitionService.scopeCanUseDefinition(destinationDefinition.getDestinationDefinitionId(), organizationId,
         ScopeType.ORGANIZATION.value())).thenReturn(true);
-    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true))
         .thenReturn(destinationDefinition);
     when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
@@ -654,12 +650,10 @@ class DestinationDefinitionsHandlerTest {
         .destinationDefinition(create)
         .scopeId(workspaceId)
         .scopeType(io.airbyte.api.model.generated.ScopeType.WORKSPACE)
-        .workspaceId(workspaceId);
+        .workspaceId(null); // scopeType and scopeId should be sufficient to resolve to the expected workspaceId
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        customCreateForWorkspace.getWorkspaceId()))
-            .thenReturn(destinationDefinitionVersion);
+        create.getDocumentationUrl(), workspaceId)).thenReturn(destinationDefinitionVersion);
 
     final DestinationDefinitionRead expectedRead = new DestinationDefinitionRead()
         .name(newDestinationDefinition.getName())
@@ -684,7 +678,7 @@ class DestinationDefinitionsHandlerTest {
     assertEquals(expectedRead, actualRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
         create.getDocumentationUrl(),
-        customCreateForWorkspace.getWorkspaceId());
+        workspaceId);
     verify(destinationService).writeCustomConnectorMetadata(
         newDestinationDefinition
             .withCustom(true)
@@ -694,25 +688,33 @@ class DestinationDefinitionsHandlerTest {
         workspaceId,
         ScopeType.WORKSPACE);
 
-    final UUID organizationId = UUID.randomUUID();
+    // TODO: custom connectors for organizations are not currently supported. Jobs currently require an
+    // explicit workspace ID to resolve a dataplane group where the job should run. We can uncomment
+    // this section of the test once we support resolving a default dataplane group for a given
+    // organization ID.
 
-    final CustomDestinationDefinitionCreate customCreateForOrganization = new CustomDestinationDefinitionCreate()
-        .destinationDefinition(create)
-        .scopeId(organizationId)
-        .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
-
-    when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        null))
-            .thenReturn(destinationDefinitionVersion);
-
-    destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForOrganization);
-
-    verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(), create.getDockerImageTag(),
-        create.getDocumentationUrl(),
-        null);
-    verify(destinationService).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
-        destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
+    // final UUID organizationId = UUID.randomUUID();
+    //
+    // final CustomDestinationDefinitionCreate customCreateForOrganization = new
+    // CustomDestinationDefinitionCreate()
+    // .destinationDefinition(create)
+    // .scopeId(organizationId)
+    // .scopeType(io.airbyte.api.model.generated.ScopeType.ORGANIZATION);
+    //
+    // when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromCreate(create.getDockerRepository(),
+    // create.getDockerImageTag(),
+    // create.getDocumentationUrl(),
+    // null))
+    // .thenReturn(destinationDefinitionVersion);
+    //
+    // destinationDefinitionsHandler.createCustomDestinationDefinition(customCreateForOrganization);
+    //
+    // verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromCreate(create.getDockerRepository(),
+    // create.getDockerImageTag(),
+    // create.getDocumentationUrl(),
+    // null);
+    // verify(destinationService).writeCustomConnectorMetadata(newDestinationDefinition.withCustom(true).withDefaultVersionId(null),
+    // destinationDefinitionVersion, organizationId, ScopeType.ORGANIZATION);
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);
   }
@@ -853,11 +855,12 @@ class DestinationDefinitionsHandlerTest {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true))
+        .thenReturn(destinationDefinition);
     when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
-        .getDestinationDefinition(
-            new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
+        .getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true);
     final String currentTag = currentDestination.getDockerImageTag();
     final String newDockerImageTag = "averydifferenttagforprotocolversion";
     assertNotEquals(newDockerImageTag, currentTag);
@@ -884,12 +887,12 @@ class DestinationDefinitionsHandlerTest {
       JsonValidationException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), eq("12.4.0")))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(false, ""));
-    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId())).thenReturn(destinationDefinition);
+    when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true))
+        .thenReturn(destinationDefinition);
     when(actorDefinitionService.getActorDefinitionVersion(destinationDefinition.getDefaultVersionId()))
         .thenReturn(destinationDefinitionVersion);
     final DestinationDefinitionRead currentDestination = destinationDefinitionsHandler
-        .getDestinationDefinition(
-            new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId()));
+        .getDestinationDefinition(destinationDefinition.getDestinationDefinitionId(), true);
     final String currentTag = currentDestination.getDockerImageTag();
     final String newDockerImageTag = "12.4.0";
     assertNotEquals(newDockerImageTag, currentTag);
@@ -905,19 +908,18 @@ class DestinationDefinitionsHandlerTest {
   @DisplayName("deleteDestinationDefinition should correctly delete a sourceDefinition")
   void testDeleteDestinationDefinition()
       throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody =
-        new DestinationDefinitionIdRequestBody().destinationDefinitionId(destinationDefinition.getDestinationDefinitionId());
+
     final StandardDestinationDefinition updatedDestinationDefinition = Jsons.clone(this.destinationDefinition).withTombstone(true);
     final DestinationRead newDestinationDefinition = new DestinationRead();
 
     when(destinationService.getStandardDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(destinationDefinition);
-    when(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinitionIdRequestBody))
+    when(destinationHandler.listDestinationsForDestinationDefinition(destinationDefinition.getDestinationDefinitionId()))
         .thenReturn(new DestinationReadList().destinations(Collections.singletonList(newDestinationDefinition)));
 
     assertFalse(destinationDefinition.getTombstone());
 
-    destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinitionIdRequestBody);
+    destinationDefinitionsHandler.deleteDestinationDefinition(destinationDefinition.getDestinationDefinitionId());
 
     verify(destinationHandler).deleteDestination(newDestinationDefinition);
     verify(destinationService).updateStandardDestinationDefinition(updatedDestinationDefinition);

@@ -16,7 +16,7 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 /**
- * Test the ScheduleJitterHelper with values from application-schedule-jitter-test.yaml
+ * Test the ScheduleJitterHelper with values from application-schedule-jitter-test.yaml.
  */
 @MicronautTest(environments = {"schedule-jitter-test"})
 class ScheduleJitterHelperMicronautTest {

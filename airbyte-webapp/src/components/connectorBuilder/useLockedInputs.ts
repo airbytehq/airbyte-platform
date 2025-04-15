@@ -16,6 +16,7 @@ import {
   extractInterpolatedConfigKey,
   isYamlString,
   JWT_AUTHENTICATOR,
+  YamlString,
 } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 
@@ -65,8 +66,10 @@ export const useGetUniqueKey = () => {
     if (reuseIncrementalField) {
       let existingKey: string | undefined = undefined;
       builderStreams.some((stream) => {
-        if (stream.incrementalSync && !isYamlString(stream.incrementalSync)) {
-          const incrementalDatetime = stream.incrementalSync[reuseIncrementalField];
+        const incrementalSync =
+          stream.requestType === "sync" ? stream.incrementalSync : stream.creationRequester.incrementalSync;
+        if (incrementalSync && !isYamlString(incrementalSync)) {
+          const incrementalDatetime = incrementalSync[reuseIncrementalField];
           if (incrementalDatetime.type === "user_input") {
             existingKey = extractInterpolatedConfigKey(incrementalDatetime.value);
             return true;
@@ -94,18 +97,33 @@ export function getKeyToDesiredLockedInput(
   authenticator: BuilderFormValues["global"]["authenticator"],
   streams: BuilderStream[]
 ): Record<string, BuilderFormInput> {
-  const authKeyToDesiredInput = isYamlString(authenticator) ? {} : getAuthKeyToDesiredLockedInput(authenticator);
+  const authKeyToDesiredInput = {
+    ...getAuthKeyToDesiredLockedInput(authenticator),
+    ...streams.reduce((acc, stream) => {
+      if (stream.requestType === "async") {
+        return {
+          ...acc,
+          ...getAuthKeyToDesiredLockedInput(stream.creationRequester.authenticator),
+          ...getAuthKeyToDesiredLockedInput(stream.pollingRequester.authenticator),
+          ...getAuthKeyToDesiredLockedInput(stream.downloadRequester.authenticator),
+        };
+      }
+      return acc;
+    }, {}),
+  };
 
   const incrementalStartDateKeys = new Set<string>();
   const incrementalEndDateKeys = new Set<string>();
   streams.forEach((stream) => {
-    if (stream.incrementalSync && !isYamlString(stream.incrementalSync)) {
-      const startDatetime = stream.incrementalSync.start_datetime;
+    const incrementalSync =
+      stream.requestType === "sync" ? stream.incrementalSync : stream.creationRequester.incrementalSync;
+    if (incrementalSync && !isYamlString(incrementalSync)) {
+      const startDatetime = incrementalSync.start_datetime;
       if (startDatetime.type === "user_input") {
         incrementalStartDateKeys.add(extractInterpolatedConfigKey(startDatetime.value));
       }
 
-      const endDatetime = stream.incrementalSync.end_datetime;
+      const endDatetime = incrementalSync.end_datetime;
       if (endDatetime.type === "user_input") {
         incrementalEndDateKeys.add(extractInterpolatedConfigKey(endDatetime.value));
       }
@@ -136,8 +154,12 @@ export function getKeyToDesiredLockedInput(
 }
 
 export function getAuthKeyToDesiredLockedInput(
-  authenticator: BuilderFormAuthenticator
+  authenticator: BuilderFormAuthenticator | YamlString
 ): Record<string, BuilderFormInput> {
+  if (isYamlString(authenticator)) {
+    return {};
+  }
+
   switch (authenticator.type) {
     case API_KEY_AUTHENTICATOR:
     case BEARER_AUTHENTICATOR:

@@ -1,5 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -18,8 +18,8 @@ export const CreateApplicationControl = () => {
   const { applications } = useListApplications();
   const { openModal } = useModalService();
 
-  const schema = yup.object().shape({
-    name: yup.string().required("form.empty.error"),
+  const schema = z.object({
+    name: z.string().nonempty("form.empty.error"),
   });
 
   const onAddApplicationButtonClick = () =>
@@ -27,7 +27,7 @@ export const CreateApplicationControl = () => {
       title: formatMessage({ id: "settings.application.create" }),
       content: ({ onComplete, onCancel }) => (
         <Form<ApplicationCreate>
-          schema={schema}
+          zodSchema={schema}
           defaultValues={{ name: "" }}
           onSubmit={async (values: ApplicationCreate) => {
             await createApplication(values);

@@ -12,6 +12,7 @@ interface FormSubmissionButtonsProps {
   cancelKey?: string;
   allowNonDirtyCancel?: boolean;
   allowNonDirtySubmit?: boolean;
+  allowInvalidSubmit?: boolean;
   onCancelClickCallback?: () => void;
   justify?: "flex-start" | "flex-end";
   reversed?: boolean;
@@ -23,6 +24,7 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
   cancelKey = "form.cancel",
   allowNonDirtyCancel = false,
   allowNonDirtySubmit = false,
+  allowInvalidSubmit = false,
   onCancelClickCallback,
   justify = "flex-end",
   noCancel,
@@ -48,7 +50,11 @@ export const FormSubmissionButtons: React.FC<FormSubmissionButtonsProps> = ({
           <FormattedMessage id={cancelKey} />
         </Button>
       )}
-      <Button type="submit" isLoading={isSubmitting} disabled={!isValid || (!isDirty && !allowNonDirtySubmit)}>
+      <Button
+        type="submit"
+        isLoading={isSubmitting}
+        disabled={(!isValid && !allowInvalidSubmit) || (!isDirty && !allowNonDirtySubmit)}
+      >
         <FormattedMessage id={submitKey} />
       </Button>
     </FlexContainer>

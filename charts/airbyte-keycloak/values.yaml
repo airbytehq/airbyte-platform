@@ -30,6 +30,8 @@ global:
 
 enabled: true
 
+serviceAccountName:
+
 bypassInit: false
 ##  image.repository The repository to use for the airbyte keycloak image.
 ##  image.pullPolicy the pull policy to use for the airbyte keycloak image

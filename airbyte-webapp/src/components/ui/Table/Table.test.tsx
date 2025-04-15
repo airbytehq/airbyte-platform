@@ -1,6 +1,8 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { render } from "@testing-library/react";
 
+import { TestWrapper } from "test-utils/testutils";
+
 import { Table } from "./Table";
 
 interface Item {
@@ -9,7 +11,7 @@ interface Item {
 }
 
 describe("<Table>", () => {
-  it("should should render the table with passed data", () => {
+  it("should render the table with passed data", () => {
     const data: Item[] = [
       { name: "2017", value: 100 },
       { name: "2018", value: 300 },
@@ -31,7 +33,11 @@ describe("<Table>", () => {
       },
     ];
 
-    const { getByText, container } = render(<Table<Item> columns={columns} data={data} />);
+    const { getByText, container } = render(
+      <TestWrapper>
+        <Table<Item> columns={columns} data={data} />
+      </TestWrapper>
+    );
     expect(getByText(/2019/)).toBeInTheDocument();
     expect(getByText(/500/)).toBeInTheDocument();
 

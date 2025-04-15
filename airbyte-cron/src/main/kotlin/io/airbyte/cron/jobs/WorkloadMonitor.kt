@@ -44,6 +44,7 @@ open class WorkloadMonitor(
     const val CHECK_NON_SYNC_TIMEOUT = "workload-monitor-non-sync-timeout"
     const val CHECK_START = "workload-monitor-start"
     const val CHECK_SYNC_TIMEOUT = "workload-monitor-sync-timeout"
+    const val WORKLOAD_QUEUE_DEPTH = "workload-monitor-queue-depth"
     val DEFAULT_TIME_PROVIDER: (ZoneId) -> OffsetDateTime = OffsetDateTime::now
   }
 
@@ -163,6 +164,26 @@ open class WorkloadMonitor(
       )
 
     failWorkloads(nonHeartbeatingWorkloads.workloads, "Sync workload timeout", CHECK_SYNC_TIMEOUT)
+  }
+
+  @Trace
+  @Instrument(
+    start = "WORKLOAD_MONITOR_RUN",
+    end = "WORKLOAD_MONITOR_DONE",
+    duration = "WORKLOAD_MONITOR_DURATION",
+    tags = [Tag(key = MetricTags.CRON_TYPE, value = WORKLOAD_QUEUE_DEPTH)],
+  )
+  @Scheduled(fixedRate = "\${airbyte.workload.monitor.queue-depth-check-rate}")
+  open fun workloadQueueDepthMonitoring() {
+    val queueStats = workloadApiClient.workloadApi.getWorkloadQueueStats()
+    queueStats.stats.forEach {
+      metricClient.gauge(
+        OssMetricsRegistry.WORKLOAD_QUEUE_SIZE,
+        it.enqueuedCount.toDouble(),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, it.dataplaneGroup ?: "unknown"),
+        MetricAttribute(MetricTags.PRIORITY_TAG, it.priority?.name ?: "none"),
+      )
+    }
   }
 
   private fun failWorkloads(

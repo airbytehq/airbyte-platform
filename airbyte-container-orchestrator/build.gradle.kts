@@ -60,6 +60,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))
+  implementation(libs.kotlin.coroutines)
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)

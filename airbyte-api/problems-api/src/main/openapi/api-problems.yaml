@@ -606,7 +606,30 @@ components:
               default: Attempted to use pre-existing secret values, but an existing secret for that mapper was not found. Please provide the secret values.
             data:
               $ref: "#/components/schemas/ProblemMapperIdData"
-
+    ConnectionConflictingStreamProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection-conflicting-destination-stream
+            title:
+              type: string
+              default: Connection contains conflicting stream(s).
+            detail:
+              type: string
+              default: This connection contains stream(s) that conflict with existing connection(s).
+            documentationUrl:
+              type: string
+              default: "https://docs.airbyte.com/using-airbyte/configuring-schema#stream-uniqueness"
+            data:
+              $ref: "#/components/schemas/ProblemConnectionConflictingStreamsData"
     RuntimeSecretsManagerRequiredProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1254,3 +1277,31 @@ components:
               default: The notification is missing a URL.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ProblemConnectionConflictingStreamsData:
+      type: object
+      required:
+        - streams
+      properties:
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemConnectionConflictingStreamsDataItem"
+    ProblemConnectionConflictingStreamsDataItem:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+        - connectionIds
+      properties:
+        streamName:
+          type: string
+          description: Name of the stream
+        streamNamespace:
+          type: string
+          description: Namespace of the stream
+        connectionIds:
+          type: array
+          description: List of connection IDs using this stream configuration
+          items:
+            type: string
+            format: uuid

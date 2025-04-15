@@ -1,6 +1,12 @@
 {
-  "oss-k8s": {
-    "name": "Local K8s",
+  "oss": {
+    "name": "frontend-dev-oss",
+    "group": "OSS Community",
+    "envFile": ".env.frontend-dev-oss",
+    "description": "Develop against a remote OSS Community environment. Requires VPN to be active."
+  },
+  "oss-local": {
+    "name": "Local OSS Community K8s",
     "group": "OSS Community",
     "envFile": ".env.development-k8s",
     "description": "Local Kubernetes cluster via `make deploy.oss`"
@@ -11,8 +17,14 @@
     "envFile": ".env.frontend-dev-enterprise",
     "description": "Develop against a remote Enterprise environment. Requires VPN to be active."
   },
+  "embedded-enterprise-widget": {
+    "name": "Embedded Enterprise Env",
+    "group": "Enterprise",
+    "envFile": ".env.embedded-dev-widget",
+    "description": "Embedded dev env`"
+  },
   "enterprise-local": {
-    "name": "Local K8s",
+    "name": "Local Enterprise K8s",
     "group": "Enterprise",
     "envFile": ".env.development-k8s",
     "description": "Local Kubernetes cluster via `make deploy.enterprise`"

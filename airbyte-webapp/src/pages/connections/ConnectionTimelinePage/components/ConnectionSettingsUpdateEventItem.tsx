@@ -1,6 +1,6 @@
 import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -18,18 +18,20 @@ import { ConnectionTimelineEventActions } from "../ConnectionTimelineEventAction
 import { ConnectionTimelineEventIcon } from "../ConnectionTimelineEventIcon";
 import { ConnectionTimelineEventItem } from "../ConnectionTimelineEventItem";
 import { ConnectionTimelineEventSummary } from "../ConnectionTimelineEventSummary";
-import { connectionSettingsUpdateEventSchema, patchFields } from "../types";
+import { connectionSettingsUpdateEventSchema, connectionSettingsUpdateEventSummaryPatchesShape } from "../types";
 import { titleIdMap } from "../utils";
 
 interface ConnectionSettingsUpdateEventItemProps {
-  event: InferType<typeof connectionSettingsUpdateEventSchema>;
+  event: z.infer<typeof connectionSettingsUpdateEventSchema>;
 }
 
 export const ConnectionSettingsUpdateEventItem: React.FC<ConnectionSettingsUpdateEventItemProps> = ({ event }) => {
   const { openModal } = useModalService();
   const { formatMessage } = useIntl();
   const titleId = titleIdMap[event.eventType];
-  const patchedFields = patchFields.filter((field) => event.summary.patches.hasOwnProperty(field));
+  const patchedFields = Object.keys(event.summary?.patches ?? {}) as Array<
+    keyof typeof connectionSettingsUpdateEventSummaryPatchesShape
+  >;
   if (patchedFields.length === 0) {
     return null;
   }
@@ -47,8 +49,8 @@ export const ConnectionSettingsUpdateEventItem: React.FC<ConnectionSettingsUpdat
               <ShortConnectionSettingsUpdateEventItemDescription
                 key={field}
                 field={field}
-                to={event.summary.patches[field].to}
-                from={event.summary.patches[field].from}
+                to={event.summary?.patches?.[field]?.to}
+                from={event.summary?.patches?.[field]?.from}
               />
             ))}
           </FlexContainer>
@@ -71,15 +73,15 @@ export const ConnectionSettingsUpdateEventItem: React.FC<ConnectionSettingsUpdat
                 <ConnectionSettingsUpdateEventItemDescription
                   field={firstPatchedField}
                   user={event.user}
-                  to={event.summary.patches[firstPatchedField].to}
-                  from={event.summary.patches[firstPatchedField].from}
+                  to={event.summary?.patches?.[firstPatchedField]?.to}
+                  from={event.summary?.patches?.[firstPatchedField]?.from}
                 />
               ) : (
                 <MultiConnectionSettingsUpdateEventItemDescription
                   field={firstPatchedField}
                   user={event.user}
-                  to={event.summary.patches[firstPatchedField].to}
-                  from={event.summary.patches[firstPatchedField].from}
+                  to={event.summary?.patches?.[firstPatchedField]?.to}
+                  from={event.summary?.patches?.[firstPatchedField]?.from}
                   totalChanges={patchedFields.length}
                 />
               )}{" "}

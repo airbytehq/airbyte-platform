@@ -9,7 +9,11 @@ import { useLocation } from "react-router-dom";
 import { useUpdateEffect } from "react-use";
 
 import { LoadingPage } from "components";
-import { ConnectorQualityMetrics } from "components/connector/ConnectorQualityMetrics";
+import {
+  ConnectorQualityMetrics,
+  ConnectorDefinitionWithMetrics,
+  convertToConnectorDefinitionWithMetrics,
+} from "components/connector/ConnectorQualityMetrics";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
@@ -138,12 +142,18 @@ const ConnectorDocumentationHeader: React.FC<{ selectedConnectorDefinition: Conn
   selectedConnectorDefinition,
 }) => {
   const { name } = selectedConnectorDefinition;
+
+  const selectedConnectorDefinitionWithMetrics: ConnectorDefinitionWithMetrics = useMemo(
+    () => convertToConnectorDefinitionWithMetrics(selectedConnectorDefinition),
+    [selectedConnectorDefinition]
+  );
+
   return (
     <FlexContainer direction="column" justifyContent="space-between" className={styles.connectorDocumentationHeader}>
       <div className={mdStyles.markdown}>
         <Heading as="h1">{name}</Heading>
       </div>
-      <ConnectorQualityMetrics connectorDefinition={selectedConnectorDefinition} />
+      <ConnectorQualityMetrics connectorDefinition={selectedConnectorDefinitionWithMetrics} />
     </FlexContainer>
   );
 };

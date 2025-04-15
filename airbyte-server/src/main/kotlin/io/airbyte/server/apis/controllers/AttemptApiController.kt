@@ -16,6 +16,7 @@ import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.model.generated.SaveStatsRequestBody
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -31,6 +32,7 @@ import io.micronaut.security.rules.SecurityRule
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class AttemptApiController(
   private val attemptHandler: AttemptHandler,
+  private val jobConverter: JobConverter,
 ) : AttemptApi {
   @Post(uri = "/get_for_job", processes = [MediaType.APPLICATION_JSON])
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -39,10 +41,12 @@ class AttemptApiController(
     @Body requestBody: GetAttemptStatsRequestBody,
   ): AttemptInfoRead? =
     execute {
-      attemptHandler.getAttemptForJob(
-        requestBody.jobId,
-        requestBody.attemptNumber,
-      )
+      val attempt =
+        attemptHandler.getAttemptForJob(
+          requestBody.jobId,
+          requestBody.attemptNumber,
+        )
+      jobConverter.getAttemptInfoRead(attempt)
     }
 
   @Post(uri = "/create_new_attempt_number", processes = [MediaType.APPLICATION_JSON])

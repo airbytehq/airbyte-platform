@@ -17,10 +17,10 @@ import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.AirbyteGlobalState;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -375,7 +375,7 @@ public class StatePersistence {
    */
   private static AirbyteStreamState buildAirbyteStreamState(final StateRecord record) {
     return new AirbyteStreamState()
-        .withStreamDescriptor(new io.airbyte.protocol.models.StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
+        .withStreamDescriptor(new io.airbyte.protocol.models.v0.StreamDescriptor().withName(record.streamName).withNamespace(record.namespace))
         .withStreamState(record.state);
   }
 

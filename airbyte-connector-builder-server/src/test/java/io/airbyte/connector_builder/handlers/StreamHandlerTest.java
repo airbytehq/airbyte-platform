@@ -80,7 +80,7 @@ class StreamHandlerTest {
 
   @Test
   void whenReadStreamThenReturnRequesterResponse() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenReturn(streamRead);
+    when(requester.readStream(A_MANIFEST, null, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenReturn(streamRead);
     final StreamRead response =
         handler.readStream(
             new StreamReadRequestBody().manifest(A_MANIFEST).config(A_CONFIG).state(A_STATE).stream(A_STREAM).recordLimit(A_LIMIT).pageLimit(A_LIMIT)
@@ -90,7 +90,7 @@ class StreamHandlerTest {
 
   @Test
   void givenIOExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(IOException.class);
+    when(requester.readStream(A_MANIFEST, null, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(IOException.class);
     assertThrows(ConnectorBuilderException.class,
         () -> handler.readStream(
             new StreamReadRequestBody()
@@ -105,7 +105,8 @@ class StreamHandlerTest {
 
   @Test
   void givenAirbyteCdkInvalidInputExceptionWhenReadStreamThenRaiseConnectorBuilderException() throws Exception {
-    when(requester.readStream(A_MANIFEST, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT)).thenThrow(AirbyteCdkInvalidInputException.class);
+    when(requester.readStream(A_MANIFEST, null, A_CONFIG, A_STATE, A_STREAM, A_LIMIT, A_LIMIT, A_LIMIT))
+        .thenThrow(AirbyteCdkInvalidInputException.class);
     assertThrows(AirbyteCdkInvalidInputException.class,
         () -> handler.readStream(
             new StreamReadRequestBody()

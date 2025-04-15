@@ -13,7 +13,6 @@ import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.PermissionPersistence;
-import io.micronaut.http.HttpRequest;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -76,11 +75,6 @@ public class RbacRoleHelper {
       throw new RuntimeException(ex);
     }
     return allRoles;
-  }
-
-  public Collection<String> getRbacRoles(final String authUserId, final HttpRequest<?> request) {
-    final Map<String, String> headerMap = request.getHeaders().asMap(String.class, String.class);
-    return getRbacRoles(authUserId, headerMap);
   }
 
   public static Set<String> getInstanceAdminRoles() {

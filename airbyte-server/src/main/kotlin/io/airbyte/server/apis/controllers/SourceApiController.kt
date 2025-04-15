@@ -11,7 +11,6 @@ import io.airbyte.api.model.generated.DiscoverCatalogResult
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceAutoPropagateChange
-import io.airbyte.api.model.generated.SourceCloneRequestBody
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
@@ -69,12 +68,6 @@ open class SourceApiController(
   override fun checkConnectionToSourceForUpdate(
     @Body sourceUpdate: SourceUpdate,
   ): CheckConnectionRead? = execute { schedulerHandler.checkSourceConnectionFromSourceIdForUpdate(sourceUpdate) }
-
-  @Post("/clone")
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun cloneSource(
-    @Body sourceCloneRequestBody: SourceCloneRequestBody,
-  ): SourceRead? = execute { sourceHandler.cloneSource(sourceCloneRequestBody) }
 
   @Post("/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

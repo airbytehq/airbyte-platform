@@ -112,7 +112,7 @@ class InstanceConfigurationHandlerTest {
 
     activeAirbyteLicense = new ActiveAirbyteLicense();
     activeAirbyteLicense
-        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS));
+        .setLicense(new AirbyteLicense(LicenseType.ENTERPRISE, EXPIRATION_DATE, MAX_NODES, MAX_EDITORS, ENTERPRISE_CONNECTOR_IDS, false));
   }
 
   @ParameterizedTest

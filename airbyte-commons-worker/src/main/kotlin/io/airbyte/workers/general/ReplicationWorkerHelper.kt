@@ -13,7 +13,6 @@ import io.airbyte.api.client.model.generated.DestinationIdRequestBody
 import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.commons.concurrency.VoidCallable
-import io.airbyte.commons.converters.ThreadedTimeTracker
 import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.ConfiguredAirbyteCatalog
@@ -38,9 +37,9 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteMessage.Type
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationFeatureFlags
@@ -68,6 +67,7 @@ import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
+import io.airbyte.workers.tracker.ThreadedTimeTracker
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -118,6 +118,7 @@ class ReplicationWorkerHelper(
     get() = _shouldAbort.get() || _cancelled.get()
 
   private var recordsRead: Long = 0
+  private var totalRecordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
   private var ctx: ReplicationContext? = null
   private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
@@ -293,7 +294,7 @@ class ReplicationWorkerHelper(
 
     logger.info {
       val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-      "Total records read: $recordsRead ($bytes)"
+      "Total records read: $totalRecordsRead ($bytes)"
     }
 
     fieldSelector.reportMetrics(context.sourceId)
@@ -387,40 +388,56 @@ class ReplicationWorkerHelper(
 
   @VisibleForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
-    val context = requireNotNull(ctx)
+    val context = requireNotNull(ctx) { "Context must not be null" }
+
+    updateRecordsCount()
 
     fieldSelector.filterSelectedFields(sourceRawMessage)
     fieldSelector.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
     streamStatusTracker.track(sourceRawMessage)
-    if (isAnalyticsMessage(sourceRawMessage)) {
-      analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
+
+    return when (sourceRawMessage.type) {
+      Type.RECORD -> processRecordMessage(sourceRawMessage)
+      Type.STATE -> {
+        metricClient.count(
+          metric = OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE,
+          attributes = metricAttrs.toTypedArray(),
+        )
+        sourceRawMessage
+      }
+      else -> {
+        if (isAnalyticsMessage(sourceRawMessage)) {
+          analyticsMessageTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
+        } else {
+          handleControlMessage(sourceRawMessage, context, AirbyteMessageOrigin.SOURCE)
+        }
+        sourceRawMessage
+      }
     }
+  }
 
-    handleControlMessage(sourceRawMessage, context, AirbyteMessageOrigin.SOURCE)
+  private fun processRecordMessage(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
+    val adapter = AirbyteJsonRecordAdapter(sourceRawMessage)
+    applyTransformationMappers(adapter)
+    if (!adapter.shouldInclude()) {
+      messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
+      return null
+    }
+    return sourceRawMessage
+  }
 
-    recordsRead += 1
-    if (recordsRead % 5000 == 0L) {
+  private fun updateRecordsCount() {
+    recordsRead++
+    totalRecordsRead += recordsRead
+
+    if (recordsRead == 5000L) {
       logger.info {
         val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
-        "Records read: $recordsRead ($bytes)"
+        "Records read: $totalRecordsRead ($bytes)"
       }
+      recordsRead = 0
     }
-
-    if (sourceRawMessage.type == Type.STATE) {
-      metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE, attributes = metricAttrs.toTypedArray())
-    }
-
-    if (sourceRawMessage.type == Type.RECORD) {
-      val airbyteJsonRecordAdapter = AirbyteJsonRecordAdapter(sourceRawMessage)
-      applyTransformationMappers(airbyteJsonRecordAdapter)
-      if (!airbyteJsonRecordAdapter.shouldInclude()) {
-        messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
-        return null
-      }
-    }
-
-    return sourceRawMessage
   }
 
   private fun handleControlMessage(

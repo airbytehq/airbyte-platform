@@ -10,6 +10,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import kotlin.time.TimeSource
 
 /**
  * Input/Output object for LaunchPipeline.
@@ -37,6 +38,7 @@ data class LaunchStageIO(
   override val logCtx: Map<String, String> = mapOf(),
   var payload: WorkloadPayload? = null,
   var ffContext: Context? = null,
+  var receivedAt: TimeSource.Monotonic.ValueTimeMark? = null,
 ) : StageIO() {
   val workloadId = msg.workloadId
 }

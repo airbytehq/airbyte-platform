@@ -14,7 +14,7 @@ jest.mock("locales/en.errors.json", () => ({
 }));
 
 const request = {
-  method: "get" as const,
+  method: "GET" as const,
   url: "/api",
 };
 

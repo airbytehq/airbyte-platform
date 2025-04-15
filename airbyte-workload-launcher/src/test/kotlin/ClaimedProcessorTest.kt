@@ -52,7 +52,6 @@ class ClaimedProcessorTest {
         apiClient = apiClient,
         pipe = launchPipeline,
         metricClient = mockk(relaxed = true),
-        dataplaneId = "dataplane1",
         parallelism = 10,
         claimProcessorTracker = claimProcessorTracker,
         backoffDuration = 1.milliseconds.toKotlinDuration().toJavaDuration(),
@@ -63,7 +62,7 @@ class ClaimedProcessorTest {
   @Test
   fun `test retrieve and process when there are no workload to resume`() {
     every { workloadApi.workloadList(any()) } returns WorkloadListResponse(listOf())
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(0) }
   }
@@ -77,7 +76,7 @@ class ClaimedProcessorTest {
           Workload("2", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
         ),
       )
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(2) }
     verify(exactly = 2) { launchPipeline.buildPipeline(any()) }
@@ -89,7 +88,7 @@ class ClaimedProcessorTest {
     every { workloadApi.workloadList(any()) } throws ServerException("Message shouldn't matter here", statusCode)
 
     assertThrows<ServerException> {
-      claimedProcessor.retrieveAndProcess()
+      claimedProcessor.retrieveAndProcess("dataplane1")
     }
     verify(exactly = 0) { claimProcessorTracker.trackNumberOfClaimsToResume(any()) }
   }
@@ -117,7 +116,7 @@ class ClaimedProcessorTest {
           ),
         )
       }
-    claimedProcessor.retrieveAndProcess()
+    claimedProcessor.retrieveAndProcess("dataplane1")
 
     verify { claimProcessorTracker.trackNumberOfClaimsToResume(3) }
     verify(exactly = 3) { launchPipeline.buildPipeline(any()) }

@@ -64,15 +64,11 @@ micronaut:
     enabled: ${API_AUTHORIZATION_ENABLED:false}
     token:
       jwt:
+        enabled: ${API_AUTHORIZATION_ENABLED:false}
         signatures:
-          jwks:
-            oidc:
-              url: ${AB_AIRBYTE_AUTH_JWKS_ENDPOINT:}
           secret:
             generator:
-              secret: ${AB_AIRBYTE_AUTH_SECRET_SIGNING_KEY:}
-        enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
-      enabled: ${AB_AIRBYTE_AUTH_TOKEN_ENABLED:false}
+              secret: ${AB_JWT_SIGNATURE_SECRET:}
   server:
     port: 8001
     cors:
@@ -120,22 +116,25 @@ airbyte:
   applications:
     type: ${AB_AIRBYTE_APPLICATIONS:}
   auth:
+    token-expiration:
+      application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
+      dataplane-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_DATAPLANE:5}
+    token-issuer: ${WEBAPP_URL}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
       first-name: ${INITIAL_USER_FIRST_NAME:}
       last-name: ${INITIAL_USER_LAST_NAME:}
       password: ${INITIAL_USER_PASSWORD:}
     identity-provider:
-      type: ${IDENTITY_PROVIDER_TYPE:}
-      oidc:
-        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_CLIENT_ID:}
-        endpoints:
-          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
-        fields:
-          sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB:sub}
-          email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL:email}
-          name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME:name}
-          issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER:iss}
+      verify-issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER:false}
+      verify-audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE:false}
+      issuers:
+        - ${WEBAPP_URL}
+        - ${DEFAULT_REALM}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ISSUER:}
+      audiences:
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_AUDIENCE:airbyte-server}
+        - ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
   cloud:
     storage:
       type: ${STORAGE_TYPE}
@@ -428,7 +427,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     leak-detection-threshold: 40000 # This should be slightly higher than the connection-timeout setting but not too high to avoid false positives and negatives.
   local-secrets:
     connection-test-query: SELECT 1
@@ -440,7 +439,7 @@ datasources:
     url: ${DATABASE_URL}
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
-    password: ${DATABASE_PASSWORD}
+    password: ${DATABASE_PASSWORD:}
     pool-name: config-pool
 
 endpoints:

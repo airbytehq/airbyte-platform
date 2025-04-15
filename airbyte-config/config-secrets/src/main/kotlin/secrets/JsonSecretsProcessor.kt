@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Preconditions
 import io.airbyte.commons.constants.AirbyteSecretConstants
+import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
@@ -63,6 +64,46 @@ class JsonSecretsProcessor(
       return copy
     }
 
+    /**
+     * Given a JSONSchema object and an object that conforms to that schema, return the coordinates of the secrets only
+     *
+     * @param json - json object that conforms to the schema
+     * @param schema - jsonschema object
+     * @return json object with only the secret coordinates returned.
+     *
+     * TODO: In the future, when we have secret refs, we can simplify this dramatically uby just swapping in the refs from the map (https://github.com/airbytehq/airbyte-platform-internal/pull/15663#discussion_r2023811563)
+     */
+    fun simplifyAllSecrets(
+      json: JsonNode,
+      schema: JsonNode?,
+    ): JsonNode {
+      val pathsWithSecrets =
+        JsonSchemas
+          .collectPathsThatMeetCondition(
+            schema,
+          ) { node: JsonNode ->
+            MoreIterators
+              .toList(node.fields())
+              .stream()
+              .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
+          }.stream()
+          .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
+            JsonPaths.mapJsonSchemaPathToJsonPath(
+              jsonSchemaPath,
+            )
+          }.collect(Collectors.toSet())
+      var copy = Jsons.clone(json)
+      for (path in pathsWithSecrets) {
+        // TODO: Is this secret sub (`_secret`) key stored anywhere? AirbyteSecretConstants?
+        var extractedCoordinateNode = JsonPaths.getSingleValue(copy, "$path._secret")
+        var extractedCoordinateString = extractedCoordinateNode.map(JsonNode::asText).orElse(null)
+        if (extractedCoordinateString != null) {
+          copy = JsonPaths.replaceAtString(copy, path, "$AIRBYTE_SECRET_COORDINATE_PREFIX$extractedCoordinateString")
+        }
+      }
+      return copy
+    }
+
     fun isSecret(obj: JsonNode): Boolean =
       obj.isObject && obj.has(AirbyteSecretConstants.AIRBYTE_SECRET_FIELD) && obj[AirbyteSecretConstants.AIRBYTE_SECRET_FIELD].asBoolean()
 
@@ -108,6 +149,24 @@ class JsonSecretsProcessor(
       return obj
     }
     return maskAllSecrets(obj, schema)
+  }
+
+  /**
+   * Returns a copy of the input object wherein any fields annotated with "airbyte_secret" in the
+   * input schema are simplified returning just the secret coordinates.
+   *
+   * @param schema Schema containing secret annotations
+   * @param obj Object containing potentially secret fields
+   */
+  fun simplifySecretsForOutput(
+    obj: JsonNode,
+    schema: JsonNode,
+  ): JsonNode {
+    if (!isValidJsonSchema(schema)) {
+      logger.error { "The schema is not valid, the secret can't be hidden" }
+      return obj
+    }
+    return simplifyAllSecrets(obj, schema)
   }
 
   /**

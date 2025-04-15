@@ -25,6 +25,7 @@ import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.publicApi.server.generated.models.SourcesResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.helpers.toInternal
 import io.airbyte.server.apis.publicapi.mappers.SourceReadMapper
 import io.airbyte.server.apis.publicapi.mappers.SourcesResponseMapper
 import io.micronaut.context.annotation.Secondary
@@ -52,7 +53,10 @@ interface SourceService {
 
   fun deleteSource(sourceId: UUID)
 
-  fun getSource(sourceId: UUID): SourceResponse
+  fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse
 
   fun getSourceSchema(
     sourceId: UUID,
@@ -97,6 +101,7 @@ open class SourceServiceImpl(
     sourceCreateOss.workspaceId = sourceCreateRequest.workspaceId
     sourceCreateOss.connectionConfiguration = sourceCreateRequest.configuration
     sourceCreateOss.secretId = sourceCreateRequest.secretId
+    sourceCreateOss.resourceAllocation = sourceCreateRequest.resourceAllocation?.toInternal()
 
     val result =
       kotlin
@@ -121,6 +126,7 @@ open class SourceServiceImpl(
         .sourceId(sourceId)
         .connectionConfiguration(sourcePutRequest.configuration)
         .name(sourcePutRequest.name)
+        .resourceAllocation(sourcePutRequest.resourceAllocation?.toInternal())
 
     val result =
       kotlin
@@ -146,6 +152,7 @@ open class SourceServiceImpl(
         .connectionConfiguration(sourcePatchRequest.configuration)
         .name(sourcePatchRequest.name)
         .secretId(sourcePatchRequest.secretId)
+        .resourceAllocation(sourcePatchRequest.resourceAllocation?.toInternal())
 
     val result =
       kotlin
@@ -177,13 +184,16 @@ open class SourceServiceImpl(
   /**
    * Gets a source by ID.
    */
-  override fun getSource(sourceId: UUID): SourceResponse {
+  override fun getSource(
+    sourceId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): SourceResponse {
     val sourceIdRequestBody = SourceIdRequestBody()
     sourceIdRequestBody.sourceId = sourceId
 
     val result =
       kotlin
-        .runCatching { sourceHandler.getSource(sourceIdRequestBody) }
+        .runCatching { sourceHandler.getSource(sourceIdRequestBody, includeSecretCoordinates == true) }
         .onFailure {
           log.error("Error for getSource", it)
           ConfigClientErrorHandler.handleError(it)

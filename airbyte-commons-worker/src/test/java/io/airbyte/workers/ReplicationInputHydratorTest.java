@@ -59,7 +59,6 @@ import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
@@ -68,6 +67,7 @@ import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator;
 import io.airbyte.workers.input.ReplicationInputMapper;
 import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
@@ -106,6 +106,7 @@ class ReplicationInputHydratorTest {
               null,
               null,
               TEST_STREAM_NAMESPACE,
+              null,
               null),
           new AirbyteStreamConfiguration(
               SyncMode.INCREMENTAL,
@@ -191,8 +192,8 @@ class ReplicationInputHydratorTest {
       null,
       null);
 
-  private static SecretsRepositoryReader secretsRepositoryReader;
   private static MapperSecretHydrationHelper mapperSecretHydrationHelper;
+  private static ConnectorSecretsHydrator connectorSecretsHydrator;
   private static AirbyteApiClient airbyteApiClient;
   private static ConnectionApi connectionApi;
   private static StateApi stateApi;
@@ -208,8 +209,8 @@ class ReplicationInputHydratorTest {
 
   @BeforeEach
   void setup() throws IOException {
-    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     mapperSecretHydrationHelper = mock(MapperSecretHydrationHelper.class);
+    connectorSecretsHydrator = mock(ConnectorSecretsHydrator.class);
     airbyteApiClient = mock(AirbyteApiClient.class);
     attemptApi = mock(AttemptApi.class);
     connectionApi = mock(ConnectionApi.class);
@@ -240,12 +241,12 @@ class ReplicationInputHydratorTest {
     return new ReplicationInputHydrator(
         airbyteApiClient,
         resumableFullRefreshStatsHelper,
-        secretsRepositoryReader,
         mapperSecretHydrationHelper,
         backfillHelper,
         catalogClientConverters,
         new ReplicationInputMapper(),
         metricClient,
+        connectorSecretsHydrator,
         useRuntimePersistence);
   }
 
@@ -267,9 +268,10 @@ class ReplicationInputHydratorTest {
         "unused",
         "unused",
         null, // unused
-        new ConnectionContext().withOrganizationId(UUID.randomUUID()),
+        new ConnectionContext().withWorkspaceId(UUID.randomUUID()).withOrganizationId(UUID.randomUUID()),
         null,
-        List.of());
+        List.of(),
+        false);
   }
 
   @ParameterizedTest
@@ -448,19 +450,19 @@ class ReplicationInputHydratorTest {
       when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
               null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
-              null));
+              null, null));
     } else {
       when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
               null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
-              null));
+              null, null));
     }
   }
 
   private void mockRefresh() throws IOException {
     when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),
@@ -473,7 +475,7 @@ class ReplicationInputHydratorTest {
   private void mockNonRefresh() throws IOException {
     when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),

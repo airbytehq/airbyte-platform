@@ -4,11 +4,9 @@
 
 package io.airbyte.commons.server.converters;
 
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.Limit;
 import io.airbyte.api.model.generated.WorkspaceLimits;
 import io.airbyte.api.model.generated.WorkspaceRead;
-import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.config.StandardWorkspace;
@@ -29,7 +27,8 @@ public class WorkspaceConverter {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(Enums.convertTo(workspace.getDefaultGeography(), Geography.class))
+        .defaultGeography(workspace.getDefaultGeography())
+        .dataplaneGroupId(workspace.getDataplaneGroupId())
         .organizationId(workspace.getOrganizationId())
         .tombstone(workspace.getTombstone());
     // Add read-only webhook configs.

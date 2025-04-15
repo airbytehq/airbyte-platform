@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Application
@@ -31,14 +32,14 @@ import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import jakarta.ws.rs.core.Response
 import java.util.Optional
-
-const val TOKEN_EXPIRATION_TIME: Long = 180
+import kotlin.time.Duration.Companion.minutes
 
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @Requires(bean = ApplicationService::class)
 open class ApplicationsController(
   private val applicationService: ApplicationService,
+  private val tokenExpirationConfig: TokenExpirationConfig,
   private val currentUserService: CurrentUserService,
   private val trackingHelper: TrackingHelper,
 ) : PublicApplicationsApi {
@@ -108,8 +109,7 @@ open class ApplicationsController(
                 clientSecret = applicationTokenRequestWithGrant.clientSecret,
               ),
           PublicAccessTokenResponse.TokenType.BEARER,
-          // This is longer for pro, but there's no reason for the terraform provider/sdks to not just get a new token every 3 min
-          TOKEN_EXPIRATION_TIME,
+          tokenExpirationConfig.applicationTokenExpirationInMinutes.minutes.inWholeSeconds,
         ),
       ).build()
 

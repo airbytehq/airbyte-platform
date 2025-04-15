@@ -25,7 +25,6 @@ export const links = {
   syncModeLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections`,
   sourceDefinedCursorLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections/incremental-append-deduped/#source-defined-cursor`,
   sourceDefinedPKLink: `${BASE_DOCS_LINK}/understanding-airbyte/connections/incremental-append-deduped/#source-defined-primary-key`,
-  demoLink: "https://demo.airbyte.io",
   contactSales: "https://airbyte.com/talk-to-sales",
   webpageLink: "https://airbyte.com",
   webhookVideoGuideLink: "https://www.youtube.com/watch?v=NjYm8F-KiFc",
@@ -46,6 +45,7 @@ export const links = {
   connectorBuilderTransformations: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/record-processing#transformations`,
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
+  connectorBuilderCustomComponents: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/custom-components`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,
@@ -60,7 +60,8 @@ export const links = {
   featureTalkToSales:
     "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=feature-{feature}",
   billingNotificationsForm:
-    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}",
+    "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
+  connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
 } as const;
 
 export type OutboundLinks = typeof links;

@@ -25,9 +25,7 @@ public interface AirbyteMessageMigration<V0, V1> extends Migration {
   V0 downgrade(final V1 message, final Optional<ConfiguredAirbyteCatalog> configuredAirbyteCatalog);
 
   /**
-   * Upgrades a message from the old version to the new
-   * version./Users/charles/code/airbyte-platform/airbyte-commons-protocol/src/main/java/io/airbyte/commons/protocol/migrations/Migration.java
-   *
+   * Upgrades a message from the old version to the new version.
    *
    * @param configuredAirbyteCatalog the ConfiguredAirbyteCatalog of the connection when applicable
    * @return the upgrade message

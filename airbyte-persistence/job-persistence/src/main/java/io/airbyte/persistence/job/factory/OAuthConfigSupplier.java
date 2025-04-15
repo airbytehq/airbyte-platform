@@ -24,7 +24,7 @@ import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.persistence.job.tracker.TrackingMetadata;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;

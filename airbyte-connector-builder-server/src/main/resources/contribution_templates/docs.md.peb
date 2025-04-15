@@ -1,6 +1,6 @@
 # {{ connectorName }}
 
-{{ description }}
+{{ connectorDescription }}
 
 
 ## Configuration

@@ -2,7 +2,7 @@ import React from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useNavigate } from "react-router-dom";
 import { useToggle } from "react-use";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -19,15 +19,12 @@ import { useNotificationService } from "hooks/services/Notification";
 import { useOrganizationsToCreateWorkspaces } from "./useOrganizationsToCreateWorkspaces";
 import styles from "./WorkspacesCreateControl.module.scss";
 
-interface CreateWorkspaceFormValues {
-  name: string;
-  organizationId: string;
-}
-
-const OrganizationCreateWorkspaceFormValidationSchema = yup.object().shape({
-  name: yup.string().trim().required("form.empty.error"),
-  organizationId: yup.string().trim().required("form.empty.error"),
+const OrganizationCreateWorkspaceFormValidationSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  organizationId: z.string().trim().nonempty("form.empty.error"),
 });
+
+type CreateWorkspaceFormValues = z.infer<typeof OrganizationCreateWorkspaceFormValidationSchema>;
 
 export const WorkspacesCreateControl: React.FC = () => {
   const { organizationsToCreateIn } = useOrganizationsToCreateWorkspaces();
@@ -75,7 +72,7 @@ export const WorkspacesCreateControl: React.FC = () => {
               name: "",
               organizationId: organizationsToCreateIn[0].organizationId,
             }}
-            schema={OrganizationCreateWorkspaceFormValidationSchema}
+            zodSchema={OrganizationCreateWorkspaceFormValidationSchema}
             onSubmit={onSubmit}
             onSuccess={onSuccess}
             onError={onError}

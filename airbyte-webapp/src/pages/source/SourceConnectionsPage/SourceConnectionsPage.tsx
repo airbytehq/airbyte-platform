@@ -8,18 +8,25 @@ import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 
 import { useGetSourceFromParams } from "area/connector/utils";
-import { useCurrentWorkspace, useConnectionList, useDestinationList } from "core/api";
+import { useCurrentWorkspace, useConnectionList, useDestinationList, useListConnectionsStatusesAsync } from "core/api";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./SourceConnectionsPage.module.scss";
 
 const SourceConnectionTable = React.lazy(() => import("./SourceConnectionTable"));
 
+const emptyArray: never[] = [];
 export const SourceConnectionsPage = () => {
   const source = useGetSourceFromParams();
   const { workspaceId } = useCurrentWorkspace();
   const connectionList = useConnectionList({ sourceId: [source.sourceId] });
-  const connections = connectionList?.connections ?? [];
+  const connections = connectionList?.connections ?? (emptyArray as WebBackendConnectionListItem[]);
+
+  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
+  const connectionIds = useMemo(() => connections.map((connection) => connection.connectionId), [connections]);
+  useListConnectionsStatusesAsync(connectionIds, isAllConnectionsStatusEnabled);
 
   // We load all destinations so the add destination button has a pre-filled list of options.
   const { destinations } = useDestinationList();

@@ -20,5 +20,17 @@ internal class AirbyteLicenseTest {
     Assertions.assertNull(result.expirationDate)
     Assertions.assertNull(result.maxEditors)
     Assertions.assertNull(result.maxNodes)
+    Assertions.assertFalse(result.isEmbedded)
+  }
+
+  @Test
+  fun testDeserializeWithIsEmbedded() {
+    val result =
+      Jsons.deserialize(
+        """{ "type": "pro", "isEmbedded": true } """,
+        AirbyteLicense::class.java,
+      )
+    Assertions.assertEquals(result.type, AirbyteLicense.LicenseType.PRO)
+    Assertions.assertTrue(result.isEmbedded)
   }
 }

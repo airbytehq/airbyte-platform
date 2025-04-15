@@ -49,6 +49,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
@@ -183,6 +184,7 @@ public class JobNotifier {
     notificationMetadata.put("connection_id", connectionId);
     List<String> notificationTypes = new ArrayList<>();
     for (final var notificationType : notificationItem.getNotificationType()) {
+      // NOTE: NotificationType.SLACK is used for both slack and traditional webhook notifications.
       if (NotificationType.SLACK.equals(notificationType)
           && notificationItem.getSlackConfiguration().getWebhook().contains("hooks.slack.com")) {
         // flag as slack if the webhook URL is also pointing to slack
@@ -258,13 +260,17 @@ public class JobNotifier {
     NotificationItem notificationItem = null;
     final UUID workspaceId = workspace.getWorkspaceId();
 
-    // Error message we show in the notification is the first failure reason of the last attempt if
-    // available
-    // If it is not available, default to null
-    final String failureMessage = job.getLastAttempt()
+    final Optional<FailureReason> firstFailure = job.getLastAttempt()
         .flatMap(Attempt::getFailureSummary)
-        .flatMap(s -> s.getFailures().stream().findFirst())
-        .map(FailureReason::getExternalMessage)
+        .flatMap(s -> s.getFailures().stream().findFirst());
+
+    final String failureMessage = firstFailure.map(FailureReason::getExternalMessage)
+        .orElse(null);
+
+    final FailureReason.FailureType failureType = firstFailure.map(FailureReason::getFailureType)
+        .orElse(null);
+
+    final FailureReason.FailureOrigin failureOrigin = firstFailure.map(FailureReason::getFailureOrigin)
         .orElse(null);
 
     long bytesEmitted = 0;
@@ -300,7 +306,9 @@ public class JobNotifier {
         recordsCommitted,
         recordsFilteredOut,
         bytesFilteredOut,
-        failureMessage);
+        failureMessage,
+        failureType,
+        failureOrigin);
 
     if (notificationSettings != null) {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {

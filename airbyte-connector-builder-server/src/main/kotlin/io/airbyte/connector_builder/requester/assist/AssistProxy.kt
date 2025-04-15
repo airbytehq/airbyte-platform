@@ -13,6 +13,7 @@ import io.airbyte.connector_builder.exceptions.ConnectorBuilderException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.IOException
 import java.io.InputStreamReader
+import java.net.HttpURLConnection
 
 private val logger = KotlinLogging.logger {}
 
@@ -24,8 +25,35 @@ class AssistProxy(
     jsonBody: JsonNode?,
   ): JsonNode {
     logger.info { "Calling Assist API with path: $path" }
-    val connection = proxyConfig.getConnection(path)
-    connection.apply {
+    val connection = setupConnection(path)
+    return executeRequest(connection, jsonBody)
+  }
+
+  fun postNoWait(
+    path: String,
+    jsonBody: JsonNode?,
+  ) {
+    logger.info { "Initiating non-blocking warming request to Assist API with path: $path" }
+    val connection = setupConnection(path)
+
+    // PROBLEM: HttpURLConnection is not adept at firing requests and not waiting for a response.
+    // HACK: Set a very short timeout for the warming request and ignore the timeout exception.
+    connection.connectTimeout = 500
+    connection.readTimeout = 500
+
+    Thread {
+      try {
+        executeRequest(connection, jsonBody, suppressTimeout = true)
+      } catch (e: Exception) {
+        logger.error(e) { "Error in background warming request" }
+      } finally {
+        logger.info { "Background warming request completed" }
+      }
+    }.start()
+  }
+
+  private fun setupConnection(path: String) =
+    proxyConfig.getConnection(path).apply {
       requestMethod = "POST"
       setRequestProperty("Content-Type", "application/json")
       doOutput = true
@@ -33,9 +61,15 @@ class AssistProxy(
       readTimeout = 10 * 60 * 1000 // 10 minutes
     }
 
+  private fun executeRequest(
+    connection: HttpURLConnection,
+    jsonBody: JsonNode?,
+    suppressTimeout: Boolean = false,
+  ): JsonNode {
     connection.outputStream.use { outputStream ->
       objectMapper.writeValue(outputStream, jsonBody)
     }
+
     val responseCode: Int
     val jsonResponse: JsonNode
 
@@ -58,6 +92,11 @@ class AssistProxy(
           }
         }
     } catch (e: IOException) {
+      if (suppressTimeout && e is java.net.SocketTimeoutException) {
+        logger.debug(e) { "Suppressed timeout error" }
+        return objectMapper.createObjectNode()
+      }
+
       throw ConnectorBuilderException("AI Assistant processing error", e)
     } finally {
       connection.disconnect()

@@ -17,8 +17,6 @@ import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator;
 import io.airbyte.commons.protocol.serde.AirbyteMessageDeserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV1Deserializer;
-import io.airbyte.commons.protocol.serde.AirbyteMessageV1Serializer;
 import io.airbyte.commons.version.AirbyteProtocolVersion;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -26,13 +24,12 @@ import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.protocol.models.AirbyteLogMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteLogMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import io.airbyte.workers.helper.GsonPksExtractor;
 import io.micronaut.core.util.StringUtils;
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -123,8 +120,8 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
                                                                                        final GsonPksExtractor gsonPksExtractor,
                                                                                        final MetricClient metricClient) {
     final AirbyteMessageSerDeProvider provider = new AirbyteMessageSerDeProvider(
-        List.of(new AirbyteMessageV0Deserializer(), new AirbyteMessageV1Deserializer()),
-        List.of(new AirbyteMessageV0Serializer(), new AirbyteMessageV1Serializer()));
+        List.of(new AirbyteMessageV0Deserializer()),
+        List.of(new AirbyteMessageV0Serializer()));
     provider.initialize();
 
     final AirbyteMessageMigrator airbyteMessageMigrator = new AirbyteMessageMigrator(List.of());
@@ -228,10 +225,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
   private Stream<AirbyteMessage> addLineReadLogic(final BufferedReader bufferedReader) {
     return bufferedReader
         .lines()
-        .peek(str -> {
-          final long messageSize = str.getBytes(StandardCharsets.UTF_8).length;
-          metricClient.distribution(OssMetricsRegistry.JSON_STRING_LENGTH, messageSize);
-        })
         .flatMap(this::toAirbyteMessage)
         .filter(this::filterLog);
   }
@@ -333,7 +326,6 @@ public class VersionedAirbyteStreamFactory<T> implements AirbyteStreamFactory {
     logLargeRecordWarning(line);
 
     Optional<AirbyteMessage> m = deserializer.deserializeExact(line);
-
     if (m.isPresent()) {
       m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog);
 

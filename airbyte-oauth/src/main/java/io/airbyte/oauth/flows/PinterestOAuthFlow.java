@@ -24,7 +24,7 @@ import java.util.function.Supplier;
 import org.apache.http.client.utils.URIBuilder;
 
 /**
- * Following docs from https://developers.pinterest.com/docs/getting-started/authentication
+ * Following docs from https://developers.pinterest.com/docs/getting-started/authentication.
  */
 public class PinterestOAuthFlow extends BaseOAuth2Flow {
 

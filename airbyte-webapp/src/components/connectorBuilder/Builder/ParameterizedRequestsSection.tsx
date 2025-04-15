@@ -18,10 +18,11 @@ import {
   StreamPathFn,
   BuilderParameterizedRequests,
   builderParameterizedRequestsToManifest,
+  CreationRequesterPathFn,
 } from "../types";
 
 interface ParameterizedRequestsSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -53,7 +54,7 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
         },
       }}
       copyConfig={{
-        path: "parameterizedRequests",
+        path: streamFieldPath("parameterizedRequests"),
         currentStreamIndex,
         componentName: label,
       }}

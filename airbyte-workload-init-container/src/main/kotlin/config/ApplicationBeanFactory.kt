@@ -9,14 +9,15 @@ import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import io.airbyte.commons.protocol.ProtocolSerializer
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.metrics.MetricClient
-import io.airbyte.workers.CheckConnectionInputHydrator
-import io.airbyte.workers.ConnectorSecretsHydrator
-import io.airbyte.workers.DiscoverCatalogInputHydrator
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.helper.BackfillHelper
 import io.airbyte.workers.helper.MapperSecretHydrationHelper
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
+import io.airbyte.workers.hydration.CheckConnectionInputHydrator
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator
+import io.airbyte.workers.hydration.DiscoverCatalogInputHydrator
 import io.airbyte.workers.input.ReplicationInputMapper
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
@@ -28,8 +29,8 @@ class ApplicationBeanFactory {
   fun replicationInputHydrator(
     airbyteApiClient: AirbyteApiClient,
     resumableFullRefreshStatsHelper: ResumableFullRefreshStatsHelper,
-    secretsRepositoryReader: SecretsRepositoryReader,
     mapperSecretHydrationHelper: MapperSecretHydrationHelper,
+    connectorSecretsHydrator: ConnectorSecretsHydrator,
     backfillHelper: BackfillHelper,
     catalogClientConverters: CatalogClientConverters,
     metricClient: MetricClient,
@@ -39,12 +40,12 @@ class ApplicationBeanFactory {
     ReplicationInputHydrator(
       airbyteApiClient,
       resumableFullRefreshStatsHelper,
-      secretsRepositoryReader,
       mapperSecretHydrationHelper,
       backfillHelper,
       catalogClientConverters,
       mapper,
       metricClient,
+      connectorSecretsHydrator,
       useRuntimeSecretPersistence,
     )
 
@@ -54,11 +55,13 @@ class ApplicationBeanFactory {
     metricClient: MetricClient,
     secretsRepositoryReader: SecretsRepositoryReader,
     @Value("\${airbyte.secret.use-runtime-persistence}") useRuntimeSecretPersistence: Boolean,
+    defaultSecretPersistence: SecretPersistence,
   ): ConnectorSecretsHydrator =
     ConnectorSecretsHydrator(
       secretsRepositoryReader = secretsRepositoryReader,
       airbyteApiClient = airbyteApiClient,
       useRuntimeSecretPersistence = useRuntimeSecretPersistence,
+      defaultSecretPersistence = defaultSecretPersistence,
       metricClient = metricClient,
     )
 

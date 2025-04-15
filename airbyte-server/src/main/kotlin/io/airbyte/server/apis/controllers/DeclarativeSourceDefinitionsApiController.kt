@@ -27,7 +27,7 @@ import io.micronaut.security.rules.SecurityRule
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DeclarativeSourceDefinitionsApiController(
-  @param:Body private val handler: DeclarativeSourceDefinitionsHandler,
+  private val handler: DeclarativeSourceDefinitionsHandler,
 ) : DeclarativeSourceDefinitionsApi {
   @Post(uri = "/create_manifest")
   @Status(HttpStatus.CREATED)

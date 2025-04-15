@@ -8,6 +8,8 @@ $cancelled: colors.$grey-400;
 $paused: colors.$grey;
 $syncing: colors.$blue-400;
 $queued: colors.$blue-50;
+$undefined: colors.$grey-400;
+
 $failed-light: colors.$red-40;
 $paused-light: colors.$grey-100;
 $incomplete-light: colors.$yellow-50;
@@ -16,6 +18,7 @@ $up-to-date-light: colors.$green-40;
 $cancelled-light: colors.$grey-100;
 $syncing-light: colors.$blue-40;
 $queued-light: colors.$foreground;
+$undefined-light: colors.$grey-100;
 
 $by-stream-status:
   "failed" $failed $failed-light,
@@ -25,4 +28,5 @@ $by-stream-status:
   "upToDate" $up-to-date $up-to-date-light,
   "cancelled" $cancelled $cancelled-light,
   "syncing" $syncing $syncing-light,
-  "queued" $queued $queued-light;
+  "queued" $queued $queued-light,
+  "undefined" $undefined $undefined-light;

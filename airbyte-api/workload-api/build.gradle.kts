@@ -53,7 +53,7 @@ val genWorkloadApiClient =
   tasks.register<GenerateTask>("genWorkloadApiClient") {
     val clientOutputDir = "${getLayout().buildDirectory.get()}/generated/workloadapi/client"
 
-    inputs.file(workloadSpecFile)
+    inputs.file(workloadSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(clientOutputDir)
 
     generatorName = "kotlin"

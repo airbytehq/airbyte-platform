@@ -18,7 +18,7 @@ import { authPredicateMatchesPath, makeConnectionConfigurationPath, serverProvid
 const shouldShowButtonForAdvancedAuth = (
   predicateKey: string[] | undefined,
   predicateValue: string | undefined,
-  values: ConnectorFormValues<unknown>
+  values: ConnectorFormValues
 ): boolean => {
   return (
     !predicateKey ||
@@ -76,7 +76,7 @@ export const useAuthentication = (): AuthenticationHook => {
   const advancedAuth = connectorSpec?.advancedAuth;
 
   const getValuesSafe = useCallback(
-    (values: ConnectorFormValues<unknown>) => {
+    (values: ConnectorFormValues) => {
       try {
         // We still see cases where calling `getValues` which will eventually use the yupSchema.cast method
         // crashes based on the passed in values. To temporarily make sure we're not crashing the form, we're

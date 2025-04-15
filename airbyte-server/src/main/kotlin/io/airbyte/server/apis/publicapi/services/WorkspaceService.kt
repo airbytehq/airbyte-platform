@@ -13,10 +13,10 @@ import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUpdate
-import io.airbyte.commons.server.handlers.ResourceBootstrapHandlerInterface
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationsConfig
@@ -94,7 +94,7 @@ open class WorkspaceServiceImpl(
   private val workspacesHandler: WorkspacesHandler,
   @Value("\${airbyte.api.host}") open val publicApiHost: String,
   private val currentUserService: CurrentUserService,
-  private val resourceBootstrapHandler: ResourceBootstrapHandlerInterface,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : WorkspaceService {
   companion object {
     private val log = LoggerFactory.getLogger(WorkspaceServiceImpl::class.java)
@@ -113,6 +113,9 @@ open class WorkspaceServiceImpl(
         .email(currentUserService.currentUser.email)
         .organizationId(organizationId)
         .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
+    if (workspaceCreateRequest.regionId != null) {
+      workspaceCreate.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).name
+    }
 
     val result =
       kotlin
@@ -162,6 +165,11 @@ open class WorkspaceServiceImpl(
         this.workspaceId = workspaceId
         this.notificationsConfig = workspaceUpdateRequest.notifications.toInternalNotificationConfig()
       }
+    if (workspaceUpdateRequest.regionId != null) {
+      workspaceUpdate.apply {
+        this.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).name
+      }
+    }
 
     val result =
       kotlin
@@ -352,12 +360,12 @@ open class WorkspaceServiceImpl(
 
 fun NotificationsConfig.toNotificationSettings() =
   NotificationSettings()
-    .sendOnFailure(failure?.toNotificationItem())
-    .sendOnSuccess(success?.toNotificationItem())
-    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem())
-    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem())
-    .sendOnSyncDisabled(syncDisabled?.toNotificationItem())
-    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem())
+    .sendOnFailure(failure?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSuccess(success?.toNotificationItem(enableEmailByDefault = false))
+    .sendOnConnectionUpdate(connectionUpdate?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnConnectionUpdateActionRequired(connectionUpdateActionRequired?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabled(syncDisabled?.toNotificationItem(enableEmailByDefault = true))
+    .sendOnSyncDisabledWarning(syncDisabledWarning?.toNotificationItem(enableEmailByDefault = true))
 
 private fun NotificationsConfig?.toInternalNotificationConfig() =
   this?.let {
@@ -394,7 +402,15 @@ private fun WebhookNotificationConfig?.toInternalWebhookNotificationConfig() =
       .url(it.url)
   }
 
-private fun NotificationConfig.toNotificationItem() =
-  NotificationItem()
-    .notificationType(if (this.webhook?.enabled == true) listOf(NotificationType.SLACK) else emptyList())
-    .slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+private fun NotificationConfig.toNotificationItem(enableEmailByDefault: Boolean): NotificationItem {
+  val item = NotificationItem()
+  if (this.webhook?.enabled == true) {
+    item.addNotificationTypeItem(NotificationType.SLACK)
+    item.slackConfiguration(SlackNotificationConfiguration().webhook(this.webhook?.url))
+  }
+
+  if (this.email?.enabled == true || (enableEmailByDefault && this.email == null)) {
+    item.addNotificationTypeItem(NotificationType.CUSTOMERIO)
+  }
+  return item
+}

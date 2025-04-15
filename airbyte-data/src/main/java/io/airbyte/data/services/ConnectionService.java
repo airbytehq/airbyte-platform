@@ -5,9 +5,9 @@
 package io.airbyte.data.services;
 
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.Geography;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
+import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
@@ -64,7 +64,7 @@ public interface ConnectionService {
 
   ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  Geography getGeographyForConnection(UUID connectionId) throws IOException;
+  String getDataplaneGroupNameForConnection(UUID connectionId) throws IOException;
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
 
@@ -77,5 +77,7 @@ public interface ConnectionService {
   List<UUID> listConnectionIdsForWorkspace(UUID workspaceId) throws IOException;
 
   List<UUID> listConnectionIdsForOrganization(UUID organizationId) throws IOException;
+
+  List<StreamDescriptorForDestination> listStreamsForDestination(UUID destinationId, UUID connectionId) throws IOException;
 
 }

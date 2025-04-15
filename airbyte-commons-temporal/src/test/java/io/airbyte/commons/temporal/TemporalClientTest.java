@@ -47,6 +47,7 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.StreamRefreshesRepository;
 import io.airbyte.config.persistence.StreamResetPersistence;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
@@ -262,7 +263,7 @@ public class TemporalClientTest {
               .thenReturn(checkConnectionWorkflow);
       final JobCheckConnectionConfig checkConnectionConfig = new JobCheckConnectionConfig()
           .withDockerImage(IMAGE_NAME1)
-          .withConnectionConfiguration(Jsons.emptyObject());
+          .withConnectionConfiguration(InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(Jsons.emptyObject()));
 
       temporalClient.submitCheckConnection(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, CHECK_TASK_QUEUE, checkConnectionConfig, new ActorContext());
 
@@ -282,7 +283,7 @@ public class TemporalClientTest {
           .thenReturn(discoverCatalogWorkflow);
       final JobDiscoverCatalogConfig checkConnectionConfig = new JobDiscoverCatalogConfig()
           .withDockerImage(IMAGE_NAME1)
-          .withConnectionConfiguration(Jsons.emptyObject());
+          .withConnectionConfiguration(InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(Jsons.emptyObject()));
 
       temporalClient.submitDiscoverSchema(JOB_UUID, ATTEMPT_ID, WORKSPACE_ID, DISCOVER_TASK_QUEUE, checkConnectionConfig, new ActorContext(),
           WorkloadPriority.DEFAULT);

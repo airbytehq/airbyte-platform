@@ -19,9 +19,9 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.SyncStats
 import io.airbyte.config.helpers.ProtocolConverters.Companion.toProtocol
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.AirbyteGlobalState
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStreamState
+import io.airbyte.protocol.models.v0.AirbyteGlobalState
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStreamState
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

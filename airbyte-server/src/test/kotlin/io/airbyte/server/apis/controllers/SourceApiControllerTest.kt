@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.model.generated.ActorCatalogWithUpdatedAt
 import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.DiscoverCatalogResult
-import io.airbyte.api.model.generated.SourceCloneRequestBody
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRequestBody
@@ -70,14 +69,6 @@ internal class SourceApiControllerTest {
     val path = "/api/v1/sources/check_connection_for_update"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceUpdate())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceUpdate())))
-  }
-
-  @Test
-  fun testCloneSource() {
-    every { sourceHandler.cloneSource(any()) } returns SourceRead() andThenThrows ConfigNotFoundException("", "")
-    val path = "/api/v1/sources/clone"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceCloneRequestBody())))
-    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceCloneRequestBody())))
   }
 
   @Test

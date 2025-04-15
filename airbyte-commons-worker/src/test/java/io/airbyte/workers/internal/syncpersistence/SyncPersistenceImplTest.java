@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.internal.syncpersistence;
 
-import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.LEGACY;
-import static io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType.STREAM;
+import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.LEGACY;
+import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.STREAM;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,11 +29,11 @@ import io.airbyte.api.client.model.generated.ConnectionStateType;
 import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import io.airbyte.workers.internal.bookkeeping.ParallelStreamStatsTracker;
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker;
 import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;

@@ -5,7 +5,7 @@
 package io.airbyte.connector_builder.exceptions;
 
 import io.airbyte.commons.server.errors.KnownException;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 
 /**
  * Thrown when the CDK processed the request, but the result contains an error.

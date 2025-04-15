@@ -22,7 +22,7 @@ import org.apache.http.client.utils.URIBuilder;
 
 /**
  * Following docs from
- * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow
+ * https://developers.facebook.com/docs/facebook-login/manually-build-a-login-flow.
  */
 public abstract class FacebookOAuthFlow extends BaseOAuth2Flow {
 

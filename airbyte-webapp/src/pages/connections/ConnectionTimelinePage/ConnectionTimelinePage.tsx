@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { ConnectionSyncContextProvider } from "components/connection/ConnectionSync/ConnectionSyncContext";
@@ -10,6 +11,7 @@ import { ScrollParent } from "components/ui/ScrollParent";
 
 import { useCurrentConnection, useFilters, useGetConnectionEvent } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useDrawerActions } from "core/services/ui/DrawerService";
 import { useModalService } from "hooks/services/Modal";
 
 import { ConnectionTimelineAllEventsList, validateAndMapEvent } from "./ConnectionTimelineAllEventsList";
@@ -56,6 +58,14 @@ export const ConnectionTimelinePage = () => {
       setFilterValue,
     });
   }
+
+  const { closeDrawer } = useDrawerActions();
+
+  useLayoutEffect(() => {
+    return () => {
+      closeDrawer();
+    };
+  }, [closeDrawer]);
 
   return (
     <ScrollParent>

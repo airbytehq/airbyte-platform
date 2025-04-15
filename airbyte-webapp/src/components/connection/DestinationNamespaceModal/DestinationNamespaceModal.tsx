@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { ModalFormSubmissionButtons } from "components/forms/ModalFormSubmissionButtons";
@@ -15,12 +15,9 @@ import { DestinationNamespaceDescription } from "./DestinationNamespaceDescripti
 import styles from "./DestinationNamespaceModal.module.scss";
 import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
 import { LabeledRadioButtonFormControl } from "../ConnectionForm/LabeledRadioButtonFormControl";
-import { namespaceDefinitionSchema, namespaceFormatSchema } from "../ConnectionForm/schema";
+import { namespaceFormatSchema } from "../ConnectionForm/schemas/namespaceDefinitionSchema";
 
-export interface DestinationNamespaceFormValues {
-  namespaceDefinition: NamespaceDefinitionType;
-  namespaceFormat?: string;
-}
+export type DestinationNamespaceFormValues = z.infer<typeof namespaceFormatSchema>;
 
 const NameSpaceCustomFormatInput: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -45,11 +42,6 @@ const NameSpaceCustomFormatInput: React.FC = () => {
   );
 };
 
-const destinationNamespaceValidationSchema = yup.object().shape({
-  namespaceDefinition: namespaceDefinitionSchema.required("form.empty.error"),
-  namespaceFormat: namespaceFormatSchema,
-});
-
 interface DestinationNamespaceModalProps {
   initialValues: Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat">;
   onCancel: () => void;
@@ -64,13 +56,13 @@ export const DestinationNamespaceModal: React.FC<DestinationNamespaceModalProps>
   const { formatMessage } = useIntl();
 
   return (
-    <Form
+    <Form<DestinationNamespaceFormValues>
+      zodSchema={namespaceFormatSchema}
       defaultValues={{
         namespaceDefinition: initialValues.namespaceDefinition,
         // eslint-disable-next-line no-template-curly-in-string
         namespaceFormat: initialValues.namespaceFormat ?? "${SOURCE_NAMESPACE}",
       }}
-      schema={destinationNamespaceValidationSchema}
       onSubmit={onSubmit}
     >
       <>

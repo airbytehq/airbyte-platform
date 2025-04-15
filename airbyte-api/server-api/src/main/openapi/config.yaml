@@ -91,6 +91,22 @@ tags:
     description: Scoped configuration store specific configuration for a given entity. e.g. Overriding a workspaces connector version.
   - name: public
     description: Public resources that are considered stable and are intended to be consumed as API by end users.
+  - name: config_templates
+    description: Interactions with config templates, used in conjunction with partial_user_configs to generate sources.
+  - name: partial_user_configs
+    description: Interactions with partial user configs, used in conjunction with config_templates to generate sources.
+  - name: embedded
+    description: Endpoints specific to workflows for Airbyte operators and their end-users.
+  - name: dataplanes
+    description: Endpoints for managing dataplanes.
+  - name: regions
+    description: Endpoints for managing regions (akad dataplane groups).
+  - name: public_health
+    description: Public health check endpoints.
+  - name: public_jobs
+    description: Public job-related endpoints.
+  - name: Jobs
+    description: Job management endpoints.
 
 paths:
   /v1/workspaces/create:
@@ -1142,6 +1158,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConnectorBuilderProjectStreamRead"
+  /v1/connector_builder_projects/full_resolve:
+    post:
+      tags:
+        - connector_builder_project
+      summary: Given a JSON manifest, returns a JSON manifest with all dynamic streams and all of the $refs and $parameters resolved and flattened
+      operationId: fullResolveManifestBuilderProject
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectorBuilderProjectFullResolveRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectorBuilderProjectFullResolveResponse"
+        "400":
+          $ref: "#/components/responses/ExceptionResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connector_builder_projects/fork:
     post:
       tags:
@@ -1381,29 +1420,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SourceReadList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/sources/clone:
-    post:
-      tags:
-        - source
-      summary: Clone source
-      operationId: cloneSource
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SourceCloneRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/SourceRead"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/sources/delete:
@@ -2072,29 +2088,6 @@ paths:
       responses:
         "204":
           description: The resource was deleted successfully.
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-  /v1/destinations/clone:
-    post:
-      tags:
-        - destination
-      summary: Clone destination
-      operationId: cloneDestination
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/DestinationCloneRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DestinationRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3479,6 +3472,12 @@ paths:
         to the platform default behavior. Entries other than 'auto' are two-letter country codes that
         follow the ISO 3166-1 alpha-2 standard.
       operationId: webBackendListGeographies
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebBackendGeographiesListRequest"
+        required: true
       responses:
         "200":
           description: Successful operation
@@ -3902,6 +3901,30 @@ paths:
       responses:
         "204":
           description: Successfully delete stream reset records for job
+  /v1/jobs/explain:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Returns a LLM generated description of the result of a given job
+      operationId: explainJob
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobExplainRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # USERS
   /v1/users/get:
@@ -4275,6 +4298,29 @@ paths:
       responses:
         "200":
           description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/get:
+    post:
+      tags:
+        - secret_storage
+      summary: Get secret storage by its id
+      operationId: getSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
@@ -6020,25 +6066,207 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /v1/dataplanes/get_dataplane_id:
+  /v1/dataplanes/token:
     post:
-      summary: Get a dataplane ID given the provided request body params
+      summary: Get a token for dataplane requests
       tags:
         - dataplane
-      operationId: getDataplaneId
+      operationId: getDataplaneToken
       requestBody:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/DataplaneGetIdRequestBody"
+              $ref: "#/components/schemas/DataplaneTokenRequestBody"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/DataplaneTokenRequestBody"
         required: true
       responses:
         "200":
-          description: Successfully retrieved dataplane ID
+          description: Successfully retrieved dataplane token
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DataplaneReadId"
+                $ref: "#/components/schemas/AccessToken"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/heartbeat:
+    post:
+      summary: For a dataplane to signal it is still alive
+      tags:
+        - dataplane
+      operationId: heartbeatDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneHeartbeatRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane heartbeat information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneHeartbeatResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/dataplanes/initialize:
+    post:
+      summary: Returns information needed for dataplane startup and initialization (groups, queues, AuthN identify, etc.)
+      tags:
+        - dataplane
+      operationId: initializeDataplane
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneInitRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved dataplane initialization information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneInitResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+  /v1/config_templates/list:
+    post:
+      summary: List all config templates available to a workspace
+      tags:
+        - config_template
+        - embedded
+      operationId: listConfigTemplates
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListConfigTemplatesRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved config template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+        "403":
+          description: Not allowed
+  /v1/config_templates/get:
+    post:
+      summary: Get details of a specific config template
+      tags:
+        - config_template
+        - embedded
+      operationId: getConfigTemplate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved config template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/get:
+    post:
+      summary: Get details of a specific partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: getPartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved partial user config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/create:
+    post:
+      summary: Create a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: createPartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigCreate"
+        required: true
+      responses:
+        "200":
+          description: Successfully created partial user config + source
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigWithSource"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/list:
+    post:
+      summary: List partial user configs
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: listPartialUserConfigs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListPartialUserConfigsRequest"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved partial user configs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/update:
+    post:
+      summary: Update a part
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: updateUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigUpdate"
+        required: true
+      responses:
+        "200":
+          description: Successfully updated partial user config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartialUserConfigWithSource"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -6072,6 +6300,120 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
+  /public/v1/config_templates:
+    get:
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateListResponse"
+          description: List all Applications a User has permission to view.
+        "403":
+          description: Not allowed
+      operationId: publicListConfigTemplate
+      summary: List config templates
+      x-sdk-alias: listConfigTemplates
+      x-sdk-group: ConfigTemplates
+      parameters:
+        - name: organizationId
+          description: ID of the organization
+          schema:
+            format: UUID
+            type: string
+          in: query
+          required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateCreateResponse"
+          description: Create a config template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConfigTemplate
+      summary: Create config template
+      x-sdk-alias: createConfigTemplate
+      x-sdk-group: ConfigTemplates
+  /public/v1/config_templates/{configTemplateId}:
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfigTemplateUpdateRequestBody"
+        required: true
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateUpdateResponse"
+          description: Successfully updated config template
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateConfigTemplate
+      x-sdk-alias: updateConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Update a config template
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
+    get:
+      tags:
+        - public_config_templates
+        - public
+        - ConfigTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigTemplateRead"
+          description: Get an TODO.
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetConfigTemplate
+      x-sdk-alias: getConfigTemplate
+      x-sdk-group: ConfigTemplates
+      summary: Get TODO
+      parameters:
+        - name: configTemplateId
+          schema:
+            type: string
+            format: uuid
+          in: path
+          required: true
   /public/v1/applications:
     get:
       tags:
@@ -6450,6 +6792,279 @@ paths:
         in: path
         required: true
 
+  # Regions endpoints
+  /public/v1/regions:
+    get:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionsResponse"
+          description: List all regions for the organization
+        "403":
+          description: Not allowed
+      operationId: publicListRegions
+      summary: List regions
+      x-sdk-alias: listRegions
+      x-sdk-group: Regions
+      parameters:
+        - name: organizationId
+          description: The UUID of the organization to list regions for
+          schema:
+            type: string
+            format: uuid
+          in: query
+          required: true
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionCreateRequest"
+        required: true
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully created region
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+      operationId: publicCreateRegion
+      summary: Create a region
+      x-sdk-alias: createRegion
+      x-sdk-group: Dataplanes
+
+  /public/v1/regions/{regionId}:
+    get:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Get a region by the id in the path
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetRegion
+      x-sdk-alias: getRegion
+      x-sdk-group: Regions
+      summary: Get a region
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegionPatchRequest"
+        required: true
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully updated region
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateRegion
+      x-sdk-alias: updateRegion
+      x-sdk-group: Dataplanes
+      summary: Update a region
+    delete:
+      tags:
+        - public_regions
+        - public
+        - Regions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegionResponse"
+          description: Successfully deleted region
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteRegion
+      x-sdk-alias: deleteRegion
+      x-sdk-group: Regions
+      summary: Delete a region
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
+  # Dataplanes endpoints
+  /public/v1/regions/{regionId}/dataplanes:
+    get:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplanesResponse"
+          description: List all dataplanes for the region
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDataplanes
+      summary: List dataplanes
+      x-sdk-alias: listDataplanes
+      x-sdk-group: Dataplanes
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplaneCreateRequest"
+        required: true
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneCreateResponseBody"
+          description: Successfully created dataplane
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicCreateDataplane
+      summary: Create a dataplane
+      x-sdk-alias: createDataplane
+      x-sdk-group: Dataplanes
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
+  /public/v1/regions/{regionId}/dataplanes/{dataplaneId}:
+    get:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Get a dataplane by the id in the path
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDataplane
+      x-sdk-alias: getDataplane
+      x-sdk-group: Dataplanes
+      summary: Get a dataplane
+    patch:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataplanePatchRequest"
+        required: true
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Successfully updated dataplane
+        "400":
+          description: Invalid data
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDataplane
+      x-sdk-alias: updateDataplane
+      x-sdk-group: Dataplanes
+      summary: Update a dataplane
+    delete:
+      tags:
+        - public_dataplanes
+        - public
+        - Dataplanes
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataplaneResponse"
+          description: Successfully deleted dataplane
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDataplane
+      x-sdk-alias: deleteDataplane
+      x-sdk-group: Dataplanes
+      summary: Delete a dataplane
+    parameters:
+      - name: regionId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+      - name: dataplaneId
+        schema:
+          type: string
+          format: uuid
+        in: path
+        required: true
+
   /public/v1/connector_definitions:
     get:
       tags:
@@ -6486,6 +7101,420 @@ paths:
           example: df08f6b0-b364-4cc1-9b3f-96f5d2fccfb2
           in: query
           required: false
+
+  /public/v1/workspaces/{workspaceId}/definitions/declarative_sources:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDeclarativeSourceDefinitions
+      x-sdk-alias: listDeclarativeSourceDefinitions
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: List declarative source definitions.
+    post:
+      summary: Create a declarative source definition.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#create
+      operationId: publicCreateDeclarativeSourceDefinition
+      x-sdk-alias: createDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDeclarativeSourceDefinitionRequest"
+
+  /public/v1/workspaces/{workspaceId}/definitions/declarative_sources/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        x-speakeasy-match: id
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDeclarativeSourceDefinition
+      x-sdk-alias: getDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Get declarative source definition details.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#read
+    put:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDeclarativeSourceDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDeclarativeSourceDefinition
+      x-sdk-alias: updateDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Update declarative source definition details.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#update
+    delete:
+      tags:
+        - public_declarative_source_definitions
+        - public
+        - DeclarativeSourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDeclarativeSourceDefinition
+      x-sdk-alias: deleteDeclarativeSourceDefinition
+      x-sdk-group: DeclarativeSourceDefinitions
+      summary: Delete a declarative source definition.
+      x-sdk-entity-operation: DeclarativeSourceDefinition#delete
+
+  /public/v1/workspaces/{workspaceId}/definitions/sources:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListSourceDefinitions
+      x-sdk-alias: listSourceDefinitions
+      x-sdk-group: SourceDefinitions
+      summary: List source definitions.
+
+    post:
+      operationId: publicCreateSourceDefinition
+      x-sdk-alias: createSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Create a source definition.
+      x-sdk-entity-operation: SourceDefinition#create
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+
+  /public/v1/workspaces/{workspaceId}/definitions/sources/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        x-speakeasy-match: id
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetSourceDefinition
+      x-sdk-alias: getSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Get source definition details.
+      x-sdk-entity-operation: SourceDefinition#read
+    put:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateSourceDefinition
+      x-sdk-alias: updateSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Update source definition details.
+      x-sdk-entity-operation: SourceDefinition#update
+    delete:
+      tags:
+        - public_source_definitions
+        - public
+        - SourceDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteSourceDefinition
+      x-sdk-alias: deleteSourceDefinition
+      x-sdk-group: SourceDefinitions
+      summary: Delete a source definition.
+      x-sdk-entity-operation: SourceDefinition#delete
+
+  /public/v1/workspaces/{workspaceId}/definitions/destinations:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionsResponse"
+          description: Successful operation
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicListDestinationDefinitions
+      x-sdk-alias: listDestinationDefinitions
+      x-sdk-group: DestinationDefinitions
+      summary: List destination definitions.
+
+    post:
+      operationId: publicCreateDestinationDefinition
+      x-sdk-alias: createDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Create a destination definition.
+      x-sdk-entity-operation: DestinationDefinition#create
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+
+  /public/v1/workspaces/{workspaceId}/definitions/destinations/{definitionId}:
+    parameters:
+      - name: workspaceId
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+      - name: definitionId
+        x-speakeasy-match: id
+        schema:
+          format: uuid
+          type: string
+        in: path
+        required: true
+    get:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicGetDestinationDefinition
+      x-sdk-alias: getDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Get destination definition details.
+      x-sdk-entity-operation: DestinationDefinition#read
+    put:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDefinitionRequest"
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicUpdateDestinationDefinition
+      x-sdk-alias: updateDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Update destination definition details.
+      x-sdk-entity-operation: DestinationDefinition#update
+    delete:
+      tags:
+        - public_destination_definitions
+        - public
+        - DestinationDefinitions
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefinitionResponse"
+          description: Success
+        "403":
+          description: Not allowed
+        "404":
+          description: Not found
+      operationId: publicDeleteDestinationDefinition
+      x-sdk-alias: deleteDestinationDefinition
+      x-sdk-group: DestinationDefinitions
+      summary: Delete a destination definition.
+      x-sdk-entity-operation: DestinationDefinition#delete
+
   /public/v1/sources:
     get:
       tags:
@@ -6611,6 +7640,13 @@ paths:
       x-sdk-alias: getSource
       x-sdk-group: Sources
       summary: Get Source details
+      parameters:
+        - in: "query"
+          name: includeSecretCoordinates
+          schema:
+            type: boolean
+          required: false
+          description: Rather than return *** for secret properties include the secret coordinate information
     patch:
       tags:
         - public_sources
@@ -6858,6 +7894,13 @@ paths:
       x-sdk-alias: getDestination
       x-sdk-group: Destinations
       summary: Get Destination details
+      parameters:
+        - in: "query"
+          name: includeSecretCoordinates
+          schema:
+            type: boolean
+          required: false
+          description: Rather than return *** for secret properties include the secret coordinate information
     delete:
       tags:
         - public_destinations
@@ -7853,6 +8896,29 @@ paths:
       operationId: publicUpdateTag
       x-sdk-alias: updateTag
       x-sdk-group: Tags
+
+  /public/v1/embedded/widget:
+    post:
+      operationId: getEmbeddedWidget
+      summary: Get a token for Airbyte Embedded
+      x-sdk-group: EmbeddedWidget
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedWidgetRequest"
+        required: true
+      responses:
+        "200":
+          content:
+            text/plain:
+              schema:
+                type: string
+          description: Success
+      tags:
+        - public
+        - embedded_widget
+
 components:
   securitySchemes:
     bearerAuth:
@@ -8572,7 +9638,7 @@ components:
         displaySetupWizard:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -8609,7 +9675,7 @@ components:
         displaySetupWizard:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -8821,7 +9887,10 @@ components:
         feedbackDone:
           type: boolean
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
+        dataplaneGroupId:
+          type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -8956,7 +10025,7 @@ components:
         notificationsConfig:
           $ref: "#/components/schemas/NotificationsConfig"
         defaultGeography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         webhookConfigs:
           type: array
           items:
@@ -9069,6 +10138,14 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
+    WebBackendGeographiesListRequest:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
     WebBackendGeographiesListResult:
       type: object
       required:
@@ -9077,7 +10154,7 @@ components:
         geographies:
           type: array
           items:
-            $ref: "#/components/schemas/Geography"
+            type: string
     # SLUG
     SlugRequestBody:
       type: object
@@ -9086,18 +10163,13 @@ components:
       properties:
         slug:
           type: string
-    # Geography
-    Geography:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
     # BuilderProject
     ConnectorBuilderProjectId:
       type: string
       format: uuid
     DeclarativeManifest:
+      x-sdk-component: true
+      x-speakeasy-type-override: any
       description: Low code CDK manifest JSON object
       type: object
     DeclarativeManifestBaseImageRead:
@@ -9342,6 +10414,9 @@ components:
         streamName:
           type: string
           description: Name of the stream to read
+        customComponentsCode:
+          type: string
+          description: Custom components python code to use during source execution
         formGeneratedManifest:
           type: boolean
           description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
@@ -9448,6 +10523,35 @@ components:
         latest_config_update:
           description: The latest configuration emitted by the platform. The connector builder uses this to update its state when a new configuration is generated, to ensure that the user always work with the latest configuration.
           $ref: "#/components/schemas/ConnectorBuilderProjectTestingValues"
+    ConnectorBuilderProjectFullResolveRequestBody:
+      type: object
+      required:
+        - manifest
+      properties:
+        formGeneratedManifest:
+          type: boolean
+          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
+          default: false
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        builderProjectId:
+          $ref: "#/components/schemas/ConnectorBuilderProjectId"
+        streamLimit:
+          type: integer
+          default: 5
+          minimum: 1
+          maximum: 100
+          description: Maximum number of generated streams that will be returned to the client from connector builder test reads
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    ConnectorBuilderProjectFullResolveResponse:
+      type: object
+      required:
+        - manifest
+      properties:
+        manifest:
+          type: object
+          description: The config-based connector manifest contents with $refs and $parameters resolved
     ConnectorBuilderAuxiliaryRequest:
       type: object
       required:
@@ -9514,6 +10618,7 @@ components:
           type: object
           description: The headers of the HTTP response, if any
     ManifestVersion:
+      x-sdk-component: true
       type: integer
       format: int64
     DeclarativeSourceManifest:
@@ -9922,6 +11027,7 @@ components:
         name:
           type: string
     SourceConfiguration:
+      type: object
       description: The values required to configure the source. The schema for this must match the schema return by source_definition_specifications/get for the source.
       example: { user: "charles" }
       x-sdk-component: true
@@ -10368,6 +11474,7 @@ components:
         destinationId:
           $ref: "#/components/schemas/DestinationId"
     DestinationConfiguration:
+      type: object
       description: The values required to configure the destination. The schema for this must match the schema return by destination_definition_specifications/get for the destinationDefinition.
       example: { user: "charles" }
       x-sdk-component: true
@@ -10806,7 +11913,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -10867,7 +11974,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         nonBreakingChangesPreference:
@@ -10930,7 +12037,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -11002,7 +12109,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -11065,7 +12172,7 @@ components:
           type: string
           format: uuid
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         breakingChange:
           type: boolean
         notifySchemaChanges:
@@ -11081,6 +12188,9 @@ components:
           $ref: "#/components/schemas/SchemaChangeBackfillPreference"
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
+        dataplaneGroupId:
+          type: string
+          format: uuid
         tags:
           type: array
           items:
@@ -11327,6 +12437,9 @@ components:
           $ref: "#/components/schemas/ConnectionEventId"
         connectionId:
           $ref: "#/components/schemas/ConnectionId"
+    # ConnectionEventType enums are also defined in oss/airbyte-data/src/main/kotlin/io/airbyte/data/services/shared/ConnectionEvent.kt.
+    # Please maintain the consistency between them.
+    # If any change made in one place, please do the same in the other place.
     ConnectionEventType:
       type: string
       enum:
@@ -11349,6 +12462,7 @@ components:
         - CONNECTION_ENABLED
         - CONNECTION_DISABLED
         - SCHEMA_UPDATE
+        - SCHEMA_CONFIG_UPDATE
         - CONNECTOR_UPDATE
         - UNKNOWN
     UserReadInConnectionEvent:
@@ -11393,7 +12507,7 @@ components:
     ConnectionEventMinimal:
       type: object
       required:
-        - id
+        - eventId
         - connectionId
         - createdAt
         - eventType
@@ -12670,6 +13784,9 @@ components:
           description: Optional Source-defined namespace. Airbyte streams from the same sources should have the same namespace. Currently only used by JDBC destinations to determine what schema to write to.
         isResumable:
           type: boolean
+        isFileBased:
+          type: boolean
+          description: If the stream supports FileReference.
     StreamJsonSchema:
       description: Stream schema using Json Schema specs.
       type: object
@@ -13482,6 +14599,16 @@ components:
             $ref: "#/components/schemas/AttemptInfoRead"
         workflowState:
           $ref: "#/components/schemas/WorkflowStateRead"
+    JobExplainRead:
+      type: object
+      required:
+        - jobId
+        - explanation
+      properties:
+        jobId:
+          $ref: "#/components/schemas/JobId"
+        explanation:
+          type: string
     AttemptInfoRead:
       type: object
       required:
@@ -13681,6 +14808,14 @@ components:
         - stream
         - legacy
         - not_set
+    AirbyteCatalogDiff:
+      type: object
+      description: Describes the difference between two Airbyte catalogs. Include both source schema diff and schema config diff.
+      properties:
+        catalogDiff:
+          $ref: "#/components/schemas/CatalogDiff"
+        catalogConfigDiff:
+          $ref: "#/components/schemas/CatalogConfigDiff"
     CatalogConfigDiff:
       type: object
       description: Describes the difference between two configured catalogs.
@@ -13705,21 +14840,16 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/StreamFieldStatusChanged"
-        fieldsDataTypeChanged:
-          description: list of changes ofr field data type. Order does not matter.
-          type: array
-          items:
-            $ref: "#/components/schemas/FieldDataTypeDiff"
         primaryKeysChanged:
           description: list of changes for primary keys. Order does not matter.
           type: array
           items:
-            $ref: "#/components/schemas/StreamConfigDiff"
+            $ref: "#/components/schemas/StreamPrimaryKeyDiff"
         cursorFieldsChanged:
           description: list of changes for cursor fields. Order does not matter.
           type: array
           items:
-            $ref: "#/components/schemas/StreamConfigDiff"
+            $ref: "#/components/schemas/StreamCursorFieldDiff"
         syncModesChanged:
           description: list of changes for sync mode. Order does not matter.
           type: array
@@ -13756,23 +14886,38 @@ components:
           type: string
         current:
           type: string
-    StreamConfigDiff:
+    StreamPrimaryKeyDiff:
       type: object
-      description: Stream configuration changed
+      description: Primary key changed
       properties:
         streamName:
           type: string
         streamNamespace:
           type: string
-        configType:
-          type: string
-          enum:
-            - primary_key
-            - cursor_field
         prev:
-          type: string
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
         current:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
+    StreamCursorFieldDiff:
+      type: object
+      description: Cursor field changed
+      properties:
+        streamName:
           type: string
+        streamNamespace:
+          type: string
+        prev:
+          type: array
+          items:
+            type: string
+        current:
+          type: array
+          items:
+            type: string
     StreamSyncModeDiff:
       type: object
       description: Sync mode changed
@@ -13782,13 +14927,13 @@ components:
         streamNamespace:
           type: string
         prevSourceSyncMode:
-          type: string
+          $ref: "#/components/schemas/SyncMode"
         prevDestinationSyncMode:
-          type: string
+          $ref: "#/components/schemas/DestinationSyncMode"
         currentSourceSyncMode:
-          type: string
+          $ref: "#/components/schemas/SyncMode"
         currentDestinationSyncMode:
-          type: string
+          $ref: "#/components/schemas/DestinationSyncMode"
     CatalogDiff:
       type: object
       description: Describes the difference between two Airbyte catalogs.
@@ -13909,6 +15054,7 @@ components:
           items:
             $ref: "#/components/schemas/FieldName"
     ScopedResourceRequirements:
+      x-sdk-component: true
       description: actor or actor definition specific resource requirements. if default is set, these are the requirements that should be set for ALL jobs run for this actor definition. it is overriden by the job type specific configurations. if not set, the platform will use defaults. these values will be overriden by configuration at the connection level.
       type: object
       additionalProperties: false
@@ -13939,6 +15085,7 @@ components:
       type: string
       format: uuid
     JobTypeResourceLimit:
+      x-sdk-component: true
       description: sets resource requirements for a specific job type for an actor or actor definition. these values override the default, if both are set.
       type: object
       additionalProperties: false
@@ -13951,6 +15098,7 @@ components:
         resourceRequirements:
           "$ref": "#/components/schemas/ResourceRequirements"
     JobType:
+      x-sdk-component: true
       description: enum that describes the different types of jobs that the platform runs.
       type: string
       enum:
@@ -13962,6 +15110,7 @@ components:
         - connection_updater
         - replicate
     ResourceRequirements:
+      x-sdk-component: true
       description: optional resource requirements to run workers (blank for unbounded allocations)
       type: object
       properties:
@@ -14589,7 +15738,7 @@ components:
         catalogDiff:
           $ref: "#/components/schemas/CatalogDiff"
         geography:
-          $ref: "#/components/schemas/Geography"
+          type: string
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
@@ -14938,6 +16087,8 @@ components:
           type: string
           default: "airbyte"
         authorizationServerUrl:
+          type: string
+        audience:
           type: string
     LicenseStatus:
       type: string
@@ -15486,6 +16637,45 @@ components:
           $ref: "#/components/schemas/ScopeId"
     SecretPersistenceConfigurationJson:
       type: object
+    SecretStorageIdRequestBody:
+      description: Request body containing a secret storage ID
+      required:
+        - secretStorageId
+      properties:
+        secretStorageId:
+          $ref: "#/components/schemas/SecretStorageId"
+    SecretStorageId:
+      type: string
+      format: uuid
+    SecretStorageType:
+      type: string
+      enum:
+        - local_testing
+        - google_secret_manager
+        - vault
+        - aws_secrets_manager
+        - azure_key_vault
+    SecretStorageRead:
+      description: Object representing a secret storage
+      required:
+        - id
+        - secretStorageType
+        - isConfiguredFromEnvironment
+        - scopeType
+        - scopeId
+      properties:
+        id:
+          $ref: "#/components/schemas/SecretStorageId"
+        secretStorageType:
+          $ref: "#/components/schemas/SecretStorageType"
+        isConfiguredFromEnvironment:
+          type: boolean
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        config:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
     ApplicationCreate:
       required:
         - name
@@ -15773,7 +16963,9 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -15807,7 +16999,9 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          deprecated: true
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -15887,6 +17081,8 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -15901,6 +17097,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -15919,6 +17117,8 @@ components:
         secretId:
           description: Optional secretID obtained through the  OAuth redirect flow.
           type: string
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Source
       x-sdk-param-suppress-computed-diff: true
@@ -16041,7 +17241,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -16098,21 +17298,6 @@ components:
         - manual
         - cron
         - basic
-      x-sdk-component: true
-    GeographyEnum:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
-      default: "auto"
-      x-sdk-component: true
-    GeographyEnumNoDefault:
-      type: string
-      enum:
-        - auto
-        - us
-        - eu
       x-sdk-component: true
     ConnectionStatusEnum:
       type: string
@@ -16188,6 +17373,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -16226,6 +17413,8 @@ components:
         createdAt:
           format: int64
           type: integer
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: 18dccc91-0ab1-4f72-9ed7-0b8fc27c5826
         name: Analytics Team Postgres
@@ -16308,6 +17497,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true
@@ -16319,6 +17510,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true
@@ -16333,6 +17526,8 @@ components:
           type: string
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: io.airbyte.api.common.ConfigurableActor
       x-sdk-entity: Destination
       x-sdk-param-suppress-computed-diff: true
@@ -16351,6 +17546,9 @@ components:
           type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: string
+          format: uuid
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -16362,6 +17560,9 @@ components:
           type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: string
+          format: uuid
       x-sdk-entity: Workspace
       x-sdk-param-suppress-computed-diff: true
       x-sdk-component: true
@@ -16382,7 +17583,7 @@ components:
         name:
           type: string
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: string
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-sdk-entity: Workspace
@@ -16688,6 +17889,7 @@ components:
           destinationType: postgres
           workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
       x-sdk-component: true
+
     ConnectorDefinitionsResponse:
       title: Root Type for DefinitionsResponse
       description: ""
@@ -16700,6 +17902,138 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-sdk-component: true
+
+    CreateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - workspaceId
+        - name
+        - manifest
+      properties:
+        name:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - manifest
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+
+    DeclarativeSourceDefinitionsResponse:
+      title: Root Type for DeclarativeSourceDefinitionsResponse
+      description: ""
+      x-sdk-component: true
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+
+    DeclarativeSourceDefinitionResponse:
+      type: object
+      x-sdk-component: true
+      required:
+        - id
+        - name
+        - manifest
+        - version
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+
+    CreateDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+          format: uri
+
+    UpdateDefinitionRequest:
+      type: object
+      x-sdk-component: true
+      required:
+        - name
+        - dockerImageTag
+      properties:
+        name:
+          type: string
+        dockerImageTag:
+          type: string
+
+    DefinitionsResponse:
+      title: Root Type for DefinitionsResponse
+      description: ""
+      x-sdk-component: true
+      required:
+        - data
+      type: object
+      properties:
+        previous:
+          type: string
+        next:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+
+    DefinitionResponse:
+      title: Root Type for DefinitionResponse
+      description: Provides details of a single connector definition.
+      type: object
+      x-sdk-component: true
+      required:
+        - id
+        - name
+        - dockerRepository
+        - dockerImageTag
+      properties:
+        id:
+          format: UUID
+          type: string
+        name:
+          type: string
+        dockerRepository:
+          type: string
+        dockerImageTag:
+          type: string
+        documentationUrl:
+          type: string
+
     WorkspacesResponse:
       title: Root Type for WorkspacesResponse
       description: ""
@@ -16898,15 +18232,14 @@ components:
     DataplaneGroupRead:
       type: object
       required:
-        # TODO: add dataplanes when those endpoints have been added
         - name
         - dataplane_group_id
         - organization_id
         - enabled
         - created_at
         - updated_at
+        - dataplanes
       properties:
-        # TODO: add dataplanes when those endpoints have been added
         name:
           type: string
         dataplane_group_id:
@@ -16923,6 +18256,10 @@ components:
         updated_at:
           type: string
           format: date-time
+        dataplanes:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneRead"
     DataplaneGroupListResponse:
       type: object
       properties:
@@ -16930,7 +18267,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DataplaneGroupRead"
-
     DataplaneCreateRequestBody:
       type: object
       required:
@@ -17024,27 +18360,456 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DataplaneRead"
-    DataplaneGetIdRequestBody:
+    DataplaneTokenRequestBody:
+      required:
+        - client_id
+        - client_secret
+      type: object
+      properties:
+        client_id:
+          type: string
+        client_secret:
+          type: string
+    DataplaneHeartbeatRequestBody:
+      required:
+        - client_id
+      type: object
+      properties:
+        client_id:
+          type: string
+    DataplaneHeartbeatResponse:
       type: object
       required:
-        - workloadPriority
+        - dataplane_name
+        - dataplane_id
+        - dataplane_enabled
+        - dataplane_group_name
+        - dataplane_group_id
       properties:
-        connectionId:
-          $ref: "#/components/schemas/ConnectionId"
-        actorType:
-          $ref: "#/components/schemas/ActorType"
-        actorId:
-          $ref: "#/components/schemas/ActorId"
+        dataplane_name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_enabled:
+          type: boolean
+        dataplane_group_name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+    DataplaneInitRequestBody:
+      required:
+        - client_id
+      type: object
+      properties:
+        client_id:
+          type: string
+    DataplaneInitResponse:
+      type: object
+      required:
+        - dataplane_name
+        - dataplane_id
+        - dataplane_enabled
+        - dataplane_group_name
+        - dataplane_group_id
+      properties:
+        dataplane_name:
+          type: string
+        dataplane_id:
+          type: string
+          format: uuid
+        dataplane_enabled:
+          type: boolean
+        dataplane_group_name:
+          type: string
+        dataplane_group_id:
+          type: string
+          format: uuid
+
+    # Public Region Schemas
+    RegionCreateRequest:
+      type: object
+      required:
+        - name
+        - organizationId
+        - enabled
+      properties:
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionResponse:
+      type: object
+      required:
+        - regionId
+        - name
+        - organizationId
+        - enabled
+        - createdAt
+        - updatedAt
+      properties:
+        regionId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-sdk-entity: Region
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    RegionsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegionResponse"
+      x-sdk-component: true
+
+    # Public Dataplane Schemas
+    DataplaneCreateRequest:
+      type: object
+      required:
+        - name
+        - enabled
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplaneCreateResponseBody:
+      type: object
+      required:
+        - dataplaneId
+        - clientId
+        - clientSecret
+      properties:
+        dataplaneId:
+          type: string
+          format: UUID
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+
+    DataplanePatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        enabled:
+          type: boolean
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplaneResponse:
+      type: object
+      required:
+        - dataplaneId
+        - name
+        - regionId
+        - enabled
+        - createdAt
+        - updatedAt
+      properties:
+        dataplaneId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        regionId:
+          type: string
+          format: uuid
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+      x-sdk-entity: Dataplane
+      x-sdk-param-suppress-computed-diff: true
+      x-sdk-component: true
+
+    DataplanesResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataplaneResponse"
+      x-sdk-component: true
+
+    # CONFIG TEMPLATES
+    ConfigTemplateListResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+    ConfigTemplateList:
+      type: object
+      required:
+        - configTemplates
+      properties:
+        configTemplates:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+    ConfigTemplateListItem:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+    ConfigTemplateRequestBody:
+      type: object
+      required:
+        - workspaceId
+        - configTemplateId
+      properties:
         workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        workloadPriority:
-          $ref: "#/components/schemas/WorkloadPriority"
-    DataplaneReadId:
+          type: string
+          format: uuid
+        configTemplateId:
+          type: string
+          format: uuid
+    ConfigTemplateRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefinitionId
+        - configTemplateSpec
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+    ListConfigTemplatesRequestBody:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    ConfigTemplateCreateRequestBody:
+      type: object
+      required:
+        - actorDefinitionId
+        - partialDefaultConfig
+        - partialUserConfigSpec
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+    ConfigTemplateSpec:
+      type: object
+    ConfigTemplateCreateResponse:
       type: object
       required:
         - id
       properties:
         id:
+          type: string
+          format: uuid
+    ConfigTemplateUpdateRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+    ConfigTemplateUpdateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+
+    # PARTIAL USER CONFIGS
+    PartialUserConfigRequestBody:
+      type: object
+      required:
+        - partialUserConfigId
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+    PartialUserConfigRead:
+      type: object
+      required:
+        - id
+        - partialUserConfigProperties
+        - configTemplate
+        - actorId
+      properties:
+        id:
+          type: string
+          format: uuid
+        configTemplate:
+          $ref: "#/components/schemas/ConfigTemplateRead"
+        actorId:
+          description: the actor that this partial user config is for
+          type: string
+          format: uuid
+        partialUserConfigProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigCreate:
+      type: object
+      required:
+        - configTemplateId
+        - partialUserConfigProperties
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        configTemplateId:
+          description: the template that this user config is connected with
+          type: string
+          format: uuid
+        partialUserConfigProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigWithSource:
+      type: object
+      description: the partial user config and its associated source
+      required:
+        - partialUserConfig
+        - source
+      properties:
+        partialUserConfig:
+          $ref: "#/components/schemas/PartialUserConfigRead"
+        source:
+          $ref: "#/components/schemas/SourceRead"
+    ListPartialUserConfigsRequest:
+      type: object
+      required:
+        - workspaceId
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+    PartialUserConfigUpdate:
+      type: object
+      required:
+        - partialUserConfigId
+        - partialUserConfigProperties
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+        partialUserConfigProperties:
+          $ref: "#/components/schemas/SourceConfiguration"
+    PartialUserConfigReadList:
+      type: object
+      required:
+        - partialUserConfigs
+      properties:
+        partialUserConfigs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartialUserConfigListItem"
+    PartialUserConfigListItem:
+      type: object
+      required:
+        - partialUserConfigId
+        - configTemplateName
+        - configTemplateIcon
+      properties:
+        partialUserConfigId:
+          type: string
+          format: uuid
+        configTemplateName:
+          type: string
+          description: the display name for the template
+        configTemplateIcon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+    EmbeddedWidgetRequest:
+      type: object
+      required:
+        - workspaceId
+        - allowedOrigin
+      properties:
+        workspaceId:
+          type: string
+          format: uuid
+        allowedOrigin:
+          type: string
+        externalUserId:
           type: string
 
   responses:

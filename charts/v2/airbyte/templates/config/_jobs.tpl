@@ -45,7 +45,11 @@ Renders the jobs.kube.namespace environment variable
 Renders the global.jobs.kube.localVolume.enabled value
 */}}
 {{- define "airbyte.jobs.kube.localVolume.enabled" }}
-    {{- .Values.global.jobs.kube.localVolume.enabled | default false }}
+	{{- if eq .Values.global.jobs.kube.localVolume.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.jobs.kube.localVolume.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*

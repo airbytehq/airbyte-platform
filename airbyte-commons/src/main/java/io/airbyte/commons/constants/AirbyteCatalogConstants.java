@@ -23,6 +23,8 @@ public final class AirbyteCatalogConstants {
 
   public static final String REMOTE_REGISTRY_BASE_URL = "https://connectors.airbyte.com/files/";
 
+  public static final String AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE = "airbyte/source-declarative-manifest";
+
   private AirbyteCatalogConstants() {
     // Private constructor to prevent instantiation
   }

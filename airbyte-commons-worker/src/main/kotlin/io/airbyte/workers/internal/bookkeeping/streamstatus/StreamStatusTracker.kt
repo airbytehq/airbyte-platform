@@ -7,11 +7,11 @@ package io.airbyte.workers.internal.bookkeeping.streamstatus
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteStateMessage
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType
-import io.airbyte.protocol.models.AirbyteTraceMessage
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.general.RateLimitedMessageHelper
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor
@@ -20,7 +20,7 @@ import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus as ProtocolEnum
 
 private val logger = KotlinLogging.logger {}
 

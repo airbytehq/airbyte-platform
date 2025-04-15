@@ -5,6 +5,7 @@
 package io.airbyte.metrics.reporter;
 
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.jooq.impl.DSL.asterisk;
@@ -45,12 +46,14 @@ class MetricRepository {
   Map<String, Integer> numberOfPendingJobsByGeography() {
     final String geographyResultAlias = "geography";
     final String countResultAlias = "result";
-    final var result = ctx.select(CONNECTION.GEOGRAPHY.cast(String.class).as(geographyResultAlias), count(asterisk()).as(countResultAlias))
+    final var result = ctx.select(DATAPLANE_GROUP.NAME.cast(String.class).as(geographyResultAlias), count(asterisk()).as(countResultAlias))
         .from(JOBS)
         .join(CONNECTION)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
+        .join(DATAPLANE_GROUP)
+        .on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(JOBS.STATUS.eq(JobStatus.pending))
-        .groupBy(CONNECTION.GEOGRAPHY);
+        .groupBy(DATAPLANE_GROUP.NAME);
     final Field<String> geographyResultField = DSL.field(name(geographyResultAlias), String.class);
     final Field<Integer> countResultField = DSL.field(name(countResultAlias), Integer.class);
     final Map<String, Integer> queriedMap = result.fetchMap(geographyResultField, countResultField);
@@ -99,13 +102,15 @@ class MetricRepository {
     final var query =
         """
         SELECT
-          cast(connection.geography as varchar) AS geography,
+          cast(dataplane_group.name as varchar) AS geography,
           MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at)))::float AS run_duration_seconds
         FROM jobs
         JOIN connection
         ON jobs.scope::uuid = connection.id
+        JOIN dataplane_group
+        ON connection.dataplane_group_id::UUID = dataplane_group.id
         WHERE jobs.status = 'pending'
-        GROUP BY geography;
+        GROUP BY dataplane_group.name;
         """;
     final var result = ctx.fetch(query);
     final Field<String> geographyResultField = DSL.field(name("geography"), String.class);

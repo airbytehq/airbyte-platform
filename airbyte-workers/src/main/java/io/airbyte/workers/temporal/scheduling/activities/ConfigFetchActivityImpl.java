@@ -200,8 +200,7 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
         // Basic schedules don't wait for their first run.
         return Duration.ZERO;
       }
-      final long prevRunStart = previousJobOptional.getJob().getStartedAt() != null ? previousJobOptional.getJob().getStartedAt()
-          : previousJobOptional.getJob().getCreatedAt();
+      final long prevRunStart = previousJobOptional.getJob().getCreatedAt();
       final long nextRunStart = prevRunStart + getIntervalInSecond(connectionRead.getScheduleData().getBasicSchedule());
       final Duration timeToWait = Duration.ofSeconds(
           Math.max(0, nextRunStart - currentSecondsSupplier.get()));

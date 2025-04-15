@@ -60,6 +60,13 @@ class AuthConfigsTest {
   }
 
   @Test
+  @Property(name = "airbyte.edition", value = "ENTERPRISE")
+  @Property(name = "airbyte.auth.identity-provider.type", value = SIMPLE)
+  fun `test Enterprise AuthConfigs sets mode to SIMPLE when doing simple auth`() {
+    Assertions.assertTrue(authConfigs.authMode == AuthMode.SIMPLE)
+  }
+
+  @Test
   @Property(name = "airbyte.auth")
   fun `test AuthConfigs inject subconfigurations`() {
     Assertions.assertTrue(authConfigs.keycloakConfig != null)

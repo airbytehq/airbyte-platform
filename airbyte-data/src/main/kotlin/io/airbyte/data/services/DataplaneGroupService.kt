@@ -14,6 +14,14 @@ interface DataplaneGroupService {
   fun getDataplaneGroup(id: UUID): DataplaneGroup
 
   /**
+   * Get the dataplane group by geography .
+   */
+  fun getDataplaneGroupByOrganizationIdAndName(
+    organizationId: UUID,
+    name: String,
+  ): DataplaneGroup
+
+  /**
    * Write (create or update) a dataplane group.
    */
   fun writeDataplaneGroup(dataplaneGroup: DataplaneGroup): DataplaneGroup

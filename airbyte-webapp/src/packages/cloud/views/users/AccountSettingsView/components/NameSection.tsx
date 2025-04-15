@@ -1,6 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -9,13 +9,11 @@ import { AuthChangeName, useCurrentUser } from "core/services/auth";
 import { trackError } from "core/utils/datadog";
 import { useNotificationService } from "hooks/services/Notification";
 
-const nameFormSchema = yup.object({
-  name: yup.string().required("form.empty.error"),
+const nameFormSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
 });
 
-interface NameFormValues {
-  name: string;
-}
+type NameFormValues = z.infer<typeof nameFormSchema>;
 
 interface NameSectionProps {
   updateName: AuthChangeName;
@@ -48,7 +46,7 @@ export const NameSection: React.FC<NameSectionProps> = ({ updateName }) => {
       onSubmit={({ name }) => updateName(name)}
       onError={onError}
       onSuccess={onSuccess}
-      schema={nameFormSchema}
+      zodSchema={nameFormSchema}
       defaultValues={{ name: user.name }}
     >
       <FormControl<NameFormValues>

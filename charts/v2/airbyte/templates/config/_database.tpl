@@ -172,7 +172,11 @@ DATABASE_PASSWORD: {{ include "airbyte.database.password" . | quote }}
 Renders the global.migrations.runAtStartup value
 */}}
 {{- define "airbyte.database.migrations.runAtStartup" }}
-    {{- .Values.global.migrations.runAtStartup | default true }}
+	{{- if eq .Values.global.migrations.runAtStartup nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.global.migrations.runAtStartup }}
+	{{- end }}
 {{- end }}
 
 {{/*

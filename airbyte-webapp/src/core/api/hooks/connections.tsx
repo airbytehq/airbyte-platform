@@ -44,9 +44,11 @@ import {
   AirbyteCatalog,
   ConnectionEventsListMinimalRequestBody,
   ConnectionEventsRequestBody,
+  ConnectionEventType,
   ConnectionScheduleData,
   ConnectionScheduleType,
   ConnectionStateCreateOrUpdate,
+  ConnectionStatusesRead,
   ConnectionStatusRead,
   ConnectionStream,
   ConnectionSyncStatus,
@@ -445,11 +447,13 @@ export const useUpdateConnectionOptimistically = () => {
       const result = await webBackendUpdateConnection(connectionTagsUpdate, requestOptions);
       return result;
     } catch (e) {
-      notificationService.registerNotification({
-        id: "update-connection-error",
-        type: "error",
-        text: formatMessage({ id: "connection.updateFailed" }),
-      });
+      if (!(e instanceof HttpError && HttpProblem.isType(e, "error:connection-conflicting-destination-stream"))) {
+        notificationService.registerNotification({
+          id: "update-connection-error",
+          type: "error",
+          text: formatMessage({ id: "connection.updateFailed" }),
+        });
+      }
 
       // If the request fails, we need to revert the optimistic update
       queryClient.invalidateQueries<WebBackendConnectionReadList>(connectionsKeys.lists());
@@ -520,6 +524,10 @@ export const useUpdateConnection = () => {
                 />
               ),
             });
+          }
+          if (HttpProblem.isType(error, "error:connection-conflicting-destination-stream")) {
+            // We have custom logic for this error that needs access to the form methods, so we should not register the notification here
+            return null;
           }
 
           return registerNotification({
@@ -666,18 +674,40 @@ export const useGetConnectionUptimeHistory = (connectionId: string, numberOfJobs
   );
 };
 
+const CONNECTION_STATUS_REFETCH_INTERVAL = 10_000;
+
 export const useListConnectionsStatuses = (connectionIds: string[]) => {
   const requestOptions = useRequestOptions();
   const queryKey = connectionsKeys.statuses(connectionIds);
 
-  return useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
-    refetchInterval: (data) => {
-      // when any of the polled connections is running, refresh 2.5s instead of 10s
-      return data?.some(({ connectionSyncStatus }) => connectionSyncStatus === ConnectionSyncStatus.running)
-        ? 2500
-        : 10000;
-    },
-  });
+  return (
+    useSuspenseQuery(queryKey, () => getConnectionStatuses({ connectionIds }, requestOptions), {
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
+    }) ?? []
+  );
+};
+
+export const useListConnectionsStatusesAsync = (connectionIds: string[], enabled: boolean = true) => {
+  const requestOptions = useRequestOptions();
+  const queryKey = connectionsKeys.statuses(connectionIds);
+
+  return (
+    useQuery(queryKey, async () => getConnectionStatuses({ connectionIds }, requestOptions), {
+      enabled,
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
+    }) ?? []
+  );
+};
+
+export const useGetCachedConnectionStatusesById = (connectionIds: string[]) => {
+  const queryClient = useQueryClient();
+  const queryData = queryClient.getQueriesData<ConnectionStatusesRead>(connectionsKeys.statuses());
+  const allStatuses = queryData.flatMap(([_, data]) => data ?? []);
+
+  return connectionIds.reduce<Record<string, ConnectionStatusRead | undefined>>((acc, connectionId) => {
+    acc[connectionId] = allStatuses.find((status) => status.connectionId === connectionId);
+    return acc;
+  }, {});
 };
 
 export const useSetConnectionStatusActiveJob = () => {
@@ -700,15 +730,24 @@ export const useSetConnectionStatusActiveJob = () => {
   };
 };
 
+export const CONNECTIONS_GRAPH_EVENT_TYPES = [
+  ConnectionEventType.SYNC_SUCCEEDED,
+  ConnectionEventType.REFRESH_SUCCEEDED,
+  ConnectionEventType.SYNC_INCOMPLETE,
+  ConnectionEventType.REFRESH_INCOMPLETE,
+  ConnectionEventType.SYNC_FAILED,
+  ConnectionEventType.REFRESH_FAILED,
+] as const;
+
 export const useGetConnectionsGraphData = (requestBody: ConnectionEventsListMinimalRequestBody) => {
   const requestOptions = useRequestOptions();
 
   return useQuery(
     connectionsKeys.eventsListMinimal(requestBody),
-    () => listConnectionEventsMinimal(requestBody, requestOptions),
+    async () =>
+      listConnectionEventsMinimal({ ...requestBody, eventTypes: [...CONNECTIONS_GRAPH_EVENT_TYPES] }, requestOptions),
     {
-      staleTime: 30_000,
-      refetchInterval: 60_000,
+      refetchInterval: CONNECTION_STATUS_REFETCH_INTERVAL,
     }
   );
 };

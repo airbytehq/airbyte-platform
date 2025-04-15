@@ -5,7 +5,7 @@
 package io.airbyte.workers.internal.bookkeeping.events
 
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 

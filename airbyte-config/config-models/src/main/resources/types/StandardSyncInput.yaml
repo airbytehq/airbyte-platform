@@ -75,3 +75,7 @@ properties:
     type: array
     items:
       type: string
+  includesFiles:
+    description: Whether or not the sync may move files.
+    type: boolean
+    default: false

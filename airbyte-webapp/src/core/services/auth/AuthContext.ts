@@ -8,7 +8,7 @@ export type AuthLogout = () => Promise<void>;
 export type AuthLogin = ({ username, password }: { username: string; password: string }) => Promise<void>;
 
 export interface AuthContextApi {
-  authType: "none" | "simple" | "oidc" | "cloud";
+  authType: "none" | "simple" | "oidc" | "cloud" | "embedded";
   applicationSupport: "single" | "multiple" | "none";
   user: UserRead | null;
   inited: boolean;

@@ -25,6 +25,8 @@ enabled: true
 ##  cron.replicaCount Number of cron replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  cron.image.repository The repository to use for the airbyte cron image.
 ##  cron.image.pullPolicy the pull policy to use for the airbyte cron image
 ##  cron.image.tag The airbyte cron image tag. Defaults to the chart's AppVersion

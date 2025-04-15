@@ -76,6 +76,7 @@ class RuntimeEnvVarFactoryTest {
           connectorAwsAssumedRoleSecretEnvList,
           stagingMountPath,
           CONTAINER_ORCH_JAVA_OPTS,
+          false,
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -208,6 +209,7 @@ class RuntimeEnvVarFactoryTest {
           connectorAwsAssumedRoleSecretEnvList,
           stagingMountPath,
           CONTAINER_ORCH_JAVA_OPTS,
+          false,
           connectorApmSupportHelper,
           ffClient,
           airbyteEdition,
@@ -329,7 +331,8 @@ class RuntimeEnvVarFactoryTest {
 
     val result = factory.replicationConnectorEnvVars(config, resourceReqs, false)
 
-    val expected = awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
+    val expected =
+      awsEnvVars + apmEnvVars + configurationEnvVars + metadataEnvVars + resourceEnvVars + passThroughVars + customCodeEnvVars
 
     assertEquals(expected, result)
   }
@@ -347,7 +350,7 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
-        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null) +
+        EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -367,7 +370,7 @@ class RuntimeEnvVarFactoryTest {
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
-        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null) +
+        EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
@@ -384,7 +387,7 @@ class RuntimeEnvVarFactoryTest {
 
     assertEquals(
       listOf(
-        EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), false.toString(), null),
+        EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       ),
@@ -393,13 +396,36 @@ class RuntimeEnvVarFactoryTest {
   }
 
   @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `builds expected env vars for getDeclarativeCustomCodeSupportEnvVars`(useAllowCustomCode: Boolean) {
+  @CsvSource(
+    "true, true, true",
+    "true, false, true",
+    "false, true, true",
+    "false, false, false",
+  )
+  fun `builds expected env vars for getDeclarativeCustomCodeSupportEnvVars`(
+    useAllowCustomCode: Boolean,
+    globalOverride: Boolean,
+    expectedEnvValue: Boolean,
+  ) {
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns useAllowCustomCode
-    val result = factory.getDeclarativeCustomCodeSupportEnvVars(Workspace(workspaceId))
+
+    val envFactory =
+      spyk(
+        RuntimeEnvVarFactory(
+          connectorAwsAssumedRoleSecretEnvList,
+          stagingMountPath,
+          CONTAINER_ORCH_JAVA_OPTS,
+          globalOverride,
+          connectorApmSupportHelper,
+          ffClient,
+          airbyteEdition,
+        ),
+      )
+
+    val result = envFactory.getDeclarativeCustomCodeSupportEnvVars(Workspace(workspaceId))
 
     assertEquals(
-      listOf(EnvVar(AirbyteEnvVar.AIRBYTE_ALLOW_CUSTOM_CODE.toString(), useAllowCustomCode.toString(), null)),
+      listOf(EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), expectedEnvValue.toString(), null)),
       result,
     )
   }

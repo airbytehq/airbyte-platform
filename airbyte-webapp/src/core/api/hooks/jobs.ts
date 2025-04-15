@@ -14,6 +14,7 @@ import {
   getAttemptForJob,
   getJobDebugInfo,
   getJobInfoWithoutLogs,
+  explainJob,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import { AttemptInfoRead, AttemptRead, LogEvents, LogRead } from "../types/AirbyteClient";
@@ -22,6 +23,7 @@ import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const jobsKeys = {
   all: (connectionId: string | undefined) => [SCOPE_WORKSPACE, connectionId] as const,
+  explain: (jobId: number) => [SCOPE_WORKSPACE, "jobs", "explain", jobId] as const,
 };
 
 export const useCancelJob = () => {
@@ -175,4 +177,15 @@ export const useDonwnloadJobLogsFetchQuery = () => {
       workspace.workspaceId,
     ]
   );
+};
+
+export const useExplainJob = (jobId: number) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery({
+    queryFn: () => explainJob({ id: jobId }, requestOptions),
+    queryKey: jobsKeys.explain(jobId),
+    staleTime: Infinity,
+    cacheTime: Infinity,
+  });
 };

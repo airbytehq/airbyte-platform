@@ -1,0 +1,17 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  padding: variables.$spacing-sm;
+  height: 100%;
+  gap: variables.$spacing-md;
+  overflow: auto;
+}
+
+.description {
+  background-color: colors.$grey-50;
+  border-radius: variables.$border-radius-md;
+  padding: variables.$spacing-md;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -75,7 +75,7 @@ open class SourceDefinitionApiController(
     log.info("about to call access validator")
     accessValidator.validateWriteAccess(sourceDefinitionIdRequestBody.sourceDefinitionId)
     execute<Any?> {
-      sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinitionIdRequestBody)
+      sourceDefinitionsHandler.deleteSourceDefinition(sourceDefinitionIdRequestBody.sourceDefinitionId)
       null
     }
   }
@@ -88,7 +88,8 @@ open class SourceDefinitionApiController(
   ): SourceDefinitionRead? =
     execute {
       sourceDefinitionsHandler.getSourceDefinition(
-        sourceDefinitionIdRequestBody,
+        sourceDefinitionIdRequestBody.sourceDefinitionId,
+        true,
       )
     }
 

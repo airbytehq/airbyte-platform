@@ -8,7 +8,7 @@ import io.airbyte.commons.auth.generated.Intent
 import java.lang.annotation.Inherited
 
 @Retention(AnnotationRetention.RUNTIME)
-@Target(AnnotationTarget.FUNCTION)
+@Target(AnnotationTarget.FUNCTION, AnnotationTarget.CLASS)
 @Inherited
 annotation class RequiresIntent(
   val value: Intent,

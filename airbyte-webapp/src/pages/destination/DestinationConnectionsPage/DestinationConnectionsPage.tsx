@@ -9,11 +9,14 @@ import { DropdownMenuOptionType } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 
 import { useGetDestinationFromParams } from "area/connector/utils";
-import { useCurrentWorkspace, useConnectionList, useSourceList } from "core/api";
+import { useCurrentWorkspace, useConnectionList, useSourceList, useListConnectionsStatusesAsync } from "core/api";
+import { WebBackendConnectionListItem } from "core/api/types/AirbyteClient";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./DestinationConnectionsPage.module.scss";
 
+const emptyArray: never[] = [];
 export const DestinationConnectionsPage = () => {
   const navigate = useNavigate();
   const { workspaceId } = useCurrentWorkspace();
@@ -22,7 +25,11 @@ export const DestinationConnectionsPage = () => {
 
   // We load only connections attached to this destination to be shown in the connections grid
   const connectionList = useConnectionList({ destinationId: [destination.destinationId] });
-  const connections = connectionList?.connections ?? [];
+  const connections = connectionList?.connections ?? (emptyArray as WebBackendConnectionListItem[]);
+
+  const isAllConnectionsStatusEnabled = useExperiment("connections.connectionsStatusesEnabled");
+  const connectionIds = useMemo(() => connections.map((connection) => connection.connectionId), [connections]);
+  useListConnectionsStatusesAsync(connectionIds, isAllConnectionsStatusEnabled);
 
   // We load all sources so the add source button has a pre-filled list of options.
   const { sources } = useSourceList();

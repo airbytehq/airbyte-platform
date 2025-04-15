@@ -210,6 +210,7 @@ const useOptionalStreamData = (streamNum?: number) => {
 };
 
 export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
+  const streams = useBuilderWatch("formValues.streams");
   const { stream_name, stream_response } = useOptionalStreamData(streamNum);
 
   const config = assistButtonConfigs[assistKey];
@@ -220,6 +221,10 @@ export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum
 
   const { assistEnabled } = useConnectorBuilderFormState();
   if (!assistEnabled) {
+    return null;
+  }
+
+  if (streamNum && streams[streamNum].requestType === "async") {
     return null;
   }
 
