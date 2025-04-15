@@ -12,9 +12,12 @@ import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
+import io.airbyte.commons.server.handlers.helpers.getWorkspaceWithFixedGeography
+import io.airbyte.commons.server.handlers.helpers.validateWorkspace
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
@@ -24,7 +27,6 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.featureflag.FeatureFlagClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -44,8 +46,8 @@ open class ResourceBootstrapHandler(
   private val permissionService: PermissionService,
   private val currentUserService: CurrentUserService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
-  private val featureFlagClient: FeatureFlagClient,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
+  private val airbyteEdition: AirbyteEdition,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -73,7 +75,9 @@ open class ResourceBootstrapHandler(
     )
 
     val standardWorkspace = buildStandardWorkspace(workspaceCreateWithId, organization, uuidSupplier)
-    workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
+
+    validateWorkspace(standardWorkspace, airbyteEdition)
+    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(standardWorkspace, airbyteEdition))
 
     val workspacePermission = buildDefaultWorkspacePermission(user.userId, standardWorkspace.workspaceId)
 

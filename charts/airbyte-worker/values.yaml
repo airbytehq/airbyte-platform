@@ -79,6 +79,8 @@ enabled: true
 ##  worker.replicaCount Number of worker replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  worker.image.repository The repository to use for the airbyte worker image.
 ##  worker.image.pullPolicy the pull policy to use for the airbyte worker image
 ##  worker.image.tag The airbyte worker image tag. Defaults to the chart's AppVersion

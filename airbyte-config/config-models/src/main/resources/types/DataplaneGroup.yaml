@@ -34,10 +34,6 @@ properties:
   updated_at:
     type: integer
     format: int64
-  updated_by:
-    type: string
-    format: uuid
-    description: UUID of the user who last updated the dataplane group
   tombstone:
     type: boolean
     description: Whether the dataplane group is marked as deleted

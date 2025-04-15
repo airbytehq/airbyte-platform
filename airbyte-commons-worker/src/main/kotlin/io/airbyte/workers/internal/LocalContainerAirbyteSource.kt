@@ -11,7 +11,7 @@ import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.LocalContainerConstants.ACCEPTED_MESSAGE_TYPES
 import io.airbyte.workers.internal.LocalContainerConstants.IGNORED_EXIT_CODES

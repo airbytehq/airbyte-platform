@@ -16,7 +16,6 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.ConnectionStatus;
 import io.airbyte.api.model.generated.DeadlineAction;
-import io.airbyte.api.model.generated.Geography;
 import io.airbyte.api.model.generated.JobType;
 import io.airbyte.api.model.generated.JobTypeResourceLimit;
 import io.airbyte.api.model.generated.NonBreakingChangesPreference;
@@ -164,7 +163,8 @@ public class ApiPojoConverters {
         .syncCatalog(this.catalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()))
         .sourceCatalogId(standardSync.getSourceCatalogId())
         .breakingChange(standardSync.getBreakingChange())
-        .geography(Enums.convertTo(standardSync.getGeography(), Geography.class))
+        .geography(standardSync.getGeography())
+        .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
         .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
@@ -225,14 +225,6 @@ public class ApiPojoConverters {
 
   public StandardSync.BackfillPreference toPersistenceBackfillPreference(final SchemaChangeBackfillPreference preference) {
     return Enums.convertTo(preference, StandardSync.BackfillPreference.class);
-  }
-
-  public Geography toApiGeography(final io.airbyte.config.Geography geography) {
-    return Enums.convertTo(geography, Geography.class);
-  }
-
-  public io.airbyte.config.Geography toPersistenceGeography(final Geography apiGeography) {
-    return Enums.convertTo(apiGeography, io.airbyte.config.Geography.class);
   }
 
   public Schedule.TimeUnit toPersistenceTimeUnit(final ConnectionSchedule.TimeUnitEnum apiTimeUnit) {

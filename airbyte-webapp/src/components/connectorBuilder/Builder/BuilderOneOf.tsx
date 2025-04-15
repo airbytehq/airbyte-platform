@@ -28,6 +28,7 @@ interface BuilderOneOfProps<T extends OneOfType> {
   manifestPath?: string;
   manifestOptionPaths?: string[];
   onSelect?: (type: string) => void;
+  optional?: boolean;
 }
 
 export const BuilderOneOf = <T extends OneOfType>({
@@ -38,6 +39,7 @@ export const BuilderOneOf = <T extends OneOfType>({
   manifestPath,
   manifestOptionPaths,
   onSelect,
+  optional,
 }: BuilderOneOfProps<T>) => {
   const { setValue, unregister } = useFormContext();
   const fieldName = `${path}.type`;
@@ -63,7 +65,7 @@ export const BuilderOneOf = <T extends OneOfType>({
   return (
     <GroupControls
       ref={elementRef}
-      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} />}
+      label={<ControlLabels label={finalLabel} infoTooltipContent={finalTooltip} optional={optional} />}
       control={
         <ListBox
           options={options.map((option) => ({
@@ -73,7 +75,7 @@ export const BuilderOneOf = <T extends OneOfType>({
           placement="bottom-end"
           adaptiveWidth={false}
           isDisabled={isPreview}
-          selectedValue={selectedOption ?? options[0]}
+          selectedValue={selectedOption}
           onSelect={(selectedOption: OneOfOption<T>) => {
             if (selectedOption.default.type === fieldValue) {
               return;

@@ -537,11 +537,13 @@ exports[`CreateConnectionForm should render 1`] = `
                         >
                           <table
                             class="<removed-for-snapshot-test>"
+                            context="[object Object]"
                             data-testid="sync-catalog-table"
                             style="border-spacing: 0;"
                           >
                             <thead
                               class="<removed-for-snapshot-test>"
+                              context="[object Object]"
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
@@ -560,6 +562,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                         aria-checked="mixed"
                                         data-testid="sync-namespace-checkbox"
                                         type="checkbox"
+                                      />
+                                      <div
+                                        aria-hidden="true"
+                                        class="<removed-for-snapshot-test>"
                                       />
                                       <div
                                         class="<removed-for-snapshot-test>"
@@ -652,6 +658,7 @@ exports[`CreateConnectionForm should render 1`] = `
                             >
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="0"
                                 data-item-index="0"
                                 data-known-size="40"
@@ -674,6 +681,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           aria-checked="mixed"
                                           data-testid="sync-namespace-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -759,6 +770,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="1"
                                 data-item-index="1"
                                 data-known-size="40"
@@ -781,6 +793,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -911,6 +927,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="2"
                                 data-item-index="2"
                                 data-known-size="40"
@@ -933,6 +950,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           checked=""
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                         <div
                                           class="<removed-for-snapshot-test>"
@@ -1063,6 +1084,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               </tr>
                               <tr
                                 class="<removed-for-snapshot-test>"
+                                context="[object Object]"
                                 data-index="3"
                                 data-item-index="3"
                                 data-known-size="40"
@@ -1084,6 +1106,10 @@ exports[`CreateConnectionForm should render 1`] = `
                                           aria-checked="false"
                                           data-testid="sync-stream-checkbox"
                                           type="checkbox"
+                                        />
+                                        <div
+                                          aria-hidden="true"
+                                          class="<removed-for-snapshot-test>"
                                         />
                                       </label>
                                       <button

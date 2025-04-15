@@ -180,16 +180,28 @@ class ConnectorWatcher(
     input: SidecarInput,
     e: Exception,
   ) {
-    logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
-    val connectorOutput =
-      when (input.operationType) {
-        SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
-        SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
-        SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
-      }
-    jobOutputDocStore.write(input.workloadId, connectorOutput)
-    failWorkload(input.workloadId, connectorOutput.failureReason)
-    exitInternalError()
+    try {
+      logger.error(e) { "Error performing operation: ${e.javaClass.name}" }
+      val connectorOutput =
+        when (input.operationType) {
+          SidecarInput.OperationType.CHECK -> getFailedOutput(input.checkConnectionInput, e)
+          SidecarInput.OperationType.DISCOVER -> getFailedOutput(input.discoverCatalogInput, e)
+          SidecarInput.OperationType.SPEC -> getFailedOutput(input.integrationLauncherConfig.dockerImage, e)
+        }
+      jobOutputDocStore.write(input.workloadId, connectorOutput)
+      failWorkload(input.workloadId, connectorOutput.failureReason)
+    } catch (e: Exception) {
+      failWorkload(
+        input.workloadId,
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withExternalMessage("Unable to persist the job Output, check the document store credentials.")
+          .withInternalMessage(e.message)
+          .withStacktrace(e.stackTraceToString()),
+      )
+    } finally {
+      exitInternalError()
+    }
   }
 
   @VisibleForTesting

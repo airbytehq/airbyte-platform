@@ -1,5 +1,5 @@
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -8,17 +8,13 @@ import { Message } from "components/ui/Message";
 
 import { ConnectorDefinition } from "core/domain/connector";
 
-export interface EditDefinitionFormValues {
-  name: string;
-  dockerRepository: string;
-  dockerImageTag: string;
-}
-
-const editDefinitionFormSchema = yup.object().shape({
-  name: yup.string().required("form.empty.error"),
-  dockerRepository: yup.string().required(),
-  dockerImageTag: yup.string().required("form.empty.error"),
+const editDefinitionFormSchema = z.object({
+  name: z.string().trim().nonempty("form.empty.error"),
+  dockerRepository: z.string().trim().nonempty("form.empty.error"),
+  dockerImageTag: z.string().trim().nonempty("form.empty.error"),
 });
+
+export type EditDefinitionFormValues = z.infer<typeof editDefinitionFormSchema>;
 
 interface EditConnectorDefinitionModalContentProps<T extends ConnectorDefinition> {
   definition: T;
@@ -41,7 +37,7 @@ export const EditConnectorDefinitionModalContent = <T extends ConnectorDefinitio
   return (
     <Box p="xl">
       <Form<EditDefinitionFormValues>
-        schema={editDefinitionFormSchema}
+        zodSchema={editDefinitionFormSchema}
         defaultValues={{
           name: definition.name,
           dockerRepository: definition.dockerRepository,

@@ -1,3 +1,7 @@
 .lowercase {
   text-transform: lowercase;
 }
+
+.fixedHeight {
+  height: 1lh; // match the height of one line of text
+}

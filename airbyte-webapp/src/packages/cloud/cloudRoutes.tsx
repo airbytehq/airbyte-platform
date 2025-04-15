@@ -12,6 +12,7 @@ import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
+import { storeConnectorChatBuilderFromQuery } from "core/utils/connectorChatBuilderStorage";
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
@@ -19,6 +20,7 @@ import { useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
+import { EmbeddedSourceCreatePage } from "pages/embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
 import {
   SourcesPage as SettingsSourcesPage,
@@ -138,6 +140,7 @@ const MainRoutes: React.FC = () => {
           <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
         </Route>
         <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+
         <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
       </Routes>
     </DefaultErrorBoundary>
@@ -179,6 +182,10 @@ export const Routing: React.FC = () => {
   const { user, inited, provider, loggedOut } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { pathname: originalPathname, search, hash } = useLocation();
+
+  useEffectOnce(() => {
+    storeConnectorChatBuilderFromQuery(search);
+  });
 
   const loginRedirectSearchParam = `${createSearchParams({
     loginRedirect: `${originalPathname}${search}${hash}`,
@@ -233,6 +240,7 @@ export const Routing: React.FC = () => {
     <LDExperimentServiceProvider>
       <Suspense fallback={<LoadingPage />}>
         <Routes>
+          <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
           <Route
             path="*"
             element={

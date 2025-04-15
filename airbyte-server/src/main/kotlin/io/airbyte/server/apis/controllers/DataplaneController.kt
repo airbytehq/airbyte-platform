@@ -5,41 +5,45 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.DataplaneApi
+import io.airbyte.api.model.generated.AccessToken
 import io.airbyte.api.model.generated.DataplaneCreateRequestBody
 import io.airbyte.api.model.generated.DataplaneCreateResponse
 import io.airbyte.api.model.generated.DataplaneDeleteRequestBody
-import io.airbyte.api.model.generated.DataplaneGetIdRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatRequestBody
+import io.airbyte.api.model.generated.DataplaneHeartbeatResponse
+import io.airbyte.api.model.generated.DataplaneInitRequestBody
+import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
-import io.airbyte.api.model.generated.DataplaneReadId
+import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Dataplane
+import io.airbyte.data.services.DataplaneCredentialsService
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.server.services.DataplaneService
+import io.micronaut.context.annotation.Context
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import org.jooq.exception.DataAccessException
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.stream.Collectors
-import kotlin.jvm.optionals.getOrNull
-import io.airbyte.data.services.DataplaneService as DataDataplaneService
-import io.airbyte.server.services.DataplaneService as ServerDataplaneService
 
+@Context
 @Controller("/api/v1/dataplanes")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-class DataplaneController(
-  private val dataDataplaneService: DataDataplaneService,
-  private val serverDataplaneService: ServerDataplaneService,
-  private val currentUserService: CurrentUserService,
+@Requires(bean = DataplaneCredentialsService::class)
+open class DataplaneController(
+  private val dataplaneService: DataplaneService,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : DataplaneApi {
   @Post("/create")
   @Secured(ADMIN)
@@ -52,11 +56,13 @@ class DataplaneController(
         dataplaneGroupId = dataplaneCreateRequestBody.dataplaneGroupId
         name = dataplaneCreateRequestBody.name
         enabled = dataplaneCreateRequestBody.enabled
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
       }
-    val createdDataplane = writeDataplane(dataplane)
-    // Dummy response until auth is wired through
-    return DataplaneCreateResponse().dataplaneId(createdDataplane.id)
+    val createdDataplane = dataplaneService.writeDataplane(dataplane)
+    val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id)
+    return DataplaneCreateResponse()
+      .dataplaneId(createdDataplane.id)
+      .clientId(dataplaneAuth.clientId)
+      .clientSecret(dataplaneAuth.clientSecret)
   }
 
   @Post("/update")
@@ -64,18 +70,14 @@ class DataplaneController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun updateDataplane(
     @Body dataplaneUpdateRequestBody: DataplaneUpdateRequestBody,
-  ): DataplaneRead {
-    val existingDataplane = dataDataplaneService.getDataplane(dataplaneUpdateRequestBody.dataplaneId)
-
-    val updatedDataplane =
-      existingDataplane.apply {
-        name = dataplaneUpdateRequestBody.name
-        enabled = dataplaneUpdateRequestBody.enabled
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
-      }
-
-    return toDataplaneRead(writeDataplane(updatedDataplane))
-  }
+  ): DataplaneRead =
+    toDataplaneRead(
+      dataplaneService.updateDataplane(
+        dataplaneUpdateRequestBody.dataplaneId,
+        dataplaneUpdateRequestBody.name,
+        dataplaneUpdateRequestBody.enabled,
+      ),
+    )
 
   @Post("/delete")
   @Secured(ADMIN)
@@ -83,15 +85,9 @@ class DataplaneController(
   override fun deleteDataplane(
     @Body dataplaneDeleteRequestBody: DataplaneDeleteRequestBody,
   ): DataplaneRead {
-    val existingDataplane = dataDataplaneService.getDataplane(dataplaneDeleteRequestBody.dataplaneId)
+    val tombstonedDataplane = dataplaneService.deleteDataplane(dataplaneDeleteRequestBody.dataplaneId)
 
-    val tombstonedDataplane =
-      existingDataplane.apply {
-        tombstone = true
-        updatedBy = currentUserService.currentUserIdIfExists.getOrNull()
-      }
-
-    return toDataplaneRead(writeDataplane(tombstonedDataplane))
+    return toDataplaneRead(tombstonedDataplane)
   }
 
   @Post("/list")
@@ -100,7 +96,7 @@ class DataplaneController(
   override fun listDataplanes(
     @Body dataplaneListRequestBody: DataplaneListRequestBody,
   ): DataplaneListResponse {
-    val dataplanes: List<Dataplane> = dataDataplaneService.listDataplanes(dataplaneListRequestBody.dataplaneGroupId, false)
+    val dataplanes: List<Dataplane> = dataplaneService.listDataplanes(dataplaneListRequestBody.dataplaneGroupId)
     return DataplaneListResponse()
       .dataplanes(
         dataplanes
@@ -113,38 +109,66 @@ class DataplaneController(
   fun toDataplaneRead(dataplane: Dataplane): DataplaneRead {
     val dataplaneRead = DataplaneRead()
     dataplaneRead
-      .dataplaneId(dataplane.getId())
-      .name(dataplane.getName())
-      .dataplaneGroupId(dataplane.getDataplaneGroupId())
-      .enabled(dataplane.getEnabled())
-      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.getCreatedAt()), ZoneOffset.UTC))
-      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.getUpdatedAt()), ZoneOffset.UTC))
+      .dataplaneId(dataplane.id)
+      .name(dataplane.name)
+      .dataplaneGroupId(dataplane.dataplaneGroupId)
+      .enabled(dataplane.enabled)
+      .createdAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.createdAt), ZoneOffset.UTC))
+      .updatedAt(OffsetDateTime.ofInstant(Instant.ofEpochMilli(dataplane.updatedAt), ZoneOffset.UTC))
 
     return dataplaneRead
   }
 
-  @Secured(ADMIN)
+  @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getDataplaneId(dataplaneGetIdRequestBody: DataplaneGetIdRequestBody): DataplaneReadId {
-    val connectionId = dataplaneGetIdRequestBody.connectionId
-    val actorType = dataplaneGetIdRequestBody.actorType
-    val actorId = dataplaneGetIdRequestBody.actorId
-    val workspaceId = dataplaneGetIdRequestBody.workspaceId
-    val queueName = serverDataplaneService.getQueueName(connectionId, actorType, actorId, workspaceId, dataplaneGetIdRequestBody.workloadPriority)
+  override fun getDataplaneToken(
+    @Body dataplaneTokenRequest: DataplaneTokenRequestBody,
+  ): AccessToken {
+    val token =
+      dataplaneService.getToken(
+        dataplaneTokenRequest.clientId,
+        dataplaneTokenRequest.clientSecret,
+      )
 
-    return DataplaneReadId().id(queueName)
+    val accessToken = AccessToken()
+    accessToken.accessToken = token
+    return accessToken
   }
 
-  fun writeDataplane(dataplane: Dataplane): Dataplane {
-    try {
-      return dataDataplaneService.writeDataplane(dataplane)
-    } catch (e: DataAccessException) {
-      if (e.message?.contains("duplicate key value violates unique constraint") == true &&
-        e.message?.contains("dataplane_dataplane_group_id_name_key") == true
-      ) {
-        throw DataplaneNameAlreadyExistsProblem()
-      }
-      throw e
+  @Post("/initialize")
+  @Secured(ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun initializeDataplane(
+    @Body req: DataplaneInitRequestBody,
+  ): DataplaneInitResponse {
+    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    val resp = DataplaneInitResponse()
+    resp.dataplaneName = dataplane.name
+    resp.dataplaneId = dataplane.id
+    resp.dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
+    resp.dataplaneGroupName = dataplaneGroup.name
+    resp.dataplaneGroupId = dataplaneGroup.id
+
+    return resp
+  }
+
+  @Post("/heartbeat")
+  @Secured(ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun heartbeatDataplane(
+    @Body req: DataplaneHeartbeatRequestBody,
+  ): DataplaneHeartbeatResponse {
+    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    return DataplaneHeartbeatResponse().apply {
+      dataplaneName = dataplane.name
+      dataplaneId = dataplane.id
+      dataplaneEnabled = dataplane.enabled && dataplaneGroup.enabled
+      dataplaneGroupName = dataplaneGroup.name
+      dataplaneGroupId = dataplaneGroup.id
     }
   }
 }

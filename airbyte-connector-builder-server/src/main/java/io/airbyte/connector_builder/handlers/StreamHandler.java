@@ -44,6 +44,7 @@ public class StreamHandler {
           streamReadRequestBody.getWorkspaceId(), streamReadRequestBody.getProjectId());
       return this.requester.readStream(
           streamReadRequestBody.getManifest(),
+          streamReadRequestBody.getCustomComponentsCode(),
           streamReadRequestBody.getConfig(),
           streamReadRequestBody.getState(),
           streamReadRequestBody.getStream(),

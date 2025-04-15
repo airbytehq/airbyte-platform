@@ -11,7 +11,7 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags.CONNECTION_ID
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE
-import io.airbyte.workers.CheckConnectionInputHydrator
+import io.airbyte.workers.hydration.CheckConnectionInputHydrator
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants

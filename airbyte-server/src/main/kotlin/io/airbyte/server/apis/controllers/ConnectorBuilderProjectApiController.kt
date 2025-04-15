@@ -12,6 +12,8 @@ import io.airbyte.api.model.generated.BuilderProjectOauthConsentRequest
 import io.airbyte.api.model.generated.CompleteConnectorBuilderProjectOauthRequest
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectForkRequestBody
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveRequestBody
+import io.airbyte.api.model.generated.ConnectorBuilderProjectFullResolveResponse
 import io.airbyte.api.model.generated.ConnectorBuilderProjectIdWithWorkspaceId
 import io.airbyte.api.model.generated.ConnectorBuilderProjectRead
 import io.airbyte.api.model.generated.ConnectorBuilderProjectReadList
@@ -145,6 +147,19 @@ class ConnectorBuilderProjectApiController(
     execute {
       connectorBuilderProjectsHandler.readConnectorBuilderProjectStream(
         connectorBuilderProjectStreamReadRequestBody,
+      )
+    }
+
+  @Post(uri = "/full_resolve")
+  @Status(HttpStatus.OK)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun fullResolveManifestBuilderProject(
+    @Body connectorBuilderProjectFullResolveRequestBody: ConnectorBuilderProjectFullResolveRequestBody,
+  ): ConnectorBuilderProjectFullResolveResponse? =
+    execute {
+      connectorBuilderProjectsHandler.fullResolveManifestBuilderProject(
+        connectorBuilderProjectFullResolveRequestBody,
       )
     }
 

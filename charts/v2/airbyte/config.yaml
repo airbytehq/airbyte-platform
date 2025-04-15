@@ -3,7 +3,7 @@ common:
   config:
     - env: AIRBYTE_EDITION
       key: edition
-      valueExp: ternary "pro" .Values.global.edition (or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise"))
+      defaultValue: community
 
     - env: AIRBYTE_VERSION
       key: version
@@ -32,7 +32,7 @@ common:
       valueExp: (printf "%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port))
 
     - env: API_AUTHORIZATION_ENABLED
-      key: api.authEnabled
+      key: auth.enabled
       defaultValue: true
 
     - env: CONNECTOR_BUILDER_SERVER_API_HOST
@@ -41,7 +41,7 @@ common:
 
     - env: INTERNAL_API_HOST
       key: api.internalHost
-      valueExp: (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port))
+      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")
     
     - env: LOCAL
       key: local
@@ -56,7 +56,7 @@ auth:
   config:
     - env: AB_INSTANCE_ADMIN_PASSWORD
       key: instanceAdmin.password
-      refKey: INSTANCE_ADMIN_PASSWORD
+      refKey: instance-admin-password
       sensitive: true
       secretRef: airbyte.auth.bootstrap.managedSecretName
 
@@ -78,16 +78,16 @@ auth.bootstrap:
 
     - env: AB_INSTANCE_ADMIN_PASSWORD_SECRET_KEY
       key: instanceAdmin.passwordSecretKey
-      defaultValue: INSTANCE_ADMIN_PASSWORD
+      defaultValue: instance-admin-password
 
     # client id
     - env: AB_INSTANCE_ADMIN_CLIENT_ID
-      key: instanceAdmin.cilentId
+      key: instanceAdmin.clientId
       sensitive: true
 
     - env: AB_INSTANCE_ADMIN_CLIENT_ID_SECRET_KEY
       key: instanceAdmin.clientIdSecretKey
-      defaultValue: INSTANCE_ADMIN_CLIENT_ID
+      defaultValue: instance-admin-client-id
 
     # client secret
     - env: AB_INSTANCE_ADMIN_CLIENT_SECRET
@@ -96,7 +96,7 @@ auth.bootstrap:
 
     - env: AB_INSTANCE_ADMIN_CLIENT_SECRET_SECRET_KEY
       key: instanceAdmin.clientSecretSecretKey
-      defaultValue: INSTANCE_ADMIN_CLIENT_SECRET
+      defaultValue: instance-admin-client-secret
 
     # jwt signature
     - env: AB_JWT_SIGNATURE_SECRET
@@ -105,27 +105,106 @@ auth.bootstrap:
 
     - env: AB_JWT_SIGNATURE_SECRET_KEY
       key: security.jwtSignatureSecretKey
-      defaultValue: JWT_SIGNATURE_SECRET
-      
+      defaultValue: jwt-signature-secret
+
+    # dataplane secret keys
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: dataPlane.clientIdSecretKey
+      defaultValue: dataplane-client-id
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: dataPlane.clientSecretSecretKey
+      defaultValue: dataplane-client-secret
+
 auth.identityProvider:
   keyBasePath: global.auth.identityProvider
+  discriminatorField: type
+  discriminatorFieldOpts:
+    - oidc
+    - generic-oidc
   config:
     - env: IDENTITY_PROVIDER_TYPE
       key: type
+      defaultValue: simple
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_ISSUER
+      key: verifyIssuer
+      defaultValue: false
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_VERIFY_AUDIENCE
+      key: verifyAudience
+      defaultValue: false
 
     - env: OIDC_DOMAIN
       key: oidc.domain
+      discriminatorOpts:
+        - oidc
 
     - env: OIDC_APP_NAME
       key: oidc.appName
+      discriminatorOpts:
+        - oidc
 
     - env: OIDC_CLIENT_ID
       key: oidc.clientId
       sensitive: true
+      discriminatorOpts:
+        - oidc
 
     - env: OIDC_CLIENT_SECRET
       key: oidc.clientSecret
       sensitive: true
+      discriminatorOpts:
+        - oidc
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID 
+      key: genericOidc.clientId
+      discriminatorOpts:
+        - generic-oidc
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE
+      key: genericOidc.audience
+      discriminatorOpts:
+        - generic-oidc
+
+    - env: DEFAULT_REALM
+      key: genericOidc.issuer
+      discriminatorOpts:
+        - generic-oidc
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT
+      key: genericOidc.endpoints.authorizationServerEndpoint
+      discriminatorOpts:
+        - generic-oidc
+
+    - env: AB_AIRBYTE_AUTH_JWKS_ENDPOINT
+      key: genericOidc.endpoints.jwksEndpoint
+      discriminatorOpts:
+        - generic-oidc
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB
+      key: genericOidc.fields.subject
+      discriminatorOpts:
+        - generic-oidc
+      defaultValue: sub
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL
+      key: genericOidc.fields.email
+      discriminatorOpts:
+        - generic-oidc
+      defaultValue: email
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME
+      key: genericOidc.fields.name
+      discriminatorOpts:
+        - generic-oidc
+      defaultValue: name
+
+    - env: AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER
+      key: genericOidc.fields.issuer
+      discriminatorOpts:
+        - generic-oidc
+      defaultValue: iss
 
 auth.instanceAdmin.enterprise:
   keyBasePath: global.auth.instanceAdmin
@@ -151,7 +230,7 @@ auth.jwt:
     - env: AB_JWT_SIGNATURE_SECRET
       key: jwtSignatureSecret
       sensitive: true
-      refKey: JWT_SIGNATURE_SECRET
+      refKey: jwt-signature-secret
       secretRef: airbyte.auth.bootstrap.managedSecretName
 
 auth.security:
@@ -164,7 +243,7 @@ auth.security:
     - env: AB_COOKIE_SAME_SITE
       key: cookieSameSiteSetting
       defaultValue: strict
-
+    
 cluster:
   keyBasePath: global.cluster
   discriminatorField: type
@@ -178,7 +257,8 @@ cluster:
       defaultValue: hybrid
 
     - env: REMOTE_DATAPLANE_SERVICEACCOUNTS
-      key: controlPlane.serviceAccounts
+      key: controlPlane.remoteDataPlaneServiceAccounts
+      valueExp: (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson )
       discriminatorOpts:
        - control-plane
        - hybrid
@@ -209,6 +289,19 @@ cluster:
       discriminatorOpts:
        - data-plane
        - hybrid
+
+cluster.controlPlane.bootstrap:
+  keyBasePath: global.cluster.controlPlane.bootstrap       
+  config:
+    - env: DATAPLANE_SECRET_NAME
+      key: dataPlane.secretName
+      defaultValue: dataplane-creds
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: dataPlane.clientIdSecretKey
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: dataPlane.clientSecretSecretKey
 
 connector:
   keyBasePath: global.connectorRegistry
@@ -527,7 +620,7 @@ keycloak.admin.client:
 
     - env: KEYCLOAK_INTERNAL_HOST
       key: internalHost
-      valueExp: ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") (ne .Values.global.edition "community"))
+      valueExp: ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))
 
     - env: KEYCLOAK_INTERNAL_PROTOCOL
       key: internalProtocol
@@ -592,7 +685,12 @@ micronaut:
   config:
     - env: MICRONAUT_ENVIRONMENTS
       key: environments
-      valueExp: join "," (append .Values.global.micronaut.environments (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")))
+      valueExp: |
+        join "," (
+              concat .Values.global.micronaut.environments 
+              (list (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")))
+              (list (ternary "edition-community" (include "airbyte.auth.identityProvider.type" .) (eq (include "airbyte.auth.identityProvider.type" .) "simple")))
+            )
 
 minio:
   keyBasePath: minio
@@ -753,6 +851,13 @@ secretsManager:
         - VAULT
       sensitive: true
 
+server:
+  keybasePath: server
+  config:
+    - env: AB_AIRBYTE_APPLICATIONS
+      key: applications
+      defaultValueExp: ternary "database" "" (eq (include "airbyte.auth.identityProvider.type" .) "generic-oidc")
+
 shopify:
   keyBasePath: global.shopify
   config:
@@ -810,7 +915,7 @@ storage:
       sensitive: true
 
     - env: AWS_SECRET_ACCESS_KEY
-      key: s3.secretAccesskey
+      key: s3.secretAccessKey
       discriminatorOpts:
         - s3
       sensitive: true
@@ -908,7 +1013,7 @@ temporal:
 
     - env: TEMPORAL_HOST
       key: host
-      valueExp: (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port))
+      valueExp: ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (eq (include "airbyte.temporal.cloud.enabled" .) "true")
 
     - env: DYNAMIC_CONFIG_FILE_PATH
       key: configFilePath
@@ -938,7 +1043,24 @@ temporal.cli:
 
 temporal.cloud:
   keyBasePath: global.temporal.cloud
+  secretNamePath: global.temporal.secretName
   config:
+    - env: TEMPORAL_CLOUD_BILLING_HOST
+      key: billing.host
+      refKey: TEMPORAL_CLOUD_HOST
+
+    - env: TEMPORAL_CLOUD_BILLING_NAMESPACE
+      key: billing.namespace
+      refKey: TEMPORAL_CLOUD_NAMESPACE
+
+    - env: TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT
+      key: connectorRollout.host
+      refKey: TEMPORAL_CLOUD_HOST
+
+    - env: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
+      key: connectorRollout.namespace
+      refKey: TEMPORAL_CLOUD_NAMESPACE
+
     - env: TEMPORAL_CLOUD_ENABLED
       key: enabled
       defaultValue: false
@@ -1050,9 +1172,37 @@ worker:
       key: maxSyncWorkers
       defaultValue: 5
       
-    - env: SHOULD_RUN_NOTIFY_WORKFLOWS
-      key: shouldRunNotifyWorkflows
-      defaultValue: true
+    #- env: SHOULD_HANDLE_SYNC_CONTROL_PLANE_TASKS
+    #  key: shouldHandleSyncControlPlaneTasks
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_CHECK_CONNECTION_WORKFLOWS
+    #  key: shouldRunCheckConnectionWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_CONNECTION_MANAGER_WORKFLOWS
+    #  key: shouldRunConnectionManagerWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_DISCOVER_WORKFLOWS
+    #  key: shouldRunDiscoverWorkflows
+    #  defaultValue: true
+
+    #- env: SHOULD_RUN_GET_SPEC_WORKFLOWS
+    #  key: shouldRunGetSpecWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_NOTIFY_WORKFLOWS
+    #  key: shouldRunNotifyWorkflows
+    #  defaultValue: false
+
+    #- env: SHOULD_RUN_SYNC_WORKFLOWS
+    #  key: shouldRunSyncWorkflows
+    #  defaultValue: true
+
+    #- env: SKIP_DATABASE_AVAILABILITY_CHECKS
+    #  key: skipDatabaseAvailabilityChecks
+    #  defaultValue: true
 
     - env: SYNC_JOB_MAX_ATTEMPTS
       key: syncJobMaxAttempts
@@ -1093,7 +1243,7 @@ workloadApiServer:
 
     - env: WORKLOAD_API_HOST
       key: host
-      valueExp: (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port))
+      valueExp: ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-workload-api-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.workloadApiServer.service.port)) (eq (include "airbyte.cluster.type" .) "data-plane")
 
     - env: WORKLOAD_API_BEARER_TOKEN
       key: bearerToken
@@ -1110,19 +1260,9 @@ workloadApiServer:
 
 workloadLauncher:
   config:
-    - env: RUNNING_TTL_MINUTES
-      key: running
-      keyBasePath: podSweeper.timeToDeletePods
-
-    - env: SUCCEEDED_TTL_MINUTES
-      key: succeeded
-      keyBasePath: podSweeper.timeToDeletePods
-      defaultValue: 10
-
-    - env: UNSUCCESSFUL_TTL_MINUTES
-      key: unsuccessful
-      keyBasePath: podSweeper.timeToDeletePods
-      defaultValue: 120
+    - env: CONTROL_PLANE_TOKEN_ENDPOINT
+      key: controlPlane.tokenEndpoint
+      valueExp: (printf "%s/api/v1/dataplanes/token" (ternary (include "airbyte.common.airbyteUrl" .) (printf "http://%s-airbyte-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.server.service.port)) (eq (include "airbyte.common.cluster.type" .) "data-plane")))
 
     - env: WORKLOAD_LAUNCHER_ENABLED
       key: enabled
@@ -1132,9 +1272,39 @@ workloadLauncher:
       key: parallelism
       defaultValue: 10
 
+workloadLauncher.dataPlane:
+  config:
+    - env: DATAPLANE_CLIENT_ID
+      key: clientId
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_NAME
+      key: clientIdSecretName
+      defaultValueExp: .Values.global.auth.secretName
+
+    - env: DATAPLANE_CLIENT_ID_SECRET_KEY
+      key: clientIdSecretKey
+      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" .)
+
+    - env: DATAPLANE_CLIENT_SECRET
+      key: clientSecret
+      sensitive: true
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+      key: clientSecretSecretName
+      defaultValueExp: .Values.global.auth.secretName
+
+    - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+      key: clientSecretSecretKey
+      defaultValueExp: (include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" .)
+
 workloadLauncher.images:
   keyBasePath: workloadLauncher
   config:
+    - env: CONNECTOR_PROFILER_IMAGE
+      key: connectorProfiler.image
+      valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $)
+
     - env: CONNECTOR_SIDECAR_IMAGE
       key:  connectorSidecar.image
       valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorSidecar.image $)
@@ -1152,11 +1322,10 @@ workloadLauncher.images:
 
 workloads:
   keyBasePath: global.workloads
-  secretNamePath: global.workloads.secretName
   config:
     - env: CONTAINER_ORCHESTRATOR_SECRET_NAME
       key: containerOrchestrator.secretName
-      valueExp: include "airbyte.workloads.secretName" .
+      defaultValueExp: .Values.global.secretName
 
     - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_MOUNT_PATH
       key: containerOrchestrator.dataPlane.secretMountPath
@@ -1164,6 +1333,10 @@ workloads:
 
     - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_NAME
       key: containerOrchestrator.dataPlane.secretName
+
+    - env: CONTAINER_ORCHESTRATOR_DATA_PLANE_CREDS_SECRET_KEY
+      key: containerOrchestrator.dataPlane.secretKey
+      defaultValue: sa.json
 
     - env: CONTAINER_ORCHESTRATOR_JAVA_OPTS
       key: containerOrchestrator.javaOpts

@@ -16,6 +16,8 @@ import java.util.UUID
 enum class Entitlement {
   SOURCE_CONNECTOR,
   DESTINATION_CONNECTOR,
+  CONFIG_TEMPLATE_ENDPOINTS,
+  ACTOR_CONFIG_WITH_SECRET_COORDINATES,
 }
 
 /**
@@ -47,6 +49,22 @@ open class LicenseEntitlementChecker(
     when (entitlement) {
       Entitlement.SOURCE_CONNECTOR -> checkConnectorEntitlements(organizationId, ActorType.SOURCE, resourceIds)
       Entitlement.DESTINATION_CONNECTOR -> checkConnectorEntitlements(organizationId, ActorType.DESTINATION, resourceIds)
+      else -> resourceIds.associateWith { _ -> false }
+    }
+
+  /**
+   * Checks if the current license is entitled
+   */
+  fun checkEntitlements(
+    organizationId: UUID,
+    entitlement: Entitlement,
+  ): Boolean =
+    when (entitlement) {
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS -> checkConfigTemplateEntitlement(organizationId)
+      Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES -> checkActorConfigWithSecretCoordinatesEntitlement(organizationId)
+      else -> {
+        false
+      }
     }
 
   /**
@@ -66,6 +84,18 @@ open class LicenseEntitlementChecker(
     }
   }
 
+  fun ensureEntitled(
+    organizationId: UUID,
+    entitlement: Entitlement,
+  ) {
+    if (!checkEntitlements(organizationId, entitlement)) {
+      throw LicenseEntitlementProblem(
+        ProblemLicenseEntitlementData()
+          .entitlement(entitlement.name),
+      )
+    }
+  }
+
   @Cacheable("entitlement-enterprise-connector")
   protected open fun isEnterpriseConnector(
     actorType: ActorType,
@@ -75,6 +105,11 @@ open class LicenseEntitlementChecker(
       ActorType.SOURCE -> sourceService.getStandardSourceDefinition(actorDefinitionId).enterprise
       ActorType.DESTINATION -> destinationService.getStandardDestinationDefinition(actorDefinitionId).enterprise
     }
+
+  private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
+
+  private fun checkActorConfigWithSecretCoordinatesEntitlement(organizationId: UUID): Boolean =
+    entitlementProvider.hasConfigWithSecretCoordinatesEntitlements(organizationId)
 
   private fun checkConnectorEntitlements(
     organizationId: UUID,

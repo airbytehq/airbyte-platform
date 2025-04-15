@@ -15,9 +15,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
+import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
@@ -31,10 +33,12 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.DestinationServiceJooqImpl;
@@ -51,6 +55,7 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +76,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private DestinationServiceJooqImpl destinationService;
   private WorkspaceService workspaceService;
   private ConnectionService connectionService;
+  private DataplaneGroupService dataplaneGroupService;
 
   @BeforeEach
   void setup() throws SQLException, IOException {
@@ -89,14 +95,26 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     actorDefinitionService = new ActorDefinitionServiceJooqImpl(database);
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    connectionService = spy(new ConnectionServiceJooqImpl(database));
+    organizationService.writeOrganization(new Organization()
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID).withName("Test Organization").withEmail("test@test.com"));
+
+    dataplaneGroupService = spy(new DataplaneGroupServiceTestJooqImpl(database));
+    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
+        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography)
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+
+    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
 
     sourceService = spy(
         new SourceServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
             secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
@@ -110,9 +128,6 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         new DestinationServiceJooqImpl(
             database,
             featureFlagClient,
-            secretsRepositoryReader,
-            secretsRepositoryWriter,
-            secretPersistenceConfigService,
             connectionService,
             new ActorDefinitionVersionUpdater(
                 featureFlagClient,
@@ -121,10 +136,12 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
                 scopedConfigurationService,
                 connectionTimelineEventService),
             metricClient));
+
+    organizationService.writeOrganization(MockData.defaultOrganization());
+
     workspaceService = spy(
         new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-            metricClient));
-    organizationService.writeOrganization(MockData.defaultOrganization());
+            metricClient, dataplaneGroupService));
   }
 
   @Test
@@ -216,7 +233,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
         .withBreakingChange(false)
-        .withGeography(Geography.US);
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
 
     connectionService.writeStandardSync(connection);
 
@@ -306,7 +323,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
         .withBreakingChange(false)
-        .withGeography(Geography.US);
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
 
     connectionService.writeStandardSync(connection);
 
@@ -553,7 +570,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 

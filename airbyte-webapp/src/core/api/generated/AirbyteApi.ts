@@ -16,7 +16,7 @@ type SecondParameter<T extends (...args: any) => any> = T extends (config: any, 
  * @summary Get the Speakeasy Callback URL
  */
 export const getSpeakeasyCallbackUrl = (options: SecondParameter<typeof apiCall>) => {
-  return apiCall<RedirectUrlResponse>({ url: `/public/speakeasy_callback_url`, method: "get" }, options);
+  return apiCall<RedirectUrlResponse>({ url: `/public/speakeasy_callback_url`, method: "GET" }, options);
 };
 
 type AwaitedInput<T> = PromiseLike<T> | T;

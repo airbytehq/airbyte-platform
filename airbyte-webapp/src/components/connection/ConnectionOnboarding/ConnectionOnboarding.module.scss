@@ -66,15 +66,6 @@
   color: colors.$blue;
 }
 
-.demoLink {
-  color: colors.$dark-blue;
-
-  &:hover,
-  &:focus {
-    color: colors.$blue-400;
-  }
-}
-
 .footer {
   display: flex;
   flex-direction: column;

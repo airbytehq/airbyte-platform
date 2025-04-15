@@ -41,6 +41,33 @@ const parseCDKVersion = (connectorCdkVersion?: string, latestPythonCdkVersion?: 
   }
 };
 
+export type ConnectorDefinitionWithMetrics = ConnectorDefinition & {
+  metrics: {
+    all: {
+      sync_success_rate?: string;
+      usage?: string;
+    };
+  };
+};
+
+export function convertToConnectorDefinitionWithMetrics(
+  connectorDefinition: ConnectorDefinition
+): ConnectorDefinitionWithMetrics {
+  const connectorDefinitionWithMetrics: ConnectorDefinitionWithMetrics = {
+    ...connectorDefinition,
+    metrics: {
+      all: {
+        sync_success_rate:
+          typeof connectorDefinition.metrics?.sync_success_rate === "string"
+            ? connectorDefinition.metrics.sync_success_rate
+            : undefined,
+        usage: typeof connectorDefinition.metrics?.usage === "string" ? connectorDefinition.metrics.usage : undefined,
+      },
+    },
+  };
+  return connectorDefinitionWithMetrics;
+}
+
 interface MetricInfo {
   icon: IconType;
   title: string;
@@ -88,7 +115,7 @@ const SUCCESS_ICON_MAP: IconMap = {
 
 interface MetricIconProps {
   metric: "usage" | "success";
-  connectorDefinition: ConnectorDefinition;
+  connectorDefinition: ConnectorDefinitionWithMetrics;
 }
 
 export const MetricIcon: React.FC<MetricIconProps> = ({ metric, connectorDefinition }) => {
@@ -137,8 +164,8 @@ const MetadataStat: React.FC<React.PropsWithChildren<MetadataStatProps>> = ({ la
   </FlexContainer>
 );
 
-interface ConnectorQualityMetricsProps {
-  connectorDefinition: ConnectorDefinition;
+export interface ConnectorQualityMetricsProps {
+  connectorDefinition: ConnectorDefinitionWithMetrics;
 }
 
 export const ConnectorQualityMetrics: React.FC<ConnectorQualityMetricsProps> = ({ connectorDefinition }) => {

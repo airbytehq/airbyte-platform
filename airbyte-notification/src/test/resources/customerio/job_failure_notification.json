@@ -37,6 +37,8 @@
     "recordsFilteredOut": 0,
     "recordsCommitted": 48,
     "errorMessage": "Connection to the source failed",
+    "errorType": "config_error",
+    "errorOrigin": "source",
     "durationInSeconds": 70000,
     "durationFormatted": "19 hours 26 min",
     "success": false

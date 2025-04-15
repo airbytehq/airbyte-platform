@@ -39,7 +39,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.keycloak.serviceAccountName }}
       {{- if .Values.keycloak.nodeSelector }}
       nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.keycloak.nodeSelector "context" $) | nindent 8 }}
       {{- end }}

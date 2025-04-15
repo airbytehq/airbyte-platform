@@ -155,7 +155,7 @@ class MapperSecretHelper(
             Jsons.jsonNode(mapperConfig.config()),
             mapperConfigSchema,
           )
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           workspaceId,
           persistedConfigAsJson!!,
           configWithSecrets,
@@ -165,7 +165,7 @@ class MapperSecretHelper(
       } else {
         val configWithSecrets = Jsons.jsonNode(mapperConfig.config())
         assertConfigHasNoMaskedSecrets(configWithSecrets, mapperConfig.id(), mapperName)
-        secretsRepositoryWriter.createFromConfig(
+        secretsRepositoryWriter.createFromConfigLegacy(
           workspaceId,
           configWithSecrets,
           mapperConfigSchema,

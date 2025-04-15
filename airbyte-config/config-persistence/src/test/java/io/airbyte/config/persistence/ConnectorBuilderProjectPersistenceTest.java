@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,9 +19,11 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DeclarativeManifest;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
@@ -31,10 +34,12 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OrganizationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.ConnectorBuilderServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.SourceServiceJooqImpl;
@@ -44,8 +49,8 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Jsons;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -105,12 +110,22 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
     final MetricClient metricClient = mock(MetricClient.class);
 
-    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+    organizationService.writeOrganization(MockData.defaultOrganization());
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
+        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
+      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+          .withId(UUID.randomUUID())
+          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+          .withName(geography)
+          .withEnabled(true)
+          .withTombstone(false));
+    }
+    sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService, metricClient);
+        secretPersistenceConfigService, metricClient, dataplaneGroupService);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization());
   }
 
   @Test

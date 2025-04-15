@@ -109,7 +109,7 @@ interface TriggerButtonProps {
  */
 const TriggerButton: React.FC<TriggerButtonProps> = ({ icon }) => {
   return (
-    <button className={styles.selectConnectionTags__trigger}>
+    <button className={styles.selectConnectionTags__trigger} data-testid="select-connection-tags-popover">
       <Icon size="xs" type={icon} />
     </button>
   );
@@ -216,7 +216,7 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   };
 
   return (
-    <Popover ref={targetRef} data-target="select-connection-tags-popover">
+    <Popover ref={targetRef}>
       {() => {
         return (
           <>

@@ -7,7 +7,11 @@ import styles from "./InnerListBox.module.scss";
 const ControlButton = <T,>(props: ListBoxControlButtonProps<T>) => {
   return (
     <>
-      {props.selectedOption && <Text size="md">{props.selectedOption.label}</Text>}
+      {props.selectedOption && (
+        <Text size="md" className={styles.buttonText}>
+          {props.selectedOption.label}
+        </Text>
+      )}
       <Icon type="chevronDown" className={styles.arrow} />
     </>
   );

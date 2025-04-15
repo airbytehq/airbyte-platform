@@ -40,6 +40,7 @@ export const titleIdMap: Record<ConnectionEventType, string> = {
   [ConnectionEventType.SYNC_STARTED]: "connection.timeline.sync_started",
   [ConnectionEventType.REFRESH_STARTED]: "connection.timeline.refresh_started",
   [ConnectionEventType.SCHEMA_UPDATE]: "connection.timeline.schema_update",
+  [ConnectionEventType.SCHEMA_CONFIG_UPDATE]: "connection.timeline.schema_config_update",
 
   // todo
   [ConnectionEventType.CONNECTOR_UPDATE]: "",
@@ -73,7 +74,7 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
 
 export interface TimelineFilterValues {
   status: "success" | "failure" | "incomplete" | "cancelled" | "";
-  eventCategory: "sync" | "clear" | "refresh" | "connection_settings" | "schema_update" | "";
+  eventCategory: "sync" | "clear" | "refresh" | "connection_settings" | "schema_update" | "schema_config_update" | "";
   startDate: string;
   endDate: string;
   eventId: string;
@@ -135,6 +136,7 @@ export const eventTypeByTypeFilterValue: Record<
     ConnectionEventType.CONNECTION_SETTINGS_UPDATE,
   ],
   schema_update: [ConnectionEventType.SCHEMA_UPDATE],
+  schema_config_update: [ConnectionEventType.SCHEMA_CONFIG_UPDATE],
 };
 
 export const getStatusByEventType = (eventType: ConnectionEventType) => {
@@ -231,6 +233,7 @@ export const eventTypeFilterOptions = (filterValues: TimelineFilterValues) => {
       ? [
           generateEventTypeFilterOption("connection_settings", "connection.timeline.filters.connection_settings"),
           generateEventTypeFilterOption("schema_update", "connection.timeline.filters.schema_update"),
+          generateEventTypeFilterOption("schema_config_update", "connection.timeline.filters.schema_config_update"),
         ]
       : []),
   ];

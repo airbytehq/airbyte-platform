@@ -34,7 +34,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.webapp.serviceAccountName }}
       {{- if .Values.webapp.nodeSelector }}
       nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.webapp.nodeSelector "context" $) | nindent 8 }}
       {{- end }}

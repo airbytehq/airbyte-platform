@@ -17,6 +17,7 @@ import io.airbyte.api.model.generated.ConnectionState;
 import io.airbyte.api.model.generated.ConnectionStateType;
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody;
 import io.airbyte.api.model.generated.SyncInput;
+import io.airbyte.commons.annotation.InternalForTesting;
 import io.airbyte.commons.constants.WorkerConstants;
 import io.airbyte.commons.converters.ConfigReplacer;
 import io.airbyte.commons.converters.StateConverter;
@@ -30,6 +31,7 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfigScopeType;
+import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
@@ -52,11 +54,15 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
 import io.airbyte.featureflag.FeatureFlagClient;
@@ -100,6 +106,7 @@ public class JobInputHandler {
   private final DestinationService destinationService;
   private final ApiPojoConverters apiPojoConverters;
   private final ScopedConfigurationService scopedConfigurationService;
+  private final SecretReferenceService secretReferenceService;
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JobInputHandler.class);
 
@@ -116,7 +123,8 @@ public class JobInputHandler {
                          final SourceService sourceService,
                          final DestinationService destinationService,
                          final ApiPojoConverters apiPojoConverters,
-                         final ScopedConfigurationService scopedConfigurationService) {
+                         final ScopedConfigurationService scopedConfigurationService,
+                         final SecretReferenceService secretReferenceService) {
     this.jobPersistence = jobPersistence;
     this.featureFlagClient = featureFlagClient;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
@@ -130,6 +138,7 @@ public class JobInputHandler {
     this.destinationService = destinationService;
     this.apiPojoConverters = apiPojoConverters;
     this.scopedConfigurationService = scopedConfigurationService;
+    this.secretReferenceService = secretReferenceService;
   }
 
   /**
@@ -160,12 +169,9 @@ public class JobInputHandler {
             sourceService.getStandardSourceDefinition(source.getSourceDefinitionId()),
             source.getWorkspaceId(),
             source.getSourceId());
-        final JsonNode sourceConfiguration = oAuthConfigSupplier.injectSourceOAuthParameters(
-            source.getSourceDefinitionId(),
-            source.getSourceId(),
-            source.getWorkspaceId(),
-            source.getConfiguration());
-        attemptSyncConfig.setSourceConfiguration(configInjector.injectConfig(sourceConfiguration, source.getSourceDefinitionId()));
+        final ConfigWithSecretReferences sourceConfiguration = getSourceConfiguration(source);
+        final JsonNode sourceConfigWithInlinedRefs = InlinedConfigWithSecretRefsKt.toInlined(sourceConfiguration);
+        attemptSyncConfig.setSourceConfiguration(sourceConfigWithInlinedRefs);
       } else if (JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
         final JobResetConnectionConfig resetConnection = job.getConfig().getResetConnection();
         final ResetSourceConfiguration resetSourceConfiguration = resetConnection.getResetSourceConfiguration();
@@ -181,12 +187,9 @@ public class JobInputHandler {
               destinationService.getStandardDestinationDefinition(destination.getDestinationDefinitionId()),
               destination.getWorkspaceId(),
               destination.getDestinationId());
-      final JsonNode destinationConfiguration = oAuthConfigSupplier.injectDestinationOAuthParameters(
-          destination.getDestinationDefinitionId(),
-          destination.getDestinationId(),
-          destination.getWorkspaceId(),
-          destination.getConfiguration());
-      attemptSyncConfig.setDestinationConfiguration(configInjector.injectConfig(destinationConfiguration, destination.getDestinationDefinitionId()));
+      final ConfigWithSecretReferences destinationConfiguration = getDestinationConfiguration(destination);
+      final JsonNode destinationConfigWithInlinedRefs = InlinedConfigWithSecretRefsKt.toInlined(destinationConfiguration);
+      attemptSyncConfig.setDestinationConfiguration(destinationConfigWithInlinedRefs);
 
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
@@ -230,7 +233,8 @@ public class JobInputHandler {
           .withConnectionContext(connectionContext)
           .withUseAsyncReplicate(true)
           .withUseAsyncActivities(true)
-          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()));
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()))
+          .withIncludesFiles(shouldIncludeFiles(config, sourceVersion, destinationVersion));
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -266,8 +270,11 @@ public class JobInputHandler {
       final ActorDefinitionVersion sourceVersion =
           actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
 
-      final JsonNode sourceConfiguration = getSourceConfiguration(source);
-      final JsonNode destinationConfiguration = getDestinationConfiguration(destination);
+      final ConfigWithSecretReferences sourceConfiguration = getSourceConfiguration(source);
+      final JsonNode sourceConfigWithInlinedRefs = InlinedConfigWithSecretRefsKt.toInlined(sourceConfiguration);
+
+      final ConfigWithSecretReferences destinationConfiguration = getDestinationConfiguration(destination);
+      final JsonNode destinationConfigWithInlinedRefs = InlinedConfigWithSecretRefsKt.toInlined(destinationConfiguration);
 
       final IntegrationLauncherConfig sourceLauncherConfig = getSourceIntegrationLauncherConfig(
           jobId,
@@ -275,7 +282,7 @@ public class JobInputHandler {
           connectionId,
           jobSyncConfig,
           sourceVersion,
-          sourceConfiguration);
+          sourceConfigWithInlinedRefs);
 
       final IntegrationLauncherConfig destinationLauncherConfig =
           getDestinationIntegrationLauncherConfig(
@@ -284,7 +291,7 @@ public class JobInputHandler {
               connectionId,
               jobSyncConfig,
               destinationVersion,
-              destinationConfiguration,
+              destinationConfigWithInlinedRefs,
               Collections.emptyMap());
 
       final ResourceRequirements sourceCheckResourceRequirements =
@@ -295,7 +302,7 @@ public class JobInputHandler {
       final StandardCheckConnectionInput sourceCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.SOURCE)
           .withActorId(source.getSourceId())
-          .withConnectionConfiguration(sourceConfiguration)
+          .withConnectionConfiguration(sourceConfigWithInlinedRefs)
           .withResourceRequirements(sourceCheckResourceRequirements)
           .withActorContext(sourceContext)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
@@ -308,7 +315,7 @@ public class JobInputHandler {
       final StandardCheckConnectionInput destinationCheckConnectionInput = new StandardCheckConnectionInput()
           .withActorType(ActorType.DESTINATION)
           .withActorId(destination.getDestinationId())
-          .withConnectionConfiguration(destinationConfiguration)
+          .withConnectionConfiguration(destinationConfigWithInlinedRefs)
           .withResourceRequirements(destinationCheckResourceRequirements)
           .withActorContext(destinationContext)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(jobSyncConfig.getWorkspaceId()));
@@ -441,20 +448,22 @@ public class JobInputHandler {
         .withAdditionalEnvironmentVariables(additionalEnviornmentVariables);
   }
 
-  private JsonNode getSourceConfiguration(final SourceConnection source) throws IOException {
-    return configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
+  private ConfigWithSecretReferences getSourceConfiguration(final SourceConnection source) throws IOException {
+    final JsonNode injectedConfig = configInjector.injectConfig(oAuthConfigSupplier.injectSourceOAuthParameters(
         source.getSourceDefinitionId(),
         source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration()), source.getSourceDefinitionId());
+    return secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, source.getSourceId(), injectedConfig);
   }
 
-  private JsonNode getDestinationConfiguration(final DestinationConnection destination) throws IOException {
-    return configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
+  private ConfigWithSecretReferences getDestinationConfiguration(final DestinationConnection destination) throws IOException {
+    final JsonNode injectedConfig = configInjector.injectConfig(oAuthConfigSupplier.injectDestinationOAuthParameters(
         destination.getDestinationDefinitionId(),
         destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration()), destination.getDestinationDefinitionId());
+    return secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, destination.getDestinationId(), injectedConfig);
   }
 
   private @NotNull List<String> getNetworkSecurityTokens(final UUID workspaceId) {
@@ -468,6 +477,13 @@ public class JobInputHandler {
       LOGGER.error(e.getMessage());
       return Collections.emptyList();
     }
+  }
+
+  @InternalForTesting
+  Boolean shouldIncludeFiles(final JobSyncConfig jobSyncConfig, final ActorDefinitionVersion sourceAdv, final ActorDefinitionVersion destinationAdv) {
+    // TODO add compatibility check with sourceAdv and destinationAdv to avoid scanning through all
+    // catalogs for nothing
+    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludesFiles);
   }
 
 }

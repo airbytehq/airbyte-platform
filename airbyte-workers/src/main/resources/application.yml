@@ -37,6 +37,7 @@ micronaut:
     enabled: false
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   activity:
     initial-delay: ${ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS:30}
     max-attempts: ${ACTIVITY_MAX_ATTEMPT:5}

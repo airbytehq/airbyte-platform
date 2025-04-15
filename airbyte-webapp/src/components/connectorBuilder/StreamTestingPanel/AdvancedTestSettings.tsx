@@ -1,6 +1,6 @@
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { Button } from "components/ui/Button";
@@ -12,23 +12,11 @@ import { TestReadContext, useConnectorBuilderTestRead } from "services/connector
 
 import styles from "./AdvancedTestSettings.module.scss";
 import { BuilderField } from "../Builder/BuilderField";
-import { jsonString } from "../useBuilderValidationSchema";
+import { zodJsonString } from "../useBuilderValidationSchema";
 
 const MAX_RECORD_LIMIT = 5000;
 const MAX_PAGE_LIMIT = 20;
 const MAX_SLICE_LIMIT = 20;
-
-const numericCountField = yup
-  .number()
-  .positive()
-  .required()
-  .transform((value) => (isNaN(value) ? 0 : value));
-const testReadLimitsValidation = yup.object({
-  recordLimit: numericCountField.label("Record limit").max(MAX_RECORD_LIMIT).min(1),
-  pageLimit: numericCountField.label("Page limit").max(MAX_PAGE_LIMIT).min(1),
-  sliceLimit: numericCountField.label("Partition limit").max(MAX_SLICE_LIMIT).min(1),
-  testState: jsonString,
-});
 
 interface AdvancedTestSettingsFormValues {
   recordLimit: number;
@@ -36,6 +24,13 @@ interface AdvancedTestSettingsFormValues {
   sliceLimit: number;
   testState?: string;
 }
+
+const testReadLimitsValidation = z.object({
+  recordLimit: z.coerce.number().min(1).max(MAX_RECORD_LIMIT),
+  pageLimit: z.coerce.number().min(1).max(MAX_PAGE_LIMIT),
+  sliceLimit: z.coerce.number().min(1).max(MAX_SLICE_LIMIT),
+  testState: zodJsonString.optional(),
+});
 
 interface AdvancedTestSettingsProps {
   className?: string;
@@ -78,7 +73,7 @@ export const AdvancedTestSettings: React.FC<AdvancedTestSettingsProps> = ({ clas
           title={formatMessage({ id: "connectorBuilder.testReadSettings.modalTitle" })}
         >
           <Form<AdvancedTestSettingsFormValues>
-            schema={testReadLimitsValidation}
+            zodSchema={testReadLimitsValidation}
             defaultValues={{
               recordLimit,
               pageLimit,

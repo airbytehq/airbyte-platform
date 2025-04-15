@@ -15,7 +15,7 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.Storage;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.Configs;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Map;

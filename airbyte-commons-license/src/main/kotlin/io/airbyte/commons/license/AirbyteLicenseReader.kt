@@ -36,6 +36,7 @@ class AirbyteLicenseReader(
         jwt.maxNodes,
         jwt.maxEditors,
         jwt.enterpriseConnectorIds?.map { UUID.fromString(it) }?.toSet() ?: emptySet(),
+        isEmbedded = jwt.isEmbedded ?: false,
       )
     }
     return INVALID_LICENSE
@@ -51,4 +52,5 @@ private data class LicenseJwt(
   val maxEditors: Int?,
   val enterpriseConnectorIds: List<String>?,
   val exp: Long?,
+  val isEmbedded: Boolean?,
 )

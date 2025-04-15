@@ -25,8 +25,6 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -42,7 +40,7 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -117,8 +115,6 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
-    final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
@@ -134,7 +130,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         scopedConfigurationService,
         connectionTimelineEventService);
 
-    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
+    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
 
     final UUID defId = UUID.randomUUID();

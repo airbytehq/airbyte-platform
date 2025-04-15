@@ -4,8 +4,8 @@
 
 package io.airbyte.workers.models;
 
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
 import java.util.OptionalInt;
 import java.util.concurrent.atomic.AtomicInteger;
 

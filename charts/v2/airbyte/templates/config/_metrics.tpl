@@ -9,7 +9,11 @@
 Renders the global.metrics.enabled value
 */}}
 {{- define "airbyte.metrics.enabled" }}
-    {{- .Values.global.metrics.enabled | default false }}
+	{{- if eq .Values.global.metrics.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.metrics.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -63,7 +67,11 @@ Renders the metrics.statsd.flavor environment variable
 Renders the global.metrics.otlp.enabled value
 */}}
 {{- define "airbyte.metrics.otlp.enabled" }}
-    {{- .Values.global.metrics.otlp.enabled | default false }}
+	{{- if eq .Values.global.metrics.otlp.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.metrics.otlp.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -99,7 +107,11 @@ Renders the metrics.otlp.collectorEndpoint environment variable
 Renders the global.metrics.statsd.enabled value
 */}}
 {{- define "airbyte.metrics.statsd.enabled" }}
-    {{- .Values.global.metrics.statsd.enabled | default false }}
+	{{- if eq .Values.global.metrics.statsd.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.metrics.statsd.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*

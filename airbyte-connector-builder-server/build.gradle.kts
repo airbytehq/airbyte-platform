@@ -56,7 +56,7 @@ dependencies {
   implementation(libs.airbyte.protocol)
 
   // Third-party dependencies
-  implementation("org.kohsuke:github-api:1.323")
+  implementation("org.kohsuke:github-api:1.327")
   implementation("org.yaml:snakeyaml:2.2")
   implementation("io.pebbletemplates:pebble:3.2.2")
 
@@ -98,7 +98,7 @@ airbyte {
 val generateOpenApiServer =
   tasks.register<GenerateTask>("generateOpenApiServer") {
     val specFile = "$projectDir/src/main/openapi/openapi.yaml"
-    inputs.file(specFile)
+    inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputDir = "${project.layout.buildDirectory.get()}/generated/api/server"
 
     inputSpec.set(specFile)
@@ -122,6 +122,7 @@ val generateOpenApiServer =
         "dateLibrary" to "java8",
         "generatePom" to "false",
         "interfaceOnly" to "true",
+        "hideGenerationTimestamp" to "true",
       /*
       JAX-RS generator does not respect nullable properties defined in the OpenApi Spec.
       It means that if a field is not nullable but not set it is still returning a null value for this field in the serialized json.

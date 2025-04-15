@@ -13,6 +13,7 @@ import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.commons.temporal.config.TemporalQueueConfiguration;
 import io.airbyte.config.MaxWorkersConfig;
 import io.airbyte.micronaut.temporal.TemporalProxyHelper;
+import io.airbyte.workers.temporal.TemporalWorkerShutdownHook;
 import io.airbyte.workers.temporal.check.connection.CheckConnectionWorkflowImpl;
 import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
@@ -106,6 +107,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
   private TemporalUtils temporalUtils;
   @Inject
   private WorkerFactory workerFactory;
+  @Inject
+  TemporalWorkerShutdownHook workerFactoryShutdownHook;
 
   @Inject
   private TemporalQueueConfiguration temporalQueueConfiguration;

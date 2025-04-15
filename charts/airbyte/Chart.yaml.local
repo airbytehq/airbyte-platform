@@ -70,10 +70,6 @@ dependencies:
     name: workload-launcher
     repository: "file://../airbyte-workload-launcher"
     version: "*"
-  - condition: pod-sweeper.enabled
-    name: pod-sweeper
-    repository: "file://../airbyte-pod-sweeper"
-    version: "*"
   - condition: metrics.enabled
     name: metrics
     repository: "file://../airbyte-metrics"

@@ -34,6 +34,7 @@ dependencies {
   implementation(libs.aws.java.sdk.sts)
   implementation(libs.s3)
   implementation(libs.sts)
+  implementation(libs.kotlin.coroutines)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -83,6 +84,7 @@ dependencies {
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
   testImplementation(libs.bundles.logback)
+  testImplementation(libs.kotlin.coroutines.test)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
   testRuntimeOnly(libs.javax.databind)

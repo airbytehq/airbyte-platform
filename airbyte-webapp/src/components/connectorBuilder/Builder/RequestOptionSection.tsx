@@ -1,6 +1,7 @@
 import { useIntl } from "react-intl";
 
 import { AssistButton } from "./Assist/AssistButton";
+import { AuthPath } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
@@ -11,12 +12,16 @@ import { useBuilderWatch } from "../useBuilderWatch";
 type RequestOptionSectionProps =
   | {
       inline: false;
-      basePath: `formValues.streams.${number}.requestOptions`;
+      basePath:
+        | `formValues.streams.${number}.requestOptions`
+        | `formValues.streams.${number}.creationRequester.requestOptions`
+        | `formValues.streams.${number}.pollingRequester.requestOptions`
+        | `formValues.streams.${number}.downloadRequester.requestOptions`;
       currentStreamIndex: number;
     }
   | {
       inline: true;
-      basePath: "formValues.global.authenticator.login_requester.requestOptions";
+      basePath: `${AuthPath}.login_requester.requestOptions`;
     };
 
 export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props) => {
@@ -126,12 +131,11 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
   ) : (
     <BuilderCard
       copyConfig={{
-        path: "requestOptions",
+        path: props.basePath,
         currentStreamIndex: props.currentStreamIndex,
         componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
       labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
-      label="Request Options"
     >
       {content}
     </BuilderCard>

@@ -15,4 +15,6 @@ data class GenericOidcConfig(
   val authorizationServerEndpoint: String,
   @Property(name = "airbyte.auth.identity-provider.oidc.client-id")
   val clientId: String,
+  @Property(name = "airbyte.auth.identity-provider.oidc.audience")
+  val audience: String?,
 )

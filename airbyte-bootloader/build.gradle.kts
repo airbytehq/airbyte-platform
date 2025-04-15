@@ -5,9 +5,6 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(platform(libs.micronaut.platform))
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
-
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
 
@@ -37,10 +34,6 @@ dependencies {
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.annotation.processor)
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
-
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.annotation.processor)
   kspTest(libs.bundles.micronaut.test.annotation.processor)
@@ -53,6 +46,7 @@ dependencies {
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
   testImplementation(libs.mockk)
+  testImplementation(libs.bundles.kotest)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 }

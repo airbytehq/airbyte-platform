@@ -16,6 +16,7 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.tracker.JobTracker
@@ -44,6 +45,7 @@ class TemporalBeanFactory {
     oAuthConfigSupplier: OAuthConfigSupplier?,
     configInjector: ConfigInjector?,
     contextBuilder: ContextBuilder?,
+    secretReferenceService: SecretReferenceService?,
   ): SynchronousSchedulerClient =
     DefaultSynchronousSchedulerClient(
       temporalClient,
@@ -52,6 +54,7 @@ class TemporalBeanFactory {
       oAuthConfigSupplier,
       configInjector,
       contextBuilder,
+      secretReferenceService,
     )
 
   @Singleton

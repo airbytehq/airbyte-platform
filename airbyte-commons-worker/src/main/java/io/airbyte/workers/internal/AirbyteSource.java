@@ -5,7 +5,7 @@
 package io.airbyte.workers.internal;
 
 import io.airbyte.config.WorkerSourceConfig;
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.UUID;

@@ -11,10 +11,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.Organization;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -29,6 +30,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
@@ -36,7 +38,7 @@ import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -53,6 +55,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final DestinationServiceJooqImpl destinationServiceJooqImpl;
   private final WorkspaceServiceJooqImpl workspaceServiceJooqImpl;
   private final OrganizationServiceJooqImpl organizationServiceJooqImpl;
+  private final DataplaneGroupService dataplaneGroupServiceDataImpl;
   private final TestClient featureFlagClient;
   private final UUID ORGANIZATION_ID = UUID.randomUUID();
   private final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -88,26 +91,23 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     this.destinationServiceJooqImpl = new DestinationServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);
     this.sourceServiceJooqImpl = new SourceServiceJooqImpl(database,
         featureFlagClient,
-        secretsRepositoryReader,
-        secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);
+    this.dataplaneGroupServiceDataImpl = new DataplaneGroupServiceTestJooqImpl(database);
     this.workspaceServiceJooqImpl = new WorkspaceServiceJooqImpl(database,
         featureFlagClient,
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient);
+        metricClient,
+        this.dataplaneGroupServiceDataImpl);
     this.organizationServiceJooqImpl = new OrganizationServiceJooqImpl(database);
   }
 
@@ -115,6 +115,9 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     // Create org
     organization = createBaseOrganization();
     organizationServiceJooqImpl.writeOrganization(organization);
+
+    // Create dataplane group
+    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup());
 
     // Create workspace
     workspace = createBaseWorkspace();
@@ -155,6 +158,9 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
     // Create org
     organization = createBaseOrganization();
     organizationServiceJooqImpl.writeOrganization(organization);
+
+    // Create dataplane group
+    dataplaneGroupServiceDataImpl.writeDataplaneGroup(createBaseDataplaneGroup());
 
     // Create workspace
     workspace = createBaseWorkspace();
@@ -279,6 +285,15 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withEmail("org@airbyte.io");
   }
 
+  private DataplaneGroup createBaseDataplaneGroup() {
+    return new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(ORGANIZATION_ID)
+        .withName(DataplaneConstantsKt.GEOGRAPHY_US)
+        .withEnabled(true)
+        .withTombstone(false);
+  }
+
   private StandardWorkspace createBaseWorkspace() {
     return new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
@@ -287,7 +302,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
   }
 
   private StandardWorkspace createSecondWorkspace() {
@@ -298,7 +313,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("second-workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(Geography.US);
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
   }
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {

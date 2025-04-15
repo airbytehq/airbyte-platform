@@ -10,7 +10,7 @@ import io.airbyte.initContainer.system.FileClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.DiscoverCatalogInputHydrator
+import io.airbyte.workers.hydration.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants

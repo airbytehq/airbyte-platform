@@ -7,13 +7,14 @@ package io.airbyte.config.secrets
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.config.secrets.hydration.SecretsHydrator
 import org.junit.jupiter.api.BeforeEach
 import java.util.UUID
 
 private val UUID1 = UUID.randomUUID()
-private val COORDINATE = SecretCoordinate("pointer", 2)
+private val COORDINATE = AirbyteManagedSecretCoordinate("airbyte_pointer", 2)
 private const val SECRET = "abc"
 private val PARTIAL_CONFIG = Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": { \"_secret\": \"${COORDINATE.fullCoordinate}\" } }")
 private val FULL_CONFIG = Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": \"${SECRET}\"}")

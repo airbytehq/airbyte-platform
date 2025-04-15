@@ -11,8 +11,8 @@ import io.airbyte.config.mapper.configs.TestConfig
 import io.airbyte.config.mapper.configs.TestEnums
 import io.airbyte.config.mapper.configs.TestMapperConfig
 import io.airbyte.mappers.mocks.TestMapper
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteRecordMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.mockk.spyk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test

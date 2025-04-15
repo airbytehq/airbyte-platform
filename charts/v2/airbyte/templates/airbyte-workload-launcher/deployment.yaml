@@ -35,7 +35,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadLauncher.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.workloadLauncher.serviceAccountName }}
       automountServiceAccountToken: true
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
@@ -92,10 +92,15 @@ spec:
         {{- include "airbyte.workloads.queues.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.envs" . | nindent 8 }}
+        {{- include "airbyte.workloadLauncher.dataPlane.envs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.images.envs" . | nindent 8 }}
 
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- end }}
+
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- end }}
 
         # Values from secret
@@ -159,11 +164,16 @@ spec:
         securityContext: {{- toYaml .Values.workloadLauncher.containerSecurityContext | nindent 10 }}
         {{- end }}
         volumeMounts:
-        {{- if eq (include "airbyte.storage.type" .) "gcs" }}
-        - name: gcs-log-creds-volume
-          mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . }}
-          readOnly: true
-        {{- end }}
+          {{- if eq (include "airbyte.storage.type" .) "gcs" }}
+          - name: gcs-log-creds-volume
+            mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
+            readOnly: true
+          {{- end }}
+          {{- if eq (include "airbyte.cluster.type" .) "data-plane" }}
+          - name: dataplane-creds-volume
+            mountPath: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretMountPath" . | dir }}
+            readOnly: true
+          {{- end }}
         {{- if .Values.workloadLauncher.extraVolumeMounts }}
 {{- toYaml .Values.workloadLauncher.extraVolumeMounts | nindent 8 }}
         {{- end }}
@@ -181,10 +191,18 @@ spec:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ include "airbyte.storage.secretName" }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"
+      {{- end }}
+      {{- if eq (include "airbyte.cluster.type" .) "data-plane" }}
+      - name: dataplane-creds-volume
+        secret:
+          secretName: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretName" . }}
+          items:
+            - key: {{ include "airbyte.workloads.containerOrchestrator.dataPlane.secretKey" . }}
+              path: "sa.json"
       {{- end }}
       {{- if .Values.workloadLauncher.extraVolumes }}
 {{- toYaml .Values.workloadLauncher.extraVolumes | nindent 6 }}

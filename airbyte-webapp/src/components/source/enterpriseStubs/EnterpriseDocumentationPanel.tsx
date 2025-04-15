@@ -61,11 +61,9 @@ export const EnterpriseDocumentationPanel: React.FC<EnterpriseDocumentationPanel
         </ExternalLink>
       </FlexContainer>
       <FlexContainer direction="column" justifyContent="space-between" className={styles.connectorDocumentationHeader}>
-        <div className={styles.markdown}>
-          <Heading as="h1" className={styles.enterpriseDocsHeader}>
-            {name}
-          </Heading>
-        </div>
+        <Heading as="h2" className={styles.enterpriseDocsHeader}>
+          {name}
+        </Heading>
       </FlexContainer>
       <Markdown className={styles.content} content={docsContent} options={{}} remarkPlugins={remarkPlugins} />
     </FlexContainer>

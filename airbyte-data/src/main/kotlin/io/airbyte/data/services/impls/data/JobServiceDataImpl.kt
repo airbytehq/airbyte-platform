@@ -13,6 +13,7 @@ import io.airbyte.data.repositories.Specifications
 import io.airbyte.data.services.JobService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.db.instance.jobs.jooq.generated.enums.JobConfigType
 import io.micronaut.data.model.Pageable
 import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
@@ -57,36 +58,17 @@ class JobServiceDataImpl(
       .toList()
   }
 
-  override fun listJobsForScopes(
+  override fun findLatestJobPerScope(
     configTypes: Set<JobConfig.ConfigType>,
     scopes: Set<String>,
-    limit: Int,
-    offset: Int,
-    statuses: List<io.airbyte.config.JobStatus>,
-    createdAtStart: OffsetDateTime?,
-    createdAtEnd: OffsetDateTime?,
-    updatedAtStart: OffsetDateTime?,
-    updatedAtEnd: OffsetDateTime?,
-    orderByField: String?,
-    orderByMethod: String?,
-  ): List<Job> {
-    val pageable = buildPageable(limit, offset, orderByField, orderByMethod)
-    return jobsWithAttemptsRepository
-      .findAll(
-        Specifications.jobWithAssociatedAttempts(
-          configTypes = configTypes.map { it.toEntity() }.toSet(),
-          scopes = scopes,
-          statuses = statuses.map { it.toEntity() }.toSet(),
-          createdAtStart = createdAtStart,
-          createdAtEnd = createdAtEnd,
-          updatedAtStart = updatedAtStart,
-          updatedAtEnd = updatedAtEnd,
-        ),
-        pageable,
-      ).toList()
-      .map { it.toConfigModel() }
-      .toList()
-  }
+    createdAtStart: OffsetDateTime,
+  ): List<Job> =
+    jobsRepository
+      .findLatestJobPerScope(
+        JobConfigType.sync.toString(),
+        scopes,
+        createdAtStart,
+      ).map { it.toConfigModel() }
 
   override fun firstSuccessfulJobForScope(scope: String): Job? = jobsRepository.firstSuccessfulJobForScope(scope)?.toConfigModel()
 

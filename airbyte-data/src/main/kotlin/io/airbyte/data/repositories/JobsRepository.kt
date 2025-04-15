@@ -10,6 +10,7 @@ import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
+import java.time.OffsetDateTime
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface JobsRepository : PageableRepository<Job, Long> {
@@ -85,4 +86,21 @@ interface JobsRepository : PageableRepository<Job, Long> {
     jobId: Long,
     status: JobStatus,
   ): Job?
+
+  @Query(
+    """
+    SELECT DISTINCT ON (scope) *
+    FROM jobs
+    WHERE scope IN (:scopes)
+      AND config_type::text = :configType
+      AND created_at >= :createdAtStart
+    ORDER BY scope, created_at DESC
+  """,
+    nativeQuery = true,
+  )
+  fun findLatestJobPerScope(
+    configType: String,
+    scopes: Set<String>,
+    createdAtStart: OffsetDateTime,
+  ): List<Job>
 }

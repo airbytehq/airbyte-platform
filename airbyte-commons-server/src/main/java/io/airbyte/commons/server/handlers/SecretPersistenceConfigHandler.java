@@ -8,8 +8,7 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
-import io.airbyte.config.secrets.SecretCoordinate;
-import io.airbyte.config.secrets.SecretsHelpers;
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import jakarta.inject.Singleton;
 import java.util.UUID;
@@ -35,17 +34,17 @@ public class SecretPersistenceConfigHandler {
         .scopeId(secretPersistenceConfig.getScopeId());
   }
 
-  public String writeToEnvironmentSecretPersistence(final SecretCoordinate secretCoordinate, final String payload) {
-    secretsRepositoryWriter.store(secretCoordinate, payload, null);
+  public String writeToEnvironmentSecretPersistence(final AirbyteManagedSecretCoordinate secretCoordinate, final String payload) {
+    secretsRepositoryWriter.storeInDefaultPersistence(secretCoordinate, payload);
     return secretCoordinate.getFullCoordinate();
   }
 
-  public SecretCoordinate buildRsmCoordinate(final ScopeType scope, final UUID scopeId) {
-    final String coordinateBase = SecretsHelpers.INSTANCE.getCoordinatorBase(
-        String.format("airbyte_rsm_%s_", scope.name()),
+  public AirbyteManagedSecretCoordinate buildRsmCoordinate(final ScopeType scope, final UUID scopeId) {
+    return new AirbyteManagedSecretCoordinate(
+        String.format("rsm_%s_", scope.name()),
         scopeId,
+        AirbyteManagedSecretCoordinate.DEFAULT_VERSION,
         UUID::randomUUID);
-    return new SecretCoordinate(coordinateBase, 1);
   }
 
 }

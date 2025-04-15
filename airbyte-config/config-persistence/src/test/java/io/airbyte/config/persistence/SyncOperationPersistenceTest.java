@@ -9,7 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import io.airbyte.config.Geography;
+import io.airbyte.commons.constants.DataplaneConstantsKt;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
@@ -17,8 +18,10 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.OperationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
@@ -101,7 +104,16 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
     final MetricClient metricClient = mock(MetricClient.class);
+
     new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
+
+    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withEnabled(true)
+        .withTombstone(false));
 
     final StandardWorkspace workspace = new StandardWorkspace()
         .withWorkspaceId(WORKSPACE_ID)
@@ -109,10 +121,10 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO)
+        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-        metricClient)
+        metricClient, dataplaneGroupService)
             .writeStandardWorkspaceNoSecrets(workspace);
   }
 

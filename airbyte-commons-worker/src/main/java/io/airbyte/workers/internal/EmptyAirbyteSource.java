@@ -15,13 +15,13 @@ import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
+import io.airbyte.protocol.models.v0.AirbyteGlobalState;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.lang.invoke.MethodHandles;
 import java.nio.file.Path;
@@ -206,7 +206,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     return streamsToResetDescriptors.containsAll(catalogStreamDescriptors);
   }
 
-  private AirbyteMessage buildNullStreamStateMessage(final io.airbyte.protocol.models.StreamDescriptor stream) {
+  private AirbyteMessage buildNullStreamStateMessage(final io.airbyte.protocol.models.v0.StreamDescriptor stream) {
     return new AirbyteMessage()
         .withType(Type.STATE)
         .withState(
@@ -246,7 +246,7 @@ public class EmptyAirbyteSource implements AirbyteSource {
     // the global state always containing the entire
     // state
     streamsToReset.forEach(configStreamDescriptor -> {
-      final io.airbyte.protocol.models.StreamDescriptor streamDescriptor = new io.airbyte.protocol.models.StreamDescriptor()
+      final io.airbyte.protocol.models.v0.StreamDescriptor streamDescriptor = new io.airbyte.protocol.models.v0.StreamDescriptor()
           .withName(configStreamDescriptor.getName())
           .withNamespace(configStreamDescriptor.getNamespace());
       if (!currentState.getGlobal().getStreamStates().stream().map(AirbyteStreamState::getStreamDescriptor).toList()

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
@@ -14,6 +14,8 @@ import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { ConnectionConfiguration } from "area/connector/types";
 import { useCreateDestination, useDestinationDefinitionList } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { clearConnectorChatBuilderStorage, CONNECTOR_CHAT_ACTIONS } from "core/utils/connectorChatBuilderStorage";
+import { useExperiment } from "hooks/services/Experiment";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { DestinationPaths, RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
@@ -33,7 +35,7 @@ export const CreateDestinationPage: React.FC = () => {
   const onSubmitDestinationForm = async (values: {
     name: string;
     serviceType: string;
-    connectionConfiguration?: ConnectionConfiguration;
+    connectionConfiguration: ConnectionConfiguration;
   }) => {
     const connector = destinationDefinitions.find((item) => item.destinationDefinitionId === values.serviceType);
     const result = await createDestination({
@@ -62,6 +64,13 @@ export const CreateDestinationPage: React.FC = () => {
   const onGoBack = () => {
     navigate(prevPath);
   };
+
+  const isConnectorBuilderGenerateFromParamsEnabled = useExperiment("connectorBuilder.generateConnectorFromParams");
+  useEffect(() => {
+    if (isConnectorBuilderGenerateFromParamsEnabled) {
+      clearConnectorChatBuilderStorage(CONNECTOR_CHAT_ACTIONS.SET_UP_NEW_CONNECTOR);
+    }
+  }, [isConnectorBuilderGenerateFromParamsEnabled]);
 
   return (
     <ConnectorDocumentationWrapper>

@@ -4,12 +4,12 @@ import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
-import { StreamConfigDiff } from "core/api/types/AirbyteClient";
+import { StreamCursorFieldDiff } from "core/api/types/AirbyteClient";
 
 import styles from "./CursorFieldsDiffSection.module.scss";
 
 interface CursorFieldsDiffSectionProps {
-  cursorFields: StreamConfigDiff[];
+  cursorFields: StreamCursorFieldDiff[];
 }
 
 export const CursorFieldsDiffSection: React.FC<CursorFieldsDiffSectionProps> = ({ cursorFields }) => {
@@ -35,7 +35,9 @@ export const CursorFieldsDiffSection: React.FC<CursorFieldsDiffSectionProps> = (
                 id="connection.timeline.connection_schema_update.catalog_config_diff.cursorFieldsChanged.description"
                 values={{
                   streamName: cursorField.streamName,
-                  prevCursorField: <span className={styles.prevValue}>{cursorField.prev}</span>,
+                  prevCursorField: cursorField.prev?.length ? (
+                    <span className={styles.prevValue}>{cursorField.prev}</span>
+                  ) : undefined,
                   currentCursorField: <span className={styles.currentValue}>{cursorField.current}</span>,
                 }}
               />

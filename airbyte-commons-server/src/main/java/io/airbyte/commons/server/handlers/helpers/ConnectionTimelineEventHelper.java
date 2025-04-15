@@ -6,6 +6,7 @@ package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.api.client.model.generated.JobRead;
+import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.ConnectionStatus;
@@ -40,6 +41,7 @@ import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent.FinalStatus;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
+import io.airbyte.data.services.shared.SchemaConfigUpdateEvent;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
@@ -281,6 +283,17 @@ public class ConnectionTimelineEventHelper {
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist source schema change auto-propagated event for connection: {}", connectionId, e);
+    }
+  }
+
+  public void logSchemaConfigChangeEventInConnectionTimeline(final UUID connectionId,
+                                                             final AirbyteCatalogDiff airbyteCatalogDiff) {
+    try {
+      LOGGER.debug("Persisting schema config change event for connection: {} with diff: {}", connectionId, airbyteCatalogDiff);
+      final SchemaConfigUpdateEvent event = new SchemaConfigUpdateEvent(airbyteCatalogDiff);
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+    } catch (final Exception e) {
+      LOGGER.error("Failed to persist schema config change event for connection: {}", connectionId, e);
     }
   }
 

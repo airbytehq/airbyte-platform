@@ -81,6 +81,8 @@ enabled: true
 ##  workload-launcher.replicaCount Number of workload launcher replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  workload-launcher.image.repository The repository to use for the airbyte workload launcher image.
 ##  workload-launcher.image.pullPolicy the pull policy to use for the airbyte workload launcher image
 ##  workload-launcher.image.tag The airbyte workload launcher image tag. Defaults to the chart's AppVersion

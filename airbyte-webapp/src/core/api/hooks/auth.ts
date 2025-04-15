@@ -20,7 +20,7 @@ export const simpleAuthLogin = (loginRequestBody: LoginRequestBody, options: Par
   return apiCall<LoginResponseBody>(
     {
       url: `/login`,
-      method: "post",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       data: loginRequestBody,
     },
@@ -32,7 +32,7 @@ export const simpleAuthLogout = (options: Parameters<typeof apiCall>[1]) => {
   return apiCall<null>(
     {
       url: `/logout`,
-      method: "post",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
     },
     options
@@ -43,7 +43,7 @@ export const simpleAuthRefreshToken = (options: Parameters<typeof apiCall>[1]) =
   return apiCall<LoginResponseBody>(
     {
       url: `/oauth/access_token`,
-      method: "post",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
     },
     options

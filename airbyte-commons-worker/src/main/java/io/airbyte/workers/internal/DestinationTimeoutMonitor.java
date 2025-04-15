@@ -20,7 +20,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,9 +46,9 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   private static final Logger LOGGER = LoggerFactory.getLogger(DestinationTimeoutMonitor.class);
   private static final Duration POLL_INTERVAL = Duration.ofMinutes(1);
 
-  private final AtomicReference<Long> currentAcceptCallStartTime = new AtomicReference<>(null);
-  private final AtomicReference<Long> currentNotifyEndOfInputCallStartTime = new AtomicReference<>(null);
-  private final AtomicReference<Long> timeSinceLastAction = new AtomicReference<>(null);
+  private final AtomicLong currentAcceptCallStartTime = new AtomicLong(-1);
+  private final AtomicLong currentNotifyEndOfInputCallStartTime = new AtomicLong(-1);
+  private final AtomicLong timeSinceLastAction = new AtomicLong(-1);
 
   private final UUID workspaceId;
   private ExecutorService lazyExecutorService;
@@ -159,7 +159,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * sense if there's a previous call to {@link #startAcceptTimer}.
    */
   public void resetAcceptTimer() {
-    currentAcceptCallStartTime.set(null);
+    currentAcceptCallStartTime.set(-1);
   }
 
   /**
@@ -185,7 +185,7 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
    * makes sense if there's a previous call to {@link #startNotifyEndOfInputTimer}.
    */
   public void resetNotifyEndOfInputTimer() {
-    currentNotifyEndOfInputCallStartTime.set(null);
+    currentNotifyEndOfInputCallStartTime.set(-1);
   }
 
   private void onTimeout(final CompletableFuture<Void> runnableFuture, final long threshold, final long timeSinceLastAction) {
@@ -214,21 +214,17 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     }
   }
 
-  private boolean hasTimedOut() {
+  public boolean hasTimedOut() {
     if (hasTimedOutOnAccept()) {
       return true;
     }
-    if (hasTimedOutOnNotifyEndOfInput()) {
-      return true;
-    }
-
-    return false;
+    return hasTimedOutOnNotifyEndOfInput();
   }
 
   private boolean hasTimedOutOnAccept() {
-    final Long startTime = currentAcceptCallStartTime.get();
+    final long startTime = currentAcceptCallStartTime.get();
 
-    if (startTime != null) {
+    if (startTime != -1) {
       // by the time we get here, currentAcceptCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from currentAcceptCallStartTime
       // but from startTime
@@ -245,9 +241,9 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
   }
 
   private boolean hasTimedOutOnNotifyEndOfInput() {
-    final Long startTime = currentNotifyEndOfInputCallStartTime.get();
+    final long startTime = currentNotifyEndOfInputCallStartTime.get();
 
-    if (startTime != null) {
+    if (startTime != -1) {
       // by the time we get here, currentNotifyEndOfInputCallStartTime might have already been reset.
       // this won't be a problem since we are not getting the start time from
       // currentNotifyEndOfInputCallStartTime but from startTime
@@ -300,6 +296,14 @@ public class DestinationTimeoutMonitor implements AutoCloseable {
     }
 
     return lazyExecutorService;
+  }
+
+  public AtomicLong getTimeSinceLastAction() {
+    return timeSinceLastAction;
+  }
+
+  public Duration getTimeout() {
+    return timeout;
   }
 
 }

@@ -4,16 +4,15 @@ plugins {
 }
 
 dependencies {
-  annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-temporal"))
   implementation(project(":oss:airbyte-config:config-models"))
 
-  implementation(libs.guava)
-
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
 
   testImplementation(libs.mockito.core)
   testImplementation(libs.bundles.micronaut.test)
+  testImplementation(libs.mockk)
 }

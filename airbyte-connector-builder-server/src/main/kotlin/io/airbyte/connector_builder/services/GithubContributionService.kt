@@ -7,7 +7,6 @@
 package io.airbyte.connector_builder.services
 
 import io.airbyte.commons.server.handlers.logger
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.kohsuke.github.GHBranch
 import org.kohsuke.github.GHCommit
 import org.kohsuke.github.GHContent
@@ -20,13 +19,11 @@ import org.kohsuke.github.GitHubBuilder
 import org.kohsuke.github.HttpException
 import org.yaml.snakeyaml.Yaml
 
-private val logger = KotlinLogging.logger {}
-
 class GithubContributionService(
   var connectorImageName: String,
   personalAccessToken: String?,
 ) {
-  var githubService: GitHub? = null
+  var githubService: GitHub
   val repositoryName = "airbyte"
   val repoOwner = "airbytehq"
   val connectorDirectory = "airbyte-integrations/connectors"
@@ -45,7 +42,7 @@ class GithubContributionService(
   // PROPERTIES
 
   val airbyteRepository: GHRepository
-    get() = githubService!!.getRepository("$repoOwner/$repositoryName")
+    get() = githubService.getRepository("$repoOwner/$repositoryName")
 
   val forkedRepository: GHRepository
     get() = airbyteRepository.fork()
@@ -79,6 +76,9 @@ class GithubContributionService(
   val connectorManifestPath: String
     get() = "$connectorDirectoryPath/manifest.yaml"
 
+  val connectorCustomComponentsPath: String
+    get() = "$connectorDirectoryPath/components.py"
+
   val connectorIconPath: String
     get() = "$connectorDirectoryPath/icon.svg"
 
@@ -86,7 +86,7 @@ class GithubContributionService(
     get() = "$connectorDirectoryPath/acceptance-test-config.yml"
 
   val username: String
-    get() = githubService!!.myself.login
+    get() = githubService.myself.login
 
   val contributionBranchName: String
     get() = "$username/builder-contribute/$connectorImageName"
@@ -125,7 +125,17 @@ class GithubContributionService(
   // TODO: Cache the metadata
   fun readConnectorMetadata(): Map<String, Any>? {
     val metadataFile = safeReadFileContent(connectorMetadataPath, airbyteRepository) ?: return null
-    val rawYamlString = metadataFile.content
+    val rawYamlString = metadataFile.read().bufferedReader().use { it.readText() }
+
+    // Parse YAML
+    val yaml = Yaml()
+    return yaml.load(rawYamlString)
+  }
+
+  // TODO: Cache the manifest file
+  fun readConnectorManifest(): Map<String, Any>? {
+    val metadataFile = safeReadFileContent(connectorManifestPath, airbyteRepository) ?: return null
+    val rawYamlString = metadataFile.read().bufferedReader().use { it.readText() }
 
     // Parse YAML
     val yaml = Yaml()
@@ -141,6 +151,12 @@ class GithubContributionService(
     // Extract a top-level field from the "data" section
     val dataSection = parsedYaml["data"] as? Map<*, *>
     return dataSection?.get(field) as? String
+  }
+
+  fun readConnectorDescription(): String? {
+    val parsedYaml = readConnectorManifest() ?: return null
+
+    return parsedYaml["description"] as? String
   }
 
   fun constructConnectorFilePath(fileName: String): String = "$connectorDirectoryPath/$fileName"
@@ -226,13 +242,20 @@ class GithubContributionService(
       null
     }
 
-  fun commitFiles(files: Map<String, String>): GHCommit {
+  fun commitFiles(files: Map<String, String?>): GHCommit {
+    // If file's contents are null, don't add it to the tree. If the file's contents are null, and it exists on main, delete it
     val message = "Submission for $connectorImageName from Connector Builder"
     val branchSha = getBranchSha(contributionBranchName, forkedRepository)
     val treeBuilder = forkedRepository.createTree().baseTree(branchSha)
 
     for ((path, content) in files) {
-      treeBuilder.add(path, content, false)
+      if (content != null) {
+        treeBuilder.add(path, content, false)
+      } else {
+        if (checkFileExistsOnMain(path)) {
+          treeBuilder.delete(path)
+        }
+      }
     }
 
     val tree = treeBuilder.create()
@@ -264,20 +287,20 @@ class GithubContributionService(
     return createPullRequest(description)
   }
 
-  fun attemptUpdateForkedBranchAndRepoToLatest() {
-    val airbyteMasterSha = getBranchSha(airbyteRepository.defaultBranch, airbyteRepository)
-    val forkedMasterRef = getBranchRef(airbyteRepository.defaultBranch, forkedRepository)
-    val forkedContributionBranch = getBranch(contributionBranchName, forkedRepository)
-
-    try {
-      forkedMasterRef?.updateTo(airbyteMasterSha)
-      forkedContributionBranch?.merge(airbyteMasterSha, "Merge latest changes from main branch")
-    } catch (e: GHFileNotFoundException) {
-      // HACK: This method is flaky and relies on an eventually consistent GitHub API
-      // TODO: Update to use `merge-upstream` instead
-      // WHEN: When a version of org.kohsuke:github-api < 1.323 is available
-      // WHY: https://github.com/hub4j/github-api/pull/1898 will be part of that change
-      logger.error(e) { "Failed to update forked branch to latest" }
+  private fun attemptUpdateForkedBranchAndRepoToLatest() {
+    for (branch in listOf(airbyteRepository.defaultBranch, contributionBranchName)) {
+      try {
+        forkedRepository.sync(branch)
+      } catch (e: HttpException) {
+        logger.debug(e) { "Failed to update forked branch '$branch' from upstream repository: $e" }
+        if (e.responseCode == 409) {
+          // A 409 signifies a merge conflict, see https://docs.github.com/en/rest/branches/branches?apiVersion=2022-11-28#sync-a-fork-branch-with-the-upstream-repository
+          // we will continue to make the contribution and expect the user to resolve the merge conflict.
+          logger.info { "There is a merge conflict, continuing to publish contribution regardless" }
+        } else {
+          throw e
+        }
+      }
     }
   }
 
@@ -285,16 +308,13 @@ class GithubContributionService(
     val existingBranch = getBranchRef(contributionBranchName, forkedRepository)
     val existingPR = getExistingOpenPullRequest()
 
-    if (existingBranch != null) {
-      if (existingPR != null) {
-        // Make sure the existing PR stays up to date with master
-        attemptUpdateForkedBranchAndRepoToLatest()
-      } else {
-        // Delete the branch with old contributions in the PR doesn't exist anymore
-        deleteBranch(contributionBranchName, forkedRepository)
-      }
+    // If the branch exists and the PR doesn't exist, delete the branch to clean up commit history
+    if (existingBranch != null && existingPR == null) {
+      deleteBranch(contributionBranchName, forkedRepository)
     }
 
+    // Create a new branch if it doesn't exist and update it and the repo fork to the latest Airbyte main
     getOrCreateContributionBranch()
+    attemptUpdateForkedBranchAndRepoToLatest()
   }
 }

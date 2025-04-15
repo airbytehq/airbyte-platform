@@ -4,7 +4,6 @@
 
 package io.airbyte.data.repositories.entities
 
-import io.micronaut.core.annotation.Nullable
 import io.micronaut.data.annotation.AutoPopulated
 import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
@@ -24,7 +23,5 @@ data class Dataplane(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
-  @Nullable
-  var updatedBy: UUID? = null,
   var tombstone: Boolean,
 )

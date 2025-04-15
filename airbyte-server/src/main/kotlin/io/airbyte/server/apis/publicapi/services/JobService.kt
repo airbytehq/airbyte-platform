@@ -120,10 +120,9 @@ class JobServiceImpl(
    * Gets job info without logs as they're sometimes large enough to make the response size exceed the server max.
    */
   override fun getJobInfoWithoutLogs(jobId: Long): JobResponse {
-    val jobIdRequestBody = JobIdRequestBody().id(jobId)
     val result =
       kotlin
-        .runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody) }
+        .runCatching { jobHistoryHandler.getJobInfoWithoutLogs(jobId) }
         .onFailure {
           log.error("Error getting job info without logs $it")
           ConfigClientErrorHandler.handleError(it)

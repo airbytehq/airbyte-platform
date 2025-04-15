@@ -186,7 +186,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     workflowId: String,
     input: ConnectorRolloutWorkflowInput,
   ): ConnectorEnumRolloutState {
-    val rollout = connectorRollout!!
+    val rollout = getRollout(ConnectorRolloutActivityInputGet(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, input.rolloutId))
 
     var nextRolloutStageAt = getCurrentTimeMilli()
     val expirationTime = nextRolloutStageAt.plusSeconds(input.rolloutExpirationSeconds.toLong())

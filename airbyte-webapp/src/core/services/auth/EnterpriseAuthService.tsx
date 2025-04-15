@@ -27,6 +27,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
     client_id: auth.clientId,
     redirect_uri: createUriWithoutSsoParams(true), // creates redirect uri and adds `checkLicense=true` query param to trigger Enterprise license check.
     scope: "openid profile email",
+    extraQueryParams: !!auth.audience ? { audience: auth.audience } : undefined,
     onSigninCallback: () => {
       // Remove OIDC params from URL, but don't remove other params that might be present
       const searchParams = new URLSearchParams(window.location.search);

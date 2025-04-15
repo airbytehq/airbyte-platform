@@ -6,14 +6,16 @@ package io.airbyte.data.services.impls.jooq;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
+import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
-import io.airbyte.config.Geography;
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
+import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
@@ -42,7 +44,8 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
   public ConnectionServiceJooqImplTest() {
-    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
+    final DataplaneGroupServiceTestJooqImpl dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
+    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
   }
 
   private static Stream<Arguments> actorSyncsStreamTestProvider() {
@@ -114,7 +117,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withGeography(Geography.AUTO)
+        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());
@@ -191,6 +194,122 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
 
     assertNotEquals(tagsFromMultipleWorkspaces, standardSyncPersisted.getTags());
     assertEquals(tags, standardSyncPersisted.getTags());
+  }
+
+  @Test
+  void testGetStreamsForDestination() throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setUpDependencies();
+
+    final DestinationConnection destination = jooqTestDbSetupHelper.getDestination();
+    final SourceConnection source = jooqTestDbSetupHelper.getSource();
+
+    // Create a connection with multiple streams in different states
+    final List<ConfiguredAirbyteStream> streams = List.of(
+        // Selected stream
+        catalogHelpers.createConfiguredAirbyteStream("stream_a", "namespace_1", Field.of("field_1", JsonSchemaType.STRING)),
+
+        // Selected stream with different namespace
+        catalogHelpers.createConfiguredAirbyteStream("stream_b", "namespace_2", Field.of("field_1", JsonSchemaType.STRING)));
+
+    final StandardSync standardSync = createStandardSync(source, destination, streams)
+        .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
+        .withPrefix("prefix_")
+        .withNamespaceFormat("${SOURCE_NAMESPACE}");
+
+    connectionServiceJooqImpl.writeStandardSync(standardSync);
+
+    // Create another connection that's inactive
+    final List<ConfiguredAirbyteStream> inactiveStreams = List.of(
+        catalogHelpers.createConfiguredAirbyteStream("stream_d", "namespace_3", Field.of("field_1", JsonSchemaType.STRING)));
+
+    final StandardSync inactiveSync = createStandardSync(source, destination, inactiveStreams)
+        .withStatus(StandardSync.Status.INACTIVE);
+
+    connectionServiceJooqImpl.writeStandardSync(inactiveSync);
+
+    // Get streams for destination
+    final List<StreamDescriptorForDestination> streamConfigs =
+        connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId(), null);
+
+    // Should only return selected streams from active connections
+    assertEquals(2, streamConfigs.size());
+
+    // Verify first stream
+    final StreamDescriptorForDestination streamConfigA = streamConfigs.stream()
+        .filter(s -> "stream_a".equals(s.getStreamName()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals("namespace_1", streamConfigA.getStreamNamespace());
+    assertEquals(NamespaceDefinitionType.SOURCE, streamConfigA.getNamespaceDefinition());
+    assertEquals("${SOURCE_NAMESPACE}", streamConfigA.getNamespaceFormat());
+    assertEquals("prefix_", streamConfigA.getPrefix());
+
+    // Verify second stream
+    final StreamDescriptorForDestination streamConfigC = streamConfigs.stream()
+        .filter(s -> "stream_b".equals(s.getStreamName()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals("namespace_2", streamConfigC.getStreamNamespace());
+    assertEquals(NamespaceDefinitionType.SOURCE, streamConfigC.getNamespaceDefinition());
+    assertEquals("${SOURCE_NAMESPACE}", streamConfigC.getNamespaceFormat());
+    assertEquals("prefix_", streamConfigC.getPrefix());
+  }
+
+  @Test
+  void testGetStreamsForDestinationWithMultipleConnections() throws IOException, JsonValidationException, ConfigNotFoundException, SQLException {
+    final JooqTestDbSetupHelper jooqTestDbSetupHelper = new JooqTestDbSetupHelper();
+    jooqTestDbSetupHelper.setUpDependencies();
+
+    final DestinationConnection destination = jooqTestDbSetupHelper.getDestination();
+    final SourceConnection source = jooqTestDbSetupHelper.getSource();
+
+    // Create first connection with custom namespace
+    final List<ConfiguredAirbyteStream> streams1 = List.of(
+        catalogHelpers.createConfiguredAirbyteStream("stream_a", "namespace_1", Field.of("field_1", JsonSchemaType.STRING)));
+
+    final StandardSync sync1 = createStandardSync(source, destination, streams1)
+        .withNamespaceDefinition(NamespaceDefinitionType.CUSTOMFORMAT)
+        .withNamespaceFormat("custom_${SOURCE_NAMESPACE}")
+        .withPrefix("prefix1_");
+
+    connectionServiceJooqImpl.writeStandardSync(sync1);
+
+    // Create second connection with destination namespace
+    final List<ConfiguredAirbyteStream> streams2 = List.of(
+        catalogHelpers.createConfiguredAirbyteStream("stream_b", "namespace_2", Field.of("field_1", JsonSchemaType.STRING)));
+
+    final StandardSync sync2 = createStandardSync(source, destination, streams2)
+        .withNamespaceDefinition(NamespaceDefinitionType.DESTINATION)
+        .withPrefix("prefix2_");
+
+    connectionServiceJooqImpl.writeStandardSync(sync2);
+
+    // Get streams for destination
+    final List<StreamDescriptorForDestination> streamConfigs =
+        connectionServiceJooqImpl.listStreamsForDestination(destination.getDestinationId(), null);
+
+    assertEquals(2, streamConfigs.size());
+
+    // Verify first stream
+    final StreamDescriptorForDestination streamConfigA = streamConfigs.stream()
+        .filter(s -> "stream_a".equals(s.getStreamName()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals("namespace_1", streamConfigA.getStreamNamespace());
+    assertEquals(NamespaceDefinitionType.CUSTOMFORMAT, streamConfigA.getNamespaceDefinition());
+    assertEquals("custom_${SOURCE_NAMESPACE}", streamConfigA.getNamespaceFormat());
+    assertEquals("prefix1_", streamConfigA.getPrefix());
+
+    // Verify second stream
+    final StreamDescriptorForDestination streamConfigB = streamConfigs.stream()
+        .filter(s -> "stream_b".equals(s.getStreamName()))
+        .findFirst()
+        .orElseThrow();
+    assertEquals("namespace_2", streamConfigB.getStreamNamespace());
+    assertEquals(NamespaceDefinitionType.DESTINATION, streamConfigB.getNamespaceDefinition());
+    assertNull(streamConfigB.getNamespaceFormat());
+    assertEquals("prefix2_", streamConfigB.getPrefix());
   }
 
 }

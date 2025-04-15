@@ -27,7 +27,12 @@ import {
 } from "./Assist/assist";
 import { AssistWaiting } from "./Assist/AssistWaiting";
 import { BuilderField } from "./BuilderField";
-import { BuilderStream, DEFAULT_BUILDER_STREAM_VALUES, DEFAULT_SCHEMA } from "../types";
+import {
+  BuilderStream,
+  DEFAULT_BUILDER_STREAM_VALUES,
+  DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+  DEFAULT_SCHEMA,
+} from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface AddStreamResponse {
@@ -38,7 +43,6 @@ interface AddStreamResponse {
 interface AddStreamButtonProps {
   onAddStream: (addedStreamNum: number) => void;
   button?: React.ReactElement;
-  streamToDuplicate?: Partial<BuilderStream>;
   "data-testid"?: string;
   modalTitle?: string;
   disabled?: boolean;
@@ -47,7 +51,6 @@ interface AddStreamButtonProps {
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   onAddStream,
   button,
-  streamToDuplicate,
   "data-testid": testId,
   modalTitle,
   disabled,
@@ -85,23 +88,15 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
     ]);
     setIsOpen(false);
     onAddStream(numStreams);
-    if (streamToDuplicate) {
-      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_COPY, {
-        actionDescription: "Existing stream copied into a new stream",
-        existing_stream_id: streamToDuplicate.id,
-        existing_stream_name: streamToDuplicate.name,
-        new_stream_id: id,
-        new_stream_name: values.streamName,
-        new_stream_url_path: values.newStreamValues?.urlPath,
-      });
-    } else {
-      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
-        actionDescription: "New stream created from the Add Stream button",
-        stream_id: id,
-        stream_name: values.streamName,
-        url_path: values.newStreamValues?.urlPath,
-      });
-    }
+    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
+      actionDescription: "New stream created from the Add Stream button",
+      stream_id: id,
+      stream_name: values.streamName,
+      url_path:
+        values.newStreamValues.requestType === "sync"
+          ? values.newStreamValues.urlPath
+          : values.newStreamValues.creationRequester.url,
+    });
   };
 
   return (
@@ -130,7 +125,6 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           modalTitle={modalTitle}
           onSubmit={handleSubmit}
           onCancel={() => setIsOpen(false)}
-          streamToDuplicate={streamToDuplicate}
           streams={streams}
         />
       )}
@@ -157,17 +151,15 @@ const AddStreamModal = ({
   modalTitle,
   onSubmit,
   onCancel,
-  streamToDuplicate,
   streams,
 }: {
   modalTitle?: string;
   onSubmit: (values: AddStreamResponse) => void;
   onCancel: () => void;
-  streamToDuplicate?: Partial<BuilderStream>;
   streams: BuilderStream[];
 }) => {
   const { assistEnabled } = useConnectorBuilderFormState();
-  const shouldAssist = assistEnabled && !streamToDuplicate;
+  const shouldAssist = assistEnabled;
 
   // TODO refactor to useMutation, as this is a bit of a hack
   const [assistFormValues, setAssistFormValues] = useState<AddStreamFormValues | null>(null);
@@ -180,12 +172,23 @@ const AddStreamModal = ({
 
       onSubmit({
         streamName: values.streamName,
-        newStreamValues: merge({}, DEFAULT_BUILDER_STREAM_VALUES, streamToDuplicate, otherStreamValues, {
-          urlPath: values.urlPath,
-        }),
+        newStreamValues: merge(
+          {},
+          values.requestType === "sync" ? DEFAULT_BUILDER_STREAM_VALUES : DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+          otherStreamValues,
+          values.requestType === "sync"
+            ? {
+                urlPath: values.urlPath,
+              }
+            : {
+                creationRequester: {
+                  url: values.urlPath,
+                },
+              }
+        ),
       });
     },
-    [streams, onSubmit, streamToDuplicate]
+    [streams, onSubmit]
   );
 
   const submitAction = useCallback(
@@ -228,14 +231,7 @@ const AddStreamModal = ({
       {assistInput ? (
         <AssistProcessing input={assistInput} onComplete={onSubmit} onSkip={cancelAction} />
       ) : (
-        <AddStreamForm
-          onSubmit={submitAction}
-          onCancel={cancelAction}
-          isDuplicate={!!streamToDuplicate}
-          streams={streams}
-          initialUrlPath={streamToDuplicate?.urlPath}
-          shouldAssist={shouldAssist}
-        />
+        <AddStreamForm onSubmit={submitAction} onCancel={cancelAction} streams={streams} shouldAssist={shouldAssist} />
       )}
     </Modal>
   );
@@ -246,21 +242,18 @@ interface AddStreamFormValues {
   urlPath: string;
   copyOtherStream?: boolean;
   streamToCopy?: string;
+  requestType?: BuilderStream["requestType"];
 }
 
 const AddStreamForm = ({
   onSubmit,
   onCancel,
-  isDuplicate,
   streams,
-  initialUrlPath,
   shouldAssist,
 }: {
   onSubmit: (values: AddStreamFormValues) => void;
   onCancel: () => void;
-  isDuplicate: boolean;
   streams: BuilderStream[];
-  initialUrlPath?: string;
   shouldAssist: boolean;
 }) => {
   const { formatMessage } = useIntl();
@@ -269,7 +262,7 @@ const AddStreamForm = ({
     enabled: shouldAssist,
   });
 
-  const showCopyFromStream = !isDuplicate && streams.length > 0;
+  const showCopyFromStream = streams.length > 0;
   const showUrlPath = !shouldAssist;
 
   const validator: Record<string, yup.StringSchema> = {
@@ -290,15 +283,17 @@ const AddStreamForm = ({
   const methods = useForm({
     defaultValues: {
       streamName: "",
-      urlPath: initialUrlPath ?? "",
+      urlPath: "",
       copyOtherStream: false,
       streamToCopy: streams[0]?.name,
+      requestType: "sync" as const,
     },
     resolver: yupResolver(yup.object().shape(validator)),
     mode: "onChange",
   });
 
   const useOtherStream = methods.watch("copyOtherStream");
+  const requestType = methods.watch("requestType");
 
   return (
     <FormProvider {...methods}>
@@ -318,8 +313,18 @@ const AddStreamForm = ({
             <BuilderField
               path="urlPath"
               type="jinja"
-              label={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathLabel" })}
-              tooltip={formatMessage({ id: "connectorBuilder.addStreamModal.urlPathTooltip" })}
+              label={formatMessage({
+                id:
+                  useOtherStream || requestType === "sync"
+                    ? "connectorBuilder.addStreamModal.urlPathLabel"
+                    : "connectorBuilder.asyncStream.url.label",
+              })}
+              tooltip={formatMessage({
+                id:
+                  useOtherStream || requestType === "sync"
+                    ? "connectorBuilder.addStreamModal.urlPathTooltip"
+                    : "connectorBuilder.asyncStream.url.tooltip",
+              })}
               bubbleUpUndoRedo={false}
             />
           )}
@@ -340,6 +345,23 @@ const AddStreamForm = ({
                 />
               )}
             </>
+          )}
+          {!useOtherStream && (
+            <BuilderField
+              type="enum"
+              path="requestType"
+              label={formatMessage({ id: "connectorBuilder.requestType" })}
+              options={[
+                {
+                  value: "sync",
+                  label: formatMessage({ id: "connectorBuilder.requestType.sync" }),
+                },
+                {
+                  value: "async",
+                  label: formatMessage({ id: "connectorBuilder.requestType.async" }),
+                },
+              ]}
+            />
           )}
         </ModalBody>
         <ModalFooter>

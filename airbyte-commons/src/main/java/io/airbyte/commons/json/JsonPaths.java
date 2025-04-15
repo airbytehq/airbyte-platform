@@ -310,4 +310,39 @@ public class JsonPaths {
     }
   }
 
+  /**
+   * Given a JSONPath template (which may include wildcards like [*]), returns the expanded list of
+   * full JSON paths that match the template in the provided JSON object.
+   * <p>
+   * For example, if the template is "$.rotating_keys[*].key2" and only the second array element
+   * contains "key2", this method will return a list with "$.rotating_keys[1].key2".
+   *
+   * @param json the JSON object to search
+   * @param jsonPathTemplate a JSONPath that may include wildcards (e.g. "$.rotating_keys[*].key2")
+   * @return a sorted list of expanded JSONPath strings with wildcards replaced by actual indices
+   */
+  public static List<String> getExpandedPaths(final JsonNode json, final String jsonPathTemplate) {
+    return getInternal(GET_PATHS_CONFIGURATION, json, jsonPathTemplate)
+        .stream()
+        .map(JsonNode::asText)
+        .map(JsonPaths::normalizeJsonPath)
+        .distinct()
+        .sorted()
+        .collect(Collectors.toList());
+  }
+
+  /**
+   * Normalizes a JSONPath string to use dot notation. For example, it converts
+   * $['rotating_keys'][0]['key1'] to $.rotating_keys[0].key1.
+   *
+   * @param jsonPath the JSONPath string to normalize
+   * @return a normalized JSONPath in dot notation
+   */
+  private static String normalizeJsonPath(String jsonPath) {
+    if (jsonPath == null) {
+      return null;
+    }
+    return jsonPath.replaceAll("\\[['\"]([^'\"]+)['\"]]", ".$1");
+  }
+
 }

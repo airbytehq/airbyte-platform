@@ -46,6 +46,7 @@ import {
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
   useIsForeignWorkspace,
+  useCancelBuilderProjectStreamRead,
 } from "core/api";
 import {
   ConnectorBuilderProjectTestingValues,
@@ -53,7 +54,12 @@ import {
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
 import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
-import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
+import {
+  ConnectorManifest,
+  DeclarativeComponentSchema,
+  DeclarativeStreamType,
+  AsyncRetrieverType,
+} from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
@@ -82,6 +88,7 @@ export type TestingValuesUpdate = UseMutateAsyncFunction<
 
 interface FormStateContext {
   jsonManifest: DeclarativeComponentSchema;
+  customComponentsCode: string | undefined;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
   savingState: SavingState;
@@ -146,6 +153,8 @@ export interface TestReadContext {
   };
   queuedStreamRead: boolean;
   queueStreamRead: () => void;
+  cancelStreamRead: () => void;
+  testStreamRequestType: "sync" | "async";
 }
 
 interface FormManagementStateContext {
@@ -169,7 +178,8 @@ interface NewUserInputContext {
 export const ConnectorBuilderFormStateContext = React.createContext<FormStateContext | null>(null);
 export const ConnectorBuilderTestReadContext = React.createContext<TestReadContext | null>(null);
 export const ConnectorBuilderFormManagementStateContext = React.createContext<FormManagementStateContext | null>(null);
-export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<BuilderState, unknown> | null>(null);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<any, unknown> | null>(null);
 
 export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
@@ -384,9 +394,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
             manifest: convertedManifest,
             componentsFileContent: customComponentsCode,
           });
-          // don't need to explicitly validate here, since automatic form validation will still prevent
-          // publishing if there are any form errors
-          setValue("formValues", convertedFormValues, { shouldValidate: false });
+          setValue("formValues", convertedFormValues, { shouldValidate: true });
           setValue("mode", "ui");
         } catch (e) {
           confirmDiscard(e.message);
@@ -569,6 +577,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const ctx: FormStateContext = {
     jsonManifest,
+    customComponentsCode,
     yamlEditorIsMounted,
     yamlIsValid,
     savingState,
@@ -667,6 +676,7 @@ function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedMa
   }
   resolvedManifest.streams.forEach((resolvedStream, i) => {
     const streamName = streamNameOrDefault(resolvedStream.name, i);
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     if (persistedManifest.metadata?.testedStreams?.[streamName]) {
       return;
     }
@@ -774,6 +784,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   useEffect(() => {
     if (typeof view === "number") {
@@ -815,12 +826,15 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
   const autoImportSchema = useAutoImportSchema(testStreamIndex);
-  const { updateStreamTestResults } = useStreamTestMetadata();
+  const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
+
+  const streamUsesCustomCode = getStreamHasCustomType(streamName);
 
   const streamRead = useBuilderProjectReadStream(
     {
       builderProjectId: projectId,
       manifest: filteredManifest,
+      customComponentsCode: streamUsesCustomCode ? customComponentsCode : undefined,
       streamName,
       recordLimit,
       pageLimit,
@@ -853,11 +867,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
         // Set the schema_loader on the test stream to the inferred schema as well, so
         // that it is included in the stream when generating the test result stream hash.
-
-        testStream.schema_loader = {
-          type: "InlineSchemaLoader",
-          schema: result.inferred_schema,
-        } as const;
+        if (testStream.type === DeclarativeStreamType.DeclarativeStream) {
+          testStream.schema_loader = {
+            type: "InlineSchemaLoader",
+            schema: result.inferred_schema,
+          } as const;
+        }
       }
 
       // update the version so that it is clear which CDK version was used to test the connector
@@ -889,6 +904,14 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setQueuedStreamRead(true);
   }, []);
 
+  const cancel = useCancelBuilderProjectStreamRead(projectId, streamName);
+  const cancelStreamRead = useCallback(() => {
+    // Cancel the query using React Query's remove method
+    cancel();
+    // Also ensure queuedStreamRead is set to false to prevent auto-refetching
+    setQueuedStreamRead(false);
+  }, [cancel]);
+
   const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
 
   const ctx = {
@@ -899,6 +922,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setTestState,
     queuedStreamRead,
     queueStreamRead,
+    cancelStreamRead,
+    testStreamRequestType:
+      testStream?.type === DeclarativeStreamType.DeclarativeStream &&
+      testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever
+        ? ("async" as const)
+        : ("sync" as const),
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

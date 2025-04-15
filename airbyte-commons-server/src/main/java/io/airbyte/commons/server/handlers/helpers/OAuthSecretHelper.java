@@ -11,7 +11,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.oauth.MoreOAuthParameters;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.util.ArrayList;
 import java.util.HashMap;

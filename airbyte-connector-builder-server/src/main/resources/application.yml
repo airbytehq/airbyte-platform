@@ -44,6 +44,9 @@ micronaut:
     v1/manifest/resolve:
       enable: true
       sensitive: false
+    v1/manifest/full_resolve:
+      enable: true
+      sensitive: false
     v1/stream/read:
       enable: true
       sensitive: false
@@ -52,11 +55,14 @@ micronaut:
       sensitive: false
 
 airbyte:
+  license-key: ${AIRBYTE_LICENSE_KEY:empty}
   connector-builder-server:
     github:
       airbyte-pat-token: ${BUILDER_GITHUB_AIRBYTE_PAT_TOKEN:}
     ai-assist:
       url-base: ${AI_ASSIST_URL_BASE:}
+    capabilities:
+      enable-unsafe-code: ${AIRBYTE_ENABLE_UNSAFE_CODE:false}
   acceptance:
     test:
       enabled: ${ACCEPTANCE_TEST_ENABLED:false}

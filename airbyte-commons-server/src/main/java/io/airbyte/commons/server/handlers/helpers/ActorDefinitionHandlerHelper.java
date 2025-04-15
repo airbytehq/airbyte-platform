@@ -24,7 +24,7 @@ import io.airbyte.config.helpers.ConnectorRegistryConverters;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -78,7 +78,7 @@ public class ActorDefinitionHandlerHelper {
   public ActorDefinitionVersion defaultDefinitionVersionFromCreate(final String dockerRepository,
                                                                    final String dockerImageTag,
                                                                    final URI documentationUrl,
-                                                                   final @Nullable UUID workspaceId)
+                                                                   final UUID workspaceId)
       throws IOException {
     final ConnectorSpecification spec = getSpecForImage(
         dockerRepository,

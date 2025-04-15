@@ -21,8 +21,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.api.model.generated.AttemptInfoRead;
-import io.airbyte.api.model.generated.AttemptInfoReadLogs;
 import io.airbyte.api.model.generated.AttemptStats;
 import io.airbyte.api.model.generated.AttemptSyncConfig;
 import io.airbyte.api.model.generated.ConnectionState;
@@ -44,9 +42,7 @@ import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelp
 import io.airbyte.commons.temporal.TemporalUtils;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AirbyteStream;
-import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
-import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
@@ -85,7 +81,6 @@ import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -493,40 +488,6 @@ class AttemptHandlerTest {
     when(jobPersistence.getAttemptForJob(anyLong(), anyInt())).thenReturn(Optional.empty());
 
     assertThrows(IdNotFoundKnownException.class, () -> handler.getAttemptForJob(1L, 2));
-  }
-
-  @Test
-  void getAttemptReturnsAttempt() throws Exception {
-    final var attempt = new Attempt(
-        2,
-        214L,
-        Path.of("/tmp/logs/all/the/way/down"),
-        null,
-        null,
-        AttemptStatus.SUCCEEDED,
-        null,
-        null,
-        Instant.now().getEpochSecond(),
-        Instant.now().getEpochSecond(),
-        Instant.now().getEpochSecond());
-
-    final var logs = new AttemptInfoReadLogs();
-    logs.addLogLinesItem("log line 1");
-    logs.addLogLinesItem("log line 2");
-    final var infoRead = new AttemptInfoRead();
-    infoRead.setAttempt(JobConverter.getAttemptRead(attempt));
-    infoRead.setLogs(logs);
-
-    when(jobPersistence.getAttemptForJob(anyLong(), anyInt())).thenReturn(Optional.of(attempt));
-    when(jobConverter.getAttemptInfoRead(attempt)).thenReturn(infoRead);
-
-    final AttemptInfoRead result = handler.getAttemptForJob(1L, 2);
-    assertEquals(attempt.getAttemptNumber(), result.getAttempt().getId());
-    assertEquals(attempt.getEndedAtInSecond().get(), result.getAttempt().getEndedAt());
-    assertEquals(attempt.getCreatedAtInSecond(), result.getAttempt().getCreatedAt());
-    assertEquals(attempt.getUpdatedAtInSecond(), result.getAttempt().getUpdatedAt());
-    assertEquals(io.airbyte.api.model.generated.AttemptStatus.SUCCEEDED, result.getAttempt().getStatus());
-    assertEquals(logs, result.getLogs());
   }
 
   @Test

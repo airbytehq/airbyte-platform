@@ -5,8 +5,8 @@
 package io.airbyte.workers.internal.bookkeeping.events
 
 import io.airbyte.commons.converters.ConnectorConfigUpdater
-import io.airbyte.protocol.models.AirbyteControlMessage
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteControlMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import io.github.oshai.kotlinlogging.KotlinLogging

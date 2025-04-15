@@ -130,7 +130,7 @@ Renders the database password
         {{- if .Values.global.database.passwordSecretKey }}
             {{ $secretName := .Values.global.database.secretName | required "You must set `global.database.secretName` when using an external database" }}
         {{- else }}
-            {{ $password := .Values.global.database.password | required "You must set `global.database.password` when using an external database" }}
+            {{ $password := .Values.global.database.password }}
         {{- end }}
     {{- end }}
 {{- end }}

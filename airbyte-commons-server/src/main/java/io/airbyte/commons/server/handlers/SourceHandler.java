@@ -19,10 +19,7 @@ import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody;
 import io.airbyte.api.model.generated.PartialSourceUpdate;
-import io.airbyte.api.model.generated.SourceCloneConfiguration;
-import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
@@ -40,34 +37,37 @@ import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
-import io.airbyte.config.ScopeType;
-import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Organization;
-import io.airbyte.featureflag.UseRuntimeSecretPersistence;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -96,17 +96,18 @@ public class SourceHandler {
   private final OAuthConfigSupplier oAuthConfigSupplier;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
-  private final FeatureFlagClient featureFlagClient;
   private final SourceService sourceService;
-  private final WorkspaceService workspaceService;
   private final WorkspaceHelper workspaceHelper;
-  private final SecretPersistenceConfigService secretPersistenceConfigService;
+  private final SecretPersistenceService secretPersistenceService;
   private final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final CatalogConverter catalogConverter;
   private final ApiPojoConverters apiPojoConverters;
-  private final MetricClient metricClient;
   private final Configs.AirbyteEdition airbyteEdition;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final SecretStorageService secretStorageService;
+  private final SecretReferenceService secretReferenceService;
+  private final CurrentUserService currentUserService;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -118,18 +119,19 @@ public class SourceHandler {
                        final ConfigurationUpdate configurationUpdate,
                        final OAuthConfigSupplier oAuthConfigSupplier,
                        final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
-                       final FeatureFlagClient featureFlagClient,
                        final SourceService sourceService,
-                       final WorkspaceService workspaceService,
                        final WorkspaceHelper workspaceHelper,
-                       final SecretPersistenceConfigService secretPersistenceConfigService,
+                       final SecretPersistenceService secretPersistenceService,
                        final ActorDefinitionHandlerHelper actorDefinitionHandlerHelper,
                        final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater,
                        final LicenseEntitlementChecker licenseEntitlementChecker,
                        final CatalogConverter catalogConverter,
                        final ApiPojoConverters apiPojoConverters,
-                       final MetricClient metricClient,
-                       final Configs.AirbyteEdition airbyteEdition) {
+                       final Configs.AirbyteEdition airbyteEdition,
+                       final SecretsRepositoryWriter secretsRepositoryWriter,
+                       final SecretStorageService secretStorageService,
+                       final SecretReferenceService secretReferenceService,
+                       final CurrentUserService currentUserService) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -139,18 +141,19 @@ public class SourceHandler {
     this.secretsProcessor = secretsProcessor;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
-    this.featureFlagClient = featureFlagClient;
     this.sourceService = sourceService;
-    this.workspaceService = workspaceService;
     this.workspaceHelper = workspaceHelper;
-    this.secretPersistenceConfigService = secretPersistenceConfigService;
+    this.secretPersistenceService = secretPersistenceService;
     this.actorDefinitionHandlerHelper = actorDefinitionHandlerHelper;
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.catalogConverter = catalogConverter;
     this.apiPojoConverters = apiPojoConverters;
-    this.metricClient = metricClient;
     this.airbyteEdition = airbyteEdition;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.secretStorageService = secretStorageService;
+    this.secretReferenceService = secretReferenceService;
+    this.currentUserService = currentUserService;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -233,11 +236,13 @@ public class SourceHandler {
     }
 
     final UUID sourceId = partialSourceUpdate.getSourceId();
+
     final SourceConnection updatedSource = configurationUpdate
         .partialSource(sourceId, partialSourceUpdate.getName(),
             partialSourceUpdate.getConnectionConfiguration());
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
-    validateSource(spec, updatedSource.getConfiguration());
+
+    validateSourceUpdate(partialSourceUpdate.getConnectionConfiguration(), updatedSource, spec);
 
     ApmTraceUtils.addTagsToTrace(Map.of(WORKSPACE_ID, updatedSource.getWorkspaceId().toString()));
 
@@ -265,10 +270,10 @@ public class SourceHandler {
 
     final UUID sourceId = sourceUpdate.getSourceId();
     final SourceConnection updatedSource = configurationUpdate
-        .source(sourceId, sourceUpdate.getName(),
-            sourceUpdate.getConnectionConfiguration());
+        .source(sourceId, sourceUpdate.getName(), sourceUpdate.getConnectionConfiguration());
     final ConnectorSpecification spec = getSpecFromSourceId(sourceId);
-    validateSource(spec, sourceUpdate.getConnectionConfiguration());
+
+    validateSourceUpdate(sourceUpdate.getConnectionConfiguration(), updatedSource, spec);
 
     ApmTraceUtils.addTagsToTrace(
         Map.of(
@@ -303,8 +308,13 @@ public class SourceHandler {
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
-    return buildSourceRead(sourceIdRequestBody.getSourceId());
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    return getSource(sourceIdRequestBody, false);
+  }
+
+  public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody, Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+    return buildSourceRead(sourceIdRequestBody.getSourceId(), includeSecretCoordinates);
   }
 
   public ActorCatalogWithUpdatedAt getMostRecentSourceActorCatalogWithUpdatedAt(final SourceIdRequestBody sourceIdRequestBody)
@@ -316,36 +326,6 @@ public class SourceHandler {
     } else {
       return new ActorCatalogWithUpdatedAt().updatedAt(actorCatalog.get().getUpdatedAt()).catalog(actorCatalog.get().getCatalog());
     }
-  }
-
-  public SourceRead cloneSource(final SourceCloneRequestBody sourceCloneRequestBody)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
-    // read source configuration from db
-    final SourceRead sourceToClone;
-    sourceToClone = buildSourceReadWithSecrets(sourceCloneRequestBody.getSourceCloneId());
-    final SourceCloneConfiguration sourceCloneConfiguration = sourceCloneRequestBody.getSourceConfiguration();
-
-    final String copyText = " (Copy)";
-    final String sourceName = sourceToClone.getName() + copyText;
-
-    final SourceCreate sourceCreate = new SourceCreate()
-        .name(sourceName)
-        .sourceDefinitionId(sourceToClone.getSourceDefinitionId())
-        .connectionConfiguration(sourceToClone.getConnectionConfiguration())
-        .workspaceId(sourceToClone.getWorkspaceId())
-        .resourceAllocation(sourceToClone.getResourceAllocation());
-
-    if (sourceCloneConfiguration != null) {
-      if (sourceCloneConfiguration.getName() != null) {
-        sourceCreate.name(sourceCloneConfiguration.getName());
-      }
-
-      if (sourceCloneConfiguration.getConnectionConfiguration() != null) {
-        sourceCreate.connectionConfiguration(sourceCloneConfiguration.getConnectionConfiguration());
-      }
-    }
-
-    return createSource(sourceCreate);
   }
 
   public SourceReadList listSourcesForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -378,11 +358,11 @@ public class SourceHandler {
     return new SourceReadList().sources(reads);
   }
 
-  public SourceReadList listSourcesForSourceDefinition(final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody)
+  public SourceReadList listSourcesForSourceDefinition(final UUID sourceDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
     final List<SourceRead> reads = Lists.newArrayList();
-    for (final SourceConnection sourceConnection : sourceService.listSourcesForDefinition(sourceDefinitionIdRequestBody.getSourceDefinitionId())) {
+    for (final SourceConnection sourceConnection : sourceService.listSourcesForDefinition(sourceDefinitionId)) {
       reads.add(buildSourceRead(sourceConnection));
     }
 
@@ -430,14 +410,25 @@ public class SourceHandler {
       connectionsHandler.deleteConnection(uuidToDelete);
     }
 
-    final var spec = getSpecFromSourceId(source.getSourceId());
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceIdRequestBody.getWorkspaceId());
 
-    // Delete secrets and config in this source and mark it tombstoned.
+    final ConfigWithSecretReferences configWithSecretReferences = secretReferenceService.getConfigWithSecretReferences(
+        SecretReferenceScopeType.ACTOR,
+        source.getSourceId(),
+        source.getConnectionConfiguration());
+
+    // Delete airbyte-managed secrets for this source
+    secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence);
+
+    // Delete secret references for this source
+    secretReferenceService.deleteActorSecretReferences(source.getSourceId());
+
+    // Mark source as tombstoned and clear config
     try {
       sourceService.tombstoneSource(
           source.getName(),
           source.getWorkspaceId(),
-          source.getSourceId(), spec);
+          source.getSourceId());
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -473,48 +464,86 @@ public class SourceHandler {
 
   public SourceRead buildSourceRead(final UUID sourceId)
       throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildSourceRead(sourceId, false);
+  }
+
+  public SourceRead buildSourceRead(final UUID sourceId, final Boolean includeSecretCoordinates)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
     final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceId);
-    return buildSourceRead(sourceConnection);
+    return buildSourceRead(sourceConnection, includeSecretCoordinates);
   }
 
   private SourceRead buildSourceRead(final SourceConnection sourceConnection)
+      throws ConfigNotFoundException, IOException, JsonValidationException {
+    return buildSourceRead(sourceConnection, false);
+  }
+
+  private SourceRead buildSourceRead(final SourceConnection sourceConnection, final Boolean includeSecretCoordinates)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     final StandardSourceDefinition sourceDef = sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDef, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
     final ConnectorSpecification spec = sourceVersion.getSpec();
-    return buildSourceRead(sourceConnection, spec);
+    return buildSourceRead(sourceConnection, spec, includeSecretCoordinates);
   }
 
   private SourceRead buildSourceRead(final SourceConnection sourceConnection, final ConnectorSpecification spec)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-    // read configuration from db
-    final StandardSourceDefinition standardSourceDefinition = sourceService
-        .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final JsonNode sanitizedConfig = secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), spec.getConnectionSpecification());
-    sourceConnection.setConfiguration(sanitizedConfig);
-    return toSourceRead(sourceConnection, standardSourceDefinition);
+    return buildSourceRead(sourceConnection, spec, false);
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
-  private SourceRead buildSourceReadWithSecrets(final UUID sourceId)
+  private SourceRead buildSourceRead(final SourceConnection sourceConnection,
+                                     final ConnectorSpecification spec,
+                                     final Boolean includeSecretCoordinates)
       throws ConfigNotFoundException, IOException, JsonValidationException {
     // read configuration from db
-    final SourceConnection sourceConnection;
-    try {
-      sourceConnection = sourceService.getSourceConnectionWithSecrets(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
     final StandardSourceDefinition standardSourceDefinition = sourceService
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
+    if (includeSecretCoordinates
+        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
+      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
+    }
+    final ConfigWithSecretReferences configWithRefs =
+        this.secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, sourceConnection.getSourceId(),
+            sourceConnection.getConfiguration());
+    final JsonNode sanitizedConfig =
+        includeSecretCoordinates
+            ? secretsProcessor.simplifySecretsForOutput(
+                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
+                spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+    sourceConnection.setConfiguration(sanitizedConfig);
     return toSourceRead(sourceConnection, standardSourceDefinition);
   }
 
   private void validateSource(final ConnectorSpecification spec, final JsonNode implementationJson)
       throws JsonValidationException {
     validator.ensure(spec.getConnectionSpecification(), implementationJson);
+  }
+
+  /**
+   * Validates the provided update JSON against the spec by merging it into the full updated source
+   * config.
+   * <p>
+   * Note: The existing source config may have been persisted with secret object nodes instead of raw
+   * values, which must be replaced with placeholder text nodes in order to pass validation.
+   */
+  private void validateSourceUpdate(final JsonNode providedUpdateJson, final SourceConnection updatedSource, final ConnectorSpecification spec)
+      throws JsonValidationException {
+    // Replace any secret object nodes with placeholder text nodes that will pass validation.
+    final JsonNode updatedSourceConfigWithSecretPlaceholders =
+        SecretReferenceHelpers.INSTANCE.configWithTextualSecretPlaceholders(
+            updatedSource.getConfiguration(),
+            spec.getConnectionSpecification());
+    // Merge the provided update JSON into the updated source config with secret placeholders.
+    // The final result should pass validation as long as the provided update JSON is valid.
+    final JsonNode mergedConfig = Optional.ofNullable(providedUpdateJson)
+        .map(update -> Jsons.mergeNodes(updatedSourceConfigWithSecretPlaceholders, update))
+        .orElse(updatedSourceConfigWithSecretPlaceholders);
+
+    validateSource(spec, mergedConfig);
   }
 
   private ConnectorSpecification getSpecFromSourceId(final UUID sourceId)
@@ -525,14 +554,19 @@ public class SourceHandler {
     return sourceVersion.getSpec();
   }
 
-  private ConnectorSpecification getSpecFromSourceDefinitionIdForWorkspace(final UUID sourceDefId, final UUID workspaceId)
+  public ConnectorSpecification getSpecFromSourceDefinitionIdForWorkspace(final UUID sourceDefId, final UUID workspaceId)
       throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(sourceDefId);
     final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, workspaceId);
     return sourceVersion.getSpec();
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
+  /**
+   * Persists a source to the database, with secret masking and handling applied for OAuth and other
+   * secret values in the provided configuration json. Raw secret values and prefixed secret
+   * coordinates are split out from the provided config and replaced with coordinates or secret
+   * reference IDs, depending on whether the workspace has a secret storage configured.
+   */
   private void persistSourceConnection(final String name,
                                        final UUID sourceDefinitionId,
                                        final UUID workspaceId,
@@ -541,25 +575,71 @@ public class SourceHandler {
                                        final JsonNode configurationJson,
                                        final ConnectorSpecification spec,
                                        final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException {
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinitionId);
 
-    final JsonNode oAuthMaskedConfigurationJson =
-        oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
+    final JsonNode maskedConfig = oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionId, workspaceId, configurationJson, spec);
+    final Optional<UUID> secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(workspaceId)).map(SecretStorage::getIdJava);
 
-    final SourceConnection sourceConnection = new SourceConnection()
+    final SourceConnection newSourceConnection = new SourceConnection()
         .withName(name)
         .withSourceDefinitionId(sourceDefinitionId)
         .withWorkspaceId(workspaceId)
         .withSourceId(sourceId)
         .withTombstone(tombstone)
-        .withConfiguration(oAuthMaskedConfigurationJson)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
-    try {
-      sourceService.writeSourceConnectionWithSecrets(sourceConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+
+    JsonNode updatedConfig = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, sourceId);
+
+    if (secretStorageId.isPresent()) {
+      final ConfigWithProcessedSecrets reprocessedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+          updatedConfig, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+      updatedConfig = secretReferenceService.createAndInsertSecretReferencesWithStorageId(
+          reprocessedConfig,
+          sourceId,
+          secretStorageId.get(),
+          currentUserService.getCurrentUser().getUserId());
+    }
+
+    newSourceConnection.setConfiguration(updatedConfig);
+    sourceService.writeSourceConnectionNoSecrets(newSourceConnection);
+  }
+
+  /**
+   * Persists raw secret values for the given config. Creates or updates depending on whether a prior
+   * config exists.
+   *
+   * @return new config with secret values replaced with secret coordinate nodes.
+   */
+  public JsonNode persistConfigRawSecretValues(final JsonNode config,
+                                               final Optional<UUID> secretStorageId,
+                                               final UUID workspaceId,
+                                               final ConnectorSpecification spec,
+                                               final UUID sourceId)
+      throws JsonValidationException {
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
+    final ConfigWithProcessedSecrets processedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+        config, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+    final Optional<JsonNode> previousConfig = sourceService.getSourceConnectionIfExists(sourceId)
+        .map(SourceConnection::getConfiguration);
+    if (previousConfig.isPresent()) {
+      final ConfigWithSecretReferences priorConfigWithSecretReferences =
+          secretReferenceService.getConfigWithSecretReferences(
+              SecretReferenceScopeType.ACTOR,
+              sourceId,
+              previousConfig.get());
+      return secretsRepositoryWriter.updateFromConfig(
+          workspaceId,
+          priorConfigWithSecretReferences,
+          processedConfig,
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    } else {
+      return secretsRepositoryWriter.createFromConfig(
+          workspaceId,
+          processedConfig,
+          secretPersistence);
     }
   }
 
@@ -605,29 +685,10 @@ public class SourceHandler {
 
   @VisibleForTesting
   @SuppressWarnings("PMD.PreserveStackTrace")
-  JsonNode hydrateOAuthResponseSecret(final String secretId, final UUID workspaceId)
-      throws ConfigNotFoundException, JsonValidationException, IOException {
+  JsonNode hydrateOAuthResponseSecret(final String secretId, final UUID workspaceId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.Companion.fromFullCoordinate(secretId);
-    final UUID organizationId;
-    try {
-      organizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).getOrganizationId();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-    }
-    final JsonNode secret;
-    if (organizationId != null && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
-      final SecretPersistenceConfig secretPersistenceConfig;
-      try {
-        secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-      }
-      secret =
-          secretsRepositoryReader.fetchSecretFromRuntimeSecretPersistence(secretCoordinate,
-              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
-    } else {
-      secret = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(secretCoordinate);
-    }
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
+    final JsonNode secret = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence);
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }

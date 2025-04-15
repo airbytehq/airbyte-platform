@@ -10,16 +10,23 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.json.JsonPaths
+import io.airbyte.commons.json.JsonPaths.getExpandedPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.ExternalSecretCoordinate
 import io.airbyte.config.secrets.persistence.ReadOnlySecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.domain.models.SecretReferenceId
+import io.airbyte.domain.models.SecretStorageId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 import java.util.function.Supplier
+import kotlin.collections.set
 
 private val logger = KotlinLogging.logger {}
 
@@ -47,31 +54,37 @@ private val logger = KotlinLogging.logger {}
  */
 object SecretsHelpers {
   private const val COORDINATE_FIELD = "_secret"
+  private const val SECRET_STORAGE_ID_FIELD = "_secret_storage_id"
+  private const val SECRET_REF_ID_FIELD = "_secret_reference_id"
+
+  // The prefix used to recognize secret references in a config. End users can use this prefix to
+  // specify a coordinate to a secret in their configured secret storage.
+  @InternalForTesting
+  internal const val SECRET_REF_PREFIX = "secret_coordinate::"
 
   /**
    * Used to separate secrets out of some configuration. This will output a partial config that
    * includes pointers to secrets instead of actual secret values and a map that can be used to update
    * a [SecretPersistence] at coordinates with values from the full config.
    *
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param fullConfig config including secrets
-   * @param spec specification for the config
    * @param secretPersistence secret persistence to be used for r/w. Could be a runtime secret persistence.
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitConfig(
-    workspaceId: UUID,
-    fullConfig: JsonNode,
-    spec: JsonNode?,
+    secretBaseId: UUID,
+    fullConfig: ConfigWithProcessedSecrets,
     secretPersistence: SecretPersistence,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
-      { UUID.randomUUID() },
-      workspaceId,
-      secretPersistence,
-      Jsons.emptyObject(),
-      fullConfig,
-      spec,
+      uuidSupplier = { UUID.randomUUID() },
+      secretBaseId = secretBaseId,
+      secretReader = secretPersistence,
+      persistedPartialConfig = null,
+      newFullConfig = fullConfig,
+      secretBasePrefix = secretBasePrefix,
     )
 
   /**
@@ -81,26 +94,45 @@ object SecretsHelpers {
    *
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation.
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param fullConfig config including secrets
    * @param spec specification for the config
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
-    fullConfig: JsonNode,
-    spec: JsonNode?,
+    secretBaseId: UUID,
+    fullConfig: ConfigWithProcessedSecrets,
     secretPersistence: SecretPersistence,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
-      uuidSupplier,
-      workspaceId,
-      secretPersistence,
-      Jsons.emptyObject(),
-      fullConfig,
-      spec,
+      uuidSupplier = uuidSupplier,
+      secretBaseId = secretBaseId,
+      secretReader = secretPersistence,
+      persistedPartialConfig = null,
+      newFullConfig = fullConfig,
+      secretBasePrefix = secretBasePrefix,
     )
+
+  @Deprecated("Use splitConfig() that takes in InputConfigWithProcessedSecrets instead.")
+  fun splitConfig(
+    uuidSupplier: Supplier<UUID>,
+    secretBaseId: UUID,
+    fullConfig: JsonNode,
+    spec: JsonNode,
+    secretPersistence: SecretPersistence,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+  ): SplitSecretConfig {
+    val fullConfigWithProcessedSecrets = SecretReferenceHelpers.processConfigSecrets(fullConfig, spec, null)
+    return splitConfig(
+      uuidSupplier = uuidSupplier,
+      secretBaseId = secretBaseId,
+      fullConfig = fullConfigWithProcessedSecrets,
+      secretPersistence = secretPersistence,
+      secretBasePrefix = secretBasePrefix,
+    )
+  }
 
   /**
    * Used to separate secrets out of a configuration and output a partial config that includes
@@ -109,7 +141,7 @@ object SecretsHelpers {
    * for this configuration is provided, this method attempts to use the same base coordinates to
    * refer to the same secret and increment the version of the coordinate used to reference a secret.
    *
-   * @param workspaceId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param oldPartialConfig previous partial config for this specific configuration
    * @param newFullConfig new config containing secrets that will be used to update the partial config
    * @param spec specification that should match both the previous partial config after filling in
@@ -119,46 +151,66 @@ object SecretsHelpers {
    * @return a partial config + a map of coordinates to secret payloads
    */
   fun splitAndUpdateConfig(
-    workspaceId: UUID,
-    oldPartialConfig: JsonNode?,
-    newFullConfig: JsonNode,
-    spec: JsonNode?,
+    secretBaseId: UUID,
+    oldPartialConfig: ConfigWithSecretReferences?,
+    newFullConfig: ConfigWithProcessedSecrets,
     secretReader: ReadOnlySecretPersistence,
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
   ): SplitSecretConfig =
     internalSplitAndUpdateConfig(
-      { UUID.randomUUID() },
-      workspaceId,
-      secretReader,
-      oldPartialConfig,
-      newFullConfig,
-      spec,
+      uuidSupplier = { UUID.randomUUID() },
+      secretBaseId = secretBaseId,
+      secretReader = secretReader,
+      persistedPartialConfig = oldPartialConfig,
+      newFullConfig = newFullConfig,
+      secretBasePrefix = secretBasePrefix,
     )
 
   /**
    * Identical to [SecretsHelpers.splitAndUpdateConfig] with UUID supplier for testing.
    */
+  @Deprecated("Use splitAndUpdateConfig() that takes in ConfigWithSecretReferences instead.")
   @VisibleForTesting
   fun splitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     oldPartialConfig: JsonNode?,
     newFullConfig: JsonNode,
-    spec: JsonNode?,
+    spec: JsonNode,
     secretReader: ReadOnlySecretPersistence,
-  ): SplitSecretConfig = internalSplitAndUpdateConfig(uuidSupplier, workspaceId, secretReader, oldPartialConfig, newFullConfig, spec)
+    secretBasePrefix: String = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+  ): SplitSecretConfig {
+    val oldPartialConfigWithSecretReferences = oldPartialConfig?.let { buildConfigWithSecretRefsJava(it) }
+    val newFullConfigWithProcessedSecrets = SecretReferenceHelpers.processConfigSecrets(newFullConfig, spec, null)
+    return internalSplitAndUpdateConfig(
+      uuidSupplier = uuidSupplier,
+      secretBaseId = secretBaseId,
+      secretReader = secretReader,
+      persistedPartialConfig = oldPartialConfigWithSecretReferences,
+      newFullConfig = newFullConfigWithProcessedSecrets,
+      secretBasePrefix = secretBasePrefix,
+    )
+  }
 
   /**
    * Replaces {"_secret": "full_coordinate"} objects in the partial config with the string secret
    * payloads loaded from the secret persistence at those coordinates.
    *
-   * @param partialConfig configuration containing secret coordinates (references to secrets)
+   * @param configWithRefs configuration containing secret coordinates (references to secrets)
    * @param secretPersistence secret storage mechanism
    * @return full config including actual secret values
    */
   fun combineConfig(
+    configWithRefs: ConfigWithSecretReferences?,
+    secretPersistence: ReadOnlySecretPersistence,
+  ): JsonNode = combineInlinedConfig(configWithRefs?.toInlined()?.value, secretPersistence)
+
+  @VisibleForTesting
+  internal fun combineInlinedConfig(
     partialConfig: JsonNode?,
     secretPersistence: ReadOnlySecretPersistence,
   ): JsonNode {
+    // This should be updated to operate on ConfigWithSecretReferences instead of raw json nodes after legacy secrets are gone
     return if (partialConfig != null) {
       val config = partialConfig.deepCopy<JsonNode>()
 
@@ -173,10 +225,10 @@ object SecretsHelpers {
       config.fields().forEachRemaining { (fieldName, fieldNode): Map.Entry<String, JsonNode> ->
         if (fieldNode is ArrayNode) {
           for (i in 0 until fieldNode.size()) {
-            fieldNode[i] = combineConfig(fieldNode[i], secretPersistence)
+            fieldNode[i] = combineInlinedConfig(fieldNode[i], secretPersistence)
           }
         } else if (fieldNode is ObjectNode) {
-          (config as ObjectNode).replace(fieldName, combineConfig(fieldNode, secretPersistence))
+          (config as ObjectNode).replace(fieldName, combineInlinedConfig(fieldNode, secretPersistence))
         }
       }
       config
@@ -210,13 +262,6 @@ object SecretsHelpers {
       .sorted()
       .toList()
 
-  fun getExistingCoordinateIfExists(json: JsonNode?): String? =
-    if (json != null && json.has(COORDINATE_FIELD)) {
-      json[COORDINATE_FIELD].asText()
-    } else {
-      null
-    }
-
   /**
    * Internal method used to support both "split config" and "split and update config" operations.
    *
@@ -229,7 +274,7 @@ object SecretsHelpers {
    *
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation
-   * @param workspaceId workspace that will contain the source or destination this config will be
+   * @param secretBaseId base id that will contain the source or destination this config will be
    * stored for
    * @param secretReader provides a way to determine if a secret is the same or updated at a specific
    * location in a config
@@ -240,27 +285,118 @@ object SecretsHelpers {
    */
   private fun internalSplitAndUpdateConfig(
     uuidSupplier: Supplier<UUID>,
-    workspaceId: UUID,
+    secretBaseId: UUID,
     secretReader: ReadOnlySecretPersistence,
-    persistedPartialConfig: JsonNode?,
-    newFullConfig: JsonNode,
-    spec: JsonNode?,
+    persistedPartialConfig: ConfigWithSecretReferences?,
+    newFullConfig: ConfigWithProcessedSecrets,
+    secretBasePrefix: String,
   ): SplitSecretConfig {
-    var fullConfigCopy = newFullConfig.deepCopy<JsonNode>()
-    val secretMap: HashMap<SecretCoordinate, String> = HashMap()
-    val paths = getSortedSecretPaths(spec)
-    logger.debug { "SortedSecretPaths: $paths" }
-    for (path in paths) {
-      fullConfigCopy =
-        JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
-          val persistedNode = JsonPaths.getSingleValue(persistedPartialConfig, pathOfNode).orElse(null)
-          val existingCoordinate = getExistingCoordinateIfExists(persistedNode)
-          val coordinate: SecretCoordinate = getCoordinate(secretReader, workspaceId, uuidSupplier, existingCoordinate)
-          secretMap[coordinate] = json.asText()
-          Jsons.jsonNode(mapOf(COORDINATE_FIELD to coordinate.fullCoordinate))
+    val airbyteCoordinateAndValueMap =
+      getAirbyteCoordinatesToWriteAndReplace(
+        uuidSupplier = uuidSupplier,
+        secretBaseId = secretBaseId,
+        secretReader = secretReader,
+        persistedPartialConfig = persistedPartialConfig,
+        newFullConfig = newFullConfig,
+        secretBasePrefix = secretBasePrefix,
+      )
+    val updatedConfigWithReplacedCoordinateNodes =
+      replaceSecretValuesWithCoordinateNodes(
+        newFullConfig = newFullConfig,
+        airbyteCoordinateAndValueMap = airbyteCoordinateAndValueMap,
+      )
+    val airbyteCoordinateToRawValueMap =
+      airbyteCoordinateAndValueMap.values
+        .associate { it.airbyteCoordinate to it.rawValue }
+    return SplitSecretConfig(
+      updatedConfigWithReplacedCoordinateNodes,
+      airbyteCoordinateToRawValueMap,
+    )
+  }
+
+  /**
+   * Helper class to group an AirbyteManagedSecretCoordinate and its raw value
+   */
+  private data class AirbyteManagedCoordinateAndRawValue(
+    val airbyteCoordinate: AirbyteManagedSecretCoordinate,
+    val rawValue: String,
+  )
+
+  /**
+   * Given a config that may contain raw secret values, returns a map of each path to the new
+   * [AirbyteManagedSecretCoordinate] and the raw value to be written to the secret persistence.
+   * - If a path containing a raw value is associated with an existing airbyte-managed secret
+   * coordinate, the new coordinate will be created with the same base and an incremented version.
+   */
+  private fun getAirbyteCoordinatesToWriteAndReplace(
+    uuidSupplier: Supplier<UUID>,
+    secretBaseId: UUID,
+    secretReader: ReadOnlySecretPersistence,
+    persistedPartialConfig: ConfigWithSecretReferences?,
+    newFullConfig: ConfigWithProcessedSecrets,
+    secretBasePrefix: String,
+  ): Map<String, AirbyteManagedCoordinateAndRawValue> =
+    buildMap {
+      newFullConfig.processedSecrets.forEach { (path, processedSecretNode) ->
+        processedSecretNode.rawValue?.let { rawValue ->
+          // If there is an existing secret reference, attempt to extract its AirbyteManagedSecretCoordinate.
+          val persistedNode = persistedPartialConfig?.referencedSecrets?.get(path)
+          val existingCoordinate = persistedNode?.secretCoordinate as? AirbyteManagedSecretCoordinate
+
+          // Create a new coordinate.
+          val coordinate =
+            createNewAirbyteManagedSecretCoordinate(
+              secretBasePrefix = secretBasePrefix,
+              secretReader = secretReader,
+              secretBaseId = secretBaseId,
+              uuidSupplier = uuidSupplier,
+              oldCoordinate = existingCoordinate,
+            )
+          put(path, AirbyteManagedCoordinateAndRawValue(coordinate, rawValue))
         }
+      }
     }
-    return SplitSecretConfig(fullConfigCopy, secretMap)
+
+  /**
+   * Given a config that may contain raw secret values and/or prefixed secret references, returns
+   * a new config with those secret values replaced with secret coordinate nodes.
+   * - If the config contains a raw secret value, it will be replaced with an airbyte-managed
+   * coordinate node
+   * - If the config contains a prefixed secret reference, it will be replaced with an external
+   * secret coordinate node, along with the secret storage ID pertaining to that reference.
+   */
+  private fun replaceSecretValuesWithCoordinateNodes(
+    newFullConfig: ConfigWithProcessedSecrets,
+    airbyteCoordinateAndValueMap: Map<String, AirbyteManagedCoordinateAndRawValue>,
+  ): JsonNode {
+    var fullConfigCopy = newFullConfig.originalConfig.deepCopy<JsonNode>()
+    newFullConfig.processedSecrets.forEach { (path, processedSecretNode) ->
+      if (processedSecretNode.rawValue != null) {
+        val airbyteManagedCoordAndValue =
+          airbyteCoordinateAndValueMap[path] ?: throw IllegalStateException(
+            "Expected to find a coordinate for path $path, but none was found.",
+          )
+        fullConfigCopy =
+          JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
+            Jsons.jsonNode(
+              buildMap {
+                put(COORDINATE_FIELD, airbyteManagedCoordAndValue.airbyteCoordinate.fullCoordinate)
+              },
+            )
+          }
+      } else if (processedSecretNode.secretCoordinate is ExternalSecretCoordinate) {
+        fullConfigCopy =
+          JsonPaths.replaceAt(fullConfigCopy, path) { json: JsonNode, pathOfNode: String? ->
+            Jsons.jsonNode(
+              buildMap {
+                put(COORDINATE_FIELD, processedSecretNode.secretCoordinate.fullCoordinate)
+                processedSecretNode.secretStorageId?.let { put(SECRET_STORAGE_ID_FIELD, it.value.toString()) }
+              },
+            )
+          }
+      }
+    }
+    return fullConfigCopy
   }
 
   /**
@@ -293,23 +429,6 @@ object SecretsHelpers {
   private fun getCoordinateFromTextNode(node: JsonNode): SecretCoordinate = SecretCoordinate.fromFullCoordinate(node.asText())
 
   /**
-   * Same as #getCoordinate but with a consistent base. For Production use.
-   */
-  internal fun getCoordinate(
-    secretReader: ReadOnlySecretPersistence,
-    workspaceId: UUID,
-    uuidSupplier: Supplier<UUID>,
-    oldSecretFullCoordinate: String?,
-  ): SecretCoordinate =
-    getSecretCoordinate(
-      "airbyte_workspace_",
-      secretReader,
-      workspaceId,
-      uuidSupplier,
-      oldSecretFullCoordinate,
-    )
-
-  /**
    * Determines which coordinate base and version to use based off of an old version that may exist in
    * the secret persistence.
    *
@@ -319,7 +438,7 @@ object SecretsHelpers {
    *
    * @param secretBasePrefix prefix for the secret base
    * @param secretReader secret persistence
-   * @param secretBaseId workspace used for this config
+   * @param secretBaseId id used for this config
    * @param uuidSupplier provided to allow a test case to produce known UUIDs in order for easy
    * fixture creation.
    * @param oldSecretFullCoordinate a nullable full coordinate (base+version) retrieved from the
@@ -327,39 +446,26 @@ object SecretsHelpers {
    * @return a coordinate (versioned reference to where the secret is stored in the persistence)
    */
   @VisibleForTesting
-  fun getSecretCoordinate(
+  fun createNewAirbyteManagedSecretCoordinate(
     secretBasePrefix: String,
     secretReader: ReadOnlySecretPersistence,
     secretBaseId: UUID,
     uuidSupplier: Supplier<UUID>,
-    oldSecretFullCoordinate: String?,
-  ): SecretCoordinate {
-    var coordinateBase: String? = null
-    var version = 1L
-
-    if (oldSecretFullCoordinate != null) {
-      val oldCoordinate: SecretCoordinate = SecretCoordinate.fromFullCoordinate(oldSecretFullCoordinate)
-      coordinateBase = oldCoordinate.coordinateBase
-      val oldSecretValue: String = secretReader.read(oldCoordinate)
-      if (oldSecretValue.isNotEmpty()) {
-        version = oldCoordinate.version.inc()
-      }
+    oldCoordinate: AirbyteManagedSecretCoordinate?,
+  ): AirbyteManagedSecretCoordinate {
+    // If an old coordinate exists and the secret value isn't empty, increment its version.
+    if (oldCoordinate != null && secretReader.read(oldCoordinate).isNotEmpty()) {
+      return oldCoordinate.copy(version = oldCoordinate.version.inc())
     }
 
-    if (coordinateBase == null) {
-      // IMPORTANT: format of this cannot be changed without introducing migrations for secrets
-      // persistence
-      coordinateBase = getCoordinatorBase(secretBasePrefix, secretBaseId, uuidSupplier)
-    }
-
-    return SecretCoordinate(coordinateBase, version)
+    // Otherwise, create a new coordinate with the default version.
+    return AirbyteManagedSecretCoordinate(
+      secretBasePrefix = secretBasePrefix,
+      secretBaseId = secretBaseId,
+      version = AirbyteManagedSecretCoordinate.DEFAULT_VERSION,
+      uuidSupplier = uuidSupplier,
+    )
   }
-
-  fun getCoordinatorBase(
-    secretBasePrefix: String,
-    secretBaseId: UUID,
-    uuidSupplier: Supplier<UUID>,
-  ): String = "${secretBasePrefix}${secretBaseId}_secret_${uuidSupplier.get()}"
 
   /**
    * Takes in the secret coordinate in form of a JSON and fetches the secret from the store.
@@ -378,5 +484,245 @@ object SecretsHelpers {
         secretCoordinateAsJson[COORDINATE_FIELD],
       )
     return Jsons.deserialize(getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate))
+  }
+
+  /**
+   * Internal helper object for specifically dealing with SecretReferences in the context of
+   * configs.
+   */
+  object SecretReferenceHelpers {
+    fun getSecretStorageIdFromConfig(config: ConfigWithSecretReferences): UUID? =
+      config.referencedSecrets.values
+        .mapNotNull { it.secretStorageId }
+        .toSet()
+        .let { secretStorageIds ->
+          when {
+            secretStorageIds.size > 1 -> throw IllegalStateException("Multiple secret storage IDs found in the config: $secretStorageIds")
+            secretStorageIds.isNotEmpty() -> secretStorageIds.first()
+            else -> null
+          }
+        }
+
+    fun inlineSecretReferences(
+      config: JsonNode,
+      secretRefConfigs: Map<String, SecretReferenceConfig>,
+    ): InlinedConfigWithSecretRefs {
+      var inlinedJson = Jsons.clone(config)
+      secretRefConfigs.forEach { (hydrationPath, secretRefConfig) ->
+        val secretNode =
+          Jsons.jsonNode(
+            buildMap {
+              put(COORDINATE_FIELD, secretRefConfig.secretCoordinate.fullCoordinate)
+              secretRefConfig.secretStorageId?.let { put(SECRET_STORAGE_ID_FIELD, it) }
+              secretRefConfig.secretReferenceId?.let { put(SECRET_REF_ID_FIELD, it) }
+            },
+          )
+
+        inlinedJson =
+          when (hydrationPath) {
+            "$" -> secretNode
+            else -> JsonPaths.replaceAt(inlinedJson, hydrationPath) { _: JsonNode, _: String? -> secretNode }
+          }
+      }
+
+      return InlinedConfigWithSecretRefs(inlinedJson)
+    }
+
+    /**
+     * Extracts all secret references from a config.
+     */
+    fun getReferenceMapFromConfig(config: InlinedConfigWithSecretRefs): Map<String, SecretReferenceConfig> =
+      getReferenceMapFromInlinedConfig(config.value)
+
+    private fun getReferenceMapFromInlinedConfig(
+      config: JsonNode,
+      path: String = "$",
+    ): Map<String, SecretReferenceConfig> {
+      if (config.isObject && config.has(COORDINATE_FIELD)) {
+        val secretRefConfig =
+          SecretReferenceConfig(
+            secretCoordinate = SecretCoordinate.fromFullCoordinate(config[COORDINATE_FIELD].asText()),
+            secretStorageId = config[SECRET_STORAGE_ID_FIELD]?.takeIf { it.isTextual }?.let { UUID.fromString(it.asText()) },
+          )
+        return mapOf(path to secretRefConfig)
+      }
+
+      val secretRefConfigs = mutableMapOf<String, SecretReferenceConfig>()
+      config.fields().forEachRemaining { (key, value) ->
+        if (value.isObject) {
+          secretRefConfigs.putAll(getReferenceMapFromInlinedConfig(value, "$path.$key"))
+        } else if (value.isArray) {
+          for (i in 0 until value.size()) {
+            secretRefConfigs.putAll(getReferenceMapFromInlinedConfig(value[i], "$path.$key[$i]"))
+          }
+        }
+      }
+
+      return secretRefConfigs
+    }
+
+    fun getSecretReferenceIdsFromConfig(config: JsonNode): Set<UUID> {
+      val secretRefIds = mutableSetOf<UUID>()
+      config.fields().forEach { (key, value) ->
+        if (key == SECRET_REF_ID_FIELD) {
+          secretRefIds.add(UUID.fromString(value.asText()))
+        } else if (value.isObject) {
+          secretRefIds.addAll(getSecretReferenceIdsFromConfig(value))
+        }
+      }
+      return secretRefIds
+    }
+
+    private enum class SecretNodeType {
+      AIRBYTE_MANAGED_SECRET_COORDINATE,
+      EXTERNAL_SECRET_COORDINATE,
+      PREFIXED_SECRET_REFERENCE,
+      RAW_SECRET_VALUE,
+      SECRET_REFERENCE_ID,
+    }
+
+    private fun determineSecretNodeType(secretNode: JsonNode): SecretNodeType =
+      when {
+        secretNode.has(SECRET_REF_ID_FIELD) -> SecretNodeType.SECRET_REFERENCE_ID
+        secretNode.has(COORDINATE_FIELD) -> {
+          val secretCoord = SecretCoordinate.fromFullCoordinate(secretNode.get(COORDINATE_FIELD).asText())
+          when (secretCoord) {
+            is AirbyteManagedSecretCoordinate -> SecretNodeType.AIRBYTE_MANAGED_SECRET_COORDINATE
+            else -> SecretNodeType.EXTERNAL_SECRET_COORDINATE
+          }
+        }
+        secretNode.asText().startsWith(SECRET_REF_PREFIX) -> SecretNodeType.PREFIXED_SECRET_REFERENCE
+        else -> SecretNodeType.RAW_SECRET_VALUE
+      }
+
+    private fun processSecretNode(
+      secretNode: JsonNode,
+      secretStorageId: SecretStorageId?,
+    ): ProcessedSecretNode {
+      if (secretNode.isArray || secretNode.isMissingNode || secretNode.isNull) {
+        throw IllegalStateException("Cannot process node that is an array, missing, or null")
+      }
+      return when (determineSecretNodeType(secretNode)) {
+        SecretNodeType.PREFIXED_SECRET_REFERENCE ->
+          ProcessedSecretNode(
+            secretCoordinate = ExternalSecretCoordinate(secretNode.asText().removePrefix(SECRET_REF_PREFIX)),
+            secretStorageId = secretStorageId,
+          )
+        SecretNodeType.AIRBYTE_MANAGED_SECRET_COORDINATE ->
+          ProcessedSecretNode(
+            secretCoordinate = AirbyteManagedSecretCoordinate.fromFullCoordinate(secretNode.get(COORDINATE_FIELD).asText()),
+            secretStorageId = secretStorageId,
+          )
+        SecretNodeType.EXTERNAL_SECRET_COORDINATE ->
+          ProcessedSecretNode(
+            secretCoordinate = ExternalSecretCoordinate(secretNode.get(COORDINATE_FIELD).asText()),
+            secretStorageId = secretStorageId,
+          )
+        SecretNodeType.RAW_SECRET_VALUE ->
+          ProcessedSecretNode(
+            rawValue = secretNode.asText(),
+            secretStorageId = secretStorageId,
+          )
+        SecretNodeType.SECRET_REFERENCE_ID ->
+          ProcessedSecretNode(
+            secretReferenceId = secretNode.get(SECRET_REF_ID_FIELD)?.let { SecretReferenceId(UUID.fromString(it.asText())) },
+          )
+      }
+    }
+
+    private fun getProcessedSecretMapFromInputConfig(
+      config: JsonNode,
+      spec: JsonNode,
+      secretStorageId: SecretStorageId?,
+    ): Map<String, ProcessedSecretNode> {
+      val processedSecretMap = mutableMapOf<String, ProcessedSecretNode>()
+
+      getSortedSecretPaths(spec).forEach { pathTemplate ->
+        getExpandedPaths(config, pathTemplate).forEach { path ->
+          val secretNode = JsonPaths.getSingleValue(config, path)
+          if (secretNode.isPresent) {
+            val processedSecretNode = processSecretNode(secretNode.get(), secretStorageId)
+            processedSecretMap[path] = processedSecretNode
+          }
+        }
+      }
+      return processedSecretMap
+    }
+
+    /**
+     * Process a config that may contain raw secret values or prefixed secret references.
+     * If a secretStorageId is provided, it will be associated with all processed secrets nodes,
+     * to indicate the storage where raw secrets should be written, or where prefixed secret
+     * references can be resolved.
+     *
+     * @return A [ConfigWithProcessedSecrets] object containing the original, unmodified
+     * actorConfig and a map of secret paths to [ProcessedSecretNode] objects.
+     */
+    @JvmName("processConfigSecrets")
+    fun processConfigSecrets(
+      actorConfig: JsonNode,
+      spec: JsonNode,
+      secretStorageId: SecretStorageId?,
+    ): ConfigWithProcessedSecrets {
+      val processedSecrets =
+        getProcessedSecretMapFromInputConfig(
+          config = actorConfig,
+          spec = spec,
+          secretStorageId = secretStorageId,
+        )
+      return ConfigWithProcessedSecrets(actorConfig, processedSecrets)
+    }
+
+    /**
+     * A wrapper around a [JsonNode] config that contains secret reference IDs instead of
+     * secret coordinates.
+     */
+    @JvmInline
+    value class ConfigWithSecretReferenceIdReplacements(
+      val value: JsonNode,
+    )
+
+    /**
+     * Given a [config] and [secretReferenceIdsByPath], for each path in the map, replace the
+     * node at that path with the corresponding secret reference id.
+     */
+    fun replaceSecretNodesWithSecretReferenceIds(
+      config: JsonNode,
+      secretReferenceIdsByPath: Map<String, SecretReferenceId>,
+    ): ConfigWithSecretReferenceIdReplacements {
+      var updatedConfig = Jsons.clone(config)
+      secretReferenceIdsByPath.forEach { (path, secretRefId) ->
+        val secretRefIdNode =
+          Jsons.jsonNode(
+            mapOf(
+              SECRET_REF_ID_FIELD to secretRefId.value.toString(),
+            ),
+          )
+        updatedConfig = JsonPaths.replaceAtJsonNodeLoud(updatedConfig, path, secretRefIdNode)
+      }
+      return ConfigWithSecretReferenceIdReplacements(updatedConfig)
+    }
+
+    /**
+     * Given a config and spec, replace all secret nodes with a placeholder text value.
+     * This is useful for preparing a config with secret nodes for validation against a spec
+     * that expects string values instead of object nodes at each secret path.
+     */
+    fun configWithTextualSecretPlaceholders(
+      config: JsonNode,
+      spec: JsonNode,
+    ): JsonNode {
+      var configCopy = Jsons.clone(config)
+      val secretPaths = getSortedSecretPaths(spec)
+      secretPaths.forEach { path ->
+        getExpandedPaths(configCopy, path).forEach { expandedPath ->
+          val nodeAtPath = JsonPaths.getSingleValue(configCopy, expandedPath)
+          if (nodeAtPath.isPresent && nodeAtPath.get().isObject) {
+            configCopy = Jsons.clone(JsonPaths.replaceAtString(configCopy, expandedPath, "secret_placeholder"))
+          }
+        }
+      }
+      return configCopy
+    }
   }
 }

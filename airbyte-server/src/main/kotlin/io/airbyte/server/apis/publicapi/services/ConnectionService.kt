@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
@@ -20,6 +21,7 @@ import io.airbyte.publicApi.server.generated.models.ConnectionsResponse
 import io.airbyte.publicApi.server.generated.models.SourceResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.helpers.DataResidencyHelper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionCreateMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionReadMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
@@ -67,6 +69,8 @@ class ConnectionServiceImpl(
   private val sourceService: SourceService,
   private val connectionHandler: ConnectionsHandler,
   private val currentUserService: CurrentUserService,
+  private val airbyteEdition: AirbyteEdition,
+  private val dataResidencyHelper: DataResidencyHelper,
 ) : ConnectionService {
   companion object {
     private val log = LoggerFactory.getLogger(ConnectionServiceImpl::class.java)
@@ -87,6 +91,9 @@ class ConnectionServiceImpl(
     val connectionCreateOss: ConnectionCreate =
       ConnectionCreateMapper.from(connectionCreateRequest, catalogId, configuredCatalog)
 
+    connectionCreateOss.geography =
+      dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionCreateRequest.dataResidency)
+
     val result: Result<ConnectionRead> =
       kotlin
         .runCatching { connectionHandler.createConnection(connectionCreateOss) }
@@ -99,6 +106,7 @@ class ConnectionServiceImpl(
       ConnectionReadMapper.from(
         result.getOrNull()!!,
         workspaceId,
+        airbyteEdition,
       )
     } catch (e: Exception) {
       log.error("Error while reading response and converting to Connection read: ", e)
@@ -126,23 +134,23 @@ class ConnectionServiceImpl(
    */
   override fun getConnection(connectionId: UUID): ConnectionResponse {
     val result =
-      kotlin
-        .runCatching {
-          connectionHandler.getConnection(connectionId)
-        }.onFailure {
-          log.error("Error while getting connection: ", it)
-          ConfigClientErrorHandler.handleError(it)
-        }
+      runCatching {
+        connectionHandler.getConnection(connectionId)
+      }.onFailure {
+        log.error("Error while getting connection: ", it)
+        ConfigClientErrorHandler.handleError(it)
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
 
     val connectionRead = result.getOrNull()!!
 
     // get workspace id from source id
-    val sourceResponse: SourceResponse = sourceService.getSource(connectionRead.sourceId)
+    val sourceResponse: SourceResponse = sourceService.getSource(connectionRead.sourceId, false)
 
     return ConnectionReadMapper.from(
       connectionRead,
       UUID.fromString(sourceResponse.workspaceId),
+      airbyteEdition,
     )
   }
 
@@ -164,6 +172,11 @@ class ConnectionServiceImpl(
         configuredCatalog,
       )
 
+    if (connectionPatchRequest.dataResidency != null) {
+      connectionUpdate.geography =
+        dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionPatchRequest.dataResidency)
+    }
+
     // this is kept as a string to easily parse the error response to determine if a source or a
     // destination id is invalid
     val result =
@@ -181,6 +194,7 @@ class ConnectionServiceImpl(
       ConnectionReadMapper.from(
         connectionRead,
         workspaceId,
+        airbyteEdition,
       )
     } catch (e: java.lang.Exception) {
       log.error("Error while reading and converting to Connection Response: ", e)
@@ -226,6 +240,7 @@ class ConnectionServiceImpl(
       limit,
       offset,
       publicApiHost!!,
+      airbyteEdition,
     )
   }
 }

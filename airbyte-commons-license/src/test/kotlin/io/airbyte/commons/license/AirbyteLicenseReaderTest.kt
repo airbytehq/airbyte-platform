@@ -8,13 +8,14 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.ZoneOffset
 import java.util.Base64
 import java.util.UUID
 
 internal class AirbyteLicenseReaderTest {
-  @Test
-  fun testDeserializeValidLicense() {
+  fun testDeserializeValidLicenseNoIsEmbedded() {
     val payload =
       Jsons.deserialize(
         """
@@ -56,6 +57,55 @@ internal class AirbyteLicenseReaderTest {
         .month.value,
     )
     Assertions.assertSame(AirbyteLicense.LicenseType.PRO, license.type)
+    Assertions.assertFalse(license.isEmbedded)
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = [true, false])
+  fun testDeserializeValidLicenseWithIsEmbedded(isEmbedded: Boolean) {
+    val payload =
+      Jsons.deserialize(
+        """
+      {
+        "license": "pro",
+        "maxNodes": 5,
+        "maxEditors": 5,
+        "enterpriseConnectorIds": ["3f17c355-5717-446b-8857-8ce7c7144531"],
+        "iat": 1725388175,
+        "iss": "Airbyte",
+        "aud": "Airbyte!",
+        "sub": "malik@airbyte.io",
+        "exp": 1756328296731,
+        "isEmbedded": $isEmbedded
+      }
+      """,
+      )
+    val licenseKey = makeDummyKey(payload)
+
+    val license = AirbyteLicenseReader(licenseKey).extractLicense()
+    Assertions.assertEquals(5, license.maxEditors)
+    Assertions.assertEquals(5, license.maxNodes)
+    Assertions.assertEquals(1, license.enterpriseConnectorIds.size)
+    Assertions.assertEquals(
+      UUID.fromString("3f17c355-5717-446b-8857-8ce7c7144531"),
+      license.enterpriseConnectorIds.first(),
+    )
+    Assertions.assertEquals(
+      2025,
+      license.expirationDate!!
+        .toInstant()
+        .atOffset(ZoneOffset.UTC)
+        .year,
+    )
+    Assertions.assertEquals(
+      8,
+      license.expirationDate!!
+        .toInstant()
+        .atOffset(ZoneOffset.UTC)
+        .month.value,
+    )
+    Assertions.assertSame(AirbyteLicense.LicenseType.PRO, license.type)
+    Assertions.assertEquals(license.isEmbedded, isEmbedded)
   }
 
   @Test

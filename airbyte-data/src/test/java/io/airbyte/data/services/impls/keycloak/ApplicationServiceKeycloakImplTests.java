@@ -13,13 +13,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.config.TokenExpirationConfig;
 import io.airbyte.commons.auth.keycloak.ClientScopeConfigurator;
 import io.airbyte.config.Application;
 import io.airbyte.config.AuthenticatedUser;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.core.Response;
 import java.net.URI;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -72,7 +72,7 @@ class ApplicationServiceKeycloakImplTests {
         keycloakClient,
         keycloakConfiguration,
         clientScopeConfigurator,
-        Duration.ofMinutes(30)));
+        new TokenExpirationConfig()));
   }
 
   // TODO: Add this test back in, got tired of fighting mocks.

@@ -68,6 +68,8 @@ enabled: false
 ##  replicaCount Number of server replicas
 replicaCount: 1
 
+serviceAccountName:
+
 ##  image.repository The repository to use for the airbyte workload api server image.
 ##  image.pullPolicy the pull policy to use for the airbyte workload api server image
 ##  image.tag The airbyte featureflag server image tag. Defaults to the chart's AppVersion

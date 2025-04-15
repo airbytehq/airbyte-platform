@@ -12,8 +12,6 @@ dependencies {
   implementation(libs.bundles.datadog)
   implementation(libs.bundles.kubernetes.client)
   implementation(libs.bundles.micronaut)
-  implementation(libs.bundles.temporal)
-  implementation(libs.bundles.temporal.telemetry)
   implementation(libs.failsafe)
   implementation(libs.failsafe.okhttp)
   implementation(libs.kubernetes.client)
@@ -27,6 +25,7 @@ dependencies {
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.okhttp)
   implementation(libs.reactor.core)
+  implementation(libs.reactor.core.micrometer)
   implementation(libs.reactor.kotlin.extensions)
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
@@ -37,8 +36,6 @@ dependencies {
   implementation(project(":oss:airbyte-commons-storage"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
-  implementation(project(":oss:airbyte-commons-temporal"))
-  implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
   implementation(project(":oss:airbyte-commons-worker"))
   implementation(project(":oss:airbyte-config:config-models"))
@@ -46,7 +43,6 @@ dependencies {
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
-  implementation(project(":oss:airbyte-micronaut-temporal"))
   implementation(project(":oss:airbyte-worker-models"))
 
   runtimeOnly(libs.snakeyaml)
@@ -69,7 +65,7 @@ dependencies {
   testImplementation(libs.testcontainers.vault)
   testImplementation(libs.jakarta.ws.rs.api)
   testImplementation(libs.kubernetes.mock.server)
-
+  testImplementation(libs.reactor.test)
 }
 
 airbyte {

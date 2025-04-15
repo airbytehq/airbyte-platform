@@ -30,12 +30,13 @@ dependencies {
    * need to define singletons from these modules in order for everything work.
    */
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-json-validation"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-featureflag"))
 
-  testAnnotationProcessor(platform(libs.micronaut.platform))
-  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlin.test.runner.junit5)
@@ -44,4 +45,5 @@ dependencies {
   testImplementation(libs.airbyte.protocol)
   testImplementation(libs.testcontainers.vault)
   testImplementation(testFixtures(project(":oss:airbyte-config:config-persistence")))
+  testFixturesImplementation(project(":oss:airbyte-config:config-models"))
 }

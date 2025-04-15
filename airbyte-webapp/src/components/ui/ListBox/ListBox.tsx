@@ -233,7 +233,6 @@ export const ListBox = <T,>({
           </OriginalListboxButton>
           <OriginalListboxOptions
             as="ul"
-            modal={false}
             onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
             className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth })}
             {...(testId && {

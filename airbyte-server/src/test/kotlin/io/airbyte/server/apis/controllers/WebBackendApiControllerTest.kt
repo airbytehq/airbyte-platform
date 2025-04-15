@@ -157,7 +157,7 @@ internal class WebBackendApiControllerTest {
 
   @Test
   fun testWebBackendListGeographies() {
-    every { webBackendGeographiesHandler.listGeographiesOSS() } returns WebBackendGeographiesListResult()
+    every { webBackendGeographiesHandler.listGeographies(any()) } returns WebBackendGeographiesListResult()
 
     val path = "/api/v1/web_backend/geographies/list"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))

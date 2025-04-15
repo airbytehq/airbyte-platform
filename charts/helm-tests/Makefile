@@ -1,11 +1,11 @@
 .PHONY:
-test.unit:
-	go test ./tests/... -v -count=1 -timeout 0s
+v1.test.unit:
+	go test ./tests/v1/... -v -count=1 -timeout 0s
 
 .PHONY:
-test.integration:
-	go test ./integration_tests/... -v -count=1 -timeout 0s
+v1.test.integration:
+	go test ./integration_tests/v1/... -v -count=1 -timeout 0s
 
 .PHONY:
-test.clean:
+v1.test.clean:
 	go clean -testcache

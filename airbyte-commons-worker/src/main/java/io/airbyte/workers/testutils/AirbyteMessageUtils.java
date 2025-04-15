@@ -7,24 +7,24 @@ package io.airbyte.workers.testutils;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableMap;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage;
-import io.airbyte.protocol.models.AirbyteControlConnectorConfigMessage;
-import io.airbyte.protocol.models.AirbyteControlMessage;
-import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
-import io.airbyte.protocol.models.AirbyteEstimateTraceMessage;
-import io.airbyte.protocol.models.AirbyteGlobalState;
-import io.airbyte.protocol.models.AirbyteLogMessage;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
-import io.airbyte.protocol.models.AirbyteRecordMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage;
-import io.airbyte.protocol.models.AirbyteStateMessage.AirbyteStateType;
-import io.airbyte.protocol.models.AirbyteStreamState;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage;
-import io.airbyte.protocol.models.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.Config;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteControlConnectorConfigMessage;
+import io.airbyte.protocol.models.v0.AirbyteControlMessage;
+import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteGlobalState;
+import io.airbyte.protocol.models.v0.AirbyteLogMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
+import io.airbyte.protocol.models.v0.AirbyteStreamState;
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage.AirbyteStreamStatus;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.Config;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
@@ -173,7 +173,7 @@ public class AirbyteMessageUtils {
                                                             final Double emittedAt,
                                                             final AirbyteErrorTraceMessage.FailureType failureType) {
     final var msg = new AirbyteTraceMessage()
-        .withType(io.airbyte.protocol.models.AirbyteTraceMessage.Type.ERROR)
+        .withType(io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ERROR)
         .withError(new AirbyteErrorTraceMessage().withMessage(message))
         .withEmittedAt(emittedAt);
 

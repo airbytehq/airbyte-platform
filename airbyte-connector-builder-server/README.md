@@ -13,7 +13,7 @@ The Connector Builder API server sends commands to an entrypoint of the Airbyte 
 To set up a local CDK environment, navigate to the `airbyte_cdk` folder in your local `airbyte-python-cdk` repo and create your CDK environment:
 
 ```bash
-pyenv local 3.10  # use the python version compatible with the CDK
+pyenv local 3.11  # use the python version compatible with the CDK
 poetry config --local virtualenvs.in-project true  # optional - this creates the .venv folder in the repo's directory
 poetry env use $(pyenv which python)
 poetry install
@@ -105,7 +105,7 @@ You must then make two changes to your local `airbyte-platform-internal` repo:
     ```
     cd oss/airbyte-webapp
     pnpm install
-    pnpm start oss-k8s
+    pnpm start oss-local
     ```
 
 If you then go to https://localhost:3000/ in your browser, and navigate to the connector builder, all requests directed toward the connector builder server will now be sent to your locally-running gradle builder server that uses your local CDK code, and the UI will use your local airbyte-webapp code.

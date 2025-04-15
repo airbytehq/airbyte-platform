@@ -36,7 +36,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.workloadApiServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.workloadApiServer.serviceAccountName }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
@@ -75,6 +75,7 @@ spec:
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.envs" . | nindent 8 }}
         {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
@@ -82,6 +83,11 @@ spec:
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
+
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
+        {{- end }}
+
 
         # Values from secret
         {{- if .Values.workloadApiServer.secrets }}
@@ -168,7 +174,7 @@ spec:
       {{- if eq (include "airbyte.storage.type" .) "gcs" }}
       - name: gcs-log-creds-volume
         secret:
-          secretName: {{ include "airbyte.storage.secretName" }}
+          secretName: {{ include "airbyte.storage.secretName" . }}
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"

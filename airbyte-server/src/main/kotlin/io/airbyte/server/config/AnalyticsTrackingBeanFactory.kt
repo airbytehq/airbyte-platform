@@ -8,11 +8,9 @@ import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.api.client.model.generated.WorkspaceRead
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
-import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler
-import io.airbyte.config.Geography
 import io.airbyte.config.Organization
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationService
@@ -65,10 +63,8 @@ class AnalyticsTrackingBeanFactory {
           NotificationSettingsConverter.toClientApi(workspace.notificationSettings),
           workspace.firstCompletedSync,
           workspace.feedbackDone,
-          Enums.convertTo<Geography, io.airbyte.api.client.model.generated.Geography>(
-            workspace.defaultGeography,
-            io.airbyte.api.client.model.generated.Geography::class.java,
-          ),
+          workspace.defaultGeography,
+          UUID.randomUUID(),
           null,
           workspace.tombstone,
           null,

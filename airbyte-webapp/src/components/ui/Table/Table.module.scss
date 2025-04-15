@@ -21,6 +21,18 @@ $border-radius: variables.$border-radius-sm;
   &--empty {
     height: 100%;
   }
+
+  .viewMoreButton {
+    color: colors.$blue;
+    background-color: colors.$foreground;
+    border: none;
+    cursor: pointer;
+    padding: variables.$spacing-md variables.$spacing-lg;
+    font-size: variables.$font-size-sm;
+    line-height: 1.2;
+    font-weight: 400;
+    border-radius: $border-radius;
+  }
 }
 
 .thead--sticky {

@@ -51,7 +51,10 @@ properties:
   feedbackDone:
     type: boolean
   defaultGeography:
-    "$ref": Geography.yaml
+    type: string
+  dataplaneGroupId:
+    type: string
+    format: uuid
   webhookOperationConfigs:
     description:
       Configurations for webhooks operations, stored as a JSON object so we can replace sensitive info with

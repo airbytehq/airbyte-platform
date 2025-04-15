@@ -4,13 +4,10 @@
 
 package io.airbyte.workers.internal
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
 import io.airbyte.analytics.TrackingClient
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ScopeType
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import java.util.Collections
@@ -23,7 +20,7 @@ class AnalyticsMessageTracker(
   private val trackingClient: TrackingClient,
 ) {
   var ctx: ReplicationContext? = null
-  private val messages = Collections.synchronizedList(mutableListOf<JsonNode>())
+  private val messages = Collections.synchronizedList(mutableListOf<Map<String, Any>>())
   private val totalNumberOfMessages = AtomicInteger(0)
 
   fun addMessage(
@@ -38,13 +35,11 @@ class AnalyticsMessageTracker(
     }
 
     messages.add(
-      Jsons.jsonNode(
-        mapOf(
-          "origin" to origin.toString(),
-          "type" to msg.trace.analytics.type,
-          "value" to msg.trace.analytics.value,
-          "timestamp" to System.currentTimeMillis(),
-        ),
+      mapOf(
+        "origin" to origin.toString(),
+        "type" to msg.trace.analytics.type,
+        "value" to msg.trace.analytics.value,
+        "timestamp" to System.currentTimeMillis(),
       ),
     )
     if (messages.size >= MAX_ANALYTICS_MESSAGES_PER_BATCH) {
@@ -52,22 +47,19 @@ class AnalyticsMessageTracker(
     }
   }
 
-  private fun generateAnalyticsMetadata(currentMessages: List<JsonNode>): Map<String, Any?> {
-    val context = requireNotNull(ctx)
-    val jsonList: ArrayNode = Jsons.arrayNode()
-    jsonList.addAll(currentMessages)
-
-    return mapOf(
-      "analytics_messages" to jsonList.toString(),
-      "workspace_id" to context.workspaceId,
-      "connection_id" to context.connectionId,
-      "job_id" to context.jobId,
-      "attempt" to context.attempt,
-    )
-  }
+  private fun generateAnalyticsMetadata(currentMessages: List<Map<String, Any>>): Map<String, Any?> =
+    requireNotNull(ctx).let { context ->
+      mapOf(
+        "analytics_messages" to currentMessages,
+        "workspace_id" to context.workspaceId,
+        "connection_id" to context.connectionId,
+        "job_id" to context.jobId,
+        "attempt" to context.attempt,
+      )
+    }
 
   @Synchronized
-  private fun getCurrentMessages(): List<JsonNode> {
+  private fun getCurrentMessages(): List<Map<String, Any>> {
     val currentMessages = messages.toList()
     messages.clear()
 

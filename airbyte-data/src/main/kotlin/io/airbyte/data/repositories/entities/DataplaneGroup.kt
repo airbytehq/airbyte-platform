@@ -23,6 +23,5 @@ data class DataplaneGroup(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
-  var updatedBy: UUID? = null,
   var tombstone: Boolean,
 )
