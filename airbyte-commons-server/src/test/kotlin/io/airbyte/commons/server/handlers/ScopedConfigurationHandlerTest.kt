@@ -128,6 +128,68 @@ internal class ScopedConfigurationHandlerTest {
   }
 
   @Test
+  fun `test listScopedConfigurationsWithOriginType`() {
+    val scopedConfigurations =
+      listOf(
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withValue("value1")
+          .withKey("key1")
+          .withDescription("description1")
+          .withReferenceUrl("url1")
+          .withResourceId(UUID.randomUUID())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withScopeId(UUID.randomUUID())
+          .withScopeType(ConfigScopeType.ORGANIZATION)
+          .withOrigin(UUID.randomUUID().toString())
+          .withOriginType(ConfigOriginType.USER),
+        ScopedConfiguration()
+          .withId(UUID.randomUUID())
+          .withValue("value2")
+          .withKey("key1")
+          .withDescription("description2")
+          .withReferenceUrl("url2")
+          .withResourceId(UUID.randomUUID())
+          .withResourceType(ConfigResourceType.ACTOR_DEFINITION)
+          .withScopeId(UUID.randomUUID())
+          .withScopeType(ConfigScopeType.ACTOR)
+          .withOrigin(UUID.randomUUID().toString())
+          .withOriginType(ConfigOriginType.USER)
+          .withExpiresAt("2023-01-01"),
+      )
+
+    every { scopedConfigurationService.listScopedConfigurations(ConfigOriginType.USER) } returns scopedConfigurations
+    every { organizationService.getOrganization(scopedConfigurations[0].scopeId) } returns Optional.of(Organization().withName("org name"))
+    every { sourceService.getSourceConnection(scopedConfigurations[1].scopeId) } returns SourceConnection().withName("source actor name")
+    every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition().withName("source def name")
+    every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("me@airbyte.io"))
+
+    val expectedScopedConfigurationReads =
+      scopedConfigurations.map { scopedConfiguration ->
+        ScopedConfigurationRead()
+          .id(scopedConfiguration.id.toString())
+          .value(scopedConfiguration.value)
+          .configKey(scopedConfiguration.key)
+          .description(scopedConfiguration.description)
+          .referenceUrl(scopedConfiguration.referenceUrl)
+          .resourceId(scopedConfiguration.resourceId.toString())
+          .resourceType(scopedConfiguration.resourceType.toString())
+          .resourceName("source def name")
+          .scopeId(scopedConfiguration.scopeId.toString())
+          .scopeType(scopedConfiguration.scopeType.toString())
+          .scopeName(if (scopedConfiguration.scopeType == ConfigScopeType.ORGANIZATION) "org name" else "source actor name")
+          .origin(scopedConfiguration.origin)
+          .originType(scopedConfiguration.originType.toString())
+          .originName("me@airbyte.io")
+          .expiresAt(scopedConfiguration.expiresAt?.let { LocalDate.parse(scopedConfiguration.expiresAt) })
+      }
+
+    val actualScopedConfigurationReads = scopedConfigurationHandler.listScopedConfigurations(ConfigOriginType.USER)
+
+    assertEquals(expectedScopedConfigurationReads, actualScopedConfigurationReads)
+  }
+
+  @Test
   fun `test listScopedConfigurations`() {
     val scopedConfigurations =
       listOf(
