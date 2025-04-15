@@ -225,10 +225,4 @@ DATABASE_HOST: {{ include "airbyte.database.host" . }}
 DATABASE_PORT: {{ include "airbyte.database.port" . | quote }}
 DATABASE_DB: {{ include "airbyte.database.name" . }}
 DATABASE_URL: {{ include "airbyte.database.url" . }}
-{{- if .Values.global.database.user }}
-DATABASE_USER: {{ include "airbyte.database.user" . }}
-{{- end}}
-{{- if .Values.global.database.password }}
-DATABASE_PASSWORD: {{ include "airbyte.database.password" . }}
-{{- end}}
 {{- end }}
