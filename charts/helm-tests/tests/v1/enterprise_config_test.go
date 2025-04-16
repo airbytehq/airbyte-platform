@@ -185,13 +185,13 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 		t.Run("should set required env vars for keycloak setup job", func(t *testing.T) {
 			expectedEnvVarKeys := map[string]helmtests.ExpectedEnvVar{
 				"AIRBYTE_URL":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AIRBYTE_URL"),
-				"INITIAL_USER_FIRST_NAME": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_FIRST_NAME"),
-				"INITIAL_USER_LAST_NAME":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_LAST_NAME"),
+				"INITIAL_USER_FIRST_NAME": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_FIRST_NAME").Value("Octavia"),
+				"INITIAL_USER_LAST_NAME":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_LAST_NAME").Value("Squidington"),
 				"INITIAL_USER_EMAIL":      helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("instance-admin-email"),
 				"INITIAL_USER_PASSWORD":   helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("instance-admin-password"),
-				"IDENTITY_PROVIDER_TYPE":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("IDENTITY_PROVIDER_TYPE"),
-				"OIDC_DOMAIN":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_DOMAIN"),
-				"OIDC_APP_NAME":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_APP_NAME"),
+				"IDENTITY_PROVIDER_TYPE":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("IDENTITY_PROVIDER_TYPE").Value("oidc"),
+				"OIDC_DOMAIN":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_DOMAIN").Value("sso.example.org"),
+				"OIDC_APP_NAME":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_APP_NAME").Value("sso-app"),
 				"OIDC_CLIENT_ID":          helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("client-id"),
 				"OIDC_CLIENT_SECRET":      helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("client-secret"),
 			}
@@ -203,7 +203,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			for k, expected := range expectedEnvVarKeys {
 				actual, ok := keycloakEnvVars[k]
 				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
-				helmtests.VerifyEnvVar(t, expected, actual)
+				helmtests.VerifyEnvVar(t, chartYaml, expected, actual)
 			}
 		})
 
@@ -211,13 +211,13 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			expectedEnvVarKeys := map[string]helmtests.ExpectedEnvVar{
 				"AIRBYTE_LICENSE_KEY":     helmtests.ExpectedSecretVar().RefName("airbyte-license").RefKey("license-key"),
 				"AIRBYTE_URL":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("AIRBYTE_URL"),
-				"INITIAL_USER_FIRST_NAME": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_FIRST_NAME"),
-				"INITIAL_USER_LAST_NAME":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_LAST_NAME"),
+				"INITIAL_USER_FIRST_NAME": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_FIRST_NAME").Value("Octavia"),
+				"INITIAL_USER_LAST_NAME":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("INITIAL_USER_LAST_NAME").Value("Squidington"),
 				"INITIAL_USER_EMAIL":      helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("instance-admin-email"),
 				"INITIAL_USER_PASSWORD":   helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("instance-admin-password"),
-				"IDENTITY_PROVIDER_TYPE":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("IDENTITY_PROVIDER_TYPE"),
-				"OIDC_DOMAIN":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_DOMAIN"),
-				"OIDC_APP_NAME":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_APP_NAME"),
+				"IDENTITY_PROVIDER_TYPE":  helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("IDENTITY_PROVIDER_TYPE").Value("oidc"),
+				"OIDC_DOMAIN":             helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_DOMAIN").Value("sso.example.org"),
+				"OIDC_APP_NAME":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("OIDC_APP_NAME").Value("sso-app"),
 				"OIDC_CLIENT_ID":          helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("client-id"),
 				"OIDC_CLIENT_SECRET":      helmtests.ExpectedSecretVar().RefName("sso-secrets").RefKey("client-secret"),
 			}
@@ -229,13 +229,13 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			for k, expected := range expectedEnvVarKeys {
 				actual, ok := airbyteServerEnvVars[k]
 				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
-				helmtests.VerifyEnvVar(t, expected, actual)
+				helmtests.VerifyEnvVar(t, chartYaml, expected, actual)
 			}
 		})
 
 		t.Run("should configure keycloak to use the 'KEYCLOAK_DATABASE_URL'", func(t *testing.T) {
 			expectedEnvVarKeys := map[string]helmtests.ExpectedEnvVar{
-				"KEYCLOAK_DATABASE_URL": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+				"KEYCLOAK_DATABASE_URL": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte?currentSchema=keycloak"),
 			}
 
 			keycloakSS := helmtests.GetStatefulSet(chartYaml, "airbyte-keycloak")
@@ -244,7 +244,7 @@ func TestBasicEnterpriseConfigWithHelmValues(t *testing.T) {
 			for k, expected := range expectedEnvVarKeys {
 				actual, ok := keycloakEnvVars[k]
 				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
-				helmtests.VerifyEnvVar(t, expected, actual)
+				helmtests.VerifyEnvVar(t, chartYaml, expected, actual)
 			}
 		})
 	})
