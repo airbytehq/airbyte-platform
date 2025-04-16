@@ -10,7 +10,7 @@ const togglePaginationInput = "[data-testid='toggle-formValues.streams.0.paginat
 const toggleParameterizedRequestsInput = "input[data-testid='toggle-formValues.streams.0.parameterizedRequests']";
 const parameterizedRequestsCursorInput = "[name='formValues.streams.0.parameterizedRequests.0.cursor_field']";
 const streamNameInput = "input[name='streamName']";
-const streamUrlPathFromModal = "[name='urlPath']";
+const streamUrlPathFromModal = "[name='urlPath'] textarea";
 const streamUrlPathFromForm = "[name='formValues.streams.0.urlPath']";
 const recordSelectorToggle = "[data-testid='toggle-formValues.streams.0.recordSelector']";
 const recordSelectorFieldPathInput = "[data-testid='tag-input-formValues.streams.0.recordSelector.fieldPath'] input";
