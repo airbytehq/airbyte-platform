@@ -144,6 +144,7 @@ func EnvVarMap(vars []corev1.EnvVar) map[string]corev1.EnvVar {
 type ExpectedEnvVar interface {
 	RefName(name string) ExpectedEnvVar
 	RefKey(key string) ExpectedEnvVar
+	Value(value string) ExpectedEnvVar
 }
 
 type ExpectedVarFromConfigMap struct {
@@ -151,6 +152,8 @@ type ExpectedVarFromConfigMap struct {
 	refName string
 	// value to expect for `valueFrom.configMapKeyRef.key`
 	refKey string
+	// value to expect in the configMap
+	value string
 }
 
 func (e ExpectedVarFromConfigMap) RefName(n string) ExpectedEnvVar {
@@ -163,6 +166,11 @@ func (e ExpectedVarFromConfigMap) RefKey(k string) ExpectedEnvVar {
 	return e
 }
 
+func (e ExpectedVarFromConfigMap) Value(v string) ExpectedEnvVar {
+	e.value = v
+	return e
+}
+
 func ExpectedConfigMapVar() *ExpectedVarFromConfigMap {
 	return &ExpectedVarFromConfigMap{}
 }
@@ -172,6 +180,8 @@ type ExpectedVarFromSecret struct {
 	refName string
 	// value to expect for `valueFrom.secretKeyRef.key`
 	refKey string
+	// value to expect in the secret
+	value string
 }
 
 func (e ExpectedVarFromSecret) RefName(n string) ExpectedEnvVar {
@@ -184,16 +194,25 @@ func (e ExpectedVarFromSecret) RefKey(k string) ExpectedEnvVar {
 	return e
 }
 
+func (e ExpectedVarFromSecret) Value(v string) ExpectedEnvVar {
+	e.value = v
+	return e
+}
+
 func ExpectedSecretVar() *ExpectedVarFromSecret {
 	return &ExpectedVarFromSecret{}
 }
 
-func VerifyEnvVar(t *testing.T, expected ExpectedEnvVar, actual corev1.EnvVar) {
+func VerifyEnvVar(t *testing.T, chartYaml string, expected ExpectedEnvVar, actual corev1.EnvVar) {
 	switch expected := expected.(type) {
 	case ExpectedVarFromConfigMap:
 		assert.NotNil(t, actual.ValueFrom.ConfigMapKeyRef)
 		assert.Equal(t, expected.refName, actual.ValueFrom.ConfigMapKeyRef.Name)
 		assert.Equal(t, expected.refKey, actual.ValueFrom.ConfigMapKeyRef.Key)
+
+		configMap := GetConfigMap(chartYaml, expected.refName)
+		assert.Equal(t, expected.value, configMap.Data[expected.refKey])
+
 	case ExpectedVarFromSecret:
 		assert.NotNil(t, actual.ValueFrom.SecretKeyRef)
 		assert.Equal(t, expected.refName, actual.ValueFrom.SecretKeyRef.Name)
