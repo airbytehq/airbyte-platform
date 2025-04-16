@@ -97,12 +97,6 @@ class WorkloadApiClient(
 
     val resp = workloadApiClient.workloadApi.pollWorkloadQueue(req)
 
-    if (resp.workloads.isNotEmpty()) {
-      logger.info {
-        "$groupId-$priority resp: $resp"
-      }
-    }
-
     return resp.workloads
   }
 }

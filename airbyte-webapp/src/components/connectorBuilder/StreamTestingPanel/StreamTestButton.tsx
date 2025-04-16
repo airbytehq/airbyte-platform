@@ -1,4 +1,5 @@
 import classNames from "classnames";
+import { ComponentProps } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { FormattedMessage } from "react-intl";
 
@@ -26,6 +27,7 @@ interface StreamTestButtonProps {
   className?: string;
   forceDisabled?: boolean;
   requestType: "sync" | "async";
+  variant?: ComponentProps<typeof Button>["variant"];
 }
 
 export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
@@ -40,12 +42,17 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   className,
   forceDisabled,
   requestType,
+  variant,
 }) => {
   const { yamlIsValid } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
-  const relevantViews: BuilderView[] = ["global", "inputs", testStreamIndex];
+  const relevantViews: BuilderView[] = [
+    "global",
+    "inputs",
+    testStreamId.type === "stream" ? testStreamId.index : `dynamic_stream_${testStreamId.index}`,
+  ];
 
   useHotkeys(
     ["ctrl+enter", "meta+enter"],
@@ -107,6 +114,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       icon={showWarningIcon ? "warningOutline" : "rotate"}
       iconSize="sm"
       isLoading={isLoading}
+      variant={variant}
     >
       <FormattedMessage id="connectorBuilder.testButton" />
     </Button>

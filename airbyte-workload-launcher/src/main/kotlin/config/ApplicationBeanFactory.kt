@@ -7,7 +7,6 @@ package io.airbyte.workload.launcher.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Geography
-import io.airbyte.featureflag.PlaneName
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -99,13 +98,7 @@ class ApplicationBeanFactory {
   @Named("infraFlagContexts")
   fun staticFlagContext(
     @Property(name = "airbyte.workload-launcher.geography") geography: String,
-    @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
-  ): List<Context> =
-    if (dataPlaneName.isNullOrBlank()) {
-      listOf(Geography(geography))
-    } else {
-      listOf(Geography(geography), PlaneName(dataPlaneName))
-    }
+  ): List<Context> = listOf(Geography(geography))
 
   @Singleton
   fun connectorApmSupportHelper(): ConnectorApmSupportHelper = ConnectorApmSupportHelper()
