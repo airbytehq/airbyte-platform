@@ -227,6 +227,13 @@ class ScopedConfigurationServiceDataImpl(
 
   override fun listScopedConfigurations(key: String): List<ScopedConfiguration> = repository.findByKey(key).map { it.toConfigModel() }.toList()
 
+  override fun listScopedConfigurations(originType: ConfigOriginType): List<ScopedConfiguration> =
+    repository
+      .findByOriginType(originType.toEntity())
+      .map {
+        it.toConfigModel()
+      }.toList()
+
   override fun listScopedConfigurationsWithScopes(
     key: String,
     resourceType: ConfigResourceType,

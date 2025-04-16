@@ -360,7 +360,13 @@ export const useBuilderValidationSchema = () => {
             'Must be "global", "inputs", "components", or a number',
             (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
           ),
-        testStreamIndex: yup.number().min(0).required(REQUIRED_ERROR),
+        testStreamId: yup
+          .object()
+          .shape({
+            type: yup.string().oneOf(["stream", "dynamic_stream"]).required(REQUIRED_ERROR),
+            index: yup.number().min(0).required(REQUIRED_ERROR),
+          })
+          .required(REQUIRED_ERROR),
         testingValues: testingValuesSchema,
       }),
     [builderFormValidationSchema, testingValuesSchema]

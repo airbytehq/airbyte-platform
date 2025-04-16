@@ -989,6 +989,51 @@ internal class ScopedConfigurationServiceDataImplTest {
   }
 
   @Test
+  fun `test list configurations with originType`() {
+    val resourceId = UUID.randomUUID()
+
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id",
+        description = "my_description",
+      )
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = "key",
+        value = "value2",
+        scopeType = EntityConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = EntityConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = "my_user_id2",
+        description = "my_description2",
+        referenceUrl = "https://github.com/",
+        expiresAt = Date.valueOf(LocalDate.now()),
+      )
+
+    every { scopedConfigurationRepository.findByOriginType(ConfigOriginType.user) } returns listOf(config, config2)
+
+    val res =
+      scopedConfigurationService.listScopedConfigurations(io.airbyte.config.ConfigOriginType.USER)
+    assert(res == listOf(config.toConfigModel(), config2.toConfigModel()))
+
+    verify {
+      scopedConfigurationRepository.findByOriginType(ConfigOriginType.user)
+    }
+  }
+
+  @Test
   fun `test delete scoped configuration`() {
     val configId = UUID.randomUUID()
 

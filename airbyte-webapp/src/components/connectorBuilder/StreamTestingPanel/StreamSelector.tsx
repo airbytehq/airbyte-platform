@@ -4,19 +4,26 @@ import { useIntl } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
-import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
+import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
+import { BuilderState, StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamSelectorProps {
   className?: string;
 }
 
-const ControlButton: React.FC<ListBoxControlButtonProps<string>> = ({ selectedOption }) => {
+interface SelectorOption {
+  type: "stream" | "dynamic_stream";
+  name: string;
+  idx: number;
+}
+
+const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => {
   return (
     <>
       {selectedOption && (
@@ -34,11 +41,11 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
 
-  const { streamNames } = useConnectorBuilderFormState();
+  const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
 
-  if (streamNames.length === 0) {
+  if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
     return (
       <Box py="md">
         <Heading className={styles.label} as="h1" size="sm">
@@ -48,18 +55,42 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     );
   }
 
-  const options = streamNames.map((streamName) => {
-    const label = streamName && streamName.trim() ? streamName : formatMessage({ id: "connectorBuilder.emptyName" });
-    return { label, value: streamName ?? "" };
-  });
+  const options: Array<Option<SelectorOption>> = [];
 
-  const handleStreamSelect = (selectedStreamName: string) => {
-    const selectedStreamIndex = streamNames.findIndex((streamName) => selectedStreamName === streamName);
-    if (selectedStreamIndex >= 0) {
-      setValue("testStreamIndex", selectedStreamIndex);
+  options.push(
+    ...dynamicStreamNames.map((streamName, idx) => {
+      const label = streamName.trim() ? streamName : formatMessage({ id: "connectorBuilder.emptyName" });
+      return { label, value: { type: "dynamic_stream" as const, name: streamName ?? "", idx } };
+    })
+  );
+
+  options.push(
+    ...streamNames.map((streamName, idx) => {
+      const label = streamName.trim() ? streamName : formatMessage({ id: "connectorBuilder.emptyName" });
+      return { label, value: { type: "stream" as const, name: streamName ?? "", idx } };
+    })
+  );
+
+  const handleStreamSelect = (selectedStream: SelectorOption) => {
+    const { type, name: selectedStreamName } = selectedStream;
+
+    let selectedView: BuilderState["view"] | undefined;
+    let selectedStreamId: StreamId | undefined;
+
+    if (type === "stream") {
+      selectedView = streamNames.findIndex((streamName) => selectedStreamName === streamName);
+      selectedStreamId = { type: "stream" as const, index: selectedView };
+    } else if (type === "dynamic_stream") {
+      const selectedStreamIndex = dynamicStreamNames.findIndex((streamName) => selectedStreamName === streamName);
+      selectedView = `dynamic_stream_${selectedStreamIndex}`;
+      selectedStreamId = { type: "dynamic_stream" as const, index: selectedStreamIndex };
+    }
+
+    if (selectedView != null) {
+      setValue("testStreamId", selectedStreamId);
 
       if (view !== "global" && view !== "inputs") {
-        setValue("view", selectedStreamIndex);
+        setValue("view", selectedView);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected in testing panel",
           stream_name: selectedStreamName,
@@ -68,11 +99,17 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     }
   };
 
+  const selectedValueType: SelectorOption["type"] = testStreamId.type;
+
+  const selectedValue = options.find(
+    (option) => option.value.type === selectedValueType && option.value.idx === testStreamId.index
+  )?.value;
+
   return (
     <ListBox
       className={className}
       options={options}
-      selectedValue={streamNames[testStreamIndex] ?? formatMessage({ id: "connectorBuilder.noStreamSelected" })}
+      selectedValue={selectedValue}
       onSelect={handleStreamSelect}
       buttonClassName={styles.button}
       controlButton={ControlButton}

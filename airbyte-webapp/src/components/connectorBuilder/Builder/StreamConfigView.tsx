@@ -752,7 +752,7 @@ const SchemaTab = ({
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
   const { hasErrors } = useBuilderErrors();
-  const autoImportSchema = useAutoImportSchema(streamNum);
+  const autoImportSchema = useAutoImportSchema({ type: "stream", index: streamNum });
 
   return (
     <StreamTab
@@ -770,12 +770,12 @@ const SchemaTab = ({
 const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
-  const { permission, streamNames } = useConnectorBuilderFormState();
+  const { permission, streamIdToStreamRepresentation } = useConnectorBuilderFormState();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
   const schema = useBuilderWatch(schemaFieldPath);
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
   const { setValue } = useFormContext();
   const path = streamFieldPath("schema");
   const { errors } = useFormState({ name: path });
@@ -815,7 +815,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) =>
             setValue(path, formattedJson);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
-              stream_name: streamNames[testStreamIndex],
+              ...streamIdToStreamRepresentation(testStreamId),
             });
           }}
         >

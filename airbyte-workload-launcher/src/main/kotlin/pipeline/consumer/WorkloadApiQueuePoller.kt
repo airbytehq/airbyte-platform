@@ -4,7 +4,9 @@
 
 package io.airbyte.workload.launcher.pipeline.consumer
 
+import io.airbyte.featureflag.DataplaneGroup
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WorkloadPollerUsesJitter
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -18,6 +20,9 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.time.Duration
 import kotlin.concurrent.Volatile
+import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -34,7 +39,6 @@ class WorkloadApiQueuePoller(
   private val pollSizeItems: Int,
   private val pollIntervalSeconds: Long,
   private val priority: WorkloadPriority,
-  private val dataplaneName: String,
 ) {
   @Volatile
   private var suspended = true
@@ -68,7 +72,15 @@ class WorkloadApiQueuePoller(
   fun isSuspended(): Boolean = suspended
 
   private fun buildInputFlux(): Flux<LauncherInput> {
-    val interval = Flux.interval(Duration.ofSeconds(pollIntervalSeconds))
+    val interval =
+      if (useJitter()) {
+        Flux
+          .interval(Duration.ofSeconds(pollIntervalSeconds))
+          .onBackpressureDrop()
+          .delayUntil { Mono.delay(Random.nextInt(0, 100).milliseconds.toJavaDuration()) }
+      } else {
+        Flux.interval(Duration.ofSeconds(pollIntervalSeconds)).onBackpressureDrop()
+      }
 
     val pollFlux: Flux<Workload> =
       Flux.create { sink ->
@@ -84,12 +96,13 @@ class WorkloadApiQueuePoller(
       }
 
     return interval
-      .onBackpressureDrop()
       .filter { !isSuspended() }
       .flatMap { pollFlux }
       .map(Workload::toLauncherInput)
       .onErrorContinue(this::handlePollError)
   }
+
+  private fun useJitter(): Boolean = featureFlagClient.boolVariation(WorkloadPollerUsesJitter, DataplaneGroup(groupId))
 
   private fun handlePollError(
     e: Throwable,

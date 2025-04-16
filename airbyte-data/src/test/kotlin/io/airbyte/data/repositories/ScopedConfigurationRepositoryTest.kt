@@ -492,6 +492,50 @@ internal class ScopedConfigurationRepositoryTest : AbstractConfigRepositoryTest(
   }
 
   @Test
+  fun `test db find by originType in list`() {
+    val resourceId = UUID.randomUUID()
+    val originA = UUID.randomUUID().toString()
+    val config =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.user,
+        origin = originA,
+      )
+
+    scopedConfigurationRepository.save(config)
+
+    val config2 =
+      ScopedConfiguration(
+        id = UUID.randomUUID(),
+        key = CONFIG_KEY,
+        value = "config_value2",
+        scopeType = ConfigScopeType.workspace,
+        scopeId = UUID.randomUUID(),
+        resourceType = ConfigResourceType.actor_definition,
+        resourceId = resourceId,
+        originType = ConfigOriginType.connector_rollout,
+        origin = originA,
+      )
+
+    scopedConfigurationRepository.save(config2)
+
+    assert(scopedConfigurationRepository.count() == 2L)
+
+    val findConfigsResult =
+      scopedConfigurationRepository.findByOriginType(ConfigOriginType.user)
+    assert(findConfigsResult.size == 1)
+
+    val persistedIds = findConfigsResult.map { it.id }
+    assert(persistedIds.containsAll(listOf(config.id)))
+  }
+
+  @Test
   fun `test db find by value in list`() {
     val resourceId = UUID.randomUUID()
     val valueA = "version-1"

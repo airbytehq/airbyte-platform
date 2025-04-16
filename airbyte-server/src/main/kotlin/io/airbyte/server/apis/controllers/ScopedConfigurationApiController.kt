@@ -13,6 +13,7 @@ import io.airbyte.api.model.generated.ScopedConfigurationDeleteRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationDeleteResponse
 import io.airbyte.api.model.generated.ScopedConfigurationListRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationListResponse
+import io.airbyte.api.model.generated.ScopedConfigurationRead
 import io.airbyte.api.model.generated.ScopedConfigurationReadRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationReadResponse
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateRequestBody
@@ -20,6 +21,7 @@ import io.airbyte.api.model.generated.ScopedConfigurationUpdateResponse
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ScopedConfigurationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.config.ConfigOriginType
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -71,8 +73,28 @@ class ScopedConfigurationApiController(
     @Body scopedConfigurationListRequestBody: ScopedConfigurationListRequestBody,
   ): ScopedConfigurationListResponse? =
     execute {
-      val scopedConfigurations =
-        scopedConfigurationHandler.listScopedConfigurations(scopedConfigurationListRequestBody.configKey)
+      val scopedConfigurations: List<ScopedConfigurationRead>
+      if (scopedConfigurationListRequestBody.configKey != null && scopedConfigurationListRequestBody.originType != null) {
+        throw RuntimeException(
+          "Either a configuration key or origin type is required, but not both. " +
+            "Got configKey=${scopedConfigurationListRequestBody.configKey} originType=%${scopedConfigurationListRequestBody.originType}.",
+        )
+      }
+
+      if (scopedConfigurationListRequestBody.configKey != null) {
+        scopedConfigurations =
+          scopedConfigurationHandler.listScopedConfigurations(scopedConfigurationListRequestBody.configKey)
+      } else if (scopedConfigurationListRequestBody.originType != null) {
+        scopedConfigurations =
+          scopedConfigurationHandler.listScopedConfigurations(
+            ConfigOriginType.valueOf(scopedConfigurationListRequestBody.originType),
+          )
+      } else {
+        throw RuntimeException(
+          "Either a configuration key or origin type is required. " +
+            "Got configKey=${scopedConfigurationListRequestBody.configKey} originType=%${scopedConfigurationListRequestBody.originType}.",
+        )
+      }
       ScopedConfigurationListResponse().scopedConfigurations(scopedConfigurations)
     }
 

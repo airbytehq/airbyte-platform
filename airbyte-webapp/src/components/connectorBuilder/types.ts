@@ -82,6 +82,11 @@ import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
+export interface StreamId {
+  type: "stream" | "dynamic_stream";
+  index: number;
+}
+
 export interface BuilderState {
   name: string;
   mode: "ui" | "yaml";
@@ -89,9 +94,14 @@ export interface BuilderState {
   previewValues?: BuilderFormValues;
   yaml: string;
   customComponentsCode?: string;
-  view: "global" | "inputs" | "components" | number;
+  view:
+    | "global"
+    | "inputs"
+    | "components"
+    | `dynamic_stream_${number}` /* dynamic stream index */
+    | number /* stream index */;
   streamTab: BuilderStreamTab;
-  testStreamIndex: number;
+  testStreamId: StreamId;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
 
@@ -302,6 +312,7 @@ export interface BuilderFormValues {
   assist: AssistData;
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
+  dynamicStreams: BuilderDynamicStream[];
   checkStreams: string[];
   version: string;
   description?: string;
@@ -446,6 +457,12 @@ export type BuilderPollingTimeout =
       value: string;
     };
 
+export interface BuilderDynamicStream {
+  streamTemplate: BuilderStream;
+  // TODO:
+  // componentsResolver: BuilderComponentsResolver;
+}
+
 export type BuilderStream = {
   id: string;
   name: string;
@@ -576,6 +593,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   inputs: [],
   streams: [],
+  dynamicStreams: [],
   checkStreams: [],
   version: CDK_VERSION,
 };
@@ -699,6 +717,10 @@ export function hasIncrementalSyncUserInput(
       (key === "start_datetime" || incrementalSync?.filter_mode === "range")
     );
   });
+}
+
+export function isStreamDynamicStream(streamId: StreamId): boolean {
+  return streamId.type === "dynamic_stream";
 }
 
 export function interpolateConfigKey(key: string): string;

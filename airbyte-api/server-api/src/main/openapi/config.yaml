@@ -8977,6 +8977,9 @@ components:
         config_key:
           type: string
           description: Key of the configuration to filter by
+        origin_type:
+          type: string
+          description: Type of origin to filter by
 
     ScopedConfigurationListResponse:
       type: object
