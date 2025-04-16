@@ -220,7 +220,7 @@ class Bootloader(
     dataplaneGroupService: DataplaneGroupService,
     airbyteEdition: AirbyteEdition,
   ) {
-    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
 
     // Cloud currently depends on a "US" Dataplane group to exist. Once this is no longer the case,
     // we can remove Cloud-specific code from the bootloader.

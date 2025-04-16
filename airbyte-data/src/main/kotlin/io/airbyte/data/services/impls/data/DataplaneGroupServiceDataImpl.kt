@@ -61,20 +61,20 @@ open class DataplaneGroupServiceDataImpl(
   }
 
   override fun listDataplaneGroups(
-    organizationId: UUID,
+    organizationIds: List<UUID>,
     withTombstone: Boolean,
   ): List<DataplaneGroup> =
     if (withTombstone) {
       repository
-        .findAllByOrganizationIdOrderByUpdatedAtDesc(
-          organizationId,
+        .findAllByOrganizationIdInOrderByUpdatedAtDesc(
+          organizationIds,
         ).map { unit ->
           unit.toConfigModel()
         }
     } else {
       repository
-        .findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(
-          organizationId,
+        .findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(
+          organizationIds,
         ).map { unit ->
           unit.toConfigModel()
         }
@@ -82,7 +82,7 @@ open class DataplaneGroupServiceDataImpl(
 
   fun validateDataplaneGroupName(dataplaneGroup: DataplaneGroup) {
     if (dataplaneGroup.organizationId != DEFAULT_ORGANIZATION_ID) {
-      val defaultGroups = listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+      val defaultGroups = listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
       val reservedNames = defaultGroups.map { it.name }.toSet()
 
       if (dataplaneGroup.name in reservedNames) {
