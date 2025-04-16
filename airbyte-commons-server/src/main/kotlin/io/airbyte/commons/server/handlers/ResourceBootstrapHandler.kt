@@ -94,7 +94,7 @@ open class ResourceBootstrapHandler(
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
 
-  fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
+  open fun findOrCreateOrganizationAndPermission(user: AuthenticatedUser): Organization {
     findExistingOrganization(user)?.let { return it }
     val organization =
       Organization().apply {
