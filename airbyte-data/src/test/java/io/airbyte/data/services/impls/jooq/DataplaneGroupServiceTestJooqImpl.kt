@@ -75,14 +75,14 @@ class DataplaneGroupServiceTestJooqImpl(
   }
 
   override fun listDataplaneGroups(
-    organizationId: UUID,
+    organizationIds: List<UUID>,
     withTombstone: Boolean,
   ): List<DataplaneGroup> =
     database.query { ctx: DSLContext ->
       val query =
         ctx
           .selectFrom(Tables.DATAPLANE_GROUP)
-          .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.eq(organizationId))
+          .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.`in`(organizationIds))
 
       if (!withTombstone) {
         query.and(Tables.DATAPLANE_GROUP.TOMBSTONE.eq(false))

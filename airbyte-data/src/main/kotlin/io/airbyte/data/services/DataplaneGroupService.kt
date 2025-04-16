@@ -30,7 +30,7 @@ interface DataplaneGroupService {
    * List all dataplane groups matching the provided organization ID
    */
   fun listDataplaneGroups(
-    organizationId: UUID,
+    organizationIds: List<UUID>,
     withTombstone: Boolean,
   ): List<DataplaneGroup>
 }

@@ -12,7 +12,7 @@ import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.data.services.DataplaneGroupService;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
@@ -38,10 +38,9 @@ class WebBackendGeographiesHandlerTest {
     final WebBackendGeographiesListResult expected = new WebBackendGeographiesListResult().geographies(
         List.of(DataplaneConstantsKt.GEOGRAPHY_AUTO));
 
-    when(dataplaneGroupService.listDataplaneGroups(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), false))
-        .thenReturn(Collections.emptyList());
-    when(dataplaneGroupService.listDataplaneGroups(mockOrganizationId, false))
-        .thenReturn(dataplaneGroups);
+    when(dataplaneGroupService.listDataplaneGroups(
+        List.of(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), mockOrganizationId), false))
+            .thenReturn(dataplaneGroups);
 
     final WebBackendGeographiesListResult actual = webBackendGeographiesHandler.listGeographies(mockOrganizationId);
 
@@ -51,7 +50,6 @@ class WebBackendGeographiesHandlerTest {
   @Test
   void testGetDataplaneGroupNames_combinesAndDeduplicates() {
     final UUID orgId = UUID.randomUUID();
-    final UUID defaultOrgId = OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID();
 
     final List<DataplaneGroup> defaultGroups = List.of(
         new DataplaneGroup().withName("US"),
@@ -60,8 +58,12 @@ class WebBackendGeographiesHandlerTest {
         new DataplaneGroup().withName("EU"),
         new DataplaneGroup().withName("AUS"));
 
-    when(dataplaneGroupService.listDataplaneGroups(defaultOrgId, false)).thenReturn(defaultGroups);
-    when(dataplaneGroupService.listDataplaneGroups(orgId, false)).thenReturn(orgGroups);
+    final List<DataplaneGroup> combinedGroups = new ArrayList<>();
+    combinedGroups.addAll(defaultGroups);
+    combinedGroups.addAll(orgGroups);
+
+    when(dataplaneGroupService.listDataplaneGroups(
+        List.of(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), orgId), false)).thenReturn(combinedGroups);
 
     List<String> result = webBackendGeographiesHandler.getDataplaneGroupNames(orgId);
 
