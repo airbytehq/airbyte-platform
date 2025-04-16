@@ -17,15 +17,12 @@ import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { BuilderFormValues, convertToManifest } from "../types";
+import { BuilderFormValues, BuilderState, convertToManifest } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
 import { useBuilderWatch } from "../useBuilderWatch";
 
-function getView(
-  selectedView: "global" | "inputs" | "components" | { streamNum: number; streamId: string },
-  scrollToTop: () => void
-) {
+function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
   switch (selectedView) {
     case "global":
       return <GlobalConfigView />;
@@ -34,10 +31,13 @@ function getView(
     case "components":
       return <ComponentsView />;
     default:
-      // re-mount on changing stream
-      return (
-        <StreamConfigView streamNum={selectedView.streamNum} key={selectedView.streamId} scrollToTop={scrollToTop} />
-      );
+      if (typeof selectedView === "string") {
+        // dynamic stream
+        return null;
+      }
+
+      // key is used to re-mount when changing stream
+      return <StreamConfigView streamNum={selectedView} key={selectedView} scrollToTop={scrollToTop} />;
   }
 }
 
@@ -58,7 +58,6 @@ export const Builder: React.FC = () => {
   const formValues = useBuilderWatch("formValues");
   const view = useBuilderWatch("view");
 
-  const streams = useBuilderWatch("formValues.streams");
   const { builderFormValidationSchema } = useBuilderValidationSchema();
 
   // Create a reference to the builder view div for scrolling
@@ -87,17 +86,6 @@ export const Builder: React.FC = () => {
     debouncedUpdateJsonManifest(formValues);
   }, [debouncedUpdateJsonManifest, formValues, setFormValuesDirty]);
 
-  const selectedView = useMemo(
-    () =>
-      view !== "global" && view !== "inputs" && view !== "components"
-        ? {
-            streamNum: view,
-            streamId: streams[view]?.id ?? view,
-          }
-        : view,
-    [streams, view]
-  );
-
   useEffect(() => {
     if (blockedOnInvalidState) {
       validateAndTouch();
@@ -109,7 +97,7 @@ export const Builder: React.FC = () => {
       <div className={styles.container}>
         <BuilderSidebar />
         <div className={styles.builderView} ref={builderViewRef}>
-          {getView(selectedView, scrollToTop)}
+          {getView(view, scrollToTop)}
         </div>
         {newUserInputContext && (
           <InputForm
@@ -140,6 +128,6 @@ export const Builder: React.FC = () => {
         )}
       </div>
     ),
-    [selectedView, newUserInputContext, setNewUserInputContext, scrollToTop]
+    [view, newUserInputContext, setNewUserInputContext, scrollToTop]
   );
 };

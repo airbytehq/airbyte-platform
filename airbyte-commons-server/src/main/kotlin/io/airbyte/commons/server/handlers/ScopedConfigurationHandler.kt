@@ -183,6 +183,15 @@ open class ScopedConfigurationHandler
         }.collect(Collectors.toList())
     }
 
+    fun listScopedConfigurations(originType: ConfigOriginType): List<ScopedConfigurationRead> {
+      val scopedConfigurations: List<ScopedConfiguration> = scopedConfigurationService.listScopedConfigurations(originType)
+      return scopedConfigurations
+        .stream()
+        .map { scopedConfiguration: ScopedConfiguration ->
+          buildScopedConfigurationRead(scopedConfiguration)
+        }.collect(Collectors.toList())
+    }
+
     fun insertScopedConfiguration(scopedConfigurationCreate: ScopedConfigurationCreateRequestBody): ScopedConfigurationRead {
       assertCreateRelatedRecordsExist(scopedConfigurationCreate)
 

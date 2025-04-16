@@ -46,8 +46,6 @@ class WorkloadApiQueuePollerTest {
 
   private val priority: WorkloadPriority = WorkloadPriority.DEFAULT
 
-  private val dataplaneName: String = "dataplane-name"
-
   lateinit var poller: WorkloadApiQueuePoller
 
   @BeforeEach
@@ -60,7 +58,6 @@ class WorkloadApiQueuePollerTest {
         pollSizeItems,
         pollIntervalSeconds,
         priority,
-        dataplaneName,
       )
   }
 
