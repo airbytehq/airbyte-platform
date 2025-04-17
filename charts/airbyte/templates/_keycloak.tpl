@@ -23,9 +23,9 @@ Keycloak Configuration
 {{- end }}
 
 {{- define "airbyte.keycloak.database.url" }}
-{{ $host := (include "airbyte.database.host" .) }}
-{{ $dbName := (include "airbyte.database.name" .) }}
-{{ $port := (include "airbyte.database.port" . ) }}
+{{- $host := (include "airbyte.database.host" .) }}
+{{- $dbName := (include "airbyte.database.name" .) }}
+{{- $port := (include "airbyte.database.port" . ) }}
 {{- printf "jdbc:postgresql://%s:%s/%s?currentSchema=keycloak" $host $port $dbName }}
 {{- end }}
 

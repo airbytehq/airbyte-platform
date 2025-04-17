@@ -104,7 +104,7 @@ func verifyCredentialsForDeployments(t *testing.T, helmOpts *helm.Options, expec
 			for k, expected := range c.ExpectedEnvVars {
 				actual, ok := actualVars[k]
 				assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable", k))
-				helmtests.VerifyEnvVar(t, expected, actual)
+				helmtests.VerifyEnvVar(t, chartYaml, expected, actual)
 			}
 		})
 	}
