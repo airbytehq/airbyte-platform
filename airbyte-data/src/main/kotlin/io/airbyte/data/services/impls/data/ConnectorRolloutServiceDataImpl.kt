@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
@@ -28,7 +27,7 @@ open class ConnectorRolloutServiceDataImpl(
     repository
       .findById(id)
       .orElseThrow {
-        ConfigNotFoundException(ConfigSchema.CONNECTOR_ROLLOUT, id)
+        ConfigNotFoundException("ConnectorRollout", id.toString())
       }.toConfigModel()
 
   override fun insertConnectorRollout(connectorRollout: ConnectorRollout): ConnectorRollout {

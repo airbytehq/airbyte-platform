@@ -8,8 +8,8 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.google.api.gax.paging.Page
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
+import io.airbyte.config.CustomerTier
 import io.airbyte.data.config.OrganizationCustomerAttributesServiceConfig
-import io.airbyte.data.services.CustomerTier
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk

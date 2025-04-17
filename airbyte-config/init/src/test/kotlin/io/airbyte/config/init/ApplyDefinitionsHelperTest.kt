@@ -52,6 +52,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
+import java.time.Instant
 import java.util.Optional
 import java.util.UUID
 import java.util.stream.Stream
@@ -191,7 +192,17 @@ internal class ApplyDefinitionsHelperTest {
 
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
-    every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout()
+    every { connectorRolloutService.insertConnectorRollout(any()) } returns
+      ConnectorRollout(
+        id = UUID.randomUUID(),
+        workflowRunId = "fake-workflow-run-id",
+        actorDefinitionId = UUID.randomUUID(),
+        releaseCandidateVersionId = UUID.randomUUID(),
+        hasBreakingChanges = false,
+        createdAt = Instant.now().toEpochMilli(),
+        updatedAt = Instant.now().toEpochMilli(),
+        state = ConnectorEnumRolloutState.INITIALIZED,
+      )
     val fakeAdvId = UUID.randomUUID()
     val fakeInitialAdvId = UUID.randomUUID()
     val insertedAdvSource =
@@ -251,12 +262,24 @@ internal class ApplyDefinitionsHelperTest {
     assertEquals(insertedAdvDestination.actorDefinitionId, destinationRollout.actorDefinitionId)
 
     // The destination has no rollout config, we test that the defaults are used
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.maxPercentage, sourceRollout.finalTargetRolloutPct)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.maxPercentage, destinationRollout.finalTargetRolloutPct)
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.initialPercentage, sourceRollout.initialRolloutPct)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.initialPercentage, destinationRollout.initialRolloutPct)
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.advanceDelayMinutes, sourceRollout.maxStepWaitTimeMins)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.advanceDelayMinutes, destinationRollout.maxStepWaitTimeMins)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.maxPercentage
+        .toInt(),
+      sourceRollout.finalTargetRolloutPct,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.maxPercentage.toInt(), destinationRollout.finalTargetRolloutPct)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.initialPercentage
+        .toInt(),
+      sourceRollout.initialRolloutPct,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.initialPercentage.toInt(), destinationRollout.initialRolloutPct)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.advanceDelayMinutes
+        .toInt(),
+      sourceRollout.maxStepWaitTimeMins,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.advanceDelayMinutes.toInt(), destinationRollout.maxStepWaitTimeMins)
 
     assertEquals(false, sourceRollout.hasBreakingChanges)
     assertEquals(false, destinationRollout.hasBreakingChanges)
@@ -289,7 +312,19 @@ internal class ApplyDefinitionsHelperTest {
     every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(ConnectorRollout().withState(state))
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns
+      listOf(
+        ConnectorRollout(
+          id = UUID.randomUUID(),
+          workflowRunId = "fake-workflow-run-id",
+          actorDefinitionId = UUID.randomUUID(),
+          releaseCandidateVersionId = UUID.randomUUID(),
+          hasBreakingChanges = false,
+          createdAt = Instant.now().toEpochMilli(),
+          updatedAt = Instant.now().toEpochMilli(),
+          state = state,
+        ),
+      )
 
     val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
     val rcDestinationDefinitions = listOf(DESTINATION_S3_RC)
@@ -341,8 +376,30 @@ internal class ApplyDefinitionsHelperTest {
     every {
       actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
     } returns Optional.of(insertedInitialAdvSource) andThen Optional.of(insertedInitialAdvDestination)
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(ConnectorRollout().withState(state))
-    every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout().withState(state)
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns
+      listOf(
+        ConnectorRollout(
+          id = UUID.randomUUID(),
+          workflowRunId = "fake-workflow-run-id",
+          actorDefinitionId = UUID.randomUUID(),
+          releaseCandidateVersionId = UUID.randomUUID(),
+          hasBreakingChanges = false,
+          createdAt = Instant.now().toEpochMilli(),
+          updatedAt = Instant.now().toEpochMilli(),
+          state = state,
+        ),
+      )
+    every { connectorRolloutService.insertConnectorRollout(any()) } returns
+      ConnectorRollout(
+        id = UUID.randomUUID(),
+        workflowRunId = "fake-workflow-run-id",
+        actorDefinitionId = UUID.randomUUID(),
+        releaseCandidateVersionId = UUID.randomUUID(),
+        hasBreakingChanges = false,
+        createdAt = Instant.now().toEpochMilli(),
+        updatedAt = Instant.now().toEpochMilli(),
+        state = state,
+      )
 
     val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
     val rcDestinationDefinitions = listOf(DESTINATION_S3_RC)
@@ -385,12 +442,24 @@ internal class ApplyDefinitionsHelperTest {
     assertEquals(insertedAdvDestination.actorDefinitionId, destinationRollout.actorDefinitionId)
 
     // The destination has no rollout config, we test that the defaults are used
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.maxPercentage, sourceRollout.finalTargetRolloutPct)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.maxPercentage, destinationRollout.finalTargetRolloutPct)
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.initialPercentage, sourceRollout.initialRolloutPct)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.initialPercentage, destinationRollout.initialRolloutPct)
-    assertEquals(SOURCE_POSTGRES_RC.releases.rolloutConfiguration.advanceDelayMinutes, sourceRollout.maxStepWaitTimeMins)
-    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.advanceDelayMinutes, destinationRollout.maxStepWaitTimeMins)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.maxPercentage
+        .toInt(),
+      sourceRollout.finalTargetRolloutPct,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.maxPercentage.toInt(), destinationRollout.finalTargetRolloutPct)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.initialPercentage
+        .toInt(),
+      sourceRollout.initialRolloutPct,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.initialPercentage.toInt(), destinationRollout.initialRolloutPct)
+    assertEquals(
+      SOURCE_POSTGRES_RC.releases.rolloutConfiguration.advanceDelayMinutes
+        .toInt(),
+      sourceRollout.maxStepWaitTimeMins,
+    )
+    assertEquals(ConnectorRegistryConverters.DEFAULT_ROLLOUT_CONFIGURATION.advanceDelayMinutes.toInt(), destinationRollout.maxStepWaitTimeMins)
 
     assertEquals(false, sourceRollout.hasBreakingChanges)
     assertEquals(false, destinationRollout.hasBreakingChanges)
@@ -443,7 +512,17 @@ internal class ApplyDefinitionsHelperTest {
     every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
     every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
-    every { connectorRolloutService.insertConnectorRollout(any()) } returns ConnectorRollout()
+    every { connectorRolloutService.insertConnectorRollout(any()) } returns
+      ConnectorRollout(
+        id = UUID.randomUUID(),
+        workflowRunId = "fake-workflow-run-id",
+        actorDefinitionId = UUID.randomUUID(),
+        releaseCandidateVersionId = UUID.randomUUID(),
+        hasBreakingChanges = false,
+        createdAt = Instant.now().toEpochMilli(),
+        updatedAt = Instant.now().toEpochMilli(),
+        state = ConnectorEnumRolloutState.INITIALIZED,
+      )
 
     val fakeAdvId = UUID.randomUUID()
 

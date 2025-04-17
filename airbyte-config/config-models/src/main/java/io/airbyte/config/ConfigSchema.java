@@ -115,7 +115,6 @@ public enum ConfigSchema implements AirbyteConfig {
   SECRET_PERSISTENCE_CONFIG("SecretPersistenceConfig.yaml", SecretPersistenceConfig.class),
 
   SCOPED_CONFIGURATION("ScopedConfiguration.yaml", ScopedConfiguration.class),
-  CONNECTOR_ROLLOUT("ConnectorRollout.yaml", ConnectorRollout.class),
   USER_INVITATION("UserInvitation.yaml", UserInvitation.class),
   TAG("Tag.yaml", Tag.class),
   DATAPLANE_GROUP("DataplaneGroup.yaml", DataplaneGroup.class),
