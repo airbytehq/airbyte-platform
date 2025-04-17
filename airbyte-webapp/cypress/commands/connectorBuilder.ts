@@ -176,6 +176,14 @@ export const acceptSchema = () => {
 };
 
 export const focusAndType = (selector: string, text: string) => {
-  cy.get(selector).click();
-  cy.get(selector).type(text);
+  try {
+    cy.get(selector).click();
+    cy.get(selector).type(text);
+  } catch (e) {
+    // Some inputs are Monaco editors, which only allow typing in their child
+    // textarea, so try that upon failure.
+    const textareaSelector = `${selector} textarea`;
+    cy.get(textareaSelector).click();
+    cy.get(textareaSelector).type(text);
+  }
 };
