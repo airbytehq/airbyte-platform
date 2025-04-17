@@ -203,7 +203,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     dataplaneGroupRepository.save(dataplaneGroup2)
     dataplaneGroupRepository.save(dataplaneGroup3)
 
-    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdOrderByUpdatedAtDesc(organizationId)
+    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdInOrderByUpdatedAtDesc(listOf(organizationId))
 
     assertEquals(2, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
@@ -243,7 +243,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     dataplaneGroupRepository.save(dataplaneGroup2)
     dataplaneGroupRepository.save(dataplaneGroup3)
 
-    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(organizationId)
+    val retrievedDataplaneGroups = dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(organizationId))
 
     assertEquals(1, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)

@@ -46,7 +46,7 @@ class DataplaneInitializer(
             GEOGRAPHY_US,
           )
         else -> {
-          val groups = groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+          val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
           when {
             groups.size > 1 -> {
               log.info { "Skipping dataplane creation because multiple dataplane groups exist." }

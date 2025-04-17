@@ -1,3 +1,4 @@
+import { jwtDecode } from "jwt-decode";
 import { PropsWithChildren, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCookie } from "react-use";
@@ -41,7 +42,10 @@ const useScopedAuthToken = () => {
         }
 
         if (event.data?.scopedAuthToken) {
-          setToken(event.data.scopedAuthToken);
+          const expiry = jwtDecode(event.data.scopedAuthToken).exp;
+          setToken(event.data.scopedAuthToken, {
+            expires: expiry ? new Date(expiry * 1000) : new Date(),
+          });
         }
       } catch (error) {
         // Silently handle any errors in message processing

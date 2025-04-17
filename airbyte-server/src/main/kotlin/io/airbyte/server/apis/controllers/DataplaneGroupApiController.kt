@@ -14,6 +14,7 @@ import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
 import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -92,7 +93,11 @@ class DataplaneGroupApiController(
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,
   ): DataplaneGroupListResponse? {
-    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(dataplaneGroupListRequestBody.organizationId, false)
+    val dataplaneGroups =
+      dataplaneGroupService.listDataplaneGroups(
+        listOf(DEFAULT_ORGANIZATION_ID, dataplaneGroupListRequestBody.organizationId),
+        false,
+      )
     return DataplaneGroupListResponse()
       .dataplaneGroups(
         dataplaneGroups.map { dataplaneGroup ->

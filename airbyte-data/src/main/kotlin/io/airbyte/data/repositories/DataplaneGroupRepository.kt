@@ -14,12 +14,12 @@ import java.util.UUID
 interface DataplaneGroupRepository : PageableRepository<DataplaneGroup, UUID> {
   fun save(dataplaneGroup: DataplaneGroup): DataplaneGroup
 
-  fun findAllByOrganizationIdOrderByUpdatedAtDesc(organizationId: UUID): List<DataplaneGroup>
+  fun findAllByOrganizationIdInOrderByUpdatedAtDesc(organizationIds: List<UUID>): List<DataplaneGroup>
 
   fun findAllByOrganizationIdAndNameIgnoreCase(
     organizationId: UUID,
     name: String,
   ): List<DataplaneGroup>
 
-  fun findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(organizationId: UUID): List<DataplaneGroup>
+  fun findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(organizationIds: List<UUID>): List<DataplaneGroup>
 }
