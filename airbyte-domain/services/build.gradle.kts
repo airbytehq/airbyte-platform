@@ -8,6 +8,7 @@ dependencies {
   ksp(libs.micronaut.openapi)
 
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-config:config-persistence"))
   implementation(project(":oss:airbyte-config:config-secrets"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-domain:models"))

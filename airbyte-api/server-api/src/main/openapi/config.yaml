@@ -4323,6 +4323,25 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/migrate:
+    post:
+      tags:
+        - secret_storage
+      summary: Migrate from one secret storage to another
+      operationId: migrateSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MigrateSecretStorageRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/permissions/delete:
     post:
       tags:
@@ -16647,6 +16666,23 @@ components:
       properties:
         secretStorageId:
           $ref: "#/components/schemas/SecretStorageId"
+    MigrateSecretStorageRequestBody:
+      description: Request body for migrating secret storage
+      required:
+        - fromSecretStorageId
+        - toSecretStorageId
+        - scopeType
+        - scopeId
+      properties:
+        fromSecretStorageId:
+          $ref: "#/components/schemas/SecretStorageId"
+        toSecretStorageId:
+          $ref: "#/components/schemas/SecretStorageId"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          type: string
+          format: uuid
     SecretStorageId:
       type: string
       format: uuid

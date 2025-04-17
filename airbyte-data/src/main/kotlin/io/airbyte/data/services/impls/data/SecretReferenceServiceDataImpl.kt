@@ -63,4 +63,12 @@ open class SecretReferenceServiceDataImpl(
     scopeId: UUID,
   ): List<SecretReferenceWithConfig> =
     secretReferenceWithConfigRepository.listByScopeTypeAndScopeId(scopeType.toEntity(), scopeId).map { it.toConfigModel() }
+
+  override fun listWithConfigByScopeTypeAndScopeIds(
+    scopeType: SecretReferenceScopeType,
+    scopeIds: List<UUID>,
+  ): List<SecretReferenceWithConfig> =
+    secretReferenceWithConfigRepository.listByScopeTypeAndScopeIdIn(scopeType.toEntity(), scopeIds).map {
+      it.toConfigModel()
+    }
 }

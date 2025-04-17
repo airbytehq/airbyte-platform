@@ -19,4 +19,10 @@ interface SecretReferenceWithConfigRepository : PageableRepository<SecretReferen
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReferenceWithConfig>
+
+  @Join(value = "secretConfig", type = Join.Type.FETCH)
+  fun listByScopeTypeAndScopeIdIn(
+    scopeType: SecretReferenceScopeType,
+    scopeId: List<UUID>,
+  ): List<SecretReferenceWithConfig>
 }

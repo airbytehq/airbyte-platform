@@ -93,6 +93,100 @@ class SecretReferenceServiceTest {
   }
 
   @Nested
+  inner class CreateSecretConfigAndReference {
+    private val secretStorageId = SecretStorageId(UUID.randomUUID())
+    private val actorId = ActorId(UUID.randomUUID())
+    private val currentUserId = UserId(UUID.randomUUID())
+    private val airbyteManagedPasswordCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate().fullCoordinate
+
+    @Test
+    fun `creates secret configs and reference with new config`() {
+      every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, airbyteManagedPasswordCoordinate) } returns null
+
+      val createConfigSlot = slot<SecretConfigCreate>()
+      val createRefSlot = slot<SecretReferenceCreate>()
+
+      val createdPasswordConfig =
+        mockk<SecretConfig> {
+          every { id } returns SecretConfigId(UUID.randomUUID())
+        }
+      val createdPasswordRef =
+        mockk<SecretReference> {
+          every { id } returns SecretReferenceId(UUID.randomUUID())
+        }
+
+      every { secretConfigRepository.create(capture(createConfigSlot)) } returns createdPasswordConfig
+      every { secretReferenceRepository.createAndReplace(capture(createRefSlot)) } returns createdPasswordRef
+
+      val result =
+        secretReferenceService.createSecretConfigAndReference(
+          secretStorageId,
+          airbyteManagedPasswordCoordinate,
+          true,
+          currentUserId,
+          "$.password",
+          SecretReferenceScopeType.ACTOR,
+          actorId.value,
+        )
+
+      result shouldBe createdPasswordRef.id
+
+      createConfigSlot.captured shouldBe
+        SecretConfigCreate(
+          secretStorageId = secretStorageId,
+          descriptor = airbyteManagedPasswordCoordinate,
+          externalCoordinate = airbyteManagedPasswordCoordinate,
+          airbyteManaged = true,
+          createdBy = currentUserId,
+        )
+
+      createRefSlot.captured shouldBe
+        SecretReferenceCreate(
+          secretConfigId = createdPasswordConfig.id,
+          hydrationPath = "$.password",
+          scopeType = SecretReferenceScopeType.ACTOR,
+          scopeId = actorId.value,
+        )
+    }
+
+    @Test
+    fun `creates secret configs and reference with existing config`() {
+      val expectedConfigId = SecretConfigId(UUID.randomUUID())
+      every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, airbyteManagedPasswordCoordinate) } returns
+        mockk<SecretConfig> {
+          every { id } returns expectedConfigId
+        }
+
+      val createRefSlot = slot<SecretReferenceCreate>()
+
+      val createdPasswordRef =
+        mockk<SecretReference> {
+          every { id } returns SecretReferenceId(UUID.randomUUID())
+        }
+
+      every { secretReferenceRepository.createAndReplace(capture(createRefSlot)) } returns createdPasswordRef
+
+      val result =
+        secretReferenceService.createSecretConfigAndReference(
+          secretStorageId,
+          airbyteManagedPasswordCoordinate,
+          true,
+          currentUserId,
+          "$.password",
+          SecretReferenceScopeType.ACTOR,
+          actorId.value,
+        )
+
+      result shouldBe createdPasswordRef.id
+      createRefSlot.captured.secretConfigId shouldBe expectedConfigId
+
+      verify(exactly = 0) {
+        secretConfigRepository.create(any())
+      }
+    }
+  }
+
+  @Nested
   inner class CreateAndInsertSecretReferencesWithStorageId {
     private val secretStorageId = SecretStorageId(UUID.randomUUID())
     private val actorId = ActorId(UUID.randomUUID())
