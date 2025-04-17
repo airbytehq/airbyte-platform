@@ -111,7 +111,7 @@ class SecretReferenceService(
     }
   }
 
-  private fun createSecretConfigAndReference(
+  fun createSecretConfigAndReference(
     secretStorageId: SecretStorageId,
     externalCoordinate: String,
     airbyteManaged: Boolean,
