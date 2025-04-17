@@ -86,7 +86,9 @@ public class MetricTags {
 
   // workload tags
   public static final String DATA_PLANE_ID_TAG = "data_plane_id";
+  public static final String DATA_PLANE_NAME_TAG = "data_plane_name";
   public static final String DATA_PLANE_GROUP_TAG = "data_plane_group";
+  public static final String DATA_PLANE_GROUP_NAME_TAG = "data_plane_group_name";
   public static final String KUBE_COMMAND_TYPE_TAG = "kube_command_type";
   public static final String KUBE_POD_TYPE_TAG = "kube_pod_type";
   public static final String MUTEX_KEY_TAG = "mutex_key";

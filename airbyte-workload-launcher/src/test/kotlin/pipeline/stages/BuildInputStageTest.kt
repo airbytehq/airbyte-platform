@@ -63,7 +63,6 @@ class BuildInputStageTest {
         deserializer,
         metricClient,
         ffCtxMapper,
-        "dataplane-id",
       )
 
     every { ffCtxMapper.map(any<ReplicationInput>()) } returns Empty
