@@ -90,6 +90,56 @@ class SecretReferenceServiceTest {
       val actual = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, actorId, jsonConfig)
       assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
     }
+
+    @Test
+    fun `applies updated secret refs over persisted secret refs`() {
+      val actorId = UUID.randomUUID()
+      val storageId = UUID.randomUUID()
+
+      val urlRefId = UUID.randomUUID()
+      val apiKeyRefId = UUID.randomUUID()
+
+      val jsonConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "username" to "bob",
+            "secretUrl" to mapOf("_secret" to "updated_url_coordinate", "_secret_storage_id" to storageId), // updated coordinate
+            "auth" to
+              mapOf(
+                "apiKey" to mapOf("_secret_reference_id" to apiKeyRefId.toString()),
+              ),
+          ),
+        )
+
+      val persistedSecretUrlRef = mockk<SecretReferenceWithConfig>()
+      every { persistedSecretUrlRef.secretReference.id } returns SecretReferenceId(urlRefId)
+      every { persistedSecretUrlRef.secretReference.hydrationPath } returns "$.secretUrl"
+      every { persistedSecretUrlRef.secretConfig.secretStorageId } returns storageId
+      every { persistedSecretUrlRef.secretConfig.airbyteManaged } returns false
+      every { persistedSecretUrlRef.secretConfig.externalCoordinate } returns "url-coord"
+
+      val persistedApiKeyRef = mockk<SecretReferenceWithConfig>()
+      every { persistedApiKeyRef.secretReference.id } returns SecretReferenceId(apiKeyRefId)
+      every { persistedApiKeyRef.secretReference.hydrationPath } returns "$.auth.apiKey"
+      every { persistedApiKeyRef.secretConfig.secretStorageId } returns storageId
+      every { persistedApiKeyRef.secretConfig.airbyteManaged } returns false
+      every { persistedApiKeyRef.secretConfig.externalCoordinate } returns "auth-key-coord"
+
+      every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
+        listOf(
+          persistedSecretUrlRef,
+          persistedApiKeyRef,
+        )
+
+      val expectedReferencedSecretsMap =
+        mapOf(
+          "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("updated_url_coordinate"), storageId, null),
+          "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
+        )
+
+      val actual = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, actorId, jsonConfig)
+      assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
+    }
   }
 
   @Nested
