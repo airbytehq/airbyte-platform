@@ -25,7 +25,7 @@ class EnforceMutexStageTest {
     val metricClient: MetricClient = mockk()
     every { launcher.deleteMutexPods(any()) } returns false
 
-    val stage = EnforceMutexStage(launcher, metricClient, "dataplane-id")
+    val stage = EnforceMutexStage(launcher, metricClient)
     val io =
       LaunchStageIO(msg = RecordFixtures.launcherInput(mutexKey = mutexKey), payload = payload)
 
@@ -46,7 +46,7 @@ class EnforceMutexStageTest {
     val metricClient: MetricClient = mockk()
     every { launcher.deleteMutexPods(any()) } returns false
 
-    val stage = EnforceMutexStage(launcher, metricClient, "dataplane-id")
+    val stage = EnforceMutexStage(launcher, metricClient)
     val io =
       LaunchStageIO(msg = RecordFixtures.launcherInput(mutexKey = null), payload = payload)
 
