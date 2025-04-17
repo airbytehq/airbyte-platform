@@ -170,8 +170,9 @@ class SecretReferenceService(
     val refsForScope = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(scopeType, scopeId)
     assertConfigReferenceIdsExist(config, refsForScope.map { it.secretReference.id }.toSet())
 
-    val legacyCoordRefMap = SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config))
-    val persistedRefMap =
+    val secretRefsInConfig = SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config))
+
+    val persistedSecretRefs =
       refsForScope.filter { it.secretReference.hydrationPath != null }.associateBy(
         { it.secretReference.hydrationPath!! },
         {
@@ -183,8 +184,10 @@ class SecretReferenceService(
         },
       )
 
-    val referencedSecrets = legacyCoordRefMap + persistedRefMap
-    return ConfigWithSecretReferences(config, referencedSecrets)
+    // for any secret reference in the config, replace the corresponding persisted secret
+    // (if it exists) because it may have been updated in the incoming config
+    val secretRefs = persistedSecretRefs + secretRefsInConfig
+    return ConfigWithSecretReferences(config, secretRefs)
   }
 
   @JvmName("deleteActorSecretReferences")
