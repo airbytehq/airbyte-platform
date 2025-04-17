@@ -116,6 +116,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     throw new ManifestCompatibilityError(undefined, `${CheckDynamicStreamType.CheckDynamicStream} is not supported`);
   }
   builderFormValues.checkStreams = resolvedManifest.check.stream_names ?? [];
+  builderFormValues.dynamicStreamCheckConfigs = resolvedManifest.check.dynamic_streams_check_configs ?? [];
   builderFormValues.description = resolvedManifest.description;
 
   const streams = resolvedManifest.streams;

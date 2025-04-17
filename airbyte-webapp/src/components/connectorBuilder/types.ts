@@ -21,6 +21,8 @@ import {
   PageIncrement,
   OffsetIncrement,
   CursorPagination,
+  DynamicStreamCheckConfig,
+  DynamicStreamCheckConfigType,
   SimpleRetrieverPaginator,
   DefaultPaginatorPageTokenOption,
   DatetimeBasedCursor,
@@ -314,6 +316,7 @@ export interface BuilderFormValues {
   streams: BuilderStream[];
   dynamicStreams: BuilderDynamicStream[];
   checkStreams: string[];
+  dynamicStreamCheckConfigs: DynamicStreamCheckConfig[];
   version: string;
   description?: string;
 }
@@ -595,6 +598,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   streams: [],
   dynamicStreams: [],
   checkStreams: [],
+  dynamicStreamCheckConfigs: [],
   version: CDK_VERSION,
 };
 
@@ -1517,6 +1521,23 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
+  const dynamicStreamNames = values.dynamicStreamCheckConfigs.map((s) => s.dynamic_stream_name);
+  const validCheckDynamicStream = (values.dynamicStreamCheckConfigs ?? []).filter((dynamicStreamCheckConfig) =>
+    dynamicStreamNames.includes(dynamicStreamCheckConfig.dynamic_stream_name)
+  );
+  const correctedCheckDynamicStreams =
+    validCheckDynamicStream.length > 0
+      ? validCheckDynamicStream
+      : dynamicStreamNames.length > 0
+      ? [
+          {
+            type: DynamicStreamCheckConfigType.DynamicStreamCheckConfig,
+            dynamic_stream_name: dynamicStreamNames[0],
+            stream_count: 1,
+          },
+        ]
+      : [];
+
   const streamNameToStream = Object.fromEntries(manifestStreams.map((stream) => [stream.name, stream]));
   const streamRefs = manifestStreams.map((stream) => streamRef(stream.name!));
 
@@ -1553,7 +1574,10 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     type: "DeclarativeSource",
     check: {
       type: "CheckStream",
-      stream_names: correctedCheckStreams,
+      ...(correctedCheckStreams.length > 0 ? { stream_names: correctedCheckStreams } : {}),
+      ...(correctedCheckDynamicStreams.length > 0
+        ? { dynamic_streams_check_configs: correctedCheckDynamicStreams }
+        : {}),
     },
     definitions: {
       base_requester: baseRequester,
