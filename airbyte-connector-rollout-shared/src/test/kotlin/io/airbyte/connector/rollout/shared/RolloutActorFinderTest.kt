@@ -11,6 +11,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
+import io.airbyte.config.CustomerTier
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobConfig.ConfigType
@@ -24,7 +25,6 @@ import io.airbyte.config.StandardSync
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OrganizationCustomerAttributesService
@@ -187,21 +187,21 @@ class RolloutActorFinderTest {
       }
 
     private fun createMockConnectorRollout(actorDefinitionId: UUID): ConnectorRollout =
-      ConnectorRollout().apply {
-        this.id = id
-        this.actorDefinitionId = actorDefinitionId
-        this.releaseCandidateVersionId = RELEASE_CANDIDATE_VERSION_ID
-        this.initialVersionId = UUID.randomUUID()
-        this.state = ConnectorEnumRolloutState.INITIALIZED
-        this.initialRolloutPct = 10L
-        this.finalTargetRolloutPct = TARGET_PERCENTAGE.toLong()
-        this.hasBreakingChanges = false
-        this.rolloutStrategy = ConnectorEnumRolloutStrategy.MANUAL
-        this.maxStepWaitTimeMins = 60L
-        this.createdAt = OffsetDateTime.now().toEpochSecond()
-        this.updatedAt = OffsetDateTime.now().toEpochSecond()
-        this.expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond()
-      }
+      ConnectorRollout(
+        id = UUID.randomUUID(),
+        actorDefinitionId = actorDefinitionId,
+        releaseCandidateVersionId = RELEASE_CANDIDATE_VERSION_ID,
+        initialVersionId = UUID.randomUUID(),
+        state = ConnectorEnumRolloutState.INITIALIZED,
+        initialRolloutPct = 10,
+        finalTargetRolloutPct = TARGET_PERCENTAGE,
+        hasBreakingChanges = false,
+        rolloutStrategy = ConnectorEnumRolloutStrategy.MANUAL,
+        maxStepWaitTimeMins = 60,
+        createdAt = OffsetDateTime.now().toEpochSecond(),
+        updatedAt = OffsetDateTime.now().toEpochSecond(),
+        expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond(),
+      )
 
     @JvmStatic
     fun actorTypes() = listOf(ActorType.SOURCE, ActorType.DESTINATION)

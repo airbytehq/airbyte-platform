@@ -94,14 +94,14 @@ open class ConnectorRolloutHandler
           .releaseCandidateVersionId(connectorRollout.releaseCandidateVersionId)
           .initialVersionId(connectorRollout.initialVersionId)
           .state(ConnectorRolloutState.fromString(connectorRollout.state.toString()))
-          .initialRolloutPct(connectorRollout.initialRolloutPct?.toInt())
-          .currentTargetRolloutPct(connectorRollout.currentTargetRolloutPct?.toInt())
-          .finalTargetRolloutPct(connectorRollout.finalTargetRolloutPct?.toInt())
+          .initialRolloutPct(connectorRollout.initialRolloutPct)
+          .currentTargetRolloutPct(connectorRollout.currentTargetRolloutPct)
+          .finalTargetRolloutPct(connectorRollout.finalTargetRolloutPct)
           .hasBreakingChanges(connectorRollout.hasBreakingChanges)
           .rolloutStrategy(rolloutStrategy)
-          .maxStepWaitTimeMins(connectorRollout.maxStepWaitTimeMins?.toInt())
-          .updatedAt(connectorRollout.updatedAt?.let { unixTimestampToOffsetDateTime(it) })
-          .createdAt(connectorRollout.createdAt?.let { unixTimestampToOffsetDateTime(it) })
+          .maxStepWaitTimeMins(connectorRollout.maxStepWaitTimeMins)
+          .updatedAt(unixTimestampToOffsetDateTime(connectorRollout.updatedAt))
+          .createdAt(unixTimestampToOffsetDateTime(connectorRollout.createdAt))
           .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
           .errorMsg(connectorRollout.errorMsg)
           .failedReason(connectorRollout.failedReason)
@@ -200,18 +200,23 @@ open class ConnectorRolloutHandler
           )
 
       if (initializedRollouts.isEmpty()) {
+        val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
+
         val connectorRollout =
-          ConnectorRollout()
-            .withId(UUID.randomUUID())
-            .withActorDefinitionId(actorDefinitionId)
-            .withReleaseCandidateVersionId(actorDefinitionVersion.get().versionId)
-            .withInitialVersionId(initialVersion.get().versionId)
-            .withUpdatedBy(updatedBy)
-            .withState(ConnectorEnumRolloutState.INITIALIZED)
-            .withHasBreakingChanges(false)
-            .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
-            .withInitialRolloutPct(initialRolloutPct?.toLong())
-            .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
+          ConnectorRollout(
+            id = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            releaseCandidateVersionId = actorDefinitionVersion.get().versionId,
+            initialVersionId = initialVersion.get().versionId,
+            createdAt = currentTime,
+            updatedAt = currentTime,
+            updatedBy = updatedBy,
+            state = ConnectorEnumRolloutState.INITIALIZED,
+            hasBreakingChanges = false,
+            rolloutStrategy = getRolloutStrategyForManualStart(rolloutStrategy),
+            initialRolloutPct = initialRolloutPct,
+            finalTargetRolloutPct = finalTargetRolloutPct,
+          )
         connectorRolloutService.writeConnectorRollout(connectorRollout)
         return connectorRollout
       }
@@ -241,10 +246,11 @@ open class ConnectorRolloutHandler
       val connectorRollout =
         initializedRollouts
           .first()
-          .withUpdatedBy(updatedBy)
-          .withRolloutStrategy(getRolloutStrategyForManualStart(rolloutStrategy))
-          .withInitialRolloutPct(initialRolloutPct?.toLong())
-          .withFinalTargetRolloutPct(finalTargetRolloutPct?.toLong())
+      connectorRollout.updatedBy = updatedBy
+      connectorRollout.rolloutStrategy = getRolloutStrategyForManualStart(rolloutStrategy)
+      connectorRollout.initialRolloutPct = initialRolloutPct
+      connectorRollout.finalTargetRolloutPct = finalTargetRolloutPct
+
       connectorRolloutService.writeConnectorRollout(connectorRollout)
       return connectorRollout
     }
@@ -257,19 +263,15 @@ open class ConnectorRolloutHandler
       // In case 1, the rollout will be in INITIALIZED state, and we'll change the state to WORKFLOW_STARTED.
       // In case 2, the rollout may be in any state, and we only want to change it to WORKFLOW_STARTED if it was INITIALIZED.
       // However, in case 2 the workflow will have a new run ID, so we still want to update that.
-      var connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutStart.id)
       if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
-        connectorRollout =
-          connectorRollout
-            .withState(ConnectorEnumRolloutState.WORKFLOW_STARTED)
-            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutStart.rolloutStrategy.toString()))
+        connectorRollout.state = ConnectorEnumRolloutState.WORKFLOW_STARTED
+        connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(connectorRolloutStart.rolloutStrategy.toString())
       }
       // Always update the workflow run ID if provided; if the workflow was restarted it will have changed
-      connectorRollout =
-        connectorRollout
-          .withWorkflowRunId(connectorRolloutStart.workflowRunId)
-          // Also include the version ID, for cases where the rollout wasn't automatically added to the rollouts table (i.e. for testing)
-          .withInitialVersionId(connectorRollout.initialVersionId)
+      connectorRollout.workflowRunId = connectorRolloutStart.workflowRunId
+      // Also include the version ID, for cases where the rollout wasn't automatically added to the rollouts table (i.e. for testing)
+      connectorRollout.initialVersionId = connectorRollout.initialVersionId
       return connectorRollout
     }
 
@@ -311,30 +313,28 @@ open class ConnectorRolloutHandler
             ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"),
           )
         }
-        connectorRollout =
-          connectorRollout
-            .withState(ConnectorEnumRolloutState.IN_PROGRESS)
-            .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString()))
-            .withUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond())
+        connectorRollout.state = ConnectorEnumRolloutState.IN_PROGRESS
+        connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString())
+        connectorRollout.updatedAt = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
       }
       if (connectorRolloutRequest.targetPercentage != null) {
         connectorRollout = pinByPercentage(connectorRollout, connectorRolloutRequest.targetPercentage!!, connectorRolloutRequest.rolloutStrategy!!)
       }
 
       // get current percentage pinned
-      connectorRollout.withCurrentTargetRolloutPct(getPercentagePinned(getActorSelectionInfo(connectorRollout, 0)))
+      connectorRollout.currentTargetRolloutPct = getPercentagePinned(getActorSelectionInfo(connectorRollout, 0))
       return connectorRollout
     }
 
-    fun getPercentagePinned(actorSelectionInfo: ActorSelectionInfo): Long {
+    fun getPercentagePinned(actorSelectionInfo: ActorSelectionInfo): Int {
       logger.info {
         "getPercentagePinned actorSelectionInfo=$actorSelectionInfo percentagePinned=${ceil(
           (actorSelectionInfo.nPreviouslyPinned + actorSelectionInfo.nNewPinned) / actorSelectionInfo.nActorsEligibleOrAlreadyPinned.toDouble(),
-        ).toLong()}"
+        )}"
       }
       return ceil(
         (100 * actorSelectionInfo.nPreviouslyPinned + actorSelectionInfo.nNewPinned) / actorSelectionInfo.nActorsEligibleOrAlreadyPinned.toDouble(),
-      ).toLong()
+      ).toInt()
     }
 
     open fun pinByPercentage(
@@ -342,11 +342,14 @@ open class ConnectorRolloutHandler
       targetPercentage: Int,
       rolloutStrategy: ConnectorRolloutStrategy,
     ): ConnectorRollout {
+      val percentageAlreadyPinned = getPercentagePinned(getActorSelectionInfo(connectorRollout, 0))
+
       val actualPercentageToPin =
         getValidPercentageToPin(
           connectorRollout,
           targetPercentage,
           rolloutStrategy,
+          percentageAlreadyPinned,
         )
 
       val actorSelectionInfo = getActorSelectionInfo(connectorRollout, actualPercentageToPin)
@@ -369,10 +372,10 @@ open class ConnectorRolloutHandler
         throw ConnectorRolloutInvalidRequestProblem(ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"))
       }
 
+      connectorRollout.state = ConnectorEnumRolloutState.IN_PROGRESS
+      connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())
+      connectorRollout.updatedAt = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
       return connectorRollout
-        .withState(ConnectorEnumRolloutState.IN_PROGRESS)
-        .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString()))
-        .withUpdatedAt(OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond())
     }
 
     @VisibleForTesting
@@ -380,6 +383,7 @@ open class ConnectorRolloutHandler
       connectorRollout: ConnectorRollout,
       targetPercentage: Int,
       rolloutStrategy: ConnectorRolloutStrategy,
+      percentageAlreadyPinned: Int,
     ): Int {
       if (rolloutStrategy != ConnectorRolloutStrategy.AUTOMATED) {
         return targetPercentage
@@ -388,7 +392,7 @@ open class ConnectorRolloutHandler
         if (connectorRollout.finalTargetRolloutPct == null) {
           DEFAULT_MAX_ROLLOUT_PERCENTAGE
         } else {
-          connectorRollout.finalTargetRolloutPct.toInt()
+          connectorRollout.finalTargetRolloutPct!!
         }
 
       val actualTargetRolloutPct = min(targetPercentage, maxRolloutPct)
@@ -396,7 +400,7 @@ open class ConnectorRolloutHandler
         logger.info { "Requested to pin $targetPercentage% of actors but capped at $actualTargetRolloutPct." }
       }
 
-      if (connectorRollout.currentTargetRolloutPct >= actualTargetRolloutPct) {
+      if (percentageAlreadyPinned >= actualTargetRolloutPct) {
         throw ConnectorRolloutMaximumRolloutPercentageReachedProblem(
           ProblemMessageData().message(
             "Requested to pin $actualTargetRolloutPct% of actors but already pinned ${connectorRollout.currentTargetRolloutPct}.",
@@ -429,13 +433,15 @@ open class ConnectorRolloutHandler
       }
 
       val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
+
+      connectorRollout.state = ConnectorEnumRolloutState.fromValue(connectorRolloutFinalize.state.toString())
+      connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(connectorRolloutFinalize.rolloutStrategy.toString())
+      connectorRollout.updatedAt = currentTime
+      connectorRollout.completedAt = currentTime
+      connectorRollout.errorMsg = connectorRolloutFinalize.errorMsg
+      connectorRollout.failedReason = connectorRolloutFinalize.failedReason
+
       return connectorRollout
-        .withState(ConnectorEnumRolloutState.fromValue(connectorRolloutFinalize.state.toString()))
-        .withRolloutStrategy(ConnectorEnumRolloutStrategy.fromValue(connectorRolloutFinalize.rolloutStrategy.toString()))
-        .withUpdatedAt(currentTime)
-        .withCompletedAt(currentTime)
-        .withErrorMsg(connectorRolloutFinalize.errorMsg)
-        .withFailedReason(connectorRolloutFinalize.failedReason)
     }
 
     @VisibleForTesting
@@ -456,11 +462,12 @@ open class ConnectorRolloutHandler
           ),
         )
       }
+      connectorRollout.state = state
+      connectorRollout.errorMsg = errorMsg
+      connectorRollout.failedReason = failedReason
+      connectorRollout.pausedReason = pausedReason
+
       return connectorRollout
-        .withState(state)
-        .withErrorMsg(errorMsg)
-        .withFailedReason(failedReason)
-        .withPausedReason(pausedReason)
     }
 
     private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime = Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
