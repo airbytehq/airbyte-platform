@@ -21,36 +21,36 @@ var databaseClients = []struct {
 		kind: "Deployment",
 		name: "airbyte-server",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte"),
 		},
 	},
 	{
 		kind: "Deployment",
 		name: "airbyte-worker",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte"),
 		},
 	},
 	{
 		kind: "Deployment",
 		name: "airbyte-cron",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte"),
 		},
 	},
 	{
@@ -59,52 +59,52 @@ var databaseClients = []struct {
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
 			"KEYCLOAK_DATABASE_USERNAME": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"KEYCLOAK_DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"KEYCLOAK_DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+			"KEYCLOAK_DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte?currentSchema=keycloak"),
 		},
 	},
 	{
 		kind: "Job",
 		name: "airbyte-keycloak-setup",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":         helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":         helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":         helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":         helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":           helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":         helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"KEYCLOAK_DATABASE_URL": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL"),
+			"KEYCLOAK_DATABASE_URL": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("KEYCLOAK_DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte?currentSchema=keycloak"),
 		},
 	},
 	{
 		kind: "Pod",
 		name: "airbyte-airbyte-bootloader",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte"),
 		},
 	},
 	{
 		kind: "Deployment",
 		name: "airbyte-metrics",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB"),
+			"DATABASE_HOST":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DATABASE_PORT":     helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"DATABASE_DB":       helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_DB").Value("db-airbyte"),
 			"DATABASE_USER":     helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
 			"DATABASE_PASSWORD": helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
-			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL"),
+			"DATABASE_URL":      helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_URL").Value("jdbc:postgresql://airbyte-db-svc:5432/db-airbyte"),
 		},
 	},
 	{
 		kind: "Deployment",
 		name: "airbyte-temporal",
 		expectedEnvVars: map[string]helmtests.ExpectedEnvVar{
-			"POSTGRES_SEEDS": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST"),
-			"DB_PORT":        helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT"),
-			"POSTGRES_USER":  helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER"),
+			"POSTGRES_SEEDS": helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_HOST").Value("airbyte-db-svc"),
+			"DB_PORT":        helmtests.ExpectedConfigMapVar().RefName("airbyte-airbyte-env").RefKey("DATABASE_PORT").Value("5432"),
+			"POSTGRES_USER":  helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_USER").Value("db-airbyte"),
 			"POSTGRES_PWD":   helmtests.ExpectedSecretVar().RefName("airbyte-airbyte-secrets").RefKey("DATABASE_PASSWORD"),
 		},
 	},
@@ -164,7 +164,7 @@ func TestDefaultDatabaseConfiguration(t *testing.T) {
 					for k, expected := range c.expectedEnvVars {
 						actual, ok := envVars[k]
 						assert.True(t, ok, fmt.Sprintf("`%s` should be declared as an environment variable for %s %s", k, c.kind, c.name))
-						helmtests.VerifyEnvVar(t, expected, actual)
+						helmtests.VerifyEnvVar(t, chartYaml, expected, actual)
 					}
 				})
 			}

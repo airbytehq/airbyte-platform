@@ -37,6 +37,7 @@ const baseManifest: ConnectorManifest = {
   check: {
     type: "CheckStream",
     stream_names: [],
+    dynamic_streams_check_configs: [],
   },
   streams: [],
 };

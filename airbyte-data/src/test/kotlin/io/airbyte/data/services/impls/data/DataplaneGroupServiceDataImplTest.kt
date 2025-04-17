@@ -61,7 +61,8 @@ class DataplaneGroupServiceDataImplTest {
 
     every { dataplaneGroupRepository.existsById(dataplaneGroup.id) } returns false
     every { dataplaneGroupRepository.save(any()) } returns dataplaneGroup
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) } returns
+      emptyList()
 
     val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.writeDataplaneGroup(dataplaneGroup.toConfigModel())
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
@@ -76,7 +77,8 @@ class DataplaneGroupServiceDataImplTest {
 
     every { dataplaneGroupRepository.existsById(dataplaneGroup.id) } returns true
     every { dataplaneGroupRepository.update(any()) } returns dataplaneGroup
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) } returns
+      emptyList()
 
     val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.writeDataplaneGroup(dataplaneGroup.toConfigModel())
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
@@ -162,13 +164,13 @@ class DataplaneGroupServiceDataImplTest {
     val mockOrganizationId = UUID.randomUUID()
     val mockDataplaneGroupId1 = UUID.randomUUID()
     val mockDataplaneGroupId2 = UUID.randomUUID()
-    every { dataplaneGroupRepository.findAllByOrganizationIdOrderByUpdatedAtDesc(mockOrganizationId) } returns
+    every { dataplaneGroupRepository.findAllByOrganizationIdInOrderByUpdatedAtDesc(listOf(mockOrganizationId)) } returns
       listOf(
         createDataplaneGroup(mockDataplaneGroupId1),
         createDataplaneGroup(mockDataplaneGroupId2),
       )
 
-    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDataplaneGroups(mockOrganizationId, true)
+    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDataplaneGroups(listOf(mockOrganizationId), true)
 
     assertEquals(retrievedDataplaneGroups.size, 2)
   }
@@ -178,13 +180,13 @@ class DataplaneGroupServiceDataImplTest {
     val mockOrganizationId = UUID.randomUUID()
     val mockDataplaneGroupId1 = UUID.randomUUID()
     val mockDataplaneGroupId2 = UUID.randomUUID()
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(mockOrganizationId) } returns
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(mockOrganizationId)) } returns
       listOf(
         createDataplaneGroup(mockDataplaneGroupId1),
         createDataplaneGroup(mockDataplaneGroupId2),
       )
 
-    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDataplaneGroups(mockOrganizationId, false)
+    val retrievedDataplaneGroups = dataplaneGroupServiceDataImpl.listDataplaneGroups(listOf(mockOrganizationId), false)
 
     assertEquals(retrievedDataplaneGroups.size, 2)
   }
@@ -213,7 +215,7 @@ class DataplaneGroupServiceDataImplTest {
         updatedAt = OffsetDateTime.now(),
       )
 
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndTombstoneFalseOrderByUpdatedAtDesc(DEFAULT_ORGANIZATION_ID) } returns
+    every { dataplaneGroupRepository.findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(listOf(DEFAULT_ORGANIZATION_ID)) } returns
       listOf(defaultGroup)
 
     assertThrows<RuntimeException> {

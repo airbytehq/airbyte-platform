@@ -1,8 +1,6 @@
 import type { KnownApiProblem, KnownApiProblemTypeAndPrefixes } from "./problems";
 import type { RequestOptions } from "../apiCall";
 
-import { z } from "zod";
-
 import { FormatMessageParams } from "core/errors/I18nError";
 import errorMessages from "locales/en.errors.json";
 
@@ -13,11 +11,6 @@ const messages = errorMessages as Record<string, string>;
 
 type TranslationType = "exact" | "hierarchical" | "detail" | "title";
 
-// These are the only types we'd expect in the response.data JSON payload
-const JsonPrimitivesSchema: z.ZodType<FormatMessageParams> = z
-  .record(z.union([z.string(), z.number(), z.boolean(), z.null()]))
-  .optional();
-
 function getTranslation(response: KnownApiProblem): {
   key: string;
   params?: FormatMessageParams;
@@ -26,10 +19,10 @@ function getTranslation(response: KnownApiProblem): {
   const match = response.type.match(/^error:(?<error>.*)$/);
   const isHierarchicalType = Boolean(match && match.groups?.error);
   const errorType = match?.groups?.error || response.type;
-  const safeParams = JsonPrimitivesSchema.parse(response.data);
   if (messages[errorType]) {
     // If we have an exact match on the type or in case if it's a hierarchical type only on the part behind "error:" use this message.
-    return { key: `error:${errorType}`, params: safeParams, type: "exact" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { key: `error:${errorType}`, params: response.data as any, type: "exact" };
   }
 
   if (isHierarchicalType) {
@@ -38,7 +31,8 @@ function getTranslation(response: KnownApiProblem): {
     for (let i = hierarchy.length - 1; i > 0; i--) {
       const parentType = hierarchy.slice(0, i).join("/");
       if (messages[parentType]) {
-        return { key: `error:${parentType}`, params: safeParams, type: "hierarchical" };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { key: `error:${parentType}`, params: response.data as any, type: "hierarchical" };
       }
     }
   }
