@@ -9,6 +9,7 @@
 export interface Experiments {
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
+  "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
   "connection.hashingUI": boolean;
   "connection.mappingsUI": boolean;
@@ -23,6 +24,7 @@ export interface Experiments {
   "connectorBuilder.customComponents": boolean;
   "connectorBuilder.contributeEditsToMarketplace": boolean;
   "connectorBuilder.declarativeOauth": boolean;
+  "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -36,6 +38,7 @@ export interface Experiments {
 export const defaultExperimentValues: Experiments = {
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
+  "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
   "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
@@ -51,6 +54,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.contributeEditsToMarketplace": true,
   "connectorBuilder.customComponents": false,
   "connectorBuilder.declarativeOauth": true,
+  "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,

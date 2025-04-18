@@ -130,7 +130,6 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
-          mockk(),
           actorDefinitionUpdate,
           mockk(),
         )
@@ -171,8 +170,6 @@ open class RepositoryTestSetup {
       val destinationService =
         DestinationServiceJooqImpl(
           database,
-          mockk(),
-          mockk(),
           mockk(),
           mockk(),
           actorDefinitionUpdate,

@@ -1,17 +1,71 @@
-import { PropsWithChildren } from "react";
+import { jwtDecode } from "jwt-decode";
+import { PropsWithChildren, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useCookie } from "react-use";
 
 import { AuthContext } from "./AuthContext";
 
 /**
- * This is an auth service for the embedded widget. The auth scheme used by the endpoints
- * available in the embedded widget use scoped tokens that will be read starting in https://github.com/airbytehq/airbyte-platform-internal/pull/15796.
+ * This is an auth service for the embedded widget. It is designed to be used in a parent window that posts a message to the embedded widget.
  * This auth service is used to provide an empty user object to the embedded widget to fulfill the AuthContext interface.
  */
-export const EmbeddedAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
-  // this will be updated when https://github.com/airbytehq/airbyte-platform-internal/pull/15796 is merged to use an event listener instead of a search param
+
+const SCOPED_AUTH_TOKEN_COOKIE = "_airbyte_scoped_auth_token";
+
+interface ScopedAuthMessage {
+  scopedAuthToken: string;
+}
+
+const useScopedAuthToken = () => {
   const [searchParams] = useSearchParams();
-  const scopedAuthToken = searchParams.get("auth");
+  const allowedOriginParam = searchParams.get("allowedOrigin");
+
+  const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
+  const [token, setToken, deleteToken] = useCookie(SCOPED_AUTH_TOKEN_COOKIE);
+
+  // Only set up message listener if we have an allowed origin
+  useEffect(() => {
+    if (!allowedOrigin) {
+      // Clear token if origin becomes invalid
+      if (token) {
+        deleteToken();
+      }
+      return;
+    }
+
+    window.parent.postMessage("auth_token_request", allowedOrigin);
+
+    const messageHandler = (event: MessageEvent<ScopedAuthMessage>) => {
+      try {
+        if (event.origin !== allowedOrigin) {
+          return;
+        }
+
+        if (event.data?.scopedAuthToken) {
+          const expiry = jwtDecode(event.data.scopedAuthToken).exp;
+          setToken(event.data.scopedAuthToken, {
+            expires: expiry ? new Date(expiry * 1000) : new Date(),
+          });
+        }
+      } catch (error) {
+        // Silently handle any errors in message processing
+        console.debug("Error processing scoped auth message:", error);
+      }
+    };
+
+    // Use the ref for the event listener
+    window.addEventListener("message", messageHandler, false);
+
+    return () => {
+      window.removeEventListener("message", messageHandler);
+    };
+  }, [allowedOrigin, token, deleteToken, setToken]);
+
+  return token;
+};
+
+export const EmbeddedAuthService: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
+  const scopedAuthToken = useScopedAuthToken();
 
   return (
     <AuthContext.Provider
@@ -22,7 +76,7 @@ export const EmbeddedAuthService: React.FC<PropsWithChildren<unknown>> = ({ chil
         inited: !!scopedAuthToken,
         emailVerified: false,
         provider: null,
-        loggedOut: !!scopedAuthToken,
+        loggedOut: !scopedAuthToken,
         getAccessToken: () => Promise.resolve(scopedAuthToken),
       }}
     >

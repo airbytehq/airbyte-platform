@@ -73,8 +73,8 @@ val envVars = mapOf("VERSION" to "dev")
 
 tasks.register<JavaExec>("newConfigsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
+  args = listOf("configs", "create", System.getenv("DESCRIPTION") ?: "TodoDescription")
   classpath = files(migrations)
-  args = listOf("configs", "create")
   environment = envVars
   dependsOn(tasks.classes)
 }
@@ -97,8 +97,8 @@ tasks.register<JavaExec>("dumpConfigsSchema") {
 
 tasks.register<JavaExec>("newJobsMigration") {
   mainClass = "io.airbyte.db.instance.development.MigrationDevCenter"
+  args = listOf("jobs", "create", System.getenv("DESCRIPTION") ?: "TodoDescription")
   classpath = files(migrations)
-  args = listOf("jobs", "create")
   environment = envVars
   dependsOn(tasks.classes)
 }

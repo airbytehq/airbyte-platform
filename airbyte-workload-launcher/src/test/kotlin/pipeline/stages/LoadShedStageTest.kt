@@ -47,7 +47,6 @@ class LoadShedStageTest {
       LoadShedStage(
         ffClient,
         workloadClient,
-        "dataplane-id",
         metricClient,
       )
   }

@@ -6,6 +6,7 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -14,6 +15,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -33,6 +35,7 @@ class PartialUserConfigHandlerTest {
   private lateinit var sourceHandler: SourceHandler
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var secretsProcessor: JsonSecretsProcessor
 
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
@@ -45,7 +48,8 @@ class PartialUserConfigHandlerTest {
     partialUserConfigService = mockk<PartialUserConfigService>()
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler)
+    secretsProcessor = mockk<JsonSecretsProcessor>()
+    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
     objectMapper = ObjectMapper()
   }
 
@@ -59,7 +63,7 @@ class PartialUserConfigHandlerTest {
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
     every { sourceHandler.createSource(any()) } returns savedSource
-    every { sourceHandler.persistSecretsAndUpdateSourceConnection(null, any(), any(), any()) } returns
+    every { sourceHandler.persistConfigRawSecretValues(any(), any(), any(), any(), any()) } returns
       partialUserConfigCreate.partialUserConfigProperties
 
     val result = handler.createPartialUserConfig(partialUserConfigCreate)
@@ -134,11 +138,12 @@ class PartialUserConfigHandlerTest {
       )
 
     every {
-      sourceHandler.persistSecretsAndUpdateSourceConnection(
+      sourceHandler.persistConfigRawSecretValues(
         any(),
         any(),
         any(),
         any<ConnectorSpecification>(),
+        any(),
       )
     } returns
       updateUserConfig
@@ -328,7 +333,7 @@ class PartialUserConfigHandlerTest {
         actorDefinitionId = actorDefinitionId,
         partialDefaultConfig = partialDefaultConfig,
         organizationId = UUID.randomUUID(),
-        userConfigSpec = objectMapper.createObjectNode(),
+        userConfigSpec = objectMapper.createObjectNode().set<ObjectNode>("connectionSpecification", objectMapper.createObjectNode()),
         createdAt = null,
         updatedAt = null,
       ),
@@ -339,7 +344,7 @@ class PartialUserConfigHandlerTest {
   private fun createMockPartialUserConfigCreate(
     workspaceId: UUID,
     configTemplateId: UUID,
-    userConfig: JsonNode = objectMapper.createObjectNode(),
+    userConfig: JsonNode = objectMapper.createObjectNode().set<ObjectNode>("connectionConfiguration", objectMapper.createObjectNode()),
   ): PartialUserConfig =
     PartialUserConfig(
       workspaceId = workspaceId,

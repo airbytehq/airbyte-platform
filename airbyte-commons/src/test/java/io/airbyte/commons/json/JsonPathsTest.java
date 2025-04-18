@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.jayway.jsonpath.PathNotFoundException;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class JsonPathsTest {
@@ -138,6 +139,78 @@ class JsonPathsTest {
       final JsonNode actual = JsonPaths.replaceAt(JSON_NODE, EMPTY_RETURN_QUERY, (node, path) -> Jsons.jsonNode(node + "-" + path));
       assertEquals(expected, actual);
     });
+  }
+
+  @Test
+  void testGetExpandedPaths() {
+    String testJson = """
+                      {
+                        "rotating_keys": [
+                          {"key1": "hunter1"},
+                          {"key2": "hunter2"},
+                          "str"
+                        ]
+                      }
+                      """;
+    JsonNode testNode = Jsons.deserialize(testJson);
+
+    // Test using a dot-notation template that should yield a result for key1.
+    List<String> resultKey1 = JsonPaths.getExpandedPaths(testNode, "$.rotating_keys[*].key1");
+    assertEquals(1, resultKey1.size(), "Expected one matching path for key1");
+    assertEquals("$.rotating_keys[0].key1", resultKey1.get(0));
+
+    // Test using a bracket-notation template that should be normalized and yield a result for key2.
+    List<String> resultKey2 = JsonPaths.getExpandedPaths(testNode, "$['rotating_keys'][*].key2");
+    assertEquals(1, resultKey2.size(), "Expected one matching path for key2");
+    assertEquals("$.rotating_keys[1].key2", resultKey2.get(0));
+  }
+
+  @Test
+  void testGetExpandedPathsComplex() {
+    String complexJson = """
+                         {
+                           "outer": {
+                             "inner": {
+                               "rotating_keys": [
+                                 {"key1": "hunter1"},
+                                 {"key2": "hunter2"},
+                                 {"key3": "non-secret"},
+                                 "string-value"
+                               ]
+                             },
+                             "another": [
+                               {
+                                 "rotating_keys": [
+                                   {"key1": "value1"},
+                                   {"key2": "value2"}
+                                 ]
+                               },
+                               {
+                                 "rotating_keys": [
+                                   {"key1": "value3"},
+                                   {"key2": "value4"}
+                                 ]
+                               }
+                             ]
+                           }
+                         }
+                         """;
+    JsonNode complexNode = Jsons.deserialize(complexJson);
+
+    // Test for inner.rotating_keys: template for key1
+    List<String> resultInnerKey1 = JsonPaths.getExpandedPaths(complexNode, "$.outer.inner.rotating_keys[*].key1");
+    // Only the first element in inner.rotating_keys has key1
+    assertEquals(1, resultInnerKey1.size(), "Expected one matching path for inner key1");
+    assertEquals("$.outer.inner.rotating_keys[0].key1", resultInnerKey1.getFirst());
+
+    // Test for another array: template for key2 in each rotating_keys array
+    List<String> resultAnotherKey2 = JsonPaths.getExpandedPaths(complexNode, "$.outer.another[*].rotating_keys[*].key2");
+    // In both elements of the 'another' array, key2 is at index 1 in their rotating_keys arrays
+    // The expected paths, when sorted, should be:
+    // "$.outer.another[0].rotating_keys[1].key2" and "$.outer.another[1].rotating_keys[1].key2"
+    assertEquals(2, resultAnotherKey2.size(), "Expected two matching paths for another key2");
+    assertEquals("$.outer.another[0].rotating_keys[1].key2", resultAnotherKey2.get(0));
+    assertEquals("$.outer.another[1].rotating_keys[1].key2", resultAnotherKey2.get(1));
   }
 
   /**

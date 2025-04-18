@@ -9,6 +9,7 @@ import io.airbyte.initContainer.InputFetcherTest.Fixtures.workload
 import io.airbyte.initContainer.input.InputHydrationProcessor
 import io.airbyte.initContainer.system.SystemClient
 import io.airbyte.metrics.MetricClient
+import io.airbyte.workers.models.InitContainerConstants
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
@@ -19,6 +20,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import secrets.persistence.SecretCoordinateException
 import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
@@ -64,12 +66,12 @@ class InputFetcherTest {
   fun `fails workload on workload fetch error`() {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } throws Exception("bang")
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
-    every { systemClient.exitProcess(1) } returns Unit
+    every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
-    verify { systemClient.exitProcess(1) }
+    verify { systemClient.exitProcess(InitContainerConstants.WORKLOAD_API_ERROR_EXIT_CODE) }
   }
 
   @Test
@@ -77,23 +79,36 @@ class InputFetcherTest {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
     every { inputProcessor.process(workload) } throws Exception("bang")
     every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
-    every { systemClient.exitProcess(1) } returns Unit
+    every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
     verify { workloadApiClient.workloadApi.workloadFailure(any()) }
-    verify { systemClient.exitProcess(1) }
+    verify { systemClient.exitProcess(InitContainerConstants.UNEXPECTED_ERROR_EXIT_CODE) }
+  }
+
+  @Test
+  fun `fails workload on with specific error on secret coordinate error`() {
+    every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } returns workload
+    every { inputProcessor.process(workload) } throws SecretCoordinateException("bang")
+    every { workloadApiClient.workloadApi.workloadFailure(any()) } returns Unit
+    every { systemClient.exitProcess(any()) } returns Unit
+
+    fetcher.fetch()
+
+    verify { workloadApiClient.workloadApi.workloadFailure(any()) }
+    verify { systemClient.exitProcess(InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE) }
   }
 
   @Test
   fun `exception not thrown if failure when failing workload`() {
     every { workloadApiClient.workloadApi.workloadGet(WORKLOAD_ID) } throws Exception("bang")
     every { workloadApiClient.workloadApi.workloadFailure(any()) } throws Exception("bang 1")
-    every { systemClient.exitProcess(1) } returns Unit
+    every { systemClient.exitProcess(any()) } returns Unit
 
     fetcher.fetch()
 
-    verify { systemClient.exitProcess(1) }
+    verify { systemClient.exitProcess(any()) }
   }
 
   object Fixtures {

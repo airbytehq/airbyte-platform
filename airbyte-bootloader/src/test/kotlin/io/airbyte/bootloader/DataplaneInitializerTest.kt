@@ -84,7 +84,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `data plane is created if none exists`() {
-    every { groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false) } returns listOf(dpg)
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
     every { service.listDataplanes(dpg.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }
@@ -120,7 +120,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `data plane is not created if one exists`() {
-    every { groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false) } returns listOf(dpg)
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
     every { service.listDataplanes(dpg.id, false) } returns listOf(dp)
 
     val initializer =
@@ -146,7 +146,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndGeography(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
+    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }
@@ -189,7 +189,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `data plane is not created and exception is thrown if no group exists`() {
-    every { groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false) } returns emptyList()
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns emptyList()
 
     val initializer =
       DataplaneInitializer(
@@ -214,7 +214,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `data plane is not created if more than one group exists`() {
-    every { groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false) } returns listOf(dpg, dpg)
+    every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg, dpg)
 
     val initializer =
       DataplaneInitializer(

@@ -1,4 +1,4 @@
-ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.3
+ARG JDK_IMAGE=airbyte/airbyte-base-java-image:3.3.4
 
 FROM scratch as builder
 WORKDIR /app

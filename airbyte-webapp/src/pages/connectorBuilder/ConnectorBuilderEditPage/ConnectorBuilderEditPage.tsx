@@ -15,6 +15,7 @@ import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
+import { useExperiment } from "hooks/services/Experiment";
 import {
   ConnectorBuilderLocalStorageProvider,
   useConnectorBuilderLocalStorage,
@@ -38,10 +39,22 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     initialYaml,
     builderProject: {
       builderProject: { name, componentsFileContent },
+      declarativeManifest,
       testingValues: initialTestingValues,
     },
   } = useInitializedBuilderProject();
   const { getStoredMode } = useConnectorBuilderLocalStorage();
+  const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
+
+  const hasDynamicStreams =
+    declarativeManifest?.manifest?.dynamic_streams &&
+    Object.keys(declarativeManifest?.manifest?.dynamic_streams).length > 0;
+
+  const initialTestStreamId =
+    areDynamicStreamsEnabled && hasDynamicStreams
+      ? { type: "dynamic_stream" as const, index: 0 }
+      : { type: "stream" as const, index: 0 };
+
   const values = {
     mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
@@ -50,7 +63,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     name,
     view: "global" as const,
     streamTab: "requester" as const,
-    testStreamIndex: 0,
+    testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
   };
   const initialValues = useRef(values);

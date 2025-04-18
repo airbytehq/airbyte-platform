@@ -16,6 +16,7 @@ import java.util.UUID
  * storage as its scope, and references a secret that contains the secret storage's configuration.
  */
 data class SecretStorage(
+  @get:JvmName("getIdJava")
   val id: SecretStorageId,
   val scopeType: SecretStorageScopeType,
   val scopeId: UUID,
@@ -27,7 +28,11 @@ data class SecretStorage(
   val updatedBy: UUID,
   val createdAt: OffsetDateTime?,
   val updatedAt: OffsetDateTime?,
-)
+) {
+  companion object {
+    val DEFAULT_SECRET_STORAGE_ID = SecretStorageId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
+  }
+}
 
 enum class SecretStorageScopeType {
   ORGANIZATION,

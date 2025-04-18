@@ -359,7 +359,7 @@ class DefinitionsController(
 
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
-    // The "manfiest" field contains the "spec", but it has a snake_case connection_specification
+    // The "manifest" field contains the "spec", but it has a snake_case connection_specification
     // and the platform code needs camelCase connectionSpecification.
     val spec = Jsons.clone(manifest.get("spec")) as ObjectNode
     spec.replace("connectionSpecification", spec.get("connection_specification"))

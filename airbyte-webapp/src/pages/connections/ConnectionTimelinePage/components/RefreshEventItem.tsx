@@ -2,13 +2,14 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { AISyncFailureDrawerTitle, AISyncFailureExplanation } from "area/connection/components";
+import { AISyncFailureExplanationButton } from "area/connection/components/AISyncFailureExplanationButton";
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
 import { ResetStreamsDetails } from "area/connection/components/JobHistoryItem/ResetStreamDetails";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useExperiment } from "hooks/services/Experiment";
@@ -35,11 +36,15 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
     : undefined;
   const llmSyncFailureExperimentEnabled = useExperiment("platform.llm-sync-job-failure-explanation");
   const { openDrawer } = useDrawerActions();
+  const analyticsService = useAnalyticsService();
 
   const showAIJobExplanation = () => {
     if (!llmSyncFailureExperimentEnabled) {
       return;
     }
+    analyticsService.track(Namespace.CONNECTIONS, Action.REFRESH_FAILURE_EXPLANATION_OPENED, {
+      jobId: event.summary.jobId,
+    });
     openDrawer({
       title: <AISyncFailureDrawerTitle />,
       content: (
@@ -77,9 +82,9 @@ export const RefreshEventItem: React.FC<RefreshEventItemProps> = ({ event }) => 
           )}
           {llmSyncFailureExperimentEnabled && failureUiDetails && (
             <Box my="md">
-              <Button onClick={showAIJobExplanation} icon="aiStars" variant="magic">
+              <AISyncFailureExplanationButton onClick={showAIJobExplanation}>
                 <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />
-              </Button>
+              </AISyncFailureExplanationButton>
             </Box>
           )}
           {streamsToList.length > 0 && <ResetStreamsDetails names={streamsToList} />}

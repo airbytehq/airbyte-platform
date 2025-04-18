@@ -5,7 +5,6 @@
 package io.airbyte.db.instance.development
 
 import org.flywaydb.core.api.MigrationInfo
-import org.flywaydb.core.api.output.MigrateOutput
 import org.flywaydb.core.api.output.MigrateResult
 import org.jooq.DSLContext
 import org.jooq.SQLDialect
@@ -18,14 +17,13 @@ import java.sql.Date
  * This class formats the Flyway outputs so that it is easier to inspect them and debug the
  * migration.
  */
-object FlywayFormatter {
+internal object FlywayFormatter {
   private val CTX: DSLContext = DefaultDSLContext(SQLDialect.DEFAULT)
 
   /**
    * Format the [DatabaseMigrator.list] output.
    */
-  @JvmStatic
-  fun formatMigrationInfoList(migrationInfoList: List<MigrationInfo>): String {
+  fun formatMigrationInfoList(migrationInfos: List<MigrationInfo>): String {
     val type = DSL.field("Type", SQLDataType.VARCHAR)
     val version = DSL.field("Version", SQLDataType.VARCHAR)
     val description = DSL.field("Description", SQLDataType.VARCHAR)
@@ -33,49 +31,43 @@ object FlywayFormatter {
     val migratedAt = DSL.field("MigratedAt", SQLDataType.DATE)
     val result = CTX.newResult(type, version, description, state, migratedAt)
 
-    migrationInfoList.forEach { info: MigrationInfo ->
+    migrationInfos.forEach { info: MigrationInfo ->
       result.add(
         CTX.newRecord(type, version, description, state, migratedAt).values(
           info.type.name(),
           info.version.toString(),
           info.description,
           info.state.displayName,
-          if (info.installedOn == null) null else Date(info.installedOn.time),
+          info.installedOn?.let { Date(it.time) },
         ),
       )
     }
 
-    return result.format()
-  }
-
-  private fun formatMigrationOutputList(migrationOutputList: List<MigrateOutput>): String {
-    val type = DSL.field("Type", SQLDataType.VARCHAR)
-    val version = DSL.field("Version", SQLDataType.VARCHAR)
-    val description = DSL.field("Description", SQLDataType.VARCHAR)
-    val script = DSL.field("Script", SQLDataType.VARCHAR)
-    val result = CTX.newResult(type, version, description, script)
-
-    migrationOutputList.forEach { output: MigrateOutput ->
-      result.add(
-        CTX.newRecord(type, version, description, script).values(
-          "${output.type} ${output.category}",
-          output.version,
-          output.description,
-          output.filepath,
-        ),
-      )
-    }
     return result.format()
   }
 
   /**
-   * Format the [DatabaseMigrator.migrate] output.
+   * Format the [MigrateResult] output.
    */
-  @JvmStatic
-  fun formatMigrationResult(result: MigrateResult): String =
-    """
-    Version: ${result.initialSchemaVersion} -> ${result.targetSchemaVersion}
-    Migrations executed: ${result.migrationsExecuted}
-    ${formatMigrationOutputList(result.migrations)}
-    """.trimIndent()
+  fun formatMigrationResult(result: MigrateResult): String {
+    val type = DSL.field("Type", SQLDataType.VARCHAR)
+    val version = DSL.field("Version", SQLDataType.VARCHAR)
+    val description = DSL.field("Description", SQLDataType.VARCHAR)
+    val script = DSL.field("Script", SQLDataType.VARCHAR)
+    val newResult = CTX.newResult(type, version, description, script)
+    result.migrations.forEach {
+      newResult.add(
+        CTX
+          .newRecord(type, version, description, script)
+          .values("${it.type} ${it.category}", it.version, it.description, it.filepath),
+      )
+    }
+    val migrationOutput = newResult.format()
+
+    return """
+      Version: ${result.initialSchemaVersion} -> ${result.targetSchemaVersion}
+      Migrations executed: ${result.migrationsExecuted}
+      $migrationOutput
+      """.trimIndent()
+  }
 }

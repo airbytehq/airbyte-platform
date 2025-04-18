@@ -91,3 +91,38 @@ intents:
     description: Ability to manage secret storages
     roles:
       - ADMIN
+
+  ViewConfigTemplates:
+    name: View config templates
+    description: Allow user to get and list config templates
+    roles:
+      - EMBEDDED_END_USER
+      - WORKSPACE_READER
+      - WORKSPACE_RUNNER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
+
+  ViewAndEditPartialConfigs:
+    name: View and edit partial configs
+    description: Allow user to view and edit partial configs
+    roles:
+      - EMBEDDED_END_USER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
+
+  RunOAuthFlow:
+    name: Run the OAuth flow
+    description: Allow user to run OAuth flow
+    roles:
+      - EMBEDDED_END_USER
+      - WORKSPACE_EDITOR
+      - WORKSPACE_ADMIN
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN

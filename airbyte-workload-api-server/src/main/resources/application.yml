@@ -37,12 +37,10 @@ micronaut:
         port: ${STATSD_PORT:8125}
   security:
     authentication-provider-strategy: ALL
-    enabled: ${API_AUTHORIZATION_ENABLED:true}
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
     token:
+      enabled: ${API_AUTHORIZATION_ENABLED:false}
       jwt:
-        enabled: ${API_AUTHORIZATION_ENABLED:true}
-        bearer:
-          secret: ${WORKLOAD_API_BEARER_TOKEN:}
         signatures:
           secret:
             generator:
@@ -86,7 +84,8 @@ airbyte:
       max: ${AIRBYTE_API_MAX_RETRIES:5}
   workload-api:
     workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
-
+    bearer-token:
+      secret: ${WORKLOAD_API_BEARER_TOKEN:}
 endpoints:
   beans:
     enabled: true

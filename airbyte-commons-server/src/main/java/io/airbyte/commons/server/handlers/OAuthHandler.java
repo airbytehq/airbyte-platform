@@ -598,32 +598,16 @@ public class OAuthHandler {
    * See https://github.com/airbytehq/airbyte/pull/22151#discussion_r1104856648 for full discussion.
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
-  public CompleteOAuthResponse writeOAuthResponseSecret(final UUID workspaceId, final CompleteOAuthResponse payload)
-      throws IOException, ConfigNotFoundException {
-
+  public CompleteOAuthResponse writeOAuthResponseSecret(final UUID workspaceId, final CompleteOAuthResponse payload) {
     try {
       final String payloadString = Jackson.getObjectMapper().writeValueAsString(payload);
-      final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
       final AirbyteManagedSecretCoordinate secretCoordinate;
-      if (organizationId.isPresent()
-          && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
-        try {
-          final SecretPersistenceConfig secretPersistenceConfig =
-              secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
-          secretCoordinate = secretsRepositoryWriter.store(
-              generateOAuthSecretCoordinate(workspaceId),
-              payloadString,
-              new RuntimeSecretPersistence(secretPersistenceConfig, metricClient));
-        } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-          throw new ConfigNotFoundException(e.getType(), e.getConfigId());
-        }
-      } else {
-        secretCoordinate = secretsRepositoryWriter.store(
-            generateOAuthSecretCoordinate(workspaceId),
-            payloadString, null);
-      }
+      final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
+      secretCoordinate = secretsRepositoryWriter.store(
+          generateOAuthSecretCoordinate(workspaceId),
+          payloadString,
+          secretPersistence);
       return OAuthHelper.mapToCompleteOAuthResponse(Map.of("secretId", secretCoordinate.getFullCoordinate()));
-
     } catch (final JsonProcessingException e) {
       throw new RuntimeException("Json object could not be written to string.", e);
     }
@@ -800,7 +784,7 @@ public class OAuthHandler {
       }
     }
 
-    return secretsRepositoryWriter.createFromConfig(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
+    return secretsRepositoryWriter.createFromConfigLegacy(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
         secretPersistence);
   }
 

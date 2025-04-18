@@ -21,6 +21,8 @@ import {
   PageIncrement,
   OffsetIncrement,
   CursorPagination,
+  DynamicStreamCheckConfig,
+  DynamicStreamCheckConfigType,
   SimpleRetrieverPaginator,
   DefaultPaginatorPageTokenOption,
   DatetimeBasedCursor,
@@ -82,6 +84,11 @@ import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
+export interface StreamId {
+  type: "stream" | "dynamic_stream";
+  index: number;
+}
+
 export interface BuilderState {
   name: string;
   mode: "ui" | "yaml";
@@ -89,9 +96,14 @@ export interface BuilderState {
   previewValues?: BuilderFormValues;
   yaml: string;
   customComponentsCode?: string;
-  view: "global" | "inputs" | "components" | number;
+  view:
+    | "global"
+    | "inputs"
+    | "components"
+    | `dynamic_stream_${number}` /* dynamic stream index */
+    | number /* stream index */;
   streamTab: BuilderStreamTab;
-  testStreamIndex: number;
+  testStreamId: StreamId;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
 
@@ -302,7 +314,9 @@ export interface BuilderFormValues {
   assist: AssistData;
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
+  dynamicStreams: BuilderDynamicStream[];
   checkStreams: string[];
+  dynamicStreamCheckConfigs: DynamicStreamCheckConfig[];
   version: string;
   description?: string;
 }
@@ -446,6 +460,12 @@ export type BuilderPollingTimeout =
       value: string;
     };
 
+export interface BuilderDynamicStream {
+  streamTemplate: BuilderStream;
+  // TODO:
+  // componentsResolver: BuilderComponentsResolver;
+}
+
 export type BuilderStream = {
   id: string;
   name: string;
@@ -576,7 +596,9 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   },
   inputs: [],
   streams: [],
+  dynamicStreams: [],
   checkStreams: [],
+  dynamicStreamCheckConfigs: [],
   version: CDK_VERSION,
 };
 
@@ -699,6 +721,10 @@ export function hasIncrementalSyncUserInput(
       (key === "start_datetime" || incrementalSync?.filter_mode === "range")
     );
   });
+}
+
+export function isStreamDynamicStream(streamId: StreamId): boolean {
+  return streamId.type === "dynamic_stream";
 }
 
 export function interpolateConfigKey(key: string): string;
@@ -1495,6 +1521,23 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
+  const dynamicStreamNames = values.dynamicStreamCheckConfigs.map((s) => s.dynamic_stream_name);
+  const validCheckDynamicStream = (values.dynamicStreamCheckConfigs ?? []).filter((dynamicStreamCheckConfig) =>
+    dynamicStreamNames.includes(dynamicStreamCheckConfig.dynamic_stream_name)
+  );
+  const correctedCheckDynamicStreams =
+    validCheckDynamicStream.length > 0
+      ? validCheckDynamicStream
+      : dynamicStreamNames.length > 0
+      ? [
+          {
+            type: DynamicStreamCheckConfigType.DynamicStreamCheckConfig,
+            dynamic_stream_name: dynamicStreamNames[0],
+            stream_count: 1,
+          },
+        ]
+      : [];
+
   const streamNameToStream = Object.fromEntries(manifestStreams.map((stream) => [stream.name, stream]));
   const streamRefs = manifestStreams.map((stream) => streamRef(stream.name!));
 
@@ -1531,7 +1574,10 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
     type: "DeclarativeSource",
     check: {
       type: "CheckStream",
-      stream_names: correctedCheckStreams,
+      ...(correctedCheckStreams.length > 0 ? { stream_names: correctedCheckStreams } : {}),
+      ...(correctedCheckDynamicStreams.length > 0
+        ? { dynamic_streams_check_configs: correctedCheckDynamicStreams }
+        : {}),
     },
     definitions: {
       base_requester: baseRequester,

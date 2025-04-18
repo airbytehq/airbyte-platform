@@ -17,7 +17,7 @@ export const OSSAuthService: React.FC<PropsWithChildren<unknown>> = ({ children 
   const { auth } = useGetInstanceConfiguration();
   const location = useLocation();
 
-  if (location.pathname === RoutePaths.EmbeddedWidget) {
+  if (location.pathname === `/${RoutePaths.EmbeddedWidget}`) {
     return <EmbeddedAuthService>{children}</EmbeddedAuthService>;
   }
   if (auth.mode === "oidc") {

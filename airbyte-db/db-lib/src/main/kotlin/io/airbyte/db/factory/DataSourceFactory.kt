@@ -57,7 +57,6 @@ object DataSourceFactory {
    * @throws Exception if unable to close the data source.
    */
   @JvmStatic
-  @Throws(Exception::class)
   fun close(dataSource: DataSource?) {
     dataSource?.let {
       if (it is AutoCloseable) {

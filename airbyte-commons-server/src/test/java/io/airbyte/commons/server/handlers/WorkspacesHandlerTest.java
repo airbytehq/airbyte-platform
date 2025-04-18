@@ -136,7 +136,7 @@ class WorkspacesHandlerTest {
     organizationPersistence = mock(OrganizationPersistence.class);
     secretPersistence = mock(SecretPersistence.class);
     permissionPersistence = mock(PermissionPersistence.class);
-    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence, mock(MetricClient.class), mock(TestClient.class));
+    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence, mock(MetricClient.class));
     connectionsHandler = mock(ConnectionsHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     sourceHandler = mock(SourceHandler.class);

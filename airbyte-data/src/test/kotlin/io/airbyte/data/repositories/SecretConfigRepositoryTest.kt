@@ -9,11 +9,15 @@ import io.airbyte.data.repositories.entities.SecretConfig
 import io.airbyte.data.repositories.entities.SecretStorage
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageScopeType
 import io.airbyte.db.instance.configs.jooq.generated.enums.SecretStorageType
+import io.kotest.matchers.equality.shouldBeEqualToIgnoringFields
+import io.kotest.matchers.nulls.shouldBeNull
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
@@ -21,15 +25,10 @@ import java.util.UUID
 internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
   val userId = UUID.randomUUID()
 
-  @AfterEach
-  fun tearDown() {
-    secretConfigRepository.deleteAll()
-    secretStorageRepository.deleteAll()
-    organizationRepository.deleteAll()
-  }
+  private lateinit var persistedSecretStorage: SecretStorage
 
-  @Test
-  fun `test db insertion and retrieval`() {
+  @BeforeEach
+  fun setup() {
     val organization =
       Organization(
         name = "Airbyte Inc.",
@@ -47,8 +46,18 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
         createdBy = userId,
         updatedBy = userId,
       )
-    val persistedSecretStorage = secretStorageRepository.save(secretStorage)
+    persistedSecretStorage = secretStorageRepository.save(secretStorage)
+  }
 
+  @AfterEach
+  fun tearDown() {
+    secretConfigRepository.deleteAll()
+    secretStorageRepository.deleteAll()
+    organizationRepository.deleteAll()
+  }
+
+  @Test
+  fun `test db insertion and retrieval`() {
     val secretConfig =
       SecretConfig(
         secretStorageId = persistedSecretStorage.id!!,
@@ -72,5 +81,49 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
     assertNotNull(retrievedSecretConfig.createdAt)
     assertNotNull(retrievedSecretConfig.updatedAt)
     assertThat(retrievedSecretConfig).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(persistedSecretConfig)
+  }
+
+  @Nested
+  inner class FindBySecretStorageIdAndExternalCoordinate {
+    @Test
+    fun `returns null when no record found`() {
+      val externalCoordinate = "some.coordinate"
+
+      secretConfigRepository.save(
+        SecretConfig(
+          secretStorageId = persistedSecretStorage.id!!,
+          descriptor = "test",
+          externalCoordinate = "some.other.coordinate",
+          airbyteManaged = true,
+          createdBy = userId,
+          updatedBy = userId,
+        ),
+      )
+
+      val result = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(persistedSecretStorage.id!!, externalCoordinate)
+
+      result.shouldBeNull()
+    }
+
+    @Test
+    fun `returns matching secret config`() {
+      val externalCoordinate = "some.coordinate"
+
+      val persistedSecretConfig =
+        secretConfigRepository.save(
+          SecretConfig(
+            secretStorageId = persistedSecretStorage.id!!,
+            descriptor = "test",
+            externalCoordinate = externalCoordinate,
+            airbyteManaged = true,
+            createdBy = userId,
+            updatedBy = userId,
+          ),
+        )
+
+      val result = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(persistedSecretStorage.id!!, externalCoordinate)!!
+
+      result.shouldBeEqualToIgnoringFields(persistedSecretConfig, SecretConfig::createdAt, SecretConfig::updatedAt)
+    }
   }
 }

@@ -14,8 +14,6 @@ import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
-import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
@@ -36,11 +34,8 @@ import io.airbyte.db.instance.configs.jooq.generated.tables.records.ActorDefinit
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages
-import io.airbyte.featureflag.Organization
 import io.airbyte.featureflag.SourceDefinition
-import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.metrics.MetricClient
-import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonValidationException
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -70,7 +65,6 @@ import java.util.stream.Stream
 class SourceServiceJooqImpl(
   @Named("configDatabase") database: Database,
   featureFlagClient: FeatureFlagClient,
-  secretsRepositoryWriter: SecretsRepositoryWriter,
   secretPersistenceConfigService: SecretPersistenceConfigService,
   connectionService: ConnectionService,
   actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
@@ -78,7 +72,6 @@ class SourceServiceJooqImpl(
 ) : SourceService {
   private val database: ExceptionWrappingDatabase
   private val featureFlagClient: FeatureFlagClient
-  private val secretsRepositoryWriter: SecretsRepositoryWriter
   private val secretPersistenceConfigService: SecretPersistenceConfigService
   private val connectionService: ConnectionService
   private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater
@@ -89,7 +82,6 @@ class SourceServiceJooqImpl(
     this.database = ExceptionWrappingDatabase(database)
     this.connectionService = connectionService
     this.featureFlagClient = featureFlagClient
-    this.secretsRepositoryWriter = secretsRepositoryWriter
     this.secretPersistenceConfigService = secretPersistenceConfigService
     this.actorDefinitionVersionUpdater = actorDefinitionVersionUpdater
     this.metricClient = metricClient
@@ -291,10 +283,7 @@ class SourceServiceJooqImpl(
   }
 
   /**
-   * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }
-   *
-   *
-   * Write a SourceConnection to the database. The configuration of the Source will be a partial
+   * Write a SourceConnection to the database. The configuration of the Source should be a partial
    * configuration (no secrets, just pointer to the secrets store).
    *
    * @param partialSource - The configuration of the Source will be a partial configuration (no
@@ -790,12 +779,12 @@ class SourceServiceJooqImpl(
   }
 
   /**
-   * Delete source: tombstone source AND delete secrets
+   * Delete source: tombstone source and void config. Assumes airbyte-managed secrets were already
+   * deleted by the domain layer.
    *
    * @param name Source name
    * @param workspaceId workspace ID
    * @param sourceId source ID
-   * @param spec spec for the destination
    * @throws JsonValidationException if the config is or contains invalid json
    * @throws IOException if there is an issue while interacting with the secrets store or db.
    */
@@ -804,24 +793,10 @@ class SourceServiceJooqImpl(
     name: String?,
     workspaceId: UUID?,
     sourceId: UUID,
-    spec: ConnectorSpecification,
   ) {
-    // 1. Delete secrets from config
     val sourceConnection = getSourceConnection(sourceId)
-    val config = sourceConnection.getConfiguration()
-    val organizationId = getOrganizationIdFromWorkspaceId(workspaceId)
-    var secretPersistence: RuntimeSecretPersistence? = null
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(organizationId.get()))) {
-      val secretPersistenceConfig = secretPersistenceConfigService.get(io.airbyte.config.ScopeType.ORGANIZATION, organizationId.get())
-      secretPersistence = RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
-    }
-    secretsRepositoryWriter.deleteFromConfig(
-      config,
-      spec.getConnectionSpecification(),
-      secretPersistence,
-    )
 
-    // 2. Tombstone source and void config
+    // Tombstone source and void config
     val newSourceConnection =
       SourceConnection()
         .withName(name)

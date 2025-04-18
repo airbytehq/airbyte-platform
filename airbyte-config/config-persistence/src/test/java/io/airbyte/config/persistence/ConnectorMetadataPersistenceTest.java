@@ -109,7 +109,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final MetricClient metricClient = mock(MetricClient.class);
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
-    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
     connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
@@ -121,7 +121,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryWriter,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
@@ -129,8 +128,6 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     destinationService = new DestinationServiceJooqImpl(
         database,
         featureFlagClient,
-        secretsRepositoryWriter,
-        secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient);

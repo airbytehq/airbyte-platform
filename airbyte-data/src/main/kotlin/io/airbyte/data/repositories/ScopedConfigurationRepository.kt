@@ -63,6 +63,8 @@ interface ScopedConfigurationRepository : PageableRepository<ScopedConfiguration
 
   fun findByKey(key: String): List<ScopedConfiguration>
 
+  fun findByOriginType(originType: ConfigOriginType): List<ScopedConfiguration>
+
   fun deleteByIdInList(ids: List<UUID>)
 
   fun updateByKeyAndResourceTypeAndResourceIdAndOriginTypeAndOriginIn(

@@ -11,7 +11,6 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.SourceAndDefinition;
-import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -77,8 +76,7 @@ public interface SourceService {
   void tombstoneSource(
                        final String name,
                        final UUID workspaceId,
-                       final UUID sourceId,
-                       final ConnectorSpecification spec)
+                       final UUID sourceId)
       throws ConfigNotFoundException, JsonValidationException, IOException;
 
 }

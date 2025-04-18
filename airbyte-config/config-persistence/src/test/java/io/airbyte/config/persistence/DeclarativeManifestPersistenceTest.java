@@ -103,10 +103,10 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     final MetricClient metricClient = mock(MetricClient.class);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
-    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
-    sourceService = new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
+    sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
         secretPersistenceConfigService, metricClient, dataplaneGroupService);

@@ -49,7 +49,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   private void setupTestData() throws Exception {
     final UserPersistence userPersistence = new UserPersistence(database);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
-    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(any(), any()))
+    when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
         .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
 
     organizationPersistence.createOrganization(MockData.defaultOrganization());

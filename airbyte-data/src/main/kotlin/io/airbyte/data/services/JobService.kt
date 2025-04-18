@@ -33,8 +33,6 @@ interface JobService {
   fun findLatestJobPerScope(
     configTypes: Set<ConfigType>,
     scopes: Set<String>,
-    limit: Int,
-    offset: Int,
     createdAtStart: OffsetDateTime,
   ): List<Job>
 

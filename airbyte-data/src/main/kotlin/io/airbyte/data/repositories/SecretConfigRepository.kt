@@ -11,4 +11,9 @@ import io.micronaut.data.repository.PageableRepository
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface SecretConfigRepository : PageableRepository<SecretConfig, UUID>
+interface SecretConfigRepository : PageableRepository<SecretConfig, UUID> {
+  fun findBySecretStorageIdAndExternalCoordinate(
+    secretStorageId: UUID,
+    externalCoordinate: String,
+  ): SecretConfig?
+}

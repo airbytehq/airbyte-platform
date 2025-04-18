@@ -18,6 +18,8 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
+  isStreamDynamicStream,
+  StreamId,
 } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
@@ -59,6 +61,7 @@ import {
   DeclarativeComponentSchema,
   DeclarativeStreamType,
   AsyncRetrieverType,
+  DeclarativeComponentSchemaStreamsItem,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -66,6 +69,7 @@ import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
@@ -107,6 +111,8 @@ interface FormStateContext {
   resolveError: HttpError<KnownExceptionInfo> | null;
   isResolving: boolean;
   streamNames: string[];
+  dynamicStreamNames: string[];
+  streamIdToStreamRepresentation: (streamId: StreamId) => { stream_name: string } | { dynamic_stream_name: string };
   undoRedo: UndoRedo;
   setDisplayedVersion: (
     value: number | undefined,
@@ -307,13 +313,36 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       : unknownErrorMessage
     : undefined;
 
-  const resolvedManifest = (resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest;
+  const resolvedManifest = structuredClone(resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest;
+
+  resolvedManifest.streams = resolvedManifest.streams ?? [];
+
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
+  let dynamicStreamNames = useMemo(() => {
+    return mode === "ui"
+      ? dynamicStreams.map((stream) => stream.streamTemplate.name ?? "")
+      : resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.stream_template.name ?? "") ?? [];
+  }, [mode, dynamicStreams, resolvedManifest]);
+
+  const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
+  if (!areDynamicStreamsEnabled) {
+    dynamicStreamNames = [];
+  }
 
   const streams = useBuilderWatch("formValues.streams");
-  const streamNames =
-    mode === "ui"
+  const streamNames = useMemo(() => {
+    return mode === "ui"
       ? streams.map((stream) => stream.name)
       : resolvedManifest.streams?.map((stream) => stream.name ?? "") ?? [];
+  }, [mode, streams, resolvedManifest]);
+
+  const streamIdToStreamRepresentation = useCallback(
+    (streamId: StreamId) =>
+      streamId.type === "stream"
+        ? { stream_name: streamNames[streamId.index] }
+        : { dynamic_stream_name: dynamicStreamNames[streamId.index] },
+    [streamNames, dynamicStreamNames]
+  );
 
   useEffect(() => {
     if (name !== currentProject.name) {
@@ -594,6 +623,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     resolveErrorMessage,
     isResolving,
     streamNames,
+    dynamicStreamNames,
+    streamIdToStreamRepresentation,
     undoRedo,
     setDisplayedVersion: setToVersion,
     updateJsonManifest,
@@ -783,19 +814,39 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   useEffect(() => {
     if (typeof view === "number") {
-      setValue("testStreamIndex", view);
+      setValue("testStreamId", { type: "stream", index: view });
+    } else if (typeof view === "string" && view.startsWith("dynamic_stream_")) {
+      const dynamicStreamIndex = parseInt(view.split("_")[1]);
+      setValue("testStreamId", { type: "dynamic_stream", index: dynamicStreamIndex });
     }
   }, [setValue, view]);
 
-  const testStream = resolvedManifest.streams?.[testStreamIndex];
+  const streamIsDynamic = isStreamDynamicStream(testStreamId);
+  let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
+  if (streamIsDynamic) {
+    const dynamicStream = resolvedManifest.dynamic_streams?.[testStreamId.index];
+    if (dynamicStream?.components_resolver.type === "HttpComponentsResolver") {
+      testStream = {
+        type: DeclarativeStreamType.DeclarativeStream,
+        name: dynamicStream.stream_template.name,
+        retriever: {
+          ...dynamicStream.components_resolver.retriever,
+        },
+      };
+    }
+  } else {
+    testStream = resolvedManifest.streams?.[testStreamId.index];
+  }
+
   const filteredManifest = {
     ...resolvedManifest,
     streams: [testStream],
+    dynamic_streams: [],
   };
   const streamName = testStream?.name ?? "";
 
@@ -825,7 +876,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const testStateParsed = testState ? JSON.parse(testState) : undefined;
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
-  const autoImportSchema = useAutoImportSchema(testStreamIndex);
+  const autoImportSchema = useAutoImportSchema(testStreamId);
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
   const streamUsesCustomCode = getStreamHasCustomType(streamName);
@@ -859,7 +910,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
         result.inferred_schema.additionalProperties = true;
 
         // Set the inferred schema in the form values when autoImportSchema is enabled
-        setValue(`formValues.streams.${testStreamIndex}.schema`, formatJson(result.inferred_schema, true), {
+        setValue(`formValues.streams.${testStreamId.index}.schema`, formatJson(result.inferred_schema, true), {
           shouldValidate: true,
           shouldTouch: true,
           shouldDirty: true,
@@ -878,7 +929,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(jsonManifest);
 
-      updateStreamTestResults(result, testStream, streamName, testStreamIndex);
+      updateStreamTestResults(result, testStream, streamName, testStreamId.index);
     }
   );
 
@@ -912,7 +963,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     setQueuedStreamRead(false);
   }, [cancel]);
 
-  const schemaWarnings = useSchemaWarnings(streamRead, testStreamIndex, streamName);
+  const schemaWarnings = useSchemaWarnings(streamRead, testStreamId.index, streamName);
 
   const ctx = {
     streamRead,
@@ -1002,10 +1053,13 @@ export const useConnectorBuilderFormState = (): FormStateContext => {
 };
 
 export const useSelectedPageAndSlice = () => {
-  const { streamNames } = useConnectorBuilderFormState();
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
+  const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
+  const testStreamId = useBuilderWatch("testStreamId");
 
-  const selectedStreamName = streamNameOrDefault(streamNames[testStreamIndex], testStreamIndex);
+  const selectedStreamName = streamNameOrDefault(
+    testStreamId.type === "dynamic_stream" ? dynamicStreamNames[testStreamId.index] : streamNames[testStreamId.index],
+    testStreamId.index
+  );
 
   const [streamToSelectedSlice, setStreamToSelectedSlice] = useState({ [selectedStreamName]: 0 });
   const setSelectedSlice = (sliceIndex: number) => {

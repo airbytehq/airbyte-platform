@@ -9,4 +9,5 @@ import java.util.UUID
 data class SecretReferenceConfig(
   val secretCoordinate: SecretCoordinate,
   val secretStorageId: UUID? = null,
+  val secretReferenceId: UUID? = null,
 )

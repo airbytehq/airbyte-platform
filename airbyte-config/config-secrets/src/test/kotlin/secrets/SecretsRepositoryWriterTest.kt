@@ -10,13 +10,11 @@ import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.airbyte.validation.json.JsonSchemaValidator
 import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.mockk
@@ -36,20 +34,16 @@ internal class SecretsRepositoryWriterTest {
   private lateinit var secretsHydrator: RealSecretsHydrator
   private lateinit var secretsRepositoryReader: SecretsRepositoryReader
   private lateinit var metricClient: MetricClient
-  private lateinit var featureFlagClient: FeatureFlagClient
-  private lateinit var jsonSchemaValidator: JsonSchemaValidator
 
   @BeforeEach
   fun setup() {
     secretPersistence = spyk(MemorySecretPersistence())
     metricClient = mockk()
-    featureFlagClient = mockk()
 
     secretsRepositoryWriter =
       SecretsRepositoryWriter(
         secretPersistence,
         metricClient,
-        featureFlagClient,
       )
     secretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)
@@ -65,7 +59,6 @@ internal class SecretsRepositoryWriterTest {
     val config = injectCoordinate(coordinate)
     secretsRepositoryWriter.deleteFromConfig(
       config,
-      SPEC.connectionSpecification,
       null,
     )
     verify(exactly = 1) { secretPersistence.delete(AirbyteManagedSecretCoordinate.fromFullCoordinate(coordinate)!!) }
@@ -79,7 +72,6 @@ internal class SecretsRepositoryWriterTest {
     fun setup() {
       every { metricClient.count(metric = any(), value = any()) } returns mockk<Counter>()
       every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
-      every { featureFlagClient.boolVariation(any(), any()) } returns true
     }
 
     @Test
@@ -97,7 +89,7 @@ internal class SecretsRepositoryWriterTest {
 
       val oldPartialConfig = injectCoordinate(oldCoordinate)
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigNoSecretChange,
@@ -129,20 +121,13 @@ internal class SecretsRepositoryWriterTest {
       val oldCoordinate = "airbyte_existing_coordinate_v1"
       secretPersistence.write(AirbyteManagedSecretCoordinate.fromFullCoordinate(oldCoordinate)!!, secret)
 
-      val updatedFullConfigWithNewSecret =
-        Jsons.deserialize(
-          """
-          { "username": "airbyte1", "password": "$secret", "password2": "$secret"}
-          """.trimIndent(),
-        )
-
       val oldPartialConfig = injectCoordinate(oldCoordinate)
       val newConfig = Jsons.deserialize("{ \"username\": \"airbyte\", \"password\": \"$secret\", \"password2\": \"$secret\"}")
 
       val customSecretPrefix = "custom_secret_"
 
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           newConfig,
@@ -169,7 +154,7 @@ internal class SecretsRepositoryWriterTest {
 
       val oldPartialConfig = injectCoordinate(oldCoordinate)
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigSecretChange,
@@ -225,7 +210,7 @@ internal class SecretsRepositoryWriterTest {
         )
 
       val updatedPartialConfig =
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           newFullConfig,
@@ -261,7 +246,6 @@ internal class SecretsRepositoryWriterTest {
         SecretsRepositoryWriter(
           secretPersistence,
           metricClient,
-          featureFlagClient,
         )
 
       every { secretPersistence.write(any(), any()) } returns Unit
@@ -280,7 +264,7 @@ internal class SecretsRepositoryWriterTest {
         )
 
       assertDoesNotThrow {
-        secretsRepositoryWriter.updateFromConfig(
+        secretsRepositoryWriter.updateFromConfigLegacy(
           WORKSPACE_ID,
           oldPartialConfig,
           updatedFullConfigSecretChange,

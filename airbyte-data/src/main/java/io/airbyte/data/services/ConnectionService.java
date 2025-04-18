@@ -64,7 +64,7 @@ public interface ConnectionService {
 
   ConfiguredAirbyteCatalog getConfiguredCatalogForConnection(UUID connectionId) throws JsonValidationException, ConfigNotFoundException, IOException;
 
-  String getGeographyForConnection(UUID connectionId) throws IOException;
+  String getDataplaneGroupNameForConnection(UUID connectionId) throws IOException;
 
   boolean getConnectionHasAlphaOrBetaConnector(UUID connectionId) throws IOException;
 

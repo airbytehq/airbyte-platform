@@ -15,3 +15,16 @@ micronaut:
 airbyte:
   applications:
     type: database
+  auth:
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}
+      oidc:
+        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID:}
+        audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
+        endpoints:
+          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
+        fields:
+          sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB:sub}
+          email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL:email}
+          name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME:name}
+          issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER:iss}

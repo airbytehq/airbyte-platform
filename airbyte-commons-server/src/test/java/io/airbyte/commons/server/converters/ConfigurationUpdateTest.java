@@ -5,8 +5,6 @@
 package io.airbyte.commons.server.converters;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -19,18 +17,11 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
-import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.db.jdbc.JdbcUtils;
-import io.airbyte.domain.models.SecretReferenceScopeType;
-import io.airbyte.domain.services.secrets.SecretPersistenceService;
-import io.airbyte.domain.services.secrets.SecretReferenceService;
-import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.CatalogHelpers;
@@ -50,7 +41,6 @@ class ConfigurationUpdateTest {
   private static final UUID UUID1 = UUID.randomUUID();
   private static final UUID UUID2 = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
-  private static final UUID ORGANIZATION_ID = UUID.randomUUID();
   private static final JsonNode SPEC = CatalogHelpers.fieldsToJsonSchema(
       Field.of(JdbcUtils.USERNAME_KEY, JsonSchemaType.STRING),
       Field.of(JdbcUtils.PASSWORD_KEY, JsonSchemaType.STRING));
@@ -95,10 +85,6 @@ class ConfigurationUpdateTest {
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private SourceService sourceService;
   private DestinationService destinationService;
-  private WorkspaceHelper workspaceHelper;
-  private SecretPersistenceService secretPersistenceService;
-  private SecretReferenceService secretReferenceService;
-  private SecretsRepositoryReader secretsRepositoryReader;
 
   @BeforeEach
   void setup() {
@@ -106,27 +92,11 @@ class ConfigurationUpdateTest {
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
     sourceService = mock(SourceService.class);
     destinationService = mock(DestinationService.class);
-    workspaceHelper = mock(WorkspaceHelper.class);
-    secretPersistenceService = mock(SecretPersistenceService.class);
-    secretReferenceService = mock(SecretReferenceService.class);
-    secretsRepositoryReader = mock(SecretsRepositoryReader.class);
 
     configurationUpdate = new ConfigurationUpdate(
         actorDefinitionVersionHelper,
         sourceService,
-        destinationService,
-        secretPersistenceService,
-        secretReferenceService,
-        secretsRepositoryReader,
-        workspaceHelper);
-
-    final SecretPersistence secretPersistence = mock(SecretPersistence.class);
-    when(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID);
-    when(secretPersistenceService.getPersistenceFromConfig(any(), any())).thenReturn(secretPersistence);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
-    when(secretsRepositoryReader.hydrateConfig(any(), any()))
-        .thenAnswer(invocation -> ((ConfigWithSecretReferences) invocation.getArgument(0)).getConfig());
+        destinationService);
   }
 
   @Test

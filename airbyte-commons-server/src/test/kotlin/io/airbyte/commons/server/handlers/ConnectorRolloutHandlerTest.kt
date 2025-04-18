@@ -822,41 +822,40 @@ internal class ConnectorRolloutHandlerTest {
   @Test
   fun `test validateCanPin for manual rollouts does not enforce finalTargetRolloutPct`() {
     val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.withFinalTargetRolloutPct(50)
+    connectorRollout.finalTargetRolloutPct = 50
 
     assertEquals(
       100,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.MANUAL),
+      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.MANUAL, 0),
     )
   }
 
   @Test
   fun `test validateCanPin for automated rollouts when current percentage is less than max`() {
     val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.withFinalTargetRolloutPct(100)
-    connectorRollout.withCurrentTargetRolloutPct(50)
+    connectorRollout.finalTargetRolloutPct = 100
 
     assertEquals(
       75,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 75, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
+      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 75, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50),
     )
     assertEquals(
       100,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
+      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50),
     )
   }
 
   @Test
   fun `test validateCanPin for automated rollouts throws when current percentage equals or exceeds max`() {
     val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.withFinalTargetRolloutPct(50)
-    connectorRollout.withCurrentTargetRolloutPct(50)
+    connectorRollout.finalTargetRolloutPct = 50
+    connectorRollout.currentTargetRolloutPct = 50
 
     assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 50, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED)
+      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 50, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50)
     }
     assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED)
+      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50)
     }
   }
 
@@ -1399,21 +1398,21 @@ internal class ConnectorRolloutHandlerTest {
     releaseCandidateVersionId: UUID = RELEASE_CANDIDATE_VERSION_ID,
     rolloutStrategy: ConnectorEnumRolloutStrategy? = ConnectorEnumRolloutStrategy.MANUAL,
   ): ConnectorRollout =
-    ConnectorRollout().apply {
-      this.id = id
-      this.actorDefinitionId = actorDefinitionId
-      this.releaseCandidateVersionId = releaseCandidateVersionId
-      this.initialVersionId = UUID.randomUUID()
-      this.state = ConnectorEnumRolloutState.INITIALIZED
-      this.initialRolloutPct = 10L
-      this.finalTargetRolloutPct = 100L
-      this.hasBreakingChanges = false
-      this.rolloutStrategy = rolloutStrategy
-      this.maxStepWaitTimeMins = 60L
-      this.createdAt = OffsetDateTime.now().toEpochSecond()
-      this.updatedAt = OffsetDateTime.now().toEpochSecond()
-      this.expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond()
-    }
+    ConnectorRollout(
+      id = id,
+      actorDefinitionId = actorDefinitionId,
+      releaseCandidateVersionId = releaseCandidateVersionId,
+      initialVersionId = UUID.randomUUID(),
+      state = ConnectorEnumRolloutState.INITIALIZED,
+      initialRolloutPct = 10,
+      finalTargetRolloutPct = 100,
+      hasBreakingChanges = false,
+      rolloutStrategy = rolloutStrategy,
+      maxStepWaitTimeMins = 60,
+      createdAt = OffsetDateTime.now().toEpochSecond(),
+      updatedAt = OffsetDateTime.now().toEpochSecond(),
+      expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond(),
+    )
 
   private fun createMockConnectorRolloutStartRequestBody(): ConnectorRolloutStartRequestBody =
     ConnectorRolloutStartRequestBody()

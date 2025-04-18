@@ -25,7 +25,6 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
@@ -116,7 +115,6 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     when(featureFlagClient.stringVariation(eq(HeartbeatMaxSecondsBetweenMessages.INSTANCE), any(SourceDefinition.class))).thenReturn("3600");
 
-    final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
 
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
@@ -132,7 +130,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
         scopedConfigurationService,
         connectionTimelineEventService);
 
-    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
+    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
 
     final UUID defId = UUID.randomUUID();

@@ -10,50 +10,64 @@ import io.airbyte.api.model.generated.ConfigTemplateListItem
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
+import io.airbyte.commons.auth.generated.Intent
+import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.annotation.Controller
-import io.micronaut.http.annotation.Post
-import io.micronaut.security.annotation.Secured
-import io.micronaut.security.rules.SecurityRule
 
-@Controller("/api/v1/config_templates")
+@Controller
 open class ConfigTemplateController(
   private val configTemplateService: ConfigTemplateService,
+  val workspaceHelper: WorkspaceHelper,
+  val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) : ConfigTemplateApi {
-  @Post("/get")
-  @Secured(SecurityRule.IS_AUTHENTICATED)
-  override fun getConfigTemplate(configTemplateRequestBody: ConfigTemplateRequestBody): ConfigTemplateRead =
-    configTemplateService.getConfigTemplate(configTemplateRequestBody.configTemplateId).toApiModel()
+  @RequiresIntent(Intent.ViewConfigTemplates)
+  override fun getConfigTemplate(req: ConfigTemplateRequestBody): ConfigTemplateRead {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(req.workspaceId)
 
-  @Post("/list")
-  @Secured(SecurityRule.IS_AUTHENTICATED)
-  override fun listConfigTemplates(listConfigTemplatesRequestBody: ListConfigTemplatesRequestBody): ConfigTemplateList {
-    val configTemplateList = ConfigTemplateList()
-    configTemplateList.configTemplates(
-      configTemplateService
-        .listConfigTemplatesForOrganization(OrganizationId(listConfigTemplatesRequestBody.organizationId))
-        .map { it.toListItem() },
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
     )
-    return configTemplateList
+
+    return configTemplateService
+      .getConfigTemplate(req.configTemplateId)
+      .toApiModel()
   }
 
-  private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead {
-    val configTemplateRead = ConfigTemplateRead()
-    configTemplateRead.sourceDefinitionId(this.configTemplate.actorDefinitionId)
-    configTemplateRead.configTemplateSpec(this.configTemplate.userConfigSpec)
-    configTemplateRead.icon(this.actorIcon)
-    configTemplateRead.name(this.actorName)
-    configTemplateRead.id(this.configTemplate.id)
-    return configTemplateRead
-  }
+  @RequiresIntent(Intent.ViewConfigTemplates)
+  override fun listConfigTemplates(req: ListConfigTemplatesRequestBody): ConfigTemplateList {
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(req.workspaceId)
 
-  private fun ConfigTemplateWithActorDetails.toListItem(): ConfigTemplateListItem {
-    val listItem = ConfigTemplateListItem()
-    listItem.id(this.configTemplate.id)
-    listItem.icon(this.actorIcon)
-    listItem.name(this.actorName)
-    return listItem
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+
+    return ConfigTemplateList()
+      .configTemplates(
+        configTemplateService
+          .listConfigTemplatesForOrganization(OrganizationId(organizationId))
+          .map { it.toListItem() },
+      )
   }
 }
+
+private fun ConfigTemplateWithActorDetails.toApiModel() =
+  ConfigTemplateRead()
+    .sourceDefinitionId(this.configTemplate.actorDefinitionId)
+    .configTemplateSpec(this.configTemplate.userConfigSpec)
+    .icon(this.actorIcon)
+    .name(this.actorName)
+    .id(this.configTemplate.id)
+
+private fun ConfigTemplateWithActorDetails.toListItem() =
+  ConfigTemplateListItem()
+    .id(this.configTemplate.id)
+    .icon(this.actorIcon)
+    .name(this.actorName)

@@ -6,8 +6,8 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.SecretStorageRepository
 import io.airbyte.data.services.SecretStorageService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.data.services.impls.data.mappers.SecretStorageMapper.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.SecretStorageMapper.toEntity
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType

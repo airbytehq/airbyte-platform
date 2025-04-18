@@ -75,6 +75,7 @@ class PayloadKubeInputMapperTest {
     every { ffClient.stringVariation(NodeSelectorOverride, any()) } returns ""
     every { ffClient.boolVariation(ConnectorApmEnabled, any()) } returns false
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
+    val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     val mapper =
       PayloadKubeInputMapper(
@@ -90,7 +91,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
     val input: ReplicationInput = mockk()
 
@@ -213,6 +214,7 @@ class PayloadKubeInputMapperTest {
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
+    val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     val mapper =
       PayloadKubeInputMapper(
@@ -228,7 +230,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
     val input: CheckConnectionInput = mockk()
 
@@ -241,6 +243,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
@@ -326,6 +329,7 @@ class PayloadKubeInputMapperTest {
     val replSelectors = mapOf("test-selector-repl" to "normal-repl")
     every { replConfigs.workerKubeNodeSelectors } returns replSelectors
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
+    val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     val mapper =
       PayloadKubeInputMapper(
@@ -341,7 +345,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
     val input: DiscoverCatalogInput = mockk()
 
@@ -354,6 +358,7 @@ class PayloadKubeInputMapperTest {
     val workloadId = UUID.randomUUID().toString()
     val launcherConfig =
       mockk<IntegrationLauncherConfig> {
+        every { connectionId } returns UUID.randomUUID()
         every { dockerImage } returns imageName
         every { isCustomConnector } returns customConnector
         every { workspaceId } returns workspaceId1
@@ -435,6 +440,7 @@ class PayloadKubeInputMapperTest {
     every { specConfigs.jobImagePullPolicy } returns pullPolicy
     val replConfigs: WorkerConfigs = mockk()
     val resourceReqFactory: ResourceRequirementsFactory = mockk()
+    val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     val mapper =
       PayloadKubeInputMapper(
@@ -450,7 +456,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
 
     val jobId = "415"
@@ -584,6 +590,7 @@ class PayloadKubeInputMapperTest {
     every { replInput.destinationLauncherConfig } returns testConfig
     every { replInput.syncResourceRequirements } returns SyncResourceRequirements()
     every { replInput.useFileTransfer } returns false
+    val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     var mapper =
       PayloadKubeInputMapper(
@@ -599,7 +606,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
 
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
@@ -631,7 +638,7 @@ class PayloadKubeInputMapperTest {
         resourceReqFactory,
         envVarFactory,
         ffClient,
-        listOf(),
+        nodeSelector,
       )
     mapper.toKubeInput(workloadId, specInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)

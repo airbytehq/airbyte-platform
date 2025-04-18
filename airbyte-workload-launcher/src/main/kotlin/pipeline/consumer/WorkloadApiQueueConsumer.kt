@@ -66,7 +66,7 @@ class WorkloadApiQueueConsumer(
       highPriorityQueuePoller
         .initialize(dataplaneGroupId)
         .flux
-        .parallel(defaultPriorityParallelism)
+        .parallel(highPriorityParallelism)
         .runOn(highPriorityThreadPool)
 
     highPriorityQueuePollerFlux

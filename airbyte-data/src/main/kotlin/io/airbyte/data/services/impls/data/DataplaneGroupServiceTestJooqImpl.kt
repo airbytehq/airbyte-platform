@@ -56,9 +56,9 @@ class DataplaneGroupServiceTestJooqImpl(
         ?: throw ConfigNotFoundException(DataplaneGroup::class.toString(), id.toString())
     }
 
-  override fun getDataplaneGroupByOrganizationIdAndGeography(
+  override fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
-    geography: String,
+    name: String,
   ): DataplaneGroup {
     val result =
       database
@@ -68,21 +68,21 @@ class DataplaneGroupServiceTestJooqImpl(
               Tables.DATAPLANE_GROUP.asterisk(),
             ).from(Tables.DATAPLANE_GROUP)
             .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.eq(organizationId))
-            .and(Tables.DATAPLANE_GROUP.NAME.equalIgnoreCase(geography))
+            .and(Tables.DATAPLANE_GROUP.NAME.equalIgnoreCase(name))
         })
         .fetch()
     return result.first().into(DataplaneGroup::class.java)
   }
 
   override fun listDataplaneGroups(
-    organizationId: UUID,
+    organizationIds: List<UUID>,
     withTombstone: Boolean,
   ): List<DataplaneGroup> =
     database.query { ctx: DSLContext ->
       val query =
         ctx
           .selectFrom(Tables.DATAPLANE_GROUP)
-          .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.eq(organizationId))
+          .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.`in`(organizationIds))
 
       if (!withTombstone) {
         query.and(Tables.DATAPLANE_GROUP.TOMBSTONE.eq(false))

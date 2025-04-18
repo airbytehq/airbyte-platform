@@ -9,10 +9,10 @@ import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.data.services.DataplaneGroupService;
 import jakarta.inject.Singleton;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * The web backend is an abstraction that allows the frontend to structure data in such a way that
@@ -35,12 +35,10 @@ public class WebBackendGeographiesHandler {
   }
 
   List<String> getDataplaneGroupNames(final UUID organizationId) {
-    final List<DataplaneGroup> defaultOrgGroups =
-        dataplaneGroupService.listDataplaneGroups(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), false);
-    final List<DataplaneGroup> orgGroups =
-        dataplaneGroupService.listDataplaneGroups(organizationId, false);
+    final List<DataplaneGroup> dataplaneGroups =
+        dataplaneGroupService.listDataplaneGroups(Arrays.asList(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), organizationId), false);
 
-    return Stream.concat(defaultOrgGroups.stream(), orgGroups.stream())
+    return dataplaneGroups.stream()
         .map(DataplaneGroup::getName)
         .distinct()
         .collect(Collectors.toList());

@@ -99,7 +99,7 @@ class JobInputHandlerTest {
           "injected", "value"));
   private static final ConfigWithSecretReferences SOURCE_CONFIG_WITH_REFS =
       new ConfigWithSecretReferences(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG,
-          Map.of("$.source_secret", new SecretReferenceConfig(new AirbyteManagedSecretCoordinate(), null)));
+          Map.of("$.source_secret", new SecretReferenceConfig(new AirbyteManagedSecretCoordinate(), null, null)));
   private static final JsonNode INLINED_SOURCE_CONFIG_WITH_REFS = InlinedConfigWithSecretRefsKt.toInlined(SOURCE_CONFIG_WITH_REFS);
   private static final JsonNode DESTINATION_CONFIGURATION =
       Jsons.jsonNode(Map.of("destination_key", "destination_value", "destination_secret", Map.of("_secret_reference_id", SECRET_REF_ID)));
@@ -107,7 +107,7 @@ class JobInputHandlerTest {
       Jsons.jsonNode(Map.of("destination_key", "destination_value", "destination_secret", Map.of("_secret_reference_id", SECRET_REF_ID), "oauth",
           "oauth_value"));
   private static final ConfigWithSecretReferences DESTINATION_CONFIG_WITH_REFS = new ConfigWithSecretReferences(DESTINATION_CONFIG_WITH_OAUTH,
-      Map.of("$.destination_secret", new SecretReferenceConfig(new AirbyteManagedSecretCoordinate(), null)));
+      Map.of("$.destination_secret", new SecretReferenceConfig(new AirbyteManagedSecretCoordinate(), null, null)));
   private static final JsonNode INLINED_DESTINATION_CONFIG_WITH_REFS = InlinedConfigWithSecretRefsKt.toInlined(DESTINATION_CONFIG_WITH_REFS);
   private static final State STATE = new State().withState(Jsons.jsonNode(Map.of("state_key", "state_value")));
 

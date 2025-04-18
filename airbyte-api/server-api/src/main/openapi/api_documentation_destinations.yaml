@@ -289,6 +289,7 @@ components:
       x-speakeasy-component: true
     DeclarativeManifest:
       x-speakeasy-component: true
+      x-speakeasy-type-override: "any"
       description: "Low code CDK manifest JSON object"
       type: "object"
     ManifestVersion:
@@ -838,6 +839,11 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message: "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -876,6 +882,11 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
+          deprecated: true
+          x-speakeasy-deprecation-message: "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
@@ -2591,10 +2602,21 @@ components:
               shared_access_signature:
                 type: "string"
                 description: "A shared access signature (SAS) provides secure delegated\
-                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview.Mutually\
+                  \ exclusive with an account key"
                 title: "Shared Access Signature"
                 examples:
                 - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                airbyte_secret: true
+                always_show: true
+                x-speakeasy-param-sensitive: true
+              azure_blob_storage_account_key:
+                type: "string"
+                description: "The Azure blob storage account key. Mutually exclusive\
+                  \ with a Shared Access Signature"
+                title: "Azure Blob Storage account key"
+                examples:
+                - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
                 airbyte_secret: true
                 always_show: true
                 x-speakeasy-param-sensitive: true
@@ -2605,7 +2627,7 @@ components:
                 title: "BULK Load Data Source"
                 examples:
                 - "MyAzureBlobStorage"
-                order: 4
+                order: 5
                 always_show: true
               bulk_load_validate_values_pre_load:
                 type: "boolean"
@@ -2616,13 +2638,12 @@ components:
                 examples:
                 - "false"
                 default: false
-                order: 5
+                order: 6
                 always_show: false
             required:
             - "load_type"
             - "azure_blob_storage_account_name"
             - "azure_blob_storage_container_name"
-            - "shared_access_signature"
             - "bulk_load_data_source"
           description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
             \ and its associated configuration."
@@ -2797,10 +2818,20 @@ components:
               shared_access_signature:
                 type: "string"
                 description: "A shared access signature (SAS) provides secure delegated\
-                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview"
+                  \ access to resources in your storage account. See: https://learn.microsoft.com/azure/storage/common/storage-sas-overview.Mutually\
+                  \ exclusive with an account key"
                 title: "Shared Access Signature"
                 examples:
                 - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                airbyte_secret: true
+                always_show: true
+              azure_blob_storage_account_key:
+                type: "string"
+                description: "The Azure blob storage account key. Mutually exclusive\
+                  \ with a Shared Access Signature"
+                title: "Azure Blob Storage account key"
+                examples:
+                - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
                 airbyte_secret: true
                 always_show: true
               bulk_load_data_source:
@@ -2810,7 +2841,7 @@ components:
                 title: "BULK Load Data Source"
                 examples:
                 - "MyAzureBlobStorage"
-                order: 4
+                order: 5
                 always_show: true
               bulk_load_validate_values_pre_load:
                 type: "boolean"
@@ -2821,13 +2852,12 @@ components:
                 examples:
                 - "false"
                 default: false
-                order: 5
+                order: 6
                 always_show: false
             required:
             - "load_type"
             - "azure_blob_storage_account_name"
             - "azure_blob_storage_container_name"
-            - "shared_access_signature"
             - "bulk_load_data_source"
           description: "Specifies the type of load mechanism (e.g., BULK, INSERT)\
             \ and its associated configuration."
@@ -9475,108 +9505,101 @@ components:
                 airbyte_secret: true
                 order: 4
     destination-azure-blob-storage:
-      title: "AzureBlobStorage Destination Spec"
+      title: "Azure Blob Storage Destination Spec"
       type: "object"
-      required:
-      - "azure_blob_storage_account_name"
-      - "azure_blob_storage_account_key"
-      - "format"
-      - "destinationType"
       properties:
         azure_blob_storage_endpoint_domain_name:
-          title: "Endpoint Domain Name"
           type: "string"
-          default: "blob.core.windows.net"
           description: "This is Azure Blob Storage endpoint domain name. Leave default\
             \ value (or leave it empty if run container from command line) to use\
             \ Microsoft native from example."
-          examples:
-          - "blob.core.windows.net"
-        azure_blob_storage_container_name:
-          title: "Azure blob storage container (Bucket) Name"
-          type: "string"
-          description: "The name of the Azure blob storage container. If not exists\
-            \ - will be created automatically. May be empty, then will be created\
-            \ automatically airbytecontainer+timestamp"
-          examples:
-          - "airbytetescontainername"
+          title: "Azure Blob Storage Endpoint Domain Name"
         azure_blob_storage_account_name:
-          title: "Azure Blob Storage account name"
           type: "string"
-          description: "The account's name of the Azure Blob Storage."
+          description: "The name of the Azure Blob Storage Account. Read more <a href=\"\
+            https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#storage-accounts\"\
+            >here</a>."
+          title: "Azure Blob Storage Account Name"
           examples:
-          - "airbyte5storage"
-        azure_blob_storage_account_key:
-          title: "Azure Blob Storage account key"
-          description: "The Azure blob storage account key."
-          airbyte_secret: true
+          - "mystorageaccount"
+        azure_blob_storage_container_name:
           type: "string"
+          description: "The name of the Azure Blob Storage Container. Read more <a\
+            \ href=\"https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#containers\"\
+            >here</a>."
+          title: "Azure Blob Storage Container Name"
+          examples:
+          - "mycontainer"
+        shared_access_signature:
+          type: "string"
+          description: "A shared access signature (SAS) provides secure delegated\
+            \ access to resources in your storage account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/common/storage-sas-overview?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json\"\
+            >here</a>. If you set this value, you must not set the account key."
+          title: "Shared Access Signature"
+          examples:
+          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+          airbyte_secret: true
+          always_show: true
+          x-speakeasy-param-sensitive: true
+        azure_blob_storage_account_key:
+          type: "string"
+          description: "The Azure blob storage account key. If you set this value,\
+            \ you must not set the Shared Access Signature."
+          title: "Azure Blob Storage account key"
           examples:
           - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
+          airbyte_secret: true
+          always_show: true
           x-speakeasy-param-sensitive: true
-        azure_blob_storage_output_buffer_size:
-          title: "Azure Blob Storage output buffer size (Megabytes)"
-          type: "integer"
-          description: "The amount of megabytes to buffer for the output stream to\
-            \ Azure. This will impact memory footprint on workers, but may need adjustment\
-            \ for performance and appropriate block size in Azure."
-          minimum: 1
-          maximum: 2047
-          default: 5
-          examples:
-          - 5
         azure_blob_storage_spill_size:
-          title: "Azure Blob Storage file spill size"
           type: "integer"
           description: "The amount of megabytes after which the connector should spill\
             \ the records in a new blob object. Make sure to configure size greater\
-            \ than individual records. Enter 0 if not applicable"
+            \ than individual records. Enter 0 if not applicable."
+          title: "Azure Blob Storage target blob size (Megabytes)"
           default: 500
-          examples:
-          - 500
         format:
-          title: "Output Format"
-          type: "object"
-          description: "Output data format"
           oneOf:
           - title: "CSV: Comma-Separated Values"
-            required:
-            - "format_type"
-            - "flattening"
+            type: "object"
+            additionalProperties: true
             properties:
               format_type:
                 type: "string"
-                const: "CSV"
                 enum:
                 - "CSV"
+                default: "CSV"
               flattening:
                 type: "string"
-                title: "Normalization (Flattening)"
-                description: "Whether the input json data should be normalized (flattened)\
-                  \ in the output CSV. Please refer to docs for details."
                 default: "No flattening"
                 enum:
                 - "No flattening"
                 - "Root level flattening"
-              file_extension:
-                title: "File Extension"
-                type: "boolean"
-                default: false
-                description: "Add file extensions to the output file."
-          - title: "JSON Lines: newline-delimited JSON"
+                title: "Flattening"
             required:
             - "format_type"
+            - "flattening"
+          - title: "JSON Lines: Newline-delimited JSON"
+            type: "object"
+            additionalProperties: true
             properties:
               format_type:
                 type: "string"
-                const: "JSONL"
                 enum:
                 - "JSONL"
-              file_extension:
-                title: "File Extension"
-                type: "boolean"
-                default: false
-                description: "Add file extensions to the output file."
+                default: "JSONL"
+              flattening:
+                type: "string"
+                default: "No flattening"
+                enum:
+                - "No flattening"
+                - "Root level flattening"
+                title: "Flattening"
+            required:
+            - "format_type"
+          description: "Format of the data output."
+          title: "Output Format"
+          type: "object"
         destinationType:
           title: "azure-blob-storage"
           const: "azure-blob-storage"
@@ -9584,107 +9607,109 @@ components:
           - "azure-blob-storage"
           order: 0
           type: "string"
-    destination-azure-blob-storage-update:
-      title: "AzureBlobStorage Destination Spec"
-      type: "object"
       required:
       - "azure_blob_storage_account_name"
-      - "azure_blob_storage_account_key"
+      - "azure_blob_storage_container_name"
       - "format"
+      - "destinationType"
+    destination-azure-blob-storage-update:
+      title: "Azure Blob Storage Destination Spec"
+      type: "object"
       properties:
         azure_blob_storage_endpoint_domain_name:
-          title: "Endpoint Domain Name"
           type: "string"
-          default: "blob.core.windows.net"
           description: "This is Azure Blob Storage endpoint domain name. Leave default\
             \ value (or leave it empty if run container from command line) to use\
             \ Microsoft native from example."
-          examples:
-          - "blob.core.windows.net"
-        azure_blob_storage_container_name:
-          title: "Azure blob storage container (Bucket) Name"
-          type: "string"
-          description: "The name of the Azure blob storage container. If not exists\
-            \ - will be created automatically. May be empty, then will be created\
-            \ automatically airbytecontainer+timestamp"
-          examples:
-          - "airbytetescontainername"
+          title: "Azure Blob Storage Endpoint Domain Name"
         azure_blob_storage_account_name:
-          title: "Azure Blob Storage account name"
           type: "string"
-          description: "The account's name of the Azure Blob Storage."
+          description: "The name of the Azure Blob Storage Account. Read more <a href=\"\
+            https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#storage-accounts\"\
+            >here</a>."
+          title: "Azure Blob Storage Account Name"
           examples:
-          - "airbyte5storage"
-        azure_blob_storage_account_key:
-          title: "Azure Blob Storage account key"
-          description: "The Azure blob storage account key."
-          airbyte_secret: true
+          - "mystorageaccount"
+        azure_blob_storage_container_name:
           type: "string"
+          description: "The name of the Azure Blob Storage Container. Read more <a\
+            \ href=\"https://learn.microsoft.com/en-gb/azure/storage/blobs/storage-blobs-introduction#containers\"\
+            >here</a>."
+          title: "Azure Blob Storage Container Name"
+          examples:
+          - "mycontainer"
+        shared_access_signature:
+          type: "string"
+          description: "A shared access signature (SAS) provides secure delegated\
+            \ access to resources in your storage account. Read more <a href=\"https://learn.microsoft.com/en-gb/azure/storage/common/storage-sas-overview?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json\"\
+            >here</a>. If you set this value, you must not set the account key."
+          title: "Shared Access Signature"
+          examples:
+          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+          airbyte_secret: true
+          always_show: true
+        azure_blob_storage_account_key:
+          type: "string"
+          description: "The Azure blob storage account key. If you set this value,\
+            \ you must not set the Shared Access Signature."
+          title: "Azure Blob Storage account key"
           examples:
           - "Z8ZkZpteggFx394vm+PJHnGTvdRncaYS+JhLKdj789YNmD+iyGTnG+PV+POiuYNhBg/ACS+LKjd%4FG3FHGN12Nd=="
-        azure_blob_storage_output_buffer_size:
-          title: "Azure Blob Storage output buffer size (Megabytes)"
-          type: "integer"
-          description: "The amount of megabytes to buffer for the output stream to\
-            \ Azure. This will impact memory footprint on workers, but may need adjustment\
-            \ for performance and appropriate block size in Azure."
-          minimum: 1
-          maximum: 2047
-          default: 5
-          examples:
-          - 5
+          airbyte_secret: true
+          always_show: true
         azure_blob_storage_spill_size:
-          title: "Azure Blob Storage file spill size"
           type: "integer"
           description: "The amount of megabytes after which the connector should spill\
             \ the records in a new blob object. Make sure to configure size greater\
-            \ than individual records. Enter 0 if not applicable"
+            \ than individual records. Enter 0 if not applicable."
+          title: "Azure Blob Storage target blob size (Megabytes)"
           default: 500
-          examples:
-          - 500
         format:
-          title: "Output Format"
-          type: "object"
-          description: "Output data format"
           oneOf:
           - title: "CSV: Comma-Separated Values"
-            required:
-            - "format_type"
-            - "flattening"
+            type: "object"
+            additionalProperties: true
             properties:
               format_type:
                 type: "string"
-                const: "CSV"
                 enum:
                 - "CSV"
+                default: "CSV"
               flattening:
                 type: "string"
-                title: "Normalization (Flattening)"
-                description: "Whether the input json data should be normalized (flattened)\
-                  \ in the output CSV. Please refer to docs for details."
                 default: "No flattening"
                 enum:
                 - "No flattening"
                 - "Root level flattening"
-              file_extension:
-                title: "File Extension"
-                type: "boolean"
-                default: false
-                description: "Add file extensions to the output file."
-          - title: "JSON Lines: newline-delimited JSON"
+                title: "Flattening"
             required:
             - "format_type"
+            - "flattening"
+          - title: "JSON Lines: Newline-delimited JSON"
+            type: "object"
+            additionalProperties: true
             properties:
               format_type:
                 type: "string"
-                const: "JSONL"
                 enum:
                 - "JSONL"
-              file_extension:
-                title: "File Extension"
-                type: "boolean"
-                default: false
-                description: "Add file extensions to the output file."
+                default: "JSONL"
+              flattening:
+                type: "string"
+                default: "No flattening"
+                enum:
+                - "No flattening"
+                - "Root level flattening"
+                title: "Flattening"
+            required:
+            - "format_type"
+          description: "Format of the data output."
+          title: "Output Format"
+          type: "object"
+      required:
+      - "azure_blob_storage_account_name"
+      - "azure_blob_storage_container_name"
+      - "format"
     destination-yellowbrick:
       title: "Yellowbrick Destination Spec"
       type: "object"

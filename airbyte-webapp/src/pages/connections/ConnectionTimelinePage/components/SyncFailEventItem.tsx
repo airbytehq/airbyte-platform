@@ -2,11 +2,12 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Box } from "components/ui/Box";
-import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 
 import { AISyncFailureDrawerTitle, AISyncFailureExplanation } from "area/connection/components";
+import { AISyncFailureExplanationButton } from "area/connection/components/AISyncFailureExplanationButton";
 import { JobFailureDetails } from "area/connection/components/JobHistoryItem/JobFailureDetails";
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useDrawerActions } from "core/services/ui/DrawerService";
 import { failureUiDetailsFromReason } from "core/utils/errorStatusMessage";
 import { useLocalStorage } from "core/utils/useLocalStorage";
@@ -30,7 +31,7 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
   const { formatMessage } = useIntl();
   const titleId = titleIdMap[event.eventType];
   const llmSyncFailureExperimentEnabled = useExperiment("platform.llm-sync-job-failure-explanation");
-
+  const analyticsService = useAnalyticsService();
   const failureUiDetails = failureUiDetailsFromReason(event.summary.failureReason, formatMessage);
   const jobStatus = getStatusByEventType(event.eventType);
 
@@ -38,6 +39,9 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
     if (!llmSyncFailureExperimentEnabled) {
       return;
     }
+    analyticsService.track(Namespace.CONNECTIONS, Action.SYNC_FAILURE_EXPLANATION_OPENED, {
+      jobId: event.summary.jobId,
+    });
     openDrawer({
       title: <AISyncFailureDrawerTitle />,
       content: (
@@ -64,9 +68,9 @@ export const SyncFailEventItem: React.FC<SyncFailEventItemProps> = ({ event }) =
         )}
         {llmSyncFailureExperimentEnabled && (
           <Box mt="md">
-            <Button onClick={showAIJobExplanation} icon="aiStars" variant="magic">
+            <AISyncFailureExplanationButton onClick={showAIJobExplanation}>
               <FormattedMessage id="connection.llmSyncFailureExplanation.explain" />
-            </Button>
+            </AISyncFailureExplanationButton>
           </Box>
         )}
       </ConnectionTimelineEventSummary>

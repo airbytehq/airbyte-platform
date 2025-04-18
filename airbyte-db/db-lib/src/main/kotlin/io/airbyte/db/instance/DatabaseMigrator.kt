@@ -20,7 +20,7 @@ interface DatabaseMigrator {
   /**
    * List migration information.
    */
-  fun list(): List<MigrationInfo>?
+  fun list(): List<MigrationInfo>
 
   /**
    * Get the latest migration information.

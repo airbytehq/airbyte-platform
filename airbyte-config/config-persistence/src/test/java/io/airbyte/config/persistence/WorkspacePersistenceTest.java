@@ -108,10 +108,10 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
             connectionTimelineEventService);
     final MetricClient metricClient = mock(MetricClient.class);
 
-    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
+    sourceService = spy(new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
-    destinationService = spy(new DestinationServiceJooqImpl(database, featureFlagClient, secretsRepositoryWriter,
-        secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient));
+    destinationService =
+        spy(new DestinationServiceJooqImpl(database, featureFlagClient, connectionService, actorDefinitionVersionUpdater, metricClient));
     workspacePersistence = new WorkspacePersistence(database);
     userPersistence = new UserPersistence(database);
     final OrganizationPersistence organizationPersistence = new OrganizationPersistence(database);

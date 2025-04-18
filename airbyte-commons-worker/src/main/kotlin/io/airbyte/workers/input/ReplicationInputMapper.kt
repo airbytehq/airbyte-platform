@@ -17,16 +17,7 @@ import jakarta.inject.Singleton
 @Singleton
 class ReplicationInputMapper {
   fun toReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput {
-    // TODO: Remove any introspection of connector configs. Determine whether to use 'file transfer' mode another way.
-    val sourceConfiguration: SourceActorConfig = Jsons.`object`(replicationActivityInput.sourceConfiguration, SourceActorConfig::class.java)
-    val useFileTransfer =
-      sourceConfiguration.useFileTransfer ||
-        (
-          sourceConfiguration.deliveryMethod != null &&
-            "use_file_transfer".equals(
-              sourceConfiguration.deliveryMethod.deliveryType,
-            )
-        )
+    val useFileTransfer = extractUseFileTransfer(replicationActivityInput)
 
     return ReplicationInput()
       .withNamespaceDefinition(replicationActivityInput.namespaceDefinition)
@@ -47,5 +38,25 @@ class ReplicationInputMapper {
       .withConnectionContext(replicationActivityInput.connectionContext)
       .withUseFileTransfer(useFileTransfer)
       .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
+  }
+
+  private fun extractUseFileTransfer(replicationActivityInput: ReplicationActivityInput): Boolean {
+    if (replicationActivityInput.includesFiles == true) {
+      return true
+    }
+
+    if (replicationActivityInput.sourceConfiguration == null) {
+      return false
+    }
+
+    // TODO: Delete this introspection of connector configs once new file + metadata flow rolled out.
+    val sourceConfiguration: SourceActorConfig = Jsons.`object`(replicationActivityInput.sourceConfiguration, SourceActorConfig::class.java)
+    return sourceConfiguration.useFileTransfer ||
+      (
+        sourceConfiguration.deliveryMethod != null &&
+          "use_file_transfer".equals(
+            sourceConfiguration.deliveryMethod.deliveryType,
+          )
+      )
   }
 }

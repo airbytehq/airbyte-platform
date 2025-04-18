@@ -19,6 +19,7 @@ import io.airbyte.api.model.generated.SourceRead;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem;
+import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.lang.Exceptions;
@@ -288,10 +289,11 @@ public class SourceDefinitionsHandler {
   public SourceDefinitionRead createCustomSourceDefinition(final CustomSourceDefinitionCreate customSourceDefinitionCreate) throws IOException {
     final UUID id = uuidSupplier.get();
     final SourceDefinitionCreate sourceDefinitionCreate = customSourceDefinitionCreate.getSourceDefinition();
+    final UUID workspaceId = resolveWorkspaceId(customSourceDefinitionCreate);
     final ActorDefinitionVersion actorDefinitionVersion =
         actorDefinitionHandlerHelper
             .defaultDefinitionVersionFromCreate(sourceDefinitionCreate.getDockerRepository(), sourceDefinitionCreate.getDockerImageTag(),
-                sourceDefinitionCreate.getDocumentationUrl(), customSourceDefinitionCreate.getWorkspaceId())
+                sourceDefinitionCreate.getDocumentationUrl(), workspaceId)
             .withActorDefinitionId(id);
 
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -313,6 +315,17 @@ public class SourceDefinitionsHandler {
     }
 
     return buildSourceDefinitionRead(sourceDefinition, actorDefinitionVersion);
+  }
+
+  private UUID resolveWorkspaceId(final CustomSourceDefinitionCreate customSourceDefinitionCreate) {
+    if (customSourceDefinitionCreate.getWorkspaceId() != null) {
+      return customSourceDefinitionCreate.getWorkspaceId();
+    }
+    if (ScopeType.fromValue(customSourceDefinitionCreate.getScopeType().toString()).equals(ScopeType.WORKSPACE)) {
+      return customSourceDefinitionCreate.getScopeId();
+    }
+    throw new UnprocessableEntityProblem(new ProblemMessageData()
+        .message(String.format("Cannot determine workspace ID for custom source definition creation: %s", customSourceDefinitionCreate)));
   }
 
   public SourceDefinitionRead updateSourceDefinition(final SourceDefinitionUpdate sourceDefinitionUpdate)

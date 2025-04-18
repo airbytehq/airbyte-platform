@@ -671,6 +671,7 @@ create index "permission_organization_id_idx" on "public"."permission"("organiza
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
+create index "scoped_configuration_origin_idx" on "public"."scoped_configuration"("origin" asc);
 create unique index "secret_reference_scope_type_scope_id_hydration_path_idx" on "public"."secret_reference"(
   "scope_type" asc,
   "scope_id" asc,

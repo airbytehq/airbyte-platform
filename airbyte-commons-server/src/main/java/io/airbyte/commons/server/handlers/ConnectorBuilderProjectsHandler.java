@@ -734,9 +734,9 @@ public class ConnectorBuilderProjectsHandler {
 
     final var secretPersistence = secretPersistenceConfig.map(c -> new RuntimeSecretPersistence(c, metricClient)).orElse(null);
     if (existingTestingValues.isPresent()) {
-      return secretsRepositoryWriter.updateFromConfig(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
+      return secretsRepositoryWriter.updateFromConfigLegacy(workspaceId, existingTestingValues.get(), updatedTestingValues, spec, secretPersistence);
     }
-    return secretsRepositoryWriter.createFromConfig(workspaceId, updatedTestingValues, spec, secretPersistence);
+    return secretsRepositoryWriter.createFromConfigLegacy(workspaceId, updatedTestingValues, spec, secretPersistence);
   }
 
   private Optional<SecretPersistenceConfig> getSecretPersistenceConfig(final UUID workspaceId) throws IOException, ConfigNotFoundException {

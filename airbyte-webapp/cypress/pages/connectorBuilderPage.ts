@@ -145,7 +145,7 @@ export const getUrlPathInput = () => {
 
 export const enterUrlPath = (urlPath: string) => {
   focusAndType(streamUrlPathFromForm, "{selectAll}{backspace}");
-  cy.get(streamUrlPathFromForm).type(urlPath);
+  focusAndType(streamUrlPathFromForm, urlPath);
 };
 
 export const submitForm = () => {

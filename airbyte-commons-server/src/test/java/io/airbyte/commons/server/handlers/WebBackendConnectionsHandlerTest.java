@@ -90,6 +90,7 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.commons.temporal.ManualOperationResult;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -116,19 +117,17 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.protocol.models.Field;
@@ -186,14 +185,12 @@ class WebBackendConnectionsHandlerTest {
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private DestinationCatalogGenerator destinationCatalogGenerator;
   private LicenseEntitlementChecker licenseEntitlementChecker;
-  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
   private final FieldGenerator fieldGenerator = new FieldGenerator();
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private CatalogConfigDiffHelper catalogConfigDiffHelper;
-  private MetricClient metricClient;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -222,7 +219,6 @@ class WebBackendConnectionsHandlerTest {
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     catalogConfigDiffHelper = mock(CatalogConfigDiffHelper.class);
-    metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
@@ -234,8 +230,10 @@ class WebBackendConnectionsHandlerTest {
 
     final SecretsRepositoryReader secretsRepositoryReader = mock(SecretsRepositoryReader.class);
     final SourceService sourceService = mock(SourceService.class);
-    final SecretPersistenceConfigService secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    final SecretPersistenceService secretPersistenceService = mock(SecretPersistenceService.class);
     final SecretsRepositoryWriter secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    final SecretStorageService secretStorageService = mock(SecretStorageService.class);
+    final CurrentUserService currentUserService = mock(CurrentUserService.class);
 
     // Always mock the secretReferenceService to return the passed in config for both source and
     // destination
@@ -260,11 +258,11 @@ class WebBackendConnectionsHandlerTest {
         workspaceHelper,
         licenseEntitlementChecker,
         Configs.AirbyteEdition.COMMUNITY,
-        featureFlagClient,
         secretsRepositoryWriter,
-        metricClient,
-        secretPersistenceConfigService,
-        secretReferenceService);
+        secretPersistenceService,
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
 
     sourceHandler = new SourceHandler(
         catalogService,
@@ -276,20 +274,19 @@ class WebBackendConnectionsHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
-        featureFlagClient,
         sourceService,
-        workspaceService,
         workspaceHelper,
-        secretPersistenceConfigService,
+        secretPersistenceService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
         catalogConverter,
         apiPojoConverters,
-        metricClient,
         Configs.AirbyteEdition.COMMUNITY,
         secretsRepositoryWriter,
-        secretReferenceService);
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,

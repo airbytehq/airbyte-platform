@@ -18,14 +18,16 @@ import jakarta.inject.Singleton
 import org.reactivestreams.Publisher
 import reactor.core.publisher.Flux
 
-val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 @Singleton
 class IntentSecurityRule : SecurityRule<HttpRequest<*>> {
-  override fun getOrder(): Int {
+  companion object {
     // We want this rule to run before the @Secured annotation
-    return SecuredAnnotationRule.ORDER - 100
+    val ORDER = SecuredAnnotationRule.ORDER - 100
   }
+
+  override fun getOrder() = ORDER
 
   override fun check(
     request: HttpRequest<*>,

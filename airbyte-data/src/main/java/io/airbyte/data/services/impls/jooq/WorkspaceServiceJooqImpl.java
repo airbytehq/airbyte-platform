@@ -752,17 +752,18 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
 
       final JsonNode partialConfig;
       if (previousWebhookConfigs.isPresent()) {
-        partialConfig = secretsRepositoryWriter.updateFromConfig(
+        partialConfig = secretsRepositoryWriter.updateFromConfigLegacy(
             workspace.getWorkspaceId(),
             previousWebhookConfigs.get(),
             workspace.getWebhookOperationConfigs(),
             webhookConfigSchema,
             secretPersistence);
       } else {
-        partialConfig = secretsRepositoryWriter.createFromConfig(
+        partialConfig = secretsRepositoryWriter.createFromConfigLegacy(
             workspace.getWorkspaceId(),
             workspace.getWebhookOperationConfigs(),
-            webhookConfigSchema, secretPersistence);
+            webhookConfigSchema,
+            secretPersistence);
       }
       partialWorkspace.withWebhookOperationConfigs(partialConfig);
     }
@@ -782,13 +783,13 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @VisibleForTesting
   UUID getDataplaneGroupIdFromGeography(UUID organizationId, String geography) {
     try {
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(organizationId, geography).getId();
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(organizationId, geography).getId();
     } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
       log.error(
           String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
               organizationId, geography),
           e);
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndGeography(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
+      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
           .getId();
     }
   }

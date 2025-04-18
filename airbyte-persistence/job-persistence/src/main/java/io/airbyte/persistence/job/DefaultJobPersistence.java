@@ -1205,16 +1205,16 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getLastReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
-            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + "jobs.status <> CAST(? AS job_status) "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   /**
@@ -1225,35 +1225,30 @@ public class DefaultJobPersistence implements JobPersistence {
    * @return the last job for the connection including the cancelled jobs
    */
   @Override
-  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId, final boolean withScheduledOnly) throws IOException {
-    final String startOfTheQuery = BASE_JOB_SELECT_AND_JOIN + WHERE
-        + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
-        + SCOPE_WITHOUT_AND_CLAUSE;
-
-    final String endOfTheQuery = withScheduledOnly ? AND + "is_scheduled = true "
-        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1
-        : ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
-
-    final String query = startOfTheQuery + endOfTheQuery;
+  public Optional<Job> getLastReplicationJobWithCancel(final UUID connectionId) throws IOException {
+    final String query = "SELECT id FROM jobs "
+        + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        + SCOPE_WITHOUT_AND_CLAUSE + AND + "is_scheduled = true "
+        + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1;
 
     return jobDatabase.query(ctx -> ctx
         .fetch(query, connectionId.toString())
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   @Override
   public Optional<Job> getLastSyncJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES) + AND
-            + "scope = ? "
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type IN " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+            + "AND scope = ? "
             + ORDER_BY_JOB_CREATED_AT_DESC + LIMIT_1,
             connectionId.toString())
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   /**
@@ -1269,7 +1264,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return jobDatabase.query(ctx -> ctx
         .fetch("SELECT DISTINCT ON (scope) jobs.scope, jobs.created_at, jobs.status "
             + " FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+            + WHERE + "jobs.config_type IN " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + "ORDER BY scope, created_at DESC")
         .stream()
@@ -1289,8 +1284,8 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     return jobDatabase.query(ctx -> ctx
-        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
+        .fetch("SELECT DISTINCT ON (scope) id FROM jobs "
+            + WHERE + "jobs.config_type in " + toSqlInFragment(Job.SYNC_REPLICATION_TYPES)
             + AND + scopeInList(connectionIds)
             + AND + JOB_STATUS_IS_NON_TERMINAL
             + "ORDER BY scope, created_at DESC")
@@ -1307,8 +1302,8 @@ public class DefaultJobPersistence implements JobPersistence {
   public List<Job> getRunningJobForConnection(final UUID connectionId) throws IOException {
 
     return jobDatabase.query(ctx -> ctx
-        .fetch("SELECT DISTINCT ON (scope) * FROM jobs "
-            + WHERE + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES)
+        .fetch("SELECT DISTINCT ON (scope) id FROM jobs "
+            + WHERE + "jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES)
             + AND + "jobs.scope = '" + connectionId + "'"
             + AND + JOB_STATUS_IS_NON_TERMINAL
             + "ORDER BY scope, created_at DESC LIMIT 1")
@@ -1328,16 +1323,16 @@ public class DefaultJobPersistence implements JobPersistence {
   @Override
   public Optional<Job> getFirstReplicationJob(final UUID connectionId) throws IOException {
     return jobDatabase.query(ctx -> ctx
-        .fetch(BASE_JOB_SELECT_AND_JOIN + WHERE
-            + "CAST(jobs.config_type AS VARCHAR) in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
+        .fetch("SELECT id FROM jobs "
+            + "WHERE jobs.config_type in " + toSqlInFragment(Job.REPLICATION_TYPES) + AND
             + SCOPE_CLAUSE
-            + "CAST(jobs.status AS VARCHAR) <> ? "
+            + "jobs.status <> CAST(? AS job_status) "
             + "ORDER BY jobs.created_at ASC LIMIT 1",
             connectionId.toString(),
             toSqlName(JobStatus.CANCELLED))
         .stream()
         .findFirst()
-        .flatMap(r -> getJobOptional(ctx, r.get(JOB_ID, Long.class))));
+        .flatMap(r -> getJobOptional(ctx, r.get("id", Long.class))));
   }
 
   @VisibleForTesting

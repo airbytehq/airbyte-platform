@@ -173,8 +173,8 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     return [...topSection, ...bottomSection];
   }, [tagsSelectedOnOpen, filteredTags]);
 
-  const tagDoesNotExist = useMemo(
-    () => deferredQueryValue.trim().length > 0 && !availableTags.some((tag) => tag.name === deferredQueryValue.trim()),
+  const tagAlreadyExists = useMemo(
+    () => deferredQueryValue.trim().length > 0 && availableTags.some((tag) => tag.name === deferredQueryValue.trim()),
     [availableTags, deferredQueryValue]
   );
 
@@ -185,6 +185,10 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   });
 
   const handleCreateTag = async (deferredQueryValue: string, color: string) => {
+    if (disabled || createTagLoading || tagAlreadyExists) {
+      return;
+    }
+
     setCreateTagLoading(true);
     try {
       await createTag(deferredQueryValue, color);
@@ -208,13 +212,6 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
     }
   };
 
-  const handleSearchFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (tagDoesNotExist && (!disabled || createTagLoading)) {
-      handleCreateTag(deferredQueryValue, color);
-    }
-  };
-
   return (
     <Popover ref={targetRef}>
       {() => {
@@ -234,14 +231,15 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
               }}
               className={styles.selectConnectionTags}
             >
-              <SearchOrCreateInputForm
+              <SearchOrCreateInput
                 disabled={disabled || createTagLoading}
                 onChange={handleQueryChange}
-                onSubmit={handleSearchFormSubmit}
+                onPressEnter={() => handleCreateTag(deferredQueryValue, color)}
                 value={deferredQueryValue}
                 hasTags={availableTags.length > 0}
               />
-              {tagDoesNotExist &&
+              {deferredQueryValue.trim().length > 0 &&
+                !tagAlreadyExists &&
                 (!tagLimitReached ? (
                   <CreateTagControl
                     createTagLoading={createTagLoading}
@@ -301,18 +299,18 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
   );
 };
 
-interface SearchOrCreateInputFormProps {
+interface SearchOrCreateInputProps {
   disabled?: boolean;
   hasTags: boolean;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+  onPressEnter: () => void;
 }
 
-const SearchOrCreateInputForm: React.FC<SearchOrCreateInputFormProps> = ({
+const SearchOrCreateInput: React.FC<SearchOrCreateInputProps> = ({
   disabled,
   onChange,
-  onSubmit,
+  onPressEnter,
   value,
   hasTags,
 }) => {
@@ -326,22 +324,28 @@ const SearchOrCreateInputForm: React.FC<SearchOrCreateInputFormProps> = ({
     ref.current?.focus({ preventScroll: true });
   }, []);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onPressEnter();
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit}>
-      <Input
-        inline
-        ref={ref}
-        disabled={disabled}
-        value={value}
-        onChange={onChange}
-        containerClassName={styles.selectConnectionTags__input}
-        placeholder={formatMessage(
-          {
-            id: "connection.tags.selectOrCreateTag",
-          },
-          { hasTags }
-        )}
-      />
-    </form>
+    <Input
+      inline
+      ref={ref}
+      disabled={disabled}
+      value={value}
+      onChange={onChange}
+      onKeyDown={handleKeyDown}
+      containerClassName={styles.selectConnectionTags__input}
+      placeholder={formatMessage(
+        {
+          id: "connection.tags.selectOrCreateTag",
+        },
+        { hasTags }
+      )}
+    />
   );
 };

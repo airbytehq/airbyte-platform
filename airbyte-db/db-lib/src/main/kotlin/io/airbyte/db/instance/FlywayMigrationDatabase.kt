@@ -67,7 +67,6 @@ abstract class FlywayMigrationDatabase : PostgresDatabase() {
       }
     }
 
-  @Throws(Exception::class)
   private fun createInternalConnection(): Connection? {
     val dockerImage = properties.getProperty("dockerImage")?.takeIf { it.isNotBlank() } ?: DatabaseConstants.DEFAULT_DATABASE_VERSION
 

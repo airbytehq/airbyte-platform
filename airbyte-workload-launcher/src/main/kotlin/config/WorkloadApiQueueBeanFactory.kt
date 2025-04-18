@@ -10,7 +10,6 @@ import io.airbyte.workload.api.client.model.generated.WorkloadPriority
 import io.airbyte.workload.launcher.client.WorkloadApiClient
 import io.airbyte.workload.launcher.pipeline.consumer.WorkloadApiQueuePoller
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -25,7 +24,6 @@ class WorkloadApiQueueBeanFactory {
     featureFlagClient: FeatureFlagClient,
     @Value("\${airbyte.workload-launcher.consumer.high-priority-queue.poll-size-items}") pollSizeItems: Int,
     @Value("\${airbyte.workload-launcher.consumer.high-priority-queue.poll-interval-seconds}") pollIntervalSeconds: Long,
-    @Property(name = "airbyte.data-plane-name") dataPlaneName: String,
   ): WorkloadApiQueuePoller =
     WorkloadApiQueuePoller(
       workloadApiClient,
@@ -34,7 +32,6 @@ class WorkloadApiQueueBeanFactory {
       pollSizeItems,
       pollIntervalSeconds,
       WorkloadPriority.HIGH,
-      dataPlaneName,
     )
 
   @Singleton
@@ -45,7 +42,6 @@ class WorkloadApiQueueBeanFactory {
     featureFlagClient: FeatureFlagClient,
     @Value("\${airbyte.workload-launcher.consumer.default-queue.poll-size-items}") pollSizeItems: Int,
     @Value("\${airbyte.workload-launcher.consumer.default-queue.poll-interval-seconds}") pollIntervalSeconds: Long,
-    @Property(name = "airbyte.data-plane-name") dataPlaneName: String,
   ): WorkloadApiQueuePoller =
     WorkloadApiQueuePoller(
       workloadApiClient,
@@ -54,6 +50,5 @@ class WorkloadApiQueueBeanFactory {
       pollSizeItems,
       pollIntervalSeconds,
       WorkloadPriority.DEFAULT,
-      dataPlaneName,
     )
 }

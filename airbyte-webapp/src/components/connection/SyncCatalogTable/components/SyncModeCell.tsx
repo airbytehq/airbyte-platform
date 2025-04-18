@@ -5,6 +5,7 @@ import { useGetDestinationDefinitionSpecification } from "core/api";
 import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { SyncModeButton } from "./SyncModeButton";
 import { SUPPORTED_MODES, SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
@@ -23,6 +24,7 @@ interface SyncModeCellProps {
 
 export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamField }) => {
   const analyticsService = useAnalyticsService();
+  const allowToSupportAllSyncModes = useExperiment("connection.allowToSupportAllSyncModes");
   const { connection, mode } = useConnectionFormService();
   const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
     connection.destination.destinationId
@@ -50,13 +52,17 @@ export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamFie
     });
   };
 
-  const availableSyncModes: SyncModeValue[] = SUPPORTED_MODES.filter(
-    ([syncMode, destinationSyncMode]) =>
-      stream?.supportedSyncModes?.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode)
-  ).map(([syncMode, destinationSyncMode]) => ({
-    syncMode,
-    destinationSyncMode,
-  }));
+  const getSupportedSyncModes = ([syncMode, destinationSyncMode]: [SyncMode, DestinationSyncMode]) =>
+    allowToSupportAllSyncModes
+      ? true
+      : stream?.supportedSyncModes?.includes(syncMode) && supportedDestinationSyncModes?.includes(destinationSyncMode);
+
+  const availableSyncModes: SyncModeValue[] = SUPPORTED_MODES.filter(getSupportedSyncModes).map(
+    ([syncMode, destinationSyncMode]) => ({
+      syncMode,
+      destinationSyncMode,
+    })
+  );
 
   const syncSchema = config?.syncMode &&
     config?.destinationSyncMode && {

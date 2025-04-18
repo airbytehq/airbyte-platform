@@ -41,12 +41,12 @@ class DataplaneInitializer(
     val group =
       when (edition) {
         AirbyteEdition.CLOUD ->
-          groupService.getDataplaneGroupByOrganizationIdAndGeography(
+          groupService.getDataplaneGroupByOrganizationIdAndName(
             DEFAULT_ORGANIZATION_ID,
             GEOGRAPHY_US,
           )
         else -> {
-          val groups = groupService.listDataplaneGroups(DEFAULT_ORGANIZATION_ID, false)
+          val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
           when {
             groups.size > 1 -> {
               log.info { "Skipping dataplane creation because multiple dataplane groups exist." }

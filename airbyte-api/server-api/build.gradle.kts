@@ -46,6 +46,7 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.swagger.annotations)
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
 
   compileOnly(libs.v3.swagger.annotations)
 

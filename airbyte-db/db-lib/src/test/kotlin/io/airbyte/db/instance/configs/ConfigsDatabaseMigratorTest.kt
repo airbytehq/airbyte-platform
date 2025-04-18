@@ -32,11 +32,11 @@ internal class ConfigsDatabaseMigratorTest : AbstractConfigsDatabaseTest() {
     migrator.migrate()
 
     val schema = migrator.dumpSchema()
-    dumpSchema(schema!!, schemaDumpFile.absolutePath, false)
+    dumpSchema(schema, schemaDumpFile.absolutePath, false)
 
     val dumpedSchema = Files.readString(schemaDumpFile.toPath())
 
     Assertions.assertTrue(schemaDumpFile.exists())
-    Assertions.assertEquals(schema.trim { it <= ' ' }, dumpedSchema.trim { it <= ' ' })
+    Assertions.assertEquals(schema.trim(), dumpedSchema.trim())
   }
 }

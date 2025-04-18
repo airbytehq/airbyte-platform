@@ -57,27 +57,28 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
   }
 
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
-  ModelConnectorRollout()
-    .withId(this.id)
-    .withWorkflowRunId(this.workflowRunId)
-    .withActorDefinitionId(this.actorDefinitionId)
-    .withReleaseCandidateVersionId(this.releaseCandidateVersionId)
-    .withInitialVersionId(this.initialVersionId)
-    .withState(this.state.toConfigModel())
-    .withInitialRolloutPct(this.initialRolloutPct?.toLong())
-    .withCurrentTargetRolloutPct(this.currentTargetRolloutPct?.toLong())
-    .withFinalTargetRolloutPct(this.finalTargetRolloutPct?.toLong())
-    .withHasBreakingChanges(this.hasBreakingChanges)
-    .withRolloutStrategy(this.rolloutStrategy?.toConfigModel())
-    .withMaxStepWaitTimeMins(this.maxStepWaitTimeMins?.toLong())
-    .withUpdatedBy(this.updatedBy)
-    .withCreatedAt(this.createdAt?.toEpochSecond())
-    .withUpdatedAt(this.updatedAt?.toEpochSecond())
-    .withCompletedAt(this.completedAt?.toEpochSecond())
-    .withExpiresAt(this.expiresAt?.toEpochSecond())
-    .withErrorMsg(this.errorMsg)
-    .withFailedReason(this.failedReason)
-    .withPausedReason(this.pausedReason)
+  ModelConnectorRollout(
+    id = this.id,
+    workflowRunId = this.workflowRunId,
+    actorDefinitionId = this.actorDefinitionId,
+    releaseCandidateVersionId = this.releaseCandidateVersionId,
+    initialVersionId = this.initialVersionId,
+    state = this.state.toConfigModel(),
+    initialRolloutPct = this.initialRolloutPct,
+    currentTargetRolloutPct = this.currentTargetRolloutPct,
+    finalTargetRolloutPct = this.finalTargetRolloutPct,
+    hasBreakingChanges = this.hasBreakingChanges,
+    rolloutStrategy = this.rolloutStrategy?.toConfigModel(),
+    maxStepWaitTimeMins = this.maxStepWaitTimeMins,
+    updatedBy = this.updatedBy,
+    createdAt = this.createdAt!!.toEpochSecond(),
+    updatedAt = this.updatedAt!!.toEpochSecond(),
+    completedAt = this.completedAt?.toEpochSecond(),
+    expiresAt = this.expiresAt?.toEpochSecond(),
+    errorMsg = this.errorMsg,
+    failedReason = this.failedReason,
+    pausedReason = this.pausedReason,
+  )
 
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
   EntityConnectorRollout(
@@ -87,12 +88,12 @@ fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
     releaseCandidateVersionId = this.releaseCandidateVersionId,
     initialVersionId = this.initialVersionId,
     state = this.state.toEntity(),
-    initialRolloutPct = this.initialRolloutPct?.toInt(),
-    currentTargetRolloutPct = this.currentTargetRolloutPct?.toInt(),
-    finalTargetRolloutPct = this.finalTargetRolloutPct?.toInt(),
+    initialRolloutPct = this.initialRolloutPct,
+    currentTargetRolloutPct = this.currentTargetRolloutPct,
+    finalTargetRolloutPct = this.finalTargetRolloutPct,
     hasBreakingChanges = this.hasBreakingChanges,
     rolloutStrategy = this.rolloutStrategy?.toEntity(),
-    maxStepWaitTimeMins = this.maxStepWaitTimeMins?.toInt(),
+    maxStepWaitTimeMins = this.maxStepWaitTimeMins,
     updatedBy = this.updatedBy,
     createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
