@@ -17,7 +17,6 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -31,8 +30,7 @@ import reactor.core.publisher.Mono
 open class LaunchPodStage(
   private val launcher: KubePodClient,
   metricClient: MetricClient,
-  @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(metricClient) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "LaunchPodStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

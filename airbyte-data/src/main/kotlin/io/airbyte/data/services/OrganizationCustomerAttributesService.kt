@@ -4,13 +4,8 @@
 
 package io.airbyte.data.services
 
+import io.airbyte.config.CustomerTier
 import java.util.UUID
-
-enum class CustomerTier {
-  TIER_0,
-  TIER_1,
-  TIER_2,
-}
 
 /**
  * A service that reads organization tier information from GCS.

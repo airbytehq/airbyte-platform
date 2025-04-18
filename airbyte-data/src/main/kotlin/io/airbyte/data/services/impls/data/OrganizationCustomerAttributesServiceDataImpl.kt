@@ -8,8 +8,8 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.cloud.storage.Blob
 import com.google.cloud.storage.Storage
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.config.CustomerTier
 import io.airbyte.data.config.OrganizationCustomerAttributesServiceConfig
-import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.OrganizationCustomerAttributesService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.annotation.Cacheable

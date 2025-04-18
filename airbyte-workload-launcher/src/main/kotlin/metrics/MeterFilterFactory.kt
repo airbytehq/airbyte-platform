@@ -8,7 +8,6 @@ import io.airbyte.metrics.lib.MetricTags
 import io.micrometer.core.instrument.Tag
 import io.micrometer.core.instrument.config.MeterFilter
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -17,17 +16,15 @@ class MeterFilterFactory {
   @Singleton
   @Named("dataplaneMeterFilter")
   @io.micronaut.configuration.metrics.annotation.RequiresMetrics
-  fun addCommonTagFilter(
-    @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-  ): MeterFilter {
-    // Add all the common application-specific tags
-    val commonTags =
+  fun addCommonTagFilter(): MeterFilter =
+    MeterFilter.commonTags(
       mutableListOf(
-        Tag.of(MetricTags.DATA_PLANE_ID_TAG, dataplaneId),
-      )
-
-    return MeterFilter.commonTags(commonTags)
-  }
+        Tag.of(MetricTags.DATA_PLANE_ID_TAG, UNDEFINED),
+        Tag.of(MetricTags.DATA_PLANE_NAME_TAG, UNDEFINED),
+        Tag.of(MetricTags.DATA_PLANE_GROUP_TAG, UNDEFINED),
+        Tag.of(MetricTags.DATA_PLANE_GROUP_NAME_TAG, UNDEFINED),
+      ),
+    )
 
   companion object {
     const val LAUNCH_PIPELINE_OPERATION_NAME = "launch-pipeline"
@@ -39,5 +36,6 @@ class MeterFilterFactory {
     const val FAILURE_STATUS = "error"
     const val RUNNING_STATUS = "running"
     const val STOPPED_STATUS = "stopped"
+    const val UNDEFINED = "undefined"
   }
 }

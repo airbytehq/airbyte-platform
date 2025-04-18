@@ -45,6 +45,10 @@ class ReplicationInputMapper {
       return true
     }
 
+    if (replicationActivityInput.sourceConfiguration == null) {
+      return false
+    }
+
     // TODO: Delete this introspection of connector configs once new file + metadata flow rolled out.
     val sourceConfiguration: SourceActorConfig = Jsons.`object`(replicationActivityInput.sourceConfiguration, SourceActorConfig::class.java)
     return sourceConfiguration.useFileTransfer ||

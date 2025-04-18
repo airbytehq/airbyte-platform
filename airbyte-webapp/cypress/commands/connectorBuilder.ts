@@ -176,6 +176,16 @@ export const acceptSchema = () => {
 };
 
 export const focusAndType = (selector: string, text: string) => {
-  cy.get(selector).click();
-  cy.get(selector).type(text);
+  cy.get(selector).then(($el) => {
+    const tagName = $el.prop("tagName").toLowerCase();
+    // Monaco editors wrap their typeable textarea in a section element
+    // so we need to focus the textarea instead of the section
+    if (tagName === "section") {
+      cy.get(`${selector} textarea`).click();
+      cy.get(`${selector} textarea`).type(text);
+    } else {
+      cy.wrap($el).click();
+      cy.wrap($el).type(text);
+    }
+  });
 };

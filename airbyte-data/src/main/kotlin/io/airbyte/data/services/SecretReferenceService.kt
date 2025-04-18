@@ -36,4 +36,9 @@ interface SecretReferenceService {
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): List<SecretReferenceWithConfig>
+
+  fun listWithConfigByScopeTypeAndScopeIds(
+    scopeType: SecretReferenceScopeType,
+    scopeIds: List<UUID>,
+  ): List<SecretReferenceWithConfig>
 }

@@ -5,6 +5,7 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.SecretStorageApi
+import io.airbyte.api.model.generated.MigrateSecretStorageRequestBody
 import io.airbyte.api.model.generated.SecretStorageIdRequestBody
 import io.airbyte.api.model.generated.SecretStorageRead
 import io.airbyte.commons.auth.generated.Intent
@@ -13,6 +14,7 @@ import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
+import io.airbyte.domain.services.secrets.SecretMigrationService
 import io.airbyte.domain.services.secrets.SecretStorageService
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -22,6 +24,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 @ExecuteOn(AirbyteTaskExecutors.IO)
 class SecretStorageApiController(
   private val secretStorageService: SecretStorageService,
+  private val secretMigrationService: SecretMigrationService,
 ) : SecretStorageApi {
   @RequiresIntent(Intent.ManageSecretStorages)
   override fun getSecretStorage(
@@ -29,6 +32,21 @@ class SecretStorageApiController(
   ): SecretStorageRead {
     val secretStorage = secretStorageService.getById(SecretStorageId(secretStorageIdRequestBody.secretStorageId))
     return secretStorageService.hydrateStorageConfig(secretStorage).toApiModel()
+  }
+
+  @RequiresIntent(Intent.ManageSecretStorages)
+  override fun migrateSecretStorage(
+    @Body migrateSecretStorageRequestBody: MigrateSecretStorageRequestBody,
+  ) {
+    secretMigrationService.migrateSecrets(
+      SecretStorageId(migrateSecretStorageRequestBody.fromSecretStorageId),
+      SecretStorageId(migrateSecretStorageRequestBody.toSecretStorageId),
+      when (migrateSecretStorageRequestBody.scopeType) {
+        io.airbyte.api.model.generated.ScopeType.ORGANIZATION -> io.airbyte.config.ScopeType.ORGANIZATION
+        io.airbyte.api.model.generated.ScopeType.WORKSPACE -> io.airbyte.config.ScopeType.WORKSPACE
+      },
+      migrateSecretStorageRequestBody.scopeId,
+    )
   }
 }
 
