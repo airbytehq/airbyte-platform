@@ -33,6 +33,11 @@ interface SecretsHydrator {
    */
   fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode
 
+  fun hydrateSecretCoordinate(
+    secretCoordinate: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): JsonNode
+
   @Deprecated(
     "Use hydrate instead",
     ReplaceWith("hydrate(partialConfig, runtimeSecretPersistence)", "io.airbyte.config.secrets.hydration.SecretsHydrator"),

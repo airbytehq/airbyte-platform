@@ -26,7 +26,6 @@ import io.airbyte.workload.launcher.pipeline.stages.model.LaunchStageIO
 import io.airbyte.workload.launcher.pipeline.stages.model.SpecPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pipeline.stages.model.WorkloadPayload
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import reactor.core.publisher.Mono
@@ -42,8 +41,7 @@ open class BuildInputStage(
   private val deserializer: PayloadDeserializer,
   metricClient: MetricClient,
   private val ffCtxMapper: InputFeatureFlagContextMapper,
-  @Value("\${airbyte.data-plane-id}") dataplaneId: String,
-) : LaunchStage(metricClient, dataplaneId) {
+) : LaunchStage(metricClient) {
   @Trace(operationName = MeterFilterFactory.LAUNCH_PIPELINE_STAGE_OPERATION_NAME, resourceName = "BuildInputStage")
   @Instrument(
     start = "WORKLOAD_STAGE_START",

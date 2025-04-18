@@ -10,6 +10,7 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorRollout
+import io.airbyte.config.CustomerTier
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
@@ -18,7 +19,6 @@ import io.airbyte.config.StandardSync
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
-import io.airbyte.data.services.CustomerTier
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.JobService
 import io.airbyte.data.services.OrganizationCustomerAttributesService

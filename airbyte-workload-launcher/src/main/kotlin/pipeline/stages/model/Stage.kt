@@ -26,19 +26,20 @@ private val logger = KotlinLogging.logger {}
 
 abstract class Stage<T : StageIO>(
   protected val metricClient: MetricClient,
-  protected val dataplaneId: String,
 ) : StageFunction<T> {
   override fun apply(input: T): Mono<T> {
+    val detailedInfo = "(workloadId=${input.msg.workloadId})"
+
     withLoggingContext(input.logCtx) {
       if (skipStage(input)) {
-        logger.info { "SKIP Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId}) — (dataplaneId = $dataplaneId)" }
+        logger.info { "SKIP Stage: ${getStageName()} — $detailedInfo" }
         return input.toMono()
       }
 
       val startTime = TimeSource.Monotonic.markNow()
       var success = true
 
-      logger.info { "APPLY Stage: ${getStageName()} — (workloadId = ${input.msg.workloadId}) — (dataplaneId = $dataplaneId)" }
+      logger.info { "APPLY Stage: ${getStageName()} — $detailedInfo" }
 
       return try {
         applyStage(input).toMono()
@@ -72,8 +73,7 @@ abstract class Stage<T : StageIO>(
 
 abstract class LaunchStage(
   metricClient: MetricClient,
-  dataplaneId: String,
-) : Stage<LaunchStageIO>(metricClient, dataplaneId) {
+) : Stage<LaunchStageIO>(metricClient) {
   override fun skipStage(input: StageIO): Boolean = input !is LaunchStageIO || input.skip
 
   override fun getMetricAttrs(input: LaunchStageIO): List<MetricAttribute> =

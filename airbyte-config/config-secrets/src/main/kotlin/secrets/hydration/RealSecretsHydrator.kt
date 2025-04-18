@@ -33,6 +33,11 @@ class RealSecretsHydrator(
   override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode =
     SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, defaultSecretPersistence)
 
+  override fun hydrateSecretCoordinate(
+    secretCoordinate: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): JsonNode = SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence)
+
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,

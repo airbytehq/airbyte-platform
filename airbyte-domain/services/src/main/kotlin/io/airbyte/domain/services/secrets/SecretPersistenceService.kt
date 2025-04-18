@@ -51,7 +51,7 @@ class SecretPersistenceService(
   private val featureFlagClient: FeatureFlagClient,
   private val organizationService: OrganizationService,
 ) {
-  private fun getPersistenceByStorageId(secretStorageId: SecretStorageId): SecretPersistence {
+  fun getPersistenceByStorageId(secretStorageId: SecretStorageId): SecretPersistence {
     val secretStorage = secretStorageService.getById(secretStorageId)
     val secretStorageConfig = secretStorageService.hydrateStorageConfig(secretStorage).config
     val secretPersistenceConfig =
