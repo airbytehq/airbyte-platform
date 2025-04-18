@@ -10550,10 +10550,6 @@ components:
       required:
         - manifest
       properties:
-        formGeneratedManifest:
-          type: boolean
-          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
-          default: false
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:

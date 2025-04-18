@@ -544,7 +544,6 @@ public class ConnectorBuilderProjectsHandler {
     final FullResolveManifestRequestBody fullResolveManifestRequestBody =
         new FullResolveManifestRequestBody(existingHydratedTestingValues,
             requestBody.getManifest(),
-            requestBody.getFormGeneratedManifest(),
             requestBody.getStreamLimit(),
             requestBody.getBuilderProjectId().toString(),
             requestBody.getWorkspaceId().toString());
