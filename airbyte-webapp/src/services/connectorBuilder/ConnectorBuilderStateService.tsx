@@ -42,6 +42,7 @@ import {
   useBuilderProject,
   useBuilderProjectReadStream,
   useBuilderResolvedManifest,
+  useBuilderProjectFullResolveManifest,
   useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
   usePublishBuilderProject,
@@ -161,6 +162,7 @@ export interface TestReadContext {
   queueStreamRead: () => void;
   cancelStreamRead: () => void;
   testStreamRequestType: "sync" | "async";
+  generateStreams: () => void;
 }
 
 interface FormManagementStateContext {
@@ -320,8 +322,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
   let dynamicStreamNames = useMemo(() => {
     return mode === "ui"
-      ? dynamicStreams.map((stream) => stream.streamTemplate.name ?? "")
-      : resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.stream_template.name ?? "") ?? [];
+      ? dynamicStreams.map((stream) => stream.dynamic_stream_name ?? "")
+      : resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.name ?? "") ?? [];
   }, [mode, dynamicStreams, resolvedManifest]);
 
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
@@ -814,6 +816,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -833,12 +836,14 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     if (dynamicStream?.components_resolver.type === "HttpComponentsResolver") {
       testStream = {
         type: DeclarativeStreamType.DeclarativeStream,
-        name: dynamicStream.stream_template.name,
+        name: dynamicStream.name,
         retriever: {
           ...dynamicStream.components_resolver.retriever,
         },
       };
     }
+  } else if (testStreamId.type === "generated_stream") {
+    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
   } else {
     testStream = resolvedManifest.streams?.[testStreamId.index];
   }
@@ -880,6 +885,38 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
   const streamUsesCustomCode = getStreamHasCustomType(streamName);
+
+  type GeneratedStream = DeclarativeStreamType & {
+    dynamic_stream_name: string;
+  };
+
+  const resolvedManifestInput = useMemo(
+    () => ({
+      manifest: jsonManifest,
+      builderProjectId: projectId,
+      workspaceId,
+    }),
+    [jsonManifest, projectId, workspaceId]
+  );
+
+  const fullResolveManifest = useBuilderProjectFullResolveManifest(resolvedManifestInput);
+
+  const generateStreams = useCallback(async () => {
+    const resolvedManifest = await fullResolveManifest.refetch();
+    const streams = (resolvedManifest.data?.manifest?.streams ?? []) as GeneratedStream[];
+
+    const groupedStreams: Record<string, GeneratedStream[]> = {};
+
+    streams.forEach((stream) => {
+      const dynamicStreamName = stream.dynamic_stream_name || "default";
+      if (!groupedStreams[dynamicStreamName]) {
+        groupedStreams[dynamicStreamName] = [];
+      }
+      groupedStreams[dynamicStreamName].push(stream);
+    });
+
+    setValue("generatedStreams", groupedStreams); // assuming this is what you meant
+  }, [setValue, fullResolveManifest]);
 
   const streamRead = useBuilderProjectReadStream(
     {
@@ -979,6 +1016,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever
         ? ("async" as const)
         : ("sync" as const),
+    generateStreams,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

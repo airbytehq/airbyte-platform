@@ -15,6 +15,7 @@ import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
+import { DeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useExperiment } from "hooks/services/Experiment";
 import {
   ConnectorBuilderLocalStorageProvider,
@@ -46,10 +47,9 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const { getStoredMode } = useConnectorBuilderLocalStorage();
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
 
-  const hasDynamicStreams =
-    declarativeManifest?.manifest?.dynamic_streams &&
-    Object.keys(declarativeManifest?.manifest?.dynamic_streams).length > 0;
+  const dynamicStreams = declarativeManifest?.manifest?.dynamic_streams;
 
+  const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
   const initialTestStreamId =
     areDynamicStreamsEnabled && hasDynamicStreams
       ? { type: "dynamic_stream" as const, index: 0 }
@@ -65,6 +65,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     streamTab: "requester" as const,
     testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
+    generatedStreams: {} as Record<string, DeclarativeStream[]>,
   };
   const initialValues = useRef(values);
   initialValues.current = values;
@@ -85,7 +86,7 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
   const { builderStateValidationSchema } = useBuilderValidationSchema();
 
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
-  // Do prevent this, the hook is placed in its own memoized component which only re-renders when necessary
+  // To prevent this, the hook is placed in its own memoized component which only re-renders when necessary
   const methods = useForm({
     // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     defaultValues: defaultValues.current,
