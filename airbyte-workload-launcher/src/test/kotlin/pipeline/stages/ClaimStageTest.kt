@@ -26,7 +26,7 @@ class ClaimStageTest {
     } returns true
     val metricClient: MetricClient = mockk(relaxed = true)
 
-    val claimStage = ClaimStage(workloadApiClient, metricClient, "dataplane-id")
+    val claimStage = ClaimStage(workloadApiClient, metricClient)
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 
@@ -47,7 +47,7 @@ class ClaimStageTest {
     } returns false
     val metricClient: MetricClient = mockk(relaxed = true)
 
-    val claimStage = ClaimStage(workloadApiClient, metricClient, "dataplane-id")
+    val claimStage = ClaimStage(workloadApiClient, metricClient)
     val originalInput = LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path"))
     val outputFromClaimStage = claimStage.applyStage(originalInput)
 

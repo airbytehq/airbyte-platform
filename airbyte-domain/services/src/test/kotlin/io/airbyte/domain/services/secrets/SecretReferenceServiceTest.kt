@@ -90,6 +90,150 @@ class SecretReferenceServiceTest {
       val actual = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, actorId, jsonConfig)
       assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
     }
+
+    @Test
+    fun `applies updated secret refs over persisted secret refs`() {
+      val actorId = UUID.randomUUID()
+      val storageId = UUID.randomUUID()
+
+      val urlRefId = UUID.randomUUID()
+      val apiKeyRefId = UUID.randomUUID()
+
+      val jsonConfig =
+        Jsons.jsonNode(
+          mapOf(
+            "username" to "bob",
+            "secretUrl" to mapOf("_secret" to "updated_url_coordinate", "_secret_storage_id" to storageId), // updated coordinate
+            "auth" to
+              mapOf(
+                "apiKey" to mapOf("_secret_reference_id" to apiKeyRefId.toString()),
+              ),
+          ),
+        )
+
+      val persistedSecretUrlRef = mockk<SecretReferenceWithConfig>()
+      every { persistedSecretUrlRef.secretReference.id } returns SecretReferenceId(urlRefId)
+      every { persistedSecretUrlRef.secretReference.hydrationPath } returns "$.secretUrl"
+      every { persistedSecretUrlRef.secretConfig.secretStorageId } returns storageId
+      every { persistedSecretUrlRef.secretConfig.airbyteManaged } returns false
+      every { persistedSecretUrlRef.secretConfig.externalCoordinate } returns "url-coord"
+
+      val persistedApiKeyRef = mockk<SecretReferenceWithConfig>()
+      every { persistedApiKeyRef.secretReference.id } returns SecretReferenceId(apiKeyRefId)
+      every { persistedApiKeyRef.secretReference.hydrationPath } returns "$.auth.apiKey"
+      every { persistedApiKeyRef.secretConfig.secretStorageId } returns storageId
+      every { persistedApiKeyRef.secretConfig.airbyteManaged } returns false
+      every { persistedApiKeyRef.secretConfig.externalCoordinate } returns "auth-key-coord"
+
+      every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
+        listOf(
+          persistedSecretUrlRef,
+          persistedApiKeyRef,
+        )
+
+      val expectedReferencedSecretsMap =
+        mapOf(
+          "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("updated_url_coordinate"), storageId, null),
+          "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
+        )
+
+      val actual = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, actorId, jsonConfig)
+      assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
+    }
+  }
+
+  @Nested
+  inner class CreateSecretConfigAndReference {
+    private val secretStorageId = SecretStorageId(UUID.randomUUID())
+    private val actorId = ActorId(UUID.randomUUID())
+    private val currentUserId = UserId(UUID.randomUUID())
+    private val airbyteManagedPasswordCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate().fullCoordinate
+
+    @Test
+    fun `creates secret configs and reference with new config`() {
+      every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, airbyteManagedPasswordCoordinate) } returns null
+
+      val createConfigSlot = slot<SecretConfigCreate>()
+      val createRefSlot = slot<SecretReferenceCreate>()
+
+      val createdPasswordConfig =
+        mockk<SecretConfig> {
+          every { id } returns SecretConfigId(UUID.randomUUID())
+        }
+      val createdPasswordRef =
+        mockk<SecretReference> {
+          every { id } returns SecretReferenceId(UUID.randomUUID())
+        }
+
+      every { secretConfigRepository.create(capture(createConfigSlot)) } returns createdPasswordConfig
+      every { secretReferenceRepository.createAndReplace(capture(createRefSlot)) } returns createdPasswordRef
+
+      val result =
+        secretReferenceService.createSecretConfigAndReference(
+          secretStorageId,
+          airbyteManagedPasswordCoordinate,
+          true,
+          currentUserId,
+          "$.password",
+          SecretReferenceScopeType.ACTOR,
+          actorId.value,
+        )
+
+      result shouldBe createdPasswordRef.id
+
+      createConfigSlot.captured shouldBe
+        SecretConfigCreate(
+          secretStorageId = secretStorageId,
+          descriptor = airbyteManagedPasswordCoordinate,
+          externalCoordinate = airbyteManagedPasswordCoordinate,
+          airbyteManaged = true,
+          createdBy = currentUserId,
+        )
+
+      createRefSlot.captured shouldBe
+        SecretReferenceCreate(
+          secretConfigId = createdPasswordConfig.id,
+          hydrationPath = "$.password",
+          scopeType = SecretReferenceScopeType.ACTOR,
+          scopeId = actorId.value,
+        )
+    }
+
+    @Test
+    fun `creates secret configs and reference with existing config`() {
+      val expectedConfigId = SecretConfigId(UUID.randomUUID())
+      every { secretConfigRepository.findByStorageIdAndExternalCoordinate(secretStorageId, airbyteManagedPasswordCoordinate) } returns
+        mockk<SecretConfig> {
+          every { id } returns expectedConfigId
+        }
+
+      val createRefSlot = slot<SecretReferenceCreate>()
+
+      val createdPasswordRef =
+        mockk<SecretReference> {
+          every { id } returns SecretReferenceId(UUID.randomUUID())
+        }
+
+      every { secretReferenceRepository.createAndReplace(capture(createRefSlot)) } returns createdPasswordRef
+
+      val result =
+        secretReferenceService.createSecretConfigAndReference(
+          secretStorageId,
+          airbyteManagedPasswordCoordinate,
+          true,
+          currentUserId,
+          "$.password",
+          SecretReferenceScopeType.ACTOR,
+          actorId.value,
+        )
+
+      result shouldBe createdPasswordRef.id
+      createRefSlot.captured.secretConfigId shouldBe expectedConfigId
+
+      verify(exactly = 0) {
+        secretConfigRepository.create(any())
+      }
+    }
   }
 
   @Nested

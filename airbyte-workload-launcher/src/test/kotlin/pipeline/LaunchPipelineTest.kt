@@ -128,7 +128,7 @@ class LaunchPipelineTest {
   class MockStage(
     val name: StageName,
     val callback: (LaunchStageIO) -> LaunchStageIO = { it },
-  ) : LaunchStage(mockk(relaxed = true), "dataplane-id") {
+  ) : LaunchStage(mockk(relaxed = true)) {
     override fun applyStage(input: LaunchStageIO): LaunchStageIO = callback(input)
 
     override fun getStageName(): StageName = name
