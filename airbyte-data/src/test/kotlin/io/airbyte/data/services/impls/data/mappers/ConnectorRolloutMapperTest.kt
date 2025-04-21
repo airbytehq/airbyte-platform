@@ -9,7 +9,7 @@ import io.airbyte.config.AttributeName
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRolloutFilters
-import io.airbyte.data.repositories.entities.OrganizationCustomerAttributeFilter
+import io.airbyte.data.repositories.entities.CustomerTierFilter
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -22,12 +22,12 @@ class ConnectorRolloutMapperTest {
   fun `should map entity to config and back without loss`() {
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
-              operator = "in",
-              value = objectMapper.readTree("""{ "value": ["${CustomerTier.TIER_1}", "${CustomerTier.TIER_2}"] }"""),
+            CustomerTierFilter(
+              name = "TIER",
+              operator = "IN",
+              value = listOf(CustomerTier.TIER_1.name, CustomerTier.TIER_2.name),
             ),
           ),
       )
@@ -43,12 +43,12 @@ class ConnectorRolloutMapperTest {
   fun `should correctly parse tier list from JSON`() {
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
-              operator = "in",
-              value = objectMapper.readTree("""{ "value": ["${CustomerTier.TIER_2}"] }"""),
+            CustomerTierFilter(
+              name = "TIER",
+              operator = "IN",
+              value = listOf(CustomerTier.TIER_2.name),
             ),
           ),
       )
@@ -65,19 +65,19 @@ class ConnectorRolloutMapperTest {
   fun `should serialize config back to expected JSON structure`() {
     val config =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
-              operator = "in",
-              value = objectMapper.readTree("""{ "value": ["${CustomerTier.TIER_0}", "${CustomerTier.TIER_1}"] }"""),
+            CustomerTierFilter(
+              name = "TIER",
+              operator = "IN",
+              value = listOf(CustomerTier.TIER_0.name, CustomerTier.TIER_1.name),
             ),
           ),
       ).toConfigModel()
 
     val entity = config.toEntity()
-    val expectedJson = objectMapper.readTree("""{ "value": ["TIER_0", "${CustomerTier.TIER_1}"] }""")
-    val actualJson = entity.organizationCustomerAttributeFilters.first().value
+    val expectedJson = listOf("TIER_0", "TIER_1")
+    val actualJson = entity.customerTierFilters.first().value
 
     assertEquals(expectedJson, actualJson)
   }
@@ -87,12 +87,12 @@ class ConnectorRolloutMapperTest {
     val badTierJson = """{ "value": ["TIER_9"] }"""
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
-              operator = "in",
-              value = objectMapper.readTree(badTierJson),
+            CustomerTierFilter(
+              name = "TIER",
+              operator = "IN",
+              value = listOf(badTierJson),
             ),
           ),
       )
@@ -110,12 +110,12 @@ class ConnectorRolloutMapperTest {
     val missingValueJson = """{ }"""
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
-              operator = "in",
-              value = objectMapper.readTree(missingValueJson),
+            CustomerTierFilter(
+              name = "TIER",
+              operator = "IN",
+              value = listOf(missingValueJson),
             ),
           ),
       )
@@ -130,15 +130,14 @@ class ConnectorRolloutMapperTest {
 
   @Test
   fun `should throw on unknown attribute name`() {
-    val json = """{ "value": ["${CustomerTier.TIER_2}"] }"""
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
+            CustomerTierFilter(
               name = "banana",
               operator = "in",
-              value = objectMapper.readTree(json),
+              value = listOf(CustomerTier.TIER_2.name),
             ),
           ),
       )
@@ -153,15 +152,14 @@ class ConnectorRolloutMapperTest {
 
   @Test
   fun `should throw on unknown operator`() {
-    val json = """{ "value": ["${CustomerTier.TIER_1}"] }"""
     val entity =
       ConnectorRolloutFilters(
-        organizationCustomerAttributeFilters =
+        customerTierFilters =
           listOf(
-            OrganizationCustomerAttributeFilter(
-              name = "tier",
+            CustomerTierFilter(
+              name = "TIER",
               operator = "explode",
-              value = objectMapper.readTree(json),
+              value = listOf(CustomerTier.TIER_1.name),
             ),
           ),
       )
