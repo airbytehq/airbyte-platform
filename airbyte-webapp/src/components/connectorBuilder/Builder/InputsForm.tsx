@@ -386,15 +386,25 @@ const InputModal = ({
                 label={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueField" })}
                 tooltip={formatMessage({ id: "connectorBuilder.inputModal.showDefaultValueFieldTooltip" })}
               />
-              {values.showDefaultValueField && values.type && (
-                <BuilderField
-                  path="definition.default"
-                  type={values.type}
-                  options={(values.definition?.enum || []) as string[]}
-                  optional
-                  label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
-                />
-              )}
+              {values.showDefaultValueField &&
+                values.type &&
+                (values.type === "array" ? (
+                  <BuilderField
+                    path="definition.default"
+                    type={values.type}
+                    optional
+                    label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
+                    directionalStyle={false}
+                  />
+                ) : (
+                  <BuilderField
+                    path="definition.default"
+                    type={values.type}
+                    options={(values.definition?.enum as string[]) ?? []}
+                    optional
+                    label={formatMessage({ id: "connectorBuilder.inputModal.default" })}
+                  />
+                ))}
             </>
           ) : (
             <Message type="info" text={<FormattedMessage id="connectorBuilder.inputModal.lockedInput" />} />

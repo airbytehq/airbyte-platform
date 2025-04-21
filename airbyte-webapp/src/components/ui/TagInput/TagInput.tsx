@@ -49,7 +49,7 @@ const customStyles = (directional?: boolean, disabled?: boolean): StylesConfig<T
     const hoveredBorderColor = isInvalid ? styles.errorHoveredBorderColor : styles.hoveredBorderColor;
     return {
       ...provided,
-      backgroundColor: styles.inputBackgroundColor,
+      backgroundColor: "inherit",
       boxShadow: "none",
       borderColor: state.isFocused ? styles.focusedBorderColor : regularBorderColor,
       ":hover": {
@@ -70,12 +70,10 @@ interface Tag {
   readonly value: string;
 }
 
-export interface TagInputProps {
+export type TagInputProps = {
   className?: string;
   name: string;
-  fieldValue: string[];
-  itemType?: string;
-  onChange: (value: string[]) => void;
+  fieldValue: Array<string | number>;
   onBlur?: () => void;
   onFocus?: () => void;
   error?: boolean;
@@ -83,14 +81,30 @@ export interface TagInputProps {
   id?: string;
   directionalStyle?: boolean;
   uniqueValues?: boolean;
-}
+} & (
+  | {
+      itemType?: "string";
+      onChange: (value: string[]) => void;
+    }
+  | {
+      itemType?: "number" | "integer";
+      onChange: (value: number[]) => void;
+    }
+);
 
-const generateTagFromString = (inputValue: string): Tag => ({
-  label: inputValue,
+const generateTagFromValue = (inputValue: string | number): Tag => ({
+  label: String(inputValue),
   value: uniqueId(`tag_value_`),
 });
 
-const generateStringFromTag = (tag: Tag): string => tag.label;
+const generateValueFromTag = (tag: Tag, itemType?: string): string | number => {
+  if (itemType === "integer") {
+    return parseInt(tag.label, 10);
+  } else if (itemType === "number") {
+    return parseFloat(tag.label);
+  }
+  return tag.label;
+};
 
 const delimiters = [",", ";"];
 
@@ -98,13 +112,13 @@ export const TagInput = React.forwardRef(
   (
     {
       className,
-      onChange,
+      onChange: onChangeProp,
       fieldValue,
       name,
       disabled,
       id,
       error,
-      itemType,
+      itemType = "string",
       onBlur,
       onFocus,
       directionalStyle,
@@ -112,12 +126,22 @@ export const TagInput = React.forwardRef(
     }: TagInputProps,
     _ref: React.Ref<HTMLDivElement> // ignore the ref, because TagInput is not a real <input> so it can't handle things like setSelectionRange
   ) => {
+    const onChange = useCallback(
+      (value: Array<string | number>) => {
+        if (itemType === "string") {
+          (onChangeProp as (value: string[]) => void)(value as string[]);
+        } else if (itemType === "number" || itemType === "integer") {
+          (onChangeProp as (value: number[]) => void)(value as number[]);
+        }
+      },
+      [itemType, onChangeProp]
+    );
     const [draftValue, setDraftValue] = useState("");
     const draftExists = draftValue.length > 0;
 
     // possibly deduplicates values based on the uniqueValues prop
     const valuesToCommit = useCallback(
-      (preexistingValues: string[], newValues: string[] = []) => {
+      (preexistingValues: Array<string | number>, newValues: Array<string | number> = []) => {
         const allValues = [...preexistingValues, ...newValues];
         return uniqueValues ? Array.from(new Set(allValues)) : allValues;
       },
@@ -128,7 +152,7 @@ export const TagInput = React.forwardRef(
       const nonDraftValues =
         draftExists && fieldValue.length > 0 ? fieldValue.slice(0, fieldValue.length - 1) : fieldValue;
       // we deduplicate based on props.uniqueValues when values get converted to tags
-      return valuesToCommit(nonDraftValues).map(generateTagFromString);
+      return valuesToCommit(nonDraftValues).map(generateTagFromValue);
     }, [draftExists, fieldValue, valuesToCommit]);
 
     // handles various ways of deleting a value
@@ -148,23 +172,32 @@ export const TagInput = React.forwardRef(
         updatedTags = updatedTags.slice(0, updatedTags.length - 1);
       }
 
-      const updatedTagsAsStrings = updatedTags.map((tag) => generateStringFromTag(tag));
+      const updatedValues = updatedTags.map((tag) => generateValueFromTag(tag, itemType));
       if (draftExists) {
-        onChange([...updatedTagsAsStrings, ...draftValue]);
+        const parsedDraft = parseInputValue(draftValue);
+        if (parsedDraft !== undefined) {
+          onChange([...updatedValues, parsedDraft]);
+        } else {
+          onChange(updatedValues);
+        }
       } else {
-        onChange(updatedTagsAsStrings);
+        onChange(updatedValues);
       }
     };
 
-    function normalizeInput(input: string) {
+    function parseInputValue(input: string): string | number | undefined {
+      const trimmedInput = input.trim();
       if (itemType !== "number" && itemType !== "integer") {
-        return input.trim();
+        return trimmedInput;
       }
-      const parsedInput = itemType === "integer" ? Number.parseInt(input) : Number.parseFloat(input);
+
+      const parsedInput = itemType === "integer" ? Number.parseInt(trimmedInput, 10) : Number.parseFloat(trimmedInput);
+
       if (Number.isNaN(parsedInput)) {
         return undefined;
       }
-      return parsedInput.toString();
+
+      return parsedInput;
     }
 
     // handle when a user types OR pastes in the input
@@ -175,15 +208,15 @@ export const TagInput = React.forwardRef(
       }
 
       const fieldValueMinusLast = fieldValue.slice(0, fieldValue.length - 1);
-
       const delimiter = delimiters.find((del) => newDraftValue.includes(del));
 
       if (delimiter) {
-        const newTagStrings = newDraftValue
+        const newValues = newDraftValue
           .split(delimiter)
-          .map(normalizeInput)
-          .filter((tag): tag is string => Boolean(tag));
-        if (newTagStrings.length === 0) {
+          .map(parseInputValue)
+          .filter((val): val is string | number => val !== undefined && val !== "");
+
+        if (newValues.length === 0) {
           return;
         }
 
@@ -191,14 +224,24 @@ export const TagInput = React.forwardRef(
 
         if (draftExists) {
           // the user has been typing and entered a delimiter character
-          onChange(valuesToCommit([...fieldValueMinusLast, ...newTagStrings]));
+          onChange(valuesToCommit([...fieldValueMinusLast, ...newValues]));
         } else {
           // the user pastes in text with a delimiter character with no draft item in progress
-          onChange(valuesToCommit([...fieldValue, ...newTagStrings]));
+          onChange(valuesToCommit([...fieldValue, ...newValues]));
         }
       } else {
-        const normalizedDraft = normalizeInput(newDraftValue);
-        if (normalizedDraft === undefined) {
+        // Special case: Empty input or deleting the last character
+        if (newDraftValue === "") {
+          setDraftValue("");
+          if (draftExists) {
+            // User deleted the last character of a draft value
+            onChange(valuesToCommit(fieldValueMinusLast));
+          }
+          return;
+        }
+
+        const parsedValue = parseInputValue(newDraftValue);
+        if (parsedValue === undefined) {
           return;
         }
 
@@ -210,11 +253,11 @@ export const TagInput = React.forwardRef(
             onChange(valuesToCommit(fieldValueMinusLast));
           } else {
             // the user is continuing to update a draft value
-            onChange([...fieldValueMinusLast, normalizedDraft]);
+            onChange([...fieldValueMinusLast, parsedValue]);
           }
-        } else {
+        } else if (parsedValue !== undefined) {
           // the user has typed or pasted the first character(s) of a draft value
-          onChange([...fieldValue, normalizedDraft]);
+          onChange([...fieldValue, parsedValue]);
         }
       }
     };

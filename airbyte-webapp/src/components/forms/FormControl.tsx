@@ -110,6 +110,7 @@ export interface ArrayControlProps<T extends FormValues>
   extends ControlBaseProps<T>,
     Omit<TagInputProps, "name" | "fieldValue" | "onChange"> {
   fieldType: "array";
+  itemType?: "string" | "number" | "integer";
 }
 
 export const FormControl = <T extends FormValues>({
