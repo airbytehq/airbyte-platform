@@ -193,3 +193,5 @@ object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platfor
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
 
 object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
+
+object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

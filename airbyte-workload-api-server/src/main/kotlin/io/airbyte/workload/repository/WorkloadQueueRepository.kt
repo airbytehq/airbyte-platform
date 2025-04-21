@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.repository
 
+import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadQueueItem
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
@@ -104,7 +105,7 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
        :dataplaneGroup,
        :priority,
        :workloadId
-  )
+    )
   """,
   )
   fun enqueueWorkload(
@@ -142,4 +143,20 @@ interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> 
     """,
   )
   fun getEnqueuedWorkloadStats(): List<WorkloadQueueStats>
+
+  @Query(
+    """
+    WITH acked_workloads AS (
+      SELECT id FROM workload_queue
+        WHERE acked_at IS NOT NULL
+        AND acked_at < now() - interval '1 week'
+        limit :deletionLimit
+    ) DELETE FROM workload_queue
+      WHERE id IN (SELECT id FROM acked_workloads);
+    """,
+  )
+  fun cleanUpAckedEntries(deletionLimit: Int): Unit
+
+  @InternalForTesting
+  fun findByDataplaneGroup(dataplaneGroup: String): List<WorkloadQueueItem>
 }

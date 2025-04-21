@@ -73,6 +73,9 @@ airbyte:
       sync-age-check-rate: PT1M
       non-sync-workload-timeout: ${NON_SYNC_WORKLOAD_TIMEOUT:PT4H} # Should be longer than the sum of the deadlines
       sync-workload-timeout: ${SYNC_WORKLOAD_TIMEOUT:P30D} # Should be longer than the sum of the deadlines
+    queue:
+      deletion-batch-size: ${WORKLOAD_QUEUE_DELETION_BATCH_SIZE:40000}
+      deletion-cron: 0 15 * * * ?
   workload-api:
     base-path: ${WORKLOAD_API_HOST:}
     bearer-token: ${WORKLOAD_API_BEARER_TOKEN:}

@@ -340,6 +340,10 @@ class WorkloadHandlerImpl(
     return domainStats.map { it.toApi() }
   }
 
+  override fun cleanWorkloadQueue(limit: Int) {
+    workloadQueueRepository.cleanUpAckedEntries(limit)
+  }
+
   override fun getWorkloadsWithExpiredDeadline(
     dataplaneId: List<String>?,
     workloadStatus: List<ApiWorkloadStatus>?,
