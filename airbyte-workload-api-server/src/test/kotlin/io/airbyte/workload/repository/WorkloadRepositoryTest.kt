@@ -633,6 +633,80 @@ internal class WorkloadRepositoryTest {
           ),
         ),
       )
+
+    @ParameterizedTest
+    @MethodSource("deletionLimitScenarios")
+    fun `cleanUpAckedEntries removes entries up to the specified limit`(
+      deletionLimit: Int,
+      initialEntries: List<Workload>,
+    ) {
+      val dataplaneGroup = "${UUID.randomUUID()}_group-1"
+      val priority = 0
+
+      initialEntries.forEach {
+        workloadRepo.save(it)
+        workloadQueueRepo.enqueueWorkload(dataplaneGroup, priority, it.id)
+        workloadQueueRepo.ackWorkloadQueueItem(it.id)
+      }
+
+      val entriesToOverrideAckedDate = workloadQueueRepo.findByDataplaneGroup(dataplaneGroup)
+
+      entriesToOverrideAckedDate.forEach {
+        it.ackedAt = OffsetDateTime.now().minusWeeks(1)
+        workloadQueueRepo.update(it)
+      }
+      workloadQueueRepo.cleanUpAckedEntries(deletionLimit)
+
+      val remainingEntries = workloadQueueRepo.findByDataplaneGroup(dataplaneGroup)
+      assertEquals(0.coerceAtLeast(initialEntries.size - deletionLimit), remainingEntries.size)
+    }
+
+    @Test
+    fun `cleanUpAckedEntries doesn't remove non ack entries`() {
+      val dataplaneGroup = "group-1"
+      val priority = 0
+
+      val initialEntries =
+        listOf(
+          Fixtures.workload(dataplaneGroup = dataplaneGroup, priority = priority, workloadLabels = labelList1()),
+          Fixtures.workload(dataplaneGroup = dataplaneGroup, priority = priority, workloadLabels = labelList2()),
+          Fixtures.workload(dataplaneGroup = dataplaneGroup, priority = priority, workloadLabels = labelList3()),
+        )
+      initialEntries.forEach {
+        workloadRepo.save(it)
+        workloadQueueRepo.enqueueWorkload(it.dataplaneGroup!!, it.priority!!, it.id)
+      }
+
+      workloadQueueRepo.cleanUpAckedEntries(1000)
+
+      val remainingEntries = workloadQueueRepo.pollWorkloadQueue(dataplaneGroup, priority, quantity = 10)
+      assertEquals(initialEntries.size, remainingEntries.size)
+    }
+
+    private fun deletionLimitScenarios(): List<Arguments> =
+      listOf(
+        Arguments.of(
+          4,
+          listOf(
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList1()),
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList2()),
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList3()),
+          ),
+        ),
+        Arguments.of(
+          1,
+          listOf(
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList4()),
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList2()),
+          ),
+        ),
+        Arguments.of(
+          0,
+          listOf(
+            Fixtures.workload(dataplaneGroup = "group-1", priority = 0, workloadLabels = labelList3()),
+          ),
+        ),
+      )
   }
 
   object Fixtures {
