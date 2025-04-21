@@ -4,7 +4,13 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.config.AttributeName
+import io.airbyte.config.CustomerTier
+import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
+import io.airbyte.data.repositories.entities.ConnectorRolloutFilters
+import io.airbyte.data.repositories.entities.OrganizationCustomerAttributeFilter
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -13,6 +19,9 @@ typealias EntityConnectorRolloutStateType = io.airbyte.db.instance.configs.jooq.
 typealias ModelConnectorRolloutStateType = io.airbyte.config.ConnectorEnumRolloutState
 typealias EntityConnectorRolloutStrategyType = io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStrategyType
 typealias ModelConnectorRolloutStrategyType = io.airbyte.config.ConnectorEnumRolloutStrategy
+typealias EntityConnectorRolloutFilters = ConnectorRolloutFilters
+typealias ModelConnectorRolloutFilters = io.airbyte.config.ConnectorRolloutFilters
+typealias ModelCustomerAttributeFilterExpression = io.airbyte.config.CustomerTierFilter
 typealias EntityConnectorRollout = ConnectorRollout
 typealias ModelConnectorRollout = io.airbyte.config.ConnectorRollout
 
@@ -56,6 +65,69 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
     ModelConnectorRolloutStrategyType.OVERRIDDEN -> EntityConnectorRolloutStrategyType.overridden
   }
 
+fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters {
+  val expressions =
+    this.organizationCustomerAttributeFilters.map { attr ->
+      try {
+        val name = AttributeName.valueOf(attr.name.uppercase())
+        val operator = Operator.valueOf(attr.operator.uppercase())
+
+        val value =
+          when (name) {
+            AttributeName.TIER -> {
+              val valuesNode =
+                attr.value["value"]
+                  ?: throw RuntimeException("Missing 'value' field in TIER attribute filter: ${attr.value}")
+
+              val tierList =
+                try {
+                  valuesNode
+                    .asSequence()
+                    .mapNotNull { tierNode ->
+                      tierNode?.asText()?.trim()?.let { CustomerTier.valueOf(it) }
+                    }.toList()
+                } catch (e: Exception) {
+                  throw RuntimeException("Failed to parse tier(s) from: $valuesNode", e)
+                }
+
+              tierList
+            }
+          }
+
+        ModelCustomerAttributeFilterExpression(
+          name = name,
+          operator = operator,
+          value = value,
+        )
+      } catch (e: Exception) {
+        throw RuntimeException("Failed to parse customer attribute: attribute=$attr exception=${e.message}", e)
+      }
+    }
+
+  return ModelConnectorRolloutFilters(customerTierFilters = expressions)
+}
+
+fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
+  val customerAttributeFilters =
+    this.customerTierFilters.map { filter ->
+      when (filter) {
+        is ModelCustomerAttributeFilterExpression -> {
+          val name = filter.name.toString()
+          val operator = filter.operator.toString()
+          val value: JsonNode = objectMapper.valueToTree(mapOf("value" to filter.value.map { it.name }))
+
+          OrganizationCustomerAttributeFilter(
+            name = name,
+            operator = operator,
+            value = value,
+          )
+        }
+        else -> throw RuntimeException("Failed to parse customer attribute filter: filter=$filter")
+      }
+    }
+  return EntityConnectorRolloutFilters(organizationCustomerAttributeFilters = customerAttributeFilters)
+}
+
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
   ModelConnectorRollout(
     id = this.id,
@@ -78,6 +150,7 @@ fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
+    filters = this.filters?.toConfigModel(),
   )
 
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
@@ -102,4 +175,5 @@ fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
+    filters = this.filters?.toEntity(),
   )

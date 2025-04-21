@@ -10,7 +10,8 @@ import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ConnectorRollout
-import io.airbyte.config.CustomerTier
+import io.airbyte.config.ConnectorRolloutFilters
+import io.airbyte.config.CustomerTierFilter
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
@@ -66,6 +67,7 @@ class RolloutActorFinder(
   fun getActorSelectionInfo(
     connectorRollout: ConnectorRollout,
     targetPercent: Int?,
+    filters: ConnectorRolloutFilters?,
   ): ActorSelectionInfo {
     logger.info { "Finding actors to pin for rollout ${connectorRollout.id} targetPercent=$targetPercent" }
 
@@ -75,7 +77,7 @@ class RolloutActorFinder(
     logger.info { "Rollout ${connectorRollout.id}: $initialNCandidates actors total" }
 
     val actorType = getActorType(connectorRollout.actorDefinitionId)
-    candidates = filterByTier(candidates)
+    candidates = filterByTier(candidates, filters?.customerTierFilters)
 
     logger.info { "Rollout ${connectorRollout.id}: ${candidates.size} after filterByTier" }
 
@@ -353,16 +355,27 @@ class RolloutActorFinder(
 
   @Trace
   @VisibleForTesting
-  fun filterByTier(candidates: Collection<ConfigScopeMapWithId>): Collection<ConfigScopeMapWithId> {
+  fun filterByTier(
+    candidates: Collection<ConfigScopeMapWithId>,
+    filters: List<CustomerTierFilter>?,
+  ): Collection<ConfigScopeMapWithId> {
     val organizationTiers = organizationCustomerAttributesService.getOrganizationTiers()
     logger.debug { "RolloutActorFinder.filterByTier: organizationTiers=$organizationTiers" }
-    return candidates.filter { candidate ->
-      val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
-      // Include the candidate if the organization ID is not in the map or if the CustomerTier is not TIER_0 or TIER_1
-      organizationId == null ||
-        organizationTiers[organizationId]?.let { tier ->
-          tier != CustomerTier.TIER_0 && tier != CustomerTier.TIER_1
-        } ?: true
+    if (filters.isNullOrEmpty()) {
+      logger.debug { "RolloutActorFinder.filterByTier: no tier filter specified." }
+      return candidates
+    } else {
+      logger.debug { "RolloutActorFinder.filterByTier: applying tier filter for filters=$filters" }
+      return candidates.filter { candidate ->
+        val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
+
+        // Remove if no org ID or no tier
+        val tier = organizationTiers[organizationId] ?: return@filter false
+        if (organizationId == null) return@filter false
+
+        // All filters must match
+        filters.all { it.evaluate(tier) }
+      }
     }
   }
 
