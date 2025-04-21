@@ -26,6 +26,7 @@ $space-below: 30px;
   padding-right: $group-spacing;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   height: $title-height;
   position: absolute;
   left: 0;
@@ -54,7 +55,6 @@ $space-below: 30px;
 }
 
 .control {
-  margin-left: auto;
   padding: 0 variables.$spacing-xs;
   background-color: colors.$foreground;
 }

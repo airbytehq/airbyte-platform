@@ -1,20 +1,22 @@
-import { createContext, useCallback, useContext } from "react";
+import { createContext, useCallback, useContext, useMemo } from "react";
 import {
+  DefaultValues,
   FieldError,
   FieldValues,
   FormProvider,
-  UseFormProps,
   get,
   useForm,
   useFormContext,
   useFormState,
 } from "react-hook-form";
 
+import { RefsHandlerProvider } from "./RefsHandler";
 import {
   AirbyteJsonSchema,
   extractDefaultValuesFromSchema,
   getSchemaAtPath,
   getSelectedOptionSchema,
+  resolveRefs,
   schemaValidator,
 } from "./utils";
 import { FormSubmissionHandler } from "../Form";
@@ -24,7 +26,8 @@ interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends
   onSubmit?: FormSubmissionHandler<TsSchema>;
   onSuccess?: (values: TsSchema) => void;
   onError?: (e: Error, values: TsSchema) => void;
-  mode?: UseFormProps<TsSchema>["mode"];
+  initialValues?: DefaultValues<TsSchema>;
+  refTargetPath?: string;
 }
 
 export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>({
@@ -33,47 +36,62 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   onSubmit,
   onSuccess,
   onError,
+  initialValues,
+  refTargetPath,
 }: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>) => {
+  const resolvedSchema = useMemo(() => resolveRefs(schema), [schema]);
+  const rawStartingValues = useMemo(
+    () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(resolvedSchema),
+    [initialValues, resolvedSchema]
+  );
+  const resolvedStartingValues = useMemo(() => resolveRefs(rawStartingValues), [rawStartingValues]);
   const methods = useForm<TsSchema>({
     criteriaMode: "all",
     mode: "onChange",
-    defaultValues: extractDefaultValuesFromSchema<TsSchema>(schema),
-    resolver: schemaValidator(schema),
+    defaultValues: resolvedStartingValues,
+    resolver: schemaValidator(resolvedSchema),
   });
 
-  const processSubmission = (values: TsSchema) => {
-    if (!onSubmit) {
-      return;
-    }
+  const processSubmission = useCallback(
+    (values: TsSchema) => {
+      if (!onSubmit) {
+        return;
+      }
 
-    return onSubmit(values, methods)
-      .then((submissionResult) => {
-        onSuccess?.(values);
-        if (submissionResult) {
-          methods.reset(submissionResult.resetValues ?? values, submissionResult.keepStateOptions ?? undefined);
-        } else {
-          methods.reset(values);
-        }
-      })
-      .catch((e) => {
-        onError?.(e, values);
-      });
-  };
+      return onSubmit(values, methods)
+        .then((submissionResult) => {
+          onSuccess?.(values);
+          if (submissionResult) {
+            methods.reset(submissionResult.resetValues ?? values, submissionResult.keepStateOptions ?? undefined);
+          } else {
+            methods.reset(values);
+          }
+        })
+        .catch((e) => {
+          onError?.(e, values);
+        });
+    },
+    [onSubmit, onSuccess, onError, methods]
+  );
 
-  if (!schema.properties) {
+  if (!resolvedSchema.properties) {
     return null;
   }
 
   return (
     <FormProvider {...methods}>
-      <SchemaFormProvider schema={schema}>
-        <form onSubmit={methods.handleSubmit(processSubmission)}>{children}</form>
+      <SchemaFormProvider schema={resolvedSchema}>
+        <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
+          <form onSubmit={methods.handleSubmit(processSubmission)}>{children}</form>
+        </RefsHandlerProvider>
       </SchemaFormProvider>
     </FormProvider>
   );
 };
 
+// Simple context type that forwards SchemaForm and useRefsHandler capabilities
 interface SchemaFormContextValue {
+  // Schema & validation
   schema: AirbyteJsonSchema;
   schemaAtPath: (path: string) => AirbyteJsonSchema;
   errorAtPath: (path: string) => FieldError | undefined;
@@ -95,11 +113,13 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   const { getValues } = useFormContext();
   const { errors } = useFormState();
 
+  // Setup schema access
   const schemaAtPath = useCallback(
     (path: string): AirbyteJsonSchema => getSchemaAtPath(path, schema, getValues()),
     [getValues, schema]
   );
 
+  // Setup validation functions
   const errorAtPath = (path: string): FieldError | undefined => {
     const error: FieldError | undefined = get(errors, path);
     if (!error?.message) {
@@ -117,12 +137,14 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   const isRequiredField = useCallback(
     (path: string) => {
       const pathParts = path.split(".");
-      const fieldName = pathParts.pop() || "";
-      const parentPath = pathParts.join(".");
+      const fieldName = pathParts.at(-1) ?? "";
+      const parentPath = pathParts.slice(0, -1).join(".");
       const parentProperty = parentPath ? schemaAtPath(parentPath) : schema;
+
       if (parentProperty.type === "array") {
         return true;
       }
+
       const parentOptionSchemas = parentProperty.oneOf ?? parentProperty.anyOf;
       if (parentOptionSchemas) {
         const selectedOption = getSelectedOptionSchema(parentOptionSchemas, getValues(parentPath));
@@ -137,7 +159,15 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   );
 
   return (
-    <SchemaFormContext.Provider value={{ schema, schemaAtPath, errorAtPath, isRequiredField }}>
+    <SchemaFormContext.Provider
+      value={{
+        // SchemaForm capabilities
+        schema,
+        schemaAtPath,
+        errorAtPath,
+        isRequiredField,
+      }}
+    >
       {children}
     </SchemaFormContext.Provider>
   );

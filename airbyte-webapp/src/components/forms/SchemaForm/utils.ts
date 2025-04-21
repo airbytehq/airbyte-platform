@@ -1,4 +1,5 @@
 import { ExtendedJSONSchema, JSONSchemaExtension } from "json-schema-to-ts/lib/types/definitions";
+import capitalize from "lodash/capitalize";
 import isBoolean from "lodash/isBoolean";
 import { DefaultValues, FieldValues, get } from "react-hook-form";
 
@@ -8,6 +9,7 @@ export class AirbyteJsonSchemaExtention implements JSONSchemaExtension {
   [k: string]: unknown;
   multiline?: boolean;
   patternDescriptor?: string;
+  linkable?: boolean;
 }
 
 export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExtention>, boolean>;
@@ -173,4 +175,82 @@ export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: F
   }
 
   return currentProperty;
+};
+
+// Convert a $ref of the form "#/path/to/field" to a path of the form "path.to.field"
+export const convertRefToPath = (ref: string) => {
+  return ref.replace("#/", "").replace(/\//g, ".");
+};
+
+/**
+ * Dereferences all $ref occurrences in a JSON object by replacing them with the actual values
+ * @param obj The object containing references to resolve
+ * @param root The root object containing the reference targets (defaults to obj)
+ * @param visitedRefs Set of already visited references to avoid circular references
+ * @returns A new object with all references resolved
+ */
+export const resolveRefs = <T>(obj: T, root?: unknown, visitedRefs: Set<string> = new Set()): T => {
+  if (!obj || typeof obj !== "object") {
+    return obj;
+  }
+
+  const rootObj = root ?? obj;
+
+  if (Array.isArray(obj)) {
+    // For all arrays, give each item its own independent tracking of visited references
+    // This prevents cross-contamination where a circular reference in one item
+    // would block resolution of other items
+    return obj.map((item) => resolveRefs(item, rootObj, new Set(visitedRefs))) as unknown as T;
+  }
+
+  if ("$ref" in obj && typeof obj.$ref === "string") {
+    const ref = obj.$ref;
+
+    // If we've already visited this reference or if it's a circular reference,
+    // return the original object as-is without attempting to resolve it
+    if (visitedRefs.has(ref)) {
+      return obj;
+    }
+
+    // Add this reference to visited set before resolving it
+    visitedRefs.add(ref);
+
+    const path = convertRefToPath(ref);
+    const target = get(rootObj, path);
+
+    // If target doesn't exist, return the original object as-is
+    if (target === undefined) {
+      console.warn(`Reference not found: ${ref}`);
+      return obj;
+    }
+
+    // Resolve the target with the updated visited references set
+    return resolveRefs(target, rootObj, visitedRefs) as T;
+  }
+
+  const result = {} as Record<string, unknown>;
+
+  // Process each object property with its own independent reference tracking
+  // This prevents cross-contamination between properties
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = resolveRefs(value, rootObj, new Set(visitedRefs));
+  }
+
+  return result as T;
+};
+
+export const displayName = (path: string, title?: string) => {
+  if (title) {
+    return title;
+  }
+
+  const fieldName = path.split(".").at(-1);
+  // If the field name is not a number, capitalize and display it
+  if (Number.isNaN(Number(fieldName))) {
+    return capitalize(fieldName);
+  }
+
+  // If the field name is a number, it is likely an array index
+  // and we don't need to display that as a control label
+  return undefined;
 };
