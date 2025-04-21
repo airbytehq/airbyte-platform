@@ -166,15 +166,126 @@ internal class SecretsHelpersTest {
     testCase.persistenceUpdater.accept(secretPersistence)
     val inputPartialConfig: JsonNode = testCase.partialConfig
     val inputPartialConfigCopy = inputPartialConfig.deepCopy<JsonNode>()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
     val actualCombinedConfig: JsonNode =
-      SecretsHelpers.combineInlinedConfig(
-        testCase.partialConfig,
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
         secretPersistence,
       )
     Assertions.assertEquals(testCase.fullConfig, actualCombinedConfig)
 
     // check that we didn't mutate the input configs
     Assertions.assertEquals(inputPartialConfigCopy, inputPartialConfig)
+  }
+
+  @ParameterizedTest
+  @MethodSource(PROVIDE_TEST_CASES)
+  fun testCombineWithMap(testCase: SecretsTestCase) {
+    val secretPersistence = MemorySecretPersistence()
+    testCase.persistenceUpdater.accept(secretPersistence)
+    val inputPartialConfig: JsonNode = testCase.partialConfig
+    val inputPartialConfigCopy = inputPartialConfig.deepCopy<JsonNode>()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
+    val actualCombinedConfig: JsonNode =
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
+        mapOf(null to secretPersistence),
+      )
+    Assertions.assertEquals(testCase.fullConfig, actualCombinedConfig)
+
+    // check that we didn't mutate the input configs
+    Assertions.assertEquals(inputPartialConfigCopy, inputPartialConfig)
+  }
+
+  @Test
+  fun testCombineWithMultipleSecretPersistence() {
+    val secretPersistence1 = mockk<ReadOnlySecretPersistence>()
+    val secretPersistence2 = mockk<ReadOnlySecretPersistence>()
+    val defaultPersistence = mockk<ReadOnlySecretPersistence>()
+
+    val storageId1 = UUID.randomUUID()
+    val storageId2 = UUID.randomUUID()
+
+    val secretRefOne =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_456"),
+        secretStorageId = storageId1,
+        secretReferenceId = UUID.randomUUID(),
+      )
+    val secretRefTwo =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_789"),
+        secretStorageId = storageId2,
+        secretReferenceId = UUID.randomUUID(),
+      )
+    val legacyRef =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_456"),
+      )
+
+    val inputConfigWithRefs =
+      ConfigWithSecretReferences(
+        config =
+          Jsons.jsonNode(
+            mapOf(
+              "key1" to
+                mapOf(
+                  "_secret_reference_id" to secretRefOne.secretReferenceId,
+                ),
+              "key2" to
+                mapOf(
+                  "_secret_reference_id" to secretRefTwo.secretReferenceId,
+                ),
+              "legacyKey" to
+                mapOf(
+                  "_secret" to legacyRef.secretCoordinate,
+                ),
+            ),
+          ),
+        referencedSecrets =
+          mapOf(
+            "$.key1" to secretRefOne,
+            "$.key2" to secretRefTwo,
+            "$.legacyKey" to legacyRef,
+          ),
+      )
+
+    val originalConfigCopy = inputConfigWithRefs.config.deepCopy<JsonNode>()
+
+    every {
+      defaultPersistence.read(legacyRef.secretCoordinate)
+    } returns "legacySecretValue"
+    every {
+      secretPersistence1.read(secretRefOne.secretCoordinate)
+    } returns "secretValue1"
+    every {
+      secretPersistence2.read(secretRefTwo.secretCoordinate)
+    } returns "secretValue2"
+
+    val actualCombinedConfig: JsonNode =
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
+        mapOf(
+          null to defaultPersistence,
+          storageId1 to secretPersistence1,
+          storageId2 to secretPersistence2,
+        ),
+      )
+    Assertions.assertNotNull(actualCombinedConfig)
+
+    val expectedConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "key1" to "secretValue1",
+          "key2" to "secretValue2",
+          "legacyKey" to "legacySecretValue",
+        ),
+      )
+
+    Assertions.assertEquals(expectedConfig, actualCombinedConfig)
+
+    // check that we didn't mutate the input config
+    Assertions.assertEquals(originalConfigCopy, inputConfigWithRefs.config)
   }
 
   @Test
@@ -191,13 +302,14 @@ internal class SecretsHelpersTest {
   fun testMissingSecretShouldThrowException() {
     val testCase = SimpleTestCase()
     val secretPersistence: ReadOnlySecretPersistence = mockk()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
     every { secretPersistence.read(any()) } returns ""
 
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) {
-      SecretsHelpers.combineInlinedConfig(
-        testCase.partialConfig,
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
         secretPersistence,
       )
     }

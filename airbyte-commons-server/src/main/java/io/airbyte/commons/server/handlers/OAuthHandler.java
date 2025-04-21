@@ -691,8 +691,8 @@ public class OAuthHandler {
 
   private JsonNode getHydratedConfiguration(final ConfigWithSecretReferences config, final UUID organizationId, final UUID workspaceId) {
     final SecretHydrationContext hydrationContext = SecretHydrationContext.fromJava(organizationId, workspaceId);
-    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromConfig(config, hydrationContext);
-    return secretsRepositoryReader.hydrateConfig(config, secretPersistence);
+    final Map<UUID, SecretPersistence> secretPersistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, hydrationContext);
+    return secretsRepositoryReader.hydrateConfig(config, secretPersistenceMap);
   }
 
   /**

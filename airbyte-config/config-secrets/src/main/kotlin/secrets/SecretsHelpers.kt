@@ -5,9 +5,7 @@
 package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
-import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.annotation.InternalForTesting
@@ -193,8 +191,8 @@ object SecretsHelpers {
   }
 
   /**
-   * Replaces {"_secret": "full_coordinate"} objects in the partial config with the string secret
-   * payloads loaded from the secret persistence at those coordinates.
+   * Replaces referenced secrets in the config with the string secret payloads loaded from the secret persistence at those coordinates.
+   * All referenced coordinates are expected to live in the passed-in secretPersistence.
    *
    * @param configWithRefs configuration containing secret coordinates (references to secrets)
    * @param secretPersistence secret storage mechanism
@@ -203,38 +201,50 @@ object SecretsHelpers {
   fun combineConfig(
     configWithRefs: ConfigWithSecretReferences?,
     secretPersistence: ReadOnlySecretPersistence,
-  ): JsonNode = combineInlinedConfig(configWithRefs?.toInlined()?.value, secretPersistence)
-
-  @VisibleForTesting
-  internal fun combineInlinedConfig(
-    partialConfig: JsonNode?,
-    secretPersistence: ReadOnlySecretPersistence,
-  ): JsonNode {
-    // This should be updated to operate on ConfigWithSecretReferences instead of raw json nodes after legacy secrets are gone
-    return if (partialConfig != null) {
-      val config = partialConfig.deepCopy<JsonNode>()
-
-      // if the entire config is a secret coordinate object
-      if (config.has(COORDINATE_FIELD)) {
-        val coordinateNode = config[COORDINATE_FIELD]
-        val coordinate: SecretCoordinate = getCoordinateFromTextNode(coordinateNode)
-        return TextNode(getOrThrowSecretValue(secretPersistence, coordinate))
-      }
-
-      // otherwise iterate through all object fields
-      config.fields().forEachRemaining { (fieldName, fieldNode): Map.Entry<String, JsonNode> ->
-        if (fieldNode is ArrayNode) {
-          for (i in 0 until fieldNode.size()) {
-            fieldNode[i] = combineInlinedConfig(fieldNode[i], secretPersistence)
-          }
-        } else if (fieldNode is ObjectNode) {
-          (config as ObjectNode).replace(fieldName, combineInlinedConfig(fieldNode, secretPersistence))
-        }
-      }
-      config
-    } else {
-      JsonNodeFactory.instance.objectNode()
+  ): JsonNode =
+    combineConfigInternal(configWithRefs) {
+      secretPersistence
     }
+
+  /**
+   * Replaces referenced secrets in the config with their values from the corresponding secret persistence.
+   *
+   * @param configWithRefs configuration containing secret coordinates (references to secrets)
+   * @param secretPersistenceMap map of secret storage IDs to their corresponding secret persistence
+   * @return full config including actual secret values
+   */
+  fun combineConfig(
+    configWithRefs: ConfigWithSecretReferences?,
+    secretPersistenceMap: Map<UUID?, ReadOnlySecretPersistence>,
+  ): JsonNode =
+    combineConfigInternal(
+      configWithRefs,
+      resolvePersistence = { secretStorageId ->
+        secretPersistenceMap[secretStorageId]
+          ?: throw IllegalStateException("No persistence found for secret storage ID: $secretStorageId")
+      },
+    )
+
+  private fun combineConfigInternal(
+    configWithRefs: ConfigWithSecretReferences?,
+    resolvePersistence: (UUID?) -> ReadOnlySecretPersistence,
+  ): JsonNode {
+    if (configWithRefs == null) {
+      return JsonNodeFactory.instance.objectNode()
+    }
+
+    var config = configWithRefs.config
+    for ((hydrationPath, secretRefConfig) in configWithRefs.referencedSecrets) {
+      val secretPersistence = resolvePersistence(secretRefConfig.secretStorageId)
+      val secretValue = getOrThrowSecretValue(secretPersistence, secretRefConfig.secretCoordinate)
+      config =
+        when (hydrationPath) {
+          "$" -> TextNode(secretValue)
+          else -> JsonPaths.replaceAt(config, hydrationPath) { _, _ -> TextNode(secretValue) }
+        }
+    }
+
+    return config
   }
 
   /**
@@ -491,17 +501,10 @@ object SecretsHelpers {
    * configs.
    */
   object SecretReferenceHelpers {
-    fun getSecretStorageIdFromConfig(config: ConfigWithSecretReferences): UUID? =
+    fun getSecretStorageIdsFromConfig(config: ConfigWithSecretReferences): Set<UUID?> =
       config.referencedSecrets.values
-        .mapNotNull { it.secretStorageId }
+        .map { it.secretStorageId }
         .toSet()
-        .let { secretStorageIds ->
-          when {
-            secretStorageIds.size > 1 -> throw IllegalStateException("Multiple secret storage IDs found in the config: $secretStorageIds")
-            secretStorageIds.isNotEmpty() -> secretStorageIds.first()
-            else -> null
-          }
-        }
 
     fun inlineSecretReferences(
       config: JsonNode,
