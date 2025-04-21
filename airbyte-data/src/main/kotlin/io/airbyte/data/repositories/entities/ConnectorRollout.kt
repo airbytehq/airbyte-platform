@@ -4,6 +4,7 @@
 
 package io.airbyte.data.repositories.entities
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStrategyType
 import io.micronaut.core.annotation.Nullable
@@ -11,6 +12,8 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -50,4 +53,17 @@ data class ConnectorRollout(
   var failedReason: String? = null,
   @Nullable
   var pausedReason: String? = null,
+  @Nullable
+  @field:TypeDef(type = DataType.JSON)
+  var filters: ConnectorRolloutFilters? = null,
+)
+
+data class ConnectorRolloutFilters(
+  val organizationCustomerAttributeFilters: List<OrganizationCustomerAttributeFilter>,
+)
+
+data class OrganizationCustomerAttributeFilter(
+  val name: String,
+  val operator: String,
+  val value: JsonNode,
 )

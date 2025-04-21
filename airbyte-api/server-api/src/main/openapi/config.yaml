@@ -9213,6 +9213,8 @@ components:
           type: object
           additionalProperties:
             $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
+        tier:
+          $ref: "#/components/schemas/CustomerTier"
 
     ConnectorRolloutState:
       type: string
@@ -9240,6 +9242,26 @@ components:
         - manual
         - automated
         - overridden
+
+    ConnectorRolloutFilters:
+      type: object
+      properties:
+        tierFilter:
+          type: object
+          $ref: "#/components/schemas/ConnectorRolloutTierFilter"
+
+    ConnectorRolloutTierFilter:
+      type: object
+      properties:
+        tier:
+          $ref: "#/components/schemas/CustomerTier"
+
+    CustomerTier:
+      type: string
+      enum:
+        - TIER_0
+        - TIER_1
+        - TIER_2
 
     ConnectorRolloutListRequestBody:
       type: object
@@ -9305,6 +9327,8 @@ components:
         expires_at:
           type: string
           format: date-time
+        tier:
+          $ref: "#/components/schemas/CustomerTier"
 
     ConnectorRolloutCreateResponse:
       type: object
@@ -9557,6 +9581,8 @@ components:
         migrate_pins:
           type: boolean
           default: true
+        filters:
+          $ref: "#/components/schemas/ConnectorRolloutFilters"
 
     ConnectorRolloutManualRolloutRequestBody:
       type: object
@@ -9592,6 +9618,8 @@ components:
         migrate_pins:
           type: boolean
           default: true
+        filters:
+          $ref: "#/components/schemas/ConnectorRolloutFilters"
 
     ConnectorRolloutManualFinalizeRequestBody:
       type: object
@@ -10550,10 +10578,6 @@ components:
       required:
         - manifest
       properties:
-        formGeneratedManifest:
-          type: boolean
-          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
-          default: false
         workspaceId:
           $ref: "#/components/schemas/WorkspaceId"
         builderProjectId:

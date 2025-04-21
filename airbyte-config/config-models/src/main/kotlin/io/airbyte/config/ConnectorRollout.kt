@@ -27,4 +27,5 @@ data class ConnectorRollout(
   var errorMsg: String? = null,
   var failedReason: String? = null,
   var pausedReason: String? = null,
+  var filters: ConnectorRolloutFilters? = null,
 )

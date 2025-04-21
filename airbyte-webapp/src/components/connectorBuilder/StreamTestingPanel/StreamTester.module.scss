@@ -75,3 +75,13 @@
 .traceback.traceback {
   margin-bottom: 0;
 }
+
+.dynamicStreamButtonContainer {
+  display: flex;
+  flex-direction: row;
+  gap: variables.$spacing-md;
+
+  :last-child {
+    flex-grow: 1;
+  }
+}
