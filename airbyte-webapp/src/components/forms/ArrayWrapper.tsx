@@ -9,6 +9,7 @@ export const ArrayWrapper = <T extends FormValues>({
   controlId,
   name,
   hasError,
+  itemType,
   ...rest
 }: Omit<ArrayControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
@@ -20,6 +21,7 @@ export const ArrayWrapper = <T extends FormValues>({
       render={({ field }) => (
         <TagInput
           {...rest}
+          itemType={itemType}
           name={name}
           fieldValue={field.value ?? []}
           onChange={field.onChange}
