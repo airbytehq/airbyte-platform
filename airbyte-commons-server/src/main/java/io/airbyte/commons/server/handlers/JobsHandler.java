@@ -24,6 +24,9 @@ import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.StandardSyncOutput;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.MergeStreamStatWithMetadata;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.persistence.job.JobNotifier;
@@ -52,6 +55,7 @@ public class JobsHandler {
   private final JobNotifier jobNotifier;
   private final JobErrorReporter jobErrorReporter;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private final FeatureFlagClient featureFlagClient;
   private final MetricClient metricClient;
 
   public JobsHandler(final JobPersistence jobPersistence,
@@ -59,12 +63,14 @@ public class JobsHandler {
                      final JobNotifier jobNotifier,
                      final JobErrorReporter jobErrorReporter,
                      final ConnectionTimelineEventHelper connectionTimelineEventHelper,
+                     final FeatureFlagClient featureFlagClient,
                      final MetricClient metricClient) {
     this.jobPersistence = jobPersistence;
     this.jobCreationAndStatusUpdateHelper = jobCreationAndStatusUpdateHelper;
     this.jobNotifier = jobNotifier;
     this.jobErrorReporter = jobErrorReporter;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
+    this.featureFlagClient = featureFlagClient;
     this.metricClient = metricClient;
   }
 
@@ -82,7 +88,13 @@ public class JobsHandler {
 
       final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
       for (final Attempt attempt : job.getAttempts()) {
-        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
+        final boolean mergeStatsWithStreamMetadata = featureFlagClient.boolVariation(MergeStreamStatWithMetadata.INSTANCE,
+            new Connection(input.getConnectionId()));
+        if (mergeStatsWithStreamMetadata) {
+          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.getAttemptNumber()));
+        } else {
+          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
+        }
       }
       if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.failJob(job, attemptStats);
@@ -169,7 +181,13 @@ public class JobsHandler {
 
       final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
       for (final Attempt attempt : job.getAttempts()) {
-        attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
+        final boolean mergeStatsWithStreamMetadata = featureFlagClient.boolVariation(MergeStreamStatWithMetadata.INSTANCE,
+            new Connection(input.getConnectionId()));
+        if (mergeStatsWithStreamMetadata) {
+          attemptStats.add(jobPersistence.getAttemptStatsWithStreamMetadata(jobId, attempt.getAttemptNumber()));
+        } else {
+          attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
+        }
       }
       if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.successJob(job, attemptStats);

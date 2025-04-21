@@ -40,10 +40,19 @@ public interface JobPersistence {
   //
 
   /**
+   * Retrieve the combined and per stream stats for a single attempt. This included the stream
+   * metadata which means that was resumed and was backfilled are properly populated.
+   *
+   * @return {@link AttemptStats}
+   */
+  AttemptStats getAttemptStatsWithStreamMetadata(final long jobId, final int attemptNumber) throws IOException;
+
+  /**
    * Retrieve the combined and per stream stats for a single attempt.
    *
    * @return {@link AttemptStats}
    */
+  @Deprecated // This return AttemptStats without stream metadata. Use getAttemptStatsWithStreamMetadata instead.
   AttemptStats getAttemptStats(long jobId, int attemptNumber) throws IOException;
 
   /**
