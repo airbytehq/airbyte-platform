@@ -5,6 +5,7 @@
 package io.airbyte.connector.rollout.shared
 
 import io.airbyte.config.ActorType
+import io.airbyte.config.AttributeName
 import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
 import io.airbyte.config.ConfigScopeType
@@ -12,11 +13,13 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.CustomerTier
+import io.airbyte.config.CustomerTierFilter
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.config.Operator
 import io.airbyte.config.Schedule
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.StandardDestinationDefinition
@@ -241,7 +244,12 @@ class RolloutActorFinderTest {
       )
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
-    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), TARGET_PERCENTAGE)
+    val actorSelectionInfo =
+      rolloutActorFinder.getActorSelectionInfo(
+        createMockConnectorRollout(actorDefinitionId),
+        TARGET_PERCENTAGE,
+        null,
+      )
 
     verify {
       if (actorType == ActorType.SOURCE) {
@@ -292,7 +300,7 @@ class RolloutActorFinderTest {
       )
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
-    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), null)
+    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), null, null)
 
     verify {
       if (actorType == ActorType.SOURCE) {
@@ -626,7 +634,7 @@ class RolloutActorFinderTest {
       )
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
-    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
+    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1, null)
 
     verify {
       if (actorType == ActorType.SOURCE) {
@@ -705,7 +713,7 @@ class RolloutActorFinderTest {
       )
     every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
 
-    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1)
+    val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(createMockConnectorRollout(actorDefinitionId), 1, null)
 
     verify {
       if (actorType == ActorType.SOURCE) {
@@ -773,7 +781,7 @@ class RolloutActorFinderTest {
 
   @ParameterizedTest
   @MethodSource("actorTypes")
-  fun `test filterByTier excludes organizations listed as tier 0 or 1`(actorType: ActorType) {
+  fun `test filterByTier excludes organizations when filter is present`(actorType: ActorType) {
     val organizationTiers =
       mapOf(
         ORGANIZATION_ID_1 to CustomerTier.TIER_0,
@@ -797,11 +805,20 @@ class RolloutActorFinderTest {
         ),
       )
 
-    val filteredCandidates = rolloutActorFinder.filterByTier(candidates)
+    val filteredCandidates =
+      rolloutActorFinder.filterByTier(
+        candidates,
+        listOf(
+          CustomerTierFilter(
+            AttributeName.TIER,
+            Operator.IN,
+            listOf(CustomerTier.TIER_2),
+          ),
+        ),
+      )
 
-    assertEquals(2, filteredCandidates.size)
+    assertEquals(1, filteredCandidates.size)
     assertTrue(filteredCandidates.any { it.scopeMap[ConfigScopeType.ORGANIZATION] == ORGANIZATION_ID_2 })
-    assertTrue(filteredCandidates.any { it.scopeMap[ConfigScopeType.ORGANIZATION] == null })
 
     verify { organizationCustomerAttributesService.getOrganizationTiers() }
   }

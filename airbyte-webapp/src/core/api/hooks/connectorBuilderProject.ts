@@ -20,6 +20,7 @@ import {
   getDeclarativeManifestBaseImage,
   createForkedConnectorBuilderProject,
   getConnectorBuilderProjectIdForDefinitionId,
+  fullResolveManifestBuilderProject,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -27,6 +28,7 @@ import {
   DeclarativeManifestVersionRead,
   ConnectorBuilderProjectRead,
   SourceDefinitionIdBody,
+  ConnectorBuilderProjectFullResolveRequestBody,
   ConnectorBuilderProjectStreamReadRequestBody,
   ConnectorBuilderProjectStreamRead,
   ConnectorBuilderProjectTestingValuesUpdate,
@@ -63,6 +65,7 @@ const connectorBuilderProjectsKeys = {
   getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
   getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
     [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
+  fullResolve: (projectId?: string) => ["builder_project_full_resolve", projectId] as const,
 };
 
 export interface BuilderProject {
@@ -514,6 +517,21 @@ export const useBuilderProjectReadStream = (
       refetchOnWindowFocus: false,
       enabled: false,
       onSuccess,
+    }
+  );
+};
+
+export const useBuilderProjectFullResolveManifest = (params: ConnectorBuilderProjectFullResolveRequestBody) => {
+  const requestOptions = useRequestOptions();
+
+  const projectId = params.builderProjectId;
+
+  return useQuery(
+    connectorBuilderProjectsKeys.fullResolve(projectId),
+    () => fullResolveManifestBuilderProject(params, requestOptions),
+    {
+      enabled: false,
+      refetchOnWindowFocus: false,
     }
   );
 };

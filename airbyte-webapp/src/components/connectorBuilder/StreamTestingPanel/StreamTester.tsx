@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconColor, IconType } from "components/ui/Icon";
@@ -46,6 +47,7 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
+    generateStreams,
     queuedStreamRead,
     queueStreamRead,
     cancelStreamRead,
@@ -149,6 +151,30 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
+  const streamTestButton = (
+    <StreamTestButton
+      variant={streamIsDynamic ? "secondary" : undefined}
+      queueStreamRead={() => {
+        queueStreamRead();
+        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
+          actionDescription: "Stream test initiated",
+          stream_name: streamName,
+        });
+      }}
+      cancelStreamRead={cancelStreamRead}
+      hasTestingValuesErrors={hasTestingValuesErrors}
+      setTestingValuesInputOpen={setTestingValuesInputOpen}
+      hasResolveErrors={Boolean(resolveErrorMessage)}
+      isStreamTestQueued={queuedStreamRead}
+      isStreamTestRunning={isFetching}
+      isStreamTestStale={
+        !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+      }
+      forceDisabled={cantProcessCustomComponents}
+      requestType={testStreamRequestType}
+    />
+  );
+
   return (
     <div className={styles.container}>
       {streamName === undefined && isResolving && (
@@ -161,27 +187,13 @@ export const StreamTester: React.FC<{
         <Message type="error" text={formatMessage({ id: "connectorBuilder.warnings.containsCustomComponent" })} />
       )}
 
-      <StreamTestButton
-        variant={streamIsDynamic ? "secondary" : undefined}
-        queueStreamRead={() => {
-          queueStreamRead();
-          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
-            actionDescription: "Stream test initiated",
-            stream_name: streamName,
-          });
-        }}
-        cancelStreamRead={cancelStreamRead}
-        hasTestingValuesErrors={hasTestingValuesErrors}
-        setTestingValuesInputOpen={setTestingValuesInputOpen}
-        hasResolveErrors={Boolean(resolveErrorMessage)}
-        isStreamTestQueued={queuedStreamRead}
-        isStreamTestRunning={isFetching}
-        isStreamTestStale={
-          !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
-        }
-        forceDisabled={cantProcessCustomComponents}
-        requestType={testStreamRequestType}
-      />
+      {streamIsDynamic && (
+        <div className={styles.dynamicStreamButtonContainer}>
+          {streamTestButton}
+          <Button onClick={generateStreams}>Generate Streams</Button>
+        </div>
+      )}
+      {!streamIsDynamic && streamTestButton}
 
       {resolveErrorMessage !== undefined && (
         <div className={styles.listErrorDisplay}>

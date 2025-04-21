@@ -7,5 +7,5 @@ plugins {
 tasks.register<DockerBuildxTask>("dockerJavaBaseImage") {
   inputDir = project.projectDir
   tag = "3.3.4"
-  imageName = "airbyte/airbyte-base-java-image"
+  imageName = "airbyte-base-java-image"
 }

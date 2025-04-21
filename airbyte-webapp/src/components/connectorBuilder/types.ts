@@ -84,10 +84,18 @@ import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
-export interface StreamId {
+interface GeneratedStreamId {
+  type: "generated_stream";
+  index: number;
+  dynamicStreamName: string;
+}
+
+interface BaseStreamId {
   type: "stream" | "dynamic_stream";
   index: number;
 }
+
+export type StreamId = BaseStreamId | GeneratedStreamId;
 
 export interface BuilderState {
   name: string;
@@ -101,9 +109,11 @@ export interface BuilderState {
     | "inputs"
     | "components"
     | `dynamic_stream_${number}` /* dynamic stream index */
+    | `generated_stream_${string}` /* stream instance generated from a dynamic stream */
     | number /* stream index */;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
+  generatedStreams: Record<string, DeclarativeStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
 }
 
@@ -462,6 +472,7 @@ export type BuilderPollingTimeout =
 
 export interface BuilderDynamicStream {
   streamTemplate: BuilderStream;
+  dynamic_stream_name?: string;
   // TODO:
   // componentsResolver: BuilderComponentsResolver;
 }
