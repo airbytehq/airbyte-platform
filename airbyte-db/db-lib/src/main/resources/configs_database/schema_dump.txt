@@ -264,6 +264,7 @@ create table "public"."connector_rollout" (
   "rollout_strategy" varchar(256),
   "workflow_run_id" varchar(64),
   "paused_reason" varchar(1024),
+  "filters" jsonb,
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."dataplane" (

@@ -15,8 +15,8 @@ jobs:
     steps:
       - name: List and Terminate Instances Older Than 4 Hours
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.SELF_RUNNER_AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.SELF_RUNNER_AWS_SECRET_ACCESS_KEY }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PLATFORM_BUILD_CACHE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PLATFORM_BUILD_CACHE_SECRET_KEY }}
           # See https://github.com/aws/aws-cli/issues/5623
           AWS_EC2_METADATA_DISABLED: true
         run: |

@@ -17,11 +17,20 @@ interface StreamSelectorProps {
   className?: string;
 }
 
-interface SelectorOption {
+interface GeneratedStreamOption {
+  type: "generated_stream";
+  name: string;
+  idx: number;
+  dynamicStreamName: string;
+}
+
+interface BaseSelectorOption {
   type: "stream" | "dynamic_stream";
   name: string;
   idx: number;
 }
+
+type SelectorOption = BaseSelectorOption | GeneratedStreamOption;
 
 const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => {
   return (
@@ -42,7 +51,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
@@ -64,6 +73,17 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
     })
   );
 
+  Object.entries(generatedStreams).forEach(([dynamicStreamName, streams]) => {
+    options.push(
+      ...streams.map((stream, idx) => {
+        const label = stream.name?.trim()
+          ? `${dynamicStreamName}: ${stream.name}`
+          : formatMessage({ id: "connectorBuilder.emptyName" });
+        return { label, value: { type: "generated_stream" as const, name: stream.name ?? "", idx, dynamicStreamName } };
+      })
+    );
+  });
+
   options.push(
     ...streamNames.map((streamName, idx) => {
       const label = streamName.trim() ? streamName : formatMessage({ id: "connectorBuilder.emptyName" });
@@ -84,6 +104,15 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
       const selectedStreamIndex = dynamicStreamNames.findIndex((streamName) => selectedStreamName === streamName);
       selectedView = `dynamic_stream_${selectedStreamIndex}`;
       selectedStreamId = { type: "dynamic_stream" as const, index: selectedStreamIndex };
+    } else if (type === "generated_stream") {
+      const selectedGeneratedStreams = generatedStreams[selectedStream.dynamicStreamName];
+      const selectedStreamIndex = selectedGeneratedStreams.findIndex((stream) => selectedStreamName === stream.name);
+      selectedView = `generated_stream_${selectedStreamIndex}`;
+      selectedStreamId = {
+        type: "generated_stream" as const,
+        index: selectedStreamIndex,
+        dynamicStreamName: selectedStream.dynamicStreamName,
+      };
     }
 
     if (selectedView != null) {

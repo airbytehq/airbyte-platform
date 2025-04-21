@@ -346,6 +346,25 @@ export const useBuilderValidationSchema = () => {
     []
   );
 
+  const generatedStreamsSchema = useMemo(
+    () =>
+      yup
+        .object()
+        .shape({})
+        .test("generatedStreams", "Generated streams must be valid streams", (value) => {
+          for (const key in value) {
+            const stream = value[key];
+            try {
+              streamSchema.validateSync(stream);
+            } catch {
+              return false;
+            }
+          }
+          return true;
+        }),
+    [streamSchema]
+  );
+
   const builderStateValidationSchema = useMemo(
     () =>
       yup.object().shape({
@@ -367,9 +386,10 @@ export const useBuilderValidationSchema = () => {
             index: yup.number().min(0).required(REQUIRED_ERROR),
           })
           .required(REQUIRED_ERROR),
+        generatedStreams: generatedStreamsSchema,
         testingValues: testingValuesSchema,
       }),
-    [builderFormValidationSchema, testingValuesSchema]
+    [builderFormValidationSchema, testingValuesSchema, generatedStreamsSchema]
   );
 
   return {
