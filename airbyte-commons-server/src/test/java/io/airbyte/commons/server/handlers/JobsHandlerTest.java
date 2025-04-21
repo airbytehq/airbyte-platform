@@ -31,6 +31,7 @@ import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelp
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
+import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
@@ -45,6 +46,9 @@ import io.airbyte.config.StandardSyncOutput;
 import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.SyncMode;
+import io.airbyte.config.SyncStats;
+import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobNotifier;
 import io.airbyte.persistence.job.JobPersistence;
@@ -52,6 +56,7 @@ import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.errorreporter.SyncJobReportingContext;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -63,6 +68,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 
 /**
@@ -77,6 +83,7 @@ public class JobsHandlerTest {
   private JobCreationAndStatusUpdateHelper helper;
   private JobErrorReporter jobErrorReporter;
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
+  private FeatureFlagClient featureFlagClient;
   private MetricClient metricClient;
 
   private static final long JOB_ID = 12;
@@ -109,11 +116,15 @@ public class JobsHandlerTest {
     metricClient = mock(MetricClient.class);
 
     helper = mock(JobCreationAndStatusUpdateHelper.class);
-    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper, metricClient);
+    featureFlagClient = mock(TestClient.class);
+
+    jobsHandler = new JobsHandler(jobPersistence, helper, jobNotifier, jobErrorReporter, connectionTimelineEventHelper,
+        featureFlagClient, metricClient);
   }
 
-  @Test
-  void testJobSuccessWithAttemptNumber() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testJobSuccessWithAttemptNumber(final boolean mergeStatsWithMetadata) throws IOException {
     final var request = new JobSuccessWithAttemptNumberRequest()
         .attemptNumber(ATTEMPT_NUMBER)
         .jobId(JOB_ID)
@@ -121,15 +132,27 @@ public class JobsHandlerTest {
         .standardSyncOutput(standardSyncOutput);
 
     final Job job =
-        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(
+            new Attempt(ATTEMPT_NUMBER, JOB_ID, Path.of(""), null, null, AttemptStatus.SUCCEEDED, null, null, 1, 2, null)),
+            io.airbyte.config.JobStatus.SUCCEEDED, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
+
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(mergeStatsWithMetadata);
+
+    JobPersistence.AttemptStats attemptStats = new JobPersistence.AttemptStats(new SyncStats().withBytesEmitted(1234L), List.of());
+    if (mergeStatsWithMetadata) {
+      when(jobPersistence.getAttemptStatsWithStreamMetadata(JOB_ID, ATTEMPT_NUMBER)).thenReturn(attemptStats);
+    } else {
+      when(jobPersistence.getAttemptStats(JOB_ID, ATTEMPT_NUMBER)).thenReturn(attemptStats);
+    }
+
     jobsHandler.jobSuccessWithAttemptNumber(request);
 
     verify(jobPersistence).writeOutput(JOB_ID, ATTEMPT_NUMBER, jobOutput);
     verify(jobPersistence).succeedAttempt(JOB_ID, ATTEMPT_NUMBER);
     verify(jobNotifier).successJob(any(), any());
     verify(helper).trackCompletion(any(), eq(JobStatus.SUCCEEDED));
-    verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(eq(job), eq(CONNECTION_ID), any());
+    verify(connectionTimelineEventHelper).logJobSuccessEventInConnectionTimeline(job, CONNECTION_ID, List.of(attemptStats));
   }
 
   @Test
@@ -266,8 +289,9 @@ public class JobsHandlerTest {
     verify(helper).reportJobStart(jobId);
   }
 
-  @Test
-  void setJobFailure() throws IOException {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void setJobFailure(final boolean mergeStatsWithMetadata) throws IOException {
     final AttemptFailureSummary failureSummary = new AttemptFailureSummary()
         .withFailures(Collections.singletonList(
             new FailureReason()
@@ -276,6 +300,7 @@ public class JobsHandlerTest {
 
     final Attempt mAttempt = Mockito.mock(Attempt.class);
     when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
+    when(mAttempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withSourceDefinitionVersionId(UUID.randomUUID())
@@ -293,11 +318,22 @@ public class JobsHandlerTest {
     when(mJob.getConfig()).thenReturn(mJobConfig);
     when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
     when(mJob.getConfigType()).thenReturn(SYNC);
+    when(mJob.getId()).thenReturn(JOB_ID);
+    when(mJob.getAttempts()).thenReturn(List.of(mAttempt));
 
     when(jobPersistence.getJob(JOB_ID))
         .thenReturn(mJob);
 
-    jobsHandler.jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(1).connectionId(CONNECTION_ID).reason(failureReason));
+    when(featureFlagClient.boolVariation(any(), any())).thenReturn(mergeStatsWithMetadata);
+
+    JobPersistence.AttemptStats attemptStats = new JobPersistence.AttemptStats(new SyncStats().withBytesEmitted(1234L), List.of());
+    if (mergeStatsWithMetadata) {
+      when(jobPersistence.getAttemptStatsWithStreamMetadata(JOB_ID, ATTEMPT_NUMBER)).thenReturn(attemptStats);
+    } else {
+      when(jobPersistence.getAttemptStats(JOB_ID, ATTEMPT_NUMBER)).thenReturn(attemptStats);
+    }
+
+    jobsHandler.jobFailure(new JobFailureRequest().jobId(JOB_ID).attemptNumber(ATTEMPT_NUMBER).connectionId(CONNECTION_ID).reason(failureReason));
 
     final SyncJobReportingContext expectedReportingContext = new SyncJobReportingContext(
         JOB_ID,
@@ -313,7 +349,7 @@ public class JobsHandlerTest {
     verify(jobPersistence).failJob(JOB_ID);
     verify(jobNotifier).failJob(Mockito.any(), any());
     verify(jobErrorReporter).reportSyncJobFailure(CONNECTION_ID, failureSummary, expectedReportingContext, expectedAttemptConfig);
-    verify(connectionTimelineEventHelper).logJobFailureEventInConnectionTimeline(eq(mJob), eq(CONNECTION_ID), any());
+    verify(connectionTimelineEventHelper).logJobFailureEventInConnectionTimeline(mJob, CONNECTION_ID, List.of(attemptStats));
   }
 
   @Test
