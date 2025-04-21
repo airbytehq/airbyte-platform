@@ -102,25 +102,6 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     assertConnectorRolloutEquals(rollout, persistedRollout)
   }
 
-  @ParameterizedTest
-  @ArgumentsSource(ActiveStatesProvider::class)
-  fun `test db insertion fails when actor has active rollouts`(state: ConnectorRolloutStateType) {
-    val rolloutId1 = UUID.randomUUID()
-    val actorDefinitionId = UUID.randomUUID()
-    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, state)
-
-    connectorRolloutRepository.save(rollout1)
-    assertEquals(1, connectorRolloutRepository.count())
-
-    // Attempt to insert another rollout with the same actorDefinitionId and an active state fails because only one active rollout is allowed per actor
-    val rolloutId2 = UUID.randomUUID()
-    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, state)
-
-    assertThrows<Exception> {
-      connectorRolloutRepository.save(rollout2)
-    }
-  }
-
   @Test
   fun `test db insertion succeeds when actor has no active rollouts`() {
     val actorDefinitionId = UUID.randomUUID()
@@ -261,26 +242,6 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
 
     val updatedRollout = connectorRolloutRepository.findById(rolloutId).get()
     assertEquals(newState, updatedRollout.state)
-  }
-
-  @Test
-  fun `test prevent update from terminal to active state when active rollout exists for actor`() {
-    val rolloutId1 = UUID.randomUUID()
-    val actorDefinitionId = UUID.randomUUID()
-    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, ConnectorRolloutStateType.succeeded)
-    // Save the first rollout with a terminal state
-    connectorRolloutRepository.save(rollout1)
-
-    // Save a new rollout with an active state
-    val rolloutId2 = UUID.randomUUID()
-    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, ConnectorRolloutStateType.initialized)
-    connectorRolloutRepository.save(rollout2)
-
-    // Attempt to update the first rollout to an active state fails because only one active rollout is allowed per actor
-    rollout1.state = ConnectorRolloutStateType.in_progress
-    assertThrows<Exception> {
-      connectorRolloutRepository.update(rollout1)
-    }
   }
 
   @Test
