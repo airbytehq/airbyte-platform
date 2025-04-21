@@ -198,7 +198,7 @@ class ConnectorRolloutApiController(
     @Body connectorRolloutManualRolloutRequestBody: ConnectorRolloutManualRolloutRequestBody,
   ): ConnectorRolloutManualRolloutResponse? =
     execute {
-      connectorRolloutHandler.manualDoConnectorRolloutUpdate(
+      connectorRolloutHandler.manualDoConnectorRollout(
         connectorRolloutManualRolloutRequestBody,
       )
     }
