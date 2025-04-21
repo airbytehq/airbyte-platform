@@ -61,7 +61,7 @@ open class SecretsRepositoryReader(
   ): JsonNode {
     val node = JsonNodeFactory.instance.objectNode()
     node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
-    return secretsHydrator.hydrate(buildConfigWithSecretRefsJava(node), mapOf(null to secretPersistence))
+    return secretsHydrator.hydrateSecretCoordinate(node, secretPersistence)
   }
 
   /**
