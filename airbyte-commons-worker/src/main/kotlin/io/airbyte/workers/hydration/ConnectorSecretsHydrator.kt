@@ -51,15 +51,19 @@ class ConnectorSecretsHydrator(
     return RuntimeSecretPersistence(secretPersistenceConfig.toModel(), metricClient)
   }
 
-  private fun getPersistence(
+  private fun getPersistenceMap(
     config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
-  ): SecretPersistence {
-    val secretStorageId = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdFromConfig(config)
-    return when {
-      secretStorageId != null -> getPersistenceByStorageId(secretStorageId)
-      useRuntimeSecretPersistence -> getLegacyPersistenceByOrgId(context.organizationId)
-      else -> defaultSecretPersistence
+  ): Map<UUID?, SecretPersistence> {
+    val secretStorageIds = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdsFromConfig(config)
+    return secretStorageIds.associate { secretStorageId ->
+      val persistence =
+        when {
+          secretStorageId != null -> getPersistenceByStorageId(secretStorageId)
+          useRuntimeSecretPersistence -> getLegacyPersistenceByOrgId(context.organizationId)
+          else -> defaultSecretPersistence
+        }
+      secretStorageId to persistence
     }
   }
 
@@ -67,7 +71,7 @@ class ConnectorSecretsHydrator(
     config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
   ): JsonNode? {
-    val secretPersistence = getPersistence(config, context)
-    return secretsRepositoryReader.hydrateConfig(config, secretPersistence)
+    val secretPersistenceMap = getPersistenceMap(config, context)
+    return secretsRepositoryReader.hydrateConfig(config, secretPersistenceMap)
   }
 }
