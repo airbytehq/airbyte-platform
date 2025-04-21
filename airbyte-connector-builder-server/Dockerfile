@@ -7,7 +7,7 @@ ENV CDK_PYTHON=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python
 ENV CDK_ENTRYPOINT ${PYENV_ROOT}/versions/${PYTHON_VERSION}/lib/python3.10/site-packages/airbyte_cdk/connector_builder/main.py
 # Set up CDK
 ENV PIP=${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/pip
-COPY requirements.txt requirements.txt
+COPY --chown=airbyte:airbyte requirements.txt requirements.txt
 RUN ${PIP} install -r requirements.txt
 
 ARG VERSION=dev
