@@ -29,7 +29,7 @@ micronaut:
   executors:
     kube-client:
       type: cached
-      n-threads: ${WORKLOAD_LAUNCHER_PARALLELISM:10}
+      n-threads: ${KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS:10}
       core-pool-size: 0
 airbyte:
   auth:
