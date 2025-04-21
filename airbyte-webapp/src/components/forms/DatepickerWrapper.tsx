@@ -1,6 +1,6 @@
 import type { OmittableProperties, DatepickerControlProps } from "./FormControl";
 
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import DatePicker from "components/ui/DatePicker";
 
@@ -13,6 +13,9 @@ export const DatepickerWrapper = <T extends FormValues>({
   ...rest
 }: Omit<DatepickerControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
+  // If we don't watch the name explicitly, the datepicker will not update
+  // when its value is changed as a result of setting a parent object value.
+  const value = useWatch({ name });
 
   return (
     <Controller
@@ -21,7 +24,7 @@ export const DatepickerWrapper = <T extends FormValues>({
       render={({ field }) => (
         <DatePicker
           {...rest}
-          value={field.value}
+          value={value ?? ""}
           onChange={field.onChange}
           withTime={format === "date-time"}
           error={hasError}

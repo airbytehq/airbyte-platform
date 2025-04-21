@@ -10,6 +10,8 @@ import { ListBox } from "components/ui/ListBox";
 import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { ControlGroup } from "./ControlGroup";
+import { LinkComponentsToggle } from "./LinkComponentsToggle";
+import { useRefsHandler } from "./RefsHandler";
 import { useSchemaForm } from "./SchemaForm";
 import styles from "./SchemaFormControl.module.scss";
 import { extractDefaultValuesFromSchema, verifyArrayItems, AirbyteJsonSchema, getSelectedOptionSchema } from "./utils";
@@ -34,6 +36,7 @@ interface BaseControlProps {
   label?: string;
   labelTooltip?: ReactElement;
   optional: boolean;
+  header?: ReactElement;
 }
 
 /**
@@ -59,7 +62,12 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
         <LabelInfo description={targetProperty.description} examples={targetProperty.examples} />
       ) : undefined,
     optional: !isRequiredField(path),
+    header: <LinkComponentsToggle path={path} />,
   };
+
+  if (targetProperty.oneOf || targetProperty.anyOf) {
+    return <MultiOptionControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+  }
 
   if (targetProperty.type === "object") {
     return <ObjectControl baseProps={baseProps} overrideByPath={overrideByPath} />;
@@ -133,8 +141,13 @@ const ObjectControl = ({
   );
 
   // rendering top-level schema, so no border is necessary
-  if (!baseProps.name || !baseProps.label) {
-    return contents;
+  if (!baseProps.name) {
+    return (
+      <>
+        {baseProps.header}
+        {contents}
+      </>
+    );
   }
 
   return (
@@ -144,6 +157,7 @@ const ObjectControl = ({
       path={baseProps.name}
       error={errorAtPath(baseProps.name)}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
+      header={baseProps.header}
     >
       {contents}
     </ControlGroup>
@@ -194,6 +208,7 @@ const MultiOptionControl = ({
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
       error={errorAtPath(baseProps.name)}
+      header={baseProps.header}
       control={
         <ListBox
           options={options.map((option) => ({
@@ -246,6 +261,7 @@ const ArrayOfObjectsControl = ({
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
       error={error}
+      header={baseProps.header}
       control={
         <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button">
           <FormattedMessage id="form.add" />
@@ -264,20 +280,42 @@ const ArrayOfObjectsControl = ({
 
 const useToggleConfig = (path: string) => {
   const { schemaAtPath } = useSchemaForm();
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, clearErrors, resetField } = useFormContext();
   const value = useWatch({ name: path });
+  const { getReferenceInfo, handleUnlinkAction } = useRefsHandler();
 
   const defaultValue = extractDefaultValuesFromSchema(schemaAtPath(path));
   const handleToggle = useCallback(
     (newEnabledState: boolean) => {
       if (newEnabledState) {
+        // Use resetField to ensure the field and all its children are properly reset
+        // This avoids the UI showing stale values that aren't in the form state
+        resetField(path, { defaultValue });
         setValue(path, defaultValue);
       } else {
-        setValue(path, undefined);
-        clearErrors(path);
+        // Get reference info before making changes
+        const refInfo = getReferenceInfo(path);
+
+        // For more deterministic behavior, use a more controlled approach:
+        // 1. First unlink all affected references if this field has any
+        if (refInfo.type !== "none") {
+          // Unlink the field
+          handleUnlinkAction(path);
+
+          // Give a small delay to ensure React state updates happen in the correct order
+          setTimeout(() => {
+            // 2. Then uncheck the field
+            setValue(path, undefined);
+            clearErrors(path);
+          }, 0);
+        } else {
+          // No references, just uncheck the field immediately
+          setValue(path, undefined);
+          clearErrors(path);
+        }
       }
     },
-    [path, clearErrors, defaultValue, setValue]
+    [path, clearErrors, defaultValue, setValue, resetField, getReferenceInfo, handleUnlinkAction]
   );
 
   return {

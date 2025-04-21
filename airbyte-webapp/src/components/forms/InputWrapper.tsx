@@ -1,7 +1,7 @@
 import type { OmittableProperties, InputControlProps } from "./FormControl";
 
 import { useCallback } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { Input } from "components/ui/Input";
 
@@ -16,6 +16,9 @@ export const InputWrapper = <T extends FormValues>({
 }: Omit<InputControlProps<T>, OmittableProperties>) => {
   const { register, setValue } = useFormContext<T>();
   const { onChange, ...registerRest } = register(name);
+  // If we don't watch the name explicitly, the input will not update
+  // when its value is changed as a result of setting a parent object value.
+  const value = useWatch({ name });
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,6 +46,7 @@ export const InputWrapper = <T extends FormValues>({
     <Input
       {...rest}
       {...registerRest}
+      value={value ?? ""}
       onChange={handleChange}
       name={name}
       type={type}

@@ -34,6 +34,7 @@ export const schemaValidator = <JsonSchema extends AirbyteJsonSchema, TsSchema e
     removeEmptyProperties(data);
 
     // Run the standard AJV validation
+    // TODO: resolve schema before validation
     const ajv = ajvResolver(schema as JSONSchemaType<unknown>, {
       coerceTypes: true,
       formats: fullFormats,
