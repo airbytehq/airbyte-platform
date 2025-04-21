@@ -89,6 +89,9 @@ properties:
     description: whether the sync is transferring files
     type: boolean
     default: false
+  omitFileTransferEnvVar:
+    description: whether to omit the file transfer env var when using file transfer. Deprecated, to delete when destinations no longer support the old flow.
+    default: false
   connectionContext:
     existingJavaType: io.airbyte.config.ConnectionContext
   networkSecurityTokens:
