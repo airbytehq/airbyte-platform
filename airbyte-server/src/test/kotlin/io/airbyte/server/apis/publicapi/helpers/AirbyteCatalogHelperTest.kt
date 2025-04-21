@@ -614,6 +614,25 @@ internal class AirbyteCatalogHelperTest {
   }
 
   @Test
+  internal fun `test that the updated configuration includes files if set`() {
+    val airbyteStream = AirbyteStream()
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name",
+        includeFiles = true,
+      )
+
+    val airbyteStreamConfiguration =
+      AirbyteCatalogHelper.updateAirbyteStreamConfiguration(
+        config = createAirbyteStreamConfiguration(),
+        airbyteStream = airbyteStream,
+        streamConfiguration = streamConfiguration,
+      )
+
+    assertTrue(airbyteStreamConfiguration.includeFiles)
+  }
+
+  @Test
   internal fun `test that the updated configuration includes configured mappers if provided`() {
     val airbyteStream = AirbyteStream()
     val streamConfiguration =

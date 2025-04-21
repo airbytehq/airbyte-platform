@@ -64,6 +64,7 @@ object ConnectionReadMapper {
                   primaryKey = streamAndConfiguration.config.primaryKey,
                   cursorField = streamAndConfiguration.config.cursorField,
                   mappers = convertMappers(streamAndConfiguration.config.mappers),
+                  includeFiles = streamAndConfiguration.config.includeFiles,
                   syncMode = connectionSyncMode,
                   selectedFields = selectedFields,
                 )
