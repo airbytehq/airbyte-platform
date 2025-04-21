@@ -4,8 +4,13 @@
 
 package io.airbyte.data.repositories
 
+import io.airbyte.config.AttributeName
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.config.CustomerTier
+import io.airbyte.config.CustomerTierFilter
+import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
+import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
@@ -137,6 +142,18 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
       rolloutStrategy = ConnectorRolloutStrategyType.manual,
       maxStepWaitTimeMins = 60,
       expiresAt = OffsetDateTime.now().plusDays(1),
+      filters =
+        io.airbyte.config
+          .ConnectorRolloutFilters(
+            customerTierFilters =
+              listOf(
+                CustomerTierFilter(
+                  name = AttributeName.TIER,
+                  operator = Operator.IN,
+                  value = listOf(CustomerTier.TIER_1),
+                ),
+              ),
+          ).toEntity(),
     )
 
   private fun assertConnectorRolloutEquals(

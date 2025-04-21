@@ -4,13 +4,12 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
-import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.AttributeName
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
 import io.airbyte.data.repositories.entities.ConnectorRolloutFilters
-import io.airbyte.data.repositories.entities.OrganizationCustomerAttributeFilter
+import io.airbyte.data.repositories.entities.CustomerTierFilter
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -21,7 +20,7 @@ typealias EntityConnectorRolloutStrategyType = io.airbyte.db.instance.configs.jo
 typealias ModelConnectorRolloutStrategyType = io.airbyte.config.ConnectorEnumRolloutStrategy
 typealias EntityConnectorRolloutFilters = ConnectorRolloutFilters
 typealias ModelConnectorRolloutFilters = io.airbyte.config.ConnectorRolloutFilters
-typealias ModelCustomerAttributeFilterExpression = io.airbyte.config.CustomerTierFilter
+typealias ModelCustomerTierFilterExpression = io.airbyte.config.CustomerTierFilter
 typealias EntityConnectorRollout = ConnectorRollout
 typealias ModelConnectorRollout = io.airbyte.config.ConnectorRollout
 
@@ -67,37 +66,26 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
 
 fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters {
   val expressions =
-    this.organizationCustomerAttributeFilters.map { attr ->
+    this.customerTierFilters.map { attr ->
       try {
-        val name = AttributeName.valueOf(attr.name.uppercase())
-        val operator = Operator.valueOf(attr.operator.uppercase())
+        val name = AttributeName.valueOf(attr.name)
+        val operator = Operator.valueOf(attr.operator)
 
-        val value =
-          when (name) {
-            AttributeName.TIER -> {
-              val valuesNode =
-                attr.value["value"]
-                  ?: throw RuntimeException("Missing 'value' field in TIER attribute filter: ${attr.value}")
-
-              val tierList =
-                try {
-                  valuesNode
-                    .asSequence()
-                    .mapNotNull { tierNode ->
-                      tierNode?.asText()?.trim()?.let { CustomerTier.valueOf(it) }
-                    }.toList()
-                } catch (e: Exception) {
-                  throw RuntimeException("Failed to parse tier(s) from: $valuesNode", e)
-                }
-
-              tierList
-            }
+        val tierList =
+          try {
+            attr.value
+              .asSequence()
+              .map { tierValue ->
+                tierValue.trim().let { CustomerTier.valueOf(it) }
+              }.toList()
+          } catch (e: Exception) {
+            throw RuntimeException("Failed to parse tier(s) from: ${attr.value}", e)
           }
 
-        ModelCustomerAttributeFilterExpression(
+        ModelCustomerTierFilterExpression(
           name = name,
           operator = operator,
-          value = value,
+          value = tierList,
         )
       } catch (e: Exception) {
         throw RuntimeException("Failed to parse customer attribute: attribute=$attr exception=${e.message}", e)
@@ -108,15 +96,15 @@ fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters 
 }
 
 fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
-  val customerAttributeFilters =
+  val customerTierFilters =
     this.customerTierFilters.map { filter ->
       when (filter) {
-        is ModelCustomerAttributeFilterExpression -> {
-          val name = filter.name.toString()
-          val operator = filter.operator.toString()
-          val value: JsonNode = objectMapper.valueToTree(mapOf("value" to filter.value.map { it.name }))
+        is ModelCustomerTierFilterExpression -> {
+          val name = filter.name.name
+          val operator = filter.operator.name
+          val value: List<String> = filter.value.map { it.name }
 
-          OrganizationCustomerAttributeFilter(
+          CustomerTierFilter(
             name = name,
             operator = operator,
             value = value,
@@ -125,7 +113,8 @@ fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
         else -> throw RuntimeException("Failed to parse customer attribute filter: filter=$filter")
       }
     }
-  return EntityConnectorRolloutFilters(organizationCustomerAttributeFilters = customerAttributeFilters)
+
+  return EntityConnectorRolloutFilters(customerTierFilters = customerTierFilters)
 }
 
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
