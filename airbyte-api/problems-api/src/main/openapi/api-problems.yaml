@@ -606,6 +606,48 @@ components:
               default: Attempted to use pre-existing secret values, but an existing secret for that mapper was not found. Please provide the secret values.
             data:
               $ref: "#/components/schemas/ProblemMapperIdData"
+    ConnectionDoesNotSupportFileTransfersProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection-validation/file-transfer/connection-unsupported
+            title:
+              type: string
+              default: Connection does not support file transfers
+            detail:
+              type: string
+              default: The source or destination used in this connection does not support file transfers, so they cannot be enabled.
+            data:
+              $ref: "#/components/schemas/ProblemConnectionUnsupportedFileTransfersData"
+    StreamDoesNotSupportFileTransfersProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection-validation/file-transfer/stream-unsupported
+            title:
+              type: string
+              default: Stream does not support file transfers
+            detail:
+              type: string
+              default: The stream does not support file transfers, so it cannot be enabled.
+            data:
+              $ref: "#/components/schemas/ProblemConnectionUnsupportedFileTransfersData"
     ConnectionConflictingStreamProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
@@ -1277,6 +1319,27 @@ components:
               default: The notification is missing a URL.
             data:
               $ref: "#/components/schemas/ProblemMessageData"
+    ProblemStreamDataItem:
+      type: object
+      required:
+        - streamName
+        - streamNamespace
+      properties:
+        streamName:
+          type: string
+          description: Name of the stream
+        streamNamespace:
+          type: string
+          description: Namespace of the stream
+    ProblemConnectionUnsupportedFileTransfersData:
+      type: object
+      required:
+        - streams
+      properties:
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProblemStreamDataItem"
     ProblemConnectionConflictingStreamsData:
       type: object
       required:

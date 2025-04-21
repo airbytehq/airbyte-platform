@@ -13869,6 +13869,9 @@ components:
         suggested:
           description: Does the connector suggest that this stream be enabled by default?
           type: boolean
+        includeFiles:
+          description: Should the sync move raw files from the source to the destination?
+          type: boolean
         fieldSelectionEnabled:
           description: Whether field selection should be enabled. If this is true, only the properties in `selectedFields` will be included.
           type: boolean

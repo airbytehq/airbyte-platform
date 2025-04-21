@@ -581,6 +581,7 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setAliasName(originalStreamConfig.getAliasName());
         outputStreamConfig.setSelected(originalConfiguredStream.getConfig().getSelected());
         outputStreamConfig.setSuggested(originalConfiguredStream.getConfig().getSuggested());
+        outputStreamConfig.setIncludeFiles(originalConfiguredStream.getConfig().getIncludeFiles());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
         outputStreamConfig.setMappers(originalStreamConfig.getMappers());
 

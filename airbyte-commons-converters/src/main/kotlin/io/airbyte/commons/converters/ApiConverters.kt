@@ -24,6 +24,7 @@ class ApiConverters {
         .defaultCursorField(defaultCursorField)
         .sourceDefinedPrimaryKey(sourceDefinedPrimaryKey)
         .namespace(namespace)
+        .isFileBased(isFileBased)
         .isResumable(isResumable)
 
     @JvmStatic
