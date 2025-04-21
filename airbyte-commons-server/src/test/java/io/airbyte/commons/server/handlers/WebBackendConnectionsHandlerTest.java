@@ -1488,6 +1488,37 @@ class WebBackendConnectionsHandlerTest {
     assertEquals(List.of(List.of(FIELD1)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateSchemaWithDiscoveryWithIncludeFiles(final boolean includeFiles) {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getConfig()
+        .includeFiles(includeFiles);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    discovered.getStreams().getFirst().getConfig()
+        .includeFiles(false);
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Use new value for include files
+    assertEquals(includeFiles, actual.getStreams().getFirst().getConfig().getIncludeFiles());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateSchemaWithDiscoveryWithFileBased(final boolean isFileBased) {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getStream().isFileBased(false);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    discovered.getStreams().getFirst().getStream().isFileBased(isFileBased);
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    assertEquals(isFileBased, actual.getStreams().getFirst().getStream().getIsFileBased());
+  }
+
   @Test
   void testUpdateSchemaWithDiscoveryWithHashedField() {
     final List<SelectedFieldInfo> hashedFields = List.of(new SelectedFieldInfo().fieldPath(List.of(SECOND_FIELD_NAME)));
