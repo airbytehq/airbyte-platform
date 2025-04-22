@@ -204,6 +204,7 @@ class RolloutActorFinderTest {
         createdAt = OffsetDateTime.now().toEpochSecond(),
         updatedAt = OffsetDateTime.now().toEpochSecond(),
         expiresAt = OffsetDateTime.now().plusDays(1).toEpochSecond(),
+        tag = null,
       )
 
     @JvmStatic

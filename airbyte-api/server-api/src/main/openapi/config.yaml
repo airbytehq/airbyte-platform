@@ -9215,6 +9215,8 @@ components:
             $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
         tier:
           $ref: "#/components/schemas/CustomerTier"
+        tag:
+          type: string
 
     ConnectorRolloutState:
       type: string
@@ -9293,50 +9295,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectorRolloutRead"
-
-    ConnectorRolloutCreateRequestBody:
-      type: object
-      required:
-        - docker_repository
-        - docker_image_tag
-        - actor_definition_id
-      properties:
-        docker_repository:
-          type: string
-        docker_image_tag:
-          type: string
-        actor_definition_id:
-          type: string
-          format: uuid
-        initial_rollout_pct:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 100
-        final_target_rollout_pct:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 100
-        has_breaking_changes:
-          type: boolean
-        max_step_wait_time_mins:
-          type: integer
-          format: int32
-          minimum: 0
-        expires_at:
-          type: string
-          format: date-time
-        tier:
-          $ref: "#/components/schemas/CustomerTier"
-
-    ConnectorRolloutCreateResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: "#/components/schemas/ConnectorRolloutRead"
 
     ConnectorRolloutReadRequestBody:
       type: object

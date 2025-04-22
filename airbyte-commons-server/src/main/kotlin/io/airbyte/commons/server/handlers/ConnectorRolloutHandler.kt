@@ -119,6 +119,7 @@ open class ConnectorRolloutHandler
             },
           ).completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
           .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
+          .tag(connectorRollout.tag)
 
       if (withActorSyncAndSelectionInfo) {
         val pinnedActorInfo = getPinnedActorInfo(connectorRollout.id)
@@ -206,6 +207,7 @@ open class ConnectorRolloutHandler
           )
 
       val filters = createFiltersFromRequest(requestFilters)
+      val tag = createTagFromFilters(filters)
 
       if (initializedRollouts.isEmpty()) {
         val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
@@ -225,14 +227,15 @@ open class ConnectorRolloutHandler
             initialRolloutPct = initialRolloutPct,
             finalTargetRolloutPct = finalTargetRolloutPct,
             filters = filters,
+            tag = createTagFromFilters(filters),
           )
         connectorRolloutService.writeConnectorRollout(connectorRollout)
         return connectorRollout
       }
 
-      if (initializedRollouts.size > 1) {
+      if (initializedRollouts.size > 1 && initializedRollouts.any { it.tag == tag }) {
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message("Expected at most 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}."),
+          ProblemMessageData().message("Expected at most 1 rollout in the INITIALIZED state for tag $tag, found ${initializedRollouts.size}."),
         )
       }
       val finalEnumStates =
@@ -243,13 +246,14 @@ open class ConnectorRolloutHandler
         }
       val rolloutsInInvalidState =
         connectorRollouts.filter { rollout: ConnectorRollout ->
-          finalEnumStates.contains(rollout.state) &&
+          rollout.tag == tag &&
+            finalEnumStates.contains(rollout.state) &&
             (rollout.state != ConnectorEnumRolloutState.INITIALIZED && rollout.state != ConnectorEnumRolloutState.CANCELED)
         }
 
       if (rolloutsInInvalidState.isNotEmpty()) {
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message("Found rollouts in invalid states: $rolloutsInInvalidState."),
+          ProblemMessageData().message("Cannot create a new rollout; rollouts with tag $tag already exist in states: $rolloutsInInvalidState."),
         )
       }
       val connectorRollout =
@@ -260,9 +264,22 @@ open class ConnectorRolloutHandler
       connectorRollout.initialRolloutPct = initialRolloutPct
       connectorRollout.finalTargetRolloutPct = finalTargetRolloutPct
       connectorRollout.filters = filters
+      connectorRollout.tag = tag
 
       connectorRolloutService.writeConnectorRollout(connectorRollout)
       return connectorRollout
+    }
+
+    fun createTagFromFilters(filters: io.airbyte.config.ConnectorRolloutFilters?): String? {
+      if (filters?.customerTierFilters.isNullOrEmpty()) {
+        return null
+      }
+
+      return filters!!
+        .customerTierFilters
+        .flatMap { it.value }
+        .sortedBy { it.name }
+        .joinToString("-") { it.name }
     }
 
     @VisibleForTesting
@@ -630,6 +647,7 @@ open class ConnectorRolloutHandler
             waitBetweenSyncResultsQueriesSeconds,
             rolloutExpirationSeconds,
           ),
+          rollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         rollout.state = ConnectorEnumRolloutState.CANCELED
@@ -673,6 +691,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -694,6 +713,7 @@ open class ConnectorRolloutHandler
             connectorRolloutUpdate.updatedBy,
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
@@ -727,6 +747,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds = rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -753,6 +774,7 @@ open class ConnectorRolloutHandler
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
             connectorRolloutFinalize.retainPinsOnCancellation,
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("finalizeRollout", e)
@@ -784,6 +806,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds = rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -806,6 +829,7 @@ open class ConnectorRolloutHandler
             connectorRolloutPause.updatedBy,
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("pauseRollout", e)

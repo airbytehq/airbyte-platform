@@ -140,6 +140,7 @@ fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
     filters = this.filters?.toConfigModel(),
+    tag = this.tag,
   )
 
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
@@ -165,4 +166,5 @@ fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
     filters = this.filters?.toEntity(),
+    tag = this.tag,
   )

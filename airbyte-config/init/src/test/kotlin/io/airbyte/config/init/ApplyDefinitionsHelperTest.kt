@@ -202,6 +202,7 @@ internal class ApplyDefinitionsHelperTest {
         createdAt = Instant.now().toEpochMilli(),
         updatedAt = Instant.now().toEpochMilli(),
         state = ConnectorEnumRolloutState.INITIALIZED,
+        tag = null,
       )
     val fakeAdvId = UUID.randomUUID()
     val fakeInitialAdvId = UUID.randomUUID()
@@ -323,6 +324,7 @@ internal class ApplyDefinitionsHelperTest {
           createdAt = Instant.now().toEpochMilli(),
           updatedAt = Instant.now().toEpochMilli(),
           state = state,
+          tag = null,
         ),
       )
 
@@ -387,6 +389,7 @@ internal class ApplyDefinitionsHelperTest {
           createdAt = Instant.now().toEpochMilli(),
           updatedAt = Instant.now().toEpochMilli(),
           state = state,
+          tag = null,
         ),
       )
     every { connectorRolloutService.insertConnectorRollout(any()) } returns
@@ -399,6 +402,7 @@ internal class ApplyDefinitionsHelperTest {
         createdAt = Instant.now().toEpochMilli(),
         updatedAt = Instant.now().toEpochMilli(),
         state = state,
+        tag = null,
       )
 
     val rcSourceDefinitions = listOf(SOURCE_POSTGRES_RC)
@@ -522,6 +526,7 @@ internal class ApplyDefinitionsHelperTest {
         createdAt = Instant.now().toEpochMilli(),
         updatedAt = Instant.now().toEpochMilli(),
         state = ConnectorEnumRolloutState.INITIALIZED,
+        tag = null,
       )
 
     val fakeAdvId = UUID.randomUUID()
