@@ -1693,6 +1693,7 @@
   "connectorBuilder.invalidYamlDownload": "Cannot download while YAML content is invalid.",
   "connectorBuilder.invalidYamlPublish": "Cannot publish while YAML content is invalid.",
   "connectorBuilder.resolveErrorPublish": "Cannot publish while streams can't be verified. Check the testing panel.",
+  "connectorBuilder.noStreamsPublish": "Cannot publish without any streams.",
   "connectorBuilder.invalidYamlTest": "Cannot test stream while YAML content is invalid.",
   "connectorBuilder.unknownError": "An unknown error has occurred",
   "connectorBuilder.couldNotValidateConnectorSpec": "Could not validate your connector as specified:",
