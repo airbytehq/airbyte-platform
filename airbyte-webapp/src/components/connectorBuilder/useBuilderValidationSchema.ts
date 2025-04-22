@@ -295,7 +295,7 @@ export const useBuilderValidationSchema = () => {
     () =>
       yup.object().shape({
         global: globalSchema,
-        streams: yup.array().min(1).of(streamSchema),
+        streams: yup.array().of(streamSchema),
       }),
     [globalSchema, streamSchema]
   );

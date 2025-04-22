@@ -23,8 +23,16 @@ interface PublishButtonProps {
 }
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
-  const { yamlIsValid, formValuesValid, permission, resolveErrorMessage, streamNames, isResolving, formValuesDirty } =
-    useConnectorBuilderFormState();
+  const {
+    yamlIsValid,
+    formValuesValid,
+    permission,
+    resolveErrorMessage,
+    streamNames,
+    isResolving,
+    formValuesDirty,
+    resolvedManifest,
+  } = useConnectorBuilderFormState();
   const {
     streamRead: { isFetching: isReadingStream },
   } = useConnectorBuilderTestRead();
@@ -53,6 +61,11 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   if (resolveErrorMessage) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
+  }
+
+  if (resolvedManifest.streams?.length === 0) {
+    buttonDisabled = true;
+    tooltipContent = <FormattedMessage id="connectorBuilder.noStreamsPublish" />;
   }
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
