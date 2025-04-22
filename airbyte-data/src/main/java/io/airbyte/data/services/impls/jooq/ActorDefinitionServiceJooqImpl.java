@@ -289,6 +289,18 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
   }
 
   @Override
+  public List<ActorWorkspaceOrganizationIds> getIdsForActors(final List<UUID> actorIds) throws IOException {
+    return database.query(ctx -> ctx.select(ACTOR.ID, ACTOR.WORKSPACE_ID, WORKSPACE.ORGANIZATION_ID)
+        .from(ACTOR)
+        .join(WORKSPACE).on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .where(ACTOR.ID.in(actorIds))
+        .fetch()
+        .stream()
+        .map(record -> new ActorWorkspaceOrganizationIds(record.get(ACTOR.ID), record.get(ACTOR.WORKSPACE_ID), record.get(WORKSPACE.ORGANIZATION_ID)))
+        .toList());
+  }
+
+  @Override
   public void updateActorDefinitionDefaultVersionId(final UUID actorDefinitionId, final UUID versionId) throws IOException {
     database.query(ctx -> ctx.update(ACTOR_DEFINITION)
         .set(ACTOR_DEFINITION.DEFAULT_VERSION_ID, versionId)
