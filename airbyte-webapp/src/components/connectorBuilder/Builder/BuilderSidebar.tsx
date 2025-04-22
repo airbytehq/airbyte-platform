@@ -11,6 +11,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AddStreamButton } from "./AddStreamButton";
@@ -53,6 +54,45 @@ const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>>
         />
       )}
     </button>
+  );
+};
+
+interface DynamicStreamViewButtonProps {
+  name: string;
+  num: number;
+}
+const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name, num }) => {
+  const analyticsService = useAnalyticsService();
+  const { hasErrors } = useBuilderErrors();
+  const { setValue } = useFormContext();
+  const view = useBuilderWatch("view");
+
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
+
+  return (
+    <ViewSelectButton
+      data-testid={`navbutton-${String(num)}`}
+      selected={view === `dynamic_stream_${num}`}
+      showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+      onClick={() => {
+        setValue("view", `dynamic_stream_${num}`);
+        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
+          actionDescription: "Dynamic stream view selected",
+          dynamic_stream_name: name,
+        });
+      }}
+    >
+      <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
+        {name && name.trim() ? (
+          <Text className={styles.streamViewText}>{name}</Text>
+        ) : (
+          <Text className={styles.emptyStreamViewText}>
+            <FormattedMessage id="connectorBuilder.emptyName" />
+          </Text>
+        )}
+      </FlexContainer>
+    </ViewSelectButton>
   );
 };
 
@@ -116,6 +156,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
   };
 
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
 
   return (
     <Sidebar yamlSelected={false}>
@@ -178,6 +219,37 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         )}
       </FlexContainer>
 
+      {areDynamicStreamsEnabled && (
+        <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
+          <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
+            <FlexContainer alignItems="center" gap="none">
+              <Text className={styles.streamsHeading} size="xs" bold>
+                <FormattedMessage
+                  id="connectorBuilder.dynamicStreamsHeading"
+                  values={{ number: formValues.dynamicStreams.length }}
+                />
+              </Text>
+              <InfoTooltip placement="top">
+                <FormattedMessage id="connectorBuilder.dynamicStreamTooltip" />
+              </InfoTooltip>
+            </FlexContainer>
+
+            <AddStreamButton
+              streamType="dynamicStream"
+              onAddStream={(addedStreamNum) => handleViewSelect(`dynamic_stream_${addedStreamNum}`)}
+              disabled={permission === "readOnly"}
+              data-testid="add-dynamic-stream"
+            />
+          </FlexContainer>
+
+          <div className={styles.streamList}>
+            {formValues.dynamicStreams.map(({ dynamic_stream_name }, num) => (
+              <DynamicStreamViewButton key={num} name={dynamic_stream_name} num={num} />
+            ))}
+          </div>
+        </FlexContainer>
+      )}
+
       <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
         <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
           <FlexContainer alignItems="center" gap="none">
@@ -190,6 +262,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
           </FlexContainer>
 
           <AddStreamButton
+            streamType="stream"
             onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
             disabled={permission === "readOnly"}
             data-testid="add-stream"
