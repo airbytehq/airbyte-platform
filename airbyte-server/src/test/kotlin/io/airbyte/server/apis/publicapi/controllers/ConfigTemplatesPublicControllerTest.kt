@@ -122,6 +122,7 @@ class ConfigTemplatesPublicControllerTest {
     assertEquals(response.icon, configTemplate.actorIcon)
     assertEquals(response.sourceDefinitionId, configTemplate.configTemplate.actorDefinitionId)
     assertEquals(response.configTemplateSpec, configTemplate.configTemplate.userConfigSpec)
+    assertEquals(response.partialDefaultConfig, configTemplate.configTemplate.partialDefaultConfig)
   }
 
   @Test
