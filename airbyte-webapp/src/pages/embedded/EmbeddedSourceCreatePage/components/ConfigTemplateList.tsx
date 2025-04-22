@@ -16,6 +16,9 @@ export const ConfigTemplateSelectList: React.FC = () => {
   };
 
   const { configTemplates } = useListConfigTemplates(workspaceId);
+  if (configTemplates.length === 1) {
+    setSelectedTemplate(configTemplates[0].id);
+  }
 
   const items = configTemplates.map((template) => ({
     id: template.id,
