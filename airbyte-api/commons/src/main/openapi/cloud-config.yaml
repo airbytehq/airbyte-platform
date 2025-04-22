@@ -228,28 +228,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CloudWorkspaceReadList"
-  /v1/cloud_workspaces/list_active_workspaces_by_most_recently_running_jobs:
-    post:
-      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TimeWindowRequestBody"
-        required: false
-      responses:
-        "200":
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceIdList"
-          description: Successful operation
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
-      summary: Lists workspaces with the most recently running jobs within the given time window
-      tags:
-        - cloud_workspace
-      x-accepts: application/json
   /v1/cloud_workspaces/get:
     post:
       tags:
