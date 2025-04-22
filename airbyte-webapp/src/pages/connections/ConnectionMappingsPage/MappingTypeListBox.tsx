@@ -9,8 +9,12 @@ import { MapperConfiguration, StreamMapperType } from "core/api/types/AirbyteCli
 
 import { useMappingContext } from "./MappingContext";
 import styles from "./MappingRow.module.scss";
-import { OperationType } from "./RowFilteringMapperForm";
 import { StreamMapperWithId } from "./types";
+
+enum OperationType {
+  equal = "EQUAL",
+  not = "NOT",
+}
 
 interface MappingTypeListBoxProps {
   selectedValue: StreamMapperType;

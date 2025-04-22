@@ -134,13 +134,12 @@ class TracingServerFilter(
       ApmTraceUtils.addTagsToTrace(trace.refs as Map<String, Any>, "refs")
 
       val metricAttrs = mutableListOf<MetricAttribute>()
-      metricAttrs.add("user", trace.user)
-      metricAttrs.add("http", trace.http)
-      metricAttrs.add("refs", trace.refs)
 
-      if (trace.traceError != null) {
-        metricAttrs.add(MetricAttribute("trace_error", "true"))
-      }
+      // Only record a subset of attributes to the metric,
+      // because each unique tag value costs money in Datadog.
+      metricAttrs.add("user", trace.user, listOf("userId", "authUserId"))
+      metricAttrs.add("http", trace.http, listOf("route"))
+      metricAttrs.add("refs", trace.refs, listOf("workspaceId", "organizationId"))
 
       if (throwable != null) {
         metricAttrs.add(MetricAttribute("error", "true"))
@@ -174,9 +173,11 @@ private fun getRouteVariables(req: HttpRequest<*>): Map<String, Any> =
 private fun MutableList<MetricAttribute>.add(
   prefix: String,
   attrs: Map<String, String?>,
+  keys: List<String>,
 ) {
   attrs
     .filterValues { it != null }
+    .filterKeys { keys.contains(it) }
     .forEach { (k, v) ->
       this.add(MetricAttribute("$prefix.$k", v!!))
     }
