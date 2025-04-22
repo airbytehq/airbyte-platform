@@ -790,6 +790,9 @@
   "connections.mappings.addStream.disabled": "All enabled streams already have mappings",
   "connections.mappings.rowFilter.in": "in",
   "connections.mappings.rowFilter.out": "out",
+  "connections.mappings.error.INVALID_RSA_PUBLIC_KEY": "Public key must be in hexadecimal format",
+  "connections.mappings.error.FIELD_NAME_REQUIRED": "Target field is required",
+  "connections.mappings.error.FIELD_NAME_SUFFIX_REQUIRED": "Field name suffix is required",
   "connections.mappings.submissionValidationError": "There are errors in some of the mapping configurations. Please fix them before saving.",
   "connections.mappings.aesRequiresSecrets": "You must have an external secrets manager to use an AES encryption key.",
 
