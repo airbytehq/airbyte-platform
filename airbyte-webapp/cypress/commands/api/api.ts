@@ -34,11 +34,12 @@ const apiRequest = <T = void>(
   });
 
 export const requestWorkspaceId = () =>
-  apiRequest<{ workspaces: Array<{ workspaceId: string }> }>("POST", "/workspaces/list").then(
-    ({ workspaces: [{ workspaceId }] }) => {
-      setWorkspaceId(workspaceId);
-    }
-  );
+  apiRequest<{ workspaces: Array<{ workspaceId: string }> }>("POST", "/workspaces/list_all_paginated", {
+    workspaceIds: [],
+    pagination: { pageSize: 1, rowOffset: 0 },
+  }).then(({ workspaces: [{ workspaceId }] }) => {
+    setWorkspaceId(workspaceId);
+  });
 
 export const completeInitialSetup = () =>
   apiRequest("POST", "/workspaces/update", {
