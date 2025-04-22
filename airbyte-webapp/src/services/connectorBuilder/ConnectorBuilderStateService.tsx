@@ -824,7 +824,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     if (typeof view === "number") {
       setValue("testStreamId", { type: "stream", index: view });
     } else if (typeof view === "string" && view.startsWith("dynamic_stream_")) {
-      const dynamicStreamIndex = parseInt(view.split("_")[1]);
+      const dynamicStreamIndex = parseInt(view.split("_")[2], 10);
       setValue("testStreamId", { type: "dynamic_stream", index: dynamicStreamIndex });
     }
   }, [setValue, view]);

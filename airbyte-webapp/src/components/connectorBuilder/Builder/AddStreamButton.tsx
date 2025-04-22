@@ -13,6 +13,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
+import { SimpleRetrieverRequester } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -32,6 +33,7 @@ import {
   DEFAULT_BUILDER_STREAM_VALUES,
   DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
   DEFAULT_SCHEMA,
+  BuilderDynamicStream,
 } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
@@ -40,8 +42,11 @@ interface AddStreamResponse {
   newStreamValues: BuilderStream;
 }
 
+interface AddDynamicStreamResponse extends BuilderDynamicStream {}
+
 interface AddStreamButtonProps {
   onAddStream: (addedStreamNum: number) => void;
+  streamType: "stream" | "dynamicStream";
   button?: React.ReactElement;
   "data-testid"?: string;
   modalTitle?: string;
@@ -50,53 +55,75 @@ interface AddStreamButtonProps {
 
 export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
   onAddStream,
+  streamType,
   button,
   "data-testid": testId,
   modalTitle,
   disabled,
 }) => {
   const analyticsService = useAnalyticsService();
-
   const baseUrl = useBuilderWatch("formValues.global.urlBase");
   const streams = useBuilderWatch("formValues.streams");
-
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
   const [isOpen, setIsOpen] = useState(false);
-
   const { setValue } = useFormContext();
   const numStreams = streams.length;
+  const numDynamicStreams = dynamicStreams.length;
 
   const buttonClickHandler = () => {
     setIsOpen(true);
   };
 
-  const shouldPulse = numStreams === 0 && baseUrl;
+  const shouldPulse = numStreams === 0 && numDynamicStreams === 0 && baseUrl;
 
-  const handleSubmit = (values: AddStreamResponse) => {
+  const handleSubmit = (values: AddStreamResponse | AddDynamicStreamResponse) => {
     const id = uuid();
-    setValue("formValues.streams", [
-      ...streams,
-      {
-        ...values.newStreamValues,
-        name: values.streamName,
-        schema: DEFAULT_SCHEMA,
-        id,
-        testResults: {
-          // indicates that this stream was added by the Builder and needs to be tested
-          streamHash: null,
+
+    if (streamType === "stream") {
+      const streamValues = values as AddStreamResponse;
+      setValue("formValues.streams", [
+        ...streams,
+        {
+          ...streamValues.newStreamValues,
+          name: streamValues.streamName,
+          schema: DEFAULT_SCHEMA,
+          id,
+          testResults: { streamHash: null },
         },
-      },
-    ]);
+      ]);
+      onAddStream(numStreams);
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
+        actionDescription: "New stream created from the Add Stream button",
+        stream_id: id,
+        stream_name: streamValues.streamName,
+        url_path:
+          streamValues.newStreamValues.requestType === "sync"
+            ? streamValues.newStreamValues.urlPath
+            : streamValues.newStreamValues.creationRequester.url,
+      });
+    } else {
+      const dynamicStreamValues = values as AddDynamicStreamResponse;
+      setValue("formValues.dynamicStreams", [
+        ...dynamicStreams,
+        {
+          ...dynamicStreamValues,
+          schema: DEFAULT_SCHEMA,
+          id,
+          testResults: {
+            // indicates that this stream was added by the Builder and needs to be tested
+            streamHash: null,
+          },
+        },
+      ]);
+      onAddStream(numDynamicStreams);
+      analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_CREATE, {
+        actionDescription: "New dynamic stream created from the Add Stream button",
+        stream_id: id,
+        stream_name: dynamicStreamValues.dynamic_stream_name,
+        url_path: dynamicStreamValues.componentsResolver.retriever.requester.url_base,
+      });
+    }
     setIsOpen(false);
-    onAddStream(numStreams);
-    analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_CREATE, {
-      actionDescription: "New stream created from the Add Stream button",
-      stream_id: id,
-      stream_name: values.streamName,
-      url_path:
-        values.newStreamValues.requestType === "sync"
-          ? values.newStreamValues.urlPath
-          : values.newStreamValues.creationRequester.url,
-    });
   };
 
   return (
@@ -105,7 +132,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
         React.cloneElement(button, {
           onClick: buttonClickHandler,
           "data-testid": testId,
-          disabled: disabled ?? button.props.disabled, // respect `disabled` from both AddStreamButton and the custom button
+          disabled: disabled ?? button.props.disabled,
           className: classNames(button.props.className, styles.disableable),
         })
       ) : (
@@ -126,6 +153,8 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
           onSubmit={handleSubmit}
           onCancel={() => setIsOpen(false)}
           streams={streams}
+          dynamicStreams={dynamicStreams}
+          streamType={streamType}
         />
       )}
     </>
@@ -147,56 +176,100 @@ const getStreamOptions = (currentStreams: BuilderStream[], data: BuilderAssistFi
     }));
 };
 
+interface AddStreamFormValues {
+  streamName: string;
+  urlPath: string;
+  copyOtherStream?: boolean;
+  streamToCopy?: string;
+  requestType?: BuilderStream["requestType"];
+}
+
+interface AddDynamicStreamFormValues {
+  dynamicStreamName: string;
+  urlPath: string;
+}
+
 const AddStreamModal = ({
   modalTitle,
   onSubmit,
   onCancel,
   streams,
+  dynamicStreams,
+  streamType,
 }: {
   modalTitle?: string;
-  onSubmit: (values: AddStreamResponse) => void;
+  onSubmit: (values: AddStreamResponse | AddDynamicStreamResponse) => void;
   onCancel: () => void;
   streams: BuilderStream[];
+  dynamicStreams: BuilderDynamicStream[];
+  streamType: "stream" | "dynamicStream";
 }) => {
   const { assistEnabled } = useConnectorBuilderFormState();
-  const shouldAssist = assistEnabled;
+  const shouldAssist = assistEnabled && streamType === "stream"; // AI assist only for regular streams
 
   // TODO refactor to useMutation, as this is a bit of a hack
   const [assistFormValues, setAssistFormValues] = useState<AddStreamFormValues | null>(null);
 
   const submitResponse = useCallback(
-    (values: AddStreamFormValues) => {
-      const otherStreamValues = values.copyOtherStream
-        ? streams.find((stream) => stream.name === values.streamToCopy)
-        : undefined;
+    (values: AddStreamFormValues | AddDynamicStreamFormValues) => {
+      if (streamType === "stream") {
+        const streamValues = values as AddStreamFormValues;
+        const otherStreamValues = streamValues.copyOtherStream
+          ? streams.find((stream) => stream.name === streamValues.streamToCopy)
+          : undefined;
 
-      onSubmit({
-        streamName: values.streamName,
-        newStreamValues: merge(
-          {},
-          values.requestType === "sync" ? DEFAULT_BUILDER_STREAM_VALUES : DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
-          otherStreamValues,
-          values.requestType === "sync"
-            ? {
-                urlPath: values.urlPath,
-              }
-            : {
-                creationRequester: {
-                  url: values.urlPath,
+        onSubmit({
+          streamName: streamValues.streamName,
+          newStreamValues: merge(
+            {},
+            streamValues.requestType === "sync" ? DEFAULT_BUILDER_STREAM_VALUES : DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
+            otherStreamValues,
+            streamValues.requestType === "sync"
+              ? {
+                  urlPath: streamValues.urlPath,
+                }
+              : {
+                  creationRequester: {
+                    url: streamValues.urlPath,
+                  },
+                }
+          ),
+        });
+      } else {
+        const dynamicStreamValues = values as AddDynamicStreamFormValues;
+        onSubmit({
+          dynamic_stream_name: dynamicStreamValues.dynamicStreamName,
+          streamTemplate: structuredClone(DEFAULT_BUILDER_STREAM_VALUES),
+          componentsResolver: {
+            type: "HttpComponentsResolver",
+            retriever: {
+              type: "SimpleRetriever",
+              requester: {
+                $ref: "#/definitions/base_requester",
+                path: dynamicStreamValues.urlPath,
+              } as unknown as SimpleRetrieverRequester,
+              record_selector: {
+                type: "RecordSelector",
+                extractor: {
+                  type: "DpathExtractor",
+                  field_path: [],
                 },
-              }
-        ),
-      });
+              },
+            },
+            components_mapping: [],
+          },
+        });
+      }
     },
-    [streams, onSubmit]
+    [onSubmit, streamType, streams]
   );
 
   const submitAction = useCallback(
-    (values: AddStreamFormValues) => {
+    (values: AddStreamFormValues | AddDynamicStreamFormValues) => {
       // use AI Assistant if the user isn't copying from another and AI is on
-      const shouldAssistValues = shouldAssist && !values.copyOtherStream;
+      const shouldAssistValues = shouldAssist && !(values as AddStreamFormValues).copyOtherStream;
       if (shouldAssistValues) {
-        setAssistFormValues(values);
+        setAssistFormValues(values as AddStreamFormValues);
       } else {
         // return the values as is
         submitResponse(values);
@@ -225,25 +298,29 @@ const AddStreamModal = ({
   return (
     <Modal
       size="sm"
-      title={modalTitle ?? <FormattedMessage id="connectorBuilder.addStreamModal.title" />}
+      title={
+        modalTitle ?? (
+          <FormattedMessage
+            id={
+              streamType === "stream"
+                ? "connectorBuilder.addStreamModal.title"
+                : "connectorBuilder.addDynamicStreamModal.title"
+            }
+          />
+        )
+      }
       onCancel={cancelAction}
     >
       {assistInput ? (
         <AssistProcessing input={assistInput} onComplete={onSubmit} onSkip={cancelAction} />
-      ) : (
+      ) : streamType === "stream" ? (
         <AddStreamForm onSubmit={submitAction} onCancel={cancelAction} streams={streams} shouldAssist={shouldAssist} />
+      ) : (
+        <AddDynamicStreamForm onSubmit={submitAction} onCancel={cancelAction} dynamicStreams={dynamicStreams} />
       )}
     </Modal>
   );
 };
-
-interface AddStreamFormValues {
-  streamName: string;
-  urlPath: string;
-  copyOtherStream?: boolean;
-  streamToCopy?: string;
-  requestType?: BuilderStream["requestType"];
-}
 
 const AddStreamForm = ({
   onSubmit,
@@ -372,6 +449,68 @@ const AddStreamForm = ({
               onCancel();
             }}
           >
+            <FormattedMessage id="form.cancel" />
+          </Button>
+          <Button type="submit">
+            <FormattedMessage id="form.create" />
+          </Button>
+        </ModalFooter>
+      </form>
+    </FormProvider>
+  );
+};
+
+const AddDynamicStreamForm = ({
+  onSubmit,
+  onCancel,
+  dynamicStreams,
+}: {
+  onSubmit: (values: AddDynamicStreamFormValues) => void;
+  onCancel: () => void;
+  dynamicStreams: BuilderDynamicStream[];
+}) => {
+  const { formatMessage } = useIntl();
+
+  const validator = {
+    dynamicStreamName: yup
+      .string()
+      .required("form.empty.error")
+      .notOneOf(
+        dynamicStreams.map((stream) => stream.dynamic_stream_name),
+        "connectorBuilder.duplicateStreamName"
+      ),
+    urlPath: yup.string().required("form.empty.error"),
+  };
+
+  const methods = useForm({
+    defaultValues: {
+      dynamicStreamName: "",
+      urlPath: "",
+    },
+    resolver: yupResolver(yup.object().shape(validator)),
+    mode: "onChange",
+  });
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(onSubmit)}>
+        <ModalBody className={styles.body}>
+          <BuilderField
+            path="dynamicStreamName"
+            type="string"
+            label={formatMessage({ id: "connectorBuilder.addDynamicStreamModal.dynamicStreamNameLabel" })}
+            tooltip={formatMessage({ id: "connectorBuilder.addDynamicStreamModal.dynamicStreamNameTooltip" })}
+          />
+          <BuilderField
+            path="urlPath"
+            type="jinja"
+            label={formatMessage({ id: "connectorBuilder.addDynamicStreamModal.urlPathLabel" })}
+            tooltip={formatMessage({ id: "connectorBuilder.addDynamicStreamModal.urlPathTooltip" })}
+            bubbleUpUndoRedo={false}
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="secondary" type="reset" onClick={onCancel}>
             <FormattedMessage id="form.cancel" />
           </Button>
           <Button type="submit">
