@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
 
+import { fieldRenamingMapperConfiguration } from "components/connection/ConnectionForm/schemas/mapperSchema";
 import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Text } from "components/ui/Text";
 
@@ -14,11 +14,6 @@ import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./Mappi
 import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
-
-export const fieldRenamingConfigSchema = yup.object().shape({
-  newFieldName: yup.string().required("form.empty.error"),
-  originalFieldName: yup.string().required("form.empty.error"),
-});
 
 interface FieldRenamingRowProps {
   mapping: StreamMapperWithId<FieldRenamingMapperConfiguration>;
@@ -40,7 +35,7 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
 
   const methods = useForm<FieldRenamingMapperConfiguration>({
     defaultValues,
-    resolver: autoSubmitResolver<FieldRenamingMapperConfiguration>(fieldRenamingConfigSchema, (formValues) => {
+    resolver: autoSubmitResolver(fieldRenamingMapperConfiguration, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
     }),
     mode: "onBlur",

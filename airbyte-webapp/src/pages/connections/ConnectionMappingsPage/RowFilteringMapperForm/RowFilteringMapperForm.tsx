@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { FormControlErrorMessage } from "components/forms/FormControl";
 import { ListBox } from "components/ui/ListBox";
@@ -17,20 +17,9 @@ import { MappingTypeListBox } from "../MappingTypeListBox";
 import { SelectTargetField } from "../SelectTargetField";
 import { StreamMapperWithId } from "../types";
 
-export enum OperationType {
-  equal = "EQUAL",
-  not = "NOT",
-}
-
 export enum FilterCondition {
   IN = "IN",
   OUT = "OUT",
-}
-
-export interface RowFilteringMapperFormValues {
-  condition: FilterCondition;
-  fieldName: string;
-  comparisonValue: string;
 }
 
 interface RowFilteringMapperFormProps {
@@ -38,11 +27,13 @@ interface RowFilteringMapperFormProps {
   streamDescriptorKey: string;
 }
 
-const simpleSchema: yup.SchemaOf<RowFilteringMapperFormValues> = yup.object({
-  condition: yup.mixed<FilterCondition>().oneOf([FilterCondition.IN, FilterCondition.OUT]).required("form.empty.error"),
-  fieldName: yup.string().required("form.empty.error"),
-  comparisonValue: yup.string().required("form.empty.error"),
+const formSchema = z.object({
+  condition: z.nativeEnum(FilterCondition),
+  fieldName: z.string().nonempty("form.empty.error"),
+  comparisonValue: z.string().nonempty("form.empty.error"),
 });
+
+export type RowFilteringMapperFormValues = z.infer<typeof formSchema>;
 
 const createEmptyDefaultValues = (): RowFilteringMapperFormValues => ({
   condition: FilterCondition.IN,
@@ -57,7 +48,7 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
 
   const methods = useForm<RowFilteringMapperFormValues>({
     defaultValues: mapping ? mapperConfigurationToFormValues(mapping.mapperConfiguration) : createEmptyDefaultValues(),
-    resolver: autoSubmitResolver<RowFilteringMapperFormValues>(simpleSchema, (values) => {
+    resolver: autoSubmitResolver(formSchema, (values) => {
       const mapperConfiguration = formValuesToMapperConfiguration(values);
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration });
     }),

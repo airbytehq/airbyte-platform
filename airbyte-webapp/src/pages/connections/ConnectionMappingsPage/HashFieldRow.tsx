@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { Controller, FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import * as yup from "yup";
 
+import { hashingMapperConfiguration } from "components/connection/ConnectionForm/schemas/mapperSchema";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
@@ -22,15 +22,6 @@ import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 
-const hashingMapperConfigSchema = yup.object().shape({
-  targetField: yup.string().required("form.empty.error"),
-  method: yup
-    .mixed<HashingMapperConfigurationMethod>()
-    .oneOf(Object.values(HashingMapperConfigurationMethod))
-    .required("form.empty.error"),
-  fieldNameSuffix: yup.string().required("form.empty.error"),
-});
-
 export const HashFieldRow: React.FC<{
   mapping: StreamMapperWithId<HashingMapperConfiguration>;
   streamDescriptorKey: string;
@@ -49,7 +40,7 @@ export const HashFieldRow: React.FC<{
 
   const methods = useForm<HashingMapperConfiguration>({
     defaultValues,
-    resolver: autoSubmitResolver<HashingMapperConfiguration>(hashingMapperConfigSchema, (formValues) => {
+    resolver: autoSubmitResolver(hashingMapperConfiguration, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
     }),
     mode: "onBlur",
