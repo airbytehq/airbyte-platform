@@ -55,6 +55,8 @@ data class ConnectorRollout(
   @Nullable
   @field:TypeDef(type = DataType.JSON)
   var filters: ConnectorRolloutFilters? = null,
+  @Nullable
+  var tag: String? = null,
 )
 
 data class ConnectorRolloutFilters(
