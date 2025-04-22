@@ -122,7 +122,7 @@ open class ConnectorRolloutHandler
           .tag(connectorRollout.tag)
 
       if (withActorSyncAndSelectionInfo) {
-        val pinnedActorInfo = getPinnedActorInfo(connectorRollout.id)
+        val pinnedActorInfo = getActorSelectionInfoForPinnedActors(connectorRollout.id)
         val actorSyncInfo = getActorSyncInfo(connectorRollout.id).mapKeys { (uuidKey, _) -> uuidKey.toString() }
 
         logger.info {
@@ -604,11 +604,11 @@ open class ConnectorRolloutHandler
       }
     }
 
-    fun getPinnedActorInfo(id: UUID): ConnectorRolloutActorSelectionInfo {
+    fun getActorSelectionInfoForPinnedActors(id: UUID): ConnectorRolloutActorSelectionInfo {
       val rollout = connectorRolloutService.getConnectorRollout(id)
-      logger.info { "getPinnedActorInfo: rollout=$rollout" }
+      logger.info { "getActorSelectionInfoForPinnedActors: rollout=$rollout" }
       val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(rollout, null, rollout.filters)
-      logger.info { "getPinnedActorInfo: actorSelectionInfo=$actorSelectionInfo" }
+      logger.info { "getActorSelectionInfoForPinnedActors: actorSelectionInfo=$actorSelectionInfo" }
 
       return ConnectorRolloutActorSelectionInfo()
         .numActors(actorSelectionInfo.nActors)

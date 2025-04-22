@@ -51,6 +51,8 @@ public interface ActorDefinitionService {
 
   List<ActorWorkspaceOrganizationIds> getActorIdsForDefinition(UUID actorDefinitionId) throws IOException;
 
+  List<ActorWorkspaceOrganizationIds> getIdsForActors(final List<UUID> actorIds) throws IOException;
+
   List<ActorDefinitionBreakingChange> listBreakingChangesForActorDefinition(UUID actorDefinitionId) throws IOException;
 
   void setActorDefinitionVersionSupportStates(List<UUID> actorDefinitionVersionIds, ActorDefinitionVersion.SupportState supportState)
