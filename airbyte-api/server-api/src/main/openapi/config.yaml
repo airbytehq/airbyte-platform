@@ -6416,8 +6416,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConfigTemplateRead"
-          description: Get an TODO.
+                $ref: "#/components/schemas/ConfigTemplatePublicRead"
+          description: Get a Config Template by id.
         "403":
           description: Not allowed
         "404":
@@ -6425,7 +6425,7 @@ paths:
       operationId: publicGetConfigTemplate
       x-sdk-alias: getConfigTemplate
       x-sdk-group: ConfigTemplates
-      summary: Get TODO
+      summary: Get a Config Template by id.
       parameters:
         - name: configTemplateId
           schema:
@@ -18704,6 +18704,7 @@ components:
           format: uuid
         name:
           type: string
+          description: Name of the associated actor definition
         icon:
           type: string
           description: url to icon in connector asset (svg) registry
@@ -18712,6 +18713,32 @@ components:
           format: uuid
         configTemplateSpec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
+    ConfigTemplatePublicRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefinitionId
+        - configTemplateSpec
+        - partialDefaultConfig
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Name of the associated actor definition
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        partialDefaultConfig:
+          type: object
     ListConfigTemplatesRequestBody:
       type: object
       required:

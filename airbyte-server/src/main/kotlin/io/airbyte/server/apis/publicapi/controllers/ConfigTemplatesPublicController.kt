@@ -19,7 +19,7 @@ import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateRequestB
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateResponse
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateListItem
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateListResponse
-import io.airbyte.publicApi.server.generated.models.ConfigTemplateRead
+import io.airbyte.publicApi.server.generated.models.ConfigTemplatePublicRead
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateRequestBody
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
@@ -82,7 +82,7 @@ open class ConfigTemplatesPublicController(
     }
 
   @VisibleForTesting
-  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateRead = configTemplateService.getConfigTemplate(configTemplateId).toApiModel()
+  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplatePublicRead = configTemplateService.getConfigTemplate(configTemplateId).toApiModel()
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListConfigTemplate(organizationId: String): Response =
@@ -137,13 +137,14 @@ open class ConfigTemplatesPublicController(
     return ConfigTemplateUpdateResponse(id = updated.configTemplate.id)
   }
 
-  private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead =
-    ConfigTemplateRead(
+  private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplatePublicRead =
+    ConfigTemplatePublicRead(
       id = this.configTemplate.id,
       name = actorName,
       icon = this.actorIcon,
       sourceDefinitionId = this.configTemplate.actorDefinitionId,
       configTemplateSpec = this.configTemplate.userConfigSpec,
+      partialDefaultConfig = this.configTemplate.partialDefaultConfig,
     )
 
   private fun ConfigTemplateWithActorDetails.toListItemApiModel(): ConfigTemplateListItem =
