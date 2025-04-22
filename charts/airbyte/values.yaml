@@ -1568,6 +1568,10 @@ postgresql:
   postgresqlPassword: airbyte
   # -- Airbyte Postgresql database
   postgresqlDatabase: db-airbyte
+
+  storage:
+    capacity: 500Mi
+
   # fullnameOverride: *db-hostname
   ## This secret is used in case of postgresql.enabled=true and we would like to specify password for newly created postgresql instance
   # -- Name of an existing secret containing the PostgreSQL password ('postgresql-password' key)
@@ -1577,7 +1581,7 @@ postgresql:
     fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
