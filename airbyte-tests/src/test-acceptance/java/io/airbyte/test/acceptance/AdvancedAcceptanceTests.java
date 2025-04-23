@@ -51,11 +51,12 @@ class AdvancedAcceptanceTests {
 
   @BeforeAll
   static void init() throws Exception {
-    final var apiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of());
-
-    // work in whatever default workspace is present.
-    workspaceId = apiClient.getWorkspaceApi().listWorkspaces().getWorkspaces().getFirst().getWorkspaceId();
+    AcceptanceTestsResources acceptanceTestsResources = new AcceptanceTestsResources();
+    acceptanceTestsResources.init();
+    workspaceId = acceptanceTestsResources.getWorkspaceId();
     LOGGER.info("workspaceId = {}", workspaceId);
+
+    final var apiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of());
 
     // log which connectors are being used.
     final SourceDefinitionRead sourceDef = apiClient.getSourceDefinitionApi()
