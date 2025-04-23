@@ -194,4 +194,8 @@ object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-syn
 
 object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
 
+object PersistSecretConfigsAndReferences : Temporary<Boolean>(key = "platform.persist-secret-configs-and-references", default = false)
+
+object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read-secret-reference-ids-in-configs", default = false)
+
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

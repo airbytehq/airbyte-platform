@@ -56,7 +56,6 @@ import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.domain.models.ActorDefinitionId;
 import io.airbyte.domain.models.OrganizationId;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretHydrationContext;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -198,8 +197,8 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
         final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
@@ -278,8 +277,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(destinationConnection.getDestinationId(), destinationConnection.getConfiguration(),
+                workspaceId);
         final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
@@ -363,8 +363,8 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
         final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
@@ -439,8 +439,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(destinationConnection.getDestinationId(), destinationConnection.getConfiguration(),
+                workspaceId);
         final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
@@ -493,8 +494,8 @@ public class OAuthHandler {
     }
     final JsonNode sourceOAuthParamConfig =
         getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceDefinitionId());
-    final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-        sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+    final ConfigWithSecretReferences configWithRefs =
+        secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
     final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
     oAuthFlowImplementation.revokeSourceOauth(
         revokeSourceOauthTokensRequest.getWorkspaceId(),
