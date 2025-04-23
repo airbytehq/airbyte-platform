@@ -9,7 +9,7 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useCurrentConnection } from "core/api";
 import { DbtCloudJob, isSameJob, useDbtIntegration } from "core/api/cloud";
-import { DbtCloudJobInfo } from "core/api/types/CloudApi";
+import { DbtCloudJobInfo } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 import { ToZodSchema } from "core/utils/zod";
 import { useNotificationService } from "hooks/services/Notification";
