@@ -13,6 +13,7 @@ import {
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
 import { ComponentsView } from "./ComponentsView";
+import { DynamicStreamConfigView } from "./DynamicStreamConfigView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
@@ -32,7 +33,10 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
       return <ComponentsView />;
     default:
       if (typeof selectedView === "string") {
-        // dynamic stream
+        if (selectedView.startsWith("dynamic_stream_")) {
+          return <DynamicStreamConfigView key={selectedView} streamNum={parseInt(selectedView.split("_")[2], 10)} />;
+        }
+        // generated stream
         return null;
       }
 

@@ -322,7 +322,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
   let dynamicStreamNames = useMemo(() => {
     return mode === "ui"
-      ? dynamicStreams.map((stream) => stream.dynamic_stream_name ?? "")
+      ? dynamicStreams.map((stream) => stream.dynamicStreamName ?? "")
       : resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.name ?? "") ?? [];
   }, [mode, dynamicStreams, resolvedManifest]);
 

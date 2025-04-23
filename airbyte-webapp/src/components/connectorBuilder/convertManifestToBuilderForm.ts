@@ -222,8 +222,16 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       path: dynamicStream.components_resolver.retriever.requester.path,
     } as unknown as SimpleRetrieverRequester;
 
+    // if there isn't a record filter, add a default one so the form controls pathing works
+    if (!componentsResolver.retriever.record_selector.record_filter) {
+      componentsResolver.retriever.record_selector.record_filter = {
+        type: "RecordFilter",
+        condition: "",
+      };
+    }
+
     return {
-      dynamic_stream_name: dynamicStream.name ?? `dynamic_stream_${idx}`,
+      dynamicStreamName: dynamicStream.name ?? `dynamic_stream_${idx}`,
       componentsResolver,
       streamTemplate: manifestSyncStreamToBuilder(
         dynamicStream.stream_template,
