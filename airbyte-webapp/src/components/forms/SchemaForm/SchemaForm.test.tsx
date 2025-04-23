@@ -699,6 +699,7 @@ describe("SchemaForm", () => {
           type: "string",
           title: "Shipping Option",
           enum: ["standard", "express", "pickup"],
+          default: "standard",
         },
         address: {
           type: "object",
@@ -739,7 +740,7 @@ describe("SchemaForm", () => {
       // Verify the data passed to onSubmit - should have default shipping option
       expect(mockOnSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
-          shippingOption: "standard", // Default is first enum value
+          shippingOption: "standard",
         }),
         expect.anything()
       );
@@ -1242,6 +1243,7 @@ describe("SchemaForm", () => {
           ],
         },
       },
+      required: ["primaryKey"],
     } as const;
 
     it("handles simple array of strings correctly", async () => {

@@ -1,6 +1,6 @@
 import { StoryObj } from "@storybook/react";
 import { FromSchema } from "json-schema-to-ts";
-import { useWatch } from "react-hook-form";
+import { useFormState, useWatch } from "react-hook-form";
 
 import { formatJson } from "components/connectorBuilder/utils";
 import { Card } from "components/ui/Card";
@@ -11,6 +11,7 @@ import { NotificationService } from "hooks/services/Notification";
 import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { SchemaForm } from "./SchemaForm";
 import { SchemaFormRemainingFields } from "./SchemaFormRemainingFields";
+import { resolveTopLevelRef } from "./utils";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 import { FormControl } from "../FormControl";
 import { FormSubmissionButtons } from "../FormSubmissionButtons";
@@ -81,7 +82,7 @@ const schema = {
               type: "string",
               enum: ["EmailContactMethod"],
             },
-            emailAddress: { type: "string", title: "Email Address", format: "email", default: "test@test.com" },
+            emailAddress: { type: "string", title: "Email Address", format: "email" },
             frequency: { type: "string", title: "Email Frequency", enum: ["daily", "weekly", "monthly"] },
             specialRequests: {
               type: "array",
@@ -155,7 +156,7 @@ const schema = {
       },
     },
   },
-  required: ["favoriteColors"],
+  required: ["name", "favoriteColors", "address", "age"],
   additionalProperties: false,
 } as const;
 
@@ -491,34 +492,18 @@ export const Test = () => {
         type: "object",
         properties: {
           test: {
-            anyOf: [
-              { type: "string" },
-              {
-                title: "Request Parameters",
-                anyOf: [
-                  {
-                    type: "number",
-                  },
-                  {
-                    type: "object",
-                    additionalProperties: {
-                      anyOf: [
-                        { type: "string" },
-                        {
-                          type: "object",
-                          properties: {
-                            innerString: { type: "string" },
-                            innerNumber: { type: "number" },
-                          },
-                        },
-                      ],
-                    },
-                  },
-                ],
+            type: "object",
+            additionalProperties: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+                age: { type: "number" },
               },
-            ],
+              required: ["name", "age"],
+            },
           },
         },
+        required: ["test"],
       }}
       onSubmit={onSubmit}
     >
@@ -532,38 +517,45 @@ export const Test = () => {
 };
 
 export const Test2 = () => {
-  return (
-    <SchemaForm
-      schema={{
+  const schema = {
+    type: "object",
+    properties: {
+      test: {
+        $ref: "#/definitions/Test",
+      },
+    },
+    definitions: {
+      Test: {
         type: "object",
         properties: {
-          primary_key: {
-            anyOf: [
-              { type: "string", title: "Single Key" },
-              {
-                type: "array",
-                title: "Composite Key",
-                items: {
-                  type: "string",
-                },
-              },
-              {
-                type: "array",
-                title: "Composite Nested Keys",
-                items: {
-                  type: "array",
-                  items: {
-                    type: "string",
-                  },
-                },
-              },
-            ],
+          name: { type: "string" },
+          age: { type: "number" },
+          location: {
+            $ref: "#/definitions/Location",
           },
         },
-        required: ["primary_key"],
-      }}
-      onSubmit={onSubmit}
-    >
+        required: ["name", "age", "location"],
+      },
+      Location: {
+        type: "object",
+        properties: {
+          city: { type: "string" },
+          state: { type: "string" },
+          test: {
+            $ref: "#/definitions/Test",
+          },
+        },
+        required: ["city", "state"],
+      },
+    },
+    required: ["test"],
+  } as const;
+
+  const resolvedRef = resolveTopLevelRef(schema, schema.properties.test);
+  console.log("resolve top level ref", resolvedRef);
+
+  return (
+    <SchemaForm schema={schema} onSubmit={onSubmit}>
       <Card>
         <SchemaFormControl />
         <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
@@ -575,5 +567,7 @@ export const Test2 = () => {
 
 const ShowFormValues = () => {
   const values = useWatch();
+  const { errors } = useFormState();
+  console.log("errors", errors);
   return <pre>{formatJson(values)}</pre>;
 };

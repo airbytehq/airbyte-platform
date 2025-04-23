@@ -2,12 +2,14 @@ import { useCallback } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { useRefsHandler } from "../RefsHandler";
-import { AirbyteJsonSchema, extractDefaultValuesFromSchema } from "../utils";
+import { useSchemaForm } from "../SchemaForm";
+import { AirbyteJsonSchema } from "../utils";
 
 export const useToggleConfig = (path: string, fieldSchema: AirbyteJsonSchema) => {
   const { setValue, clearErrors, resetField } = useFormContext();
   const value = useWatch({ name: path });
   const { getReferenceInfo, handleUnlinkAction } = useRefsHandler();
+  const { extractDefaultValuesFromSchema } = useSchemaForm();
 
   const handleToggle = useCallback(
     (newEnabledState: boolean) => {
@@ -41,7 +43,16 @@ export const useToggleConfig = (path: string, fieldSchema: AirbyteJsonSchema) =>
         }
       }
     },
-    [fieldSchema, resetField, path, setValue, getReferenceInfo, handleUnlinkAction, clearErrors]
+    [
+      fieldSchema,
+      extractDefaultValuesFromSchema,
+      resetField,
+      path,
+      setValue,
+      getReferenceInfo,
+      handleUnlinkAction,
+      clearErrors,
+    ]
   );
 
   return {

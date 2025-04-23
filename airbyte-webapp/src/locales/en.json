@@ -232,6 +232,7 @@
   "form.additionalProperties.key": "Key",
   "form.additionalProperties.value": "Value",
   "form.additionalProperties.duplicateKey": "Must not duplicate keys",
+  "form.invalidNumber": "Must be a number",
 
   "setupForm.check.loading": "Checking the security of your installation…",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",
