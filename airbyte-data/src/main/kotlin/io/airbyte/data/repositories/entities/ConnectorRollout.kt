@@ -61,10 +61,16 @@ data class ConnectorRollout(
 
 data class ConnectorRolloutFilters(
   val customerTierFilters: List<CustomerTierFilter>,
+  val jobBypassFilter: JobBypassFilter?,
 )
 
 data class CustomerTierFilter(
   val name: String,
   val operator: String,
   val value: List<String>,
+)
+
+data class JobBypassFilter(
+  val name: String,
+  val value: Boolean,
 )
