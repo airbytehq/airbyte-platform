@@ -31,6 +31,7 @@ interface SchemaFormControlProps {
   titleOverride?: string;
   fieldSchema?: AirbyteJsonSchema;
   isRequired?: boolean;
+  className?: string;
 }
 
 /**
@@ -44,6 +45,7 @@ export const SchemaFormControl = ({
   titleOverride,
   fieldSchema,
   isRequired = true,
+  className,
 }: SchemaFormControlProps) => {
   const { schema, registerRenderedPath } = useSchemaForm();
   const value = useWatch({ name: path });
@@ -78,6 +80,7 @@ export const SchemaFormControl = ({
       ) : undefined,
     optional: !isRequired,
     header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
+    containerControlClassName: className,
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {
@@ -128,8 +131,8 @@ export const SchemaFormControl = ({
   }
 
   if (targetSchema.type === "array") {
-    const items = verifyArrayItems(targetSchema.items, path);
-    if (items.type === "object") {
+    const items = verifyArrayItems(targetSchema.items);
+    if (items.type === "object" || items.type === "array") {
       return (
         <ArrayOfObjectsControl
           fieldSchema={targetSchema}

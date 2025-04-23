@@ -537,32 +537,30 @@ export const Test2 = () => {
       schema={{
         type: "object",
         properties: {
-          test: {
+          primary_key: {
             anyOf: [
-              { type: "string" },
+              { type: "string", title: "Single Key" },
               {
-                type: "object",
-                additionalProperties: {
-                  anyOf: [
-                    { type: "string" },
-                    {
-                      $ref: "#/definitions/QueryProperties",
-                    },
-                  ],
+                type: "array",
+                title: "Composite Key",
+                items: {
+                  type: "string",
+                },
+              },
+              {
+                type: "array",
+                title: "Composite Nested Keys",
+                items: {
+                  type: "array",
+                  items: {
+                    type: "string",
+                  },
                 },
               },
             ],
           },
         },
-        definitions: {
-          QueryProperties: {
-            type: "object",
-            properties: {
-              query: { type: "string" },
-            },
-          },
-        },
-        required: ["test"],
+        required: ["primary_key"],
       }}
       onSubmit={onSubmit}
     >

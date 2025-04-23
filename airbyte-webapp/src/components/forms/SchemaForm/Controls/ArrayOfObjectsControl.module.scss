@@ -1,10 +1,14 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.removeButton {
-  padding-top: variables.$spacing-md;
+.removeButtonPadding {
+  padding-top: variables.$spacing-lg;
 }
 
 .addButtonContainer {
   padding-bottom: variables.$spacing-xl;
+}
+
+.itemControl {
+  width: 100%;
 }

@@ -8,6 +8,7 @@ export interface BaseControlProps {
   labelTooltip?: ReactElement;
   optional: boolean;
   header?: ReactElement;
+  containerControlClassName?: string;
 }
 
 export type OverrideByPath = Record<string, ReactElement | null>;
