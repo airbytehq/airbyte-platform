@@ -295,6 +295,8 @@ public class ConnectorRegistryConverters {
         null,
         null,
         null,
+        null,
+        null,
         null);
 
     return connectorRollout;

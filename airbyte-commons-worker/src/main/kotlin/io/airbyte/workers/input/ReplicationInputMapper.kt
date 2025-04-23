@@ -18,6 +18,7 @@ import jakarta.inject.Singleton
 class ReplicationInputMapper {
   fun toReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput {
     val useFileTransfer = extractUseFileTransfer(replicationActivityInput)
+    val isOldFileTransfer = isDeprecatedFileTransfer(replicationActivityInput)
 
     return ReplicationInput()
       .withNamespaceDefinition(replicationActivityInput.namespaceDefinition)
@@ -36,15 +37,14 @@ class ReplicationInputMapper {
       .withSourceConfiguration(replicationActivityInput.sourceConfiguration)
       .withDestinationConfiguration(replicationActivityInput.destinationConfiguration)
       .withConnectionContext(replicationActivityInput.connectionContext)
-      .withUseFileTransfer(useFileTransfer)
+      .withUseFileTransfer(useFileTransfer || isOldFileTransfer)
+      .withOmitFileTransferEnvVar(useFileTransfer && !isOldFileTransfer)
       .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
   }
 
-  private fun extractUseFileTransfer(replicationActivityInput: ReplicationActivityInput): Boolean {
-    if (replicationActivityInput.includesFiles == true) {
-      return true
-    }
+  private fun extractUseFileTransfer(replicationActivityInput: ReplicationActivityInput): Boolean = replicationActivityInput.includesFiles == true
 
+  private fun isDeprecatedFileTransfer(replicationActivityInput: ReplicationActivityInput): Boolean {
     if (replicationActivityInput.sourceConfiguration == null) {
       return false
     }

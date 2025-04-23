@@ -6,6 +6,7 @@ import { Path, get, useFormState } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { DatePickerProps } from "components/ui/DatePicker/DatePicker";
+import { FlexContainer } from "components/ui/Flex";
 import { InputProps } from "components/ui/Input";
 import { ListBoxProps, Option } from "components/ui/ListBox";
 import { SwitchProps } from "components/ui/Switch/Switch";
@@ -24,6 +25,7 @@ import { InputWrapper } from "./InputWrapper";
 import { SelectWrapper } from "./SelectWrapper";
 import { SwitchWrapper } from "./SwitchWrapper";
 import { TextAreaWrapper } from "./TextAreaWrapper";
+
 type ControlProps<T extends FormValues> =
   | SelectControlProps<T>
   | InputControlProps<T>
@@ -53,6 +55,10 @@ interface ControlBaseProps<T extends FormValues> {
    * An optional description that appears under the label
    */
   description?: string | ReactNode;
+  /**
+   * Optional content to render on the right side of the label
+   */
+  header?: ReactNode;
   hasError?: boolean;
   controlId?: string;
   inline?: boolean;
@@ -110,12 +116,14 @@ export interface ArrayControlProps<T extends FormValues>
   extends ControlBaseProps<T>,
     Omit<TagInputProps, "name" | "fieldValue" | "onChange"> {
   fieldType: "array";
+  itemType?: "string" | "number" | "integer";
 }
 
 export const FormControl = <T extends FormValues>({
   label,
   labelTooltip,
   description,
+  header,
   inline = false,
   optional = false,
   containerControlClassName,
@@ -180,6 +188,7 @@ export const FormControl = <T extends FormValues>({
           labelTooltip={labelTooltip}
           htmlFor={controlId}
           optional={optional}
+          header={header}
         />
       )}
       <div className={styles.control__field}>{renderControl()}</div>
@@ -200,20 +209,31 @@ interface FormLabelProps {
   htmlFor: string;
   inline?: boolean;
   optional?: boolean;
+  header?: ReactNode;
 }
 
-export const FormLabel: React.FC<FormLabelProps> = ({ description, label, labelTooltip, htmlFor, optional }) => {
+export const FormLabel: React.FC<FormLabelProps> = ({
+  description,
+  label,
+  labelTooltip,
+  htmlFor,
+  optional,
+  header,
+}) => {
   return (
     <label className={styles.control__label} htmlFor={htmlFor}>
-      <Text size="lg" className={styles.control__label__text}>
-        {label}
-        {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
-        {optional && (
-          <Text className={styles.control__optional} as="span">
-            <FormattedMessage id="form.optional" />
-          </Text>
-        )}
-      </Text>
+      <FlexContainer alignItems="center" gap="md">
+        <Text size="lg" className={styles.control__label__text}>
+          {label}
+          {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
+          {optional && (
+            <Text className={styles.control__optional} as="span">
+              <FormattedMessage id="form.optional" />
+            </Text>
+          )}
+        </Text>
+        {header}
+      </FlexContainer>
       {description &&
         (isString(description) ? <Text className={styles.control__description}>{description}</Text> : description)}
     </label>

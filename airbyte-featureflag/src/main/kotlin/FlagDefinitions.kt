@@ -173,6 +173,8 @@ object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instan
 
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
 
+object MergeStreamStatWithMetadata : Temporary<Boolean>(key = "platform.merge-stat-with-metadata", default = false)
+
 object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
 
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
@@ -193,3 +195,5 @@ object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platfor
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
 
 object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
+
+object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

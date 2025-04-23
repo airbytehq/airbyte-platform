@@ -65,12 +65,16 @@ import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem;
+import io.airbyte.api.problems.model.generated.ProblemConnectionUnsupportedFileTransfersData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData;
 import io.airbyte.api.problems.model.generated.ProblemMessageData;
+import io.airbyte.api.problems.model.generated.ProblemStreamDataItem;
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem;
+import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
+import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
 import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.converters.ApiConverters;
@@ -587,8 +591,19 @@ public class ConnectionsHandler {
 
     // TODO Undesirable behavior: sending a null configured catalog should not be valid?
     if (connectionCreate.getSyncCatalog() != null) {
+      final StandardSourceDefinition sourceDefinition = sourceService
+          .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
+      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper
+          .getSourceVersion(sourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
+      final StandardDestinationDefinition destinationDefinition = destinationService
+          .getStandardDestinationDefinition(destinationConnection.getDestinationDefinitionId());
+      final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper
+          .getDestinationVersion(destinationDefinition, destinationConnection.getWorkspaceId(), destinationConnection.getDestinationId());
+
+      validateCatalogIncludeFiles(connectionCreate.getSyncCatalog(), sourceVersion, destinationVersion);
       validateCatalogDoesntContainDuplicateStreamNames(connectionCreate.getSyncCatalog());
       validateCatalogSize(connectionCreate.getSyncCatalog(), workspaceId, "create");
+
       if (featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new Organization(organizationId))) {
         validateStreamsDoNotConflictWithExistingDestinationStreams(
             connectionCreate.getSyncCatalog(),
@@ -775,6 +790,14 @@ public class ConnectionsHandler {
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.SOURCE_CONNECTOR, sourceDefinition.getSourceDefinitionId());
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinition.getDestinationDefinitionId());
 
+    if (connectionPatch.getSyncCatalog() != null) {
+      final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper
+          .getSourceVersion(sourceDefinition, workspaceId, sync.getSourceId());
+      final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper
+          .getDestinationVersion(destinationDefinition, workspaceId, sync.getDestinationId());
+      validateCatalogIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
+    }
+
     if (isPatchRelevantForDestinationValidation(connectionPatch)
         && !Objects.equals(updateReason, ConnectionAutoUpdatedReason.SCHEMA_CHANGE_AUTO_PROPAGATE.name())
         && featureFlagClient.boolVariation(ValidateConflictingDestinationStreams.INSTANCE, new Organization(organizationId))) {
@@ -824,6 +847,40 @@ public class ConnectionsHandler {
         updateReason, autoUpdate);
 
     return updatedRead;
+  }
+
+  private void validateCatalogIncludeFiles(final AirbyteCatalog newCatalog,
+                                           final ActorDefinitionVersion sourceVersion,
+                                           final ActorDefinitionVersion destinationVersion) {
+    final List<AirbyteStreamAndConfiguration> enabledStreamsIncludingFiles =
+        newCatalog.getStreams().stream().filter(s -> s.getConfig().getSelected()
+            && s.getConfig().getIncludeFiles() != null
+            && s.getConfig().getIncludeFiles()).toList();
+
+    if (enabledStreamsIncludingFiles.isEmpty()) {
+      // No file streams are enabled, so we don't need to do any validation.
+      return;
+    }
+
+    // If either source or destination doesn't support files, we can't enable file transfers
+    if (!sourceVersion.getSupportsFileTransfer() || !destinationVersion.getSupportsFileTransfer()) {
+      final List<ProblemStreamDataItem> problemStreams = enabledStreamsIncludingFiles.stream()
+          .map(stream -> new ProblemStreamDataItem()
+              .streamName(stream.getStream().getName())
+              .streamNamespace(stream.getStream().getNamespace()))
+          .toList();
+      throw new ConnectionDoesNotSupportFileTransfersProblem(new ProblemConnectionUnsupportedFileTransfersData().streams(problemStreams));
+    }
+
+    // If the stream isn't file based, we can't enable file transfers for that stream
+    for (final AirbyteStreamAndConfiguration stream : enabledStreamsIncludingFiles) {
+      if (stream.getStream().getIsFileBased() == null || !stream.getStream().getIsFileBased()) {
+        throw new StreamDoesNotSupportFileTransfersProblem(new ProblemConnectionUnsupportedFileTransfersData().addstreamsItem(
+            new ProblemStreamDataItem()
+                .streamName(stream.getStream().getName())
+                .streamNamespace(stream.getStream().getNamespace())));
+      }
+    }
   }
 
   private void validateConnectionPatch(final WorkspaceHelper workspaceHelper, final StandardSync persistedSync, final ConnectionUpdate patch) {

@@ -1,4 +1,4 @@
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 
 import { ListBox } from "components/ui/ListBox";
 
@@ -14,6 +14,9 @@ export const SelectWrapper = <T extends FormValues>({
   ...rest
 }: Omit<SelectControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
+  // If we don't watch the name explicitly, the listbox will not update
+  // when its value is changed as a result of setting a parent object value.
+  const value = useWatch({ name });
 
   return (
     <Controller
@@ -25,7 +28,7 @@ export const SelectWrapper = <T extends FormValues>({
           options={options}
           hasError={hasError}
           onSelect={(value) => field.onChange(value)}
-          selectedValue={field.value}
+          selectedValue={value}
           className={styles.select}
           {...rest}
         />

@@ -14,6 +14,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateRequestBody
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateRequestBody
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
@@ -60,7 +61,7 @@ class ConfigTemplatesPublicControllerTest {
               organizationId = organizationId,
               actorDefinitionId = UUID.randomUUID(),
               partialDefaultConfig = objectMapper.readTree("{}"),
-              userConfigSpec = objectMapper.readTree("{}"),
+              userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
               createdAt = OffsetDateTime.now(),
               updatedAt = OffsetDateTime.now(),
             ),
@@ -104,7 +105,7 @@ class ConfigTemplatesPublicControllerTest {
           organizationId = organizationId,
           actorDefinitionId = UUID.randomUUID(),
           partialDefaultConfig = objectMapper.readTree("{}"),
-          userConfigSpec = objectMapper.readTree("{}"),
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
           createdAt = OffsetDateTime.now(),
           updatedAt = OffsetDateTime.now(),
         ),
@@ -122,6 +123,7 @@ class ConfigTemplatesPublicControllerTest {
     assertEquals(response.icon, configTemplate.actorIcon)
     assertEquals(response.sourceDefinitionId, configTemplate.configTemplate.actorDefinitionId)
     assertEquals(response.configTemplateSpec, configTemplate.configTemplate.userConfigSpec)
+    assertEquals(response.partialDefaultConfig, configTemplate.configTemplate.partialDefaultConfig)
   }
 
   @Test
@@ -138,7 +140,7 @@ class ConfigTemplatesPublicControllerTest {
           organizationId = organizationId,
           actorDefinitionId = UUID.randomUUID(),
           partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpec,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
           createdAt = OffsetDateTime.now(),
           updatedAt = OffsetDateTime.now(),
         ),
@@ -175,7 +177,7 @@ class ConfigTemplatesPublicControllerTest {
           organizationId = organizationId,
           actorDefinitionId = UUID.randomUUID(),
           partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpec,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
           createdAt = OffsetDateTime.now(),
           updatedAt = OffsetDateTime.now(),
         ),

@@ -497,10 +497,6 @@ components:
           $ref: "#/components/schemas/ConnectorConfig"
         manifest:
           $ref: "#/components/schemas/ConnectorManifest"
-        form_generated_manifest:
-          type: boolean
-          description: Indicates if the manifest was auto-generated from the form-based Connector Builder UI
-          default: false
         stream_limit:
           type: integer
           minimum: 1

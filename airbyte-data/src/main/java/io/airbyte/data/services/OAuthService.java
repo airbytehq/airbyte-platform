@@ -27,7 +27,10 @@ public interface OAuthService {
   Optional<SourceOAuthParameter> getSourceOAuthParameterOptional(UUID workspaceId, UUID organizationId, UUID sourceDefinitionId)
       throws IOException;
 
-  Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(UUID workspaceId, UUID sourceDefinitionId) throws IOException;
+  Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(Optional<UUID> workspaceId,
+                                                                           Optional<UUID> organizationId,
+                                                                           UUID sourceDefinitionId)
+      throws IOException;
 
   void writeDestinationOAuthParam(DestinationOAuthParameter destinationOAuthParameter) throws IOException;
 
@@ -40,7 +43,9 @@ public interface OAuthService {
   Optional<DestinationOAuthParameter> getDestinationOAuthParameterOptional(UUID workspaceId, UUID organizationId, UUID destinationDefinitionId)
       throws IOException;
 
-  Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(UUID workspaceId, UUID destinationDefinitionId)
+  Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(Optional<UUID> workspaceId,
+                                                                                     Optional<UUID> organizationId,
+                                                                                     UUID destinationDefinitionId)
       throws IOException;
 
 }

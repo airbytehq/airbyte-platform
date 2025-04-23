@@ -13,9 +13,11 @@ import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionCheckRequest
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SlugRequestBody
+import io.airbyte.api.model.generated.TimeWindowRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
+import io.airbyte.api.model.generated.WorkspaceIdList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead
 import io.airbyte.api.model.generated.WorkspaceRead
@@ -44,7 +46,6 @@ import io.micronaut.http.annotation.Status
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.concurrent.Callable
 
 @Controller("/api/v1/workspaces")
 @Secured(SecurityRule.IS_AUTHENTICATED)
@@ -155,17 +156,12 @@ open class WorkspaceApiController(
     @Body workspaceUsageRequestBody: WorkspaceUsageRequestBody?,
   ): WorkspaceUsageRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
 
-  @Post("/list")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listWorkspaces(): WorkspaceReadList? = execute(Callable { workspacesHandler.listWorkspaces() })
-
   @Post("/list_all_paginated")
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listAllWorkspacesPaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
-  ): io.airbyte.api.model.generated.WorkspaceReadList? =
+  ): WorkspaceReadList? =
     execute {
       workspacesHandler.listAllWorkspacesPaginated(
         listResourcesForWorkspacesRequestBody,
@@ -177,7 +173,7 @@ open class WorkspaceApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listWorkspacesPaginated(
     @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
-  ): io.airbyte.api.model.generated.WorkspaceReadList? =
+  ): WorkspaceReadList? =
     execute {
       workspacesHandler.listWorkspacesPaginated(
         listResourcesForWorkspacesRequestBody,
@@ -236,7 +232,7 @@ open class WorkspaceApiController(
 
   override fun listWorkspacesInOrganization(
     @Body request: ListWorkspacesInOrganizationRequestBody,
-  ): io.airbyte.api.model.generated.WorkspaceReadList? {
+  ): WorkspaceReadList? {
     // To be implemented
     return execute { workspacesHandler.listWorkspacesInOrganization(request) }
   }
@@ -246,5 +242,11 @@ open class WorkspaceApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listWorkspacesByUser(
     @Body request: ListWorkspacesByUserRequestBody,
-  ): io.airbyte.api.model.generated.WorkspaceReadList? = execute { workspacesHandler.listWorkspacesByUser(request) }
+  ): WorkspaceReadList? = execute { workspacesHandler.listWorkspacesByUser(request) }
+
+  @Post("/list_workspaces_by_most_recently_running_jobs")
+  @Secured(AuthRoleConstants.ADMIN)
+  override fun listActiveWorkspacesByMostRecentlyRunningJobs(
+    @Body timeWindowRequestBody: TimeWindowRequestBody,
+  ): WorkspaceIdList = throw ApiNotImplementedInOssProblem()
 }

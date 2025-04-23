@@ -10,6 +10,8 @@ import { ListBox } from "components/ui/ListBox";
 import { RemoveButton } from "components/ui/RemoveButton/RemoveButton";
 
 import { ControlGroup } from "./ControlGroup";
+import { LinkComponentsToggle } from "./LinkComponentsToggle";
+import { useRefsHandler } from "./RefsHandler";
 import { useSchemaForm } from "./SchemaForm";
 import styles from "./SchemaFormControl.module.scss";
 import { extractDefaultValuesFromSchema, verifyArrayItems, AirbyteJsonSchema, getSelectedOptionSchema } from "./utils";
@@ -25,6 +27,12 @@ interface SchemaFormControlProps {
    * Map of property paths to custom renderers, allowing override of specific fields.
    */
   overrideByPath?: OverrideByPath;
+
+  /**
+   * If true, the component will not register the path as rendered.
+   * Used internally by SchemaFormRemainingFields to prevent duplicate registration.
+   */
+  skipRenderedPathRegistration?: boolean;
 }
 
 type OverrideByPath = Record<string, ReactElement | null>;
@@ -34,14 +42,24 @@ interface BaseControlProps {
   label?: string;
   labelTooltip?: ReactElement;
   optional: boolean;
+  header?: ReactElement;
 }
 
 /**
  * Component that renders form controls based on JSON schema.
  * It can render a single field or recursively render nested objects.
  */
-export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaFormControlProps) => {
-  const { schemaAtPath, isRequiredField } = useSchemaForm();
+export const SchemaFormControl = ({
+  path = "",
+  overrideByPath = {},
+  skipRenderedPathRegistration = false,
+}: SchemaFormControlProps) => {
+  const { schemaAtPath, isRequiredField, registerRenderedPath } = useSchemaForm();
+
+  // Register this path synchronously during render instead of in an effect
+  if (!skipRenderedPathRegistration && path) {
+    registerRenderedPath(path);
+  }
 
   // Check if there's an override for this path
   if (overrideByPath[path] !== undefined) {
@@ -59,10 +77,27 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
         <LabelInfo description={targetProperty.description} examples={targetProperty.examples} />
       ) : undefined,
     optional: !isRequiredField(path),
+    header: <LinkComponentsToggle path={path} />,
   };
 
+  if (targetProperty.oneOf || targetProperty.anyOf) {
+    return (
+      <MultiOptionControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
+  }
+
   if (targetProperty.type === "object") {
-    return <ObjectControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+    return (
+      <ObjectControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   if (targetProperty.type === "boolean") {
@@ -93,7 +128,13 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
   if (targetProperty.type === "array") {
     const items = verifyArrayItems(targetProperty.items);
     if (items.type === "object") {
-      return <ArrayOfObjectsControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+      return (
+        <ArrayOfObjectsControl
+          baseProps={baseProps}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+        />
+      );
     }
     if (items.type === "string") {
       return <FormControl {...baseProps} fieldType="array" />;
@@ -106,16 +147,24 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
 const ObjectControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: OverrideByPath;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const { errorAtPath, schemaAtPath } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name);
 
   const objectProperty = schemaAtPath(baseProps.name);
   if (objectProperty.oneOf || objectProperty.anyOf) {
-    return <MultiOptionControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+    return (
+      <MultiOptionControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   // If no properties, nothing to render
@@ -127,14 +176,26 @@ const ObjectControl = ({
     <>
       {Object.keys(objectProperty.properties).map((propertyName) => {
         const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
-        return <SchemaFormControl key={fullPath} path={fullPath} overrideByPath={overrideByPath} />;
+        return (
+          <SchemaFormControl
+            key={fullPath}
+            path={fullPath}
+            overrideByPath={overrideByPath}
+            skipRenderedPathRegistration={skipRenderedPathRegistration}
+          />
+        );
       })}
     </>
   );
 
   // rendering top-level schema, so no border is necessary
-  if (!baseProps.name || !baseProps.label) {
-    return contents;
+  if (!baseProps.name) {
+    return (
+      <>
+        {baseProps.header}
+        {contents}
+      </>
+    );
   }
 
   return (
@@ -144,6 +205,7 @@ const ObjectControl = ({
       path={baseProps.name}
       error={errorAtPath(baseProps.name)}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
+      header={baseProps.header}
     >
       {contents}
     </ControlGroup>
@@ -153,9 +215,11 @@ const ObjectControl = ({
 const MultiOptionControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: OverrideByPath;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const value: unknown = useWatch({ name: baseProps.name });
   const { setValue, clearErrors } = useFormContext();
@@ -184,7 +248,14 @@ const MultiOptionControl = ({
       }
 
       const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
-      return <SchemaFormControl key={fullPath} path={fullPath} overrideByPath={overrideByPath} />;
+      return (
+        <SchemaFormControl
+          key={fullPath}
+          path={fullPath}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+        />
+      );
     });
   };
 
@@ -194,6 +265,7 @@ const MultiOptionControl = ({
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
       error={errorAtPath(baseProps.name)}
+      header={baseProps.header}
       control={
         <ListBox
           options={options.map((option) => ({
@@ -229,9 +301,11 @@ const MultiOptionControl = ({
 const ArrayOfObjectsControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: Record<string, ReactElement | null>;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const { schemaAtPath, errorAtPath } = useSchemaForm();
   const { fields: items, append, remove } = useFieldArray({ name: baseProps.name });
@@ -246,38 +320,69 @@ const ArrayOfObjectsControl = ({
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
       error={error}
-      control={
-        <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button">
-          <FormattedMessage id="form.add" />
-        </Button>
-      }
+      header={baseProps.header}
     >
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
-          <SchemaFormControl path={`${baseProps.name}.${index}`} overrideByPath={overrideByPath} />
+          <SchemaFormControl
+            path={`${baseProps.name}.${index}`}
+            overrideByPath={overrideByPath}
+            skipRenderedPathRegistration={skipRenderedPathRegistration}
+          />
           <RemoveButton className={styles.removeButton} onClick={() => remove(index)} />
         </FlexContainer>
       ))}
+      <div className={styles.addButtonContainer}>
+        <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button" icon="plus">
+          {itemSchema.title ? (
+            <FormattedMessage id="form.addItem" values={{ itemName: itemSchema.title }} />
+          ) : (
+            <FormattedMessage id="form.add" />
+          )}
+        </Button>
+      </div>
     </ControlGroup>
   );
 };
 
 const useToggleConfig = (path: string) => {
   const { schemaAtPath } = useSchemaForm();
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, clearErrors, resetField } = useFormContext();
   const value = useWatch({ name: path });
+  const { getReferenceInfo, handleUnlinkAction } = useRefsHandler();
 
   const defaultValue = extractDefaultValuesFromSchema(schemaAtPath(path));
   const handleToggle = useCallback(
     (newEnabledState: boolean) => {
       if (newEnabledState) {
+        // Use resetField to ensure the field and all its children are properly reset
+        // This avoids the UI showing stale values that aren't in the form state
+        resetField(path, { defaultValue });
         setValue(path, defaultValue);
       } else {
-        setValue(path, undefined);
-        clearErrors(path);
+        // Get reference info before making changes
+        const refInfo = getReferenceInfo(path);
+
+        // For more deterministic behavior, use a more controlled approach:
+        // 1. First unlink all affected references if this field has any
+        if (refInfo.type !== "none") {
+          // Unlink the field
+          handleUnlinkAction(path);
+
+          // Give a small delay to ensure React state updates happen in the correct order
+          setTimeout(() => {
+            // 2. Then uncheck the field
+            setValue(path, undefined);
+            clearErrors(path);
+          }, 0);
+        } else {
+          // No references, just uncheck the field immediately
+          setValue(path, undefined);
+          clearErrors(path);
+        }
       }
     },
-    [path, clearErrors, defaultValue, setValue]
+    [path, clearErrors, defaultValue, setValue, resetField, getReferenceInfo, handleUnlinkAction]
   );
 
   return {

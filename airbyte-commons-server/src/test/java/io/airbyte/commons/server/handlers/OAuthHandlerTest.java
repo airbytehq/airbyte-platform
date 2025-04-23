@@ -135,7 +135,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
+    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), sourceDefId))
         .thenReturn(Optional.of(new SourceOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -187,7 +187,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
+    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), destinationDefId))
         .thenReturn(Optional.of(new DestinationOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
 
+import { encryptionMapperSchema } from "components/connection/ConnectionForm/schemas/mapperSchema";
 import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Text } from "components/ui/Text";
 
@@ -20,29 +20,11 @@ import { MappingTypeListBox } from "./MappingTypeListBox";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 
-const isHexadecimal = (value: string | undefined) => (value ? /^[0-9a-fA-F]*$/.test(value) : false);
-
-/**
- * AES is still _technically_ supported in the API but in reality, the secrets hydration is broken
- * It should not be supported in the UI
- * https://github.com/airbytehq/airbyte-internal-issues/issues/11515
- */
-const encryptionMapperSchema = yup
-  .object()
-  .shape({
-    algorithm: yup.mixed<EncryptionMapperAlgorithm>().oneOf([EncryptionMapperAlgorithm.RSA]).required(),
-    targetField: yup.string().required("Target field is required"),
-    fieldNameSuffix: yup.string().oneOf(["_encrypted"]).required("Field name suffix is required"),
-    publicKey: yup.string().when("algorithm", {
-      is: "RSA",
-      then: yup
-        .string()
-        .required("Public key is required")
-        .test("is-hex", "Public key must be in hexadecimal format", isHexadecimal),
-      otherwise: (schema) => schema.strip(),
-    }),
-  })
-  .required();
+// /**
+//  * AES is still _technically_ supported in the API but in reality, the secrets hydration is broken
+//  * It should not be supported in the UI
+//  * https://github.com/airbytehq/airbyte-internal-issues/issues/11515
+//  */
 
 interface EncryptionFormProps {
   streamDescriptorKey: string;
@@ -66,7 +48,7 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
         publicKey: mapping.mapperConfiguration.publicKey ?? "",
       }),
     },
-    resolver: autoSubmitResolver<EncryptionMapperConfiguration>(encryptionMapperSchema, (formValues) => {
+    resolver: autoSubmitResolver(encryptionMapperSchema, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
     }),
     mode: "onBlur",

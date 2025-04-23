@@ -11,6 +11,8 @@ import io.micronaut.data.annotation.DateCreated
 import io.micronaut.data.annotation.DateUpdated
 import io.micronaut.data.annotation.Id
 import io.micronaut.data.annotation.MappedEntity
+import io.micronaut.data.annotation.TypeDef
+import io.micronaut.data.model.DataType
 import java.time.OffsetDateTime
 import java.util.UUID
 
@@ -50,4 +52,25 @@ data class ConnectorRollout(
   var failedReason: String? = null,
   @Nullable
   var pausedReason: String? = null,
+  @Nullable
+  @field:TypeDef(type = DataType.JSON)
+  var filters: ConnectorRolloutFilters? = null,
+  @Nullable
+  var tag: String? = null,
+)
+
+data class ConnectorRolloutFilters(
+  val customerTierFilters: List<CustomerTierFilter>,
+  val jobBypassFilter: JobBypassFilter?,
+)
+
+data class CustomerTierFilter(
+  val name: String,
+  val operator: String,
+  val value: List<String>,
+)
+
+data class JobBypassFilter(
+  val name: String,
+  val value: Boolean,
 )

@@ -366,12 +366,12 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         // Therefore, we require it to be non-null here.
         // Once all DEFAULT_VERSION workflows are finished, we can delete the null branch.
         state = input.connectorRollout?.state ?: ConnectorEnumRolloutState.INITIALIZED,
-        initialRolloutPct = input.connectorRollout?.initialRolloutPct?.toInt(),
-        currentTargetRolloutPct = input.connectorRollout?.currentTargetRolloutPct?.toInt(),
-        finalTargetRolloutPct = input.connectorRollout?.finalTargetRolloutPct?.toInt(),
+        initialRolloutPct = input.connectorRollout?.initialRolloutPct,
+        currentTargetRolloutPct = input.connectorRollout?.currentTargetRolloutPct,
+        finalTargetRolloutPct = input.connectorRollout?.finalTargetRolloutPct,
         hasBreakingChanges = false,
         rolloutStrategy = input.connectorRollout?.rolloutStrategy,
-        maxStepWaitTimeMins = input.connectorRollout?.maxStepWaitTimeMins?.toInt(),
+        maxStepWaitTimeMins = input.connectorRollout?.maxStepWaitTimeMins,
         updatedBy = input.connectorRollout?.updatedBy.toString(),
         createdAt = getOffset(input.connectorRollout?.createdAt),
         updatedAt = getOffset(input.connectorRollout?.updatedAt),

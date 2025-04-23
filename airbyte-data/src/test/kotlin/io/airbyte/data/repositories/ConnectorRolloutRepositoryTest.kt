@@ -4,8 +4,13 @@
 
 package io.airbyte.data.repositories
 
+import io.airbyte.config.AttributeName
 import io.airbyte.config.ConnectorRolloutFinalState
+import io.airbyte.config.CustomerTier
+import io.airbyte.config.CustomerTierFilter
+import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
+import io.airbyte.data.services.impls.data.mappers.toEntity
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
 import io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStateType
@@ -104,17 +109,18 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
 
   @ParameterizedTest
   @ArgumentsSource(ActiveStatesProvider::class)
-  fun `test db insertion fails when actor has active rollouts`(state: ConnectorRolloutStateType) {
+  fun `test db insertion fails when actor has active rollouts with same tag`(state: ConnectorRolloutStateType) {
     val rolloutId1 = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
-    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, state)
+    val tag = "tag"
+    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, state, tag)
 
     connectorRolloutRepository.save(rollout1)
     assertEquals(1, connectorRolloutRepository.count())
 
     // Attempt to insert another rollout with the same actorDefinitionId and an active state fails because only one active rollout is allowed per actor
     val rolloutId2 = UUID.randomUUID()
-    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, state)
+    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, state, tag)
 
     assertThrows<Exception> {
       connectorRolloutRepository.save(rollout2)
@@ -142,6 +148,7 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
     rolloutId: UUID,
     actorDefinitionId: UUID,
     state: ConnectorRolloutStateType,
+    tag: String? = null,
   ): ConnectorRollout =
     ConnectorRollout(
       id = rolloutId,
@@ -156,6 +163,19 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
       rolloutStrategy = ConnectorRolloutStrategyType.manual,
       maxStepWaitTimeMins = 60,
       expiresAt = OffsetDateTime.now().plusDays(1),
+      filters =
+        io.airbyte.config
+          .ConnectorRolloutFilters(
+            customerTierFilters =
+              listOf(
+                CustomerTierFilter(
+                  name = AttributeName.TIER,
+                  operator = Operator.IN,
+                  value = listOf(CustomerTier.TIER_1),
+                ),
+              ),
+          ).toEntity(),
+      tag = tag,
     )
 
   private fun assertConnectorRolloutEquals(
@@ -267,13 +287,14 @@ internal class ConnectorRolloutRepositoryTest : AbstractConfigRepositoryTest() {
   fun `test prevent update from terminal to active state when active rollout exists for actor`() {
     val rolloutId1 = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
-    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, ConnectorRolloutStateType.succeeded)
+    val tag = "tag"
+    val rollout1 = createConnectorRollout(rolloutId1, actorDefinitionId, ConnectorRolloutStateType.succeeded, tag)
     // Save the first rollout with a terminal state
     connectorRolloutRepository.save(rollout1)
 
     // Save a new rollout with an active state
     val rolloutId2 = UUID.randomUUID()
-    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, ConnectorRolloutStateType.initialized)
+    val rollout2 = createConnectorRollout(rolloutId2, actorDefinitionId, ConnectorRolloutStateType.initialized, tag)
     connectorRolloutRepository.save(rollout2)
 
     // Attempt to update the first rollout to an active state fails because only one active rollout is allowed per actor

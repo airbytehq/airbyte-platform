@@ -4,7 +4,13 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import io.airbyte.config.AttributeName
+import io.airbyte.config.CustomerTier
+import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
+import io.airbyte.data.repositories.entities.ConnectorRolloutFilters
+import io.airbyte.data.repositories.entities.CustomerTierFilter
+import io.airbyte.data.repositories.entities.JobBypassFilter
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -13,6 +19,11 @@ typealias EntityConnectorRolloutStateType = io.airbyte.db.instance.configs.jooq.
 typealias ModelConnectorRolloutStateType = io.airbyte.config.ConnectorEnumRolloutState
 typealias EntityConnectorRolloutStrategyType = io.airbyte.db.instance.configs.jooq.generated.enums.ConnectorRolloutStrategyType
 typealias ModelConnectorRolloutStrategyType = io.airbyte.config.ConnectorEnumRolloutStrategy
+typealias EntityConnectorRolloutFilters = ConnectorRolloutFilters
+typealias ModelConnectorRolloutFilters = io.airbyte.config.ConnectorRolloutFilters
+typealias ModelCustomerTierFilterExpression = io.airbyte.config.CustomerTierFilter
+typealias ModelJobBypassFilter = io.airbyte.config.JobBypassFilter
+typealias EntityJobBypassFilter = JobBypassFilter
 typealias EntityConnectorRollout = ConnectorRollout
 typealias ModelConnectorRollout = io.airbyte.config.ConnectorRollout
 
@@ -56,6 +67,78 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
     ModelConnectorRolloutStrategyType.OVERRIDDEN -> EntityConnectorRolloutStrategyType.overridden
   }
 
+fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters {
+  val customerTierFilters =
+    this.customerTierFilters.map { attr ->
+      try {
+        val name = AttributeName.valueOf(attr.name)
+        val operator = Operator.valueOf(attr.operator)
+
+        val tierList =
+          try {
+            attr.value
+              .asSequence()
+              .map { tierValue ->
+                tierValue.trim().let { CustomerTier.valueOf(it) }
+              }.toList()
+          } catch (e: Exception) {
+            throw RuntimeException("Failed to parse tier(s) from: ${attr.value}", e)
+          }
+
+        ModelCustomerTierFilterExpression(
+          name = name,
+          operator = operator,
+          value = tierList,
+        )
+      } catch (e: Exception) {
+        throw RuntimeException("Failed to parse customer attribute: attribute=$attr exception=${e.message}", e)
+      }
+    }
+
+  val jobBypassFilter =
+    if (this.jobBypassFilter != null) {
+      ModelJobBypassFilter(
+        name = AttributeName.valueOf(this.jobBypassFilter.name),
+        value = this.jobBypassFilter.value,
+      )
+    } else {
+      null
+    }
+
+  return ModelConnectorRolloutFilters(customerTierFilters = customerTierFilters, jobBypassFilter = jobBypassFilter)
+}
+
+fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
+  val customerTierFilters =
+    this.customerTierFilters.map { filter ->
+      when (filter) {
+        is ModelCustomerTierFilterExpression -> {
+          val name = filter.name.name
+          val operator = filter.operator.name
+          val value: List<String> = filter.value.map { it.name }
+
+          CustomerTierFilter(
+            name = name,
+            operator = operator,
+            value = value,
+          )
+        }
+        else -> throw RuntimeException("Failed to parse customer attribute filter: filter=$filter")
+      }
+    }
+
+  val jobBypassFilter =
+    if (this.jobBypassFilter != null) {
+      JobBypassFilter(
+        name = this.jobBypassFilter!!.name.name,
+        value = this.jobBypassFilter!!.value,
+      )
+    } else {
+      null
+    }
+  return EntityConnectorRolloutFilters(customerTierFilters = customerTierFilters, jobBypassFilter = jobBypassFilter)
+}
+
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
   ModelConnectorRollout(
     id = this.id,
@@ -78,6 +161,8 @@ fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
+    filters = this.filters?.toConfigModel(),
+    tag = this.tag,
   )
 
 fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
@@ -102,4 +187,6 @@ fun ModelConnectorRollout.toEntity(): EntityConnectorRollout =
     errorMsg = this.errorMsg,
     failedReason = this.failedReason,
     pausedReason = this.pausedReason,
+    filters = this.filters?.toEntity(),
+    tag = this.tag,
   )

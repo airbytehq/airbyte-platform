@@ -274,7 +274,7 @@ describe("SchemaForm", () => {
 
     // ArrayOfObjectsControls are now always rendered without a checkbox toggle
     // Find the add button and click it to add an item
-    const addButton = await screen.findByRole("button", { name: "Add" });
+    const addButton = await screen.findByRole("button", { name: "Add Friend" });
     await userEvent.click(addButton);
 
     // Check that fields for the new item appear

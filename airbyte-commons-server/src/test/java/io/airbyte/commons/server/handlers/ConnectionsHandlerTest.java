@@ -82,8 +82,10 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
+import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem;
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
+import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
 import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -226,6 +228,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
@@ -1170,6 +1173,48 @@ class ConnectionsHandlerTest {
         verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
+      @ParameterizedTest
+      @CsvSource({
+        "true, true, true", // all supported
+        "true, true, false", // stream is not file based
+        "true, false, false", // destination does not support
+        "false, true, false", // source does not support
+        "false, false, false", // nothing supports it
+      })
+      void testCreateConnectionValidatesFileTransfer(final boolean sourceSupportsFiles,
+                                                     final boolean destinationSupportsFiles,
+                                                     final boolean streamSupportsFiles)
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getStream().isFileBased(streamSupportsFiles);
+        catalog.getStreams().getFirst().getConfig().includeFiles(true);
+
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
+
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles));
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles));
+
+        if (sourceSupportsFiles && destinationSupportsFiles && streamSupportsFiles) {
+          // everything supports file transfers, so the connection should be created successfully
+          final ConnectionRead actualRead = connectionsHandler.createConnection(connectionCreate);
+          final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+          assertEquals(expectedRead, actualRead);
+        } else if (!sourceSupportsFiles || !destinationSupportsFiles) {
+          // source or destination does not support file transfers
+          assertThrows(ConnectionDoesNotSupportFileTransfersProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+        } else {
+          // stream is not file based
+          assertThrows(StreamDoesNotSupportFileTransfersProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+        }
+      }
+
       @Test
       void testCreateConnectionValidatesMappers() throws JsonValidationException, ConfigNotFoundException, IOException {
         final StandardWorkspace workspace = new StandardWorkspace()
@@ -1871,6 +1916,47 @@ class ConnectionsHandlerTest {
         assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @ParameterizedTest
+      @CsvSource({
+        "true, true, true", // all supported
+        "true, true, false", // stream is not file based
+        "true, false, false", // destination does not support
+        "false, true, false", // source does not support
+        "false, false, false", // nothing supports it
+      })
+      void testUpdateConnectionValidatesFileTransfer(final boolean sourceSupportsFiles,
+                                                     final boolean destinationSupportsFiles,
+                                                     final boolean streamSupportsFiles)
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+
+        final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateBasicApiCatalog();
+        catalogForUpdate.getStreams().getFirst().getStream().isFileBased(streamSupportsFiles);
+        catalogForUpdate.getStreams().getFirst().getConfig().setIncludeFiles(true);
+
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalogForUpdate);
+
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsFileTransfer(sourceSupportsFiles));
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsFileTransfer(destinationSupportsFiles));
+
+        if (sourceSupportsFiles && destinationSupportsFiles && streamSupportsFiles) {
+          // everything supports file transfers, so the connection should be created successfully
+          final ConnectionRead actualRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+          final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync).syncCatalog(catalogForUpdate);
+          assertEquals(expectedRead, actualRead);
+        } else if (!sourceSupportsFiles || !destinationSupportsFiles) {
+          // source or destination does not support file transfers
+          assertThrows(ConnectionDoesNotSupportFileTransfersProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+        } else {
+          // stream is not file based
+          assertThrows(StreamDoesNotSupportFileTransfersProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+        }
+
       }
 
       @Test

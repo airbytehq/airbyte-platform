@@ -67,6 +67,9 @@ class RuntimeEnvVarFactory(
     val optionsOverride: String = featureFlagClient.stringVariation(ContainerOrchestratorJavaOpts, Connection(replicationInput.connectionId))
     val javaOpts = optionsOverride.trim().ifEmpty { containerOrchestratorJavaOpts }
     val secretPersistenceEnvVars = getSecretPersistenceEnvVars(replicationInput.connectionContext.organizationId)
+    val useFileTransferEnvVar =
+      replicationInput.useFileTransfer == true &&
+        (replicationInput.omitFileTransferEnvVar == null || replicationInput.omitFileTransferEnvVar == false)
 
     return listOf(
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SYNC.toString(), null),
@@ -74,7 +77,7 @@ class RuntimeEnvVarFactory(
       EnvVar(AirbyteEnvVar.JOB_ID.toString(), replicationInput.getJobId(), null),
       EnvVar(AirbyteEnvVar.ATTEMPT_ID.toString(), replicationInput.getAttemptId().toString(), null),
       EnvVar(AirbyteEnvVar.CONNECTION_ID.toString(), replicationInput.connectionId.toString(), null),
-      EnvVar(EnvVarConstants.USE_FILE_TRANSFER, replicationInput.useFileTransfer.toString(), null),
+      EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
     ) + secretPersistenceEnvVars

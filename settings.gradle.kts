@@ -81,9 +81,9 @@ buildCache {
     isEnabled = !isCiServer
   }
   remote<com.github.burrunan.s3cache.AwsS3BuildCache> {
-    region = "us-west-2"
-    bucket = "ab-ci-cache"
-    prefix = "platform-ci-cache/"
+    region = "us-east-1"
+    bucket = "gradle-build-cache20250418223459104400000001"
+    prefix = "platform-cache/"
     isPush = isCiServer
     isEnabled = System.getenv().containsKey("S3_BUILD_CACHE_ACCESS_KEY_ID")
   }

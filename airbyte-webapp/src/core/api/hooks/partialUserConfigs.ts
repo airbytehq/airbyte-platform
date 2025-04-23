@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { ALLOWED_ORIGIN_SEARCH_PARAM } from "core/services/auth/EmbeddedAuthService";
 import { useNotificationService } from "hooks/services/Notification";
 import {
   CREATE_PARTIAL_USER_CONFIG_PARAM,
@@ -36,16 +38,17 @@ export const useListPartialUserConfigs = (workspaceId: string): PartialUserConfi
 
 export const useGetPartialUserConfig = (partialUserConfigId: string) => {
   const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(partialUserConfigs.detail(partialUserConfigId), () => {
-    return getPartialUserConfig({ partialUserConfigId }, requestOptions);
+    return getPartialUserConfig({ partialUserConfigId, workspaceId }, requestOptions);
   });
 };
 
 export const useCreatePartialUserConfig = () => {
   const requestOptions = useRequestOptions();
   const { registerNotification } = useNotificationService();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { formatMessage } = useIntl();
 
@@ -54,7 +57,7 @@ export const useCreatePartialUserConfig = () => {
       return await createPartialUserConfig(partialUserConfigCreate, requestOptions);
     },
     {
-      onSuccess: () => {
+      onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: partialUserConfigs.lists() });
 
         setSearchParams((params: URLSearchParams) => {
@@ -63,6 +66,19 @@ export const useCreatePartialUserConfig = () => {
           return params;
         });
 
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
+
+        if (allowedOrigin.length > 0) {
+          const successMessage = {
+            type: "end_user_action_result",
+            message: "partial_user_config_created",
+            data,
+          };
+
+          window.parent.postMessage(successMessage, allowedOrigin);
+        }
+
         registerNotification({
           id: "partial-user-config-create-success",
           type: "success",
@@ -70,6 +86,18 @@ export const useCreatePartialUserConfig = () => {
         });
       },
       onError: (error: Error) => {
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
+
+        if (allowedOrigin.length > 0) {
+          const errorMessage = {
+            type: "end_user_action_result",
+            message: "partial_user_config_create_error",
+            error,
+          };
+          window.parent.postMessage(errorMessage, allowedOrigin);
+        }
+
         registerNotification({
           id: "partial-user-config-create-error",
           type: "error",
@@ -83,7 +111,7 @@ export const useCreatePartialUserConfig = () => {
 export const useUpdatePartialUserConfig = () => {
   const requestOptions = useRequestOptions();
   const { registerNotification } = useNotificationService();
-  const [, setSearchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { formatMessage } = useIntl();
   return useMutation(
@@ -91,25 +119,48 @@ export const useUpdatePartialUserConfig = () => {
       return await updateUserConfig(partialUserConfigUpdate, requestOptions);
     },
     {
-      onSuccess: (_data, variables) => {
+      onSuccess: (data, variables) => {
         queryClient.invalidateQueries({ queryKey: partialUserConfigs.lists() });
         queryClient.invalidateQueries({
           queryKey: partialUserConfigs.detail(variables.partialUserConfigId),
         });
+
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
+        if (allowedOrigin.length > 0) {
+          const successMessage = {
+            type: "end_user_action_result",
+            message: "partial_user_config_updated",
+            data,
+          };
+
+          window.parent.postMessage(successMessage, allowedOrigin);
+        }
 
         setSearchParams((params: URLSearchParams) => {
           params.delete(SELECTED_PARTIAL_CONFIG_ID_PARAM);
           return params;
         });
         registerNotification({
-          id: "partial-user-config-edit-success",
+          id: "partial-user-config-update-success",
           type: "success",
           text: formatMessage({ id: "partialUserConfig.create.success" }),
         });
       },
       onError: (error: Error) => {
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
+        if (allowedOrigin.length > 0) {
+          const errorMessage = {
+            type: "end_user_action_result",
+            message: "partial_user_config_update_error",
+            error,
+          };
+
+          window.parent.postMessage(errorMessage, allowedOrigin);
+        }
         registerNotification({
-          id: "partial-user-config-edit-error",
+          id: "partial-user-config-update-error",
           type: "error",
           text: error.message,
         });

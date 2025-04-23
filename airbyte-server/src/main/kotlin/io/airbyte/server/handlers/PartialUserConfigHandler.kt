@@ -40,7 +40,7 @@ class PartialUserConfigHandler(
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
 
     // Create and persist the source
-    val combinedConfigs = combineProperties(configTemplate.configTemplate.partialDefaultConfig, partialUserConfigCreate.partialUserConfigProperties)
+    val combinedConfigs = combineProperties(configTemplate.configTemplate.partialDefaultConfig, partialUserConfigCreate.connectionConfiguration)
     val sourceCreate =
       createSourceCreateFromPartialUserConfig(configTemplate.configTemplate, partialUserConfigCreate, combinedConfigs, configTemplate.actorName)
     val savedSource = sourceHandler.createSource(sourceCreate)
@@ -48,9 +48,9 @@ class PartialUserConfigHandler(
     // Handle secrets in configuration
     val connectorSpec =
       ConnectorSpecification().apply {
-        connectionSpecification = configTemplate.configTemplate.userConfigSpec.get("connectionSpecification")
+        connectionSpecification = configTemplate.configTemplate.userConfigSpec.connectionSpecification
       }
-    val connectionConfig = partialUserConfigCreate.partialUserConfigProperties.get("connectionConfiguration")
+    val connectionConfig = partialUserConfigCreate.connectionConfiguration
     val secureConfig =
       sourceHandler.persistConfigRawSecretValues(
         connectionConfig,
@@ -61,7 +61,7 @@ class PartialUserConfigHandler(
       )
 
     // Save the secure config
-    val securePartialUserConfig = partialUserConfigCreate.copy(partialUserConfigProperties = secureConfig, actorId = savedSource.sourceId)
+    val securePartialUserConfig = partialUserConfigCreate.copy(connectionConfiguration = secureConfig, actorId = savedSource.sourceId)
     val createdPartialUserConfig = partialUserConfigService.createPartialUserConfig(securePartialUserConfig)
 
     return PartialUserConfigWithConfigTemplateAndActorDetails(
@@ -83,11 +83,11 @@ class PartialUserConfigHandler(
 
     val sanitizedConfigProperties =
       secretsProcessor.prepareSecretsForOutput(
-        partialUserConfig.partialUserConfig.partialUserConfigProperties,
-        partialUserConfig.configTemplate.userConfigSpec["connectionSpecification"],
+        partialUserConfig.partialUserConfig.connectionConfiguration,
+        partialUserConfig.configTemplate.userConfigSpec.connectionSpecification,
       )
 
-    partialUserConfig.partialUserConfig.partialUserConfigProperties = sanitizedConfigProperties
+    partialUserConfig.partialUserConfig.connectionConfiguration = sanitizedConfigProperties
 
     return partialUserConfig
   }
@@ -112,7 +112,7 @@ class PartialUserConfigHandler(
     val combinedConfigs =
       combineProperties(
         ObjectMapper().valueToTree(configTemplate.configTemplate.partialDefaultConfig),
-        ObjectMapper().valueToTree(partialUserConfig.partialUserConfigProperties),
+        ObjectMapper().valueToTree(partialUserConfig.connectionConfiguration),
       )
 
     // Update the source using the combined config
@@ -128,10 +128,10 @@ class PartialUserConfigHandler(
     // Handle secrets in configuration
     val connectorSpec =
       ConnectorSpecification().apply {
-        connectionSpecification = configTemplate.configTemplate.userConfigSpec.get("connectionSpecification")
+        connectionSpecification = configTemplate.configTemplate.userConfigSpec.connectionSpecification
       }
 
-    val connectionConfig = partialUserConfig.partialUserConfigProperties.get("connectionConfiguration")
+    val connectionConfig = partialUserConfig.connectionConfiguration
     val secureConfig =
       sourceHandler.persistConfigRawSecretValues(
         connectionConfig,
@@ -141,7 +141,7 @@ class PartialUserConfigHandler(
         existingConfig.actorId,
       )
 
-    val securePartialUserConfig = partialUserConfig.copy(partialUserConfigProperties = secureConfig, actorId = existingConfig.actorId)
+    val securePartialUserConfig = partialUserConfig.copy(connectionConfiguration = secureConfig, actorId = existingConfig.actorId)
 
     // Update the partial user config in the database
     val updatedPartialUserConfig = partialUserConfigService.updatePartialUserConfig(securePartialUserConfig)
@@ -169,29 +169,34 @@ class PartialUserConfigHandler(
 
   /**
    * Combines all properties from ConfigTemplate.partialDefaultConfig and
-   * PartialUserConfig.partialUserConfigProperties into a single JSON object.
+   * PartialUserConfig.connectionConfiguration into a single JSON object.
    * Recursively merges the JSON structures, with user config values taking precedence.
    */
   internal fun combineProperties(
-    configTemplateNode: JsonNode,
-    partialUserConfigNode: JsonNode,
+    configTemplateNode: JsonNode?,
+    partialUserConfigNode: JsonNode?,
   ): JsonNode {
     val objectMapper = ObjectMapper()
     val combinedNode = objectMapper.createObjectNode()
 
     // Helper function to merge two JSON objects recursively
     fun mergeObjects(
-      target: ObjectNode,
-      source: ObjectNode,
+      target: JsonNode,
+      source: JsonNode,
     ) {
+      // Ensure both nodes are objects
+      if (!target.isObject || !source.isObject) {
+        throw IllegalArgumentException("Both nodes must be objects to merge")
+      }
+
+      val targetObject = target as ObjectNode
+
       source.fields().forEach { (key, value) ->
-        if (target.has(key)) {
-          val targetValue = target.get(key)
+        if (targetObject.has(key)) {
+          val targetValue = targetObject.get(key)
           if (targetValue.isObject && value.isObject) {
             // Both are objects, merge them recursively
-            val targetObjectNode = targetValue as ObjectNode
-            val sourceObjectNode = value as ObjectNode
-            mergeObjects(targetObjectNode, sourceObjectNode)
+            mergeObjects(targetValue, value)
           } else if (targetValue.isObject != value.isObject) {
             // One is an object, the other isn't - this is a type conflict
             throw IllegalArgumentException(
@@ -199,35 +204,20 @@ class PartialUserConfigHandler(
             )
           } else {
             // Neither is an object, just override
-            target.set<JsonNode>(key, value)
+            targetObject.set<JsonNode>(key, value)
           }
         } else {
           // Key doesn't exist in target, just set it
-          target.set<JsonNode>(key, value)
+          targetObject.set<JsonNode>(key, value)
         }
       }
     }
 
-    // First, extract the connectionConfiguration objects from both nodes
-    val defaultConfigNode =
-      if (configTemplateNode.has("connectionConfiguration")) {
-        configTemplateNode.get("connectionConfiguration") as? ObjectNode
-      } else {
-        null
-      }
-
-    val userConfigNode =
-      if (partialUserConfigNode.has("connectionConfiguration")) {
-        partialUserConfigNode.get("connectionConfiguration") as? ObjectNode
-      } else {
-        null
-      }
-
     // Apply default configuration first
-    defaultConfigNode?.let { mergeObjects(combinedNode, it) }
+    configTemplateNode?.let { mergeObjects(combinedNode, it) }
 
     // Then apply user configuration (which will override defaults where they overlap)
-    userConfigNode?.let { mergeObjects(combinedNode, it) }
+    partialUserConfigNode?.let { mergeObjects(combinedNode, it) }
 
     return combinedNode
   }

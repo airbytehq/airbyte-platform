@@ -72,7 +72,11 @@ class PayloadKubeInputMapper(
     val destinationImage = input.destinationLauncherConfig.dockerImage.withImageRegistry()
     val destinationReqs = resourceRequirementsFactory.replDestination(input)
     val destinationRuntimeEnvVars =
-      runTimeEnvVarFactory.replicationConnectorEnvVars(input.destinationLauncherConfig, destinationReqs, input.useFileTransfer)
+      runTimeEnvVarFactory.replicationConnectorEnvVars(
+        input.destinationLauncherConfig,
+        destinationReqs,
+        input.useFileTransfer && (input.omitFileTransferEnvVar == null || input.omitFileTransferEnvVar == false),
+      )
 
     val labels =
       labeler.getReplicationLabels(
