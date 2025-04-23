@@ -8739,6 +8739,42 @@ paths:
       x-sdk-alias: listOrganizationsForUser
       x-sdk-group: Organizations
 
+  /public/v1/organizations/{organizationId}/oauthCredentials:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOAuthCredentialsRequest"
+        required: true
+      tags:
+        - public_organizations
+        - public
+        - Organizations
+      responses:
+        "200":
+          description: OAuth credential override was successful.
+        "400":
+          description: A field in the body has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-alias: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-group: Organizations
+      summary: Create OAuth override credentials for an organization and source type.
+      description: >-
+        Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
+        source/destination.
+    parameters:
+      - name: organizationId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+
   # Public APIs - Users
   /public/v1/users:
     get:
@@ -17244,6 +17280,23 @@ components:
     WorkspaceOAuthCredentialsRequest:
       title: Root Type for WorkspaceOAuthCredentials
       description: POST body for creating/updating workspace level OAuth credentials
+      required:
+        - actorType
+        - name
+        - configuration
+      type: object
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: string
+          description: The name of the source i.e. google-ads
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+      x-sdk-component: true
+    OrganizationOAuthCredentialsRequest:
+      title: Root Type for OrganizationOAuthCredentials
+      description: POST body for creating/updating organization level OAuth credentials
       required:
         - actorType
         - name

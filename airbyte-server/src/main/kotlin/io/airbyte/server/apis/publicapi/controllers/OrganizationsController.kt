@@ -4,13 +4,20 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.commons.entitlements.Entitlement
+import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicOrganizationsApi
+import io.airbyte.publicApi.server.generated.models.ActorTypeEnum
+import io.airbyte.publicApi.server.generated.models.OrganizationOAuthCredentialsRequest
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.GET
 import io.airbyte.server.apis.publicapi.constants.ORGANIZATIONS_PATH
+import io.airbyte.server.apis.publicapi.constants.PUT
 import io.airbyte.server.apis.publicapi.services.OrganizationService
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -25,7 +32,46 @@ open class OrganizationsController(
   private val organizationService: OrganizationService,
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
+  private val licenseEntitlementChecker: LicenseEntitlementChecker,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
 ) : PublicOrganizationsApi {
+  @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  override fun createOrUpdateOrganizationOAuthCredentials(
+    organizationId: String,
+    organizationOAuthCredentialsRequest: OrganizationOAuthCredentialsRequest,
+  ): Response {
+    val userId: UUID = currentUserService.currentUser.userId
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, UUID.fromString(organizationId))
+
+    trackingHelper.callWithTracker(
+      {
+        licenseEntitlementChecker.ensureEntitled(
+          UUID.fromString(organizationId),
+          Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+        )
+
+        val actorType =
+          when (organizationOAuthCredentialsRequest.actorType) {
+            ActorTypeEnum.SOURCE -> io.airbyte.api.model.generated.ActorTypeEnum.SOURCE
+            ActorTypeEnum.DESTINATION -> io.airbyte.api.model.generated.ActorTypeEnum.DESTINATION
+          }
+
+        organizationService.setOrganizationOverrideOauthParams(
+          OrganizationId(UUID.fromString(organizationId)),
+          organizationOAuthCredentialsRequest.name,
+          actorType,
+          organizationOAuthCredentialsRequest.configuration,
+        )
+      },
+      ORGANIZATIONS_PATH,
+      PUT,
+      userId,
+    )
+    return Response
+      .status(Response.Status.OK.statusCode)
+      .build()
+  }
+
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicListOrganizationsForUser(): Response {
     val userId: UUID = currentUserService.currentUser.userId

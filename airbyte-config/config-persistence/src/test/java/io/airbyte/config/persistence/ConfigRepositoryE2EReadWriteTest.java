@@ -703,11 +703,31 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testGetDestinationOAuthByDefinitionId() throws IOException {
+  void testGetDestinationOAuthByDefinitionIdAndWorkspaceId() throws IOException {
 
     final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(0);
     final Optional<DestinationOAuthParameter> result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(
-        destinationOAuthParameter.getWorkspaceId(), destinationOAuthParameter.getDestinationDefinitionId());
+        Optional.of(destinationOAuthParameter.getWorkspaceId()), Optional.empty(), destinationOAuthParameter.getDestinationDefinitionId());
+    assertTrue(result.isPresent());
+    assertEquals(destinationOAuthParameter, result.get());
+  }
+
+  @Test
+  void testGetDestinationOAuthByDefinitionIdAndOrganizationId() throws IOException {
+
+    final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(2);
+    final Optional<DestinationOAuthParameter> result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(
+        Optional.empty(), Optional.of(destinationOAuthParameter.getOrganizationId()), destinationOAuthParameter.getDestinationDefinitionId());
+    assertTrue(result.isPresent());
+    assertEquals(destinationOAuthParameter, result.get());
+  }
+
+  @Test
+  void testGetDestinationOAuthByDefinitionIdAndNullWorkspaceIdOrganizationId() throws IOException {
+
+    final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(3);
+    final Optional<DestinationOAuthParameter> result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(
+        Optional.empty(), Optional.empty(), destinationOAuthParameter.getDestinationDefinitionId());
     assertTrue(result.isPresent());
     assertEquals(destinationOAuthParameter, result.get());
   }
@@ -717,18 +737,44 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629");
     final DestinationOAuthParameter destinationOAuthParameter = MockData.destinationOauthParameters().get(0);
     Optional<DestinationOAuthParameter> result =
-        oauthService.getDestinationOAuthParamByDefinitionIdOptional(destinationOAuthParameter.getWorkspaceId(), missingId);
+        oauthService.getDestinationOAuthParamByDefinitionIdOptional(Optional.of(destinationOAuthParameter.getWorkspaceId()), Optional.empty(),
+            missingId);
     assertFalse(result.isPresent());
 
-    result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(missingId, destinationOAuthParameter.getDestinationDefinitionId());
+    result = oauthService.getDestinationOAuthParamByDefinitionIdOptional(Optional.of(missingId), Optional.empty(),
+        destinationOAuthParameter.getDestinationDefinitionId());
     assertFalse(result.isPresent());
   }
 
   @Test
-  void testGetSourceOAuthByDefinitionId() throws IOException {
+  void testGetSourceOAuthByDefinitionIdAndWorkspaceId() throws IOException {
     final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(0);
-    final Optional<SourceOAuthParameter> result = oauthService.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(),
-        sourceOAuthParameter.getSourceDefinitionId());
+    final Optional<SourceOAuthParameter> result =
+        oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.of(sourceOAuthParameter.getWorkspaceId()),
+            Optional.empty(),
+            sourceOAuthParameter.getSourceDefinitionId());
+    assertTrue(result.isPresent());
+    assertEquals(sourceOAuthParameter, result.get());
+  }
+
+  @Test
+  void testGetSourceOAuthByDefinitionIdAndOrganizationId() throws IOException {
+    final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(2);
+    final Optional<SourceOAuthParameter> result =
+        oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.empty(),
+            Optional.of(sourceOAuthParameter.getOrganizationId()),
+            sourceOAuthParameter.getSourceDefinitionId());
+    assertTrue(result.isPresent());
+    assertEquals(sourceOAuthParameter, result.get());
+  }
+
+  @Test
+  void testGetSourceOAuthByDefinitionIdAndNullWorkspaceIdAndOrganizationId() throws IOException {
+    final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(3);
+    final Optional<SourceOAuthParameter> result =
+        oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.empty(),
+            Optional.empty(),
+            sourceOAuthParameter.getSourceDefinitionId());
     assertTrue(result.isPresent());
     assertEquals(sourceOAuthParameter, result.get());
   }
@@ -738,10 +784,11 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final UUID missingId = UUID.fromString("fc59cfa0-06de-4c8b-850b-46d4cfb65629");
     final SourceOAuthParameter sourceOAuthParameter = MockData.sourceOauthParameters().get(0);
     Optional<SourceOAuthParameter> result =
-        oauthService.getSourceOAuthParamByDefinitionIdOptional(sourceOAuthParameter.getWorkspaceId(), missingId);
+        oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.of(sourceOAuthParameter.getWorkspaceId()), Optional.empty(), missingId);
     assertFalse(result.isPresent());
 
-    result = oauthService.getSourceOAuthParamByDefinitionIdOptional(missingId, sourceOAuthParameter.getSourceDefinitionId());
+    result = oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.of(missingId), Optional.empty(),
+        sourceOAuthParameter.getSourceDefinitionId());
     assertFalse(result.isPresent());
   }
 
