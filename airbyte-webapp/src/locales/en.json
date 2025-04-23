@@ -139,6 +139,7 @@
   "form.delete": "Delete",
   "form.change": "Change",
   "form.add": "Add",
+  "form.addItem": "Add {itemName}",
   "form.create": "Create",
   "form.saveChanges": "Save changes",
   "form.rangeDatePicker.selectDate": "Select date",
