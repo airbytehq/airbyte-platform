@@ -154,7 +154,7 @@ class SecretMigrationService(
       }
 
     val updatedActorConfig =
-      SecretReferenceHelpers.replaceSecretNodesWithSecretReferenceIds(
+      SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(
         oldActorConfig,
         newRefIdByPath,
       )

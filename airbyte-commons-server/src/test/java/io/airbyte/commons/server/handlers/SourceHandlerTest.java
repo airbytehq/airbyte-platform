@@ -74,7 +74,6 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -269,9 +268,9 @@ class SourceHandlerTest {
     // Set up secret reference service mocks for the input configuration.
     final ConfigWithSecretReferences configWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         sourceConnection.getSourceId(),
-        sourceCreate.getConnectionConfiguration()))
+        sourceCreate.getConnectionConfiguration(),
+        sourceConnection.getWorkspaceId()))
             .thenReturn(configWithRefs);
 
     // Simulate secret persistence and reference ID insertion.
@@ -285,6 +284,7 @@ class SourceHandlerTest {
     when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         configWithProcessedSecrets,
         sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
         secretStorageId,
         currentUserId))
             .thenReturn(configWithSecretRefIds);
@@ -295,9 +295,9 @@ class SourceHandlerTest {
         .thenReturn(persistedConfig);
     final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds);
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         sourceConnection.getSourceId(),
-        configWithSecretRefIds))
+        configWithSecretRefIds,
+        sourceConnection.getWorkspaceId()))
             .thenReturn(configWithRefsAfterPersist);
 
     // Prepare secret output.
@@ -460,9 +460,9 @@ class SourceHandlerTest {
     // Set up secret reference service mocks for the previous config.
     final ConfigWithSecretReferences previousConfigWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         sourceConnection.getSourceId(),
-        sourceConnection.getConfiguration()))
+        sourceConnection.getConfiguration(),
+        sourceConnection.getWorkspaceId()))
             .thenReturn(previousConfigWithRefs);
 
     // Simulate the secret update and reference ID creation/insertion.
@@ -481,6 +481,7 @@ class SourceHandlerTest {
     when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         newConfigWithProcessedSecrets,
         sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
         secretStorageId,
         currentUserId))
             .thenReturn(newConfigWithSecretRefIds);
@@ -495,9 +496,9 @@ class SourceHandlerTest {
 
     final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(newConfigWithSecretRefIds);
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         sourceConnection.getSourceId(),
-        newConfigWithSecretRefIds))
+        newConfigWithSecretRefIds,
+        sourceConnection.getWorkspaceId()))
             .thenReturn(configWithRefsAfterPersist);
 
     // Prepare secret output.
@@ -653,8 +654,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceRead actualSourceRead = sourceHandler.getSource(sourceIdRequestBody);
 
@@ -689,8 +690,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody);
 
@@ -720,8 +721,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.getSourceDefinitionId());
 
@@ -748,8 +749,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceSearch validSourceSearch = new SourceSearch().name(sourceConnection.getName());
     SourceReadList actualSourceReadList = sourceHandler.searchSources(validSourceSearch);
@@ -792,8 +793,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 

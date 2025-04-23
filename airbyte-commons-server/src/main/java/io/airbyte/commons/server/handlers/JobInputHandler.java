@@ -61,7 +61,6 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.Context;
@@ -454,7 +453,7 @@ public class JobInputHandler {
         source.getSourceId(),
         source.getWorkspaceId(),
         source.getConfiguration()), source.getSourceDefinitionId());
-    return secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, source.getSourceId(), injectedConfig);
+    return secretReferenceService.getConfigWithSecretReferences(source.getSourceId(), injectedConfig, source.getWorkspaceId());
   }
 
   private ConfigWithSecretReferences getDestinationConfiguration(final DestinationConnection destination) throws IOException {
@@ -463,7 +462,7 @@ public class JobInputHandler {
         destination.getDestinationId(),
         destination.getWorkspaceId(),
         destination.getConfiguration()), destination.getDestinationDefinitionId());
-    return secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, destination.getDestinationId(), injectedConfig);
+    return secretReferenceService.getConfigWithSecretReferences(destination.getDestinationId(), injectedConfig, destination.getWorkspaceId());
   }
 
   private @NotNull List<String> getNetworkSecurityTokens(final UUID workspaceId) {

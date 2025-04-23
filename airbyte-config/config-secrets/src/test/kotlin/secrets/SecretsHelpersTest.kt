@@ -578,6 +578,10 @@ internal class SecretsHelpersTest {
                 "_secret" to "external_secret_abc_v1",
                 "_secret_storage_id" to secretStorageId.value.toString(),
               ),
+            "ephemeral" to
+              mapOf(
+                "_secret" to "airbyte_workspace_123_secret_888_v1",
+              ),
             "refIdField" to
               mapOf(
                 "_secret_reference_id" to refId.value.toString(),
@@ -598,6 +602,7 @@ internal class SecretsHelpersTest {
                 "prefixedField" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "airbyteManaged" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "externalManaged" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
+                "ephemeral" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "refIdField" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "notSecret" to mapOf("type" to "string"),
               ),
@@ -628,6 +633,11 @@ internal class SecretsHelpersTest {
           secretCoordinate = ExternalSecretCoordinate("external_secret_abc_v1"),
           secretStorageId = secretStorageId,
         )
+      val expectedEphemeralNode =
+        ProcessedSecretNode(
+          secretCoordinate = AirbyteManagedSecretCoordinate.fromFullCoordinate("airbyte_workspace_123_secret_888_v1"),
+          secretStorageId = secretStorageId,
+        )
       val expectedRefIdNode =
         ProcessedSecretNode(
           secretReferenceId = refId,
@@ -639,6 +649,7 @@ internal class SecretsHelpersTest {
           "$.prefixedField" to expectedPrefixedNode,
           "$.airbyteManaged" to expectedAirbyteManagedNode,
           "$.externalManaged" to expectedExternalManagedNode,
+          "$.ephemeral" to expectedEphemeralNode,
           "$.refIdField" to expectedRefIdNode,
         )
 
@@ -647,15 +658,15 @@ internal class SecretsHelpersTest {
     }
 
     @Test
-    fun testReplaceSecretNodesWithSecretReferenceIds() {
+    fun testUpdateSecretNodesWithSecretReferenceIds() {
       val originalConfig =
         Jsons.jsonNode(
           mapOf(
             "username" to "alice",
-            "password" to "old-password",
+            "password" to mapOf("_secret" to "password-coord"),
             "details" to
               mapOf(
-                "apiKey" to "secret-api-key",
+                "apiKey" to mapOf("_secret" to "api-key-coord"),
               ),
           ),
         )
@@ -669,7 +680,7 @@ internal class SecretsHelpersTest {
           "$.details.apiKey" to apiKeySecretRefId,
         )
 
-      val result = SecretsHelpers.SecretReferenceHelpers.replaceSecretNodesWithSecretReferenceIds(originalConfig, secretReferenceIdsByPath)
+      val result = SecretsHelpers.SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(originalConfig, secretReferenceIdsByPath)
 
       val expectedJson =
         Jsons.jsonNode(
@@ -677,12 +688,14 @@ internal class SecretsHelpersTest {
             "username" to "alice",
             "password" to
               mapOf(
+                "_secret" to "password-coord",
                 "_secret_reference_id" to passwordSecretRefId.value.toString(),
               ),
             "details" to
               mapOf(
                 "apiKey" to
                   mapOf(
+                    "_secret" to "api-key-coord",
                     "_secret_reference_id" to apiKeySecretRefId.value.toString(),
                   ),
               ),
