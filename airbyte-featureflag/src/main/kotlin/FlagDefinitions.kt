@@ -175,8 +175,6 @@ object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", defau
 
 object MergeStreamStatWithMetadata : Temporary<Boolean>(key = "platform.merge-stat-with-metadata", default = false)
 
-object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
-
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
 
 object AllowConfigTemplateEndpoints : Permanent<Boolean>(key = "platform.allow-config-template-endpoints", default = false)
