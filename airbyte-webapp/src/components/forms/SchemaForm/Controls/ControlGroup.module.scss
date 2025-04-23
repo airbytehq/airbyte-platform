@@ -1,7 +1,7 @@
 @use "scss/colors";
 @use "scss/variables";
 
-$title-height: 25px;
+$title-height: 20px;
 $group-spacing: variables.$spacing-xl;
 $border-width: variables.$border-thick;
 $space-below: 30px;
@@ -9,6 +9,7 @@ $space-below: 30px;
 .outer {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 
 .container {

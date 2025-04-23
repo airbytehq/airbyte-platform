@@ -8,8 +8,8 @@ import { Card } from "components/ui/Card";
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { NotificationService } from "hooks/services/Notification";
 
+import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { SchemaForm } from "./SchemaForm";
-import { SchemaFormControl } from "./SchemaFormControl";
 import { SchemaFormRemainingFields } from "./SchemaFormRemainingFields";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 import { FormControl } from "../FormControl";
@@ -29,7 +29,7 @@ const schema = {
       description: "Your home address",
       required: ["street", "city"],
       properties: {
-        street: { type: "string", title: "Street" },
+        street: { type: "string", title: "Street", default: "123 Main St" },
         city: { type: "string", title: "City" },
         deliveryInstructions: {
           type: "object",
@@ -81,7 +81,7 @@ const schema = {
               type: "string",
               enum: ["EmailContactMethod"],
             },
-            emailAddress: { type: "string", title: "Email Address", format: "email" },
+            emailAddress: { type: "string", title: "Email Address", format: "email", default: "test@test.com" },
             frequency: { type: "string", title: "Email Frequency", enum: ["daily", "weekly", "monthly"] },
             specialRequests: {
               type: "array",
@@ -124,7 +124,6 @@ const schema = {
         },
         {
           title: "SMS",
-          deprecated: true,
           properties: {
             type: {
               type: "string",
@@ -133,6 +132,7 @@ const schema = {
             phoneNumber: { type: "string", title: "Phone Number" },
             frequency: { type: "string", title: "SMS Frequency", enum: ["hourly", "daily", "weekly", "monthly"] },
           },
+          required: ["phoneNumber"],
         },
       ],
     },
@@ -155,7 +155,7 @@ const schema = {
       },
     },
   },
-  required: ["favoriteColors", "name"],
+  required: ["favoriteColors"],
   additionalProperties: false,
 } as const;
 
@@ -477,6 +477,97 @@ export const DeclarativeComponentSchema = () => {
     >
       <Card>
         <SchemaFormControl path="streams.0" />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+        <ShowFormValues />
+      </Card>
+    </SchemaForm>
+  );
+};
+
+export const Test = () => {
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          test: {
+            anyOf: [
+              { type: "string" },
+              {
+                title: "Request Parameters",
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    type: "object",
+                    additionalProperties: {
+                      anyOf: [
+                        { type: "string" },
+                        {
+                          type: "object",
+                          properties: {
+                            innerString: { type: "string" },
+                            innerNumber: { type: "number" },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      }}
+      onSubmit={onSubmit}
+    >
+      <Card>
+        <SchemaFormControl />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+        <ShowFormValues />
+      </Card>
+    </SchemaForm>
+  );
+};
+
+export const Test2 = () => {
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          test: {
+            anyOf: [
+              { type: "string" },
+              {
+                type: "object",
+                additionalProperties: {
+                  anyOf: [
+                    { type: "string" },
+                    {
+                      $ref: "#/definitions/QueryProperties",
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        definitions: {
+          QueryProperties: {
+            type: "object",
+            properties: {
+              query: { type: "string" },
+            },
+          },
+        },
+        required: ["test"],
+      }}
+      onSubmit={onSubmit}
+    >
+      <Card>
+        <SchemaFormControl />
         <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
         <ShowFormValues />
       </Card>

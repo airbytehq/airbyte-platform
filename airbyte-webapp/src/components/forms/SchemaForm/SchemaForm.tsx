@@ -1,25 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useRef } from "react";
-import {
-  DefaultValues,
-  FieldError,
-  FieldValues,
-  FormProvider,
-  get,
-  useForm,
-  useFormContext,
-  useFormState,
-} from "react-hook-form";
+import { DefaultValues, FieldError, FieldValues, FormProvider, get, useForm, useFormState } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { RefsHandlerProvider } from "./RefsHandler";
 import { schemaValidator } from "./schemaValidation";
-import {
-  AirbyteJsonSchema,
-  extractDefaultValuesFromSchema,
-  getSchemaAtPath,
-  getSelectedOptionSchema,
-  resolveRefs,
-} from "./utils";
+import { AirbyteJsonSchema, extractDefaultValuesFromSchema, resolveRefs } from "./utils";
 import { FormSubmissionHandler } from "../Form";
 interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> {
   schema: JsonSchema;
@@ -94,9 +79,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
 interface SchemaFormContextValue {
   // Schema & validation
   schema: AirbyteJsonSchema;
-  schemaAtPath: (path: string, extractMultiOptionSchema?: boolean) => AirbyteJsonSchema;
   errorAtPath: (path: string) => FieldError | undefined;
-  isRequiredField: (path: string) => boolean;
 
   // Rendered paths tracking
   renderedPathsRef: React.MutableRefObject<Set<string>>;
@@ -116,18 +99,10 @@ interface SchemaFormProviderProps {
   schema: AirbyteJsonSchema;
 }
 const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({ children, schema }) => {
-  const { getValues } = useFormContext();
   const { errors } = useFormState();
 
   // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
   const renderedPathsRef = useRef<Set<string>>(new Set<string>());
-
-  // Setup schema access
-  const schemaAtPath = useCallback(
-    (path: string, extractMultiOptionSchema = false): AirbyteJsonSchema =>
-      getSchemaAtPath(path, schema, getValues(), extractMultiOptionSchema),
-    [getValues, schema]
-  );
 
   // Setup validation functions
   const errorAtPath = (path: string): FieldError | undefined => {
@@ -143,34 +118,6 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
       root: error.root,
     };
   };
-
-  const isRequiredField = useCallback(
-    (path: string) => {
-      if (!path) {
-        return true;
-      }
-
-      const pathParts = path.split(".");
-      const fieldName = pathParts.at(-1) ?? "";
-      const parentPath = pathParts.slice(0, -1).join(".");
-      const parentProperty = parentPath ? schemaAtPath(parentPath) : schema;
-
-      if (parentProperty.type === "array") {
-        return true;
-      }
-
-      const parentOptionSchemas = parentProperty.oneOf ?? parentProperty.anyOf;
-      if (parentOptionSchemas) {
-        const selectedOption = getSelectedOptionSchema(parentOptionSchemas, getValues(parentPath));
-        if (!selectedOption) {
-          throw new Error(`No matching schema found for path: ${parentPath}`);
-        }
-        return !!selectedOption.required?.includes(fieldName);
-      }
-      return !!parentProperty.required?.includes(fieldName);
-    },
-    [schema, getValues, schemaAtPath]
-  );
 
   // Update rendered paths tracking functions to use ref
   const registerRenderedPath = useCallback((path: string) => {
@@ -201,9 +148,7 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
       value={{
         // SchemaForm capabilities
         schema,
-        schemaAtPath,
         errorAtPath,
-        isRequiredField,
 
         // Rendered paths tracking
         renderedPathsRef,

@@ -1,0 +1,10 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.removeButton {
+  padding-top: variables.$spacing-md;
+}
+
+.addButtonContainer {
+  padding-bottom: variables.$spacing-xl;
+}

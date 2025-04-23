@@ -3,8 +3,9 @@ import userEvent from "@testing-library/user-event";
 
 import { render } from "test-utils/testutils";
 
+import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { SchemaForm } from "./SchemaForm";
-import { SchemaFormControl } from "./SchemaFormControl";
+import { SchemaFormRemainingFields } from "./SchemaFormRemainingFields";
 import { FormControl } from "../FormControl";
 import { FormSubmissionButtons } from "../FormSubmissionButtons";
 
@@ -59,47 +60,47 @@ describe("SchemaForm", () => {
   } as const;
 
   // Schema with conditionals using oneOf
-  // const conditionalSchema = {
-  //   type: "object",
-  //   properties: {
-  //     contactMethod: {
-  //       type: "object",
-  //       title: "Contact Method",
-  //       description: "How you should be contacted",
-  //       oneOf: [
-  //         {
-  //           title: "Email",
-  //           required: ["emailAddress"],
-  //           properties: {
-  //             type: {
-  //               type: "string",
-  //               enum: ["EmailContactMethod"],
-  //             },
-  //             emailAddress: {
-  //               type: "string",
-  //               title: "Email Address",
-  //               format: "email",
-  //             },
-  //           },
-  //         },
-  //         {
-  //           title: "SMS",
-  //           properties: {
-  //             type: {
-  //               type: "string",
-  //               enum: ["SMSContactMethod"],
-  //             },
-  //             phoneNumber: {
-  //               type: "string",
-  //               title: "Phone Number",
-  //             },
-  //           },
-  //         },
-  //       ],
-  //     },
-  //   },
-  //   additionalProperties: false,
-  // } as const;
+  const conditionalSchema = {
+    type: "object",
+    properties: {
+      contactMethod: {
+        type: "object",
+        title: "Contact Method",
+        description: "How you should be contacted",
+        oneOf: [
+          {
+            title: "Email",
+            required: ["emailAddress"],
+            properties: {
+              type: {
+                type: "string",
+                enum: ["EmailContactMethod"],
+              },
+              emailAddress: {
+                type: "string",
+                title: "Email Address",
+                format: "email",
+              },
+            },
+          },
+          {
+            title: "SMS",
+            properties: {
+              type: {
+                type: "string",
+                enum: ["SMSContactMethod"],
+              },
+              phoneNumber: {
+                type: "string",
+                title: "Phone Number",
+              },
+            },
+          },
+        ],
+      },
+    },
+    additionalProperties: false,
+  } as const;
 
   // Schema with array of objects
   const arraySchema = {
@@ -222,45 +223,37 @@ describe("SchemaForm", () => {
     });
   });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // it("handles oneOf conditional fields correctly", async () => {
-  //   await render(
-  //     <SchemaForm schema={conditionalSchema} onSubmit={() => Promise.resolve()}>
-  //       <SchemaFormControl />
-  //       <FormSubmissionButtons />
-  //     </SchemaForm>
-  //   );
+  it("handles oneOf conditional fields correctly", async () => {
+    await render(
+      <SchemaForm schema={conditionalSchema} onSubmit={() => Promise.resolve()}>
+        <SchemaFormControl />
+        <FormSubmissionButtons />
+      </SchemaForm>
+    );
 
-  //   // Check that the contact method select is rendered
-  //   expect(screen.getByText("Contact Method")).toBeInTheDocument();
+    // Check that the contact method select is rendered
+    expect(screen.getByText("Contact Method")).toBeInTheDocument();
 
-  //   // Enable the contact method by clicking the toggle
-  //   const contactToggle = screen.getByRole("checkbox", { name: "Contact Method" });
-  //   await userEvent.click(contactToggle);
+    // Enable the contact method by clicking the toggle
+    const contactToggle = screen.getByRole("checkbox", { name: "Contact Method" });
+    await userEvent.click(contactToggle);
 
-  //   // Find the dropdown button (more specific query to avoid multiple results)
-  //   const listboxButton = await screen.findByRole("button", { name: "Select a value" });
-  //   await userEvent.click(listboxButton);
+    // Check that email field appears
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Email Address" })).toBeInTheDocument();
+    });
 
-  //   // Select Email option
-  //   await userEvent.click(screen.getByText("Email"));
+    // Re-open dropdown to switch
+    await userEvent.click(screen.getByRole("button", { name: "Email" }));
 
-  //   // Check that email field appears
-  //   await waitFor(() => {
-  //     expect(screen.getByRole("textbox", { name: "Email Address" })).toBeInTheDocument();
-  //   });
+    // Now select SMS
+    await userEvent.click(screen.getByText("SMS"));
 
-  //   // Re-open dropdown to switch
-  //   await userEvent.click(screen.getByRole("button", { name: "Email" }));
-
-  //   // Now select SMS
-  //   await userEvent.click(screen.getByText("SMS"));
-
-  //   // Check that phone number field appears
-  //   await waitFor(() => {
-  //     expect(screen.getByRole("textbox", { name: "Phone Number Optional" })).toBeInTheDocument();
-  //   });
-  // });
+    // Check that phone number field appears
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Phone Number Optional" })).toBeInTheDocument();
+    });
+  });
 
   it("handles array of objects correctly", async () => {
     await render(
@@ -273,7 +266,6 @@ describe("SchemaForm", () => {
     // Check that the array section is rendered
     expect(screen.getByText("Friends")).toBeInTheDocument();
 
-    // ArrayOfObjectsControls are now always rendered without a checkbox toggle
     // Find the add button and click it to add an item
     const addButton = await screen.findByRole("button", { name: "Add Friend" });
     await userEvent.click(addButton);
@@ -402,67 +394,66 @@ describe("SchemaForm", () => {
     expect(mockOnSubmit).not.toHaveBeenCalled();
   });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // it("handles default values correctly", async () => {
-  //   // Schema with default values
-  //   const defaultValuesSchema = {
-  //     type: "object",
-  //     properties: {
-  //       name: {
-  //         type: "string",
-  //         title: "Name",
-  //         default: "Default Name",
-  //       },
-  //       isActive: {
-  //         type: "boolean",
-  //         title: "Active",
-  //         default: true,
-  //       },
-  //       count: {
-  //         type: "integer",
-  //         title: "Count",
-  //         default: 5,
-  //       },
-  //     },
-  //   } as const;
+  it("handles default values correctly", async () => {
+    // Schema with default values
+    const defaultValuesSchema = {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          title: "Name",
+          default: "Default Name",
+        },
+        isActive: {
+          type: "boolean",
+          title: "Active",
+          default: true,
+        },
+        count: {
+          type: "integer",
+          title: "Count",
+          default: 5,
+        },
+      },
+    } as const;
 
-  //   // Make sure onSubmit returns a Promise
-  //   const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+    // Make sure onSubmit returns a Promise
+    const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
 
-  //   await render(
-  //     <SchemaForm schema={defaultValuesSchema} onSubmit={mockOnSubmit}>
-  //       <SchemaFormControl />
-  //       <FormSubmissionButtons allowNonDirtySubmit />
-  //     </SchemaForm>
-  //   );
+    await render(
+      <SchemaForm schema={defaultValuesSchema} onSubmit={mockOnSubmit}>
+        <SchemaFormControl />
+        <FormSubmissionButtons allowNonDirtySubmit />
+      </SchemaForm>
+    );
 
-  //   // Verify default values are already populated in the form
-  //   const nameInput = screen.getByRole("textbox", { name: "Name Optional" });
-  //   expect(nameInput).toHaveValue("Default Name");
+    // Verify default values are already populated in the form
+    const nameInput = screen.getByRole("textbox", { name: "Name Optional" });
+    expect(nameInput).toHaveValue("Default Name");
 
-  //   const countInput = screen.getByRole("spinbutton", { name: "Count Optional" });
-  //   expect(countInput).toHaveValue(5);
+    const countInput = screen.getByRole("spinbutton", { name: "Count Optional" });
+    expect(countInput).toHaveValue(5);
 
-  //   // Verify the isActive checkbox is checked by default
-  //   const activeCheckbox = screen.getByRole("checkbox", { name: "Active Optional" });
-  //   expect(activeCheckbox).toBeChecked();
+    // Verify the isActive checkbox is checked by default
+    const activeCheckbox = screen.getByRole("checkbox", { name: "Active Optional" });
+    expect(activeCheckbox).toBeChecked();
 
-  //   // Submit the form to verify default values are submitted
-  //   const submitButton = screen.getByRole("button", { name: "Submit" });
-  //   await userEvent.click(submitButton);
+    // Submit the form to verify default values are submitted
+    const submitButton = screen.getByRole("button", { name: "Submit" });
+    await userEvent.click(submitButton);
 
-  //   // Verify the default values were submitted
-  //   await waitFor(() => {
-  //     expect(mockOnSubmit).toHaveBeenCalledWith(
-  //       expect.objectContaining({
-  //         name: "Default Name",
-  //         isActive: true,
-  //         count: 5,
-  //       }),
-  //       expect.anything()
-  //     );
-  //   });
-  // });
+    // Verify the default values were submitted
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Default Name",
+          isActive: true,
+          count: 5,
+        }),
+        expect.anything()
+      );
+    });
+  });
 
   it("validates numeric fields with min/max constraints", async () => {
     // Schema with numeric constraints
@@ -591,96 +582,88 @@ describe("SchemaForm", () => {
     });
   });
 
-  // eslint-disable-next-line jest/no-commented-out-tests
-  // it("handles anyOf schemas similarly to oneOf", async () => {
-  //   // Schema with anyOf instead of oneOf
-  //   const anyOfSchema = {
-  //     type: "object",
-  //     properties: {
-  //       payment: {
-  //         type: "object",
-  //         title: "Payment Method",
-  //         anyOf: [
-  //           {
-  //             title: "Credit Card",
-  //             properties: {
-  //               type: {
-  //                 type: "string",
-  //                 enum: ["CreditCard"],
-  //               },
-  //               cardNumber: {
-  //                 type: "string",
-  //                 title: "Card Number",
-  //               },
-  //               expiryDate: {
-  //                 type: "string",
-  //                 title: "Expiry Date",
-  //               },
-  //             },
-  //             required: ["cardNumber", "expiryDate"],
-  //           },
-  //           {
-  //             title: "Bank Transfer",
-  //             properties: {
-  //               type: {
-  //                 type: "string",
-  //                 enum: ["BankTransfer"],
-  //               },
-  //               accountNumber: {
-  //                 type: "string",
-  //                 title: "Account Number",
-  //               },
-  //               routingNumber: {
-  //                 type: "string",
-  //                 title: "Routing Number",
-  //               },
-  //             },
-  //             required: ["accountNumber"],
-  //           },
-  //         ],
-  //       },
-  //     },
-  //   } as const;
+  it("handles anyOf schemas similarly to oneOf", async () => {
+    // Schema with anyOf instead of oneOf
+    const anyOfSchema = {
+      type: "object",
+      properties: {
+        payment: {
+          type: "object",
+          title: "Payment Method",
+          anyOf: [
+            {
+              title: "Credit Card",
+              properties: {
+                type: {
+                  type: "string",
+                  enum: ["CreditCard"],
+                },
+                cardNumber: {
+                  type: "string",
+                  title: "Card Number",
+                },
+                expiryDate: {
+                  type: "string",
+                  title: "Expiry Date",
+                },
+              },
+              required: ["cardNumber", "expiryDate"],
+            },
+            {
+              title: "Bank Transfer",
+              properties: {
+                type: {
+                  type: "string",
+                  enum: ["BankTransfer"],
+                },
+                accountNumber: {
+                  type: "string",
+                  title: "Account Number",
+                },
+                routingNumber: {
+                  type: "string",
+                  title: "Routing Number",
+                },
+              },
+              required: ["accountNumber"],
+            },
+          ],
+        },
+      },
+    } as const;
 
-  //   await render(
-  //     <SchemaForm schema={anyOfSchema} onSubmit={() => Promise.resolve()}>
-  //       <SchemaFormControl />
-  //       <FormSubmissionButtons />
-  //     </SchemaForm>
-  //   );
+    await render(
+      <SchemaForm schema={anyOfSchema} onSubmit={() => Promise.resolve()}>
+        <SchemaFormControl />
+        <FormSubmissionButtons />
+      </SchemaForm>
+    );
 
-  //   // Check that the payment method select is rendered
-  //   expect(screen.getByText("Payment Method")).toBeInTheDocument();
+    // Check that the payment method select is rendered
+    expect(screen.getByText("Payment Method")).toBeInTheDocument();
 
-  //   // Enable the payment method by clicking the toggle
-  //   const paymentToggle = screen.getByRole("checkbox", { name: "Payment Method" });
-  //   await userEvent.click(paymentToggle);
+    // Enable the payment method by clicking the toggle
+    const paymentToggle = screen.getByRole("checkbox", { name: "Payment Method" });
+    await userEvent.click(paymentToggle);
 
-  //   // Find the dropdown button
-  //   const listboxButton = await screen.findByRole("button", { name: "Select a value" });
-  //   await userEvent.click(listboxButton);
+    // Check that credit card fields appear
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Card Number" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Expiry Date" })).toBeInTheDocument();
+    });
 
-  //   // Select Credit Card option
-  //   await userEvent.click(screen.getByText("Credit Card"));
+    // Re-open dropdown to switch
+    await userEvent.click(screen.getByRole("button", { name: "Credit Card" }));
 
-  //   // Check that credit card fields appear
-  //   await waitFor(() => {
-  //     expect(screen.getByRole("textbox", { name: "Card Number" })).toBeInTheDocument();
-  //     expect(screen.getByRole("textbox", { name: "Expiry Date" })).toBeInTheDocument();
-  //   });
+    // Now select Bank Transfer
+    await userEvent.click(screen.getByText("Bank Transfer"));
 
-  //   // Re-open dropdown to switch
-  //   await userEvent.click(screen.getByRole("button", { name: "Credit Card" }));
-
-  //   // Now select Bank Transfer
-  //   await userEvent.click(screen.getByText("Bank Transfer"));
-
-  //   // Check that bank transfer fields appear
-  //   await waitFor(() => {
-  //     expect(screen.getByRole("textbox", { name: "Account Number" })).toBeInTheDocument();
-  //     expect(screen.getByRole("textbox", { name: "Routing Number Optional" })).toBeInTheDocument();
-  //   });
-  // });
+    // Check that bank transfer fields appear
+    await waitFor(() => {
+      expect(screen.getByRole("textbox", { name: "Account Number" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Routing Number Optional" })).toBeInTheDocument();
+    });
+  });
 
   it("renders a field with specific component overrides", async () => {
     // This test shows how to use SchemaFormControl to render different versions of the same form
@@ -741,24 +724,28 @@ describe("SchemaForm", () => {
     await render(
       <SchemaForm schema={complexSchema} onSubmit={mockOnSubmit}>
         <SchemaFormControl />
-        <FormSubmissionButtons />
+        <FormSubmissionButtons allowNonDirtySubmit />
       </SchemaForm>
     );
-
-    // Find and click the shipping dropdown
-    const dropdownButton = screen.getByRole("button", { name: "Select a value" });
-    await userEvent.click(dropdownButton);
-
-    // Select standard shipping
-    await userEvent.click(screen.getByText("standard"));
 
     // Try to submit without address
     const submitButton = screen.getByRole("button", { name: "Submit" });
     await userEvent.click(submitButton);
 
-    // When we're testing schemas that don't explicitly define validation
-    // the Headless UI button might not work completely as expected
-    // Instead of relying on the submit check, we'll check if the form is showing the address fields
+    // With allowNonDirtySubmit, the form should submit successfully even though no fields have been changed
+    await waitFor(() => {
+      // Check that onSubmit was called
+      expect(mockOnSubmit).toHaveBeenCalled();
+      // Verify the data passed to onSubmit - should have default shipping option
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          shippingOption: "standard", // Default is first enum value
+        }),
+        expect.anything()
+      );
+      // Reset mock for the next test
+      mockOnSubmit.mockClear();
+    });
 
     // Enable address by clicking the toggle (it should be there after shipping is selected)
     const addressToggle = await screen.findByRole("checkbox", { name: "Address" });
@@ -790,6 +777,407 @@ describe("SchemaForm", () => {
         }),
         expect.anything()
       );
+    });
+  });
+
+  // Add tests for SchemaFormRemainingFields
+  describe("SchemaFormRemainingFields", () => {
+    const remainingFieldsSchema = {
+      type: "object",
+      properties: {
+        name: {
+          type: "string",
+          title: "Name",
+        },
+        age: {
+          type: "integer",
+          title: "Age",
+        },
+        email: {
+          type: "string",
+          title: "Email",
+          format: "email",
+        },
+        isActive: {
+          type: "boolean",
+          title: "Active",
+        },
+      },
+      required: ["name"],
+      additionalProperties: false,
+    } as const;
+
+    it("renders all fields not explicitly rendered elsewhere", async () => {
+      await render(
+        <SchemaForm schema={remainingFieldsSchema} onSubmit={() => Promise.resolve()}>
+          {/* Only render name field explicitly */}
+          <SchemaFormControl path="name" />
+          {/* Render all other fields via SchemaFormRemainingFields */}
+          <SchemaFormRemainingFields />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that all fields are rendered
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
+    });
+
+    it("doesn't render fields that have already been rendered", async () => {
+      await render(
+        <SchemaForm schema={remainingFieldsSchema} onSubmit={() => Promise.resolve()}>
+          {/* Render name and age explicitly */}
+          <SchemaFormControl path="name" />
+          <SchemaFormControl path="age" />
+          {/* Should only render email and isActive */}
+          <SchemaFormRemainingFields />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that only remaining fields are rendered (email and isActive)
+      // Note: Age will have no "Optional" tag since we render it directly
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+      expect(screen.getByRole("spinbutton", { name: "Age" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
+    });
+
+    it("supports nested objects with remaining fields", async () => {
+      const nestedRemainingFieldsSchema = {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            title: "Name",
+          },
+          address: {
+            type: "object",
+            title: "Address",
+            properties: {
+              street: { type: "string", title: "Street" },
+              city: { type: "string", title: "City" },
+              zipCode: { type: "string", title: "Zip Code" },
+              country: { type: "string", title: "Country" },
+            },
+          },
+        },
+      } as const;
+
+      await render(
+        <SchemaForm schema={nestedRemainingFieldsSchema} onSubmit={() => Promise.resolve()}>
+          {/* Render name explicitly */}
+          <SchemaFormControl path="name" />
+
+          {/* Render address object (this might auto-render all address fields) */}
+          <SchemaFormControl path="address" />
+
+          {/* Within address, render street explicitly */}
+          <SchemaFormControl path="address.street" />
+
+          {/* Render remaining fields within address */}
+          <SchemaFormRemainingFields path="address" />
+
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that all fields are rendered
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+
+      // The address fields are already rendered when we render the address object
+      expect(screen.getByRole("textbox", { name: "Street Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "City Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Zip Code Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Country Optional" })).toBeInTheDocument();
+
+      // We also have a duplicate street field from our explicit path specification
+      expect(screen.getByRole("textbox", { name: "Street" })).toBeInTheDocument();
+    });
+
+    it("works with custom overrides for remaining fields", async () => {
+      await render(
+        <SchemaForm schema={remainingFieldsSchema} onSubmit={() => Promise.resolve()}>
+          <SchemaFormControl path="name" />
+          <SchemaFormRemainingFields
+            overrideByPath={{
+              age: <FormControl name="age" label="Custom Age" fieldType="input" type="number" />,
+            }}
+          />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that the name is rendered normally
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+
+      // Check that age has the custom label
+      expect(screen.getByLabelText("Custom Age")).toBeInTheDocument();
+
+      // Check that other remaining fields are rendered normally
+      expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
+    });
+  });
+
+  // Add tests for refTargetPath functionality
+  describe("refTargetPath functionality", () => {
+    const refSchema = {
+      type: "object",
+      properties: {
+        source: {
+          type: "object",
+          title: "Source",
+          properties: {
+            name: { type: "string", title: "Name" },
+            email: { type: "string", title: "Email" },
+            age: { type: "integer", title: "Age" },
+          },
+        },
+        shared: {
+          type: "object",
+          title: "Shared",
+          properties: {},
+        },
+      },
+    } as const;
+
+    it("supports refTargetPath prop for linking fields", async () => {
+      // Create initial values with a $ref pointing from source.name to shared.name
+      const initialValues = {
+        source: {
+          name: "John Doe",
+          email: "john@example.com",
+          age: 30,
+        },
+        shared: {},
+      };
+
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={refSchema} initialValues={initialValues} refTargetPath="shared" onSubmit={mockOnSubmit}>
+          <SchemaFormControl path="source" />
+          <SchemaFormControl path="shared" />
+          <FormSubmissionButtons allowNonDirtySubmit />
+        </SchemaForm>
+      );
+
+      // Source fields should be rendered directly
+      expect(screen.getByRole("textbox", { name: "Name Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+
+      // Verify the source.name field has the expected value
+      const nameField = screen.getByRole("textbox", { name: "Name Optional" });
+      expect(nameField).toHaveValue("John Doe");
+
+      // Submit the form as-is to verify the structure
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check form submits with expected values
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            source: expect.objectContaining({
+              name: "John Doe",
+              email: "john@example.com",
+              age: 30,
+            }),
+            shared: expect.any(Object),
+          }),
+          expect.anything()
+        );
+      });
+
+      // Reset mock for the next test
+      mockOnSubmit.mockClear();
+
+      // Now update the name field
+      await userEvent.clear(nameField);
+      await userEvent.type(nameField, "Jane Smith");
+
+      // Submit the form again
+      await userEvent.click(submitButton);
+
+      // Verify the update happened
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            source: expect.objectContaining({
+              name: "Jane Smith",
+            }),
+          }),
+          expect.anything()
+        );
+      });
+    });
+  });
+
+  // Add tests for additionalProperties functionality
+  describe("additionalProperties functionality", () => {
+    it("handles additional properties in form submissions", async () => {
+      // Schema with additionalProperties as an object schema
+      const additionalPropsSchema = {
+        type: "object",
+        properties: {
+          name: { type: "string", title: "Name" },
+          // No other fixed properties
+        },
+        required: ["name"],
+        // Additional properties must be strings
+        additionalProperties: {
+          type: "string",
+          title: "Custom Field",
+        },
+      } as const;
+
+      // Initial values with some additional properties
+      const initialValues = {
+        name: "John Doe",
+        customField1: "Value 1",
+        customField2: "Value 2",
+      };
+
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={additionalPropsSchema} initialValues={initialValues} onSubmit={mockOnSubmit}>
+          <SchemaFormControl />
+          <FormSubmissionButtons allowNonDirtySubmit />
+        </SchemaForm>
+      );
+
+      // Check that the fixed field is rendered
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+
+      // Submit the form to verify the additional properties are in the data
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check that all properties are submitted correctly
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            name: "John Doe",
+            customField1: "Value 1",
+            customField2: "Value 2",
+          }),
+          expect.anything()
+        );
+      });
+    });
+
+    it("validates additionalProperties according to their schema", async () => {
+      // Schema with additionalProperties as a number
+      const numberAdditionalPropsSchema = {
+        type: "object",
+        properties: {
+          name: { type: "string", title: "Name" },
+        },
+        additionalProperties: {
+          type: "number",
+          minimum: 0,
+        },
+      } as const;
+
+      // Initial values with mixed types for additional properties
+      const initialValues = {
+        name: "John Doe",
+        validProp: 42,
+        invalidProp: -5, // Should fail validation
+      };
+
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={numberAdditionalPropsSchema} initialValues={initialValues} onSubmit={mockOnSubmit}>
+          <SchemaFormControl />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Attempt to submit the form
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check the button stays disabled due to validation errors
+      expect(submitButton).toBeDisabled();
+
+      // Wait until the form's validation settles
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // The form should not have been submitted
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    it("submits additionalProperties for anyOf schemas correctly", async () => {
+      // Simplified schema with anyOf and additionalProperties
+      const anyOfSchema = {
+        type: "object",
+        properties: {
+          connection: {
+            type: "object",
+            anyOf: [
+              {
+                title: "Type A",
+                properties: {
+                  type: { type: "string", enum: ["typeA"] },
+                  fixed: { type: "string", title: "Fixed Field" },
+                },
+                additionalProperties: false,
+              },
+              {
+                title: "Type B",
+                properties: {
+                  type: { type: "string", enum: ["typeB"] },
+                },
+                additionalProperties: {
+                  type: "string",
+                  title: "Dynamic Field",
+                },
+              },
+            ],
+          },
+        },
+      } as const;
+
+      // Initial values with Type B selected and an additional property
+      const initialValues = {
+        connection: {
+          type: "typeB",
+          dynamicField: "Dynamic Value",
+        },
+      };
+
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={anyOfSchema} initialValues={initialValues} onSubmit={mockOnSubmit}>
+          <SchemaFormControl />
+          <FormSubmissionButtons allowNonDirtySubmit />
+        </SchemaForm>
+      );
+
+      // Just submit the form directly to verify the data structure
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check that all values are submitted correctly
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            connection: expect.objectContaining({
+              type: "typeB",
+              dynamicField: "Dynamic Value",
+            }),
+          }),
+          expect.anything()
+        );
+      });
     });
   });
 });

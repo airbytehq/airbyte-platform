@@ -5,7 +5,7 @@ import { get, useFormContext } from "react-hook-form";
 import { useEffectOnce } from "react-use";
 
 import { useSchemaForm } from "./SchemaForm";
-import { convertRefToPath } from "./utils";
+import { convertRefToPath, getSchemaAtPath } from "./utils";
 
 // Types for reference management
 export type ReferenceInfo =
@@ -46,7 +46,6 @@ export interface RefsHandlerContextValue {
   getRefTargetPathForField: (path: string) => string | null;
   addRef: (sourcePath: string, targetPath: string) => void;
   removeRef: (sourcePath: string, targetPath: string) => void;
-  isFieldLinkable: (path: string) => boolean;
   handleLinkAction: (path: string, overwriteTarget?: boolean) => void;
   handleUnlinkAction: (path: string) => void;
 }
@@ -73,9 +72,9 @@ export interface RefsHandlerProviderProps {
 // Create the provider component
 export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ children, values, refTargetPath }) => {
   const { setValue, getValues, watch } = useFormContext();
-  const { schemaAtPath } = useSchemaForm();
   const [refTargetToSources, setRefTargetToSources] = useState<Map<string, string[]>>(new Map());
   const [refSourceToTarget, setRefSourceToTarget] = useState<Map<string, string>>(new Map());
+  const { schema } = useSchemaForm();
 
   // Get information about a reference at a path
   const getReferenceInfo = useCallback(
@@ -303,14 +302,6 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
     return () => subscription.unsubscribe();
   }, [watch, setValue, findRefSourceAndTargetForPath, refTargetToSources]);
 
-  // FIELD COMPATIBILITY & LINKABILITY
-
-  // Check if a field is linkable
-  const isFieldLinkable = useCallback(
-    (path: string): boolean => schemaAtPath(path).linkable === true && !!refTargetPath,
-    [refTargetPath, schemaAtPath]
-  );
-
   // REFERENCE ACTIONS
 
   const getRefTargetPathForField = useCallback(
@@ -323,7 +314,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         return null;
       }
 
-      const parentSchema = schemaAtPath(parentPath);
+      const parentSchema = getSchemaAtPath(parentPath, schema, getValues(parentPath));
 
       // ~ declarative_component_schema type handling ~
       if (
@@ -341,7 +332,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       // This has a higher chance of causing collisions, but it's the best we can do for now.
       return `${refTargetPath}.${fieldName}`;
     },
-    [refTargetPath, schemaAtPath]
+    [refTargetPath, schema, getValues]
   );
 
   const handleLinkAction = useCallback(
@@ -386,7 +377,6 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         getRefTargetPathForField,
         addRef,
         removeRef,
-        isFieldLinkable,
         handleLinkAction,
         handleUnlinkAction,
       }}
