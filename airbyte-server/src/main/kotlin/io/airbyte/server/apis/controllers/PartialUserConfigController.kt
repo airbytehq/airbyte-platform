@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ListPartialUserConfigsRequest
 import io.airbyte.api.model.generated.PartialUserConfigCreate
@@ -19,6 +20,7 @@ import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.data.services.PartialUserConfigService
+import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.server.handlers.PartialUserConfigHandler
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
@@ -70,7 +72,7 @@ class PartialUserConfigController(
       id = UUID.randomUUID(),
       workspaceId = this.workspaceId,
       configTemplateId = this.configTemplateId,
-      partialUserConfigProperties = this.partialUserConfigProperties,
+      connectionConfiguration = this.connectionConfiguration,
     )
 
   private fun PartialUserConfigUpdate.toConfigModel(): PartialUserConfig {
@@ -80,7 +82,7 @@ class PartialUserConfigController(
       id = partialUserConfigId,
       workspaceId = existingPartialUserConfig.partialUserConfig.workspaceId,
       configTemplateId = existingPartialUserConfig.partialUserConfig.configTemplateId,
-      partialUserConfigProperties = this.partialUserConfigProperties,
+      connectionConfiguration = this.connectionConfiguration,
     )
   }
 
@@ -102,13 +104,16 @@ class PartialUserConfigController(
       .id(
         partialUserConfig.partialUserConfig.id,
       ).actorId(partialUserConfig.partialUserConfig.actorId)
-      .partialUserConfigProperties(partialUserConfig.partialUserConfig.partialUserConfigProperties)
+      .connectionConfiguration(partialUserConfig.partialUserConfig.connectionConfiguration)
       .configTemplate(
         ConfigTemplateRead()
           .id(
             partialUserConfig.configTemplate.id,
-          ).configTemplateSpec(partialUserConfig.configTemplate.userConfigSpec)
-          .icon(partialUserConfig.actorIcon)
+          ).configTemplateSpec(
+            partialUserConfig.configTemplate.userConfigSpec.let {
+              objectMapper.valueToTree<JsonNode>(it)
+            },
+          ).icon(partialUserConfig.actorIcon)
           .name(partialUserConfig.actorName),
       )
 }
