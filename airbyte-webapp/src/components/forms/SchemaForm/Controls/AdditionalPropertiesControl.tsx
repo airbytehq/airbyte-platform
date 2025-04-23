@@ -15,7 +15,6 @@ import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
-import { extractDefaultValuesFromSchema } from "../utils";
 
 // Pattern to detect internal keys
 const INTERNAL_KEY_PATTERN = /^_key\d+$/;
@@ -95,7 +94,7 @@ export const AdditionalPropertiesControl = ({
   hideBorder = false,
 }: BaseControlComponentProps) => {
   const { formatMessage } = useIntl();
-  const { errorAtPath } = useSchemaForm();
+  const { errorAtPath, extractDefaultValuesFromSchema } = useSchemaForm();
   const { setValue } = useFormContext();
   const toggleConfig = useToggleConfig(baseProps.name, additionalPropertiesSchema);
 
@@ -114,7 +113,14 @@ export const AdditionalPropertiesControl = ({
     // Add the pair to the form value with the internal key
     const updatedValue = { ...formValue, [internalKey]: defaultValue };
     setValue(baseProps.name, updatedValue);
-  }, [baseProps.name, formValue, formKeys.length, setValue, additionalPropertiesSchema]);
+  }, [
+    formKeys.length,
+    extractDefaultValuesFromSchema,
+    additionalPropertiesSchema,
+    formValue,
+    setValue,
+    baseProps.name,
+  ]);
 
   // Remove a key-value pair
   const removePair = useCallback(

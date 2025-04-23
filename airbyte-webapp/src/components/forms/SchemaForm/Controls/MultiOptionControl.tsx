@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import isBoolean from "lodash/isBoolean";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
 import { ListBox } from "components/ui/ListBox";
@@ -13,7 +13,7 @@ import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, OverrideByPath, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, extractDefaultValuesFromSchema, getSelectedOptionSchema, verifyArrayItems } from "../utils";
+import { AirbyteJsonSchema, resolveTopLevelRef } from "../utils";
 
 export const MultiOptionControl = ({
   fieldSchema,
@@ -24,22 +24,57 @@ export const MultiOptionControl = ({
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
   const { setValue, clearErrors } = useFormContext();
-  const { errorAtPath } = useSchemaForm();
+  const {
+    schema: rootSchema,
+    getSelectedOptionSchema,
+    errorAtPath,
+    extractDefaultValuesFromSchema,
+    verifyArrayItems,
+  } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
   const error = errorAtPath(baseProps.name);
   const optionSchemas = fieldSchema.oneOf ?? fieldSchema.anyOf;
   const options = useMemo(
     () =>
-      optionSchemas?.filter(
-        (optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated
-      ) as AirbyteJsonSchema[],
-    [optionSchemas]
+      optionSchemas
+        ?.map((optionSchema) => resolveTopLevelRef(rootSchema, optionSchema as AirbyteJsonSchema))
+        ?.filter((optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated) as AirbyteJsonSchema[],
+    [optionSchemas, rootSchema]
   );
   const selectedOption = useMemo(
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
-    [options, value]
+    [getSelectedOptionSchema, options, value]
   );
   const displayError = useMemo(() => (selectedOption?.type === "object" ? error : undefined), [selectedOption, error]);
+
+  const getOptionLabel = useCallback(
+    (option: AirbyteJsonSchema | undefined): string => {
+      if (option === undefined) {
+        return "";
+      }
+      if (option.title) {
+        return option.title;
+      }
+      if (option.type === undefined) {
+        if (option.anyOf) {
+          return "anyOf";
+        }
+        if (option.oneOf) {
+          return "oneOf";
+        }
+        return "";
+      }
+      if (option.type === "array") {
+        const items = verifyArrayItems(option.items);
+        return `${option.type} of ${getOptionLabel(items)}`;
+      }
+      if (Array.isArray(option.type)) {
+        return option.type.join(", ");
+      }
+      return option.type as string;
+    },
+    [verifyArrayItems]
+  );
 
   if (options.length === 1) {
     return (
@@ -96,26 +131,6 @@ export const MultiOptionControl = ({
       {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration)}
     </ControlGroup>
   );
-};
-
-const getOptionLabel = (option: AirbyteJsonSchema | undefined): string => {
-  if (option === undefined) {
-    return "";
-  }
-  if (option.title) {
-    return option.title;
-  }
-  if (option.type === undefined) {
-    return "";
-  }
-  if (option.type === "array") {
-    const items = verifyArrayItems(option.items);
-    return `${option.type} of ${getOptionLabel(items)}`;
-  }
-  if (Array.isArray(option.type)) {
-    return option.type.join(", ");
-  }
-  return option.type as string;
 };
 
 // Render the selected option's properties

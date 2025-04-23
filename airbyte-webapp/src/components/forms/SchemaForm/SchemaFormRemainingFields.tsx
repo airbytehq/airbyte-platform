@@ -3,7 +3,6 @@ import { useWatch } from "react-hook-form";
 
 import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { useSchemaForm } from "./SchemaForm";
-import { getSchemaAtPath } from "./utils";
 
 type OverrideByPath = Record<string, ReactElement | null>;
 
@@ -23,11 +22,11 @@ export interface SchemaFormRemainingFieldsProps {
 }
 
 export const SchemaFormRemainingFields = ({ path = "", overrideByPath = {} }: SchemaFormRemainingFieldsProps) => {
-  const { schema, isPathRendered } = useSchemaForm();
+  const { getSchemaAtPath, isPathRendered } = useSchemaForm();
   const value = useWatch({ name: path });
 
   // Get the property at the specified path
-  const targetProperty = getSchemaAtPath(path, schema, value);
+  const targetProperty = getSchemaAtPath(path, value);
 
   // If not an object or has no properties, nothing to render
   if (targetProperty.type !== "object" || !targetProperty.properties) {

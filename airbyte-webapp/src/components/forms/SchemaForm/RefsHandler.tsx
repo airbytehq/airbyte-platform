@@ -5,7 +5,7 @@ import { get, useFormContext } from "react-hook-form";
 import { useEffectOnce } from "react-use";
 
 import { useSchemaForm } from "./SchemaForm";
-import { convertRefToPath, getSchemaAtPath } from "./utils";
+import { convertRefToPath } from "./utils";
 
 // Types for reference management
 export type ReferenceInfo =
@@ -74,7 +74,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
   const { setValue, getValues, watch } = useFormContext();
   const [refTargetToSources, setRefTargetToSources] = useState<Map<string, string[]>>(new Map());
   const [refSourceToTarget, setRefSourceToTarget] = useState<Map<string, string>>(new Map());
-  const { schema } = useSchemaForm();
+  const { getSchemaAtPath } = useSchemaForm();
 
   // Get information about a reference at a path
   const getReferenceInfo = useCallback(
@@ -314,7 +314,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         return null;
       }
 
-      const parentSchema = getSchemaAtPath(parentPath, schema, getValues(parentPath));
+      const parentSchema = getSchemaAtPath(parentPath, getValues(parentPath));
 
       // ~ declarative_component_schema type handling ~
       if (
@@ -332,7 +332,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       // This has a higher chance of causing collisions, but it's the best we can do for now.
       return `${refTargetPath}.${fieldName}`;
     },
-    [refTargetPath, schema, getValues]
+    [refTargetPath, getSchemaAtPath, getValues]
   );
 
   const handleLinkAction = useCallback(

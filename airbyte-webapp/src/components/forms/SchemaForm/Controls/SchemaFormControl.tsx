@@ -1,4 +1,4 @@
-import { useWatch } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { LabelInfo } from "components/Label";
 
@@ -9,7 +9,7 @@ import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, displayName, verifyArrayItems, getSchemaAtPath } from "../utils";
+import { AirbyteJsonSchema, displayName, resolveTopLevelRef } from "../utils";
 
 interface SchemaFormControlProps {
   /**
@@ -47,7 +47,14 @@ export const SchemaFormControl = ({
   isRequired = true,
   className,
 }: SchemaFormControlProps) => {
-  const { schema, registerRenderedPath } = useSchemaForm();
+  const {
+    schema: rootSchema,
+    getSchemaAtPath,
+    registerRenderedPath,
+    verifyArrayItems,
+    convertJsonSchemaToZodSchema,
+  } = useSchemaForm();
+  const { register } = useFormContext();
   const value = useWatch({ name: path });
 
   // Register this path synchronously during render
@@ -66,10 +73,22 @@ export const SchemaFormControl = ({
   }
 
   // Get the property at the specified path
-  const targetSchema = fieldSchema ?? getSchemaAtPath(path, schema, value);
+  const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path, value));
   if (targetSchema.deprecated) {
     return null;
   }
+
+  // Register validation logic for this field
+  register(path, {
+    validate: (value) => {
+      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, isRequired);
+      const result = zodSchema.safeParse(value);
+      if (result.success === false) {
+        return result.error.issues.at(-1)?.message;
+      }
+      return true;
+    },
+  });
 
   const baseProps: BaseControlProps = {
     name: path,
