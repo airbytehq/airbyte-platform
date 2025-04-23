@@ -262,11 +262,6 @@ const ArrayOfObjectsControl = ({
       path={baseProps.name}
       error={error}
       header={baseProps.header}
-      control={
-        <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button">
-          <FormattedMessage id="form.add" />
-        </Button>
-      }
     >
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
@@ -274,6 +269,15 @@ const ArrayOfObjectsControl = ({
           <RemoveButton className={styles.removeButton} onClick={() => remove(index)} />
         </FlexContainer>
       ))}
+      <div className={styles.addButtonContainer}>
+        <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button" icon="plus">
+          {itemSchema.title ? (
+            <FormattedMessage id="form.addItem" values={{ itemName: itemSchema.title }} />
+          ) : (
+            <FormattedMessage id="form.add" />
+          )}
+        </Button>
+      </div>
     </ControlGroup>
   );
 };
