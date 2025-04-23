@@ -2431,9 +2431,17 @@
   "jinjaInput.suggest.userInput.createNew.label": "Create new user input…",
   "jinjaInput.suggest.userInput.createNew.doc": "Create a new user input and insert a reference to it here.",
 
+  "embeddedSource.selectIntegration": "Select integration",
   "configTemplates.emptyState": "This organization has no available sources available to configure.",
 
+  "partialUserConfig.create.tab": "Add a new integration",
+  "partialUserConfig.update.tab": "Saved integrations",
+  "partialUserConfig.create.title": "Create integration",
+  "partialUserConfig.update.title": "Update your integration",
   "partialUserConfig.create.success": "Source created successfully",
   "partialUserConfig.update.success": "Source updated successfully",
-  "partialUserConfig.back": "Back"
+  "partialUserConfig.back": "Back",
+  "partialUserConfig.backToIntegrations": "Back to integrations",
+  "partialUserConfig.success.title": "Success!",
+  "partialUserConfig.success.description": "You've connected your account."
 }

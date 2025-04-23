@@ -3,6 +3,8 @@ import { PropsWithChildren, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCookie } from "react-use";
 
+import { ALLOWED_ORIGIN_PARAM } from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
+
 import { AuthContext } from "./AuthContext";
 
 /**
@@ -11,7 +13,6 @@ import { AuthContext } from "./AuthContext";
  */
 
 const SCOPED_AUTH_TOKEN_COOKIE = "_airbyte_scoped_auth_token";
-export const ALLOWED_ORIGIN_SEARCH_PARAM = "allowedOrigin";
 
 interface ScopedAuthMessage {
   scopedAuthToken: string;
@@ -19,7 +20,7 @@ interface ScopedAuthMessage {
 
 const useScopedAuthToken = () => {
   const [searchParams] = useSearchParams();
-  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
 
   const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
   const [token, setToken, deleteToken] = useCookie(SCOPED_AUTH_TOKEN_COOKIE);

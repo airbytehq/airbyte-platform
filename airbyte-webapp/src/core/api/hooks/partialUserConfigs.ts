@@ -1,15 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { ALLOWED_ORIGIN_SEARCH_PARAM } from "core/services/auth/EmbeddedAuthService";
 import { useNotificationService } from "hooks/services/Notification";
-import {
-  CREATE_PARTIAL_USER_CONFIG_PARAM,
-  SELECTED_PARTIAL_CONFIG_ID_PARAM,
-  SELECTED_TEMPLATE_ID_PARAM,
-} from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
+import { ALLOWED_ORIGIN_PARAM } from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
 
 import {
   createPartialUserConfig,
@@ -48,9 +42,8 @@ export const useGetPartialUserConfig = (partialUserConfigId: string) => {
 export const useCreatePartialUserConfig = () => {
   const requestOptions = useRequestOptions();
   const { registerNotification } = useNotificationService();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { formatMessage } = useIntl();
 
   return useMutation(
     async (partialUserConfigCreate: PartialUserConfigCreate) => {
@@ -60,13 +53,7 @@ export const useCreatePartialUserConfig = () => {
       onSuccess: (data) => {
         queryClient.invalidateQueries({ queryKey: partialUserConfigs.lists() });
 
-        setSearchParams((params: URLSearchParams) => {
-          params.delete(CREATE_PARTIAL_USER_CONFIG_PARAM);
-          params.delete(SELECTED_TEMPLATE_ID_PARAM);
-          return params;
-        });
-
-        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
         const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
 
         if (allowedOrigin.length > 0) {
@@ -78,15 +65,9 @@ export const useCreatePartialUserConfig = () => {
 
           window.parent.postMessage(successMessage, allowedOrigin);
         }
-
-        registerNotification({
-          id: "partial-user-config-create-success",
-          type: "success",
-          text: formatMessage({ id: "partialUserConfig.create.success" }),
-        });
       },
       onError: (error: Error) => {
-        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
         const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
 
         if (allowedOrigin.length > 0) {
@@ -111,9 +92,8 @@ export const useCreatePartialUserConfig = () => {
 export const useUpdatePartialUserConfig = () => {
   const requestOptions = useRequestOptions();
   const { registerNotification } = useNotificationService();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { formatMessage } = useIntl();
   return useMutation(
     async (partialUserConfigUpdate: PartialUserConfigUpdate) => {
       return await updateUserConfig(partialUserConfigUpdate, requestOptions);
@@ -125,7 +105,7 @@ export const useUpdatePartialUserConfig = () => {
           queryKey: partialUserConfigs.detail(variables.partialUserConfigId),
         });
 
-        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
         const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
         if (allowedOrigin.length > 0) {
           const successMessage = {
@@ -136,19 +116,9 @@ export const useUpdatePartialUserConfig = () => {
 
           window.parent.postMessage(successMessage, allowedOrigin);
         }
-
-        setSearchParams((params: URLSearchParams) => {
-          params.delete(SELECTED_PARTIAL_CONFIG_ID_PARAM);
-          return params;
-        });
-        registerNotification({
-          id: "partial-user-config-update-success",
-          type: "success",
-          text: formatMessage({ id: "partialUserConfig.create.success" }),
-        });
       },
       onError: (error: Error) => {
-        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+        const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
         const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
         if (allowedOrigin.length > 0) {
           const errorMessage = {
