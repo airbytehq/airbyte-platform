@@ -18795,15 +18795,19 @@ components:
       type: object
       required:
         - partialUserConfigId
+        - workspaceId
       properties:
         partialUserConfigId:
+          type: string
+          format: uuid
+        workspaceId:
           type: string
           format: uuid
     PartialUserConfigRead:
       type: object
       required:
         - id
-        - partialUserConfigProperties
+        - connectionConfiguration
         - configTemplate
         - actorId
       properties:
@@ -18816,13 +18820,13 @@ components:
           description: the actor that this partial user config is for
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigCreate:
       type: object
       required:
         - configTemplateId
-        - partialUserConfigProperties
+        - connectionConfiguration
         - workspaceId
       properties:
         workspaceId:
@@ -18832,7 +18836,7 @@ components:
           description: the template that this user config is connected with
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigWithSource:
       type: object
@@ -18857,12 +18861,16 @@ components:
       type: object
       required:
         - partialUserConfigId
-        - partialUserConfigProperties
+        - workspaceId
+        - connectionConfiguration
       properties:
         partialUserConfigId:
           type: string
           format: uuid
-        partialUserConfigProperties:
+        workspaceId:
+          type: string
+          format: uuid
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigReadList:
       type: object

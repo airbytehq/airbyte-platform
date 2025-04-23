@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ALLOWED_ORIGIN_SEARCH_PARAM } from "core/services/auth/EmbeddedAuthService";
 import { useNotificationService } from "hooks/services/Notification";
 import {
@@ -37,9 +38,10 @@ export const useListPartialUserConfigs = (workspaceId: string): PartialUserConfi
 
 export const useGetPartialUserConfig = (partialUserConfigId: string) => {
   const requestOptions = useRequestOptions();
+  const workspaceId = useCurrentWorkspaceId();
 
   return useSuspenseQuery(partialUserConfigs.detail(partialUserConfigId), () => {
-    return getPartialUserConfig({ partialUserConfigId }, requestOptions);
+    return getPartialUserConfig({ partialUserConfigId, workspaceId }, requestOptions);
   });
 };
 

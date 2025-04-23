@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
@@ -14,6 +15,7 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
@@ -59,7 +61,7 @@ class ConfigTemplateControllerTest {
                 organizationId = organizationId,
                 actorDefinitionId = UUID.randomUUID(),
                 partialDefaultConfig = objectMapper.readTree("{}"),
-                userConfigSpec = objectMapper.readTree("{}"),
+                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
                 createdAt = OffsetDateTime.now(),
                 updatedAt = OffsetDateTime.now(),
               ),
@@ -112,7 +114,7 @@ class ConfigTemplateControllerTest {
             organizationId = organizationId,
             actorDefinitionId = UUID.randomUUID(),
             partialDefaultConfig = objectMapper.readTree("{}"),
-            userConfigSpec = objectMapper.readTree("{}"),
+            userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
             createdAt = OffsetDateTime.now(),
             updatedAt = OffsetDateTime.now(),
           ),
@@ -134,7 +136,12 @@ class ConfigTemplateControllerTest {
       assertEquals(response.name, configTemplate.actorName)
       assertEquals(response.icon, configTemplate.actorIcon)
       assertEquals(response.sourceDefinitionId, configTemplate.configTemplate.actorDefinitionId)
-      assertEquals(response.configTemplateSpec, configTemplate.configTemplate.userConfigSpec)
+      assertEquals(
+        response.configTemplateSpec,
+        configTemplate.configTemplate.userConfigSpec.let {
+          objectMapper.valueToTree<JsonNode>(it)
+        },
+      )
     }
   }
 }
