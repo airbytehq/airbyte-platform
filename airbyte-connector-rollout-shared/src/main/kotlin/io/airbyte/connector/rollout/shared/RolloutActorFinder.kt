@@ -97,13 +97,15 @@ class RolloutActorFinder(
 
     logger.info { "Rollout ${connectorRollout.id}: ${candidates.size} after filterByTier" }
 
-    val sortedConnectionsWithLatestJob =
-      getSortedConnectionsWithLatestJob(connectorRollout, candidates.map { it.id }, connectorRollout.actorDefinitionId, actorType, false, null)
-    candidates = filterByJobStatus(connectorRollout, candidates, sortedConnectionsWithLatestJob, actorType)
+    var sortedConnectionsWithLatestJob: List<ConnectionWithLatestJob>? = null
+    if (filters?.jobBypassFilter == null || filters.jobBypassFilter?.evaluate(Unit) == false) {
+      val sortedConnectionsWithLatestJob =
+        getSortedConnectionsWithLatestJob(connectorRollout, candidates.map { it.id }, connectorRollout.actorDefinitionId, actorType, false, null)
+      candidates = filterByJobStatus(connectorRollout, candidates, sortedConnectionsWithLatestJob, actorType)
+    }
 
     logger.info {
-      "Rollout ${connectorRollout.id}: " +
-        "${sortedConnectionsWithLatestJob.size} connections total;  ${candidates.size} after filterByJobStatus"
+      "Rollout ${connectorRollout.id}: ${candidates.size} after filterByJobStatus"
     }
 
     val nPreviouslyPinned = getActorsPinnedToReleaseCandidate(connectorRollout).filter { candidates.map { it.id }.contains(it) }.size
@@ -127,9 +129,7 @@ class RolloutActorFinder(
     // Calculate the number to pin based on the input percentage
     val targetTotalToPin = getTargetTotalToPin(connectorRollout, nEligibleOrAlreadyPinned, nPreviouslyPinned, targetPercent)
     logger.info {
-      "Rollout ${connectorRollout.id}: " +
-        "candidates.size=$candidates.size " +
-        "sortedConnectionsWithLatestJob.size=${sortedConnectionsWithLatestJob.size} "
+      "Rollout ${connectorRollout.id}: candidates.size=$candidates.size "
     }
 
     // From the eligible actors, choose the ones with the next sync
@@ -597,10 +597,14 @@ class RolloutActorFinder(
 
   internal fun sortActorIdsBySyncFrequency(
     candidates: Collection<ConfigScopeMapWithId>,
-    sortedConnectionsWithLatestJob: List<ConnectionWithLatestJob>,
+    sortedConnectionsWithLatestJob: List<ConnectionWithLatestJob>?,
     actorType: ActorType,
   ): List<UUID> {
     val candidateIds = candidates.map { it.id }.toSet()
+
+    if (sortedConnectionsWithLatestJob == null) {
+      return candidateIds.toList()
+    }
 
     val seen = mutableSetOf<UUID>()
 

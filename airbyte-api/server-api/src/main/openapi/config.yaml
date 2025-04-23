@@ -9259,12 +9259,21 @@ components:
         tierFilter:
           type: object
           $ref: "#/components/schemas/ConnectorRolloutTierFilter"
+        jobBypassFilter:
+          type: object
+          $ref: "#/components/schemas/ConnectorRolloutJobBypassFilter"
 
     ConnectorRolloutTierFilter:
       type: object
       properties:
         tier:
           $ref: "#/components/schemas/CustomerTier"
+
+    ConnectorRolloutJobBypassFilter:
+      type: object
+      properties:
+        shouldIgnoreJobs:
+          type: boolean
 
     CustomerTier:
       type: string

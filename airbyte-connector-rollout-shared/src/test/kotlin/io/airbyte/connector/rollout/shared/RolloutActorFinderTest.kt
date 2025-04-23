@@ -14,9 +14,11 @@ import io.airbyte.config.ConnectionWithLatestJob
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
+import io.airbyte.config.ConnectorRolloutFilters
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
 import io.airbyte.config.Job
+import io.airbyte.config.JobBypassFilter
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobConfig.ConfigType
 import io.airbyte.config.JobStatus
@@ -733,7 +735,7 @@ class RolloutActorFinderTest {
 
   @ParameterizedTest
   @EnumSource(ActorType::class)
-  fun `test getActorSelectionInfo actorIdsToPin is rounded up`(actorType: ActorType) {
+  fun `test getActorSelectionInfo actorIdsToPin is rounded up no filters`(actorType: ActorType) {
     val actorDefinitionId = if (actorType == ActorType.SOURCE) SOURCE_ACTOR_DEFINITION_ID else DESTINATION_ACTOR_DEFINITION_ID
     val mockConnectionSyncs = createConnectionsFromConfigScopeMap(CONFIG_SCOPE_MAP, actorType)
 
@@ -773,6 +775,112 @@ class RolloutActorFinderTest {
       connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(any(), any(), any())
       jobService.findLatestJobPerScope(any(), any(), any())
       organizationCustomerAttributesService.getOrganizationTiers()
+    }
+
+    assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
+    assertEquals(4, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(1, actorSelectionInfo.nNewPinned)
+    assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `test getActorSelectionInfo actorIdsToPin with jobBypassFilter`(actorType: ActorType) {
+    val actorDefinitionId = if (actorType == ActorType.SOURCE) SOURCE_ACTOR_DEFINITION_ID else DESTINATION_ACTOR_DEFINITION_ID
+    val mockConnectionSyncs = createConnectionsFromConfigScopeMap(CONFIG_SCOPE_MAP, actorType)
+
+    if (actorType == ActorType.SOURCE) {
+      every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+    } else {
+      every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
+      every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+    }
+    every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
+    every {
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+    } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
+    every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
+    every { connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(any(), any(), any()) } returns mockConnectionSyncs
+    every {
+      jobService.findLatestJobPerScope(any(), any(), any())
+    } returnsMany
+      listOf(
+        createJobsFromConnectionSummaries(mockConnectionSyncs, 0, 0),
+        emptyList(),
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
+
+    val actorSelectionInfo =
+      rolloutActorFinder.getActorSelectionInfo(
+        createMockConnectorRollout(actorDefinitionId),
+        1,
+        ConnectorRolloutFilters(jobBypassFilter = JobBypassFilter(AttributeName.BYPASS_JOBS, false)),
+      )
+
+    verify {
+      if (actorType == ActorType.SOURCE) {
+        sourceService.getStandardSourceDefinition(any())
+      } else {
+        destinationService.getStandardDestinationDefinition(any())
+      }
+      actorDefinitionVersionUpdater.getConfigScopeMaps(any())
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+      connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
+    }
+
+    assertEquals(1, actorSelectionInfo.actorIdsToPin.size)
+    assertEquals(4, actorSelectionInfo.nActors)
+    assertEquals(4, actorSelectionInfo.nActorsEligibleOrAlreadyPinned)
+    assertEquals(1, actorSelectionInfo.nNewPinned)
+    assertEquals(0, actorSelectionInfo.nPreviouslyPinned)
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `test getActorSelectionInfo with bypass filter`(actorType: ActorType) {
+    val actorDefinitionId = if (actorType == ActorType.SOURCE) SOURCE_ACTOR_DEFINITION_ID else DESTINATION_ACTOR_DEFINITION_ID
+
+    if (actorType == ActorType.SOURCE) {
+      every { sourceService.getStandardSourceDefinition(any()) } returns StandardSourceDefinition()
+    } else {
+      every { sourceService.getStandardSourceDefinition(any()) } throws ConfigNotFoundException("", "Not found")
+      every { destinationService.getStandardDestinationDefinition(any()) } returns StandardDestinationDefinition()
+    }
+    every { actorDefinitionVersionUpdater.getConfigScopeMaps(any()) } returns CONFIG_SCOPE_MAP.values
+    every {
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+    } returns CONFIG_SCOPE_MAP.map { it.key }.toSet()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any(), any(), any()) } returns mapOf()
+    every { scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any()) } returns listOf()
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns emptyMap()
+
+    val actorSelectionInfo =
+      rolloutActorFinder.getActorSelectionInfo(
+        createMockConnectorRollout(actorDefinitionId),
+        1,
+        ConnectorRolloutFilters(jobBypassFilter = JobBypassFilter(AttributeName.BYPASS_JOBS, true)),
+      )
+
+    verify {
+      if (actorType == ActorType.SOURCE) {
+        sourceService.getStandardSourceDefinition(any())
+      } else {
+        destinationService.getStandardDestinationDefinition(any())
+      }
+      actorDefinitionVersionUpdater.getConfigScopeMaps(any())
+      actorDefinitionVersionUpdater.getUpgradeCandidates(any(), any())
+      scopedConfigurationService.listScopedConfigurationsWithValues(any(), any(), any(), any(), any(), any())
+      organizationCustomerAttributesService.getOrganizationTiers()
+    }
+
+    verify(exactly = 0) {
+      connectionService.listConnectionSummaryByActorDefinitionIdAndActorIds(any(), any(), any())
+      jobService.findLatestJobPerScope(any(), any(), any())
     }
 
     assertEquals(1, actorSelectionInfo.actorIdsToPin.size)

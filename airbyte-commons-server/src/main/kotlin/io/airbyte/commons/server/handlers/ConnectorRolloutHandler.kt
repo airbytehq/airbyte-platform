@@ -32,6 +32,7 @@ import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
+import io.airbyte.config.JobBypassFilter
 import io.airbyte.config.Operator
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
@@ -918,31 +919,33 @@ open class ConnectorRolloutHandler
       return rollouts.first()
     }
 
-    private fun createFiltersFromRequest(filters: ConnectorRolloutFilters?): io.airbyte.config.ConnectorRolloutFilters {
-      if (filters?.tierFilter == null) {
-        return io.airbyte.config.ConnectorRolloutFilters(
-          customerTierFilters =
+    private fun createFiltersFromRequest(requestFilters: ConnectorRolloutFilters?): io.airbyte.config.ConnectorRolloutFilters =
+      io.airbyte.config.ConnectorRolloutFilters(
+        jobBypassFilter =
+          if (requestFilters?.jobBypassFilter?.shouldIgnoreJobs != null) {
+            JobBypassFilter(AttributeName.BYPASS_JOBS, requestFilters.jobBypassFilter?.shouldIgnoreJobs!!)
+          } else {
+            null
+          },
+        customerTierFilters =
+          if (requestFilters?.tierFilter == null) {
             listOf(
               CustomerTierFilter(
                 name = AttributeName.TIER,
                 operator = Operator.IN,
                 value = listOf(CustomerTier.TIER_2),
               ),
-            ),
-        )
-      } else {
-        return io.airbyte.config.ConnectorRolloutFilters(
-          customerTierFilters =
+            )
+          } else {
             listOf(
               CustomerTierFilter(
                 name = AttributeName.TIER,
                 operator = Operator.IN,
-                value = listOf(CustomerTier.valueOf(filters.tierFilter!!.tier.toString())),
+                value = listOf(CustomerTier.valueOf(requestFilters.tierFilter!!.tier.toString())),
               ),
-            ),
-        )
-      }
-    }
+            )
+          },
+      )
 
     private fun throwAirbyteApiClientExceptionIfExists(
       handlerName: String,

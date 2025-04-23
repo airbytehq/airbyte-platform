@@ -10,6 +10,7 @@ import io.airbyte.config.Operator
 import io.airbyte.data.repositories.entities.ConnectorRollout
 import io.airbyte.data.repositories.entities.ConnectorRolloutFilters
 import io.airbyte.data.repositories.entities.CustomerTierFilter
+import io.airbyte.data.repositories.entities.JobBypassFilter
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -21,6 +22,8 @@ typealias ModelConnectorRolloutStrategyType = io.airbyte.config.ConnectorEnumRol
 typealias EntityConnectorRolloutFilters = ConnectorRolloutFilters
 typealias ModelConnectorRolloutFilters = io.airbyte.config.ConnectorRolloutFilters
 typealias ModelCustomerTierFilterExpression = io.airbyte.config.CustomerTierFilter
+typealias ModelJobBypassFilter = io.airbyte.config.JobBypassFilter
+typealias EntityJobBypassFilter = JobBypassFilter
 typealias EntityConnectorRollout = ConnectorRollout
 typealias ModelConnectorRollout = io.airbyte.config.ConnectorRollout
 
@@ -65,7 +68,7 @@ fun ModelConnectorRolloutStrategyType.toEntity(): EntityConnectorRolloutStrategy
   }
 
 fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters {
-  val expressions =
+  val customerTierFilters =
     this.customerTierFilters.map { attr ->
       try {
         val name = AttributeName.valueOf(attr.name)
@@ -92,7 +95,17 @@ fun EntityConnectorRolloutFilters.toConfigModel(): ModelConnectorRolloutFilters 
       }
     }
 
-  return ModelConnectorRolloutFilters(customerTierFilters = expressions)
+  val jobBypassFilter =
+    if (this.jobBypassFilter != null) {
+      ModelJobBypassFilter(
+        name = AttributeName.valueOf(this.jobBypassFilter.name),
+        value = this.jobBypassFilter.value,
+      )
+    } else {
+      null
+    }
+
+  return ModelConnectorRolloutFilters(customerTierFilters = customerTierFilters, jobBypassFilter = jobBypassFilter)
 }
 
 fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
@@ -114,7 +127,16 @@ fun ModelConnectorRolloutFilters.toEntity(): EntityConnectorRolloutFilters {
       }
     }
 
-  return EntityConnectorRolloutFilters(customerTierFilters = customerTierFilters)
+  val jobBypassFilter =
+    if (this.jobBypassFilter != null) {
+      JobBypassFilter(
+        name = this.jobBypassFilter!!.name.name,
+        value = this.jobBypassFilter!!.value,
+      )
+    } else {
+      null
+    }
+  return EntityConnectorRolloutFilters(customerTierFilters = customerTierFilters, jobBypassFilter = jobBypassFilter)
 }
 
 fun EntityConnectorRollout.toConfigModel(): ModelConnectorRollout =
