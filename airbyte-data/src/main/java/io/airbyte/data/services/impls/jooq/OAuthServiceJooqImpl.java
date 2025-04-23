@@ -75,12 +75,15 @@ public class OAuthServiceJooqImpl implements OAuthService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(final UUID workspaceId, final UUID sourceDefinitionId)
+  public Optional<SourceOAuthParameter> getSourceOAuthParamByDefinitionIdOptional(final Optional<UUID> workspaceId,
+                                                                                  final Optional<UUID> organizationId,
+                                                                                  final UUID sourceDefinitionId)
       throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
       return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.source),
-          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId),
+          workspaceId.map(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID::eq).orElseGet(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID::isNull),
+          organizationId.map(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID::eq).orElseGet(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID::isNull),
           ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(sourceDefinitionId)).fetch();
     });
 
@@ -242,13 +245,15 @@ public class OAuthServiceJooqImpl implements OAuthService {
    * @throws IOException if there is an issue while interacting with db.
    */
   @Override
-  public Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(final UUID workspaceId,
+  public Optional<DestinationOAuthParameter> getDestinationOAuthParamByDefinitionIdOptional(final Optional<UUID> workspaceId,
+                                                                                            final Optional<UUID> organizationId,
                                                                                             final UUID destinationDefinitionId)
       throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(asterisk()).from(ACTOR_OAUTH_PARAMETER);
       return query.where(ACTOR_OAUTH_PARAMETER.ACTOR_TYPE.eq(ActorType.destination),
-          ACTOR_OAUTH_PARAMETER.WORKSPACE_ID.eq(workspaceId),
+          workspaceId.map(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID::eq).orElseGet(ACTOR_OAUTH_PARAMETER.WORKSPACE_ID::isNull),
+          organizationId.map(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID::eq).orElseGet(ACTOR_OAUTH_PARAMETER.ORGANIZATION_ID::isNull),
           ACTOR_OAUTH_PARAMETER.ACTOR_DEFINITION_ID.eq(destinationDefinitionId)).fetch();
     });
 
