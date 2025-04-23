@@ -475,25 +475,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/ExceptionResponse"
-  /v1/web_backend/cloud_workspaces/get_available_dbt_jobs:
-    post:
-      tags:
-        - web_backend
-      summary: Calls the dbt Cloud `List Accounts` and `List jobs` APIs to get the list of available jobs for the dbt auth token associated with the requested workspace config.
-      operationId: webBackendGetAvailableDbtJobsForWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceGetDbtJobsRequest"
-        required: true
-      responses:
-        "200":
-          description: Successfully retrieved available dbt Cloud jobs
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceGetDbtJobsResponse"
   /v1/web_backend/permissions/list_by_user:
     post:
       tags:
@@ -1072,48 +1053,6 @@ components:
             - failed
         message:
           type: string
-    WorkspaceGetDbtJobsRequest:
-      description: Get the available dbt Cloud jobs associated with the given workspace config.
-      type: object
-      required:
-        - workspaceId
-        - dbtConfigId
-      properties:
-        workspaceId:
-          $ref: "#/components/schemas/WorkspaceId"
-        dbtConfigId:
-          type: string
-          format: uuid
-          description: The config id associated with the dbt Cloud config, references the webhookConfigId in the core API.
-    DbtCloudJobInfo:
-      type: object
-      description: A dbt Cloud job
-      required:
-        - accountId
-        - jobId
-        - jobName
-      properties:
-        accountId:
-          type: integer
-          format: int64
-          description: The account id associated with the job
-        jobId:
-          type: integer
-          format: int64
-          description: The the specific job id returned by the dbt Cloud API
-        jobName:
-          type: string
-          description: The human-readable name of the job returned by the dbt Cloud API
-    WorkspaceGetDbtJobsResponse:
-      description: The available dbt Cloud jobs for the requested workspace config
-      type: object
-      required:
-        - availableDbtJobs
-      properties:
-        availableDbtJobs:
-          type: array
-          items:
-            $ref: "#/components/schemas/DbtCloudJobInfo"
     # EXCEPTIONS / ERRORS
     InvalidInputProperty:
       type: object
