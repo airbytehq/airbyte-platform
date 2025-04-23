@@ -21,6 +21,10 @@ export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: Ai
   }
 
   if (schema.type === "array") {
+    const itemSchema = verifyArrayItems(schema.items);
+    if (itemSchema.type === "array") {
+      return [extractDefaultValuesFromSchema(itemSchema)] as DefaultValues<T>;
+    }
     return [] as DefaultValues<T>;
   }
 
@@ -107,28 +111,28 @@ export const verifyArrayItems = (
   items:
     | ExtendedJSONSchema<AirbyteJsonSchemaExtention>
     | ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>
-    | undefined,
-  path: string
+    | undefined
 ) => {
   if (!items) {
-    throw new Error(`The items field of the array property at path ${path} must be defined.`);
+    throw new Error(`The "items" field of array properties must be defined.`);
   }
   if (Array.isArray(items)) {
-    throw new Error(`The items field of the array property at path ${path} must not be an array.`);
+    throw new Error(`The "items" field of array properties must not be an array.`);
   }
   if (isBoolean(items)) {
-    throw new Error(`The items field of the array property at path ${path} must not be a boolean.`);
+    throw new Error(`The "items" field of array properties must not be a boolean.`);
   }
   items = items as AirbyteJsonSchema;
   if (
     items.type !== "object" &&
+    items.type !== "array" &&
     items.type !== "string" &&
     items.type !== "integer" &&
     items.type !== "number" &&
     !items.oneOf &&
     !items.anyOf
   ) {
-    throw new Error(`Unsupported array item type: ${items.type} at path ${path}`);
+    throw new Error(`Unsupported array "items" type: ${items.type}`);
   }
   return items;
 };
@@ -142,70 +146,84 @@ export const getSelectedOptionSchema = (
   }
 
   return optionSchemas.find((optionSchema) => {
-    if (isBoolean(optionSchema)) {
-      return false;
-    }
-
-    if (optionSchema.oneOf || optionSchema.anyOf) {
-      return !!getSelectedOptionSchema((optionSchema.oneOf ?? optionSchema.anyOf)!, value);
-    }
-
-    if (value === null) {
-      // treat null as empty value for number and integer types
-      if (optionSchema.type === "number" || optionSchema.type === "integer") {
-        return true;
-      }
-      return optionSchema.type === "null";
-    }
-
-    if (value === "") {
-      if (optionSchema.type === "string") {
-        return true;
-      }
-      return false;
-    }
-
-    if (typeof value === "object" && !("type" in value)) {
-      return optionSchema.type === "object";
-    }
-
-    if (typeof value !== "object") {
-      if (typeof value === "number" && (optionSchema.type === "integer" || optionSchema.type === "number")) {
-        return true;
-      }
-      if (optionSchema.type === typeof value) {
-        return true;
-      }
-      return false;
-    }
-
-    if (!optionSchema.properties) {
-      if (optionSchema.additionalProperties) {
-        return true;
-      }
-      return false;
-    }
-
-    // ~ declarative_component_schema type handling ~
-    const discriminatorSchema = optionSchema.properties.type;
-
-    if (!discriminatorSchema || isBoolean(discriminatorSchema) || discriminatorSchema.type !== "string") {
-      return false;
-    }
-    if (
-      !discriminatorSchema.enum ||
-      !Array.isArray(discriminatorSchema.enum) ||
-      discriminatorSchema.enum.length !== 1
-    ) {
-      return false;
-    }
-
-    if (!("type" in value)) {
-      return false;
-    }
-
-    return value.type === discriminatorSchema.enum[0];
+    return valueIsCompatibleWithSchema(value, optionSchema);
   }) as AirbyteJsonSchema | undefined;
+};
+
+const valueIsCompatibleWithSchema = (
+  value: unknown,
+  schema: ExtendedJSONSchema<AirbyteJsonSchemaExtention>
+): boolean => {
+  if (isBoolean(schema)) {
+    return false;
+  }
+
+  if (schema.oneOf || schema.anyOf) {
+    return !!getSelectedOptionSchema((schema.oneOf ?? schema.anyOf)!, value);
+  }
+
+  if (value === null) {
+    // treat null as empty value for number and integer types
+    if (schema.type === "number" || schema.type === "integer") {
+      return true;
+    }
+    return schema.type === "null";
+  }
+
+  if (value === "") {
+    if (schema.type === "string") {
+      return true;
+    }
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    if (schema.type !== "array") {
+      return false;
+    }
+    if (value.length > 0) {
+      const itemSchema = verifyArrayItems(schema.items);
+      return valueIsCompatibleWithSchema(value[0], itemSchema);
+    }
+    return schema.type === "array";
+  }
+
+  if (typeof value === "object" && !("type" in value)) {
+    return schema.type === "object";
+  }
+
+  if (typeof value !== "object") {
+    if (typeof value === "number" && (schema.type === "integer" || schema.type === "number")) {
+      return true;
+    }
+    if (schema.type === typeof value) {
+      return true;
+    }
+    return false;
+  }
+
+  if (!schema.properties) {
+    if (schema.additionalProperties) {
+      return true;
+    }
+    return false;
+  }
+
+  // ~ declarative_component_schema type handling ~
+  const discriminatorSchema = schema.properties.type;
+
+  if (!discriminatorSchema || isBoolean(discriminatorSchema) || discriminatorSchema.type !== "string") {
+    return false;
+  }
+  if (!discriminatorSchema.enum || !Array.isArray(discriminatorSchema.enum) || discriminatorSchema.enum.length !== 1) {
+    return false;
+  }
+
+  if (!("type" in value)) {
+    return false;
+  }
+
+  return value.type === discriminatorSchema.enum[0];
 };
 
 export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: FieldValues): AirbyteJsonSchema => {
@@ -220,7 +238,7 @@ export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: F
   for (const part of pathParts) {
     if (!Number.isNaN(Number(part)) && currentProperty.type === "array" && currentProperty.items) {
       // array path
-      currentProperty = verifyArrayItems(currentProperty.items, currentPath);
+      currentProperty = verifyArrayItems(currentProperty.items);
       // Don't update currentPath here - will be updated at the end of the loop
     } else {
       let nextProperty: ExtendedJSONSchema<AirbyteJsonSchemaExtention>;
@@ -233,7 +251,6 @@ export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: F
           throw new Error(`No matching schema found for path: ${currentPath}`);
         }
         if (!selectedOption.properties) {
-          // debugger;
           if (selectedOption.additionalProperties && !isBoolean(selectedOption.additionalProperties)) {
             nextProperty = selectedOption.additionalProperties;
           } else {

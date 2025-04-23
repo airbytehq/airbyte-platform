@@ -1180,4 +1180,238 @@ describe("SchemaForm", () => {
       });
     });
   });
+
+  // Add tests for nested array functionality
+  describe("nested array functionality", () => {
+    // Schema with nested arrays
+    const nestedArraySchema = {
+      type: "object",
+      properties: {
+        simpleArray: {
+          type: "array",
+          title: "Simple Array",
+          items: {
+            type: "string",
+          },
+        },
+        nestedArray: {
+          type: "array",
+          title: "Nested Array",
+          items: {
+            type: "array",
+            items: {
+              type: "string",
+            },
+          },
+        },
+        complexNestedArray: {
+          type: "array",
+          title: "Complex Nested Array",
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", title: "Name" },
+                value: { type: "string", title: "Value" },
+              },
+              required: ["name"],
+            },
+          },
+        },
+        primaryKey: {
+          anyOf: [
+            { type: "string", title: "Single Key" },
+            {
+              type: "array",
+              title: "Composite Key",
+              items: {
+                type: "string",
+              },
+            },
+            {
+              type: "array",
+              title: "Composite Nested Keys",
+              items: {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+            },
+          ],
+        },
+      },
+    } as const;
+
+    it("handles simple array of strings correctly", async () => {
+      await render(
+        <SchemaForm schema={nestedArraySchema} onSubmit={() => Promise.resolve()}>
+          <SchemaFormControl path="simpleArray" />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that the array section is rendered
+      expect(screen.getByText("Simple Array")).toBeInTheDocument();
+
+      // Array of strings should render a tag input
+      const input = screen.getByTestId("tag-input-simpleArray");
+      await userEvent.type(input, "item1");
+      await userEvent.keyboard("{enter}");
+
+      // Add another tag
+      await userEvent.type(input, "item2");
+      await userEvent.keyboard("{enter}");
+
+      // Check that both items are added
+      await waitFor(() => {
+        expect(screen.getByText("item1")).toBeInTheDocument();
+        expect(screen.getByText("item2")).toBeInTheDocument();
+      });
+    });
+
+    it("supports array of arrays structure", async () => {
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={nestedArraySchema} onSubmit={mockOnSubmit}>
+          <SchemaFormControl path="nestedArray" />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that the array section is rendered
+      expect(screen.getByText("Nested Array")).toBeInTheDocument();
+
+      // Find the add button using the specific test ID and click it to add an item
+      const outerAddButton = await screen.findByTestId("add-item-_nestedArray");
+      await userEvent.click(outerAddButton);
+
+      // We should now have a nested array with a tag input
+      await waitFor(() => {
+        // After adding the first array, we should have a tag input for the inner array
+        const innerInputs = screen.getAllByTestId(/tag-input-nestedArray\.\d+/);
+        expect(innerInputs.length).toBeGreaterThan(0);
+      });
+
+      // Add a value to the inner array
+      const innerInputs = screen.getAllByTestId(/tag-input-nestedArray\.\d+/);
+      await userEvent.type(innerInputs[0], "nested-item1");
+      await userEvent.keyboard("{enter}");
+
+      // Add another value to the inner array
+      await userEvent.type(innerInputs[0], "nested-item2");
+      await userEvent.keyboard("{enter}");
+
+      // Add another outer array item
+      await userEvent.click(outerAddButton);
+
+      // Submit the form to check values
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check that the structure is correctly preserved in the submission
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            nestedArray: expect.arrayContaining([
+              expect.arrayContaining(["nested-item1", "nested-item2"]),
+              expect.any(Array), // The second array might be empty
+            ]),
+          }),
+          expect.anything()
+        );
+      });
+    });
+
+    it("renders array of objects structure in nested arrays", async () => {
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={nestedArraySchema} onSubmit={mockOnSubmit}>
+          <SchemaFormControl path="complexNestedArray" />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that the array section is rendered
+      expect(screen.getByText("Complex Nested Array")).toBeInTheDocument();
+
+      // Find the add button for the outer array using its test ID
+      const outerAddButton = await screen.findByTestId("add-item-_complexNestedArray");
+      await userEvent.click(outerAddButton);
+
+      // Find the add button for the inner array using its test ID
+      const innerAddButton = await screen.findByTestId("add-item-_complexNestedArray.0");
+      await userEvent.click(innerAddButton);
+
+      // Now we should have fields for the inner object
+      await waitFor(() => {
+        expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+        expect(screen.getByRole("textbox", { name: "Value Optional" })).toBeInTheDocument();
+      });
+
+      // Fill in the required field
+      await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "Test Name");
+      await userEvent.type(screen.getByRole("textbox", { name: "Value Optional" }), "Test Value");
+
+      // Submit the form to check values
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Check that the name and value fields received the input
+      // The exact structure may vary in testing compared to our expected structure
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalled();
+        const submitData = mockOnSubmit.mock.calls[0][0];
+        expect(submitData).toHaveProperty("complexNestedArray");
+        expect(submitData.complexNestedArray[0][0].name).toBe("Test Name");
+        expect(submitData.complexNestedArray[0][0].value).toBe("Test Value");
+      });
+    });
+
+    it("renders anyOf with array options", async () => {
+      const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+      await render(
+        <SchemaForm schema={nestedArraySchema} onSubmit={mockOnSubmit}>
+          <SchemaFormControl path="primaryKey" />
+          <FormSubmissionButtons />
+        </SchemaForm>
+      );
+
+      // Check that the select for options is rendered
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Single Key" })).toBeInTheDocument();
+      });
+
+      // Click to open the dropdown
+      await userEvent.click(screen.getByRole("button", { name: "Single Key" }));
+
+      // Select the simple array option instead of nested arrays
+      await userEvent.click(screen.getByText("Composite Key"));
+
+      // Add items to the array
+      const input = await screen.findByTestId("tag-input-primaryKey");
+      await userEvent.type(input, "key-part1");
+      await userEvent.keyboard("{enter}");
+      await userEvent.type(input, "key-part2");
+      await userEvent.keyboard("{enter}");
+
+      // Submit the form
+      const submitButton = screen.getByRole("button", { name: "Submit" });
+      await userEvent.click(submitButton);
+
+      // Verify the array structure
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalled();
+        const submitData = mockOnSubmit.mock.calls[0][0];
+        expect(submitData).toHaveProperty("primaryKey");
+        expect(Array.isArray(submitData.primaryKey)).toBe(true);
+        expect(submitData.primaryKey).toContain("key-part1");
+        expect(submitData.primaryKey).toContain("key-part2");
+      });
+    });
+  });
 });

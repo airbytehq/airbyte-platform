@@ -1,4 +1,6 @@
+import classNames from "classnames";
 import isBoolean from "lodash/isBoolean";
+import { useCallback } from "react";
 import { useFieldArray } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -32,6 +34,15 @@ export const ArrayOfObjectsControl = ({
   const itemSchema = fieldSchema.items as AirbyteJsonSchema;
   const itemDefaultValues = extractDefaultValuesFromSchema(itemSchema);
 
+  const handleAppend = useCallback(() => {
+    if (itemSchema.type === "array") {
+      // React hook form flattens arrays by default, so we need to wrap this in an extra array to counteract this
+      append([itemDefaultValues]);
+    } else {
+      append(itemDefaultValues);
+    }
+  }, [append, itemDefaultValues, itemSchema.type]);
+
   return (
     <ControlGroup
       title={baseProps.label}
@@ -43,17 +54,27 @@ export const ArrayOfObjectsControl = ({
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
           <SchemaFormControl
+            className={styles.itemControl}
             path={`${baseProps.name}.${index}`}
             overrideByPath={overrideByPath}
             skipRenderedPathRegistration={skipRenderedPathRegistration}
             fieldSchema={itemSchema}
             isRequired
           />
-          <RemoveButton className={styles.removeButton} onClick={() => remove(index)} />
+          <RemoveButton
+            className={classNames({ [styles.removeButtonPadding]: hasGroupedItems(itemSchema) })}
+            onClick={() => remove(index)}
+          />
         </FlexContainer>
       ))}
       <div className={styles.addButtonContainer}>
-        <Button variant="secondary" onClick={() => append(itemDefaultValues)} type="button" icon="plus">
+        <Button
+          variant="secondary"
+          onClick={handleAppend}
+          type="button"
+          icon="plus"
+          data-testid={`add-item-_${baseProps.name}`}
+        >
           {itemSchema.title ? (
             <FormattedMessage id="form.addItem" values={{ itemName: itemSchema.title }} />
           ) : (
@@ -63,4 +84,17 @@ export const ArrayOfObjectsControl = ({
       </div>
     </ControlGroup>
   );
+};
+
+const hasGroupedItems = (schema: AirbyteJsonSchema): boolean => {
+  if (schema.type === "object" || schema.oneOf || schema.anyOf) {
+    return true;
+  }
+  if (schema.type === "array" && schema.items && !isBoolean(schema.items) && !Array.isArray(schema.items)) {
+    const itemSchema = schema.items as AirbyteJsonSchema;
+    if (itemSchema.type === "object" || itemSchema.type === "array" || itemSchema.oneOf || itemSchema.anyOf) {
+      return true;
+    }
+  }
+  return false;
 };

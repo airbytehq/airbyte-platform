@@ -13,7 +13,7 @@ import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, OverrideByPath, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, extractDefaultValuesFromSchema, getSelectedOptionSchema } from "../utils";
+import { AirbyteJsonSchema, extractDefaultValuesFromSchema, getSelectedOptionSchema, verifyArrayItems } from "../utils";
 
 export const MultiOptionControl = ({
   fieldSchema,
@@ -71,13 +71,11 @@ export const MultiOptionControl = ({
         <ListBox
           className={classNames({ [styles.listBoxError]: !!displayError })}
           options={options.map((option) => ({
-            label: option.title ?? option.type,
-            value: option.title ?? option.type,
+            label: getOptionLabel(option),
+            value: getOptionLabel(option),
           }))}
           onSelect={(selectedValue) => {
-            const selectedOption = options.find((option) =>
-              option.title ? option.title === selectedValue : option.type === selectedValue
-            );
+            const selectedOption = options.find((option) => selectedValue === getOptionLabel(option));
             if (!selectedOption) {
               setValue(baseProps.name, undefined);
               return;
@@ -89,7 +87,7 @@ export const MultiOptionControl = ({
             // Only clear the error for the parent field itself, without validating
             clearErrors(baseProps.name);
           }}
-          selectedValue={selectedOption?.title ?? selectedOption?.type}
+          selectedValue={getOptionLabel(selectedOption)}
           adaptiveWidth={false}
         />
       }
@@ -98,6 +96,26 @@ export const MultiOptionControl = ({
       {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration)}
     </ControlGroup>
   );
+};
+
+const getOptionLabel = (option: AirbyteJsonSchema | undefined): string => {
+  if (option === undefined) {
+    return "";
+  }
+  if (option.title) {
+    return option.title;
+  }
+  if (option.type === undefined) {
+    return "";
+  }
+  if (option.type === "array") {
+    const items = verifyArrayItems(option.items);
+    return `${option.type} of ${getOptionLabel(items)}`;
+  }
+  if (Array.isArray(option.type)) {
+    return option.type.join(", ");
+  }
+  return option.type as string;
 };
 
 // Render the selected option's properties
