@@ -79,7 +79,7 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
         setValue("view", `dynamic_stream_${num}`);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
           actionDescription: "Dynamic stream view selected",
-          dynamic_stream_name: name,
+          dynamicStreamName: name,
         });
       }}
     >
@@ -243,8 +243,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
           </FlexContainer>
 
           <div className={styles.streamList}>
-            {formValues.dynamicStreams.map(({ dynamic_stream_name }, num) => (
-              <DynamicStreamViewButton key={num} name={dynamic_stream_name} num={num} />
+            {formValues.dynamicStreams.map(({ dynamicStreamName }, num) => (
+              <DynamicStreamViewButton key={num} name={dynamicStreamName} num={num} />
             ))}
           </div>
         </FlexContainer>

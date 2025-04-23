@@ -112,7 +112,7 @@ export interface BuilderState {
     | "inputs"
     | "components"
     | `dynamic_stream_${number}` /* dynamic stream index */
-    | `generated_stream_${string}` /* stream instance generated from a dynamic stream */
+    | `generated_stream_${number}` /* stream instance generated from a dynamic stream */
     | number /* stream index */;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
@@ -488,7 +488,7 @@ export type BuilderComponentsResolver = BuilderHttpComponentsResolver;
 
 export interface BuilderDynamicStream {
   streamTemplate: Omit<BuilderStream, "name" | "id">;
-  dynamic_stream_name: string;
+  dynamicStreamName: string;
   componentsResolver: BuilderComponentsResolver;
 }
 
@@ -1420,20 +1420,31 @@ function builderStreamToDeclarativeStream(stream: BuilderStream, allStreams: Bui
 }
 
 function builderDynamicStreamToDeclarativeStream(dynamicStream: BuilderDynamicStream): DynamicDeclarativeStream {
-  return {
+  const declarativeDynamicStream: DynamicDeclarativeStream = {
     type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
-    name: dynamicStream.dynamic_stream_name,
+    name: dynamicStream.dynamicStreamName,
     components_resolver: dynamicStream.componentsResolver,
     stream_template: {
       ...builderStreamToDeclarativeStream(
         {
           ...dynamicStream.streamTemplate,
-          name: `${dynamicStream.dynamic_stream_name}_template`,
+          name: `${dynamicStream.dynamicStreamName}_template`,
         } as BuilderStream,
         []
       ),
     },
   };
+
+  // if there isn't a record filter condition, remove the filter component
+  if (
+    !(declarativeDynamicStream.components_resolver as BuilderComponentsResolver).retriever.record_selector.record_filter
+      ?.condition
+  ) {
+    delete (declarativeDynamicStream.components_resolver as BuilderComponentsResolver).retriever.record_selector
+      .record_filter;
+  }
+
+  return declarativeDynamicStream;
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
@@ -1601,7 +1612,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
         schema = JSON.parse(DEFAULT_SCHEMA);
       }
       schema.additionalProperties = true;
-      return [`${dynamicStream.dynamic_stream_name}_template`, schema];
+      return [`${dynamicStream.dynamicStreamName}_template`, schema];
     })
   );
 
@@ -1686,6 +1697,7 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+export type DynamicStreamPathFn = <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${number}.${T}`;
 export type CreationRequesterPathFn = <T extends string>(
   fieldPath: T
 ) => `formValues.streams.${number}.creationRequester.${T}`;
