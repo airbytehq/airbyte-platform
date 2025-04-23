@@ -17974,6 +17974,8 @@ components:
       properties:
         name:
           type: string
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 

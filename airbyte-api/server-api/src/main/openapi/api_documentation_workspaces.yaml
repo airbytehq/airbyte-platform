@@ -1690,6 +1690,8 @@ components:
       properties:
         name:
           type: "string"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     UpdateDeclarativeSourceDefinitionRequest:
@@ -1864,6 +1866,10 @@ components:
             type: "array"
             items:
               type: "string"
+        includeFiles:
+          description: "Whether to move raw files from the source to the destination\
+            \ during the sync."
+          type: "boolean"
         selectedFields:
           description: "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
@@ -2393,6 +2399,21 @@ components:
       title: "Config"
     trello:
       title: null
+    sharepoint-enterprise:
+      properties:
+        credentials:
+          properties:
+            client_id:
+              title: "Client ID"
+              description: "Client ID of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+            client_secret:
+              title: "Client Secret"
+              description: "Client Secret of your Microsoft developer application"
+              airbyte_secret: true
+              type: "string"
+      title: "Microsoft SharePoint Source Spec"
     google-ads:
       properties:
         credentials:
@@ -2712,10 +2733,12 @@ components:
               description: "The client secret of the Airtable developer application."
               airbyte_secret: true
       title: null
+
     OAuthCredentialsConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
       oneOf:
+    
         - title: airtable
           $ref: "#/components/schemas/airtable"
         - title: amazon-ads
@@ -2774,6 +2797,8 @@ components:
           $ref: "#/components/schemas/rd-station-marketing"
         - title: salesforce
           $ref: "#/components/schemas/salesforce"
+        - title: sharepoint-enterprise
+          $ref: "#/components/schemas/sharepoint-enterprise"
         - title: shopify
           $ref: "#/components/schemas/shopify"
         - title: slack
@@ -2798,12 +2823,15 @@ components:
           $ref: "#/components/schemas/zendesk-support"
         - title: zendesk-talk
           $ref: "#/components/schemas/zendesk-talk"
+
     SourceConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
+
     DestinationConfiguration:
       description: The values required to configure the destination.
       example: { user: "charles" }
+
     InitiateOauthRequest:
       title: Root Type for initiate-oauth-post-body
       description: POST body for initiating OAuth via the public API
@@ -2877,6 +2905,7 @@ components:
         - pinterest
         - rd-station-marketing
         - salesforce
+        - sharepoint-enterprise
         - slack
         - smartsheets
         - snapchat-marketing
