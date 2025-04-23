@@ -3,13 +3,12 @@ import capitalize from "lodash/capitalize";
 import isBoolean from "lodash/isBoolean";
 import { DefaultValues, FieldValues, get } from "react-hook-form";
 
-export { schemaValidator, overrideAjvErrorMessages } from "./schemaValidation";
-
 export class AirbyteJsonSchemaExtention implements JSONSchemaExtension {
   [k: string]: unknown;
   multiline?: boolean;
   patternDescriptor?: string;
   linkable?: boolean;
+  deprecated?: boolean;
 }
 
 export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExtention>, boolean>;
@@ -18,12 +17,31 @@ export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExte
  * Extracts default values from the JSON schema
  */
 export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: AirbyteJsonSchema): DefaultValues<T> => {
-  if (schema.default) {
+  if (schema.default !== undefined) {
     return schema.default as DefaultValues<T>;
   }
 
   if (schema.type === "array") {
     return [] as DefaultValues<T>;
+  }
+
+  if (schema.type === "string") {
+    if (schema.enum && Array.isArray(schema.enum) && schema.enum.length >= 1) {
+      return schema.enum[0] as DefaultValues<T>;
+    }
+
+    return "" as unknown as DefaultValues<T>;
+  }
+
+  if (schema.type === "number" || schema.type === "integer") {
+    return null as unknown as DefaultValues<T>;
+  }
+
+  if (schema.oneOf || schema.anyOf) {
+    const firstOptionSchema = (schema.oneOf ?? schema.anyOf)![0];
+    if (firstOptionSchema && !isBoolean(firstOptionSchema)) {
+      return extractDefaultValuesFromSchema(firstOptionSchema);
+    }
   }
 
   if (schema.type !== "object" && !schema.properties) {
@@ -36,10 +54,14 @@ export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: Ai
   }
   // Iterate through each property in the schema
   Object.entries(schema.properties).forEach(([key, property]) => {
+    if (!schema.required?.includes(key)) {
+      return;
+    }
+
     // ~ declarative_component_schema type handling ~
-    if (key === "type" && !isBoolean(property) && property.enum && Array.isArray(property.enum)) {
-      const [firstEnumValue] = property.enum;
-      defaultValues[key] = firstEnumValue;
+    const declarativeSchemaTypeValue = getDeclarativeSchemaTypeValue(key, property);
+    if (declarativeSchemaTypeValue) {
+      defaultValues[key] = declarativeSchemaTypeValue;
       return;
     }
 
@@ -49,12 +71,28 @@ export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: Ai
     }
 
     const nestedDefaultValue = extractDefaultValuesFromSchema(property);
-    if (nestedDefaultValue !== undefined && !isEmptyObject(nestedDefaultValue)) {
+    if (nestedDefaultValue !== undefined && nestedDefaultValue !== null && !isEmptyObject(nestedDefaultValue)) {
       defaultValues[key] = nestedDefaultValue;
     }
   });
 
   return defaultValues as DefaultValues<T>;
+};
+
+export const getDeclarativeSchemaTypeValue = (
+  propertyName: string,
+  property: ExtendedJSONSchema<AirbyteJsonSchemaExtention>
+) => {
+  if (propertyName !== "type") {
+    return undefined;
+  }
+  if (isBoolean(property)) {
+    return undefined;
+  }
+  if (!property.enum || !Array.isArray(property.enum) || property.enum.length !== 1) {
+    return undefined;
+  }
+  return property.enum[0];
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -70,20 +108,28 @@ export const verifyArrayItems = (
   items:
     | ExtendedJSONSchema<AirbyteJsonSchemaExtention>
     | ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>
-    | undefined
+    | undefined,
+  path: string
 ) => {
   if (!items) {
-    throw new Error("The items field of an array property must be defined.");
+    throw new Error(`The items field of the array property at path ${path} must be defined.`);
   }
   if (Array.isArray(items)) {
-    throw new Error("The items field of an array property must not be an array.");
+    throw new Error(`The items field of the array property at path ${path} must not be an array.`);
   }
   if (isBoolean(items)) {
-    throw new Error("The items field of an array property must not be a boolean.");
+    throw new Error(`The items field of the array property at path ${path} must not be a boolean.`);
   }
   items = items as AirbyteJsonSchema;
-  if (items.type !== "object" && items.type !== "string") {
-    throw new Error(`Unsupported array item type: ${items.type}`);
+  if (
+    items.type !== "object" &&
+    items.type !== "string" &&
+    items.type !== "integer" &&
+    items.type !== "number" &&
+    !items.oneOf &&
+    !items.anyOf
+  ) {
+    throw new Error(`Unsupported array item type: ${items.type} at path ${path}`);
   }
   return items;
 };
@@ -92,7 +138,7 @@ export const getSelectedOptionSchema = (
   optionSchemas: ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>,
   value: unknown
 ) => {
-  if (!value || typeof value !== "object") {
+  if (value === undefined) {
     return undefined;
   }
 
@@ -100,6 +146,36 @@ export const getSelectedOptionSchema = (
     if (isBoolean(optionSchema)) {
       return false;
     }
+
+    if (value === null) {
+      // treat null as empty value for number and integer types
+      if (optionSchema.type === "number" || optionSchema.type === "integer") {
+        return true;
+      }
+      return optionSchema.type === "null";
+    }
+
+    if (value === "") {
+      if (optionSchema.type === "string") {
+        return true;
+      }
+      return false;
+    }
+
+    if (typeof value === "object" && !("type" in value)) {
+      return optionSchema.type === "object";
+    }
+
+    if (typeof value !== "object") {
+      if (typeof value === "number" && (optionSchema.type === "integer" || optionSchema.type === "number")) {
+        return true;
+      }
+      if (optionSchema.type === typeof value) {
+        return true;
+      }
+      return false;
+    }
+
     if (!optionSchema.properties) {
       return false;
     }
@@ -126,7 +202,12 @@ export const getSelectedOptionSchema = (
   }) as AirbyteJsonSchema | undefined;
 };
 
-export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: FieldValues): AirbyteJsonSchema => {
+export const getSchemaAtPath = (
+  path: string,
+  schema: AirbyteJsonSchema,
+  data: FieldValues,
+  extractMultiOptionSchema = false
+): AirbyteJsonSchema => {
   if (!path) {
     return schema;
   }
@@ -138,12 +219,12 @@ export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: F
   for (const part of pathParts) {
     if (!Number.isNaN(Number(part)) && currentProperty.type === "array" && currentProperty.items) {
       // array path
-      currentProperty = verifyArrayItems(currentProperty.items);
+      currentProperty = verifyArrayItems(currentProperty.items, currentPath);
       // Don't update currentPath here - will be updated at the end of the loop
     } else {
       let nextProperty: ExtendedJSONSchema<AirbyteJsonSchemaExtention>;
       const optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;
-      if (optionSchemas) {
+      if (optionSchemas && !currentProperty.properties) {
         // oneOf/anyOf path
         const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath));
         if (!selectedOption) {
@@ -172,6 +253,17 @@ export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: F
     }
     // Always add the part to the currentPath - whether it's an array index or a property name
     currentPath = `${currentPath ? `${currentPath}.` : ""}${part}`;
+  }
+
+  if (extractMultiOptionSchema && (currentProperty.oneOf || currentProperty.anyOf)) {
+    const optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;
+    if (!optionSchemas) {
+      return currentProperty;
+    }
+    const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath));
+    if (selectedOption) {
+      return selectedOption;
+    }
   }
 
   return currentProperty;
@@ -224,8 +316,19 @@ export const resolveRefs = <T>(obj: T, root?: unknown, visitedRefs: Set<string> 
       return obj;
     }
 
+    // Keep keys from the original object if they overlap with those in the resolved target,
+    // as this is the only way to override titles and descriptions for $ref'd schemas.
+    const resolvedTarget = resolveRefs(target, rootObj, visitedRefs);
+    const { $ref, ...withoutRef } = obj;
+    const resolvedObj: Record<string, unknown> = { ...withoutRef };
+    Object.entries(resolvedTarget).forEach(([key, value]) => {
+      if (resolvedObj[key] === undefined) {
+        resolvedObj[key] = value;
+      }
+    });
+
     // Resolve the target with the updated visited references set
-    return resolveRefs(target, rootObj, visitedRefs) as T;
+    return resolvedObj as T;
   }
 
   const result = {} as Record<string, unknown>;

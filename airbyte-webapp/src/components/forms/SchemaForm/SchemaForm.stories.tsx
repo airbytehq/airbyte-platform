@@ -11,6 +11,7 @@ import { NotificationService } from "hooks/services/Notification";
 import { SchemaForm } from "./SchemaForm";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { SchemaFormRemainingFields } from "./SchemaFormRemainingFields";
+import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 import { FormControl } from "../FormControl";
 import { FormSubmissionButtons } from "../FormSubmissionButtons";
 
@@ -47,7 +48,7 @@ const schema = {
     name: {
       type: "string",
       title: "Name",
-      minLength: 2,
+      default: "John Doe",
       multiline: true,
       description: "Enter your first name",
     },
@@ -58,7 +59,7 @@ const schema = {
         type: "string",
       },
     },
-    age: { type: "integer", title: "Age", minimum: 0, default: "23" },
+    age: { type: "integer", title: "Age", minimum: 0, default: 23 },
     ageGroup: {
       type: "string",
       title: "Age Group",
@@ -123,6 +124,7 @@ const schema = {
         },
         {
           title: "SMS",
+          deprecated: true,
           properties: {
             type: {
               type: "string",
@@ -137,6 +139,7 @@ const schema = {
     friends: {
       type: "array",
       title: "Friends",
+      maxItems: 3,
       items: {
         type: "object",
         title: "Friend",
@@ -152,7 +155,7 @@ const schema = {
       },
     },
   },
-  required: ["favoriteColors"],
+  required: ["favoriteColors", "name"],
   additionalProperties: false,
 } as const;
 
@@ -260,9 +263,115 @@ export const RefHandling = () => {
               },
               required: ["username", "password"],
             },
+            request_parameters: {
+              title: "Query Parameters",
+              description:
+                "Specifies the query parameters that should be set on an outgoing HTTP request given the inputs.",
+              anyOf: [
+                {
+                  type: "string",
+                  title: "Interpolated Value",
+                },
+                {
+                  type: "number",
+                  title: "Interpolated Number",
+                },
+                {
+                  type: "object",
+                  title: "Key/Value Pairs",
+                  // properties: {
+                  //   id: { type: "string", title: "ID" },
+                  //   name: { type: "string", title: "Name" },
+                  // },
+                  // additionalProperties: {
+                  //   anyOf: [{ type: "string" }, { $ref: "#/definitions/QueryProperties" }],
+                  // },
+                },
+              ],
+            },
           },
           required: ["name", "url"],
           additionalProperties: false,
+        },
+      },
+    },
+    definitions: {
+      QueryProperties: {
+        title: "Query Properties",
+        description:
+          "For APIs that require explicit specification of the properties to query for, this component specifies which property fields and how they are supplied to outbound requests.",
+        type: "object",
+        required: ["type", "property_list"],
+        properties: {
+          type: {
+            type: "string",
+            enum: ["QueryProperties"],
+          },
+          property_list: {
+            title: "Property List",
+            description:
+              "The set of properties that will be queried for in the outbound request. This can either be statically defined or dynamic based on an API endpoint",
+            anyOf: [
+              {
+                type: "array",
+                items: {
+                  type: "string",
+                },
+              },
+              {
+                $ref: "#/definitions/PropertiesFromEndpoint",
+              },
+            ],
+          },
+          always_include_properties: {
+            title: "Always Include Properties",
+            description:
+              "The list of properties that should be included in every set of properties when multiple chunks of properties are being requested.",
+            type: "array",
+            items: {
+              type: "string",
+            },
+          },
+          property_chunking: {
+            title: "Property Chunking",
+            description:
+              "Defines how query properties will be grouped into smaller sets for APIs with limitations on the number of properties fetched per API request.",
+            $ref: "#/definitions/PropertyChunking",
+          },
+        },
+      },
+      PropertiesFromEndpoint: {
+        title: "Properties from Endpoint",
+        description:
+          "Defines the behavior for fetching the list of properties from an API that will be loaded into the requests to extract records.",
+        type: "object",
+        required: ["type", "property_field_path", "retriever"],
+        properties: {
+          type: {
+            type: "string",
+            enum: ["PropertiesFromEndpoint"],
+          },
+          property_field_path: {
+            description: "Describes the path to the field that should be extracted",
+            type: "array",
+            items: {
+              type: "string",
+            },
+            examples: [["name"]],
+            interpolation_context: ["config", "parameters"],
+          },
+          // retriever: {
+          //   description:
+          //     "Requester component that describes how to fetch the properties to query from a remote API endpoint.",
+          //   anyOf: [
+          //     {
+          //       $ref: "#/definitions/CustomRetriever",
+          //     },
+          //     {
+          //       $ref: "#/definitions/SimpleRetriever",
+          //     },
+          //   ],
+          // },
         },
       },
     },
@@ -301,10 +410,77 @@ export const RefHandling = () => {
           <Card>
             <SchemaFormControl path="streams" />
             <ShowFormValues />
+            <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
           </Card>
         </SchemaForm>
       </ConfirmationModalService>
     </NotificationService>
+  );
+};
+
+export const DeclarativeComponentSchema = () => {
+  return (
+    <SchemaForm
+      schema={declarativeComponentSchema}
+      onSubmit={async (values) => {
+        console.log("submitted values", values);
+      }}
+      initialValues={{
+        type: "DeclarativeSource",
+        check: {
+          streams: [],
+        },
+        version: "1.0.0",
+        streams: [
+          {
+            name: "pokemon",
+            type: "DeclarativeStream",
+            retriever: {
+              type: "SimpleRetriever",
+              decoder: {
+                type: "JsonDecoder",
+              },
+              paginator: {
+                type: "DefaultPaginator",
+                page_size_option: {
+                  type: "RequestOption",
+                  field_name: "limit",
+                  inject_into: "request_parameter",
+                },
+                page_token_option: {
+                  type: "RequestOption",
+                  field_name: "offset",
+                  inject_into: "request_parameter",
+                },
+                pagination_strategy: {
+                  type: "OffsetIncrement",
+                  page_size: 10,
+                },
+              },
+              requester: {
+                type: "HttpRequester",
+                url_base: "https://pokeapi.co/api/v2/",
+                path: "pokemon",
+                http_method: "GET",
+              },
+              record_selector: {
+                type: "RecordSelector",
+                extractor: {
+                  type: "DpathExtractor",
+                  field_path: ["results"],
+                },
+              },
+            },
+          },
+        ],
+      }}
+    >
+      <Card>
+        <SchemaFormControl path="streams.0" />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+        <ShowFormValues />
+      </Card>
+    </SchemaForm>
   );
 };
 
