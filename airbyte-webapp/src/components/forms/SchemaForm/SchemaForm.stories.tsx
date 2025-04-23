@@ -4,13 +4,13 @@ import { useWatch } from "react-hook-form";
 
 import { formatJson } from "components/connectorBuilder/utils";
 import { Card } from "components/ui/Card";
-import { FlexContainer } from "components/ui/Flex";
 
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { NotificationService } from "hooks/services/Notification";
 
 import { SchemaForm } from "./SchemaForm";
 import { SchemaFormControl } from "./SchemaFormControl";
+import { SchemaFormRemainingFields } from "./SchemaFormRemainingFields";
 import { FormControl } from "../FormControl";
 import { FormSubmissionButtons } from "../FormSubmissionButtons";
 
@@ -160,6 +160,9 @@ const onSubmit = async (values: FromSchema<typeof schema>) => {
   console.log(values);
 };
 
+/**
+ * Default story showing standard behavior with auto-generated form fields
+ */
 export const Default = () => (
   <Card>
     <SchemaForm schema={schema} onSubmit={onSubmit}>
@@ -170,17 +173,38 @@ export const Default = () => (
   </Card>
 );
 
-export const WithSchemaFormControl = () => (
+/**
+ * Shows how SchemaFormRemainingFields can be used to render fields that haven't been explicitly rendered
+ */
+export const RemainingFields = () => (
   <Card>
     <SchemaForm schema={schema} onSubmit={onSubmit}>
-      <SchemaFormControl path="name" />
-      <SchemaFormControl path="age" />
+      <div style={{ marginBottom: "20px" }}>
+        <h3>Explicitly Rendered Fields:</h3>
+        <SchemaFormControl path="name" />
+        <SchemaFormControl path="age" />
+        <SchemaFormControl path="friends" />
+      </div>
+
+      <div style={{ borderTop: "1px solid #ddd", paddingTop: "20px" }}>
+        <h3>Remaining Unrendered Fields:</h3>
+        {/* 
+          Fields are registered synchronously during render,
+          so there's no need for a delay to prevent flashing content
+        */}
+        <SchemaFormRemainingFields />
+      </div>
+
       <FormSubmissionButtons />
+      <ShowFormValues />
     </SchemaForm>
   </Card>
 );
 
-export const WithOverride = () => (
+/**
+ * Shows how to override specific fields with custom components
+ */
+export const OverrideByPath = () => (
   <Card>
     <SchemaForm schema={schema} onSubmit={onSubmit}>
       <SchemaFormControl
@@ -193,58 +217,30 @@ export const WithOverride = () => (
               optional
             />
           ),
+          // Example of hiding a field by setting it to null
+          ageGroup: null,
         }}
       />
       <FormSubmissionButtons />
+      <ShowFormValues />
     </SchemaForm>
   </Card>
 );
 
-export const SeparateCards = () => (
-  <SchemaForm schema={schema} onSubmit={onSubmit}>
-    <FlexContainer direction="column" gap="xl">
-      <Card>
-        <SchemaFormControl path="name" />
-        <SchemaFormControl path="age" />
-        <SchemaFormControl path="friends" />
-      </Card>
-      <Card>
-        <SchemaFormControl
-          path="address"
-          overrideByPath={{
-            "address.deliveryInstructions": null,
-          }}
-        />
-      </Card>
-      <Card>
-        <SchemaFormControl
-          path="address.deliveryInstructions"
-          overrideByPath={{
-            "address.deliveryInstructions.pickUp": (
-              <FormControl
-                name="address.deliveryInstructions.pickUp"
-                label="Pick Up (Custom)"
-                fieldType="input"
-                optional
-              />
-            ),
-          }}
-        />
-      </Card>
-      <Card>
-        <FormSubmissionButtons />
-      </Card>
-      <ShowFormValues />
-    </FlexContainer>
-  </SchemaForm>
-);
-
-export const Streams = () => {
-  const streamsSchema = {
+/**
+ * Shows how fields can be linked via reference handling
+ */
+export const RefHandling = () => {
+  const refSchema = {
     type: "object",
     properties: {
       definitions: {
         type: "object",
+        properties: {
+          shared: {
+            type: "object",
+          },
+        },
       },
       streams: {
         type: "array",
@@ -256,7 +252,6 @@ export const Streams = () => {
             url: { type: "string", linkable: true, title: "URL", description: "The URL of the stream" },
             authentication: {
               type: "object",
-              // title: "Authentication",
               description: "The authentication details for the stream",
               linkable: true,
               properties: {
@@ -279,48 +274,33 @@ export const Streams = () => {
     <NotificationService>
       <ConfirmationModalService>
         <SchemaForm
-          schema={streamsSchema}
-          onSubmit={async (values: FromSchema<typeof streamsSchema>) => console.log(values)}
-          refTargetPath="definitions.shared"
+          schema={refSchema}
+          onSubmit={async (values: FromSchema<typeof refSchema>) => console.log(values)}
+          refTargetPath="shared"
           initialValues={{
-            // shared: {
-            //   authentication: {
-            //     username: "user",
-            //     password: "pass",
-            //   },
-            //   url: "https://shared.com",
-            // },
             streams: [
               {
                 name: "Users",
                 url: "https://users.com",
                 authentication: {
-                  username: "users username",
-                  password: "users password",
+                  username: "users_username",
+                  password: "users_password",
                 },
               },
               {
                 name: "Products",
                 url: "https://products.com",
                 authentication: {
-                  username: "products username",
-                  password: "products password",
-                },
-              },
-              {
-                name: "Orders",
-                url: "https://orders.com",
-                authentication: {
-                  username: "orders username",
-                  password: "orders password",
+                  username: "products_username",
+                  password: "products_password",
                 },
               },
             ],
           }}
         >
           <Card>
+            <SchemaFormControl path="streams" />
             <ShowFormValues />
-            <SchemaFormControl />
           </Card>
         </SchemaForm>
       </ConfirmationModalService>
@@ -328,172 +308,7 @@ export const Streams = () => {
   );
 };
 
-export const MultipleRequesters = () => {
-  const streamsSchema = {
-    type: "object",
-    properties: {
-      shared: {
-        type: "object",
-      },
-      streams: {
-        type: "array",
-        title: "Streams",
-        items: {
-          type: "object",
-          properties: {
-            name: { type: "string", title: "Name", description: "The name of the stream" },
-            url: { type: "string", linkable: true, title: "URL", description: "The URL of the stream" },
-            creationRequester: {
-              type: "object",
-              title: "Creation Requester",
-              description: "The creation requester of the stream",
-              properties: {
-                authentication: {
-                  type: "object",
-                  title: "Authentication",
-                  description: "The authentication details for the stream",
-                  linkable: true,
-                  properties: {
-                    username: { type: "string", title: "Username" },
-                    password: { type: "string", title: "Password" },
-                  },
-                },
-              },
-              required: ["authentication"],
-            },
-            pollingRequester: {
-              type: "object",
-              title: "Polling Requester",
-              description: "The polling requester of the stream",
-              properties: {
-                authentication: {
-                  type: "object",
-                  title: "Authentication",
-                  description: "The authentication details for the stream",
-                  linkable: true,
-                  properties: {
-                    username: { type: "string", title: "Username" },
-                    password: { type: "string", title: "Password" },
-                  },
-                },
-              },
-              required: ["authentication"],
-            },
-            downloadRequester: {
-              type: "object",
-              title: "Download Requester",
-              description: "The download requester of the stream",
-              properties: {
-                authentication: {
-                  type: "object",
-                  title: "Authentication",
-                  description: "The authentication details for the stream",
-                  linkable: true,
-                  properties: {
-                    username: { type: "string", title: "Username" },
-                    password: { type: "string", title: "Password" },
-                  },
-                },
-              },
-              required: ["authentication"],
-            },
-          },
-          required: ["name", "url", "creationRequester", "pollingRequester", "downloadRequester"],
-          additionalProperties: false,
-        },
-      },
-    },
-    additionalProperties: false,
-    required: ["streams"],
-  } as const;
-
-  return (
-    <SchemaForm
-      schema={streamsSchema}
-      onSubmit={async (values: FromSchema<typeof streamsSchema>) => console.log(values)}
-      refTargetPath="shared"
-      initialValues={{
-        streams: [
-          {
-            name: "Users",
-            url: "https://users.com",
-            creationRequester: {
-              authentication: {
-                username: "users creation username",
-                password: "users creation password",
-              },
-            },
-            pollingRequester: {
-              authentication: {
-                username: "users polling username",
-                password: "users polling password",
-              },
-            },
-            downloadRequester: {
-              authentication: {
-                username: "users download username",
-                password: "users download password",
-              },
-            },
-          },
-          {
-            name: "Products",
-            url: "https://products.com",
-            creationRequester: {
-              authentication: {
-                username: "products creation username",
-                password: "products creation password",
-              },
-            },
-            pollingRequester: {
-              authentication: {
-                username: "products polling username",
-                password: "products polling password",
-              },
-            },
-            downloadRequester: {
-              authentication: {
-                username: "products download username",
-                password: "products download password",
-              },
-            },
-          },
-          {
-            name: "Orders",
-            url: "https://orders.com",
-            creationRequester: {
-              authentication: {
-                username: "orders creation username",
-                password: "orders creation password",
-              },
-            },
-            pollingRequester: {
-              authentication: {
-                username: "orders polling username",
-                password: "orders polling password",
-              },
-            },
-            downloadRequester: {
-              authentication: {
-                username: "orders download username",
-                password: "orders download password",
-              },
-            },
-          },
-        ],
-      }}
-    >
-      <Card>
-        <ShowFormValues />
-        <SchemaFormControl />
-      </Card>
-    </SchemaForm>
-  );
-};
-
 const ShowFormValues = () => {
   const values = useWatch();
-  // const { errors } = useFormState();
-  // console.log(errors);
   return <pre>{formatJson(values)}</pre>;
 };

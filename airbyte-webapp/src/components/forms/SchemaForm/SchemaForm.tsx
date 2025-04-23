@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import {
   DefaultValues,
   FieldError,
@@ -96,6 +96,11 @@ interface SchemaFormContextValue {
   schemaAtPath: (path: string) => AirbyteJsonSchema;
   errorAtPath: (path: string) => FieldError | undefined;
   isRequiredField: (path: string) => boolean;
+
+  // Rendered paths tracking
+  renderedPathsRef: React.MutableRefObject<Set<string>>;
+  registerRenderedPath: (path: string) => void;
+  isPathRendered: (path: string) => boolean;
 }
 const SchemaFormContext = createContext<SchemaFormContextValue | undefined>(undefined);
 export const useSchemaForm = () => {
@@ -112,6 +117,9 @@ interface SchemaFormProviderProps {
 const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({ children, schema }) => {
   const { getValues } = useFormContext();
   const { errors } = useFormState();
+
+  // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
+  const renderedPathsRef = useRef<Set<string>>(new Set<string>());
 
   // Setup schema access
   const schemaAtPath = useCallback(
@@ -158,6 +166,30 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
     [schema, getValues, schemaAtPath]
   );
 
+  // Update rendered paths tracking functions to use ref
+  const registerRenderedPath = useCallback((path: string) => {
+    if (path) {
+      renderedPathsRef.current.add(path);
+    }
+  }, []);
+
+  const isPathRendered = useCallback((path: string): boolean => {
+    if (renderedPathsRef.current.has(path)) {
+      return true;
+    }
+
+    // Check if any parent path has been rendered
+    const pathParts = path.split(".");
+    for (let i = 1; i < pathParts.length; i++) {
+      const ancestorPath = pathParts.slice(0, i).join(".");
+      if (renderedPathsRef.current.has(ancestorPath)) {
+        return true;
+      }
+    }
+
+    return false;
+  }, []);
+
   return (
     <SchemaFormContext.Provider
       value={{
@@ -166,6 +198,11 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
         schemaAtPath,
         errorAtPath,
         isRequiredField,
+
+        // Rendered paths tracking
+        renderedPathsRef,
+        registerRenderedPath,
+        isPathRendered,
       }}
     >
       {children}
