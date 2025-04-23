@@ -73,6 +73,7 @@
   "sidebar.darkMode": "Dark mode",
   "sidebar.beta": "Beta",
   "sidebar.defaultUsername": "User",
+  "sidebar.workspaceAndOrg": "{workspace} | {organization}",
 
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",
