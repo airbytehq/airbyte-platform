@@ -9,8 +9,11 @@
   padding-bottom: variables.$spacing-xl;
 }
 
-.listBoxError {
-  & button {
-    border: 1px solid colors.$red-200;
-  }
+.valueControlContainer {
+  flex-grow: 1;
+  min-width: 250px;
+}
+
+.keyInputContainer {
+  flex-shrink: 0;
 }

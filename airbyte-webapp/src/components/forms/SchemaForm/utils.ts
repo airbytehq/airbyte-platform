@@ -1,5 +1,4 @@
 import { ExtendedJSONSchema, JSONSchemaExtension } from "json-schema-to-ts/lib/types/definitions";
-import capitalize from "lodash/capitalize";
 import isBoolean from "lodash/isBoolean";
 import { DefaultValues, FieldValues, get } from "react-hook-form";
 
@@ -54,10 +53,6 @@ export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: Ai
   }
   // Iterate through each property in the schema
   Object.entries(schema.properties).forEach(([key, property]) => {
-    if (!schema.required?.includes(key)) {
-      return;
-    }
-
     // ~ declarative_component_schema type handling ~
     const declarativeSchemaTypeValue = getDeclarativeSchemaTypeValue(key, property);
     if (declarativeSchemaTypeValue) {
@@ -67,6 +62,10 @@ export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: Ai
 
     if (isBoolean(property)) {
       defaultValues[key] = property;
+      return;
+    }
+
+    if (property.type === "object" && !schema.required?.includes(key)) {
       return;
     }
 
@@ -137,7 +136,7 @@ export const verifyArrayItems = (
 export const getSelectedOptionSchema = (
   optionSchemas: ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>,
   value: unknown
-) => {
+): AirbyteJsonSchema | undefined => {
   if (value === undefined) {
     return undefined;
   }
@@ -145,6 +144,10 @@ export const getSelectedOptionSchema = (
   return optionSchemas.find((optionSchema) => {
     if (isBoolean(optionSchema)) {
       return false;
+    }
+
+    if (optionSchema.oneOf || optionSchema.anyOf) {
+      return !!getSelectedOptionSchema((optionSchema.oneOf ?? optionSchema.anyOf)!, value);
     }
 
     if (value === null) {
@@ -177,6 +180,9 @@ export const getSelectedOptionSchema = (
     }
 
     if (!optionSchema.properties) {
+      if (optionSchema.additionalProperties) {
+        return true;
+      }
       return false;
     }
 
@@ -202,12 +208,7 @@ export const getSelectedOptionSchema = (
   }) as AirbyteJsonSchema | undefined;
 };
 
-export const getSchemaAtPath = (
-  path: string,
-  schema: AirbyteJsonSchema,
-  data: FieldValues,
-  extractMultiOptionSchema = false
-): AirbyteJsonSchema => {
+export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: FieldValues): AirbyteJsonSchema => {
   if (!path) {
     return schema;
   }
@@ -224,6 +225,7 @@ export const getSchemaAtPath = (
     } else {
       let nextProperty: ExtendedJSONSchema<AirbyteJsonSchemaExtention>;
       const optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;
+
       if (optionSchemas && !currentProperty.properties) {
         // oneOf/anyOf path
         const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath));
@@ -231,15 +233,40 @@ export const getSchemaAtPath = (
           throw new Error(`No matching schema found for path: ${currentPath}`);
         }
         if (!selectedOption.properties) {
-          throw new Error(`Invalid schema path: ${currentPath}. All oneOf options must have properties.`);
+          // debugger;
+          if (selectedOption.additionalProperties && !isBoolean(selectedOption.additionalProperties)) {
+            nextProperty = selectedOption.additionalProperties;
+          } else {
+            throw new Error(
+              `Invalid schema path: ${currentPath}. All oneOf/anyOf options must have properties or additionalProperties object.`
+            );
+          }
+        } else {
+          nextProperty = selectedOption.properties[part];
         }
-        nextProperty = selectedOption.properties[part];
-      } else {
-        // object path
-        if (!currentProperty.properties) {
+      } else if (!currentProperty.properties) {
+        // Check if we have additionalProperties defined as an object schema
+        if (
+          typeof currentProperty.additionalProperties === "object" &&
+          !Array.isArray(currentProperty.additionalProperties)
+        ) {
+          // For arbitrary keys, use the additionalProperties schema
+          nextProperty = currentProperty.additionalProperties;
+        } else {
           throw new Error(`Invalid schema path: ${path}. No properties found at subpath ${currentPath}`);
         }
+      } else {
+        // First try to find the property in the defined properties
         nextProperty = currentProperty.properties[part];
+
+        // If property not found but additionalProperties is defined, use that schema
+        if (
+          !nextProperty &&
+          typeof currentProperty.additionalProperties === "object" &&
+          !Array.isArray(currentProperty.additionalProperties)
+        ) {
+          nextProperty = currentProperty.additionalProperties;
+        }
       }
 
       if (!nextProperty) {
@@ -253,17 +280,6 @@ export const getSchemaAtPath = (
     }
     // Always add the part to the currentPath - whether it's an array index or a property name
     currentPath = `${currentPath ? `${currentPath}.` : ""}${part}`;
-  }
-
-  if (extractMultiOptionSchema && (currentProperty.oneOf || currentProperty.anyOf)) {
-    const optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;
-    if (!optionSchemas) {
-      return currentProperty;
-    }
-    const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath));
-    if (selectedOption) {
-      return selectedOption;
-    }
   }
 
   return currentProperty;
@@ -343,17 +359,26 @@ export const resolveRefs = <T>(obj: T, root?: unknown, visitedRefs: Set<string> 
 };
 
 export const displayName = (path: string, title?: string) => {
-  if (title) {
+  if (title !== undefined) {
     return title;
   }
 
   const fieldName = path.split(".").at(-1);
-  // If the field name is not a number, capitalize and display it
+
+  if (fieldName === undefined) {
+    return undefined;
+  }
+
+  // If the field name is not a number, format and display it
   if (Number.isNaN(Number(fieldName))) {
-    return capitalize(fieldName);
+    return fieldName.split("_").map(capitalizeFirstLetter).join(" ");
   }
 
   // If the field name is a number, it is likely an array index
   // and we don't need to display that as a control label
   return undefined;
+};
+
+const capitalizeFirstLetter = (str: string) => {
+  return str?.slice(0, 1).toUpperCase() + str?.slice(1);
 };

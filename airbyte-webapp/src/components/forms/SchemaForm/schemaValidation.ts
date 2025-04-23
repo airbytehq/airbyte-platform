@@ -237,14 +237,16 @@ const convertBaseObjectSchema = (
     invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
   });
 
-  // If additionalProperties is explicitly true or an object schema
-  if (
-    schema.additionalProperties === true ||
-    (typeof schema.additionalProperties === "object" && !Array.isArray(schema.additionalProperties))
-  ) {
-    // Allow additional properties
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    objectSchema = objectSchema.catchall(z.any()) as any;
+  // Handle additionalProperties
+  if (schema.additionalProperties) {
+    if (schema.additionalProperties === true) {
+      // Allow any additional properties
+      objectSchema = objectSchema.catchall(z.any());
+    } else if (typeof schema.additionalProperties === "object" && !Array.isArray(schema.additionalProperties)) {
+      // Use the additionalProperties schema for validation of arbitrary fields
+      const additionalPropSchema = convertJsonSchemaToZodSchema(schema.additionalProperties, formatMessage, true);
+      objectSchema = objectSchema.catchall(additionalPropSchema);
+    }
   }
 
   return objectSchema;

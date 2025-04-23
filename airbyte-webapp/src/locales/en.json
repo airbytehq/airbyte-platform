@@ -229,6 +229,9 @@
   "form.minItems.error": "Must have at least {min} items",
   "form.maxItems.error": "Must have less than or equal to {max} items",
   "form.multiOptionSelect.error": "Must select an option",
+  "form.additionalProperties.key": "Key",
+  "form.additionalProperties.value": "Value",
+  "form.additionalProperties.duplicateKey": "Must not duplicate keys",
 
   "setupForm.check.loading": "Checking the security of your installation…",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",
