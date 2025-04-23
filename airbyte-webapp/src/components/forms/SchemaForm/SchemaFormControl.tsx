@@ -27,6 +27,12 @@ interface SchemaFormControlProps {
    * Map of property paths to custom renderers, allowing override of specific fields.
    */
   overrideByPath?: OverrideByPath;
+
+  /**
+   * If true, the component will not register the path as rendered.
+   * Used internally by SchemaFormRemainingFields to prevent duplicate registration.
+   */
+  skipRenderedPathRegistration?: boolean;
 }
 
 type OverrideByPath = Record<string, ReactElement | null>;
@@ -43,8 +49,17 @@ interface BaseControlProps {
  * Component that renders form controls based on JSON schema.
  * It can render a single field or recursively render nested objects.
  */
-export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaFormControlProps) => {
-  const { schemaAtPath, isRequiredField } = useSchemaForm();
+export const SchemaFormControl = ({
+  path = "",
+  overrideByPath = {},
+  skipRenderedPathRegistration = false,
+}: SchemaFormControlProps) => {
+  const { schemaAtPath, isRequiredField, registerRenderedPath } = useSchemaForm();
+
+  // Register this path synchronously during render instead of in an effect
+  if (!skipRenderedPathRegistration && path) {
+    registerRenderedPath(path);
+  }
 
   // Check if there's an override for this path
   if (overrideByPath[path] !== undefined) {
@@ -66,11 +81,23 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
   };
 
   if (targetProperty.oneOf || targetProperty.anyOf) {
-    return <MultiOptionControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+    return (
+      <MultiOptionControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   if (targetProperty.type === "object") {
-    return <ObjectControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+    return (
+      <ObjectControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   if (targetProperty.type === "boolean") {
@@ -101,7 +128,13 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
   if (targetProperty.type === "array") {
     const items = verifyArrayItems(targetProperty.items);
     if (items.type === "object") {
-      return <ArrayOfObjectsControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+      return (
+        <ArrayOfObjectsControl
+          baseProps={baseProps}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+        />
+      );
     }
     if (items.type === "string") {
       return <FormControl {...baseProps} fieldType="array" />;
@@ -114,16 +147,24 @@ export const SchemaFormControl = ({ path = "", overrideByPath = {} }: SchemaForm
 const ObjectControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: OverrideByPath;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const { errorAtPath, schemaAtPath } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name);
 
   const objectProperty = schemaAtPath(baseProps.name);
   if (objectProperty.oneOf || objectProperty.anyOf) {
-    return <MultiOptionControl baseProps={baseProps} overrideByPath={overrideByPath} />;
+    return (
+      <MultiOptionControl
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   // If no properties, nothing to render
@@ -135,7 +176,14 @@ const ObjectControl = ({
     <>
       {Object.keys(objectProperty.properties).map((propertyName) => {
         const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
-        return <SchemaFormControl key={fullPath} path={fullPath} overrideByPath={overrideByPath} />;
+        return (
+          <SchemaFormControl
+            key={fullPath}
+            path={fullPath}
+            overrideByPath={overrideByPath}
+            skipRenderedPathRegistration={skipRenderedPathRegistration}
+          />
+        );
       })}
     </>
   );
@@ -167,9 +215,11 @@ const ObjectControl = ({
 const MultiOptionControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: OverrideByPath;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const value: unknown = useWatch({ name: baseProps.name });
   const { setValue, clearErrors } = useFormContext();
@@ -198,7 +248,14 @@ const MultiOptionControl = ({
       }
 
       const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
-      return <SchemaFormControl key={fullPath} path={fullPath} overrideByPath={overrideByPath} />;
+      return (
+        <SchemaFormControl
+          key={fullPath}
+          path={fullPath}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+        />
+      );
     });
   };
 
@@ -244,9 +301,11 @@ const MultiOptionControl = ({
 const ArrayOfObjectsControl = ({
   baseProps,
   overrideByPath = {},
+  skipRenderedPathRegistration = false,
 }: {
   baseProps: BaseControlProps;
   overrideByPath?: Record<string, ReactElement | null>;
+  skipRenderedPathRegistration?: boolean;
 }) => {
   const { schemaAtPath, errorAtPath } = useSchemaForm();
   const { fields: items, append, remove } = useFieldArray({ name: baseProps.name });
@@ -265,7 +324,11 @@ const ArrayOfObjectsControl = ({
     >
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
-          <SchemaFormControl path={`${baseProps.name}.${index}`} overrideByPath={overrideByPath} />
+          <SchemaFormControl
+            path={`${baseProps.name}.${index}`}
+            overrideByPath={overrideByPath}
+            skipRenderedPathRegistration={skipRenderedPathRegistration}
+          />
           <RemoveButton className={styles.removeButton} onClick={() => remove(index)} />
         </FlexContainer>
       ))}
