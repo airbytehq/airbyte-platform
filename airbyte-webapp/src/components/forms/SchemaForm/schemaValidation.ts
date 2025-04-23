@@ -1,162 +1,306 @@
-import { ajvResolver } from "@hookform/resolvers/ajv";
-import { JSONSchemaType } from "ajv";
-import { fullFormats } from "ajv-formats/dist/formats";
-import {
-  DeepRequired,
-  FieldError,
-  FieldErrorsImpl,
-  FieldErrors,
-  FieldValues,
-  Merge,
-  ResolverOptions,
-  get,
-} from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import isBoolean from "lodash/isBoolean";
+import { FieldErrors, FieldValues, ResolverOptions, ResolverResult } from "react-hook-form";
+import { IntlShape } from "react-intl";
+import * as z from "zod";
 
-import { NON_I18N_ERROR_TYPE, removeEmptyProperties } from "core/utils/form";
+import { FORM_PATTERN_ERROR } from "core/form/types";
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
+import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
-import {
-  AirbyteJsonSchema,
-  AirbyteJsonSchemaExtention,
-  getSchemaAtPath,
-  getSelectedOptionSchema,
-  hasFields,
-} from "./utils";
+import { AirbyteJsonSchema, getSelectedOptionSchema } from "./utils";
 
+const REQUIRED_ERROR = "form.empty.error";
+const INVALID_TYPE_ERROR = "form.invalid_type.error";
 /**
- * Creates a schema validator with customized error message handling
+ * Recursively converts a JSON schema to a Zod schema with customized error messages.
  */
-export const schemaValidator = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>(
-  schema: JsonSchema
-) => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return async (data: TsSchema, context: any, options: ResolverOptions<TsSchema>) => {
-    // Remove empty properties to avoid validating those
-    removeEmptyProperties(data);
-
-    // Run the standard AJV validation
-    // TODO: resolve schema before validation
-    const ajv = ajvResolver(schema as JSONSchemaType<unknown>, {
-      coerceTypes: true,
-      formats: fullFormats,
-      keywords: Object.keys(new AirbyteJsonSchemaExtention()),
-    });
-    const result = await ajv(data, context, options);
-    const errors = result.errors;
-
-    // If there are no errors, return the result
-    if (!hasFields(errors)) {
-      return result;
+const convertJsonSchemaToZodSchema = (
+  schema: AirbyteJsonSchema,
+  formatMessage: IntlShape["formatMessage"],
+  isRequired: boolean
+): z.ZodTypeAny => {
+  try {
+    // Handle enum values for any schema type
+    if (schema.enum && Array.isArray(schema.enum)) {
+      const enumSchema = z.enum(schema.enum as [string, ...string[]]);
+      if (!isRequired) {
+        return enumSchema.optional();
+      }
+      return enumSchema;
     }
 
-    // Otherwise, customize the error messages
-    await overrideAjvErrorMessages(errors, schema, data, context, options);
+    // Handle oneOf/anyOf as union types with refinement
+    if (!schema.properties && (schema.oneOf || schema.anyOf)) {
+      const optionSchemas = (schema.oneOf || schema.anyOf || []) as AirbyteJsonSchema[];
+      if (optionSchemas.length === 0) {
+        return z.any();
+      }
 
-    return result;
-  };
+      return z.any().superRefine((value, ctx) => {
+        const selectedSchema = getSelectedOptionSchema(optionSchemas, value);
+        if (!selectedSchema) {
+          if (isRequired) {
+            // Add a custom error if no matching schema is found
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: formatMessage({ id: "form.multiOptionSelect.error" }),
+            });
+          }
+          return;
+        }
+
+        // Generate a zod schema for the selected option and apply it to the value
+        const validationSchema = convertJsonSchemaToZodSchema(selectedSchema, formatMessage, isRequired);
+        try {
+          const result = validationSchema.safeParse(value);
+          if (!result.success) {
+            result.error.issues.forEach((issue) => {
+              ctx.addIssue(issue);
+            });
+          }
+        } catch (error) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Validation failed: ${String(error)}`,
+          });
+        }
+      });
+    }
+
+    // For simple schemas, we can build them manually
+    if (schema.type === "string") {
+      // Create a base string schema with custom required error message
+      let zodString = z.string({
+        required_error: formatMessage({ id: REQUIRED_ERROR }),
+        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+      });
+
+      // Add string-specific validations with custom error messages
+      if (schema.minLength) {
+        zodString = zodString.min(schema.minLength, {
+          message: formatMessage({ id: "form.minLength.error" }, { min: schema.minLength }),
+        });
+      }
+      if (schema.maxLength) {
+        zodString = zodString.max(schema.maxLength, {
+          message: formatMessage({ id: "form.maxLength.error" }, { max: schema.maxLength }),
+        });
+      }
+      if (schema.pattern) {
+        zodString = zodString.regex(new RegExp(schema.pattern), {
+          message: formatMessage(
+            { id: FORM_PATTERN_ERROR },
+            { pattern: getPatternDescriptor(schema) ?? schema.pattern }
+          ),
+        });
+      }
+      if (schema.format === "email") {
+        zodString = zodString.email({ message: formatMessage({ id: "form.email.error" }) });
+      }
+      if (schema.format === "uri") {
+        zodString = zodString.url({ message: formatMessage({ id: "form.url.error" }) });
+      }
+
+      if (!isRequired) {
+        return zodString.optional();
+      }
+      return zodString.refine((value) => value !== "", {
+        message: formatMessage({ id: REQUIRED_ERROR }),
+      });
+    } else if (schema.type === "number" || schema.type === "integer") {
+      // Create a base number schema with custom error messages
+      let zodNumber = z.number({
+        required_error: formatMessage({ id: REQUIRED_ERROR }),
+        invalid_type_error: "Must be an integer",
+      });
+
+      if (schema.type === "integer") {
+        zodNumber = zodNumber.int();
+      }
+
+      // Add number-specific validations with custom error messages
+      if (schema.minimum !== undefined) {
+        zodNumber = zodNumber.min(schema.minimum, {
+          message: formatMessage({ id: "form.min.error" }, { min: schema.minimum }),
+        });
+      }
+      if (schema.maximum !== undefined) {
+        zodNumber = zodNumber.max(schema.maximum, {
+          message: formatMessage({ id: "form.max.error" }, { max: schema.maximum }),
+        });
+      }
+
+      const zodNullableNumber = zodNumber.nullable();
+
+      if (!isRequired) {
+        return zodNullableNumber.optional();
+      }
+      return zodNullableNumber.refine((value) => value !== null, {
+        message: formatMessage({ id: REQUIRED_ERROR }),
+      });
+    } else if (schema.type === "boolean") {
+      const zodBoolean = z.boolean({
+        required_error: formatMessage({ id: REQUIRED_ERROR }),
+        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+      });
+
+      if (!isRequired) {
+        return zodBoolean.optional();
+      }
+      return zodBoolean;
+    } else if (schema.type === "null") {
+      const zodNull = z.null();
+
+      if (!isRequired) {
+        return zodNull.optional();
+      }
+      return zodNull;
+    } else if (schema.type === "array" && schema.items) {
+      // For arrays, try to handle them based on item type
+      const itemSchema = schema.items as AirbyteJsonSchema;
+      const arraySchema = z.array(convertJsonSchemaToZodSchema(itemSchema, formatMessage, isRequired), {
+        required_error: formatMessage({ id: REQUIRED_ERROR }),
+        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+      });
+
+      // Add array-specific validations with custom error messages
+      if (schema.minItems) {
+        return arraySchema.min(schema.minItems, {
+          message: formatMessage({ id: "form.minItems.error" }, { min: schema.minItems }),
+        });
+      }
+      if (schema.maxItems) {
+        return arraySchema.max(schema.maxItems, {
+          message: formatMessage({ id: "form.maxItems.error" }, { max: schema.maxItems }),
+        });
+      }
+
+      if (!isRequired) {
+        return arraySchema.optional();
+      }
+      return arraySchema;
+    } else if (schema.type === "object" || schema.properties) {
+      const zodObject = convertBaseObjectSchema(schema, formatMessage);
+
+      if (!isRequired) {
+        return zodObject.optional();
+      }
+      return zodObject;
+    }
+
+    // Handle mixed types (e.g., ["string", "number"])
+    if (Array.isArray(schema.type)) {
+      // Create a union of the types
+      const typeSchemas = schema.type.map((type) => {
+        const typeSchema = { ...schema, type };
+        return convertJsonSchemaToZodSchema(typeSchema as AirbyteJsonSchema, formatMessage, isRequired);
+      });
+
+      if (typeSchemas.length >= 2) {
+        return z.union(typeSchemas as [z.ZodTypeAny, z.ZodTypeAny, ...z.ZodTypeAny[]]);
+      } else if (typeSchemas.length === 1) {
+        return typeSchemas[0];
+      }
+    }
+
+    // Fall back to a passthrough schema for anything we couldn't convert
+    return z.any();
+  } catch (error) {
+    console.error("Error converting JSON schema to Zod schema:", error, schema);
+    // Default to accepting any value if conversion fails
+    return z.any();
+  }
 };
 
 /**
- * Customizes AJV error messages to be more user-friendly
+ * Helper function to convert an object schema
  */
-export const overrideAjvErrorMessages = async <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>(
-  errors: FieldErrors<TsSchema>,
-  schema: JsonSchema,
-  data: TsSchema,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  context: any,
-  options: ResolverOptions<TsSchema>,
-  path: string = ""
-) => {
-  const errorKeys = Object.keys(errors);
-  // Find keys that are not standard error properties, as these represent nested errors
-  const nonFieldErrorKeys = errorKeys.filter((key) => !["type", "message", "ref", "types"].includes(key));
+const convertBaseObjectSchema = (
+  schema: AirbyteJsonSchema,
+  formatMessage: IntlShape["formatMessage"]
+): z.ZodTypeAny => {
+  // For objects, build a shape with known properties
+  const shape: Record<string, z.ZodTypeAny> = {};
 
-  for (const key of nonFieldErrorKeys) {
-    const errorPath = `${path ? `${path}.` : ""}${key}`;
-    const error = errors[key];
-    if (!error) {
-      continue;
+  Object.entries(schema.properties || {}).forEach(([key, property]) => {
+    if (isBoolean(property)) {
+      return;
     }
-
-    // Process nested errors first (depth-first approach)
-    await overrideAjvErrorMessages(error as FieldErrors<TsSchema>, schema, data, context, options, errorPath);
-
-    // Skip if this is not a leaf error node
-    if (!error.type && !error.message && !error.ref) {
-      continue;
-    }
-
-    // Mark typeless errors as non-i18n errors
-    if (!error.type && error.message) {
-      error.type = NON_I18N_ERROR_TYPE;
-      continue;
-    }
-
-    // Handle standard error types
-    if (error.type === "required") {
-      error.message = "form.empty.error";
-      continue;
-    }
-
-    // Special handling for oneOf/anyOf errors
-    if (error.type === "oneOf" || error.type === "anyOf") {
-      await handleMultiSchemaErrors(error, errorPath, schema, data, context, options);
-      continue;
-    }
-
-    // For all other errors, ensure they don't trigger translation warnings
-    error.type = NON_I18N_ERROR_TYPE;
-    if (error.message) {
-      error.message = String(error.message).charAt(0).toUpperCase() + String(error.message).slice(1);
-    }
-  }
-};
-
-/**
- * Helper function for handling oneOf/anyOf schema validation errors
- */
-const handleMultiSchemaErrors = async <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>(
-  error: FieldError | Merge<FieldError, FieldErrorsImpl<DeepRequired<TsSchema>[string]>>,
-  errorPath: string,
-  schema: JsonSchema,
-  data: TsSchema,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  context: any,
-  options: ResolverOptions<TsSchema>
-) => {
-  const multiOptionSchema = getSchemaAtPath(errorPath, schema, data);
-  const optionSchemas = multiOptionSchema.oneOf ?? multiOptionSchema.anyOf;
-  if (!optionSchemas) {
-    return;
-  }
-
-  const valueAtPath = get(data, errorPath);
-  const selectedOptionSchema = getSelectedOptionSchema(optionSchemas, valueAtPath) as JsonSchema;
-
-  // If no schema is selected yet, show a "Required" error
-  if (!selectedOptionSchema) {
-    error.type = "required";
-    error.message = "form.empty.error";
-    return;
-  }
-
-  // Validate against the selected schema to get more specific errors
-  const validate = schemaValidator<JsonSchema, TsSchema>(selectedOptionSchema);
-  const result = await validate(valueAtPath, context, options);
-  const subErrors = result.errors;
-
-  if (!hasFields(subErrors)) {
-    return;
-  }
-
-  // Replace the generic oneOf/anyOf error with the more specific sub-errors
-  delete error.message;
-  delete error.ref;
-  delete error.type;
-  delete error.types;
-
-  // Spread subErrors into error
-  Object.keys(subErrors).forEach((subKey) => {
-    (error as Record<string, unknown>)[subKey] = (subErrors as Record<string, unknown>)[subKey];
+    // Recursively convert property schemas
+    shape[key] = convertJsonSchemaToZodSchema(property, formatMessage, schema.required?.includes(key) ?? false);
   });
+
+  // Create the object schema with the defined shape
+  let objectSchema = z.object(shape, {
+    required_error: formatMessage({ id: REQUIRED_ERROR }),
+    invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+  });
+
+  // If additionalProperties is explicitly true or an object schema
+  if (
+    schema.additionalProperties === true ||
+    (typeof schema.additionalProperties === "object" && !Array.isArray(schema.additionalProperties))
+  ) {
+    // Allow additional properties
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    objectSchema = objectSchema.catchall(z.any()) as any;
+  }
+
+  return objectSchema;
+};
+/**
+ * Creates a schema validator with customized error messages directly in the Zod schema
+ */
+export const schemaValidator = <TSchema extends FieldValues>(
+  schema: AirbyteJsonSchema,
+  formatMessage: IntlShape["formatMessage"]
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (data: TSchema, context: any, options: ResolverOptions<TSchema>): Promise<ResolverResult<TSchema>> => {
+    try {
+      // Convert JSON schema to a usable Zod schema with preset error messages
+      const zodSchema = convertJsonSchemaToZodSchema(schema, formatMessage, false);
+
+      // Use zodResolver which is CSP-compliant
+      const resolver = zodResolver(zodSchema);
+      const result = await resolver(data, context, options);
+
+      // Add NON_I18N_ERROR_TYPE to all errors to avoid missing translation console errors
+      if (result.errors) {
+        // Traverse all errors and set their type to NON_I18N_ERROR_TYPE
+        const traverseErrors = (obj: Record<string, unknown>) => {
+          Object.keys(obj).forEach((key) => {
+            const value = obj[key];
+            if (value && typeof value === "object") {
+              if ("type" in value && "message" in value) {
+                // This is an error object, set its type
+                (value as { type: string }).type = NON_I18N_ERROR_TYPE;
+              } else {
+                // This is a nested object, traverse it
+                traverseErrors(value as Record<string, unknown>);
+              }
+            }
+          });
+        };
+
+        traverseErrors(result.errors as Record<string, unknown>);
+      }
+
+      return result;
+    } catch (error) {
+      console.error("Error in schema validation:", error);
+
+      // Return empty errors if schema conversion or validation fails
+      return {
+        values: {} as TSchema,
+        errors: {
+          _form: {
+            type: "validation",
+            message: "Validation failed due to internal error. Please check console for details.",
+          },
+        } as unknown as FieldErrors<TSchema>,
+      };
+    }
+  };
 };

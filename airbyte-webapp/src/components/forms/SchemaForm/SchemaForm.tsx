@@ -9,18 +9,18 @@ import {
   useFormContext,
   useFormState,
 } from "react-hook-form";
+import { useIntl } from "react-intl";
 
 import { RefsHandlerProvider } from "./RefsHandler";
+import { schemaValidator } from "./schemaValidation";
 import {
   AirbyteJsonSchema,
   extractDefaultValuesFromSchema,
   getSchemaAtPath,
   getSelectedOptionSchema,
   resolveRefs,
-  schemaValidator,
 } from "./utils";
 import { FormSubmissionHandler } from "../Form";
-
 interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> {
   schema: JsonSchema;
   onSubmit?: FormSubmissionHandler<TsSchema>;
@@ -39,6 +39,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   initialValues,
   refTargetPath,
 }: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>) => {
+  const { formatMessage } = useIntl();
   const resolvedSchema = useMemo(() => resolveRefs(schema), [schema]);
   const rawStartingValues = useMemo(
     () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(resolvedSchema),
@@ -49,7 +50,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
     criteriaMode: "all",
     mode: "onChange",
     defaultValues: resolvedStartingValues,
-    resolver: schemaValidator(resolvedSchema),
+    resolver: schemaValidator(resolvedSchema, formatMessage),
   });
 
   const processSubmission = useCallback(
@@ -93,7 +94,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
 interface SchemaFormContextValue {
   // Schema & validation
   schema: AirbyteJsonSchema;
-  schemaAtPath: (path: string) => AirbyteJsonSchema;
+  schemaAtPath: (path: string, extractMultiOptionSchema?: boolean) => AirbyteJsonSchema;
   errorAtPath: (path: string) => FieldError | undefined;
   isRequiredField: (path: string) => boolean;
 
@@ -123,7 +124,8 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
 
   // Setup schema access
   const schemaAtPath = useCallback(
-    (path: string): AirbyteJsonSchema => getSchemaAtPath(path, schema, getValues()),
+    (path: string, extractMultiOptionSchema = false): AirbyteJsonSchema =>
+      getSchemaAtPath(path, schema, getValues(), extractMultiOptionSchema),
     [getValues, schema]
   );
 
@@ -144,6 +146,10 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
 
   const isRequiredField = useCallback(
     (path: string) => {
+      if (!path) {
+        return true;
+      }
+
       const pathParts = path.split(".");
       const fieldName = pathParts.at(-1) ?? "";
       const parentPath = pathParts.slice(0, -1).join(".");

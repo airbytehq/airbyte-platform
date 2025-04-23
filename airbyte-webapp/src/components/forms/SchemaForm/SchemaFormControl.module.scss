@@ -8,3 +8,9 @@
 .addButtonContainer {
   padding-bottom: variables.$spacing-xl;
 }
+
+.listBoxError {
+  & button {
+    border: 1px solid colors.$red-200;
+  }
+}

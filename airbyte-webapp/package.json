@@ -70,8 +70,6 @@
     "@types/segment-analytics": "^0.0.36",
     "@types/semver": "^7.3.13",
     "@types/uuid": "^9.0.6",
-    "ajv": "^8.17.1",
-    "ajv-formats": "^3.0.1",
     "anser": "^2.1.1",
     "any-base": "^1.1.0",
     "broadcast-channel": "^7.0.0",

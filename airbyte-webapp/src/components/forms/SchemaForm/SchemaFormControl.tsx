@@ -1,5 +1,6 @@
+import classNames from "classnames";
 import isBoolean from "lodash/isBoolean";
-import { ReactElement, useCallback } from "react";
+import { ReactElement, useCallback, useMemo } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -14,7 +15,13 @@ import { LinkComponentsToggle } from "./LinkComponentsToggle";
 import { useRefsHandler } from "./RefsHandler";
 import { useSchemaForm } from "./SchemaForm";
 import styles from "./SchemaFormControl.module.scss";
-import { extractDefaultValuesFromSchema, verifyArrayItems, AirbyteJsonSchema, getSelectedOptionSchema } from "./utils";
+import {
+  extractDefaultValuesFromSchema,
+  verifyArrayItems,
+  AirbyteJsonSchema,
+  getSelectedOptionSchema,
+  getDeclarativeSchemaTypeValue,
+} from "./utils";
 import { FormControl } from "../FormControl";
 
 interface SchemaFormControlProps {
@@ -33,6 +40,11 @@ interface SchemaFormControlProps {
    * Used internally by SchemaFormRemainingFields to prevent duplicate registration.
    */
   skipRenderedPathRegistration?: boolean;
+
+  /**
+   * If true, the component will extract the multi option schema from the oneOf or anyOf array.
+   */
+  extractMultiOptionSchema?: boolean;
 }
 
 type OverrideByPath = Record<string, ReactElement | null>;
@@ -53,6 +65,7 @@ export const SchemaFormControl = ({
   path = "",
   overrideByPath = {},
   skipRenderedPathRegistration = false,
+  extractMultiOptionSchema = false,
 }: SchemaFormControlProps) => {
   const { schemaAtPath, isRequiredField, registerRenderedPath } = useSchemaForm();
 
@@ -67,7 +80,10 @@ export const SchemaFormControl = ({
   }
 
   // Get the property at the specified path
-  const targetProperty = schemaAtPath(path);
+  const targetProperty = schemaAtPath(path, extractMultiOptionSchema);
+  if (targetProperty.deprecated) {
+    return null;
+  }
 
   const baseProps: BaseControlProps = {
     name: path,
@@ -126,7 +142,7 @@ export const SchemaFormControl = ({
   }
 
   if (targetProperty.type === "array") {
-    const items = verifyArrayItems(targetProperty.items);
+    const items = verifyArrayItems(targetProperty.items, path);
     if (items.type === "object") {
       return (
         <ArrayOfObjectsControl
@@ -136,8 +152,8 @@ export const SchemaFormControl = ({
         />
       );
     }
-    if (items.type === "string") {
-      return <FormControl {...baseProps} fieldType="array" />;
+    if (items.type === "string" || items.type === "integer" || items.type === "number") {
+      return <FormControl {...baseProps} fieldType="array" itemType={items.type} />;
     }
   }
 
@@ -174,8 +190,13 @@ const ObjectControl = ({
 
   const contents = (
     <>
-      {Object.keys(objectProperty.properties).map((propertyName) => {
+      {Object.entries(objectProperty.properties).map(([propertyName, property]) => {
         const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
+        // ~ declarative_component_schema type handling ~
+        if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+          return null;
+        }
+
         return (
           <SchemaFormControl
             key={fullPath}
@@ -226,76 +247,109 @@ const MultiOptionControl = ({
   const { schemaAtPath, errorAtPath } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name);
   const property = schemaAtPath(baseProps.name);
+  const error = errorAtPath(baseProps.name);
   const optionSchemas = property.oneOf ?? property.anyOf;
+  const options = useMemo(
+    () =>
+      optionSchemas?.filter(
+        (optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated
+      ) as AirbyteJsonSchema[],
+    [optionSchemas]
+  );
+  const selectedOption = useMemo(
+    () => (options ? getSelectedOptionSchema(options, value) : undefined),
+    [options, value]
+  );
+  const displayError = useMemo(() => (selectedOption?.type === "object" ? error : undefined), [selectedOption, error]);
 
   if (!optionSchemas) {
     return null;
   }
-
-  const options = optionSchemas.filter((optionSchema) => !isBoolean(optionSchema)) as AirbyteJsonSchema[];
-  const selectedOption = getSelectedOptionSchema(options, value);
-
-  // Render the selected option's properties
-  const renderOptionContents = () => {
-    if (!selectedOption || !selectedOption.properties) {
-      return null;
-    }
-
-    return Object.keys(selectedOption.properties).map((propertyName) => {
-      // ~ declarative_component_schema type handling ~
-      if (propertyName === "type") {
-        return null;
-      }
-
-      const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
-      return (
-        <SchemaFormControl
-          key={fullPath}
-          path={fullPath}
-          overrideByPath={overrideByPath}
-          skipRenderedPathRegistration={skipRenderedPathRegistration}
-        />
-      );
-    });
-  };
 
   return (
     <ControlGroup
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={errorAtPath(baseProps.name)}
+      error={displayError}
       header={baseProps.header}
       control={
         <ListBox
+          className={classNames({ [styles.listBoxError]: !!displayError })}
           options={options.map((option) => ({
-            label: option.title,
-            value: option.title,
+            label: option.title ?? option.type,
+            value: option.title ?? option.type,
           }))}
-          onSelect={(optionTitle) => {
-            const selectedOption = options.find((option) => option.title === optionTitle);
+          onSelect={(selectedValue) => {
+            const selectedOption = options.find((option) =>
+              option.title ? option.title === selectedValue : option.type === selectedValue
+            );
             if (!selectedOption) {
               setValue(baseProps.name, undefined);
               return;
             }
 
-            // Set values WITHOUT validation
-            // debugger;
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
 
             // Only clear the error for the parent field itself, without validating
             clearErrors(baseProps.name);
           }}
-          selectedValue={selectedOption?.title}
+          selectedValue={selectedOption?.title ?? selectedOption?.type}
           adaptiveWidth={false}
         />
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
     >
-      {renderOptionContents()}
+      {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration)}
     </ControlGroup>
   );
+};
+
+// Render the selected option's properties
+const renderOptionContents = (
+  baseProps: BaseControlProps,
+  selectedOption?: AirbyteJsonSchema,
+  overrideByPath?: OverrideByPath,
+  skipRenderedPathRegistration?: boolean
+) => {
+  if (!selectedOption) {
+    return null;
+  }
+
+  if (selectedOption.type !== "object") {
+    return (
+      <SchemaFormControl
+        key={baseProps.name}
+        path={baseProps.name}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+        extractMultiOptionSchema
+      />
+    );
+  }
+
+  // TODO: handle objects with only additionalProperties
+  if (!selectedOption.properties) {
+    return null;
+  }
+
+  return Object.entries(selectedOption.properties).map(([propertyName, property]) => {
+    // ~ declarative_component_schema type handling ~
+    if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+      return null;
+    }
+
+    const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
+    return (
+      <SchemaFormControl
+        key={fullPath}
+        path={fullPath}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
+  });
 };
 
 const ArrayOfObjectsControl = ({
@@ -351,9 +405,10 @@ const useToggleConfig = (path: string) => {
   const value = useWatch({ name: path });
   const { getReferenceInfo, handleUnlinkAction } = useRefsHandler();
 
-  const defaultValue = extractDefaultValuesFromSchema(schemaAtPath(path));
   const handleToggle = useCallback(
     (newEnabledState: boolean) => {
+      const schema = schemaAtPath(path);
+      const defaultValue = extractDefaultValuesFromSchema(schema);
       if (newEnabledState) {
         // Use resetField to ensure the field and all its children are properly reset
         // This avoids the UI showing stale values that aren't in the form state
@@ -382,11 +437,11 @@ const useToggleConfig = (path: string) => {
         }
       }
     },
-    [path, clearErrors, defaultValue, setValue, resetField, getReferenceInfo, handleUnlinkAction]
+    [schemaAtPath, path, resetField, setValue, getReferenceInfo, handleUnlinkAction, clearErrors]
   );
 
   return {
-    isEnabled: !!value,
+    isEnabled: value !== undefined,
     onToggle: handleToggle,
   };
 };
