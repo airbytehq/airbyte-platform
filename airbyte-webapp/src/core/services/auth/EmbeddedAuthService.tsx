@@ -11,6 +11,7 @@ import { AuthContext } from "./AuthContext";
  */
 
 const SCOPED_AUTH_TOKEN_COOKIE = "_airbyte_scoped_auth_token";
+export const ALLOWED_ORIGIN_SEARCH_PARAM = "allowedOrigin";
 
 interface ScopedAuthMessage {
   scopedAuthToken: string;
@@ -18,7 +19,7 @@ interface ScopedAuthMessage {
 
 const useScopedAuthToken = () => {
   const [searchParams] = useSearchParams();
-  const allowedOriginParam = searchParams.get("allowedOrigin");
+  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
 
   const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
   const [token, setToken, deleteToken] = useCookie(SCOPED_AUTH_TOKEN_COOKIE);
