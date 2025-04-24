@@ -14,7 +14,6 @@ import { NameInput } from "./NameInput";
 import { SavingIndicator } from "./SavingIndicator";
 import styles from "./Sidebar.module.scss";
 import { UiYamlToggleButton } from "./UiYamlToggleButton";
-import { useBuilderWatch } from "./useBuilderWatch";
 
 interface SidebarProps {
   className?: string;
@@ -23,9 +22,8 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
   const analyticsService = useAnalyticsService();
-  const { toggleUI, isResolving, currentProject } = useConnectorBuilderFormState();
-  const formValues = useBuilderWatch("formValues");
-  const showSavingIndicator = yamlSelected || formValues.streams.length > 0;
+  const { toggleUI, isResolving, currentProject, jsonManifest } = useConnectorBuilderFormState();
+  const showSavingIndicator = yamlSelected || (jsonManifest.streams && jsonManifest.streams.length > 0);
 
   const OnUiToggleClick = () => {
     toggleUI(yamlSelected ? "ui" : "yaml");

@@ -26,6 +26,7 @@ export interface Experiments {
   "connectorBuilder.declarativeOauth": boolean;
   "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
+  "connectorBuilder.schemaForm": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
@@ -57,6 +58,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
+  "connectorBuilder.schemaForm": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,

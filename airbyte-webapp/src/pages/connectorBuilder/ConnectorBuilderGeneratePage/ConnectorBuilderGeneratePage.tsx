@@ -16,6 +16,7 @@ import {
   DEFAULT_CONNECTOR_NAME,
   DEFAULT_JSON_MANIFEST_STREAM,
   DEFAULT_JSON_MANIFEST_VALUES,
+  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
 } from "components/connectorBuilder/types";
 import { Form, FormControl } from "components/forms";
 import { HeadTitle } from "components/HeadTitle";
@@ -81,8 +82,13 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     createAndNavigate({ name: projectName, assistSessionId: undefined });
   }, [createAndNavigate, projectName]);
 
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
+
   const onSkip = useCallback(() => {
-    const manifest: DeclarativeComponentSchema = cloneDeep(DEFAULT_JSON_MANIFEST_VALUES);
+    const manifest: DeclarativeComponentSchema = isSchemaFormEnabled
+      ? cloneDeep(DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM)
+      : cloneDeep(DEFAULT_JSON_MANIFEST_VALUES);
+    console.log("manifest", manifest);
     if (!manifest.metadata) {
       manifest.metadata = {};
     }
@@ -95,7 +101,15 @@ const ConnectorBuilderGeneratePageInner: React.FC = () => {
     });
     manifest.streams = [stream];
     createAndNavigate({ name: projectName, assistSessionId, manifest });
-  }, [createAndNavigate, submittedAssistValues, projectName, assistSessionId]);
+  }, [
+    isSchemaFormEnabled,
+    submittedAssistValues?.docsUrl,
+    submittedAssistValues?.openapiSpecUrl,
+    submittedAssistValues?.firstStream,
+    createAndNavigate,
+    projectName,
+    assistSessionId,
+  ]);
 
   const onFormSubmit = useCallback(
     async (values: GeneratorFormResponse) => {

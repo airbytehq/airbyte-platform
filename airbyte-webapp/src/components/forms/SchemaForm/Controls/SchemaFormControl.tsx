@@ -1,4 +1,5 @@
 import { useFormContext, useWatch } from "react-hook-form";
+import { useUnmount } from "react-use";
 
 import { LabelInfo } from "components/Label";
 
@@ -69,7 +70,7 @@ export const SchemaFormControl = ({
     verifyArrayItems,
     convertJsonSchemaToZodSchema,
   } = useSchemaForm();
-  const { register } = useFormContext();
+  const { register, clearErrors } = useFormContext();
 
   const targetPath = path ? path : nestPath(path, nestedUnderPath);
 
@@ -80,21 +81,20 @@ export const SchemaFormControl = ({
     registerRenderedPath(path);
   }
 
-  // ~ declarative_component_schema type $parameters handling ~
-  if (path.includes("$parameters")) {
-    return null;
-  }
-
-  // Check if there's an override for this path
-  if (overrideByPath[path] !== undefined) {
-    return overrideByPath[path];
-  }
-
   // Get the property at the specified path
   const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path, value));
-  if (targetSchema.deprecated) {
-    return null;
-  }
+
+  useUnmount(() => {
+    // Remove the validation logic for this field when unmounting.
+    // Using unregister() fully removes the field from the form which causes other issues,
+    // so just use register() to replace the validation logic with a no-op.
+    register(targetPath, {
+      validate: () => {
+        return true;
+      },
+    });
+    clearErrors(targetPath);
+  });
 
   // Register validation logic for this field
   register(targetPath, {
@@ -108,6 +108,20 @@ export const SchemaFormControl = ({
     },
   });
 
+  // ~ declarative_component_schema type $parameters handling ~
+  if (path.includes("$parameters")) {
+    return null;
+  }
+
+  // Check if there's an override for this path
+  if (overrideByPath[path] !== undefined) {
+    return overrideByPath[path];
+  }
+
+  if (targetSchema.deprecated) {
+    return null;
+  }
+
   const baseProps: BaseControlProps = {
     name: targetPath,
     label: titleOverride ?? displayName(path, targetSchema.title),
@@ -118,6 +132,7 @@ export const SchemaFormControl = ({
     optional: !isRequired,
     header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
     containerControlClassName: className,
+    onlyShowErrorIfTouched: true,
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {

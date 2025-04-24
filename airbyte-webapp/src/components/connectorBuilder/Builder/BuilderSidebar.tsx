@@ -29,7 +29,7 @@ interface ViewSelectButtonProps {
   "data-testid": string;
 }
 
-const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>> = ({
+export const ViewSelectButton: React.FC<React.PropsWithChildren<ViewSelectButtonProps>> = ({
   children,
   className,
   selected,

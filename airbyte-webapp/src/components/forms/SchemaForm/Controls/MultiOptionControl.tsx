@@ -24,7 +24,7 @@ export const MultiOptionControl = ({
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
-  const { setValue, clearErrors } = useFormContext();
+  const { setValue, unregister } = useFormContext();
   const {
     schema: rootSchema,
     getSelectedOptionSchema,
@@ -42,11 +42,14 @@ export const MultiOptionControl = ({
         ?.filter((optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated) as AirbyteJsonSchema[],
     [optionSchemas, rootSchema]
   );
-  const selectedOption = useMemo(
+  const currentlySelectedOption = useMemo(
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
     [getSelectedOptionSchema, options, value]
   );
-  const displayError = useMemo(() => (selectedOption?.type === "object" ? error : undefined), [selectedOption, error]);
+  const displayError = useMemo(
+    () => (currentlySelectedOption?.type === "object" ? error : undefined),
+    [currentlySelectedOption, error]
+  );
 
   const getOptionLabel = useCallback(
     (option: AirbyteJsonSchema | undefined): string => {
@@ -98,7 +101,7 @@ export const MultiOptionControl = ({
       <>
         {renderOptionContents(
           baseProps,
-          selectedOption,
+          currentlySelectedOption,
           overrideByPath,
           skipRenderedPathRegistration,
           nonAdvancedFields
@@ -128,19 +131,25 @@ export const MultiOptionControl = ({
               return;
             }
 
+            // unregister the field to remove the validation logic of the previous option
+            unregister(baseProps.name);
+
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
-
-            // Only clear the error for the parent field itself, without validating
-            clearErrors(baseProps.name);
           }}
-          selectedValue={getOptionLabel(selectedOption)}
+          selectedValue={getOptionLabel(currentlySelectedOption)}
           adaptiveWidth={false}
         />
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
     >
-      {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration, nonAdvancedFields)}
+      {renderOptionContents(
+        baseProps,
+        currentlySelectedOption,
+        overrideByPath,
+        skipRenderedPathRegistration,
+        nonAdvancedFields
+      )}
     </ControlGroup>
   );
 };

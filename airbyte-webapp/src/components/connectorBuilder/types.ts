@@ -118,6 +118,7 @@ export interface BuilderState {
   testStreamId: StreamId;
   generatedStreams: Record<string, DeclarativeStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
+  manifest?: ConnectorManifest;
 }
 
 export interface AssistData {
@@ -1672,7 +1673,6 @@ function schemaRef(streamName: string) {
   return { $ref: `#/schemas/${streamName}` };
 }
 
-export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
 export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   type: "DeclarativeStream",
   retriever: {
@@ -1687,13 +1687,48 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
     requester: {
       type: "HttpRequester",
       url_base: "",
-      authenticator: undefined,
-      path: "",
       http_method: "GET",
     },
-    paginator: undefined,
   },
-  primary_key: undefined,
+};
+export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = {
+  type: "DeclarativeSource",
+  version: CDK_VERSION,
+  check: {
+    type: "CheckStream",
+    stream_names: [],
+  },
+  streams: [],
+  spec: {
+    type: "Spec",
+    connection_specification: {
+      type: "object",
+      properties: {},
+    },
+  },
+};
+
+export const DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      url_base: "https://api.com",
+      http_method: "GET",
+    },
+  },
+};
+export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
+  ...DEFAULT_JSON_MANIFEST_VALUES,
+  streams: [DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE],
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;

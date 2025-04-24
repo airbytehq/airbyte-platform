@@ -118,6 +118,9 @@ export const useBuilderErrors = () => {
           return;
         }
 
+        // Mark the manifest as touched to show error messages on all fields
+        setValue("manifest", getValues("manifest"), { shouldTouch: true });
+
         const errorPathAndView = getErrorPathAndView(limitToViews);
         if (errorPathAndView) {
           setValue("view", errorPathAndView.view);
@@ -136,7 +139,7 @@ export const useBuilderErrors = () => {
         callback?.();
       });
     },
-    [getErrorPathAndView, getOauthErrorPathAndView, setScrollToField, setValue, trigger]
+    [getErrorPathAndView, getOauthErrorPathAndView, setScrollToField, setValue, trigger, getValues]
   );
 
   return { hasErrors, validateAndTouch };
@@ -187,6 +190,10 @@ const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>) => {
               : "unknown"
             : currentPath[0] === "testingValues"
             ? "inputs"
+            : currentPath[0] === "manifest"
+            ? currentPath[1] === "streams"
+              ? Number(currentPath[2])
+              : "unknown"
             : "unknown";
         const fullPath = [...currentPath, key].join(".");
         if (!result[view]) {

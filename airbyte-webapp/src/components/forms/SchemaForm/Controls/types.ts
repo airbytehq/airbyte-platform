@@ -9,6 +9,7 @@ export interface BaseControlProps {
   optional: boolean;
   header?: ReactElement;
   containerControlClassName?: string;
+  onlyShowErrorIfTouched?: boolean;
 }
 
 export type OverrideByPath = Record<string, ReactElement | null>;
