@@ -89,13 +89,18 @@ interface JobsRepository : PageableRepository<Job, Long> {
 
   @Query(
     """
-    SELECT DISTINCT ON (scope) *
-    FROM jobs
-    WHERE scope IN (:scopes)
-      AND config_type::text = :configType
-      AND created_at >= :createdAtStart
-    ORDER BY scope, created_at DESC
-  """,
+    SELECT j.*
+    FROM unnest(array[:scopes]::text[]) AS s(scope)
+    JOIN LATERAL (
+      SELECT *
+      FROM jobs
+      WHERE jobs.scope = s.scope
+      AND jobs.config_type::text = :configType
+      AND jobs.created_at >= :createdAtStart
+      ORDER BY created_at DESC
+      LIMIT 1
+    ) j ON true;
+    """,
     nativeQuery = true,
   )
   fun findLatestJobPerScope(

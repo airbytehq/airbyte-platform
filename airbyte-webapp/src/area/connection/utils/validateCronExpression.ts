@@ -11,7 +11,6 @@ const CRON_REGEX_MAP = [
 const ONLY_NUMBERS_REGEX = /^([0-9]){1,2}$/;
 
 export function validateCronFrequencyOneHourOrMore(expression: string | undefined): boolean {
-  // yup passes string | undefined, this may be fixed in the future: https://github.com/jquense/yup/issues/1367
   if (expression === undefined) {
     return false;
   }
@@ -32,7 +31,6 @@ export function validateCronFrequencyOneHourOrMore(expression: string | undefine
 }
 
 export function validateCronExpression(expression: string | undefined): { isValid: boolean; message?: string } {
-  // yup passes string | undefined, this may be fixed in the future: https://github.com/jquense/yup/issues/1367
   if (expression === undefined) {
     return { isValid: false };
   }
