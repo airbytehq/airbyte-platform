@@ -107,13 +107,7 @@ export interface BuilderState {
   previewValues?: BuilderFormValues;
   yaml: string;
   customComponentsCode?: string;
-  view:
-    | "global"
-    | "inputs"
-    | "components"
-    | `dynamic_stream_${number}` /* dynamic stream index */
-    | `generated_stream_${number}` /* stream instance generated from a dynamic stream */
-    | number /* stream index */;
+  view: { type: "global" } | { type: "inputs" } | { type: "components" } | StreamId;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
   generatedStreams: Record<string, DeclarativeStream[]>;

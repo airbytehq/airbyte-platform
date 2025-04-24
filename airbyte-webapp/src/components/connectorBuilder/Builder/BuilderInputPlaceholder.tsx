@@ -31,7 +31,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           <Button
             icon="user"
             variant="link"
-            onClick={() => setValue("view", "inputs")}
+            onClick={() => setValue("view", { type: "inputs" })}
             className={styles.tooltipTrigger}
             iconClassName={styles.tooltipIcon}
           />
@@ -43,7 +43,7 @@ export const BuilderInputPlaceholder = (props: BuilderFieldProps) => {
           variant="link"
           type="button"
           onClick={() => {
-            setValue("view", "inputs");
+            setValue("view", { type: "inputs" });
           }}
         >
           <FormattedMessage id="connectorBuilder.placeholder.button" />

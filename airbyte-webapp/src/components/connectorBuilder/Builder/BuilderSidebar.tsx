@@ -17,6 +17,7 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
+import { StreamId } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
@@ -70,13 +71,15 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
   const { getStreamTestWarnings } = useStreamTestMetadata();
   const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
 
+  const viewId: StreamId = { type: "dynamic_stream", index: num };
+
   return (
     <ViewSelectButton
       data-testid={`navbutton-${String(num)}`}
-      selected={view === `dynamic_stream_${num}`}
-      showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+      selected={view.type === "dynamic_stream" && view.index === num}
+      showIndicator={hasErrors([viewId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
       onClick={() => {
-        setValue("view", `dynamic_stream_${num}`);
+        setValue("view", viewId);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
           actionDescription: "Dynamic stream view selected",
           dynamicStreamName: name,
@@ -111,14 +114,16 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num, asyn
   const { getStreamTestWarnings } = useStreamTestMetadata();
   const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
 
+  const viewId: StreamId = { type: "stream", index: num };
+
   return (
     <ViewSelectButton
       data-testid={`navbutton-${String(num)}`}
-      selected={view === num}
-      showIndicator={hasErrors([num]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+      selected={view.type === "stream" && view.index === num}
+      showIndicator={hasErrors([viewId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
       onClick={() => {
         setValue("streamTab", "requester");
-        setValue("view", num);
+        setValue("view", viewId);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected",
           stream_id: id,
@@ -163,10 +168,10 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
       <FlexContainer direction="column" alignItems="stretch" gap="none">
         <ViewSelectButton
           data-testid="navbutton-global"
-          selected={view === "global"}
-          showIndicator={hasErrors(["global"]) ? "error" : undefined}
+          selected={view.type === "global"}
+          showIndicator={hasErrors([{ type: "global" }]) ? "error" : undefined}
           onClick={() => {
-            handleViewSelect("global");
+            handleViewSelect({ type: "global" });
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.GLOBAL_CONFIGURATION_SELECT, {
               actionDescription: "Global Configuration view selected",
             });
@@ -180,10 +185,10 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
 
         <ViewSelectButton
           data-testid="navbutton-inputs"
-          selected={view === "inputs"}
-          showIndicator={hasErrors(["inputs"]) ? "error" : undefined}
+          selected={view.type === "inputs"}
+          showIndicator={hasErrors([{ type: "inputs" }]) ? "error" : undefined}
           onClick={() => {
-            handleViewSelect("inputs");
+            handleViewSelect({ type: "inputs" });
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.USER_INPUTS_SELECT, {
               actionDescription: "User Inputs view selected",
             });
@@ -203,9 +208,9 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         {areCustomComponentsEnabled && (
           <ViewSelectButton
             data-testid="navbutton-components"
-            selected={view === "components"}
+            selected={view.type === "components"}
             onClick={() => {
-              handleViewSelect("components");
+              handleViewSelect({ type: "components" });
               analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.COMPONENTS_SELECT, {
                 actionDescription: "Components view selected",
               });
@@ -236,7 +241,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
 
             <AddStreamButton
               streamType="dynamicStream"
-              onAddStream={(addedStreamNum) => handleViewSelect(`dynamic_stream_${addedStreamNum}`)}
+              onAddStream={(addedStreamNum) => handleViewSelect({ type: "dynamic_stream", index: addedStreamNum })}
               disabled={permission === "readOnly"}
               data-testid="add-dynamic-stream"
             />
@@ -263,7 +268,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
 
           <AddStreamButton
             streamType="stream"
-            onAddStream={(addedStreamNum) => handleViewSelect(addedStreamNum)}
+            onAddStream={(addedStreamNum) => handleViewSelect({ type: "stream", index: addedStreamNum })}
             disabled={permission === "readOnly"}
             data-testid="add-stream"
           />

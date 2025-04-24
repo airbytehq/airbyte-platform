@@ -495,8 +495,8 @@ const DeclarativeOAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathF
                       text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
                       type: "info",
                     });
-                    setValue("view", "inputs");
-                    validateAndTouch(undefined, ["inputs"]);
+                    setValue("view", { type: "inputs" });
+                    validateAndTouch(undefined, [{ type: "inputs" }]);
                   }
             }
             onComplete={async (payload) => {

@@ -88,23 +88,23 @@ export const useUndoRedo = (): UndoRedo => {
           storedFormValues.streams.length < builderStateRef.current.formValues.streams.length &&
           builderStateRef.current.view >= storedFormValues.streams.length
         ) {
-          setValue("view", storedFormValues.streams.length - 1);
+          setValue("view", { type: "stream", index: storedFormValues.streams.length - 1 });
         }
 
         // stream was added, switch view to last stream
         if (storedFormValues.streams.length > builderStateRef.current.formValues.streams.length) {
-          setValue("view", storedFormValues.streams.length - 1);
+          setValue("view", { type: "stream", index: storedFormValues.streams.length - 1 });
         }
       } else if (modifiedPath?.startsWith("formValues.streams.")) {
         const streamPathRegex = /^formValues\.streams\.(\d+)\..*$/;
         const match = modifiedPath.match(streamPathRegex);
         if (match) {
-          setValue("view", Number(match[1]));
+          setValue("view", { type: "stream", index: Number(match[1]) });
         }
       } else if (modifiedPath?.startsWith("formValues.inputs")) {
-        setValue("view", "inputs");
+        setValue("view", { type: "inputs" });
       } else if (modifiedPath?.startsWith("formValues.global")) {
-        setValue("view", "global");
+        setValue("view", { type: "global" });
       }
     }
   }, [modifiedPath, setScrollToField, setValue, storedFormValues, trigger]);
