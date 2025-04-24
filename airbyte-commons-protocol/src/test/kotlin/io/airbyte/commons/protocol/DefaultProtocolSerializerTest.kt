@@ -64,7 +64,8 @@ class DefaultProtocolSerializerTest {
                     ).withJsonSchema(Jsons.emptyObject())
                     .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
                 ).withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
-                .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND),
+                .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND)
+                .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
                   ProtocolAirbyteStream()
@@ -73,7 +74,8 @@ class DefaultProtocolSerializerTest {
                     ).withJsonSchema(Jsons.emptyObject())
                     .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
                 ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
-                .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND else ProtocolDestinationSyncMode.OVERWRITE),
+                .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND else ProtocolDestinationSyncMode.OVERWRITE)
+                .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
                   ProtocolAirbyteStream()
@@ -82,7 +84,8 @@ class DefaultProtocolSerializerTest {
                     ).withJsonSchema(Jsons.emptyObject())
                     .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
                 ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
-                .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND_DEDUP),
+                .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND_DEDUP)
+                .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
                 .withStream(
                   ProtocolAirbyteStream()
@@ -91,7 +94,8 @@ class DefaultProtocolSerializerTest {
                     ).withJsonSchema(Jsons.emptyObject())
                     .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
                 ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
-                .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND_DEDUP else ProtocolDestinationSyncMode.OVERWRITE),
+                .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND_DEDUP else ProtocolDestinationSyncMode.OVERWRITE)
+                .withIncludeFiles(false),
             ),
           )
 

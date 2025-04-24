@@ -97,7 +97,7 @@ public class CatalogConverter {
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
                   .suggested(false)
-                  .includeFiles(configuredStream.getIncludesFiles())
+                  .includeFiles(configuredStream.getIncludeFiles())
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
                   .selectedFields(List.of())
                   // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.

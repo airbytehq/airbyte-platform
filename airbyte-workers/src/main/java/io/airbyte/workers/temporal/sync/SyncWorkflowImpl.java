@@ -270,7 +270,8 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         syncInput.getConnectionContext(),
         signalInput,
         syncInput.getNetworkSecurityTokens(),
-        syncInput.getIncludesFiles());
+        syncInput.getIncludesFiles(),
+        syncInput.getOmitFileTransferEnvVar());
   }
 
 }
