@@ -160,8 +160,13 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
     setValue("view", selectedView);
   };
 
-  const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const customComponentsCodeValue = useBuilderWatch("customComponentsCode");
+
+  // We want to show the custom components tab any time the custom components code is set.
+  // This is to ensure a user can still remove the custom components code if they want to (in the event of a fork).
+  const showCustomComponentsTab = areCustomComponentsEnabled || customComponentsCodeValue;
 
   return (
     <Sidebar yamlSelected={false}>
@@ -205,7 +210,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
           </Text>
         </ViewSelectButton>
 
-        {areCustomComponentsEnabled && (
+        {showCustomComponentsTab && (
           <ViewSelectButton
             data-testid="navbutton-components"
             selected={view.type === "components"}

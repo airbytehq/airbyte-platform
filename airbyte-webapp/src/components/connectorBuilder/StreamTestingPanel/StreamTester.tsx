@@ -5,6 +5,7 @@ import { Button } from "components/ui/Button";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconColor, IconType } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
@@ -184,7 +185,19 @@ export const StreamTester: React.FC<{
       )}
 
       {cantProcessCustomComponents && (
-        <Message type="error" text={formatMessage({ id: "connectorBuilder.warnings.containsCustomComponent" })} />
+        <Message
+          type="error"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.warnings.containsCustomComponent"
+              values={{
+                lnk: (...lnk: React.ReactNode[]) => (
+                  <ExternalLink href={links.connectorBuilderCustomComponents}>{lnk}</ExternalLink>
+                ),
+              }}
+            />
+          }
+        />
       )}
 
       {streamIsDynamic && (
