@@ -59,7 +59,7 @@ class TracingServerFilter(
           trace.user["companyName"] = it.companyName
         }
       } catch (e: Exception) {
-        logger.error(e) { "failed to get current user" }
+        logger.debug(e) { "failed to get current user" }
       }
 
       // trace http details
