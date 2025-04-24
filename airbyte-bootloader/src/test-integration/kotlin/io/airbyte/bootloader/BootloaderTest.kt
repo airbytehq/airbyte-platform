@@ -253,6 +253,7 @@ internal class BootloaderTest {
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -273,6 +274,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
     bootloader.load()
 
@@ -434,6 +436,7 @@ internal class BootloaderTest {
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk()
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -454,6 +457,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
 
     // starting from no previous version is always legal.
@@ -707,6 +711,7 @@ internal class BootloaderTest {
       }
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
     val bootloader =
       Bootloader(
         autoUpgradeConnectors = false,
@@ -726,6 +731,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())

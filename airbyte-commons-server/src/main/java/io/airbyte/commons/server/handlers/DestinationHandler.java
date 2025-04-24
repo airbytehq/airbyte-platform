@@ -437,7 +437,7 @@ public class DestinationHandler {
 
     if (secretStorageId.isPresent()) {
       final ConfigWithProcessedSecrets reprocessedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
-          updatedConfig, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+          updatedConfig, spec.getConnectionSpecification(), secretStorageId.get());
       updatedConfig = secretReferenceService.createAndInsertSecretReferencesWithStorageId(
           reprocessedConfig,
           destinationId,

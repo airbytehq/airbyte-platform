@@ -22,6 +22,7 @@ import com.google.common.base.Preconditions
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes.AWS_SECRET_MANAGER
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -38,7 +39,7 @@ private val logger = KotlinLogging.logger {}
  * details.](https://sdk.amazonaws.com/java/api/latest/software/amazon/awssdk/services/secretsmanager/SecretsManagerClient.html#listSecretVersionIds--)
  */
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^aws_secret_manager$")
+@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^$AWS_SECRET_MANAGER$")
 @Named("secretPersistence")
 class AwsSecretManagerPersistence(
   private val awsClient: AwsClient,

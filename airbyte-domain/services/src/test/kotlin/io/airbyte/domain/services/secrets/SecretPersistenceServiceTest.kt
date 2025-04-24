@@ -33,6 +33,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.Optional
@@ -67,197 +68,206 @@ class SecretPersistenceServiceTest {
     every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns false
   }
 
-  @Test
-  fun `test getPersistenceMapFromConfig with default persistence`() {
-    val config =
-      ConfigWithSecretReferences(
-        Jsons.emptyObject(),
-        mapOf(
-          "$.password" to
-            SecretReferenceConfig(
-              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
-            ),
-        ),
-      )
-    val context =
-      SecretHydrationContext(
-        organizationId,
-        workspaceId,
-      )
+  @Nested
+  inner class GetPersistenceFromConfig {
+    @Test
+    fun `test getPersistenceMapFromConfig with default persistence`() {
+      val config =
+        ConfigWithSecretReferences(
+          Jsons.emptyObject(),
+          mapOf(
+            "$.password" to
+              SecretReferenceConfig(
+                secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+              ),
+          ),
+        )
+      val context =
+        SecretHydrationContext(
+          organizationId,
+          workspaceId,
+        )
 
-    val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
-    assertEquals(defaultSecretPersistence, persistenceMap[null])
-  }
+      val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
+      assertEquals(defaultSecretPersistence, persistenceMap[null])
+    }
 
-  @Test
-  fun `test getPersistenceMapFromConfig with storage IDs`() {
-    val secretStorageId = UUID.randomUUID()
-    val secretStorageId2 = UUID.randomUUID()
+    @Test
+    fun `test getPersistenceMapFromConfig with storage IDs`() {
+      val secretStorageId = UUID.randomUUID()
+      val secretStorageId2 = UUID.randomUUID()
 
-    val config =
-      ConfigWithSecretReferences(
-        Jsons.emptyObject(),
-        mapOf(
-          "$.password" to
-            SecretReferenceConfig(
-              secretStorageId = secretStorageId,
-              secretCoordinate = SecretCoordinate.ExternalSecretCoordinate("my-secret-coord"),
-            ),
-          "$.token" to
-            SecretReferenceConfig(
-              secretStorageId = secretStorageId2,
-              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
-            ),
-          "$.anotherOne" to
-            SecretReferenceConfig(
-              secretStorageId = null,
-              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
-            ),
-        ),
-      )
+      val config =
+        ConfigWithSecretReferences(
+          Jsons.emptyObject(),
+          mapOf(
+            "$.password" to
+              SecretReferenceConfig(
+                secretStorageId = secretStorageId,
+                secretCoordinate = SecretCoordinate.ExternalSecretCoordinate("my-secret-coord"),
+              ),
+            "$.token" to
+              SecretReferenceConfig(
+                secretStorageId = secretStorageId2,
+                secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+              ),
+            "$.anotherOne" to
+              SecretReferenceConfig(
+                secretStorageId = null,
+                secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+              ),
+          ),
+        )
 
-    val context =
-      SecretHydrationContext(
-        organizationId,
-        workspaceId,
-      )
+      val context =
+        SecretHydrationContext(
+          organizationId,
+          workspaceId,
+        )
 
-    val secretStorage =
-      mockk<SecretStorage> {
-        every { id } returns SecretStorageId(secretStorageId)
-        every { scopeType } returns SecretStorageScopeType.WORKSPACE
-        every { scopeId } returns workspaceId.value
-        every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
+      val secretStorage =
+        mockk<SecretStorage> {
+          every { id } returns SecretStorageId(secretStorageId)
+          every { scopeType } returns SecretStorageScopeType.WORKSPACE
+          every { scopeId } returns workspaceId.value
+          every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
+          every { isDefault() } returns false
+        }
+      every { secretStorageService.getById(SecretStorageId(secretStorageId)) } returns secretStorage
+
+      val secretStorage2 =
+        mockk<SecretStorage> {
+          every { id } returns SecretStorageId(secretStorageId2)
+          every { scopeType } returns SecretStorageScopeType.WORKSPACE
+          every { scopeId } returns workspaceId.value
+          every { storageType } returns SecretStorageType.GOOGLE_SECRET_MANAGER
+          every { isDefault() } returns false
+        }
+      every { secretStorageService.getById(SecretStorageId(secretStorageId2)) } returns secretStorage2
+
+      val storageConfig = Jsons.jsonNode(mapOf("key" to "value"))
+      every { secretStorageService.hydrateStorageConfig(any()) } returns
+        mockk<SecretStorageWithConfig> {
+          every { this@mockk.config } returns storageConfig
+        }
+
+      val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
+      assertEquals(defaultSecretPersistence, persistenceMap[null])
+      assertNotNull(persistenceMap[secretStorageId])
+      assertNotNull(persistenceMap[secretStorageId2])
+
+      // we can't mock the constructor for RuntimeSecretPersistence, so we check these for now
+      persistenceMap[secretStorageId] shouldNotBe persistenceMap[secretStorageId2]
+      persistenceMap[secretStorageId] shouldNotBe defaultSecretPersistence
+      persistenceMap[secretStorageId2] shouldNotBe defaultSecretPersistence
+
+      verify {
+        secretStorageService.getById(SecretStorageId(secretStorageId))
+        secretStorageService.getById(SecretStorageId(secretStorageId2))
+        secretStorageService.hydrateStorageConfig(secretStorage)
+        secretStorageService.hydrateStorageConfig(secretStorage2)
       }
-    every { secretStorageService.getById(SecretStorageId(secretStorageId)) } returns secretStorage
+    }
 
-    val secretStorage2 =
-      mockk<SecretStorage> {
-        every { id } returns SecretStorageId(secretStorageId2)
-        every { scopeType } returns SecretStorageScopeType.WORKSPACE
-        every { scopeId } returns workspaceId.value
-        every { storageType } returns SecretStorageType.GOOGLE_SECRET_MANAGER
-      }
-    every { secretStorageService.getById(SecretStorageId(secretStorageId2)) } returns secretStorage2
+    @Test
+    fun `test getPersistenceMapFromConfig with legacy RuntimeSecretPersistence`() {
+      val config =
+        ConfigWithSecretReferences(
+          Jsons.emptyObject(),
+          mapOf(
+            "$.password" to
+              SecretReferenceConfig(
+                secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+              ),
+          ),
+        )
+      val context = SecretHydrationContext(organizationId, workspaceId)
+      every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns true
 
-    val storageConfig = Jsons.jsonNode(mapOf("key" to "value"))
-    every { secretStorageService.hydrateStorageConfig(any()) } returns
-      mockk<SecretStorageWithConfig> {
-        every { this@mockk.config } returns storageConfig
-      }
+      every { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value) } returns mockk()
 
-    val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
-    assertEquals(defaultSecretPersistence, persistenceMap[null])
-    assertNotNull(persistenceMap[secretStorageId])
-    assertNotNull(persistenceMap[secretStorageId2])
+      val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
+      assertNotNull(persistenceMap[null])
+      persistenceMap shouldNotBe defaultSecretPersistence
 
-    // we can't mock the constructor for RuntimeSecretPersistence, so we check these for now
-    persistenceMap[secretStorageId] shouldNotBe persistenceMap[secretStorageId2]
-    persistenceMap[secretStorageId] shouldNotBe defaultSecretPersistence
-    persistenceMap[secretStorageId2] shouldNotBe defaultSecretPersistence
-
-    verify {
-      secretStorageService.getById(SecretStorageId(secretStorageId))
-      secretStorageService.getById(SecretStorageId(secretStorageId2))
-      secretStorageService.hydrateStorageConfig(secretStorage)
-      secretStorageService.hydrateStorageConfig(secretStorage2)
+      verify { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value) }
     }
   }
 
-  @Test
-  fun `test getPersistenceMapFromConfig with legacy RuntimeSecretPersistence`() {
-    val config =
-      ConfigWithSecretReferences(
-        Jsons.emptyObject(),
-        mapOf(
-          "$.password" to
-            SecretReferenceConfig(
-              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
-            ),
-        ),
-      )
-    val context = SecretHydrationContext(organizationId, workspaceId)
-    every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns true
-
-    every { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value) } returns mockk()
-
-    val persistenceMap = secretPersistenceService.getPersistenceMapFromConfig(config, context)
-    assertNotNull(persistenceMap[null])
-    persistenceMap shouldNotBe defaultSecretPersistence
-
-    verify { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.value) }
-  }
-
-  @Test
-  fun `test getPersistenceFromWorkspaceId returns persistence from secret storage if available`() {
-    val secretStorageIdValue = UUID.randomUUID()
-    val secretStorageId = SecretStorageId(secretStorageIdValue)
-    val secretStorage: SecretStorage =
-      mockk {
-        every { id } returns secretStorageId
-        every { scopeType } returns SecretStorageScopeType.WORKSPACE
-        every { scopeId } returns workspaceId.value
-        every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
-      }
-    every { secretStorageService.getByWorkspaceId(workspaceId) } returns secretStorage
-    every { secretStorageService.getById(secretStorageId) } returns secretStorage
-
-    val secretStorageConfig = Jsons.jsonNode(mapOf("key" to "value"))
-    val secretStorageWithConfig = mockk<SecretStorageWithConfig>()
-    every { secretStorageWithConfig.config } returns secretStorageConfig
-    every { secretStorageService.hydrateStorageConfig(secretStorage) } returns secretStorageWithConfig
-
-    val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
-
-    assertNotNull(persistence)
-    verify { secretStorageService.getByWorkspaceId(workspaceId) }
-    verify { secretStorageService.getById(secretStorageId) }
-    verify { secretStorageService.hydrateStorageConfig(secretStorage) }
-  }
-
-  @Test
-  fun `test getPersistenceFromWorkspaceId returns legacy persistence when no secret storage and feature flag is true`() {
-    every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
-    val orgId = UUID.randomUUID()
-    val org: Organization =
-      mockk {
-        every { organizationId } returns orgId
-      }
-
-    every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
-    every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns true
-
-    every { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, orgId) } returns mockk()
-
-    val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
-
-    assertNotNull(persistence)
-    verify { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, orgId) }
-  }
-
-  @Test
-  fun `test getPersistenceFromWorkspaceId returns default persistence when no secret storage and feature flag is false`() {
-    every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
-    every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns
-      Optional.of(
+  @Nested
+  inner class GetPersistenceFromWorkspaceId {
+    @Test
+    fun `test getPersistenceFromWorkspaceId returns persistence from secret storage`() {
+      val secretStorageIdValue = UUID.randomUUID()
+      val secretStorageId = SecretStorageId(secretStorageIdValue)
+      val secretStorage: SecretStorage =
         mockk {
-          every { organizationId } returns UUID.randomUUID()
-        },
-      )
-    every { featureFlagClient.boolVariation(eq(UseRuntimeSecretPersistence), any()) } returns false
+          every { id } returns secretStorageId
+          every { scopeType } returns SecretStorageScopeType.WORKSPACE
+          every { scopeId } returns workspaceId.value
+          every { storageType } returns SecretStorageType.AWS_SECRETS_MANAGER
+          every { isDefault() } returns false
+        }
+      every { secretStorageService.getByWorkspaceId(workspaceId) } returns secretStorage
+      every { secretStorageService.getById(secretStorageId) } returns secretStorage
 
-    val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
+      val secretStorageConfig = Jsons.jsonNode(mapOf("key" to "value"))
+      val secretStorageWithConfig = mockk<SecretStorageWithConfig>()
+      every { secretStorageWithConfig.config } returns secretStorageConfig
+      every { secretStorageService.hydrateStorageConfig(secretStorage) } returns secretStorageWithConfig
 
-    assertEquals(defaultSecretPersistence, persistence)
-  }
+      val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
 
-  @Test
-  fun `test getPersistenceFromWorkspaceId throws exception when organization is not found`() {
-    every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
-    every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.empty()
+      assertNotNull(persistence)
+      verify { secretStorageService.getByWorkspaceId(workspaceId) }
+      verify { secretStorageService.getById(secretStorageId) }
+      verify { secretStorageService.hydrateStorageConfig(secretStorage) }
+    }
 
-    assertThrows<IllegalStateException> {
-      secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
+    @Test
+    fun `test getPersistenceFromWorkspaceId returns legacy persistence with config from org when no secret storage found`() {
+      every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
+      val orgId = UUID.randomUUID()
+      val org: Organization =
+        mockk {
+          every { organizationId } returns orgId
+        }
+      every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
+      every { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, orgId) } returns mockk()
+
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, io.airbyte.featureflag.Organization(orgId)) } returns true
+
+      val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
+
+      assertNotNull(persistence)
+      verify { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, orgId) }
+    }
+
+    @Test
+    fun `test getPersistenceFromWorkspaceId returns default persistence when no secret storage found`() {
+      every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
+      val orgId = UUID.randomUUID()
+      val org: Organization =
+        mockk {
+          every { organizationId } returns orgId
+        }
+      every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, io.airbyte.featureflag.Organization(orgId)) } returns false
+
+      val persistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
+
+      assertEquals(defaultSecretPersistence, persistence)
+      verify(exactly = 0) { secretPersistenceConfigService.get(ScopeType.ORGANIZATION, orgId) }
+    }
+
+    @Test
+    fun `test getPersistenceFromWorkspaceId throws exception when legacy and no organization is not found`() {
+      every { secretStorageService.getByWorkspaceId(workspaceId) } returns null
+      every { organizationService.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.empty()
+
+      assertThrows<IllegalStateException> {
+        secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId)
+      }
     }
   }
 }
