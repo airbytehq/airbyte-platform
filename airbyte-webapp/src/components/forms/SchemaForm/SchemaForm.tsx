@@ -1,7 +1,16 @@
 import { ExtendedJSONSchema } from "json-schema-to-ts";
 import isBoolean from "lodash/isBoolean";
 import { createContext, useCallback, useContext, useMemo, useRef } from "react";
-import { DefaultValues, FieldError, FieldValues, FormProvider, get, useForm, useFormState } from "react-hook-form";
+import {
+  DefaultValues,
+  FieldError,
+  FieldValues,
+  FormProvider,
+  get,
+  useForm,
+  useFormContext,
+  useFormState,
+} from "react-hook-form";
 import { IntlShape, useIntl } from "react-intl";
 import { z } from "zod";
 
@@ -16,9 +25,24 @@ import {
   resolveTopLevelRef,
   isEmptyObject,
   AirbyteJsonSchemaExtention,
+  unnestPath,
 } from "./utils";
 import { FormSubmissionHandler } from "../Form";
-interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> {
+
+type SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> =
+  | RootSchemaFormProps<JsonSchema, TsSchema>
+  | NestedSchemaFormProps<JsonSchema>;
+export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>(
+  props: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>
+) => {
+  if ("nestedUnderPath" in props) {
+    return <NestedSchemaForm {...props} />;
+  }
+
+  return <RootSchemaForm {...props} />;
+};
+
+interface RootSchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> {
   schema: JsonSchema;
   onSubmit?: FormSubmissionHandler<TsSchema>;
   onSuccess?: (values: TsSchema) => void;
@@ -27,7 +51,7 @@ interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends
   refTargetPath?: string;
 }
 
-export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>({
+const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>({
   children,
   schema,
   onSubmit,
@@ -35,7 +59,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   onError,
   initialValues,
   refTargetPath,
-}: React.PropsWithChildren<SchemaFormProps<JsonSchema, TsSchema>>) => {
+}: React.PropsWithChildren<RootSchemaFormProps<JsonSchema, TsSchema>>) => {
   const rawStartingValues = useMemo(
     () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(schema, schema),
     [initialValues, schema]
@@ -84,8 +108,33 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   );
 };
 
+interface NestedSchemaFormProps<JsonSchema extends AirbyteJsonSchema> {
+  schema: JsonSchema;
+  nestedUnderPath: string;
+  refTargetPath?: string;
+}
+
+const NestedSchemaForm = <JsonSchema extends AirbyteJsonSchema>({
+  children,
+  schema,
+  nestedUnderPath,
+  refTargetPath,
+}: React.PropsWithChildren<NestedSchemaFormProps<JsonSchema>>) => {
+  const { getValues } = useFormContext();
+  const rawStartingValues = useMemo(() => getValues(nestedUnderPath), [getValues, nestedUnderPath]);
+
+  return (
+    <SchemaFormProvider schema={schema} nestedUnderPath={nestedUnderPath}>
+      <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
+        {children}
+      </RefsHandlerProvider>
+    </SchemaFormProvider>
+  );
+};
+
 interface SchemaFormContextValue {
   schema: AirbyteJsonSchema;
+  nestedUnderPath?: string;
   errorAtPath: (path: string) => FieldError | undefined;
   extractDefaultValuesFromSchema: <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => DefaultValues<T>;
   verifyArrayItems: (
@@ -115,8 +164,13 @@ export const useSchemaForm = () => {
 
 interface SchemaFormProviderProps {
   schema: AirbyteJsonSchema;
+  nestedUnderPath?: string;
 }
-const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({ children, schema }) => {
+const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({
+  children,
+  schema,
+  nestedUnderPath,
+}) => {
   const { formatMessage } = useIntl();
   const { errors } = useFormState();
 
@@ -187,8 +241,8 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   );
 
   const getSchemaAtPathCallback = useCallback(
-    (path: string, data: FieldValues) => getSchemaAtPath(path, schema, data),
-    [schema]
+    (path: string, data: FieldValues) => getSchemaAtPath(path, schema, data, nestedUnderPath),
+    [schema, nestedUnderPath]
   );
 
   const convertJsonSchemaToZodSchemaCallback = useCallback(
@@ -200,8 +254,8 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   return (
     <SchemaFormContext.Provider
       value={{
-        // SchemaForm capabilities
         schema,
+        nestedUnderPath,
         errorAtPath,
         extractDefaultValuesFromSchema: extractDefaultValuesFromSchemaCallback,
         verifyArrayItems: verifyArrayItemsCallback,
@@ -415,12 +469,18 @@ const valueIsCompatibleWithSchema = (
   return value.type === discriminatorSchema.enum[0];
 };
 
-export const getSchemaAtPath = (path: string, rootSchema: AirbyteJsonSchema, data: FieldValues): AirbyteJsonSchema => {
-  if (!path) {
+export const getSchemaAtPath = (
+  path: string,
+  rootSchema: AirbyteJsonSchema,
+  data: FieldValues,
+  nestedUnderPath?: string
+): AirbyteJsonSchema => {
+  const targetPath = unnestPath(path, nestedUnderPath);
+  if (!targetPath) {
     return rootSchema;
   }
 
-  const pathParts = path.split(".");
+  const pathParts = targetPath.split(".");
   let currentProperty = rootSchema;
   let currentPath = "";
 
@@ -459,7 +519,7 @@ export const getSchemaAtPath = (path: string, rootSchema: AirbyteJsonSchema, dat
           // For arbitrary keys, use the additionalProperties schema
           nextProperty = currentProperty.additionalProperties;
         } else {
-          throw new Error(`Invalid schema path: ${path}. No properties found at subpath ${currentPath}`);
+          throw new Error(`Invalid schema path: ${targetPath}. No properties found at subpath ${currentPath}`);
         }
       } else {
         // First try to find the property in the defined properties
@@ -479,7 +539,7 @@ export const getSchemaAtPath = (path: string, rootSchema: AirbyteJsonSchema, dat
         throw new Error(`Invalid schema path: ${currentPath}. Property ${part} not found.`);
       }
       if (typeof nextProperty === "boolean") {
-        throw new Error(`Invalid schema path: ${path}. Property ${part} is a boolean, not an object.`);
+        throw new Error(`Invalid schema path: ${targetPath}. Property ${part} is a boolean, not an object.`);
       }
 
       currentProperty = resolveTopLevelRef(rootSchema, nextProperty);

@@ -161,3 +161,11 @@ export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAd
   const nonAdvancedFullPaths = nonAdvancedFields.map((field) => `${objectPath}.${field}`);
   return !nonAdvancedFullPaths.includes(fullFieldPath);
 };
+
+export const nestPath = (path: string, rootPath?: string) => {
+  return rootPath ? `${rootPath}${path ? `.${path}` : ""}` : path;
+};
+
+export const unnestPath = (path: string, rootPath?: string) => {
+  return rootPath && path.startsWith(rootPath) ? path.slice(rootPath.length + 1) : path;
+};
