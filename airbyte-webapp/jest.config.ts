@@ -18,6 +18,7 @@ const jestConfig: Config = {
     "\\.(css|png|scss)$": "test-utils/mock-data/mockEmpty.js",
     "\\.svg$": "test-utils/mock-data/mockSvgString.js",
     "\\.svg\\?react$": "test-utils/mock-data/mockSvg.js",
+    "^monaco-editor$": "test-utils/mockMonaco.ts",
   },
   setupFilesAfterEnv: ["./src/test-utils/setup-tests.ts"],
   globalSetup: "./src/test-utils/global-setup.js",

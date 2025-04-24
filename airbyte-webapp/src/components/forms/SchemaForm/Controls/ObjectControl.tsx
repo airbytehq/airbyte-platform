@@ -1,17 +1,20 @@
 import isBoolean from "lodash/isBoolean";
-import { get, useFormState } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { get, useFormState, useFormContext, useWatch } from "react-hook-form";
+import { useIntl } from "react-intl";
 
+import { CodeEditor } from "components/ui/CodeEditor";
 import { Collapsible } from "components/ui/Collapsible";
+import { FlexContainer } from "components/ui/Flex";
 
 import { AdditionalPropertiesControl } from "./AdditionalPropertiesControl";
 import { ControlGroup } from "./ControlGroup";
 import styles from "./ObjectControl.module.scss";
 import { SchemaFormControl } from "./SchemaFormControl";
-import { BaseControlComponentProps } from "./types";
+import { BaseControlComponentProps, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue } from "../utils";
-
+import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName } from "../utils";
 export const ObjectControl = ({
   fieldSchema,
   baseProps,
@@ -28,6 +31,11 @@ export const ObjectControl = ({
     if (!fieldSchema.additionalProperties) {
       return null;
     }
+
+    if (isBoolean(fieldSchema.additionalProperties)) {
+      return <JsonEditor baseProps={baseProps} toggleConfig={toggleConfig} />;
+    }
+
     const additionalPropertiesSchema = fieldSchema.additionalProperties;
     if (isBoolean(additionalPropertiesSchema)) {
       return null;
@@ -119,6 +127,56 @@ export const ObjectControl = ({
       header={baseProps.header}
     >
       {contents}
+    </ControlGroup>
+  );
+};
+
+const JsonEditor = ({
+  baseProps,
+  toggleConfig,
+}: {
+  baseProps: BaseControlProps;
+  toggleConfig: ReturnType<typeof useToggleConfig>;
+}) => {
+  const { formatMessage } = useIntl();
+  const { errorAtPath } = useSchemaForm();
+  const value = useWatch({ name: baseProps.name });
+  const { setValue } = useFormContext();
+  const [textValue, setTextValue] = useState(JSON.stringify(value, null, 2));
+  useEffect(() => {
+    // reset the textValue state when this is toggled off
+    if (value === undefined) {
+      setTextValue("");
+    }
+  }, [value]);
+
+  return (
+    <ControlGroup
+      path={baseProps.name}
+      title={displayName(baseProps.name, baseProps.label)}
+      tooltip={baseProps.labelTooltip}
+      optional={baseProps.optional}
+      error={errorAtPath(baseProps.name)}
+      toggleConfig={baseProps.optional ? toggleConfig : undefined}
+      footer={!textValue ? formatMessage({ id: "form.enterValidJson" }) : undefined}
+    >
+      <FlexContainer className={styles.jsonEditorContainer} direction="column" gap="md">
+        <div className={styles.jsonEditor}>
+          <CodeEditor
+            key={baseProps.name}
+            value={textValue}
+            language="json"
+            onChange={(val: string | undefined) => {
+              setTextValue(val || "");
+              let parsedValue = val;
+              try {
+                parsedValue = JSON.parse(val || "{}");
+              } catch (error) {}
+              setValue(baseProps.name, parsedValue, { shouldValidate: true, shouldTouch: true });
+            }}
+          />
+        </div>
+      </FlexContainer>
     </ControlGroup>
   );
 };

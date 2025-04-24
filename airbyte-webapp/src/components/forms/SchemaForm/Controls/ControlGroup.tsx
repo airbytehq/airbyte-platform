@@ -25,10 +25,11 @@ interface ControlGroupProps {
     isEnabled?: boolean;
     onToggle: (newEnabledState: boolean) => void;
   };
+  footer?: string;
 }
 
 export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlGroupProps>>(
-  ({ title, path, tooltip, optional, control, header, error, toggleConfig, children }, ref) => {
+  ({ title, path, tooltip, optional, control, header, error, toggleConfig, footer, children }, ref) => {
     const { formatMessage } = useIntl();
 
     const isDisabled = toggleConfig && toggleConfig.isEnabled === false;
@@ -80,11 +81,15 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
             </FlexContainer>
           </div>
         </div>
-        {error && (
-          <Text color="red" size="xs" className={styles.error}>
+        {error ? (
+          <Text color="red" size="xs" className={styles.footer}>
             {error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })}
           </Text>
-        )}
+        ) : footer && !isDisabled ? (
+          <Text color="grey300" size="xs" className={styles.footer}>
+            {footer}
+          </Text>
+        ) : null}
       </div>
     );
   }
