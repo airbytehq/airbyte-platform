@@ -9,7 +9,7 @@ import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, displayName, resolveTopLevelRef } from "../utils";
+import { AirbyteJsonSchema, displayName, nestPath, resolveTopLevelRef } from "../utils";
 
 interface SchemaFormControlProps {
   /**
@@ -65,11 +65,15 @@ export const SchemaFormControl = ({
     schema: rootSchema,
     getSchemaAtPath,
     registerRenderedPath,
+    nestedUnderPath,
     verifyArrayItems,
     convertJsonSchemaToZodSchema,
   } = useSchemaForm();
   const { register } = useFormContext();
-  const value = useWatch({ name: path });
+
+  const targetPath = path ? path : nestPath(path, nestedUnderPath);
+
+  const value = useWatch({ name: targetPath });
 
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
@@ -93,7 +97,7 @@ export const SchemaFormControl = ({
   }
 
   // Register validation logic for this field
-  register(path, {
+  register(targetPath, {
     validate: (value) => {
       const zodSchema = convertJsonSchemaToZodSchema(targetSchema, isRequired);
       const result = zodSchema.safeParse(value);
@@ -105,7 +109,7 @@ export const SchemaFormControl = ({
   });
 
   const baseProps: BaseControlProps = {
-    name: path,
+    name: targetPath,
     label: titleOverride ?? displayName(path, targetSchema.title),
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (

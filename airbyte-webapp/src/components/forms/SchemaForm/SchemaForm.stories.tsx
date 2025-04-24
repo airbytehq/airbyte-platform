@@ -1,6 +1,6 @@
 import { StoryObj } from "@storybook/react";
 import { FromSchema } from "json-schema-to-ts";
-import { useFormState, useWatch } from "react-hook-form";
+import { FieldValues, FormProvider, useForm, useFormState, useWatch } from "react-hook-form";
 
 import { formatJson } from "components/connectorBuilder/utils";
 import { Card } from "components/ui/Card";
@@ -602,6 +602,134 @@ export const DeclarativeComponentSchema = () => {
         <ShowFormValues />
       </Card>
     </SchemaForm>
+  );
+};
+
+export const NestedSchemaForm = () => {
+  const nestedSchema = {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      age: { type: "number" },
+      friends: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            friendName: { type: "string", linkable: true },
+          },
+          required: ["friendName"],
+        },
+      },
+    },
+    required: ["name", "age"],
+  } as const;
+
+  const methods = useForm<FieldValues>({
+    defaultValues: {
+      record: {
+        id: "abc123",
+        user: {
+          name: "John Doe",
+          age: 30,
+        },
+      },
+    },
+    mode: "onChange",
+  });
+
+  const processSubmission = (values: FieldValues) => {
+    console.log("submitted values", values);
+  };
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(processSubmission)}>
+        <SchemaForm schema={nestedSchema} nestedUnderPath="record.user" refTargetPath="record.definitions.shared">
+          <Card>
+            <SchemaFormControl path="record.user" />
+          </Card>
+        </SchemaForm>
+        <ShowFormValues />
+      </form>
+    </FormProvider>
+  );
+};
+
+export const NestedDeclarativeComponentSchema = () => {
+  const methods = useForm<FieldValues>({
+    defaultValues: {
+      state: {
+        view: "global",
+        manifest: {
+          type: "DeclarativeSource",
+          check: {
+            streams: [],
+          },
+          version: "1.0.0",
+          streams: [
+            {
+              name: "pokemon",
+              type: "DeclarativeStream",
+              retriever: {
+                type: "SimpleRetriever",
+                decoder: {
+                  type: "JsonDecoder",
+                },
+                paginator: {
+                  type: "DefaultPaginator",
+                  page_size_option: {
+                    type: "RequestOption",
+                    field_name: "limit",
+                    inject_into: "request_parameter",
+                  },
+                  page_token_option: {
+                    type: "RequestOption",
+                    field_name: "offset",
+                    inject_into: "request_parameter",
+                  },
+                  pagination_strategy: {
+                    type: "OffsetIncrement",
+                    page_size: 10,
+                  },
+                },
+                requester: {
+                  type: "HttpRequester",
+                  url_base: "https://pokeapi.co/api/v2/",
+                  path: "pokemon",
+                  http_method: "GET",
+                },
+                record_selector: {
+                  type: "RecordSelector",
+                  extractor: {
+                    type: "DpathExtractor",
+                    field_path: ["results"],
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+    },
+    mode: "onChange",
+  });
+
+  const processSubmission = (values: FieldValues) => {
+    console.log("submitted values", values);
+  };
+
+  return (
+    <FormProvider {...methods}>
+      <form onSubmit={methods.handleSubmit(processSubmission)}>
+        <SchemaForm schema={declarativeComponentSchema} nestedUnderPath="state.manifest">
+          <Card>
+            <SchemaFormControl path="state.manifest.streams.0" />
+          </Card>
+        </SchemaForm>
+        <ShowFormValues />
+      </form>
+    </FormProvider>
   );
 };
 
