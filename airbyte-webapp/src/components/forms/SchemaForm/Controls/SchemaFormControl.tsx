@@ -28,8 +28,21 @@ interface SchemaFormControlProps {
    */
   skipRenderedPathRegistration?: boolean;
 
-  titleOverride?: string;
+  /**
+   * The schema for the field currently being rendered.
+   * If not provided, the schema will be resolved from the root schema and the path.
+   */
   fieldSchema?: AirbyteJsonSchema;
+
+  /**
+   * If provided, these fields will be rendered normally, and everything else will
+   * be rendered inside a collapsible Advanced section.
+   *
+   * If not provided, all fields will be rendered normally.
+   */
+  nonAdvancedFields?: string[];
+
+  titleOverride?: string;
   isRequired?: boolean;
   className?: string;
 }
@@ -42,10 +55,11 @@ export const SchemaFormControl = ({
   path = "",
   overrideByPath = {},
   skipRenderedPathRegistration = false,
-  titleOverride,
   fieldSchema,
+  titleOverride,
   isRequired = true,
   className,
+  nonAdvancedFields,
 }: SchemaFormControlProps) => {
   const {
     schema: rootSchema,
@@ -109,6 +123,7 @@ export const SchemaFormControl = ({
         baseProps={baseProps}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
+        nonAdvancedFields={nonAdvancedFields}
       />
     );
   }
@@ -120,6 +135,7 @@ export const SchemaFormControl = ({
         baseProps={baseProps}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
+        nonAdvancedFields={nonAdvancedFields}
       />
     );
   }

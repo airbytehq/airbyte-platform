@@ -84,9 +84,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   );
 };
 
-// Simple context type that forwards SchemaForm and useRefsHandler capabilities
 interface SchemaFormContextValue {
-  // Schema & validation
   schema: AirbyteJsonSchema;
   errorAtPath: (path: string) => FieldError | undefined;
   extractDefaultValuesFromSchema: <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => DefaultValues<T>;
@@ -102,8 +100,6 @@ interface SchemaFormContextValue {
   ) => AirbyteJsonSchema | undefined;
   getSchemaAtPath: (path: string, data: FieldValues) => AirbyteJsonSchema;
   convertJsonSchemaToZodSchema: (schema: AirbyteJsonSchema, isRequired: boolean) => z.ZodTypeAny;
-
-  // Rendered paths tracking
   renderedPathsRef: React.MutableRefObject<Set<string>>;
   registerRenderedPath: (path: string) => void;
   isPathRendered: (path: string) => boolean;
@@ -212,8 +208,6 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
         getSelectedOptionSchema: getSelectedOptionSchemaCallback,
         getSchemaAtPath: getSchemaAtPathCallback,
         convertJsonSchemaToZodSchema: convertJsonSchemaToZodSchemaCallback,
-
-        // Rendered paths tracking
         renderedPathsRef,
         registerRenderedPath,
         isPathRendered,

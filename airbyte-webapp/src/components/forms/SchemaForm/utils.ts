@@ -153,3 +153,11 @@ export const resolveTopLevelRef = (
   }
   return currentSchema;
 };
+
+export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAdvancedFields?: string[]) => {
+  if (!nonAdvancedFields) {
+    return false;
+  }
+  const nonAdvancedFullPaths = nonAdvancedFields.map((field) => `${objectPath}.${field}`);
+  return !nonAdvancedFullPaths.includes(fullFieldPath);
+};

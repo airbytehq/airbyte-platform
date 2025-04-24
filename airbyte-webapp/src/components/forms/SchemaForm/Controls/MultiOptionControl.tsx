@@ -21,6 +21,7 @@ export const MultiOptionControl = ({
   overrideByPath = {},
   skipRenderedPathRegistration = false,
   hideBorder = false,
+  nonAdvancedFields,
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
   const { setValue, clearErrors } = useFormContext();
@@ -83,6 +84,7 @@ export const MultiOptionControl = ({
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
         fieldSchema={options[0]}
+        nonAdvancedFields={nonAdvancedFields}
       />
     );
   }
@@ -92,7 +94,17 @@ export const MultiOptionControl = ({
   }
 
   if (hideBorder) {
-    return <>{renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration)}</>;
+    return (
+      <>
+        {renderOptionContents(
+          baseProps,
+          selectedOption,
+          overrideByPath,
+          skipRenderedPathRegistration,
+          nonAdvancedFields
+        )}
+      </>
+    );
   }
 
   return (
@@ -128,7 +140,7 @@ export const MultiOptionControl = ({
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
     >
-      {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration)}
+      {renderOptionContents(baseProps, selectedOption, overrideByPath, skipRenderedPathRegistration, nonAdvancedFields)}
     </ControlGroup>
   );
 };
@@ -138,7 +150,8 @@ const renderOptionContents = (
   baseProps: BaseControlProps,
   selectedOption?: AirbyteJsonSchema,
   overrideByPath?: OverrideByPath,
-  skipRenderedPathRegistration?: boolean
+  skipRenderedPathRegistration?: boolean,
+  nonAdvancedFields?: string[]
 ) => {
   if (!selectedOption) {
     return null;
@@ -152,6 +165,7 @@ const renderOptionContents = (
         skipRenderedPathRegistration={skipRenderedPathRegistration}
         hideBorder
         fieldSchema={selectedOption}
+        nonAdvancedFields={nonAdvancedFields}
       />
     );
   }

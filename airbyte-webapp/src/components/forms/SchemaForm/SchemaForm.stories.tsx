@@ -205,6 +205,126 @@ export const RemainingFields = () => (
   </Card>
 );
 
+export const AdvancedFields = () => {
+  const schema2 = {
+    type: "object",
+    properties: {
+      parent: {
+        type: "object",
+        title: "Parent",
+        description: "I have a child",
+        required: ["child"],
+        properties: {
+          child: {
+            type: "object",
+            title: "Child",
+            description: "I have a parent",
+            required: ["name"],
+            properties: {
+              name: { type: "string", title: "Name" },
+              uncommonField1: {
+                type: "string",
+                title: "Uncommonly Used Field 1",
+                description: "This field is not commonly used",
+              },
+              commonField1: {
+                type: "string",
+                title: "Common Field 1",
+                description: "This field is commonly used",
+              },
+            },
+          },
+          uncommonField2: {
+            type: "string",
+            title: "Uncommonly Used Field 2",
+            description: "This field is not commonly used",
+          },
+          uncommonField3: {
+            type: "object",
+            title: "Uncommonly Used Field 3",
+            description: "This field is not commonly used",
+            properties: {
+              email: { type: "string", title: "Email", format: "email" },
+            },
+          },
+          commonField2: {
+            type: "string",
+            title: "Common Field 2",
+            description: "This field is commonly used",
+          },
+        },
+      },
+      uncommonField4: {
+        type: "string",
+        title: "Uncommonly Used Field 4",
+        description: "This field is not commonly used",
+      },
+      uncommonField5: {
+        type: "string",
+        title: "Uncommonly Used Field 5",
+        description: "This field is not commonly used",
+      },
+      oneOf: {
+        title: "One of",
+        type: "object",
+        oneOf: [
+          {
+            type: "object",
+            title: "First choice",
+            properties: {
+              type: { type: "string", enum: ["FirstChoice"] },
+              field1: { type: "string" },
+              field2: { type: "string" },
+            },
+          },
+          {
+            type: "object",
+            title: "Second choice",
+            properties: {
+              type: { type: "string", enum: ["SecondChoice"] },
+              field3: { type: "string" },
+              field4: { type: "string" },
+            },
+          },
+        ],
+      },
+    },
+    required: ["parent", "oneOf"],
+    additionalProperties: false,
+  } as const;
+
+  return (
+    <Card>
+      <SchemaForm schema={schema2} onSubmit={onSubmit}>
+        <SchemaFormControl
+          overrideByPath={{
+            "parent.child.name": (
+              <FormControl name="parent.child.name" label="A different label for Name" fieldType="input" />
+            ),
+            "parent.uncommonField2": (
+              <FormControl
+                name="parent.uncommonField2"
+                label="A different label for Uncommon Field 2"
+                fieldType="input"
+              />
+            ),
+          }}
+          nonAdvancedFields={[
+            "parent.child.name",
+            "parent.child.commonField1",
+            "parent.commonField2",
+            "commonField3",
+            "oneOf.field1",
+            "oneOf.field4",
+          ]}
+        />
+        <FormSubmissionButtons />
+        <ShowFormValues />
+      </SchemaForm>
+    </Card>
+  );
+};
+
 /**
  * Shows how to override specific fields with custom components
  */
