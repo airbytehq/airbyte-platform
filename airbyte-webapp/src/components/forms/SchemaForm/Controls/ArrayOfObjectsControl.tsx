@@ -18,8 +18,8 @@ import { AirbyteJsonSchema } from "../utils";
 export const ArrayOfObjectsControl = ({
   fieldSchema,
   baseProps,
-  overrideByPath = {},
   skipRenderedPathRegistration = false,
+  overrideByPath = {},
 }: BaseControlComponentProps) => {
   const { errorAtPath, extractDefaultValuesFromSchema } = useSchemaForm();
   const { fields: items, append, remove } = useFieldArray({ name: baseProps.name });

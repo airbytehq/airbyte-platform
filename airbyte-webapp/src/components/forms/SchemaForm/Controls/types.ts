@@ -19,4 +19,5 @@ export interface BaseControlComponentProps {
   overrideByPath?: OverrideByPath;
   skipRenderedPathRegistration?: boolean;
   hideBorder?: boolean;
+  nonAdvancedFields?: string[];
 }
