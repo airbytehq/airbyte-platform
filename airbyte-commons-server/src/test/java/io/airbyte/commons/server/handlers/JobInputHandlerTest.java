@@ -8,7 +8,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -55,7 +54,6 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
@@ -168,8 +166,8 @@ class JobInputHandlerTest {
 
     when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final DestinationConnection destinationConnection = new DestinationConnection()
         .withDestinationId(DESTINATION_ID)
@@ -207,9 +205,9 @@ class JobInputHandlerTest {
     when(configInjector.injectConfig(SOURCE_CONFIG_WITH_OAUTH, sourceDefinitionId))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG);
     when(
-        secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, SOURCE_ID, SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG))
+        secretReferenceService.getConfigWithSecretReferences(SOURCE_ID, SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG, WORKSPACE_ID))
             .thenReturn(SOURCE_CONFIG_WITH_REFS);
-    when(secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH))
+    when(secretReferenceService.getConfigWithSecretReferences(DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH, WORKSPACE_ID))
         .thenReturn(DESTINATION_CONFIG_WITH_REFS);
 
     when(sourceService.getStandardSourceDefinition(sourceDefinitionId)).thenReturn(mock(StandardSourceDefinition.class));
@@ -281,9 +279,8 @@ class JobInputHandlerTest {
 
     verify(oAuthConfigSupplier).injectSourceOAuthParameters(sourceDefinitionId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION);
     verify(oAuthConfigSupplier).injectDestinationOAuthParameters(DESTINATION_DEFINITION_ID, DESTINATION_ID, WORKSPACE_ID, DESTINATION_CONFIGURATION);
-    verify(secretReferenceService).getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH);
-    verify(secretReferenceService).getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, SOURCE_ID,
-        SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG);
+    verify(secretReferenceService).getConfigWithSecretReferences(DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH, WORKSPACE_ID);
+    verify(secretReferenceService).getConfigWithSecretReferences(SOURCE_ID, SOURCE_CONFIG_WITH_OAUTH_AND_INJECTED_CONFIG, WORKSPACE_ID);
 
     verify(attemptHandler).saveSyncConfig(new SaveAttemptSyncConfigRequestBody()
         .jobId(JOB_ID)
@@ -381,9 +378,9 @@ class JobInputHandlerTest {
     when(sourceService.getStandardSourceDefinition(sourceDefId)).thenReturn(mock(StandardSourceDefinition.class));
     when(oAuthConfigSupplier.injectSourceOAuthParameters(sourceDefId, SOURCE_ID, WORKSPACE_ID, SOURCE_CONFIGURATION))
         .thenReturn(SOURCE_CONFIG_WITH_OAUTH);
-    when(secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, SOURCE_ID, SOURCE_CONFIG_WITH_OAUTH))
+    when(secretReferenceService.getConfigWithSecretReferences(SOURCE_ID, SOURCE_CONFIG_WITH_OAUTH, WORKSPACE_ID))
         .thenReturn(SOURCE_CONFIG_WITH_REFS);
-    when(secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH))
+    when(secretReferenceService.getConfigWithSecretReferences(DESTINATION_ID, DESTINATION_CONFIG_WITH_OAUTH, WORKSPACE_ID))
         .thenReturn(DESTINATION_CONFIG_WITH_REFS);
 
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()

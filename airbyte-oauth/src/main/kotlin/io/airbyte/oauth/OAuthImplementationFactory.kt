@@ -184,7 +184,9 @@ class OAuthImplementationFactory(
     private val LOGGER: Logger = LoggerFactory.getLogger(OAuthImplementationFactory::class.java)
 
     private fun hasDeclarativeOAuthConfigSpecification(spec: ConnectorSpecification?): Boolean =
-      spec != null && spec.advancedAuth != null && spec.advancedAuth.oauthConfigSpecification != null &&
+      spec != null &&
+        spec.advancedAuth != null &&
+        spec.advancedAuth.oauthConfigSpecification != null &&
         spec.advancedAuth.oauthConfigSpecification.oauthConnectorInputSpecification != null
   }
 }

@@ -23,7 +23,7 @@ data class PartialUserConfig(
    * JSON string containing user-specific configuration properties that will be
    * applied to the template configuration
    */
-  var partialUserConfigProperties: JsonNode,
+  var connectionConfiguration: JsonNode,
   val actorId: UUID? = null,
 )
 

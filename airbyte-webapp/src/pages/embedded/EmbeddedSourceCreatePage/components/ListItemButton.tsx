@@ -1,5 +1,6 @@
-import { ConnectorIcon } from "components/ConnectorIcon";
-import { Box } from "components/ui/Box";
+import { FlexContainer } from "components/ui/Flex";
+
+import { SvgIcon } from "area/connector/utils";
 
 import styles from "./ListItemButton.module.scss";
 
@@ -11,11 +12,13 @@ interface ListItemButtonProps {
 
 export const ListItemButton: React.FC<ListItemButtonProps> = ({ label, onClick, icon }) => {
   return (
-    <Box py="sm">
-      <button className={styles.button} onClick={onClick}>
-        <ConnectorIcon icon={icon} />
-        {label}
-      </button>
-    </Box>
+    <button className={styles.button} onClick={onClick}>
+      <div className={styles.buttonContent}>
+        <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
+          <SvgIcon src={icon} />
+        </FlexContainer>
+        <div className={styles.label}>{label}</div>
+      </div>
+    </button>
   );
 };

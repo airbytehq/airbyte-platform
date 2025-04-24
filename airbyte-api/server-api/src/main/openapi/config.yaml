@@ -270,6 +270,25 @@ paths:
                 $ref: "#/components/schemas/WorkspaceIdList"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_available_dbt_jobs:
+    post:
+      tags:
+        - workspace
+      summary: Calls the dbt Cloud `List Accounts` and `List jobs` APIs to get the list of available jobs for the dbt auth token associated with the requested workspace config.
+      operationId: getAvailableDbtJobsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceGetDbtJobsRequest"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved available dbt Cloud jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceGetDbtJobsResponse"
   /v1/workspaces/get:
     post:
       tags:
@@ -8739,6 +8758,42 @@ paths:
       x-sdk-alias: listOrganizationsForUser
       x-sdk-group: Organizations
 
+  /public/v1/organizations/{organizationId}/oauthCredentials:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOAuthCredentialsRequest"
+        required: true
+      tags:
+        - public_organizations
+        - public
+        - Organizations
+      responses:
+        "200":
+          description: OAuth credential override was successful.
+        "400":
+          description: A field in the body has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-alias: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-group: Organizations
+      summary: Create OAuth override credentials for an organization and source type.
+      description: >-
+        Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
+        source/destination.
+    parameters:
+      - name: organizationId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+
   # Public APIs - Users
   /public/v1/users:
     get:
@@ -10075,6 +10130,48 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+    WorkspaceGetDbtJobsRequest:
+      description: Get the available dbt Cloud jobs associated with the given workspace config.
+      type: object
+      required:
+        - workspaceId
+        - dbtConfigId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        dbtConfigId:
+          type: string
+          format: uuid
+          description: The config id associated with the dbt Cloud config, references the webhookConfigId in the core API.
+    DbtCloudJobInfo:
+      type: object
+      description: A dbt Cloud job
+      required:
+        - accountId
+        - jobId
+        - jobName
+      properties:
+        accountId:
+          type: integer
+          format: int64
+          description: The account id associated with the job
+        jobId:
+          type: integer
+          format: int64
+          description: The the specific job id returned by the dbt Cloud API
+        jobName:
+          type: string
+          description: The human-readable name of the job returned by the dbt Cloud API
+    WorkspaceGetDbtJobsResponse:
+      description: The available dbt Cloud jobs for the requested workspace config
+      type: object
+      required:
+        - availableDbtJobs
+      properties:
+        availableDbtJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/DbtCloudJobInfo"
     WorkspaceUsageRequestBody:
       type: object
       required:
@@ -17258,6 +17355,23 @@ components:
         configuration:
           $ref: "#/components/schemas/OAuthCredentialsConfiguration"
       x-sdk-component: true
+    OrganizationOAuthCredentialsRequest:
+      title: Root Type for OrganizationOAuthCredentials
+      description: POST body for creating/updating organization level OAuth credentials
+      required:
+        - actorType
+        - name
+        - configuration
+      type: object
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: string
+          description: The name of the source i.e. google-ads
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+      x-sdk-component: true
     OAuthCredentialsConfiguration:
       description: The configuration for this source/destination based on the OAuth section of the relevant specification.
       type: object
@@ -17974,6 +18088,8 @@ components:
       properties:
         name:
           type: string
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18795,15 +18911,19 @@ components:
       type: object
       required:
         - partialUserConfigId
+        - workspaceId
       properties:
         partialUserConfigId:
+          type: string
+          format: uuid
+        workspaceId:
           type: string
           format: uuid
     PartialUserConfigRead:
       type: object
       required:
         - id
-        - partialUserConfigProperties
+        - connectionConfiguration
         - configTemplate
         - actorId
       properties:
@@ -18816,13 +18936,13 @@ components:
           description: the actor that this partial user config is for
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigCreate:
       type: object
       required:
         - configTemplateId
-        - partialUserConfigProperties
+        - connectionConfiguration
         - workspaceId
       properties:
         workspaceId:
@@ -18832,7 +18952,7 @@ components:
           description: the template that this user config is connected with
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigWithSource:
       type: object
@@ -18857,12 +18977,16 @@ components:
       type: object
       required:
         - partialUserConfigId
-        - partialUserConfigProperties
+        - workspaceId
+        - connectionConfiguration
       properties:
         partialUserConfigId:
           type: string
           format: uuid
-        partialUserConfigProperties:
+        workspaceId:
+          type: string
+          format: uuid
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigReadList:
       type: object

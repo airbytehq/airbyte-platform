@@ -3,6 +3,8 @@ import { PropsWithChildren, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCookie } from "react-use";
 
+import { ALLOWED_ORIGIN_PARAM } from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
+
 import { AuthContext } from "./AuthContext";
 
 /**
@@ -18,7 +20,7 @@ interface ScopedAuthMessage {
 
 const useScopedAuthToken = () => {
   const [searchParams] = useSearchParams();
-  const allowedOriginParam = searchParams.get("allowedOrigin");
+  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
 
   const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
   const [token, setToken, deleteToken] = useCookie(SCOPED_AUTH_TOKEN_COOKIE);

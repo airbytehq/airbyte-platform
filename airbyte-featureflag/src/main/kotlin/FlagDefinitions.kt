@@ -175,8 +175,6 @@ object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", defau
 
 object MergeStreamStatWithMetadata : Temporary<Boolean>(key = "platform.merge-stat-with-metadata", default = false)
 
-object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
-
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
 
 object AllowConfigTemplateEndpoints : Permanent<Boolean>(key = "platform.allow-config-template-endpoints", default = false)
@@ -195,5 +193,9 @@ object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platfor
 object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
 
 object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
+
+object PersistSecretConfigsAndReferences : Temporary<Boolean>(key = "platform.persist-secret-configs-and-references", default = false)
+
+object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read-secret-reference-ids-in-configs", default = false)
 
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

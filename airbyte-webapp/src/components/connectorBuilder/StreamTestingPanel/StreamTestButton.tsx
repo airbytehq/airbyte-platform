@@ -105,7 +105,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const testButton = (
     <Button
-      className={classNames(styles.testButton, className, { [styles.pulsate]: isStreamTestStale })}
+      className={classNames(styles.testButton, className, { [styles.pulsate]: isStreamTestStale && !showWarningIcon })}
       size="sm"
       onClick={executeTestRead}
       disabled={buttonDisabled}

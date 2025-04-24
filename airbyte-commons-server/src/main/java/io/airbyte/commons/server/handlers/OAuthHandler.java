@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.client.model.generated.WorkspaceOverrideOauthParamsRequestBody;
+import io.airbyte.api.model.generated.ActorTypeEnum;
 import io.airbyte.api.model.generated.CompleteDestinationOAuthRequest;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest;
@@ -53,7 +54,8 @@ import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.domain.models.SecretReferenceScopeType;
+import io.airbyte.domain.models.ActorDefinitionId;
+import io.airbyte.domain.models.OrganizationId;
 import io.airbyte.domain.services.secrets.SecretHydrationContext;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -90,12 +92,14 @@ import org.slf4j.LoggerFactory;
 /**
  * OAuthHandler. Javadocs suppressed because api docs should be used as source of truth.
  */
-@SuppressWarnings({"ParameterName", "PMD.AvoidDuplicateLiterals"})
+@SuppressWarnings({"ParameterName", "PMD.AvoidDuplicateLiterals", "PMD.PreserveStackTrace"})
 @Singleton
 public class OAuthHandler {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(OAuthHandler.class);
   private static final String ERROR_MESSAGE = "failed while reporting usage.";
+
+  private static final String ORGANIZATION_SECRET_PREFIX = "organization_";
 
   private final OAuthImplementationFactory oAuthImplementationFactory;
   private final TrackingClient trackingClient;
@@ -193,8 +197,8 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
         final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
@@ -273,8 +277,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(destinationConnection.getDestinationId(), destinationConnection.getConfiguration(),
+                workspaceId);
         final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
@@ -358,8 +363,8 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
         final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedSourceConfig,
@@ -434,8 +439,9 @@ public class OAuthHandler {
           throw new ConfigNotFoundException(e.getType(), e.getConfigId());
         }
 
-        final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-            destinationConnection.getDestinationId(), destinationConnection.getConfiguration());
+        final ConfigWithSecretReferences configWithRefs =
+            secretReferenceService.getConfigWithSecretReferences(destinationConnection.getDestinationId(), destinationConnection.getConfiguration(),
+                workspaceId);
         final JsonNode hydratedDestinationConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
         oAuthInputConfigurationForConsent = getOAuthInputConfigurationForConsent(spec,
             hydratedDestinationConfig,
@@ -488,8 +494,8 @@ public class OAuthHandler {
     }
     final JsonNode sourceOAuthParamConfig =
         getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceDefinitionId());
-    final ConfigWithSecretReferences configWithRefs = secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR,
-        sourceConnection.getSourceId(), sourceConnection.getConfiguration());
+    final ConfigWithSecretReferences configWithRefs =
+        secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(), workspaceId);
     final JsonNode hydratedSourceConfig = getHydratedConfiguration(configWithRefs, organizationId, workspaceId);
     oAuthFlowImplementation.revokeSourceOauth(
         revokeSourceOauthTokensRequest.getWorkspaceId(),
@@ -501,7 +507,7 @@ public class OAuthHandler {
   public void setSourceInstancewideOauthParams(final SetInstancewideSourceOauthParamsRequestBody requestBody)
       throws IOException {
     final SourceOAuthParameter param = oAuthService
-        .getSourceOAuthParamByDefinitionIdOptional(null, requestBody.getSourceDefinitionId())
+        .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), requestBody.getSourceDefinitionId())
         .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(Jsons.jsonNode(requestBody.getParams()))
         .withSourceDefinitionId(requestBody.getSourceDefinitionId());
@@ -513,7 +519,7 @@ public class OAuthHandler {
   public void setDestinationInstancewideOauthParams(final SetInstancewideDestinationOauthParamsRequestBody requestBody)
       throws IOException {
     final DestinationOAuthParameter param = oAuthService
-        .getDestinationOAuthParamByDefinitionIdOptional(null, requestBody.getDestinationDefinitionId())
+        .getDestinationOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), requestBody.getDestinationDefinitionId())
         .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(Jsons.jsonNode(requestBody.getParams()))
         .withDestinationDefinitionId(requestBody.getDestinationDefinitionId());
@@ -638,6 +644,47 @@ public class OAuthHandler {
     }
   }
 
+  public void setOrganizationOverrideOAuthParams(final OrganizationId organizationId,
+                                                 final ActorDefinitionId actorDefinitionId,
+                                                 final ActorTypeEnum actorType,
+                                                 final JsonNode params)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+    switch (actorType) {
+      case SOURCE -> setSourceOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params);
+      case DESTINATION -> setDestinationOrganizationOverrideOauthParams(organizationId, actorDefinitionId, params);
+      default -> throw new BadObjectSchemaKnownException("actorType must be one of ['source', 'destination']");
+    }
+  }
+
+  public void setSourceOrganizationOverrideOauthParams(final OrganizationId organizationId,
+                                                       final ActorDefinitionId actorDefinitionId,
+                                                       final JsonNode params)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final StandardSourceDefinition standardSourceDefinition =
+        sourceService.getStandardSourceDefinition(actorDefinitionId.getValue());
+
+    /*
+     * It is possible that the version has been overriden for the organization in a way that the spec
+     * would be different. We don't currently have a method for getting a version for an organization so
+     * this is a gap right now.
+     */
+    final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionVersionHelper.getDefaultSourceVersion(standardSourceDefinition);
+
+    final ConnectorSpecification connectorSpecification = actorDefinitionVersion.getSpec();
+
+    final JsonNode sanitizedOauthConfiguration =
+        sanitizeOauthConfiguration(organizationId.getValue(), connectorSpecification, params, Optional.empty());
+
+    final SourceOAuthParameter param = oAuthService
+        .getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(organizationId.getValue()), actorDefinitionId.getValue())
+        .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
+        .withConfiguration(sanitizedOauthConfiguration)
+        .withSourceDefinitionId(actorDefinitionId.getValue())
+        .withOrganizationId(organizationId.getValue());
+
+    oAuthService.writeSourceOAuthParam(param);
+  }
+
   public void setSourceWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
     final UUID definitionId = requestBody.getDefinitionId();
@@ -652,16 +699,47 @@ public class OAuthHandler {
 
     final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
 
-    final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+    final UUID organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get();
+    final JsonNode sanitizedOauthConfiguration =
+        sanitizeOauthConfiguration(organizationId, connectorSpecification, oauthParamConfiguration, Optional.of(workspaceId));
 
     final SourceOAuthParameter param = oAuthService
-        .getSourceOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
+        .getSourceOAuthParamByDefinitionIdOptional(Optional.of(workspaceId), Optional.empty(), definitionId)
         .orElseGet(() -> new SourceOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(sanitizedOauthConfiguration)
         .withSourceDefinitionId(definitionId)
         .withWorkspaceId(workspaceId);
 
     oAuthService.writeSourceOAuthParam(param);
+  }
+
+  public void setDestinationOrganizationOverrideOauthParams(final OrganizationId organizationId,
+                                                            final ActorDefinitionId actorDefinitionId,
+                                                            final JsonNode params)
+      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
+    final StandardDestinationDefinition standardDestinationDefinition =
+        destinationService.getStandardDestinationDefinition(actorDefinitionId.getValue());
+
+    /*
+     * It is possible that the version has been overriden for the organization in a way that the spec
+     * would be different. We don't currently have a method for getting a version for an organization so
+     * this is a gap right now.
+     */
+    final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionVersionHelper.getDefaultDestinationVersion(standardDestinationDefinition);
+
+    final ConnectorSpecification connectorSpecification = actorDefinitionVersion.getSpec();
+
+    final JsonNode sanitizedOauthConfiguration =
+        sanitizeOauthConfiguration(organizationId.getValue(), connectorSpecification, params, Optional.empty());
+
+    final DestinationOAuthParameter param = oAuthService
+        .getDestinationOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.of(organizationId.getValue()), actorDefinitionId.getValue())
+        .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
+        .withConfiguration(sanitizedOauthConfiguration)
+        .withDestinationDefinitionId(actorDefinitionId.getValue())
+        .withOrganizationId(organizationId.getValue());
+
+    oAuthService.writeDestinationOAuthParam(param);
   }
 
   public void setDestinationWorkspaceOverrideOauthParams(final WorkspaceOverrideOauthParamsRequestBody requestBody)
@@ -677,10 +755,13 @@ public class OAuthHandler {
 
     final JsonNode oauthParamConfiguration = Jsons.jsonNode(requestBody.getParams());
 
-    final JsonNode sanitizedOauthConfiguration = sanitizeOauthConfiguration(workspaceId, connectorSpecification, oauthParamConfiguration);
+    final UUID organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId).get();
+
+    final JsonNode sanitizedOauthConfiguration =
+        sanitizeOauthConfiguration(organizationId, connectorSpecification, oauthParamConfiguration, Optional.of(workspaceId));
 
     final DestinationOAuthParameter param = oAuthService
-        .getDestinationOAuthParamByDefinitionIdOptional(workspaceId, definitionId)
+        .getDestinationOAuthParamByDefinitionIdOptional(Optional.of(workspaceId), Optional.empty(), definitionId)
         .orElseGet(() -> new DestinationOAuthParameter().withOauthParameterId(UUID.randomUUID()))
         .withConfiguration(sanitizedOauthConfiguration)
         .withDestinationDefinitionId(definitionId)
@@ -700,16 +781,20 @@ public class OAuthHandler {
    * secrets manager and a new ready-for-storage version of the oauth param config JSON will be
    * returned.
    *
-   * @param workspaceId the current workspace ID
+   * @param organizationId the current organization ID
    * @param connectorSpecification the connector specification of the source/destination in question
    * @param oauthParamConfiguration the oauth param configuration passed in by the user.
+   * @param workspaceId the workspace ID if applicable
    * @return new oauth param configuration to be stored to the db.
    * @throws JsonValidationException if oauth param configuration doesn't pass spec validation
    */
-  private JsonNode sanitizeOauthConfiguration(final UUID workspaceId,
+  private JsonNode sanitizeOauthConfiguration(final UUID organizationId,
                                               final ConnectorSpecification connectorSpecification,
-                                              final JsonNode oauthParamConfiguration)
+                                              final JsonNode oauthParamConfiguration,
+                                              final Optional<UUID> workspaceId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    UUID id = workspaceId.orElse(organizationId);
+    String secretPrefix = workspaceId.isPresent() ? AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX : ORGANIZATION_SECRET_PREFIX;
 
     if (OAuthConfigSupplier.hasOAuthConfigSpecification(connectorSpecification)) {
       // Advanced auth handling
@@ -717,7 +802,7 @@ public class OAuthHandler {
           validateOauthParamConfigAndReturnAdvancedAuthSecretSpec(connectorSpecification, oauthParamConfiguration);
       LOGGER.debug("AdvancedAuthSpecification: {}", advancedAuthSpecification);
 
-      return statefulSplitSecrets(workspaceId, oauthParamConfiguration, advancedAuthSpecification);
+      return statefulSplitSecrets(organizationId, oauthParamConfiguration, advancedAuthSpecification, id, secretPrefix);
     } else {
       // This works because:
       // 1. In non advanced_auth specs, the connector configuration matches the oauth param configuration,
@@ -725,7 +810,7 @@ public class OAuthHandler {
       // 2. For these non advanced_auth specs, the actual variables are present and tagged as secrets so
       // statefulSplitSecrets can find and
       // store them in our secrets manager and replace the values appropriately.
-      return statefulSplitSecrets(workspaceId, oauthParamConfiguration, connectorSpecification);
+      return statefulSplitSecrets(organizationId, oauthParamConfiguration, connectorSpecification, id, secretPrefix);
     }
   }
 
@@ -773,19 +858,34 @@ public class OAuthHandler {
   JsonNode statefulSplitSecrets(final UUID workspaceId, final JsonNode oauthParamConfiguration, final ConnectorSpecification connectorSpecification)
       throws IOException, ConfigNotFoundException {
     final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+
+    if (organizationId.isPresent()) {
+      return statefulSplitSecrets(organizationId.get(), oauthParamConfiguration, connectorSpecification, workspaceId,
+          AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX);
+    } else {
+      throw new RuntimeException("Could not find organization ID for workspace ID: " + workspaceId + ". This should never happen.");
+    }
+  }
+
+  JsonNode statefulSplitSecrets(final UUID organizationId,
+                                final JsonNode oauthParamConfiguration,
+                                final ConnectorSpecification connectorSpecification,
+                                final UUID secretBaseId,
+                                final String secretBasePrefix)
+      throws IOException, ConfigNotFoundException {
     RuntimeSecretPersistence secretPersistence = null;
 
-    if (organizationId.isPresent() && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))) {
+    if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId))) {
       try {
-        final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get());
+        final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
         secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
       } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
         throw new ConfigNotFoundException(e.getType(), e.getConfigId());
       }
     }
 
-    return secretsRepositoryWriter.createFromConfigLegacy(workspaceId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
-        secretPersistence);
+    return secretsRepositoryWriter.createFromConfigLegacy(secretBaseId, oauthParamConfiguration, connectorSpecification.getConnectionSpecification(),
+        secretPersistence, secretBasePrefix);
   }
 
 }

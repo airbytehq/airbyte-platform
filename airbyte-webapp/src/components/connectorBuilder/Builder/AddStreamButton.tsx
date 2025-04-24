@@ -119,7 +119,7 @@ export const AddStreamButton: React.FC<AddStreamButtonProps> = ({
       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_CREATE, {
         actionDescription: "New dynamic stream created from the Add Stream button",
         stream_id: id,
-        stream_name: dynamicStreamValues.dynamic_stream_name,
+        stream_name: dynamicStreamValues.dynamicStreamName,
         url_path: dynamicStreamValues.componentsResolver.retriever.requester.url_base,
       });
     }
@@ -238,7 +238,7 @@ const AddStreamModal = ({
       } else {
         const dynamicStreamValues = values as AddDynamicStreamFormValues;
         onSubmit({
-          dynamic_stream_name: dynamicStreamValues.dynamicStreamName,
+          dynamicStreamName: dynamicStreamValues.dynamicStreamName,
           streamTemplate: structuredClone(DEFAULT_BUILDER_STREAM_VALUES),
           componentsResolver: {
             type: "HttpComponentsResolver",
@@ -253,6 +253,12 @@ const AddStreamModal = ({
                 extractor: {
                   type: "DpathExtractor",
                   field_path: [],
+                },
+                // record_filter must be present for the form control logic
+                // this component is removed from the manifest if the condition is empty
+                record_filter: {
+                  type: "RecordFilter",
+                  condition: "",
                 },
               },
             },
@@ -476,7 +482,7 @@ const AddDynamicStreamForm = ({
       .string()
       .required("form.empty.error")
       .notOneOf(
-        dynamicStreams.map((stream) => stream.dynamic_stream_name),
+        dynamicStreams.map((stream) => stream.dynamicStreamName),
         "connectorBuilder.duplicateStreamName"
       ),
     urlPath: yup.string().required("form.empty.error"),

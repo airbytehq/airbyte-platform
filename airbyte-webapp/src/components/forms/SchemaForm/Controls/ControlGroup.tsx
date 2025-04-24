@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import isEmpty from "lodash/isEmpty";
-import React, { useMemo } from "react";
+import React from "react";
 import { FieldError } from "react-hook-form";
 import { useIntl } from "react-intl";
 
@@ -11,8 +11,7 @@ import { Text } from "components/ui/Text";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 
 import styles from "./ControlGroup.module.scss";
-import { displayName } from "./utils";
-import { FormLabel } from "../FormControl";
+import { FormLabel } from "../../FormControl";
 
 interface ControlGroupProps {
   path: string;
@@ -26,17 +25,15 @@ interface ControlGroupProps {
     isEnabled?: boolean;
     onToggle: (newEnabledState: boolean) => void;
   };
+  footer?: string;
 }
 
 export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlGroupProps>>(
-  ({ title, path, tooltip, optional, control, header, error, toggleConfig, children }, ref) => {
+  ({ title, path, tooltip, optional, control, header, error, toggleConfig, footer, children }, ref) => {
     const { formatMessage } = useIntl();
 
-    // use field name if no title is provided
-    const displayTitle = useMemo(() => displayName(path, title), [path, title]);
-
     const isDisabled = toggleConfig && toggleConfig.isEnabled === false;
-    const hasTitleBar = Boolean(displayTitle || (control && !isDisabled) || header);
+    const hasTitleBar = Boolean(title || (control && !isDisabled) || header);
     const hasNoContent = isDisabled || isEmpty(children);
 
     return (
@@ -57,7 +54,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
             {isDisabled ? null : children}
           </div>
           <div className={styles.titleBar}>
-            {displayTitle && (
+            {title && (
               <FlexContainer
                 alignItems="center"
                 className={classNames(styles.title, { [styles["title--pointer"]]: !!toggleConfig })}
@@ -75,7 +72,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
                     }}
                   />
                 )}
-                <FormLabel label={displayTitle} labelTooltip={tooltip} htmlFor={path} optional={optional} />
+                <FormLabel label={title} labelTooltip={tooltip} htmlFor={path} optional={optional} />
                 {header}
               </FlexContainer>
             )}
@@ -84,11 +81,15 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
             </FlexContainer>
           </div>
         </div>
-        {error && (
-          <Text color="red" size="xs" className={styles.error}>
+        {error ? (
+          <Text color="red" size="xs" className={styles.footer}>
             {error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })}
           </Text>
-        )}
+        ) : footer && !isDisabled ? (
+          <Text color="grey300" size="xs" className={styles.footer}>
+            {footer}
+          </Text>
+        ) : null}
       </div>
     );
   }

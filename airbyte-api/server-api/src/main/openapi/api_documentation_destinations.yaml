@@ -1740,6 +1740,8 @@ components:
       properties:
         name:
           type: "string"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     UpdateDeclarativeSourceDefinitionRequest:
@@ -1914,6 +1916,10 @@ components:
             type: "array"
             items:
               type: "string"
+        includeFiles:
+          description: "Whether to move raw files from the source to the destination\
+            \ during the sync."
+          type: "boolean"
         selectedFields:
           description: "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
@@ -2606,7 +2612,7 @@ components:
                   \ exclusive with an account key"
                 title: "Shared Access Signature"
                 examples:
-                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
                 airbyte_secret: true
                 always_show: true
                 x-speakeasy-param-sensitive: true
@@ -2822,7 +2828,7 @@ components:
                   \ exclusive with an account key"
                 title: "Shared Access Signature"
                 examples:
-                - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+                - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
                 airbyte_secret: true
                 always_show: true
               azure_blob_storage_account_key:
@@ -19766,9 +19772,11 @@ components:
         title: "Indexing"
       - id: "advanced"
         title: "Advanced"
+
     DestinationConfiguration:
       description: The values required to configure the destination.
       example: { user: "charles" }
+    
       oneOf:
         - title: destination-google-sheets
           $ref: "#/components/schemas/destination-google-sheets"
@@ -19854,6 +19862,7 @@ components:
           $ref: "#/components/schemas/destination-weaviate"
         - title: destination-yellowbrick
           $ref: "#/components/schemas/destination-yellowbrick"
+
     SourceConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }

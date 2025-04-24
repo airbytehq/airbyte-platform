@@ -1,60 +1,31 @@
 import { ExtendedJSONSchema, JSONSchemaExtension } from "json-schema-to-ts/lib/types/definitions";
-import capitalize from "lodash/capitalize";
 import isBoolean from "lodash/isBoolean";
-import { DefaultValues, FieldValues, get } from "react-hook-form";
-
-export { schemaValidator, overrideAjvErrorMessages } from "./schemaValidation";
+import { get } from "react-hook-form";
 
 export class AirbyteJsonSchemaExtention implements JSONSchemaExtension {
   [k: string]: unknown;
   multiline?: boolean;
   patternDescriptor?: string;
   linkable?: boolean;
+  deprecated?: boolean;
 }
 
 export type AirbyteJsonSchema = Exclude<ExtendedJSONSchema<AirbyteJsonSchemaExtention>, boolean>;
 
-/**
- * Extracts default values from the JSON schema
- */
-export const extractDefaultValuesFromSchema = <T extends FieldValues>(schema: AirbyteJsonSchema): DefaultValues<T> => {
-  if (schema.default) {
-    return schema.default as DefaultValues<T>;
+export const getDeclarativeSchemaTypeValue = (
+  propertyName: string,
+  property: ExtendedJSONSchema<AirbyteJsonSchemaExtention>
+) => {
+  if (propertyName !== "type") {
+    return undefined;
   }
-
-  if (schema.type === "array") {
-    return [] as DefaultValues<T>;
+  if (isBoolean(property)) {
+    return undefined;
   }
-
-  if (schema.type !== "object" && !schema.properties) {
-    return undefined as unknown as DefaultValues<T>;
+  if (!property.enum || !Array.isArray(property.enum) || property.enum.length !== 1) {
+    return undefined;
   }
-
-  const defaultValues: Record<string, unknown> = {};
-  if (!schema.properties) {
-    return defaultValues as DefaultValues<T>;
-  }
-  // Iterate through each property in the schema
-  Object.entries(schema.properties).forEach(([key, property]) => {
-    // ~ declarative_component_schema type handling ~
-    if (key === "type" && !isBoolean(property) && property.enum && Array.isArray(property.enum)) {
-      const [firstEnumValue] = property.enum;
-      defaultValues[key] = firstEnumValue;
-      return;
-    }
-
-    if (isBoolean(property)) {
-      defaultValues[key] = property;
-      return;
-    }
-
-    const nestedDefaultValue = extractDefaultValuesFromSchema(property);
-    if (nestedDefaultValue !== undefined && !isEmptyObject(nestedDefaultValue)) {
-      defaultValues[key] = nestedDefaultValue;
-    }
-  });
-
-  return defaultValues as DefaultValues<T>;
+  return property.enum[0];
 };
 
 // eslint-disable-next-line @typescript-eslint/ban-types
@@ -64,117 +35,6 @@ export const hasFields = <T extends object>(object: T | {}): object is T => {
 
 export const isEmptyObject = (object: object): boolean => {
   return typeof object === "object" && !Array.isArray(object) && Object.keys(object).length === 0;
-};
-
-export const verifyArrayItems = (
-  items:
-    | ExtendedJSONSchema<AirbyteJsonSchemaExtention>
-    | ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>
-    | undefined
-) => {
-  if (!items) {
-    throw new Error("The items field of an array property must be defined.");
-  }
-  if (Array.isArray(items)) {
-    throw new Error("The items field of an array property must not be an array.");
-  }
-  if (isBoolean(items)) {
-    throw new Error("The items field of an array property must not be a boolean.");
-  }
-  items = items as AirbyteJsonSchema;
-  if (items.type !== "object" && items.type !== "string") {
-    throw new Error(`Unsupported array item type: ${items.type}`);
-  }
-  return items;
-};
-
-export const getSelectedOptionSchema = (
-  optionSchemas: ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>,
-  value: unknown
-) => {
-  if (!value || typeof value !== "object") {
-    return undefined;
-  }
-
-  return optionSchemas.find((optionSchema) => {
-    if (isBoolean(optionSchema)) {
-      return false;
-    }
-    if (!optionSchema.properties) {
-      return false;
-    }
-
-    // ~ declarative_component_schema type handling ~
-    const discriminatorSchema = optionSchema.properties.type;
-
-    if (!discriminatorSchema || isBoolean(discriminatorSchema) || discriminatorSchema.type !== "string") {
-      return false;
-    }
-    if (
-      !discriminatorSchema.enum ||
-      !Array.isArray(discriminatorSchema.enum) ||
-      discriminatorSchema.enum.length !== 1
-    ) {
-      return false;
-    }
-
-    if (!("type" in value)) {
-      return false;
-    }
-
-    return value.type === discriminatorSchema.enum[0];
-  }) as AirbyteJsonSchema | undefined;
-};
-
-export const getSchemaAtPath = (path: string, schema: AirbyteJsonSchema, data: FieldValues): AirbyteJsonSchema => {
-  if (!path) {
-    return schema;
-  }
-
-  const pathParts = path.split(".");
-  let currentProperty = schema;
-  let currentPath = "";
-
-  for (const part of pathParts) {
-    if (!Number.isNaN(Number(part)) && currentProperty.type === "array" && currentProperty.items) {
-      // array path
-      currentProperty = verifyArrayItems(currentProperty.items);
-      // Don't update currentPath here - will be updated at the end of the loop
-    } else {
-      let nextProperty: ExtendedJSONSchema<AirbyteJsonSchemaExtention>;
-      const optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;
-      if (optionSchemas) {
-        // oneOf/anyOf path
-        const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath));
-        if (!selectedOption) {
-          throw new Error(`No matching schema found for path: ${currentPath}`);
-        }
-        if (!selectedOption.properties) {
-          throw new Error(`Invalid schema path: ${currentPath}. All oneOf options must have properties.`);
-        }
-        nextProperty = selectedOption.properties[part];
-      } else {
-        // object path
-        if (!currentProperty.properties) {
-          throw new Error(`Invalid schema path: ${path}. No properties found at subpath ${currentPath}`);
-        }
-        nextProperty = currentProperty.properties[part];
-      }
-
-      if (!nextProperty) {
-        throw new Error(`Invalid schema path: ${currentPath}. Property ${part} not found.`);
-      }
-      if (typeof nextProperty === "boolean") {
-        throw new Error(`Invalid schema path: ${path}. Property ${part} is a boolean, not an object.`);
-      }
-
-      currentProperty = nextProperty;
-    }
-    // Always add the part to the currentPath - whether it's an array index or a property name
-    currentPath = `${currentPath ? `${currentPath}.` : ""}${part}`;
-  }
-
-  return currentProperty;
 };
 
 // Convert a $ref of the form "#/path/to/field" to a path of the form "path.to.field"
@@ -224,8 +84,19 @@ export const resolveRefs = <T>(obj: T, root?: unknown, visitedRefs: Set<string> 
       return obj;
     }
 
+    // Keep keys from the original object if they overlap with those in the resolved target,
+    // as this is the only way to override titles and descriptions for $ref'd schemas.
+    const resolvedTarget = resolveRefs(target, rootObj, visitedRefs);
+    const { $ref, ...withoutRef } = obj;
+    const resolvedObj: Record<string, unknown> = { ...withoutRef };
+    Object.entries(resolvedTarget).forEach(([key, value]) => {
+      if (resolvedObj[key] === undefined) {
+        resolvedObj[key] = value;
+      }
+    });
+
     // Resolve the target with the updated visited references set
-    return resolveRefs(target, rootObj, visitedRefs) as T;
+    return resolvedObj as T;
   }
 
   const result = {} as Record<string, unknown>;
@@ -240,17 +111,61 @@ export const resolveRefs = <T>(obj: T, root?: unknown, visitedRefs: Set<string> 
 };
 
 export const displayName = (path: string, title?: string) => {
-  if (title) {
+  if (title !== undefined) {
     return title;
   }
 
   const fieldName = path.split(".").at(-1);
-  // If the field name is not a number, capitalize and display it
+
+  if (fieldName === undefined) {
+    return undefined;
+  }
+
+  // If the field name is not a number, format and display it
   if (Number.isNaN(Number(fieldName))) {
-    return capitalize(fieldName);
+    return fieldName.split("_").map(capitalizeFirstLetter).join(" ");
   }
 
   // If the field name is a number, it is likely an array index
   // and we don't need to display that as a control label
   return undefined;
+};
+
+const capitalizeFirstLetter = (str: string) => {
+  return str?.slice(0, 1).toUpperCase() + str?.slice(1);
+};
+
+export const resolveTopLevelRef = (
+  rootSchema: AirbyteJsonSchema,
+  currentSchema: AirbyteJsonSchema
+): AirbyteJsonSchema => {
+  if (currentSchema.$ref) {
+    const path = convertRefToPath(currentSchema.$ref);
+    const resolvedRef = get(rootSchema, path);
+    const { $ref, ...withoutRef } = currentSchema;
+    const resolvedObj: Record<string, unknown> = { ...withoutRef };
+    Object.entries(resolvedRef).forEach(([key, value]) => {
+      if (resolvedObj[key] === undefined) {
+        resolvedObj[key] = value;
+      }
+    });
+    return resolvedObj as AirbyteJsonSchema;
+  }
+  return currentSchema;
+};
+
+export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAdvancedFields?: string[]) => {
+  if (!nonAdvancedFields) {
+    return false;
+  }
+  const nonAdvancedFullPaths = nonAdvancedFields.map((field) => `${objectPath}.${field}`);
+  return !nonAdvancedFullPaths.includes(fullFieldPath);
+};
+
+export const nestPath = (path: string, rootPath?: string) => {
+  return rootPath ? `${rootPath}${path ? `.${path}` : ""}` : path;
+};
+
+export const unnestPath = (path: string, rootPath?: string) => {
+  return rootPath && path.startsWith(rootPath) ? path.slice(rootPath.length + 1) : path;
 };

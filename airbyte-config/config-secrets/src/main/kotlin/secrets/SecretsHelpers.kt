@@ -6,6 +6,7 @@ package io.airbyte.config.secrets
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.annotation.InternalForTesting
@@ -391,6 +392,7 @@ object SecretsHelpers {
             Jsons.jsonNode(
               buildMap {
                 put(COORDINATE_FIELD, airbyteManagedCoordAndValue.airbyteCoordinate.fullCoordinate)
+                processedSecretNode.secretStorageId?.let { put(SECRET_STORAGE_ID_FIELD, it.value.toString()) }
               },
             )
           }
@@ -546,6 +548,7 @@ object SecretsHelpers {
           SecretReferenceConfig(
             secretCoordinate = SecretCoordinate.fromFullCoordinate(config[COORDINATE_FIELD].asText()),
             secretStorageId = config[SECRET_STORAGE_ID_FIELD]?.takeIf { it.isTextual }?.let { UUID.fromString(it.asText()) },
+            secretReferenceId = config[SECRET_REF_ID_FIELD]?.takeIf { it.isTextual }?.let { UUID.fromString(it.asText()) },
           )
         return mapOf(path to secretRefConfig)
       }
@@ -677,33 +680,44 @@ object SecretsHelpers {
     }
 
     /**
-     * A wrapper around a [JsonNode] config that contains secret reference IDs instead of
+     * A wrapper around a [JsonNode] config that contains secret reference IDs alongside the
      * secret coordinates.
      */
     @JvmInline
-    value class ConfigWithSecretReferenceIdReplacements(
+    value class ConfigWithSecretReferenceIdsInjected(
       val value: JsonNode,
     )
 
     /**
-     * Given a [config] and [secretReferenceIdsByPath], for each path in the map, replace the
-     * node at that path with the corresponding secret reference id.
+     * Given a [config] and [secretReferenceIdsByPath], for each path in the map, inject the
+     * secret reference id into the node at that path.
      */
-    fun replaceSecretNodesWithSecretReferenceIds(
+    fun updateSecretNodesWithSecretReferenceIds(
       config: JsonNode,
       secretReferenceIdsByPath: Map<String, SecretReferenceId>,
-    ): ConfigWithSecretReferenceIdReplacements {
+    ): ConfigWithSecretReferenceIdsInjected {
       var updatedConfig = Jsons.clone(config)
       secretReferenceIdsByPath.forEach { (path, secretRefId) ->
+        // While we're dual-writing, make sure to keep the _secret coord in the config
+        val nodeToUpdate =
+          JsonPaths.getSingleValue(updatedConfig, path).orElseThrow {
+            IllegalStateException("Secret reference not found at path: $path")
+          }
+        val existingCoordinateField =
+          (nodeToUpdate as? ObjectNode)
+            ?.get(COORDINATE_FIELD)
+            ?.takeIf { it.isTextual }
+            ?.asText()
         val secretRefIdNode =
           Jsons.jsonNode(
-            mapOf(
-              SECRET_REF_ID_FIELD to secretRefId.value.toString(),
-            ),
+            buildMap {
+              put(SECRET_REF_ID_FIELD, secretRefId.value.toString())
+              existingCoordinateField?.let { put(COORDINATE_FIELD, it) }
+            },
           )
         updatedConfig = JsonPaths.replaceAtJsonNodeLoud(updatedConfig, path, secretRefIdNode)
       }
-      return ConfigWithSecretReferenceIdReplacements(updatedConfig)
+      return ConfigWithSecretReferenceIdsInjected(updatedConfig)
     }
 
     /**

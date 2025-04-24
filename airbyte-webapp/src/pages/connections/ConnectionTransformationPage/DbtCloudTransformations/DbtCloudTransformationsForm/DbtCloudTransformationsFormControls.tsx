@@ -11,7 +11,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 
 import { isSameJob } from "core/api/cloud";
-import { DbtCloudJobInfo } from "core/api/types/CloudApi";
+import { DbtCloudJobInfo } from "core/api/types/AirbyteClient";
 
 import { DbtCloudTransformationsFormValues } from "./DbtCloudTransformationsForm";
 import styles from "./DbtCloudTransformationsFormControls.module.scss";

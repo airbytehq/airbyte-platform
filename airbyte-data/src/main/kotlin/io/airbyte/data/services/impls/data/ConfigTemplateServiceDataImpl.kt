@@ -7,12 +7,14 @@ package io.airbyte.data.services.impls.data
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.repositories.ConfigTemplateRepository
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.impls.data.mappers.EntityConfigTemplate
+import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
@@ -62,7 +64,9 @@ open class ConfigTemplateServiceDataImpl(
     partialDefaultConfig: JsonNode,
     userConfigSpec: JsonNode,
   ): ConfigTemplateWithActorDetails {
-    validateSource(actorDefinitionId, partialDefaultConfig, userConfigSpec)
+    val convertedSpec = Jsons.deserialize(userConfigSpec.toString(), ConnectorSpecification::class.java)
+
+    validateSource(actorDefinitionId, partialDefaultConfig, convertedSpec)
 
     val entity =
       EntityConfigTemplate(
@@ -102,7 +106,15 @@ open class ConfigTemplateServiceDataImpl(
     val updatedConfigTemplate =
       if (partialDefaultConfig != null || userConfigSpec != null) {
         val finalPartialDefaultConfig = partialDefaultConfig ?: configTemplate.partialDefaultConfig
-        val finalUserConfigSpec = userConfigSpec ?: configTemplate.userConfigSpec
+        val finalUserConfigSpec =
+          if (userConfigSpec != null) {
+            val configSpecJsonString = Jsons.serialize(userConfigSpec)
+            Jsons.deserialize(configSpecJsonString, ConnectorSpecification::class.java)
+          } else {
+            val configSpecJsonString = Jsons.serialize(configTemplate.userConfigSpec)
+            Jsons.deserialize(configSpecJsonString, ConnectorSpecification::class.java)
+          }
+
         validateSource(ActorDefinitionId(configTemplate.actorDefinitionId), finalPartialDefaultConfig, finalUserConfigSpec)
 
         val entity =
@@ -111,7 +123,10 @@ open class ConfigTemplateServiceDataImpl(
             organizationId = configTemplate.organizationId,
             actorDefinitionId = configTemplate.actorDefinitionId,
             partialDefaultConfig = finalPartialDefaultConfig,
-            userConfigSpec = finalUserConfigSpec,
+            userConfigSpec =
+              finalUserConfigSpec.let {
+                objectMapper.valueToTree<JsonNode>(it)
+              },
           )
         repository.update(entity).toConfigModel()
       } else {
@@ -130,7 +145,7 @@ open class ConfigTemplateServiceDataImpl(
   private fun validateSource(
     actorDefinitionId: ActorDefinitionId,
     partialDefaultConfig: JsonNode,
-    userConfigSpec: JsonNode,
+    userConfigSpec: ConnectorSpecification,
   ) {
     val actorDefinition =
       actorDefinitionService
@@ -156,10 +171,10 @@ open class ConfigTemplateServiceDataImpl(
 
   private fun mergeDefaultConfigAndPartialUserConfigSpec(
     defaultConfig: JsonNode,
-    partialUserConfigSpec: JsonNode,
+    partialUserConfigSpec: ConnectorSpecification,
   ): JsonNode {
-    if (!defaultConfig.isObject || !partialUserConfigSpec.isObject) {
-      throw IllegalArgumentException("Both inputs must be JSON objects")
+    if (!defaultConfig.isObject) {
+      throw IllegalArgumentException("Default config must be object")
     }
 
     val objectMapper = ObjectMapper()
@@ -167,7 +182,6 @@ open class ConfigTemplateServiceDataImpl(
 
     // Add all keys from defaultConfig
     defaultConfig
-      .get("connectionConfiguration")
       .fields()
       .forEach { (key, value) ->
         result.set<JsonNode>(key, value)
@@ -175,7 +189,7 @@ open class ConfigTemplateServiceDataImpl(
 
     val requiredFields: List<String> =
       partialUserConfigSpec
-        .get("connectionSpecification")
+        .connectionSpecification
         .get("required")
         .map { it.asText() }
         .toList()
@@ -184,7 +198,7 @@ open class ConfigTemplateServiceDataImpl(
       result.set<JsonNode>(
         field,
         fieldDescriptionToMockValue(
-          partialUserConfigSpec.get("connectionSpecification").get("properties")?.get(field) ?: objectMapper.nullNode(),
+          partialUserConfigSpec.connectionSpecification.get("properties")?.get(field) ?: objectMapper.nullNode(),
         ),
       )
     }

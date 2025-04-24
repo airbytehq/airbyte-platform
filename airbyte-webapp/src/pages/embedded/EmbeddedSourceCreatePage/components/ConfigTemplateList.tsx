@@ -30,7 +30,6 @@ export const ConfigTemplateSelectList: React.FC = () => {
     <SelectableList
       items={items}
       onSelect={onTemplateSelect}
-      title={<FormattedMessage id="onboarding.sourceSetUp" />}
       emptyState={
         <Box mt="2xl" pt="2xl">
           <EmptyState text={<FormattedMessage id="configTemplates.emptyState" />} />
