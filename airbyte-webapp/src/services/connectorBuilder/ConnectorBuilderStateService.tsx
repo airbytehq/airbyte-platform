@@ -18,6 +18,7 @@ import {
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
+  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
   isStreamDynamicStream,
   StreamId,
 } from "components/connectorBuilder/types";
@@ -277,8 +278,10 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const [previousManifestDraft, setPreviousManifestDraft] = useState<
     FormStateContext["previousManifestDraft"] | undefined
   >(undefined);
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
   const [jsonManifest, setJsonManifest] = useState<ConnectorManifest>(
-    (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) ?? DEFAULT_JSON_MANIFEST_VALUES
+    (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) ??
+      (isSchemaFormEnabled ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM : DEFAULT_JSON_MANIFEST_VALUES)
   );
   const [yamlIsValid, setYamlIsValid] = useState(true);
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
@@ -305,7 +308,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       form_generated_manifest: mode === "ui",
     },
     // In UI mode, only call resolve if the form is valid, since an invalid form is expected to not resolve
-    mode === "yaml" || (mode === "ui" && formValuesValid)
+    mode === "yaml" || (mode === "ui" && !isSchemaFormEnabled && formValuesValid)
   );
 
   const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
@@ -315,28 +318,27 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       : unknownErrorMessage
     : undefined;
 
-  const resolvedManifest = structuredClone(resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest;
+  const resolvedManifest =
+    isSchemaFormEnabled && mode === "ui"
+      ? jsonManifest
+      : (structuredClone(resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
 
   resolvedManifest.streams = resolvedManifest.streams ?? [];
 
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  let dynamicStreamNames = useMemo(() => {
-    return mode === "ui"
-      ? dynamicStreams.map((stream) => stream.dynamicStreamName ?? "")
-      : resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.name ?? "") ?? [];
-  }, [mode, dynamicStreams, resolvedManifest]);
+  let dynamicStreamNames = useMemo(
+    () => resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.name ?? "") ?? [],
+    [resolvedManifest]
+  );
 
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
   if (!areDynamicStreamsEnabled) {
     dynamicStreamNames = [];
   }
 
-  const streams = useBuilderWatch("formValues.streams");
-  const streamNames = useMemo(() => {
-    return mode === "ui"
-      ? streams.map((stream) => stream.name)
-      : resolvedManifest.streams?.map((stream) => stream.name ?? "") ?? [];
-  }, [mode, streams, resolvedManifest]);
+  const streamNames = useMemo(
+    () => resolvedManifest.streams?.map((stream) => stream?.name ?? "") ?? [],
+    [resolvedManifest]
+  );
 
   const streamIdToStreamRepresentation = useCallback(
     (streamId: StreamId) =>
@@ -661,8 +663,10 @@ export function useInitializedBuilderProject() {
   }
   const builderProject = useBuilderProject(projectId);
   const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
   const persistedManifest =
-    (builderProject.declarativeManifest?.manifest as ConnectorManifest) ?? DEFAULT_JSON_MANIFEST_VALUES;
+    (builderProject.declarativeManifest?.manifest as ConnectorManifest) ??
+    (isSchemaFormEnabled ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM : DEFAULT_JSON_MANIFEST_VALUES);
   const resolvedManifest = useBuilderResolvedManifestSuspense(builderProject.declarativeManifest?.manifest, projectId);
   const [initialFormValues, failedInitialFormValueConversion, initialYaml] = useMemo(() => {
     if (!resolvedManifest) {
@@ -686,6 +690,7 @@ export function useInitializedBuilderProject() {
     initialFormValues,
     failedInitialFormValueConversion,
     initialYaml,
+    resolvedManifest,
   };
 }
 

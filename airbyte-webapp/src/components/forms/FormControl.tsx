@@ -72,6 +72,11 @@ interface ControlBaseProps<T extends FormValues> {
    * Optional text displayed below the input, but only when there is no error to display
    */
   footer?: string;
+  /**
+   * If true, the error message will only be shown if the field has been touched.
+   * Otherwise, the error will be shown regardless of whether the field has been touched.
+   */
+  onlyShowErrorIfTouched?: boolean;
 }
 
 /**
@@ -128,11 +133,12 @@ export const FormControl = <T extends FormValues>({
   optional = false,
   containerControlClassName,
   footer,
+  onlyShowErrorIfTouched,
   ...props
 }: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
-  const { errors } = useFormState<T>({ name: props.name });
-  const error = get(errors, props.name);
+  const { errors, touchedFields } = useFormState<T>({ name: props.name });
+  const error = !!get(errors, props.name) && (onlyShowErrorIfTouched ? !!get(touchedFields, props.name) : true);
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
   // Properties to pass to the underlying control
