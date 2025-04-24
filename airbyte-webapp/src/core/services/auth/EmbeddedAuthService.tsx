@@ -37,6 +37,11 @@ const useScopedAuthToken = () => {
 
     window.parent.postMessage("auth_token_request", allowedOrigin);
 
+    // Set a timeout to log if no response is received within 5 seconds
+    const timeoutId = setTimeout(() => {
+      console.error("No auth token response received from allowed origin after 5 seconds");
+    }, 5000);
+
     const messageHandler = (event: MessageEvent<ScopedAuthMessage>) => {
       try {
         if (event.origin !== allowedOrigin) {
@@ -44,6 +49,9 @@ const useScopedAuthToken = () => {
         }
 
         if (event.data?.scopedAuthToken) {
+          // Clear the timeout as we received a response
+          clearTimeout(timeoutId);
+
           const expiry = jwtDecode(event.data.scopedAuthToken).exp;
           setToken(event.data.scopedAuthToken, {
             expires: expiry ? new Date(expiry * 1000) : new Date(),
@@ -60,6 +68,7 @@ const useScopedAuthToken = () => {
 
     return () => {
       window.removeEventListener("message", messageHandler);
+      clearTimeout(timeoutId);
     };
   }, [allowedOrigin, token, deleteToken, setToken]);
 
