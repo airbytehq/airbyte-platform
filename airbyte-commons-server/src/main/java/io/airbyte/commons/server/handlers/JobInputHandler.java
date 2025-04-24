@@ -43,6 +43,7 @@ import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopedConfiguration;
+import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -215,6 +216,9 @@ public class JobInputHandler {
 
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
+      final var shouldIncludeFiles = shouldIncludeFiles(config, sourceVersion, destinationVersion);
+      final var isDeprecatedFileTransfer = isDeprecatedFileTransfer(attemptSyncConfig.getSourceConfiguration());
+
       final StandardSyncInput syncInput = new StandardSyncInput()
           .withNamespaceDefinition(config.getNamespaceDefinition())
           .withNamespaceFormat(config.getNamespaceFormat())
@@ -233,7 +237,8 @@ public class JobInputHandler {
           .withUseAsyncReplicate(true)
           .withUseAsyncActivities(true)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()))
-          .withIncludesFiles(shouldIncludeFiles(config, sourceVersion, destinationVersion));
+          .withIncludesFiles(shouldIncludeFiles || isDeprecatedFileTransfer)
+          .withOmitFileTransferEnvVar(shouldIncludeFiles);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -482,7 +487,17 @@ public class JobInputHandler {
   Boolean shouldIncludeFiles(final JobSyncConfig jobSyncConfig, final ActorDefinitionVersion sourceAdv, final ActorDefinitionVersion destinationAdv) {
     // TODO add compatibility check with sourceAdv and destinationAdv to avoid scanning through all
     // catalogs for nothing
-    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludesFiles);
+    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludeFiles);
+  }
+
+  private Boolean isDeprecatedFileTransfer(final JsonNode sourceConfig) {
+    if (sourceConfig == null) {
+      return false;
+    }
+
+    final var typedSourceConfig = Jsons.object(sourceConfig, SourceActorConfig.class);
+    return typedSourceConfig.getUseFileTransfer()
+        || (typedSourceConfig.getDeliveryMethod() != null && "use_file_transfer".equals(typedSourceConfig.getDeliveryMethod().getDeliveryType()));
   }
 
 }

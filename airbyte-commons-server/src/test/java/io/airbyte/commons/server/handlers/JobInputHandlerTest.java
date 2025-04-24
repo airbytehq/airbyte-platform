@@ -442,7 +442,7 @@ class JobInputHandlerTest {
   @Test
   void testIncludesFilesIsTrueIfConnectorsSupportFilesAndFileIsConfigured() {
     final ConfiguredAirbyteStream streamWithFilesEnabled = mock(ConfiguredAirbyteStream.class);
-    when(streamWithFilesEnabled.getIncludesFiles()).thenReturn(true);
+    when(streamWithFilesEnabled.getIncludeFiles()).thenReturn(true);
 
     final ActorDefinitionVersion sourceAdv = mock(ActorDefinitionVersion.class);
     final ActorDefinitionVersion destinationAdv = mock(ActorDefinitionVersion.class);

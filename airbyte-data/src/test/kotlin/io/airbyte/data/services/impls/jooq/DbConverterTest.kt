@@ -18,6 +18,7 @@ import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -51,8 +52,16 @@ internal class DbConverterTest {
     internal: InternalConfiguredAirbyteCatalog,
     protocol: ProtocolConfiguredAirbyteCatalog,
   ) {
-    val internalToProtocol = parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
-    Assertions.assertEquals(protocol, internalToProtocol)
+    val internalToProtocol: ProtocolConfiguredAirbyteCatalog =
+      parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
+
+    // This is to ease the defaults in the comparison. The frozen catalogs do not have includeFiles,
+    // we default to false in the new model
+    protocol.streams.map {
+      assertNull(it.includeFiles)
+      it.withIncludeFiles(false)
+    }
+    assertEquals(protocol, internalToProtocol)
   }
 
   companion object {
