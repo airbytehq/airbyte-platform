@@ -813,6 +813,45 @@ export const Test2 = () => {
   );
 };
 
+export const AdditionalPropertiesTrue = () => {
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          parent: {
+            type: "object",
+            properties: {
+              test: {
+                type: "object",
+                description: "Put any object",
+                additionalProperties: true,
+              },
+              another: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  age: { type: "number" },
+                },
+                required: ["name", "age"],
+              },
+            },
+            required: [],
+          },
+        },
+        required: ["parent"],
+      }}
+      onSubmit={onSubmit}
+    >
+      <Card>
+        <SchemaFormControl />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+        <ShowFormValues />
+      </Card>
+    </SchemaForm>
+  );
+};
+
 const ShowFormValues = () => {
   const values = useWatch();
   const { errors } = useFormState();

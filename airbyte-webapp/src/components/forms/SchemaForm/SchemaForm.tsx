@@ -590,6 +590,24 @@ export const convertJsonSchemaToZodSchema = (
       });
     }
 
+    if (schema.type === "object" && !schema.properties && schema.additionalProperties === true) {
+      return z.any().superRefine((value, ctx) => {
+        if (value === undefined || value === "") {
+          if (isRequired) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: formatMessage({ id: "form.empty.error" }),
+            });
+          }
+        } else if (typeof value !== "object" || value === null || Array.isArray(value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: formatMessage({ id: "form.invalidJson" }),
+          });
+        }
+      });
+    }
+
     // For simple schemas, we can build them manually
     if (schema.type === "string") {
       // Create a base string schema with custom required error message
