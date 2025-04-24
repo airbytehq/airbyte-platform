@@ -58,10 +58,10 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       : { type: "stream" as const, index: 0 };
 
   const initialView = !isSchemaFormEnabled
-    ? "global"
+    ? { type: "global" as const }
     : initialTestStreamId.type === "dynamic_stream"
-    ? "dynamic_stream_0"
-    : 0;
+    ? { type: "dynamic_stream" as const, index: 0 }
+    : { type: "stream" as const, index: 0 };
 
   const values: BuilderState = {
     mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),

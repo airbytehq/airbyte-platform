@@ -296,6 +296,18 @@ export const useBuilderValidationSchema = () => {
       yup.object().shape({
         global: globalSchema,
         streams: yup.array().of(streamSchema),
+        dynamicStreams: yup.array().of(
+          yup.object().shape({
+            dynamicStreamName: yup.string().required(REQUIRED_ERROR),
+            componentsResolver: yup.object().shape({
+              retriever: yup.object().shape({
+                requester: yup.object().shape({
+                  path: yup.string().required(REQUIRED_ERROR),
+                }),
+              }),
+            }),
+          })
+        ),
       }),
     [globalSchema, streamSchema]
   );
@@ -376,8 +388,13 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", "components", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
+            'Must be an object with a "type" property that is one of "global", "inputs", "components", or an object with a "type" property that is one of "stream", "dynamic_stream", "generated_stream" and a "index" property that is a number',
+            (value) =>
+              value != null &&
+              typeof value === "object" &&
+              (["global", "inputs", "components"].includes(value.type) ||
+                (["stream", "dynamic_stream", "generated_stream"].includes(value.type) &&
+                  typeof value.index === "number"))
           ),
         testStreamId: yup
           .object()

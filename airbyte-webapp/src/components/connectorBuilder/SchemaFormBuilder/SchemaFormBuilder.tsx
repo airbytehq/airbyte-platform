@@ -53,13 +53,12 @@ export const SchemaFormBuilder = () => {
 };
 
 const convertViewToPath = (view: BuilderView) => {
-  if (typeof view === "number") {
-    return `manifest.streams.${view}`;
+  if (view.type === "stream") {
+    return `manifest.streams.${view.index}`;
   }
 
-  if (typeof view === "string" && view.startsWith("dynamic_stream_")) {
-    const dynamicStreamIndex = /dynamic_stream_(\d+)/.exec(view)?.[1];
-    return dynamicStreamIndex ? `dynamic_streams.${dynamicStreamIndex}` : null;
+  if (view.type === "dynamic_stream") {
+    return `manifest.dynamic_streams.${view.index}`;
   }
 
   return null;
@@ -77,7 +76,7 @@ const DeleteStreamButton = () => {
           return;
         }
         if (view === streams.length - 1) {
-          setValue("view", streams.length - 2);
+          setValue("view", { type: "stream", index: streams.length - 2 });
         }
         setValue(
           "manifest.streams",
@@ -132,7 +131,7 @@ const SchemaFormBuilderSidebar = () => {
           className={styles.addStreamButton}
           onClick={() => {
             setValue("manifest.streams", [...streams, DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE]);
-            setValue("view", streams.length);
+            setValue("view", { type: "stream", index: streams.length });
           }}
           icon="plus"
         />
@@ -141,12 +140,12 @@ const SchemaFormBuilderSidebar = () => {
         {streams.map((stream, index) => (
           <ViewSelectButton
             key={`${stream?.name}-${index}`}
-            selected={selectedView === index}
+            selected={selectedView.type === "stream" && selectedView.index === index}
             onClick={() => {
               console.log("clicked ViewSelectButton", index);
-              setValue("view", index);
+              setValue("view", { type: "stream", index });
             }}
-            showIndicator={hasErrors([index]) ? "error" : undefined}
+            showIndicator={hasErrors([{ type: "stream", index }]) ? "error" : undefined}
             data-testid="schema-form-builder-view-select-button"
           >
             {stream?.name && stream?.name?.trim() ? (

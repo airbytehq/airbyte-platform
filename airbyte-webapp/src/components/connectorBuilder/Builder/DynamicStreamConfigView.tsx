@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
@@ -34,7 +35,6 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
   );
 
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  console.log("dynamicStreams", dynamicStreams);
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -44,7 +44,8 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
       onSubmit: () => {
         const updatedStreams = dynamicStreams.filter((_, index) => index !== streamNum);
         const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
-        const viewToSelect = updatedStreams.length === 0 ? "global" : `dynamic_stream_${streamToSelect}`;
+        const viewToSelect: BuilderView =
+          updatedStreams.length === 0 ? { type: "global" } : { type: "dynamic_stream", index: streamToSelect };
         setValue("formValues.dynamicStreams", updatedStreams);
         setValue("view", viewToSelect);
         closeConfirmationModal();

@@ -489,7 +489,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       const view = getValues("view");
       if (typeof view === "number" && manifest.streams && manifest.streams.length <= view) {
         // switch back to global view if the selected stream does not exist anymore
-        setValue("view", "global");
+        setValue("view", { type: "global" });
       }
 
       if (displayedVersion === undefined && version !== undefined) {
@@ -826,11 +826,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
   useEffect(() => {
-    if (typeof view === "number") {
-      setValue("testStreamId", { type: "stream", index: view });
-    } else if (typeof view === "string" && view.startsWith("dynamic_stream_")) {
-      const dynamicStreamIndex = parseInt(view.split("_")[2], 10);
-      setValue("testStreamId", { type: "dynamic_stream", index: dynamicStreamIndex });
+    if (view.type === "stream") {
+      setValue("testStreamId", { type: "stream", index: view.index });
+    } else if (view.type === "dynamic_stream") {
+      setValue("testStreamId", { type: "dynamic_stream", index: view.index });
     }
   }, [setValue, view]);
 
