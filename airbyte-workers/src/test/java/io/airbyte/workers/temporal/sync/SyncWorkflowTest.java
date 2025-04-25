@@ -78,6 +78,7 @@ class SyncWorkflowTest {
   private WorkflowClient client;
   private AsyncReplicationActivity asyncReplicationActivity;
   private DiscoverCatalogHelperActivity discoverCatalogHelperActivity;
+  private GenerateReplicationActivityInputActivity generateReplicationActivityInputActivity;
   private WorkloadStatusCheckActivity workloadStatusCheckActivity;
   private InvokeOperationsActivity invokeOperationsActivity;
   private ConfigFetchActivityImpl configFetchActivity;
@@ -142,6 +143,7 @@ class SyncWorkflowTest {
     replicationFailOutput = new StandardSyncOutput().withStandardSyncSummary(failedSyncSummary);
     asyncReplicationActivity = mock(AsyncReplicationActivityImpl.class);
     discoverCatalogHelperActivity = mock(DiscoverCatalogHelperActivityImpl.class);
+    generateReplicationActivityInputActivity = mock(GenerateReplicationActivityInputActivityImpl.class);
     workloadStatusCheckActivity = mock(WorkloadStatusCheckActivityImpl.class);
     invokeOperationsActivity = mock(InvokeOperationsActivityImpl.class);
     configFetchActivity = mock(ConfigFetchActivityImpl.class);
@@ -230,6 +232,7 @@ class SyncWorkflowTest {
     syncWorker.registerActivitiesImplementations(
         asyncReplicationActivity,
         discoverCatalogHelperActivity,
+        generateReplicationActivityInputActivity,
         workloadStatusCheckActivity,
         invokeOperationsActivity,
         configFetchActivity,
