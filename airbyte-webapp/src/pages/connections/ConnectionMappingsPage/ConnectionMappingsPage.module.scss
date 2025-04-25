@@ -1,0 +1,5 @@
+@use "scss/variables";
+
+.pageTitleContainer {
+  height: variables.$button-height-xs; // same as the height of buttons
+}
