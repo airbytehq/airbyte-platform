@@ -13602,17 +13602,13 @@ components:
     PermissionDeleteUserFromWorkspaceRequestBody:
       type: object
       required:
-        - userIdToRemove
+        - userId
         - workspaceId
       properties:
-        userIdToRemove:
-          type: string
-          format: uuid
-          description: The user ID for which to remove workspace permissions
+        userId:
+          $ref: "#/components/schemas/UserId"
         workspaceId:
-          type: string
-          format: uuid
-          description: The workspace ID from which to remove all workspace-level permissions for the indicated user
+          $ref: "#/components/schemas/WorkspaceId"
     PermissionRead:
       type: object
       required:

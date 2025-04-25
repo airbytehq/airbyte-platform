@@ -102,7 +102,7 @@ open class PermissionApiController(
     }
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN, AuthRoleConstants.SELF)
   @Post("/delete_user_from_workspace")
   override fun deleteUserFromWorkspace(
     @Body permissionDeleteUserFromWorkspaceRequestBody: PermissionDeleteUserFromWorkspaceRequestBody,
