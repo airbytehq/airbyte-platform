@@ -11,6 +11,7 @@ import { Text } from "components/ui/Text";
 import {
   HashingMapperConfiguration,
   HashingMapperConfigurationMethod,
+  MapperValidationErrorType,
   StreamMapperType,
 } from "core/api/types/AirbyteClient";
 
@@ -19,6 +20,7 @@ import { useMappingContext } from "./MappingContext";
 import { MappingRowContent, MappingRowItem } from "./MappingRow";
 import styles from "./MappingRow.module.scss";
 import { MappingTypeListBox } from "./MappingTypeListBox";
+import { MappingValidationErrorMessage } from "./MappingValidationErrorMessage";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 
@@ -51,8 +53,14 @@ export const HashFieldRow: React.FC<{
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   useEffect(() => {
-    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
-      methods.setError("targetField", { message: mapping.validationError.message });
+    if (
+      mapping.validationError &&
+      mapping.validationError.type === MapperValidationErrorType.FIELD_NOT_FOUND &&
+      "targetField" in methods.formState.touchedFields
+    ) {
+      methods.setError("targetField", {
+        message: "connections.mappings.error.FIELD_NOT_FOUND",
+      });
     } else {
       methods.clearErrors("targetField");
     }
@@ -88,11 +96,10 @@ export const HashFieldRow: React.FC<{
             <SelectHashingMethod disabled={isStreamValidating} />
           </MappingRowItem>
         </MappingRowContent>
-        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
-          <Text italicized color="red">
-            {mapping.validationError.message}
-          </Text>
-        )}
+        <MappingValidationErrorMessage<HashingMapperConfiguration>
+          validationError={mapping.validationError}
+          touchedFields={methods.formState.touchedFields}
+        />
       </form>
     </FormProvider>
   );

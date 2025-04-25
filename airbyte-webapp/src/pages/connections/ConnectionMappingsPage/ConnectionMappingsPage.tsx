@@ -15,6 +15,7 @@ import { useConnectionFormService } from "hooks/services/ConnectionForm/Connecti
 import { useNotificationService } from "hooks/services/Notification";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";
+import styles from "./ConnectionMappingsPage.module.scss";
 import { MappingContextProvider, useMappingContext, MAPPING_VALIDATION_ERROR_KEY } from "./MappingContext";
 import { MappingsEmptyState } from "./MappingsEmptyState";
 import { MappingsUpsellEmptyState } from "./MappingsUpsellEmptyState";
@@ -73,7 +74,12 @@ const ConnectionMappingsPageContent = () => {
     <>
       <IfFeatureEnabled feature={FeatureItem.MappingsUI}>
         <FlexContainer direction="column">
-          <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+          <FlexContainer
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            className={styles.pageTitleContainer}
+          >
             <Heading as="h3" size="sm">
               <FormattedMessage id="connections.mappings.title" />
             </Heading>

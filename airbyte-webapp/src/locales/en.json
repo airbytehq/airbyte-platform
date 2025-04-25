@@ -804,6 +804,8 @@
   "connections.mappings.addStream.disabled": "All enabled streams already have mappings",
   "connections.mappings.rowFilter.in": "in",
   "connections.mappings.rowFilter.out": "out",
+  "connections.mappings.error.FIELD_NOT_FOUND": "Field not found in stream",
+  "connections.mappings.error.INVALID_MAPPER_CONFIG": "Encryption key or parameters are invalid",
   "connections.mappings.error.INVALID_RSA_PUBLIC_KEY": "Public key must be in hexadecimal format",
   "connections.mappings.error.FIELD_NAME_REQUIRED": "Target field is required",
   "connections.mappings.error.FIELD_NAME_SUFFIX_REQUIRED": "Field name suffix is required",

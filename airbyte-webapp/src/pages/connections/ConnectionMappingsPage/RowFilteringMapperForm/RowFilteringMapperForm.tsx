@@ -7,13 +7,18 @@ import { FormControlErrorMessage } from "components/forms/FormControl";
 import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
-import { RowFilteringMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  MapperValidationErrorType,
+  RowFilteringMapperConfiguration,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
 
 import { formValuesToMapperConfiguration, mapperConfigurationToFormValues } from "./formValueHelpers";
 import { autoSubmitResolver } from "../autoSubmitResolver";
 import { useMappingContext } from "../MappingContext";
 import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "../MappingRow";
 import { MappingTypeListBox } from "../MappingTypeListBox";
+import { MappingValidationErrorMessage } from "../MappingValidationErrorMessage";
 import { SelectTargetField } from "../SelectTargetField";
 import { StreamMapperWithId } from "../types";
 
@@ -60,8 +65,12 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
   }, [methods.trigger, streamDescriptorKey, updateLocalMapping, mapping.id]);
 
   useEffect(() => {
-    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
-      methods.setError("fieldName", { message: mapping.validationError.message });
+    if (
+      mapping.validationError &&
+      mapping.validationError.type === MapperValidationErrorType.FIELD_NOT_FOUND &&
+      "fieldName" in methods.formState.touchedFields
+    ) {
+      methods.setError("fieldName", { message: "connections.mappings.error.FIELD_NOT_FOUND" });
     } else {
       methods.clearErrors("fieldName");
     }
@@ -113,11 +122,10 @@ export const RowFilteringMapperForm: React.FC<RowFilteringMapperFormProps> = ({ 
             <FormControlErrorMessage<RowFilteringMapperFormValues> name="comparisonValue" />
           </MappingRowItem>
         </MappingRowContent>
-        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
-          <Text italicized color="red">
-            {mapping.validationError.message}
-          </Text>
-        )}
+        <MappingValidationErrorMessage<RowFilteringMapperFormValues>
+          validationError={mapping.validationError}
+          touchedFields={methods.formState.touchedFields}
+        />
       </form>
     </FormProvider>
   );
