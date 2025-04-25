@@ -57,6 +57,7 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
             request_headers: update?.request_headers ?? undefined,
+            request_body_json: update?.request_body_json ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
@@ -113,6 +114,7 @@ export interface ManifestUpdate {
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
   request_headers: Record<string, string> | null;
+  request_body_json: Record<string, string> | null;
   incremental_sync: DatetimeBasedCursor | null;
 }
 

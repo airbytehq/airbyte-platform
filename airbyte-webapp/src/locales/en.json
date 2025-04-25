@@ -2108,6 +2108,7 @@
   "connectorBuilder.partitionRouter.customRouter": "To use a CustomPartitionRouter, add it to the Parent Stream component in YAML mode",
   "connectorBuilder.partitionRouter.valuesPattern": "The 'values' field must match the pattern '{{' config['user_input_id'] '}}'",
   "connectorBuilder.requestOptions.label": "Request Options",
+  "connectorBuilder.requestOptions.tooltip": "Configure the query parameters, headers, and request body/payload that should be sent in the request to the API.",
   "connectorBuilder.requestOptions.jsonList": "JSON (key-value pairs)",
   "connectorBuilder.requestOptions.formList": "Form encoded (key-value pairs)",
   "connectorBuilder.requestOptions.jsonFreeform": "JSON (free form)",
