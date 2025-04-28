@@ -49,6 +49,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.EnumSource
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.Mockito
+import org.mockito.Mockito.atLeastOnce
 import org.mockito.Mockito.doNothing
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -565,7 +566,7 @@ class ConnectorRolloutWorkflowImplTest {
       workflowById.getResult(String::class.java)
     }
 
-    verify(startRolloutActivity).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
+    verify(startRolloutActivity, atLeastOnce()).startRollout(MockitoHelper.anyObject(), MockitoHelper.anyObject())
     verify(cleanupActivity).cleanup(MockitoHelper.anyObject())
   }
 

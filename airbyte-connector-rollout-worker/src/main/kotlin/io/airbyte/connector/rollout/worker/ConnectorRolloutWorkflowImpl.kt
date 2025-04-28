@@ -54,8 +54,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         RetryOptions
           .newBuilder()
           .setMaximumInterval(Duration.ofSeconds(600))
-          .setMaximumAttempts(1)
-          .setDoNotRetry("org.openapitools.client.infrastructure.ClientException")
+          .setMaximumAttempts(6)
           .build(),
       ).build()
 
