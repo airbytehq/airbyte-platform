@@ -68,6 +68,7 @@ public class CatalogConverter {
         .defaultCursorField(stream.getDefaultCursorField())
         .sourceDefinedPrimaryKey(stream.getSourceDefinedPrimaryKey())
         .namespace(stream.getNamespace())
+        .isFileBased(stream.getIsFileBased())
         .isResumable(stream.getIsResumable());
   }
 
@@ -96,6 +97,7 @@ public class CatalogConverter {
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
                   .suggested(false)
+                  .includeFiles(configuredStream.getIncludeFiles())
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
                   .selectedFields(List.of())
                   // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.
@@ -210,6 +212,7 @@ public class CatalogConverter {
         .withSupportedSyncModes(Enums.convertListTo(stream.getSupportedSyncModes(), io.airbyte.protocol.models.v0.SyncMode.class))
         .withSourceDefinedCursor(stream.getSourceDefinedCursor())
         .withDefaultCursorField(stream.getDefaultCursorField())
+        .withIsFileBased(stream.getIsFileBased())
         .withSourceDefinedPrimaryKey(Optional.ofNullable(stream.getSourceDefinedPrimaryKey()).orElse(Collections.emptyList()))
         .withNamespace(stream.getNamespace())
         .withIsResumable(stream.getIsResumable());
@@ -274,6 +277,10 @@ public class CatalogConverter {
               // TODO(pedro): `hashedFields` support should be removed once the UI is updated to use `mappers`.
               builder
                   .mappers(toConfiguredHashingMappers(s.getConfig().getHashedFields()));
+            }
+
+            if (s.getConfig().getIncludeFiles() != null) {
+              builder.includeFiles(s.getConfig().getIncludeFiles());
             }
 
             return builder.build();

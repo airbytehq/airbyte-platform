@@ -4,33 +4,47 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.json.Jsons
 import io.airbyte.data.repositories.entities.ConfigTemplate
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 
 typealias EntityConfigTemplate = ConfigTemplate
 typealias ModelConfigTemplate = io.airbyte.config.ConfigTemplate
 
 val objectMapper = ObjectMapper()
 
-fun EntityConfigTemplate.toConfigModel(): ModelConfigTemplate =
+fun EntityConfigTemplate.toConfigModel(): ModelConfigTemplate {
+  val connectorSpec =
+    this.userConfigSpec.let {
+      Jsons.deserialize(it.toString(), ConnectorSpecification::class.java)
+    }
 
-  ModelConfigTemplate(
+  return ModelConfigTemplate(
     id = this.id!!,
     organizationId = this.organizationId,
     actorDefinitionId = this.actorDefinitionId,
     partialDefaultConfig = this.partialDefaultConfig,
-    userConfigSpec = this.userConfigSpec,
+    userConfigSpec = connectorSpec,
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
   )
+}
 
-fun ModelConfigTemplate.toEntity(): EntityConfigTemplate =
-  EntityConfigTemplate(
+fun ModelConfigTemplate.toEntity(): EntityConfigTemplate {
+  val jsonNodeSpec =
+    this.userConfigSpec.let {
+      objectMapper.valueToTree<JsonNode>(it)
+    }
+
+  return EntityConfigTemplate(
     id = this.id,
     organizationId = this.organizationId,
     actorDefinitionId = this.actorDefinitionId,
     partialDefaultConfig = this.partialDefaultConfig,
-    userConfigSpec = this.userConfigSpec,
+    userConfigSpec = jsonNodeSpec,
     createdAt = this.createdAt,
     updatedAt = this.updatedAt,
   )
+}

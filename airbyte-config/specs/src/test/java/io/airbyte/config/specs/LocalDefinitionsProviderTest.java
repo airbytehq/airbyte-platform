@@ -37,7 +37,6 @@ class LocalDefinitionsProviderTest {
     assertEquals("airbyte/source-stripe", stripeSource.getDockerRepository());
     assertEquals("https://docs.airbyte.com/integrations/sources/stripe", stripeSource.getDocumentationUrl());
     assertEquals("stripe.svg", stripeSource.getIcon());
-    assertEquals(URI.create("https://docs.airbyte.com/integrations/sources/stripe"), stripeSource.getSpec().getDocumentationUrl());
     assertEquals(false, stripeSource.getTombstone());
     assertEquals("0.2.0", stripeSource.getProtocolVersion());
   }

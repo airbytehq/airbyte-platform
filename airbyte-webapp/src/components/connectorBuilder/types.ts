@@ -77,6 +77,9 @@ import {
   AsyncJobStatusMap,
   DpathExtractorType,
   DpathExtractor,
+  SimpleRetriever,
+  DynamicDeclarativeStream,
+  DynamicDeclarativeStreamType,
 } from "core/api/types/ConnectorManifest";
 
 import { DecoderTypeConfig } from "./Builder/DecoderConfig";
@@ -104,17 +107,12 @@ export interface BuilderState {
   previewValues?: BuilderFormValues;
   yaml: string;
   customComponentsCode?: string;
-  view:
-    | "global"
-    | "inputs"
-    | "components"
-    | `dynamic_stream_${number}` /* dynamic stream index */
-    | `generated_stream_${string}` /* stream instance generated from a dynamic stream */
-    | number /* stream index */;
+  view: { type: "global" } | { type: "inputs" } | { type: "components" } | StreamId;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
   generatedStreams: Record<string, DeclarativeStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
+  manifest?: ConnectorManifest;
 }
 
 export interface AssistData {
@@ -470,11 +468,23 @@ export type BuilderPollingTimeout =
       value: string;
     };
 
+interface BuilderComponentMappingDefinition {
+  type: "ComponentMappingDefinition";
+  field_path: string[];
+  value: string;
+}
+
+interface BuilderHttpComponentsResolver {
+  type: "HttpComponentsResolver";
+  retriever: SimpleRetriever;
+  components_mapping: BuilderComponentMappingDefinition[];
+}
+export type BuilderComponentsResolver = BuilderHttpComponentsResolver;
+
 export interface BuilderDynamicStream {
-  streamTemplate: BuilderStream;
-  dynamic_stream_name?: string;
-  // TODO:
-  // componentsResolver: BuilderComponentsResolver;
+  streamTemplate: Omit<BuilderStream, "name" | "id">;
+  dynamicStreamName: string;
+  componentsResolver: BuilderComponentsResolver;
 }
 
 export type BuilderStream = {
@@ -1312,7 +1322,7 @@ const builderDpathExtractorToManifest = (extractor: BuilderDpathExtractor): Dpat
   };
 };
 
-function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: BuilderStream[]): DeclarativeStream {
+function builderStreamToDeclarativeStream(stream: BuilderStream, allStreams: BuilderStream[]): DeclarativeStream {
   // cast to tell typescript which properties will be present after resolving the ref
   const requesterRef = {
     $ref: "#/definitions/base_requester",
@@ -1402,6 +1412,34 @@ function builderStreamToDeclarativeSteam(stream: BuilderStream, allStreams: Buil
     };
   }
   return merge({} as DeclarativeStream, stream.unknownFields ? load(stream.unknownFields) : {}, declarativeStream);
+}
+
+function builderDynamicStreamToDeclarativeStream(dynamicStream: BuilderDynamicStream): DynamicDeclarativeStream {
+  const declarativeDynamicStream: DynamicDeclarativeStream = {
+    type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
+    name: dynamicStream.dynamicStreamName,
+    components_resolver: dynamicStream.componentsResolver,
+    stream_template: {
+      ...builderStreamToDeclarativeStream(
+        {
+          ...dynamicStream.streamTemplate,
+          name: `${dynamicStream.dynamicStreamName}_template`,
+        } as BuilderStream,
+        []
+      ),
+    },
+  };
+
+  // if there isn't a record filter condition, remove the filter component
+  if (
+    !(declarativeDynamicStream.components_resolver as BuilderComponentsResolver).retriever.record_selector.record_filter
+      ?.condition
+  ) {
+    delete (declarativeDynamicStream.components_resolver as BuilderComponentsResolver).retriever.record_selector
+      .record_filter;
+  }
+
+  return declarativeDynamicStream;
 }
 
 export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderMetadata => {
@@ -1524,7 +1562,11 @@ export const builderInputsToSpec = (inputs: BuilderFormInput[]): Spec => {
 
 export const convertToManifest = (values: BuilderFormValues): ConnectorManifest => {
   const manifestStreams: DeclarativeStream[] = values.streams.map((stream) =>
-    builderStreamToDeclarativeSteam(stream, values.streams)
+    builderStreamToDeclarativeStream(stream, values.streams)
+  );
+
+  const manifestDynamicStreams = values.dynamicStreams.map((dynamicStream) =>
+    builderDynamicStreamToDeclarativeStream(dynamicStream)
   );
 
   const streamNames = values.streams.map((s) => s.name);
@@ -1551,6 +1593,23 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
 
   const streamNameToStream = Object.fromEntries(manifestStreams.map((stream) => [stream.name, stream]));
   const streamRefs = manifestStreams.map((stream) => streamRef(stream.name!));
+
+  const dynamicStreamNameToSchema = Object.fromEntries(
+    values.dynamicStreams.map((dynamicStream) => {
+      let schema;
+      if (dynamicStream.streamTemplate.schema) {
+        try {
+          schema = JSON.parse(dynamicStream.streamTemplate.schema);
+        } catch (e) {
+          schema = JSON.parse(DEFAULT_SCHEMA);
+        }
+      } else {
+        schema = JSON.parse(DEFAULT_SCHEMA);
+      }
+      schema.additionalProperties = true;
+      return [`${dynamicStream.dynamicStreamName}_template`, schema];
+    })
+  );
 
   const streamNameToSchema = Object.fromEntries(
     values.streams.map((stream) => {
@@ -1595,7 +1654,8 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
       streams: streamNameToStream,
     },
     streams: streamRefs,
-    schemas: streamNameToSchema,
+    ...(manifestDynamicStreams.length > 0 ? { dynamic_streams: manifestDynamicStreams } : {}),
+    schemas: { ...streamNameToSchema, ...dynamicStreamNameToSchema },
     spec,
     // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     metadata: builderFormValuesToMetadata(values),
@@ -1607,7 +1667,6 @@ function schemaRef(streamName: string) {
   return { $ref: `#/schemas/${streamName}` };
 }
 
-export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
 export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   type: "DeclarativeStream",
   retriever: {
@@ -1622,16 +1681,52 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
     requester: {
       type: "HttpRequester",
       url_base: "",
-      authenticator: undefined,
-      path: "",
       http_method: "GET",
     },
-    paginator: undefined,
   },
-  primary_key: undefined,
+};
+export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = {
+  type: "DeclarativeSource",
+  version: CDK_VERSION,
+  check: {
+    type: "CheckStream",
+    stream_names: [],
+  },
+  streams: [],
+  spec: {
+    type: "Spec",
+    connection_specification: {
+      type: "object",
+      properties: {},
+    },
+  },
+};
+
+export const DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      url_base: "https://api.com",
+      http_method: "GET",
+    },
+  },
+};
+export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
+  ...DEFAULT_JSON_MANIFEST_VALUES,
+  streams: [DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE],
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+export type DynamicStreamPathFn = <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${number}.${T}`;
 export type CreationRequesterPathFn = <T extends string>(
   fieldPath: T
 ) => `formValues.streams.${number}.creationRequester.${T}`;

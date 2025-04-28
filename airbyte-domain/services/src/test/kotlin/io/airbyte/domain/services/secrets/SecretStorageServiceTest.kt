@@ -18,10 +18,15 @@ import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.featureflag.EnableDefaultSecretStorage
+import io.airbyte.featureflag.TestClient
+import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.util.Optional
@@ -45,6 +50,7 @@ class SecretStorageServiceTest {
   private val secretReferenceRepository: SecretReferenceRepository = mockk()
   private val secretsRepositoryReader: SecretsRepositoryReader = mockk()
   private val secretConfigService: SecretConfigService = mockk()
+  private val featureFlagClient: TestClient = mockk()
 
   private val service =
     SecretStorageService(
@@ -53,6 +59,7 @@ class SecretStorageServiceTest {
       secretReferenceRepository,
       secretsRepositoryReader,
       secretConfigService,
+      featureFlagClient,
     )
 
   @Nested
@@ -75,6 +82,12 @@ class SecretStorageServiceTest {
 
   @Nested
   inner class GetByWorkspaceId {
+    @BeforeEach
+    fun setup() {
+      every { organizationRepository.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns false
+    }
+
     @Test
     fun `should return workspace scoped secret storage if available`() {
       val secretStorage = mockk<SecretStorage>()
@@ -100,7 +113,8 @@ class SecretStorageServiceTest {
     }
 
     @Test
-    fun `should return null if no secret storage found`() {
+    fun `should return default if no workspace or organization-scoped secret storage found`() {
+      val expected = mockk<SecretStorage>()
       every {
         secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value)
       } returns emptyList()
@@ -108,8 +122,28 @@ class SecretStorageServiceTest {
       every {
         secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value)
       } returns emptyList()
+      every {
+        secretStorageRepository.findById(SecretStorage.DEFAULT_SECRET_STORAGE_ID)
+      } returns expected
 
-      service.getByWorkspaceId(workspaceId) shouldBe null
+      every {
+        featureFlagClient.boolVariation(eq(EnableDefaultSecretStorage), any())
+      } returns true
+
+      service.getByWorkspaceId(workspaceId) shouldBe expected
+    }
+
+    @Test
+    fun `should return null if runtime secret persistence feature flag is enabled`() {
+      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns true
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value) } returns emptyList()
+      every { organizationRepository.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
+      every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value) } returns emptyList()
+
+      val result = service.getByWorkspaceId(workspaceId)
+
+      result shouldBe null
+      verify(exactly = 0) { secretStorageRepository.findById(any()) }
     }
   }
 

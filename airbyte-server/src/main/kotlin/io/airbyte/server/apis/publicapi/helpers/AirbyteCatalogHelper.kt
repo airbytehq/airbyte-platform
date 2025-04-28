@@ -66,6 +66,7 @@ object AirbyteCatalogHelper {
       updatedStreamConfiguration.cursorField = it.cursorField
       updatedStreamConfiguration.fieldSelectionEnabled = it.fieldSelectionEnabled
       updatedStreamConfiguration.selected = it.selected
+      updatedStreamConfiguration.includeFiles = it.includeFiles
       updatedStreamConfiguration.selectedFields = it.selectedFields
       updatedStreamConfiguration.suggested = it.suggested
     }
@@ -332,6 +333,11 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
     updatedStreamConfiguration.selectedFields = config.selectedFields
+
+    updatedStreamConfiguration.includeFiles = config.includeFiles
+    if (streamConfiguration.includeFiles != null) {
+      updatedStreamConfiguration.includeFiles = streamConfiguration.includeFiles
+    }
 
     if (streamConfiguration.selectedFields != null) {
       // Override and update

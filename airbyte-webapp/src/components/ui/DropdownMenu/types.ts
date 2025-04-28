@@ -1,9 +1,10 @@
+import { OffsetOptions } from "@floating-ui/core";
 import { Placement } from "@floating-ui/react-dom";
 import React from "react";
 
 import { TextSize } from "../Text";
 
-export type DisplacementType = 5 | 10; // $spacing-sm, $spacing-md
+export type DisplacementType = OffsetOptions;
 
 export type DropdownMenuItemElementType = "a" | "button";
 
@@ -55,4 +56,5 @@ export interface DropdownMenuProps {
   displacement?: DisplacementType;
   "data-testid"?: string;
   textSize?: TextSize;
+  style?: React.CSSProperties;
 }

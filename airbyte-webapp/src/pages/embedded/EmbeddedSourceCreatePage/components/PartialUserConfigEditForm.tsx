@@ -1,15 +1,14 @@
-import { useSearchParams } from "react-router-dom";
-
 import { useGetPartialUserConfig, useUpdatePartialUserConfig } from "core/api";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
+import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 
 export const PartialUserConfigEditForm: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedPartialConfigId = searchParams.get("selectedPartialConfigId");
-  const { mutate: updatePartialUserConfig } = useUpdatePartialUserConfig();
+  const { selectedPartialConfigId, workspaceId } = useEmbeddedSourceParams();
+  const { mutate: updatePartialUserConfig, isSuccess } = useUpdatePartialUserConfig();
+
   const partialUserConfig = useGetPartialUserConfig(selectedPartialConfigId ?? "");
 
   const sourceDefinitionSpecification: SourceDefinitionSpecificationDraft =
@@ -18,28 +17,25 @@ export const PartialUserConfigEditForm: React.FC = () => {
   const onSubmit = (values: ConnectorFormValues) => {
     updatePartialUserConfig({
       partialUserConfigId: selectedPartialConfigId ?? "",
-      partialUserConfigProperties: values,
+      connectionConfiguration: values.connectionConfiguration,
+      workspaceId,
     });
   };
 
   const initialValues: Partial<ConnectorFormValues> = {
     name: partialUserConfig.configTemplate.name,
-    ...partialUserConfig.partialUserConfigProperties,
+    connectionConfiguration: partialUserConfig.connectionConfiguration,
   };
 
   return (
     <PartialUserConfigForm
       isEditMode
-      title={partialUserConfig.configTemplate.name}
-      onBack={() => {
-        setSearchParams((params) => {
-          params.delete("selectedPartialConfigId");
-          return params;
-        });
-      }}
+      connectorName={partialUserConfig.configTemplate.name}
+      icon={partialUserConfig.configTemplate.icon}
       onSubmit={onSubmit}
       initialValues={initialValues}
       sourceDefinitionSpecification={sourceDefinitionSpecification}
+      showSuccessView={isSuccess}
     />
   );
 };

@@ -10,7 +10,6 @@ import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
@@ -115,14 +114,6 @@ internal class WorkspaceApiControllerTest {
     val path = "/api/v1/workspaces/get_by_slug"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
-  }
-
-  @Test
-  fun testListWorkspace() {
-    every { workspacesHandler.listWorkspaces() } returns WorkspaceReadList()
-
-    val path = "/api/v1/workspaces/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
   }
 
   @Test

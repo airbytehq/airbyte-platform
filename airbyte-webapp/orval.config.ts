@@ -204,7 +204,6 @@ export default defineConfig({
     // Required to exclude, due to us not being able to convert JSON parameters
     "/public/v1/oauth/callback",
   ]),
-  cloudApi: createApi("../airbyte-api/commons/src/main/openapi/cloud-config.yaml", "CloudApi", "cloudApiCall"),
   connectorBuilder: createApi(
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",

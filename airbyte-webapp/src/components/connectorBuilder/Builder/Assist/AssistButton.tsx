@@ -32,6 +32,7 @@ import {
   useBuilderAssistStreamResponse,
   parseAssistErrorToFormErrors,
   computeStreamResponse,
+  useBuilderAssistFindIncrementalSync,
 } from "./assist";
 import { AssistData, BuilderFormInput, BuilderFormValues } from "../../types";
 
@@ -189,7 +190,12 @@ const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
   request_options: {
     useHook: useBuilderAssistFindRequestOptions,
     useHookParams: ["stream_name", "stream_response"],
-    formPathToSet: (streamNum: number) => `streams.${streamNum}.requestOptions.requestHeaders`,
+    formPathToSet: (streamNum: number) => `streams.${streamNum}.requestOptions`,
+  },
+  incremental_sync: {
+    useHook: useBuilderAssistFindIncrementalSync,
+    useHookParams: ["stream_name", "stream_response"],
+    formPathToSet: (streamNum: number) => `streams.${streamNum}.incrementalSync`,
   },
 };
 

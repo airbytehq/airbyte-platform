@@ -281,6 +281,17 @@ public class DefaultJobPersistence implements JobPersistence {
     return attemptStats;
   }
 
+  private static final String STREAM_STAT_SELECT_STATEMENT = "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
+      + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
+      + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
+      + "FROM stream_stats stats "
+      + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
+      + "LEFT JOIN stream_attempt_metadata sam ON ("
+      + "sam.attempt_id = stats.attempt_id and "
+      + "sam.stream_name = stats.stream_name and "
+      + "((sam.stream_namespace is null and stats.stream_namespace is null) or (sam.stream_namespace = stats.stream_namespace))"
+      + ") ";
+
   /**
    * This method needed to be called after
    * {@link DefaultJobPersistence#hydrateSyncStats(String, DSLContext)} as it assumes hydrateSyncStats
@@ -312,20 +323,14 @@ public class DefaultJobPersistence implements JobPersistence {
     }
 
     final var streamResults = ctx.fetch(
-        "SELECT atmpt.id, atmpt.attempt_number, atmpt.job_id, "
-            + "stats.stream_name, stats.stream_namespace, stats.estimated_bytes, stats.estimated_records, stats.bytes_emitted, stats.records_emitted,"
-            + "stats.bytes_committed, stats.records_committed, sam.was_backfilled, sam.was_resumed "
-            + "FROM stream_stats stats "
-            + "INNER JOIN attempts atmpt ON atmpt.id = stats.attempt_id "
-            + "LEFT JOIN stream_attempt_metadata sam ON ("
-            + "sam.attempt_id = stats.attempt_id and "
-            + "sam.stream_name = stats.stream_name and "
-            + "((sam.stream_namespace is null and stats.stream_namespace is null) or (sam.stream_namespace = stats.stream_namespace))"
-            + ") "
+        STREAM_STAT_SELECT_STATEMENT
             + "WHERE stats.attempt_id IN "
             + "( SELECT id FROM attempts WHERE job_id IN ( " + jobIdsStr + "));");
 
     streamResults.forEach(r -> {
+      // TODO: change this block by using recordToStreamSyncSync instead. This can be done after
+      // confirming that we don't
+      // need to care about the historical data.
       final String streamNamespace = r.get(STREAM_STATS.STREAM_NAMESPACE);
       final String streamName = r.get(STREAM_STATS.STREAM_NAME);
       final long attemptId = r.get(ATTEMPTS.ID);
@@ -358,6 +363,33 @@ public class DefaultJobPersistence implements JobPersistence {
       }
       attemptStats.get(key).perStreamStats().add(streamSyncStats);
     });
+  }
+
+  /**
+   * Create a stream stats from a jooq record.
+   *
+   * @param record DB record
+   * @return a StreamSyncStats object which contain the stream metadata
+   */
+  private static StreamSyncStats recordToStreamSyncSync(final Record record) {
+    final String streamNamespace = record.get(STREAM_STATS.STREAM_NAMESPACE);
+    final String streamName = record.get(STREAM_STATS.STREAM_NAME);
+
+    final boolean wasBackfilled = getOrDefaultFalse(record, STREAM_ATTEMPT_METADATA.WAS_BACKFILLED);
+    final boolean wasResumed = getOrDefaultFalse(record, STREAM_ATTEMPT_METADATA.WAS_RESUMED);
+
+    return new StreamSyncStats()
+        .withStreamNamespace(streamNamespace)
+        .withStreamName(streamName)
+        .withStats(new SyncStats()
+            .withBytesEmitted(record.get(STREAM_STATS.BYTES_EMITTED))
+            .withRecordsEmitted(record.get(STREAM_STATS.RECORDS_EMITTED))
+            .withEstimatedRecords(record.get(STREAM_STATS.ESTIMATED_RECORDS))
+            .withEstimatedBytes(record.get(STREAM_STATS.ESTIMATED_BYTES))
+            .withBytesCommitted(record.get(STREAM_STATS.BYTES_COMMITTED))
+            .withRecordsCommitted(record.get(STREAM_STATS.RECORDS_COMMITTED)))
+        .withWasBackfilled(wasBackfilled)
+        .withWasResumed(wasResumed);
   }
 
   private static boolean getOrDefaultFalse(final Record r, final Field<Boolean> field) {
@@ -819,6 +851,22 @@ public class DefaultJobPersistence implements JobPersistence {
   }
 
   @Override
+  public AttemptStats getAttemptStatsWithStreamMetadata(final long jobId, final int attemptNumber) throws IOException {
+    return jobDatabase
+        .query(ctx -> {
+          final Long attemptId = getAttemptId(jobId, attemptNumber, ctx);
+          final var syncStats = ctx.select(DSL.asterisk()).from(SYNC_STATS).where(SYNC_STATS.ATTEMPT_ID.eq(attemptId))
+              .orderBy(SYNC_STATS.UPDATED_AT.desc())
+              .fetchOne(getSyncStatsRecordMapper());
+          final var perStreamStats = ctx.fetch(STREAM_STAT_SELECT_STATEMENT + "WHERE stats.attempt_id = ?", attemptId)
+              .stream().map(DefaultJobPersistence::recordToStreamSyncSync).collect(Collectors.toList());
+
+          return new AttemptStats(syncStats, perStreamStats);
+        });
+  }
+
+  @Override
+  @Deprecated // This return AttemptStats without stream metadata. Use getAttemptStatsWithStreamMetadata instead.
   public AttemptStats getAttemptStats(final long jobId, final int attemptNumber) throws IOException {
     return jobDatabase
         .query(ctx -> {
@@ -828,6 +876,7 @@ public class DefaultJobPersistence implements JobPersistence {
               .fetchOne(getSyncStatsRecordMapper());
           final var perStreamStats = ctx.select(DSL.asterisk()).from(STREAM_STATS).where(STREAM_STATS.ATTEMPT_ID.eq(attemptId))
               .fetch(getStreamStatsRecordsMapper());
+
           return new AttemptStats(syncStats, perStreamStats);
         });
   }

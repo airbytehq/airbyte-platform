@@ -107,6 +107,10 @@ enum class OssMetricsRegistry(
     metricName = "api-client.success",
     metricDescription = "API client successful request count",
   ),
+  API_TRACE(
+    metricName = "api-trace",
+    metricDescription = "",
+  ),
   ATTEMPTS_CREATED(
     metricName = "attempt_created",
     metricDescription = "increments when a new attempt is created. one is emitted per attempt",

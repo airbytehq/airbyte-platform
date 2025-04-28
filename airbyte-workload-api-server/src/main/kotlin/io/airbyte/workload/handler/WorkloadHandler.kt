@@ -102,4 +102,6 @@ interface WorkloadHandler {
   ): Long
 
   fun getWorkloadQueueStats(): List<WorkloadQueueStats>
+
+  fun cleanWorkloadQueue(limit: Int)
 }

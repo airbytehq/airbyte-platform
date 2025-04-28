@@ -54,6 +54,7 @@ class Bootloader(
   private val dataplaneInitializer: DataplaneInitializer,
   val airbyteEdition: AirbyteEdition,
   private val authSecretInitializer: AuthKubernetesSecretInitializer?,
+  private val secretStorageInitializer: SecretStorageInitializer,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -103,6 +104,9 @@ class Bootloader(
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
     }
+
+    log.info { "Initializing default secret storage..." }
+    secretStorageInitializer.createOrUpdateDefaultSecretStorage()
 
     val airbyteVersion = currentAirbyteVersion.serialize()
     log.info { "Setting Airbyte version to '$airbyteVersion'" }

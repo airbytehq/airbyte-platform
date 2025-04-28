@@ -91,7 +91,8 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       onSubmit: () => {
         const updatedStreams: BuilderStream[] = streams.filter((_, index) => index !== streamNum);
         const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
-        const viewToSelect: BuilderView = updatedStreams.length === 0 ? "global" : streamToSelect;
+        const viewToSelect: BuilderView =
+          updatedStreams.length === 0 ? { type: "global" } : { type: "stream", index: streamToSelect };
         setValue("formValues.streams", updatedStreams);
         setValue("view", viewToSelect);
         closeConfirmationModal();
@@ -165,7 +166,7 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([streamNum], "requester")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "requester")}
           />
           <SchemaTab
             streamNum={streamNum}
@@ -303,7 +304,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([streamNum], "requester")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "requester")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-polling"
@@ -313,7 +314,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "polling");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([streamNum], "polling")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "polling")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-download"
@@ -323,7 +324,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "download");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([streamNum], "download")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "download")}
           />
           <SchemaTab
             streamNum={streamNum}
@@ -760,7 +761,7 @@ const SchemaTab = ({
       label={formatMessage({ id: "connectorBuilder.streamSchema" })}
       isSelected={isSelected}
       onSelect={() => onSelect()}
-      showErrorIndicator={hasErrors([streamNum], "schema")}
+      showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "schema")}
       showSchemaConflictIndicator={schemaDifferences && !autoImportSchema}
       schemaErrors={incompatibleSchemaErrors}
     />

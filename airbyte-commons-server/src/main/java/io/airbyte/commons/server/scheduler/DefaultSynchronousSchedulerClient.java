@@ -34,7 +34,6 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -105,9 +104,9 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final ConfigWithSecretReferences sourceConfig =
         source.getSourceId() == null ? InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(injectedConfig)
             : secretReferenceService.getConfigWithSecretReferences(
-                SecretReferenceScopeType.ACTOR,
                 source.getSourceId(),
-                injectedConfig);
+                injectedConfig,
+                source.getWorkspaceId());
 
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.SOURCE)
@@ -153,9 +152,9 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final ConfigWithSecretReferences destinationConfig =
         destination.getDestinationId() == null ? InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava(injectedConfig)
             : secretReferenceService.getConfigWithSecretReferences(
-                SecretReferenceScopeType.ACTOR,
                 destination.getDestinationId(),
-                injectedConfig);
+                injectedConfig,
+                destination.getWorkspaceId());
 
     final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
         .withActorType(ActorType.DESTINATION)
@@ -199,9 +198,9 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
     final JsonNode injectedConfig = configInjector.injectConfig(configWithOauthParams, source.getSourceDefinitionId());
 
     final ConfigWithSecretReferences sourceConfig = secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         source.getSourceId(),
-        injectedConfig);
+        injectedConfig,
+        source.getWorkspaceId());
 
     final JobDiscoverCatalogConfig jobDiscoverCatalogConfig = new JobDiscoverCatalogConfig()
         .withConnectionConfiguration(sourceConfig)

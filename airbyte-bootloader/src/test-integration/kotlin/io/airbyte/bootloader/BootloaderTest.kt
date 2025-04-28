@@ -46,7 +46,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_1_1_028__AddFiltersToConnectorRollout
+import io.airbyte.db.instance.configs.migrations.V1_1_1_030__BackfillFiltersUpdate
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_001__AddIsScheduledToJobTable
@@ -253,6 +253,7 @@ internal class BootloaderTest {
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -273,6 +274,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
     bootloader.load()
 
@@ -434,6 +436,7 @@ internal class BootloaderTest {
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
     val dataplaneInitializer: DataplaneInitializer = mockk()
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
 
     val bootloader =
       Bootloader(
@@ -454,6 +457,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
 
     // starting from no previous version is always legal.
@@ -707,6 +711,7 @@ internal class BootloaderTest {
       }
     val dataplaneInitializer: DataplaneInitializer = mockk(relaxUnitFun = true)
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
+    val secretStorageInitializer: SecretStorageInitializer = mockk(relaxUnitFun = true)
     val bootloader =
       Bootloader(
         autoUpgradeConnectors = false,
@@ -726,6 +731,7 @@ internal class BootloaderTest {
         dataplaneInitializer = dataplaneInitializer,
         airbyteEdition = airbyteEdition,
         authSecretInitializer = authKubeSecretInitializer,
+        secretStorageInitializer = secretStorageInitializer,
       )
     bootloader.load()
     Assertions.assertTrue(testTriggered.get())
@@ -773,7 +779,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_028__AddFiltersToConnectorRollout::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_1_1_030__BackfillFiltersUpdate::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_001__AddIsScheduledToJobTable::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

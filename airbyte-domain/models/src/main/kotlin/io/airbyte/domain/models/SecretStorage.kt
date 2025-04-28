@@ -32,7 +32,19 @@ data class SecretStorage(
   companion object {
     val DEFAULT_SECRET_STORAGE_ID = SecretStorageId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
   }
+
+  fun isDefault(): Boolean = id == DEFAULT_SECRET_STORAGE_ID
 }
+
+data class SecretStorageCreate(
+  val id: SecretStorageId? = null,
+  val scopeType: SecretStorageScopeType,
+  val scopeId: UUID,
+  val descriptor: String,
+  val storageType: SecretStorageType,
+  val configuredFromEnvironment: Boolean,
+  val createdBy: UserId,
+)
 
 enum class SecretStorageScopeType {
   ORGANIZATION,

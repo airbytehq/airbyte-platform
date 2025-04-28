@@ -1,6 +1,6 @@
 import type { OmittableProperties, TextAreaControlProps } from "./FormControl";
 
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 
 import { TextArea } from "components/ui/TextArea";
 
@@ -13,6 +13,9 @@ export const TextAreaWrapper = <T extends FormValues>({
   ...rest
 }: Omit<TextAreaControlProps<T>, OmittableProperties>) => {
   const { register } = useFormContext();
+  // If we don't watch the name explicitly, the textarea will not update
+  // when its value is changed as a result of setting a parent object value.
+  const value = useWatch({ name });
 
-  return <TextArea {...rest} {...register(name)} name={name} error={hasError} id={controlId} />;
+  return <TextArea {...rest} {...register(name)} value={value ?? ""} name={name} error={hasError} id={controlId} />;
 };

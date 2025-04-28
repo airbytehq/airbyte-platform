@@ -44,7 +44,6 @@ import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.secrets.ConfigWithSecretReferences;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
@@ -132,7 +131,7 @@ class DefaultSynchronousSchedulerClientTest {
 
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
 
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), eq(CONFIGURATION)))
+    when(secretReferenceService.getConfigWithSecretReferences(any(), eq(CONFIGURATION), any()))
         .thenReturn(CONFIG_WITH_REFS);
 
     when(contextBuilder.fromDestination(any())).thenReturn(new ActorContext());
@@ -265,8 +264,9 @@ class DefaultSynchronousSchedulerClientTest {
       when(configInjector.injectConfig(SOURCE_CONNECTION.getConfiguration(), SOURCE_CONNECTION.getSourceDefinitionId()))
           .thenReturn(configAfterInjection);
       when(
-          secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, SOURCE_CONNECTION.getSourceId(), configAfterInjection))
-              .thenReturn(configWithRefsAfterInjection);
+          secretReferenceService.getConfigWithSecretReferences(SOURCE_CONNECTION.getSourceId(), configAfterInjection,
+              SOURCE_CONNECTION.getWorkspaceId()))
+                  .thenReturn(configWithRefsAfterInjection);
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);

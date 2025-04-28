@@ -6,6 +6,7 @@ import { AnyObjectSchema } from "yup";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
+import SchemaFormBuilder from "components/connectorBuilder/SchemaFormBuilder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
 import { BuilderState } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
@@ -31,7 +32,6 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
-
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
     projectId,
@@ -43,9 +43,11 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       declarativeManifest,
       testingValues: initialTestingValues,
     },
+    resolvedManifest,
   } = useInitializedBuilderProject();
   const { getStoredMode } = useConnectorBuilderLocalStorage();
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   const dynamicStreams = declarativeManifest?.manifest?.dynamic_streams;
 
@@ -55,17 +57,24 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       ? { type: "dynamic_stream" as const, index: 0 }
       : { type: "stream" as const, index: 0 };
 
-  const values = {
+  const initialView = !isSchemaFormEnabled
+    ? { type: "global" as const }
+    : initialTestStreamId.type === "dynamic_stream"
+    ? { type: "dynamic_stream" as const, index: 0 }
+    : { type: "stream" as const, index: 0 };
+
+  const values: BuilderState = {
     mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
     customComponentsCode: componentsFileContent,
     name,
-    view: "global" as const,
+    view: initialView,
     streamTab: "requester" as const,
     testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
     generatedStreams: {} as Record<string, DeclarativeStream[]>,
+    manifest: resolvedManifest,
   };
   const initialValues = useRef(values);
   initialValues.current = values;
@@ -84,6 +93,7 @@ export const ConnectorBuilderEditPage: React.FC = () => (
 
 const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRefObject<BuilderState> }) => {
   const { builderStateValidationSchema } = useBuilderValidationSchema();
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
   // To prevent this, the hook is placed in its own memoized component which only re-renders when necessary
@@ -91,29 +101,21 @@ const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRe
     // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     defaultValues: defaultValues.current,
     mode: "onChange",
-    resolver: yupResolver<AnyObjectSchema>(builderStateValidationSchema),
+    resolver: isSchemaFormEnabled ? undefined : yupResolver<AnyObjectSchema>(builderStateValidationSchema),
   });
 
   return (
     <FormProvider {...methods}>
       <ConnectorBuilderMainRHFContext.Provider value={methods}>
-        <form
-          className={styles.form}
-          onSubmit={(e) => {
-            // prevent form submission
-            e.preventDefault();
-          }}
-        >
-          <ConnectorBuilderFormStateProvider>
-            <ConnectorBuilderTestReadProvider>
-              <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-              <FlexContainer direction="column" gap="none" className={styles.container}>
-                <MenuBar />
-                <Panels />
-              </FlexContainer>
-            </ConnectorBuilderTestReadProvider>
-          </ConnectorBuilderFormStateProvider>
-        </form>
+        <ConnectorBuilderFormStateProvider>
+          <ConnectorBuilderTestReadProvider>
+            <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+            <FlexContainer direction="column" gap="none" className={styles.container}>
+              <MenuBar />
+              <Panels />
+            </FlexContainer>
+          </ConnectorBuilderTestReadProvider>
+        </ConnectorBuilderFormStateProvider>
       </ConnectorBuilderMainRHFContext.Provider>
     </FormProvider>
   );
@@ -123,6 +125,7 @@ BaseForm.displayName = "BaseForm";
 const Panels = React.memo(() => {
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   return useMemo(
     () => (
@@ -135,7 +138,8 @@ const Panels = React.memo(() => {
         })}
         panels={[
           {
-            children: <>{mode === "yaml" ? <YamlManifestEditor /> : <Builder />}</>,
+            children:
+              mode === "yaml" ? <YamlManifestEditor /> : isSchemaFormEnabled ? <SchemaFormBuilder /> : <Builder />,
             className: styles.leftPanel,
             minWidth: 350,
           },
@@ -148,7 +152,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [mode, stateKey]
+    [isSchemaFormEnabled, mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

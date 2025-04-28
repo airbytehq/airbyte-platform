@@ -7,21 +7,26 @@ import { TagInput } from "./TagInput";
 const TagInputWithWrapper = ({
   onChange,
   uniqueValues,
+  itemType = "string",
+  initialValues = ["tag1", "tag2"],
 }: {
-  onChange?: (values: string[]) => void;
+  onChange?: (values: Array<string | number>) => void;
   uniqueValues?: boolean;
+  itemType?: "string" | "integer" | "number";
+  initialValues?: Array<string | number>;
 }) => {
-  const [fieldValue, setFieldValue] = useState(["tag1", "tag2"]);
+  const [fieldValue, setFieldValue] = useState<Array<string | number>>(initialValues);
   return (
     <TagInput
       name="test"
       fieldValue={fieldValue}
-      onChange={(values) => {
+      onChange={(values: Array<string | number>) => {
         onChange?.(values);
         setFieldValue(values);
       }}
       disabled={false}
       uniqueValues={uniqueValues}
+      itemType={itemType}
     />
   );
 };
@@ -113,7 +118,7 @@ describe("<TagInput />", () => {
   describe("blurring the TagInput", () => {
     it("triggers onChange when the value changes from the blur", async () => {
       const mockOnChange = jest.fn();
-      render(<TagInputWithWrapper onChange={(values: string[]) => mockOnChange(values)} uniqueValues />);
+      render(<TagInputWithWrapper onChange={(values) => mockOnChange(values)} uniqueValues />);
       const input = screen.getByRole("combobox");
       await act(async () => userEvent.type(input, "tag2"));
 
@@ -124,13 +129,112 @@ describe("<TagInput />", () => {
 
     it("does not trigger onChange when the blurring doesn't result in a new value", async () => {
       const mockOnChange = jest.fn();
-      render(<TagInputWithWrapper onChange={(values: string[]) => mockOnChange(values)} />);
+      render(<TagInputWithWrapper onChange={(values) => mockOnChange(values)} />);
       const input = screen.getByRole("combobox");
       await act(async () => userEvent.type(input, "tag2"));
 
       mockOnChange.mockClear();
       act(() => input.blur());
       expect(mockOnChange).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("handling number/integer values", () => {
+    it("converts string inputs to integers when itemType is 'integer'", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={mockOnChange} itemType="integer" initialValues={[1, 2]} />);
+
+      const input = screen.getByRole("combobox");
+      await userEvent.type(input, "3{enter}");
+
+      // The last call should have the updated array with the new integer
+      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(lastCall).toContain(3);
+      // Verify it's a number, not a string
+      expect(typeof lastCall[lastCall.length - 1]).toBe("number");
+    });
+
+    it("converts string inputs to floats when itemType is 'number'", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={mockOnChange} itemType="number" initialValues={[1.1, 2.2]} />);
+
+      const input = screen.getByRole("combobox");
+      await userEvent.type(input, "3.3{enter}");
+
+      // The last call should have the updated array with the new float
+      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(lastCall).toContainEqual(3.3);
+      // Verify it's a number, not a string
+      expect(typeof lastCall[lastCall.length - 1]).toBe("number");
+    });
+
+    it("rejects non-numeric inputs when itemType is 'integer'", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={mockOnChange} itemType="integer" initialValues={[1, 2]} />);
+
+      const input = screen.getByRole("combobox");
+      await userEvent.type(input, "not-a-number{enter}");
+
+      // Verify no onChange call was made with the invalid input
+      expect(mockOnChange).not.toHaveBeenCalledWith(expect.arrayContaining(["not-a-number"]));
+      // Check that only the initial values are visible
+      expect(screen.getByText("1")).toBeInTheDocument();
+      expect(screen.getByText("2")).toBeInTheDocument();
+      expect(screen.queryByText("not-a-number")).not.toBeInTheDocument();
+    });
+
+    it("only uses the numeric prefix from mixed inputs for integer types", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={mockOnChange} itemType="integer" initialValues={[1, 2]} />);
+
+      const input = screen.getByRole("combobox");
+      await userEvent.type(input, "123abc{enter}");
+
+      // The last call should have parsed only the numeric prefix
+      const lastCall = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+
+      // Verify it parsed only the "123" part
+      expect(lastCall).toContain(123);
+
+      // Verify it didn't add the full "123abc" string
+      expect(lastCall).not.toContainEqual("123abc");
+
+      // Verify it's a number type, not a string
+      expect(typeof lastCall[lastCall.length - 1]).toBe("number");
+
+      // Check that the UI shows "123" but not "123abc"
+      expect(screen.getByText("123")).toBeInTheDocument();
+      expect(screen.queryByText("123abc")).not.toBeInTheDocument();
+    });
+
+    it("can delete the last character of a draft when itemType is 'integer'", async () => {
+      const mockOnChange = jest.fn();
+      render(<TagInputWithWrapper onChange={mockOnChange} itemType="integer" initialValues={[1, 2]} />);
+
+      const input = screen.getByRole("combobox");
+
+      // Type a number and verify it's shown in the onChange call
+      await userEvent.type(input, "3");
+      expect(mockOnChange).toHaveBeenCalled();
+
+      // The current fieldValue should include the new draft value
+      const withDraft = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(withDraft).toEqual([1, 2, 3]);
+
+      mockOnChange.mockClear();
+
+      // Now delete the last character using backspace
+      await userEvent.type(input, "{backspace}");
+
+      // Verify that onChange was called to remove the draft value
+      expect(mockOnChange).toHaveBeenCalled();
+
+      // The final fieldValue should NOT include the draft value anymore
+      const afterDelete = mockOnChange.mock.calls[mockOnChange.mock.calls.length - 1][0];
+      expect(afterDelete).toEqual([1, 2]);
+
+      // Verify the input field is cleared
+      expect(input).toHaveValue("");
     });
   });
 });

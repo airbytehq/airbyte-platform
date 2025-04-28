@@ -17,6 +17,7 @@ import CastIcon from "./icons/castIcon.svg?react";
 import CertifiedIcon from "./icons/certifiedIcon.svg?react";
 import ChartIcon from "./icons/chartIcon.svg?react";
 import ChatIcon from "./icons/chatIcon.svg?react";
+import CheckCircleIcon from "./icons/checkCircleIcon.svg?react";
 import CheckIcon from "./icons/checkIcon.svg?react";
 import ChevronDownIcon from "./icons/chevronDownIcon.svg?react";
 import ChevronLeftIcon from "./icons/chevronLeftIcon.svg?react";
@@ -186,6 +187,7 @@ export const Icons: Record<IconType, React.FC<React.SVGProps<SVGSVGElement>>> = 
   chart: ChartIcon,
   chat: ChatIcon,
   check: CheckIcon,
+  checkCircle: CheckCircleIcon,
   chevronDown: ChevronDownIcon,
   chevronLeft: ChevronLeftIcon,
   chevronRight: ChevronRightIcon,
