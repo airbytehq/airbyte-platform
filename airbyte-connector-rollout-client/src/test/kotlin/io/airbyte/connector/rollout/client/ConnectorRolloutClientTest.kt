@@ -18,11 +18,13 @@ import io.grpc.StatusRuntimeException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkStatic
 import io.mockk.verify
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse
+import io.temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest
 import io.temporal.api.workflowservice.v1.WorkflowServiceGrpc.WorkflowServiceBlockingStub
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowClientOptions
@@ -32,6 +34,8 @@ import io.temporal.client.WorkflowUpdateHandle
 import io.temporal.client.WorkflowUpdateStage
 import io.temporal.serviceclient.WorkflowServiceStubs
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -384,6 +388,54 @@ class ConnectorRolloutClientTest {
         updatedBy,
         rolloutStrategy,
       )
+    }
+  }
+
+  @Test
+  fun `cancelRollout should terminate the workflow successfully`() {
+    val terminationSlot = slot<TerminateWorkflowExecutionRequest>()
+    every {
+      blockingStub.terminateWorkflowExecution(capture(terminationSlot))
+    } returns mockk()
+
+    client.cancelRollout(
+      connectorRollout,
+      dockerRepository,
+      dockerImageTag,
+      actorDefinitionId,
+      errorMsg = "some error",
+      failedReason = "user cancelled",
+    )
+
+    val request = terminationSlot.captured
+    assertEquals(workflowId, request.workflowExecution.workflowId)
+    assertTrue(request.reason.contains("Manual cancellation"))
+    assertTrue(request.reason.contains("some error"))
+    assertTrue(request.reason.contains("user cancelled"))
+
+    verify {
+      blockingStub.terminateWorkflowExecution(any())
+    }
+  }
+
+  @Test
+  fun `cancelRollout should log error if termination fails`() {
+    val exception = StatusRuntimeException(Status.INTERNAL.withDescription("Temporal failed"))
+    every {
+      blockingStub.terminateWorkflowExecution(any())
+    } throws exception
+
+    client.cancelRollout(
+      connectorRollout,
+      dockerRepository,
+      dockerImageTag,
+      actorDefinitionId,
+      errorMsg = "some error",
+      failedReason = "failed to terminate",
+    )
+
+    verify {
+      blockingStub.terminateWorkflowExecution(any())
     }
   }
 }

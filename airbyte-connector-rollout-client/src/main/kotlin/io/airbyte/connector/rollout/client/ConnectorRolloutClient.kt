@@ -21,6 +21,7 @@ import io.temporal.api.common.v1.WorkflowExecution
 import io.temporal.api.enums.v1.WorkflowExecutionStatus
 import io.temporal.api.enums.v1.WorkflowIdConflictPolicy
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionRequest
+import io.temporal.api.workflowservice.v1.TerminateWorkflowExecutionRequest
 import io.temporal.client.WorkflowClient
 import io.temporal.client.WorkflowOptions
 import io.temporal.client.WorkflowStub
@@ -119,7 +120,7 @@ class ConnectorRolloutClient
             rolloutExpirationSeconds,
           ),
         )
-      logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
+      logger.info { "Workflow for connectorRollout ${connectorRollout.id} $workflowId initialized with ID: ${workflowExecution.workflowId}" }
     }
 
     private fun startWorkflowIfNotExists(
@@ -236,7 +237,7 @@ class ConnectorRolloutClient
           ConnectorRolloutWorkflow::class.java,
           workflowId,
         )
-      logger.info { "Rollout $workflowId starting `doRollout` for workflow: $workflow" }
+      logger.info { "Rollout starting `doRollout`. connectorRollout.id=${connectorRollout.id} $workflowId" }
       // Send the `update` request async so we don't block waiting for the actors to be pinned
       WorkflowStub.fromTyped(workflow).startUpdate(
         "progressRollout",
@@ -315,13 +316,12 @@ class ConnectorRolloutClient
         rolloutStrategy = rolloutStrategy,
       )
 
-      logger.info { "Rollout $workflowId starting `finalizeRollout` update: $workflowId" }
+      logger.info { "Rollout starting `finalizeRollout` update. connectorRollout.id=${connectorRollout.id} $workflowId" }
       val workflow =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
           workflowId,
         )
-      logger.info { "Rollout $workflowId starting `finalizeRollout` workflow: $workflow" }
 
       // Send the `update` request async so we don't block waiting for the GHA to run and the default version to become available
       WorkflowStub.fromTyped(workflow).startUpdate(
@@ -342,5 +342,38 @@ class ConnectorRolloutClient
           retainPinsOnCancellation,
         ),
       )
+    }
+
+    fun cancelRollout(
+      connectorRollout: ConnectorRollout,
+      dockerRepository: String,
+      dockerImageTag: String,
+      actorDefinitionId: UUID,
+      errorMsg: String? = null,
+      failedReason: String? = null,
+    ) {
+      val workflowId = getWorkflowId(dockerRepository, dockerImageTag, actorDefinitionId, connectorRollout.tag)
+
+      val request =
+        TerminateWorkflowExecutionRequest
+          .newBuilder()
+          .setNamespace(workflowClient.getClient().options.namespace)
+          .setWorkflowExecution(
+            WorkflowExecution.newBuilder().setWorkflowId(workflowId).build(),
+          ).setReason(
+            "Manual cancellation. connectorRollout.id=${connectorRollout.id} workflow=$workflowId errorMsg=$errorMsg failedReason=$failedReason",
+          ).build()
+
+      try {
+        workflowClient
+          .getClient()
+          .workflowServiceStubs
+          .blockingStub()
+          .terminateWorkflowExecution(request)
+        logger
+          .info { "Workflow terminated. connectorRollout.id=${connectorRollout.id} workflow=$workflowId" }
+      } catch (e: Throwable) {
+        logger.error(e) { "Unable to terminate workflow. connectorRollout.id=${connectorRollout.id} workflow=$workflowId" }
+      }
     }
   }

@@ -21,7 +21,6 @@ import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFilters
-import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
 import io.airbyte.config.Operator
@@ -30,6 +29,7 @@ import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.connector.rollout.shared.models.ConnectorRolloutOutput
+import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.mockk.Runs
@@ -54,6 +54,7 @@ import java.util.UUID
 internal class ConnectorRolloutHandlerManualTest {
   private val connectorRolloutService = mockk<ConnectorRolloutService>()
   private val actorDefinitionService = mockk<ActorDefinitionService>()
+  private val actorDefinitionVersionUpdater = mockk<ActorDefinitionVersionUpdater>()
   private val userPersistence = mockk<UserPersistence>()
   private val connectorRolloutClient = mockk<ConnectorRolloutClient>()
   private val rolloutActorFinder = mockk<RolloutActorFinder>()
@@ -71,6 +72,7 @@ internal class ConnectorRolloutHandlerManualTest {
       1,
       connectorRolloutService,
       actorDefinitionService,
+      actorDefinitionVersionUpdater,
       connectorRolloutClient,
       connectorRolloutHelper,
     )
@@ -90,43 +92,11 @@ internal class ConnectorRolloutHandlerManualTest {
       )
 
     @JvmStatic
-    fun validUpdateStates() =
-      setOf(
-        ConnectorEnumRolloutState.INITIALIZED,
-        ConnectorEnumRolloutState.WORKFLOW_STARTED,
-        ConnectorEnumRolloutState.IN_PROGRESS,
-        ConnectorEnumRolloutState.PAUSED,
-      )
-
-    @JvmStatic
-    fun invalidUpdateStates() =
-      ConnectorEnumRolloutState.entries.filterNot { state ->
-        validUpdateStates().map { it.name }.contains(state.name)
-      }
-
-    @JvmStatic
-    fun validFinalizeStates() =
-      ConnectorEnumRolloutState.entries.filterNot { state ->
-        ConnectorRolloutFinalState.entries.map { it.name }.contains(state.name)
-      }
-
-    @JvmStatic
-    fun invalidFinalizeStates() =
-      ConnectorEnumRolloutState.entries.filterNot { state ->
-        // If the rollout is already finalized, it can't be finalized again
-        validFinalizeStates().map { it.name }.contains(state.name)
-      }
+    fun validFinalizeStates() = listOf(ConnectorEnumRolloutState.FAILED_ROLLED_BACK, ConnectorEnumRolloutState.SUCCEEDED)
 
     @JvmStatic
     fun workflowStartedInProgress() =
       listOf(ConnectorEnumRolloutState.WORKFLOW_STARTED, ConnectorEnumRolloutState.IN_PROGRESS, ConnectorEnumRolloutState.PAUSED)
-
-    @JvmStatic
-    fun provideConnectorRolloutStateTerminalNonCanceled(): List<ConnectorRolloutStateTerminal> =
-      listOf(
-        ConnectorRolloutStateTerminal.SUCCEEDED,
-        ConnectorRolloutStateTerminal.FAILED_ROLLED_BACK,
-      )
   }
 
   @BeforeEach
@@ -430,13 +400,45 @@ internal class ConnectorRolloutHandlerManualTest {
     }
   }
 
-  @ParameterizedTest
-  @MethodSource("validFinalizeStates")
-  fun `test manualFinalizeConnectorRollout with pin retention`(initialState: ConnectorEnumRolloutState) {
+  @Test
+  fun `test manuaCancelConnectorRollout without pin retention`() {
     val rolloutId = UUID.randomUUID()
     val rollout = createMockConnectorRollout(rolloutId)
-    rollout.apply { state = initialState }
-    val state = ConnectorRolloutStateTerminal.SUCCEEDED
+    val state = ConnectorRolloutStateTerminal.CANCELED
+    val connectorRolloutFinalizeWorkflowUpdate =
+      ConnectorRolloutManualFinalizeRequestBody().apply {
+        dockerRepository = "airbyte/source-faker"
+        dockerImageTag = "0.1"
+        actorDefinitionId = UUID.randomUUID()
+        id = rolloutId
+        this.state = state
+        retainPinsOnCancellation = false
+      }
+
+    every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) } just Runs
+    every { connectorRolloutClient.cancelRollout(any(), any(), any(), any(), any(), any()) } returns Unit
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns mockk()
+
+    connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
+
+    verify(exactly = 0) {
+      connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+    }
+    verifyAll {
+      connectorRolloutService.getConnectorRollout(any())
+      actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any())
+      connectorRolloutClient.cancelRollout(any(), any(), any(), any(), any(), any())
+      connectorRolloutService.writeConnectorRollout(any())
+    }
+  }
+
+  @Test
+  fun `test manuaCancelConnectorRollout with pin retention`() {
+    val rolloutId = UUID.randomUUID()
+    val rollout = createMockConnectorRollout(rolloutId)
+    val state = ConnectorRolloutStateTerminal.CANCELED
     val connectorRolloutFinalizeWorkflowUpdate =
       ConnectorRolloutManualFinalizeRequestBody().apply {
         dockerRepository = "airbyte/source-faker"
@@ -449,14 +451,16 @@ internal class ConnectorRolloutHandlerManualTest {
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+    every { connectorRolloutClient.cancelRollout(any(), any(), any(), any(), any(), any()) } returns Unit
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns mockk()
 
     connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
 
+    verify(exactly = 0) { actorDefinitionVersionUpdater.removeReleaseCandidatePinsForVersion(any(), any()) }
     verifyAll {
       connectorRolloutService.getConnectorRollout(any())
-      actorDefinitionService.getActorDefinitionVersion(any())
-      connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+      connectorRolloutClient.cancelRollout(any(), any(), any(), any(), any(), any())
+      connectorRolloutService.writeConnectorRollout(any())
     }
   }
 
