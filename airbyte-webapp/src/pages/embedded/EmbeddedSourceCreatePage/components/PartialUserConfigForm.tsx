@@ -1,0 +1,97 @@
+import { FormattedMessage } from "react-intl";
+
+import { Button } from "components/ui/Button";
+import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
+import { Text } from "components/ui/Text";
+
+import { SvgIcon } from "area/connector/utils";
+import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
+
+import styles from "./PartialUserConfigForm.module.scss";
+import { PartialUserConfigFormControls } from "./PartialUserConfigFormControls";
+import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
+interface PartialUserConfigFormProps {
+  connectorName: string;
+  icon: string;
+  onSubmit: (values: ConnectorFormValues) => void;
+  initialValues?: Partial<ConnectorFormValues>;
+  sourceDefinitionSpecification: SourceDefinitionSpecificationDraft;
+  isEditMode: boolean;
+  showSuccessView: boolean;
+}
+
+export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
+  icon,
+  connectorName,
+  onSubmit,
+  initialValues,
+  sourceDefinitionSpecification,
+  isEditMode,
+  showSuccessView,
+}) => {
+  const { clearSelectedConfig, clearSelectedTemplate } = useEmbeddedSourceParams();
+
+  const onClick = () => {
+    clearSelectedConfig();
+    clearSelectedTemplate();
+  };
+  return (
+    <>
+      {!showSuccessView ? (
+        <FlexContainer className={styles.content} direction="column">
+          <FlexContainer alignItems="center" gap="sm" justifyContent="center">
+            <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
+              <SvgIcon src={icon} />
+            </FlexContainer>
+            <p>{connectorName}</p>
+          </FlexContainer>
+
+          <ConnectorForm
+            trackDirtyChanges
+            formType="source"
+            formValues={initialValues}
+            selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
+            onSubmit={async (values: ConnectorFormValues) => {
+              onSubmit(values);
+            }}
+            canEdit
+            renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm }) => (
+              <PartialUserConfigFormControls
+                isEditMode={isEditMode}
+                isSubmitting={isSubmitting}
+                isValid={isValid}
+                dirty={dirty}
+                onCancel={resetConnectorForm}
+              />
+            )}
+          />
+        </FlexContainer>
+      ) : (
+        <FlexContainer className={styles.content} direction="column" justifyContent="space-between">
+          <FlexContainer alignItems="center" gap="sm" justifyContent="center">
+            <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
+              <SvgIcon src={icon} />
+            </FlexContainer>
+            <p>{connectorName}</p>
+          </FlexContainer>
+          <FlexContainer direction="column" gap="lg" justifyContent="center" alignItems="center">
+            <Icon size="xl" type="checkCircle" color="disabled" />
+            <Text size="lg">
+              <FormattedMessage id="partialUserConfig.success.title" />
+            </Text>
+            <Text size="md">
+              <FormattedMessage id="partialUserConfig.success.description" />
+            </Text>
+          </FlexContainer>
+          <div className={styles.buttonContainer}>
+            <Button full onClick={onClick}>
+              <FormattedMessage id="partialUserConfig.backToIntegrations" />
+            </Button>
+          </div>
+        </FlexContainer>
+      )}
+    </>
+  );
+};

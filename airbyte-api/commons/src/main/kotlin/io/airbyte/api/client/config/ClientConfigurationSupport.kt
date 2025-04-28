@@ -18,16 +18,15 @@ private val logger = KotlinLogging.logger {}
 
 private val UUID_REGEX = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}".toRegex()
 
-fun getUrlTags(httpUrl: HttpUrl?): Array<MetricAttribute> {
-  return httpUrl?.let {
+fun getUrlTags(httpUrl: HttpUrl?): Array<MetricAttribute> =
+  httpUrl?.let {
     val last = it.pathSegments.last()
     if (last.contains(UUID_REGEX)) {
-      return arrayOf(MetricAttribute("url", it.toString().removeSuffix(last)), MetricAttribute("workload-id", last))
+      arrayOf(MetricAttribute("url", it.toString().removeSuffix(last)), MetricAttribute("workload-id", last))
     } else {
-      return arrayOf(MetricAttribute("url", it.toString()))
+      arrayOf(MetricAttribute("url", it.toString()))
     }
   } ?: emptyArray()
-}
 
 const val UNKNOWN = "unknown"
 

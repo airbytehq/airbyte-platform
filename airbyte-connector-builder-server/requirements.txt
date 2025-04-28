@@ -4,17 +4,19 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.36.3
+airbyte-cdk==6.44.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.14.2
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyio==4.8.0
+anyascii==0.3.2
+    # via airbyte-cdk
+anyio==4.9.0
     # via httpx
 attributes-doc==0.4.0
     # via serpyco-rs
-attrs==25.1.0
+attrs==25.3.0
     # via
     #   cattrs
     #   jsonschema
@@ -25,7 +27,7 @@ bracex==2.5.post1
     # via wcmatch
 cachetools==5.5.2
     # via airbyte-cdk
-cattrs==24.1.2
+cattrs==24.1.3
     # via requests-cache
 certifi==2025.1.31
     # via
@@ -38,11 +40,11 @@ charset-normalizer==3.4.1
     # via requests
 click==8.1.8
     # via nltk
-cryptography==43.0.3
+cryptography==44.0.2
     # via airbyte-cdk
 dpath==2.2.0
     # via airbyte-cdk
-dunamai==1.23.0
+dunamai==1.23.1
     # via airbyte-cdk
 exceptiongroup==1.2.2
     # via
@@ -61,9 +63,10 @@ idna==3.10
     #   anyio
     #   httpx
     #   requests
+    #   url-normalize
 isodate==0.6.1
     # via airbyte-cdk
-jinja2==3.1.5
+jinja2==3.1.6
     # via airbyte-cdk
 joblib==1.4.2
     # via nltk
@@ -87,28 +90,29 @@ numpy==1.26.4
     # via
     #   airbyte-cdk
     #   pandas
-orjson==3.10.15
+orjson==3.10.16
     # via
     #   airbyte-cdk
     #   langsmith
 packaging==23.2
     # via
+    #   airbyte-cdk
     #   dunamai
     #   langchain-core
 pandas==2.2.2
     # via airbyte-cdk
-platformdirs==4.3.6
+platformdirs==4.3.7
     # via requests-cache
 psutil==6.1.0
     # via airbyte-cdk
 pycparser==2.22
     # via cffi
-pydantic==2.10.6
+pydantic==2.11.1
     # via
     #   airbyte-cdk
     #   langchain-core
     #   langsmith
-pydantic-core==2.27.2
+pydantic-core==2.33.0
     # via pydantic
 pyjwt==2.10.1
     # via airbyte-cdk
@@ -130,7 +134,7 @@ pyyaml==6.0.2
     # via
     #   airbyte-cdk
     #   langchain-core
-rapidfuzz==3.12.1
+rapidfuzz==3.12.2
     # via airbyte-cdk
 regex==2024.11.6
     # via nltk
@@ -150,25 +154,26 @@ six==1.17.0
     # via
     #   isodate
     #   python-dateutil
-    #   url-normalize
 sniffio==1.3.1
     # via anyio
 tenacity==8.5.0
     # via langchain-core
 tqdm==4.67.1
     # via nltk
-typing-extensions==4.12.2
+typing-extensions==4.13.0
     # via
+    #   airbyte-cdk
     #   anyio
     #   cattrs
     #   pydantic
     #   pydantic-core
     #   serpyco-rs
-tzdata==2025.1
+    #   typing-inspection
+typing-inspection==0.4.0
+    # via pydantic
+tzdata==2025.2
     # via pandas
-unidecode==1.3.8
-    # via airbyte-cdk
-url-normalize==1.4.3
+url-normalize==2.2.0
     # via requests-cache
 urllib3==2.3.0
     # via

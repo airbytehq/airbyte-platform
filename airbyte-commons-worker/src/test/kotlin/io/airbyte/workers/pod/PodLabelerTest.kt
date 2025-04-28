@@ -16,14 +16,6 @@ import io.airbyte.workers.pod.Metadata.SPEC_JOB
 import io.airbyte.workers.pod.Metadata.SYNC_JOB
 import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.pod.Metadata.WRITE_STEP
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.AUTO_ID
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_NAME
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.DESTINATION_IMAGE_VERSION
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.MUTEX_KEY
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_VERSION
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_NAME
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.SOURCE_IMAGE_VERSION
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.WORKLOAD_ID
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -34,7 +26,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.stream.Stream
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
+import io.airbyte.workers.pod.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
 
 class PodLabelerTest {
   private lateinit var mPodNetworkSecurityLabeler: PodNetworkSecurityLabeler
@@ -50,12 +42,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getSourceLabels()
 
-    assert(
-      result ==
-        mapOf(
-          SYNC_STEP_KEY to READ_STEP,
-        ),
-    )
+    assertEquals(mapOf(SYNC_STEP_KEY to READ_STEP), result)
   }
 
   @Test
@@ -63,30 +50,22 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getDestinationLabels()
 
-    assert(
-      result ==
-        mapOf(
-          SYNC_STEP_KEY to WRITE_STEP,
-        ),
-    )
+    assertEquals(mapOf(SYNC_STEP_KEY to WRITE_STEP), result)
   }
 
   @Test
   fun getReplicationOrchestratorLabels() {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getReplicationOrchestratorLabels(ORCHESTRATOR_IMAGE_NAME)
-    val shortImageName = PodUtils.getShortImageName(ORCHESTRATOR_IMAGE_NAME)
-    val imageVersion = PodUtils.getImageVersion(ORCHESTRATOR_IMAGE_NAME)
 
-    assert(
-      result ==
-        mapOf(
-          IMAGE_NAME to shortImageName,
-          IMAGE_VERSION to imageVersion,
-          JOB_TYPE_KEY to SYNC_JOB,
-          SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
-        ),
-    )
+    val expected =
+      mapOf(
+        IMAGE_NAME to "an image",
+        IMAGE_VERSION to "latest",
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to ORCHESTRATOR_REPLICATION_STEP,
+      )
+    assertEquals(expected, result)
   }
 
   @Test
@@ -94,12 +73,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getCheckLabels()
 
-    assert(
-      result ==
-        mapOf(
-          JOB_TYPE_KEY to CHECK_JOB,
-        ),
-    )
+    assertEquals(mapOf(JOB_TYPE_KEY to CHECK_JOB), result)
   }
 
   @Test
@@ -107,12 +81,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getDiscoverLabels()
 
-    assert(
-      result ==
-        mapOf(
-          JOB_TYPE_KEY to DISCOVER_JOB,
-        ),
-    )
+    assertEquals(mapOf(JOB_TYPE_KEY to DISCOVER_JOB), result)
   }
 
   @Test
@@ -120,12 +89,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getSpecLabels()
 
-    assert(
-      result ==
-        mapOf(
-          JOB_TYPE_KEY to SPEC_JOB,
-        ),
-    )
+    assertEquals(mapOf(JOB_TYPE_KEY to SPEC_JOB), result)
   }
 
   @ParameterizedTest
@@ -134,12 +98,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getWorkloadLabels(workloadId)
 
-    assert(
-      result ==
-        mapOf(
-          WORKLOAD_ID to workloadId,
-        ),
-    )
+    assertEquals(mapOf(WORKLOAD_ID to workloadId), result)
   }
 
   @ParameterizedTest
@@ -148,12 +107,7 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getMutexLabels(key)
 
-    assert(
-      result ==
-        mapOf(
-          MUTEX_KEY to key,
-        ),
-    )
+    assertEquals(mapOf(MUTEX_KEY to key), result)
   }
 
   @Test
@@ -162,12 +116,7 @@ class PodLabelerTest {
     val id = UUID.randomUUID()
     val result = labeler.getAutoIdLabels(id)
 
-    assert(
-      result ==
-        mapOf(
-          AUTO_ID to id.toString(),
-        ),
-    )
+    assertEquals(mapOf(AUTO_ID to id.toString()), result)
   }
 
   @ParameterizedTest
@@ -181,14 +130,14 @@ class PodLabelerTest {
     val labeler = PodLabeler(mPodNetworkSecurityLabeler)
     val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId, null, emptyList())
 
-    assert(
-      result ==
-        passThroughLabels +
+    val expected =
+      passThroughLabels +
         labeler.getWorkloadLabels(workloadId) +
         labeler.getMutexLabels(mutexKey) +
         labeler.getAutoIdLabels(autoId) +
-        labeler.getPodSweeperLabels(),
-    )
+        labeler.getPodSweeperLabels()
+
+    assertEquals(expected, result)
   }
 
   @Test
@@ -205,15 +154,15 @@ class PodLabelerTest {
     every { podNetworkSecurityLabeler.getLabels(workspaceId, networkSecurityTokens) } returns mapOf("networkSecurityTokenHash" to "hashedToken1")
     val result = labeler.getSharedLabels(workloadId, mutexKey, passThroughLabels, autoId, workspaceId, networkSecurityTokens)
 
-    assert(
-      result ==
-        passThroughLabels +
+    val expected =
+      passThroughLabels +
         labeler.getWorkloadLabels(workloadId) +
         labeler.getMutexLabels(mutexKey) +
         labeler.getAutoIdLabels(autoId) +
         labeler.getPodSweeperLabels() +
-        mapOf("networkSecurityTokenHash" to "hashedToken1"),
-    )
+        mapOf("networkSecurityTokenHash" to "hashedToken1")
+
+    assertEquals(expected, result)
   }
 
   @Test
@@ -230,19 +179,20 @@ class PodLabelerTest {
         destImageName = destinationImageName,
       )
     assertEquals(8, replicationLabels.size)
-    assert(
-      replicationLabels ==
-        mapOf(
-          REPL_ORCHESTRATOR_IMAGE_NAME to orchestrationImageName.replace(":$version", ""),
-          ORCHESTRATOR_IMAGE_VERSION to version,
-          SOURCE_IMAGE_NAME to sourceImageName.replace(":$version", ""),
-          SOURCE_IMAGE_VERSION to version,
-          DESTINATION_IMAGE_NAME to destinationImageName.replace(":$version", ""),
-          DESTINATION_IMAGE_VERSION to version,
-          JOB_TYPE_KEY to SYNC_JOB,
-          SYNC_STEP_KEY to REPLICATION_STEP,
-        ),
-    )
+
+    val expected =
+      mapOf(
+        REPL_ORCHESTRATOR_IMAGE_NAME to orchestrationImageName.replace(":$version", ""),
+        ORCHESTRATOR_IMAGE_VERSION to version,
+        SOURCE_IMAGE_NAME to sourceImageName.replace(":$version", ""),
+        SOURCE_IMAGE_VERSION to version,
+        DESTINATION_IMAGE_NAME to destinationImageName.replace(":$version", ""),
+        DESTINATION_IMAGE_VERSION to version,
+        JOB_TYPE_KEY to SYNC_JOB,
+        SYNC_STEP_KEY to REPLICATION_STEP,
+      )
+
+    assertEquals(expected, replicationLabels)
   }
 
   companion object {

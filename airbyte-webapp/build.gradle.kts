@@ -45,7 +45,6 @@ val pnpmVer = engines?.get("pnpm")?.toString()?.trim()  // Extract 'pnpm' as Str
  */
 val outsideWebappDependencies = listOf(
     project(":oss:airbyte-api:server-api").file("src/main/openapi/config.yaml").path,
-    project(":oss:airbyte-api:commons").file("src/main/openapi/cloud-config.yaml").path,
     project(":oss:airbyte-api:problems-api").file("src/main/openapi/api-problems.yaml").path,
     project(":oss:airbyte-connector-builder-server").file("src/main/openapi/openapi.yaml").path,
     project(":oss:airbyte-connector-builder-server").file("CDK_VERSION").path,
@@ -249,11 +248,6 @@ tasks.register<Copy>("copyNginx") {
 // Those tasks should be run as part of the "check" task
 tasks.named("check") {
     dependsOn("licenseCheck", "validateLock", "unusedCode", "prettier", "test")
-}
-
-// Some check tasks only should be run on CI, thus a separate ciCheck task
-tasks.register("ciCheck") {
-    dependsOn("check", "validateLinks")
 }
 
 tasks.named("build") {

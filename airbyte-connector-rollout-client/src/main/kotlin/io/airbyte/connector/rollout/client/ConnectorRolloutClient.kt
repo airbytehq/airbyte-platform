@@ -38,7 +38,14 @@ class ConnectorRolloutClient
       name: String,
       version: String,
       actorDefinitionId: UUID,
-    ): String = "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
+      tag: String?,
+    ): String {
+      var workflowId = "$name:$version:${actorDefinitionId.toString().substring(0, 8)}"
+      if (tag != null) {
+        workflowId = workflowId + ":$tag"
+      }
+      return workflowId
+    }
 
     private fun <I, T> executeUpdate(
       input: I,
@@ -54,10 +61,13 @@ class ConnectorRolloutClient
         throw e
       }
 
-    fun startRollout(input: ConnectorRolloutWorkflowInput) {
+    fun startRollout(
+      input: ConnectorRolloutWorkflowInput,
+      tag: String?,
+    ) {
       logger.info { "ConnectorRolloutService.startWorkflow with input: id=${input.rolloutId} rolloutStrategy=${input.rolloutStrategy}" }
 
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.connectorRollout!!.actorDefinitionId)
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.connectorRollout!!.actorDefinitionId, tag)
       val workflowStub =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
@@ -74,8 +84,11 @@ class ConnectorRolloutClient
       logger.info { "Workflow $workflowId initialized with ID: ${workflowExecution.workflowId}" }
     }
 
-    fun doRollout(input: ConnectorRolloutActivityInputRollout) {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+    fun doRollout(
+      input: ConnectorRolloutActivityInputRollout,
+      tag: String?,
+    ) {
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, tag)
       val workflow =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
@@ -91,13 +104,19 @@ class ConnectorRolloutClient
       )
     }
 
-    fun pauseRollout(input: ConnectorRolloutActivityInputPause): ConnectorRolloutOutput {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+    fun pauseRollout(
+      input: ConnectorRolloutActivityInputPause,
+      tag: String?,
+    ): ConnectorRolloutOutput {
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, tag)
       return executeUpdate(input, workflowId) { stub, i -> stub.pauseRollout(i) }
     }
 
-    fun finalizeRollout(input: ConnectorRolloutActivityInputFinalize) {
-      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId)
+    fun finalizeRollout(
+      input: ConnectorRolloutActivityInputFinalize,
+      tag: String?,
+    ) {
+      val workflowId = getWorkflowId(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, tag)
       logger.info { "Rollout $workflowId starting `finalizeRollout` update: $workflowId" }
       val workflow =
         workflowClient.getClient().newWorkflowStub(

@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -237,7 +238,7 @@ class DefaultJobCreatorTest {
     final String streamToRefresh = "name";
     final String streamNamespace = "namespace";
 
-    when(jobPersistence.enqueueJob(any(), any())).thenReturn(Optional.of(1L));
+    when(jobPersistence.enqueueJob(any(), any(), anyBoolean())).thenReturn(Optional.of(1L));
 
     final StateWrapper stateWrapper = new StateWrapper().withStateType(StateType.STREAM)
         .withStateMessages(List.of());
@@ -263,7 +264,7 @@ class DefaultJobCreatorTest {
         .withRefresh(refreshConfig);
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.of(JOB_ID));
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.of(JOB_ID));
 
     final RefreshType expectedRefreshType = refreshType == RefreshStream.RefreshType.TRUNCATE ? RefreshType.TRUNCATE : RefreshType.MERGE;
     List<StreamRefresh> refreshes =
@@ -432,7 +433,7 @@ class DefaultJobCreatorTest {
         .withSync(jobSyncConfig);
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.empty());
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.empty());
 
     assertTrue(jobCreator.createSyncJob(
         SOURCE_CONNECTION,
@@ -1030,7 +1031,7 @@ class DefaultJobCreatorTest {
         .withResetConnection(jobResetConnectionConfig);
 
     final String expectedScope = STANDARD_SYNC.getConnectionId().toString();
-    when(jobPersistence.enqueueJob(expectedScope, jobConfig)).thenReturn(Optional.empty());
+    when(jobPersistence.enqueueJob(expectedScope, jobConfig, true)).thenReturn(Optional.empty());
 
     final Optional<Long> jobId = jobCreator.createResetConnectionJob(
         DESTINATION_CONNECTION,

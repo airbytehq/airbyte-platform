@@ -1,6 +1,5 @@
 @use "scss/variables";
 @use "scss/colors";
-@use "scss/mixins";
 
 .container {
   flex: 1;
@@ -77,13 +76,12 @@
   margin-bottom: 0;
 }
 
-.pulsateButton {
-  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+.dynamicStreamButtonContainer {
+  display: flex;
+  flex-direction: row;
+  gap: variables.$spacing-md;
 
-  & > * {
-    // keep content visible above the pulses
-    display: inline-block;
-    position: relative;
-    z-index: 1;
+  :last-child {
+    flex-grow: 1;
   }
 }

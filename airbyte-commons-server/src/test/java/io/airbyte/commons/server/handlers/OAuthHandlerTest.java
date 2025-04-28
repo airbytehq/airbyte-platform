@@ -32,6 +32,8 @@ import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
@@ -63,7 +65,9 @@ class OAuthHandlerTest {
   private SourceService sourceService;
   private DestinationService destinationService;
   private OAuthService oauthService;
+  private SecretPersistenceService secretPersistenceService;
   private SecretPersistenceConfigService secretPersistenceConfigService;
+  private SecretReferenceService secretReferenceService;
   private WorkspaceService workspaceService;
   private MetricClient metricClient;
 
@@ -80,17 +84,22 @@ class OAuthHandlerTest {
     destinationService = mock(DestinationService.class);
     oauthService = mock(OAuthService.class);
     secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    secretPersistenceService = mock(SecretPersistenceService.class);
+    secretReferenceService = mock(SecretReferenceService.class);
     workspaceService = mock(WorkspaceService.class);
     handler = new OAuthHandler(
         oauthImplementationFactory,
         trackingClient,
         secretsRepositoryWriter,
+        secretsRepositoryReader,
         actorDefinitionVersionHelper,
         featureFlagClient,
         sourceService,
         destinationService,
         oauthService,
         secretPersistenceConfigService,
+        secretPersistenceService,
+        secretReferenceService,
         workspaceService,
         metricClient);
   }
@@ -126,7 +135,7 @@ class OAuthHandlerTest {
     handler.setSourceInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(null, sourceDefId))
+    when(oauthService.getSourceOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), sourceDefId))
         .thenReturn(Optional.of(new SourceOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();
@@ -178,7 +187,7 @@ class OAuthHandlerTest {
     handler.setDestinationInstancewideOauthParams(firstRequest);
 
     final UUID oauthParameterId = UUID.randomUUID();
-    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(null, destinationDefId))
+    when(oauthService.getDestinationOAuthParamByDefinitionIdOptional(Optional.empty(), Optional.empty(), destinationDefId))
         .thenReturn(Optional.of(new DestinationOAuthParameter().withOauthParameterId(oauthParameterId)));
 
     final Map<String, Object> secondParams = new HashMap<>();

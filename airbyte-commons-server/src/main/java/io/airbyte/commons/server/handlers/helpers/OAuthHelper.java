@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.node.BooleanNode;
 import com.fasterxml.jackson.databind.node.TextNode;
 import io.airbyte.api.model.generated.CompleteOAuthResponse;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

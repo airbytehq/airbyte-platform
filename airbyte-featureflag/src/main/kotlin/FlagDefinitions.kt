@@ -23,8 +23,6 @@ object ContainerOrchestratorJavaOpts : Temporary<String>(key = "container-orches
 
 object EarlySyncEnabled : Temporary<Boolean>(key = "billing.early-sync-enabled", default = false)
 
-object ShouldRunRefreshSchema : Temporary<Boolean>(key = "should-run-refresh-schema", default = true)
-
 /**
  * The default value is 3 hours, it is larger than what is configured by default in the airbyte self owned instance.
  * The goal is to allow more room for OSS deployment that airbyte can not monitor.
@@ -44,8 +42,6 @@ object NotifyOnConnectorBreakingChanges : Temporary<Boolean>(key = "connectors.n
 object NotifyBreakingChangesOnSupportStateUpdate : Temporary<Boolean>(key = "connectors.notifyBreakingChangesOnSupportStateUpdate", default = true)
 
 object UseBreakingChangeScopes : Temporary<Boolean>(key = "connectors.useBreakingChangeScopes", default = true)
-
-object RefreshSchemaPeriod : Temporary<Int>(key = "refreshSchema.period.hours", default = 24)
 
 object ConcurrentSourceStreamRead : Temporary<Boolean>(key = "concurrent.source.stream.read", default = false)
 
@@ -71,6 +67,10 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
 
+object SingleContainerTest : Temporary<Boolean>(key = "platform.single-container-test", default = false)
+
+object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
+
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
 object DestResourceOverrides : Temporary<String>(key = "dest-resource-overrides", default = "")
@@ -82,6 +82,8 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
+
+object CoRoutineBufferedReplicationWorker : Temporary<Boolean>(key = "platform.coroutine-buffered-replication-worker", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -114,11 +116,6 @@ object DefaultOrgForNewWorkspace : Temporary<Boolean>(key = "platform.set-defaul
 
 object WorkloadHeartbeatRate : Permanent<Int>(key = "workload.heartbeat.rate", default = 5)
 
-/**
- * Defines whether a workload launcher should be consuming tasks.
- */
-object WorkloadLauncherConsumerEnabled : Permanent<Boolean>(key = "workload-launcher-consumer-enabled", default = true)
-
 object WorkloadPollingInterval : Permanent<Int>(key = "workload.polling.interval", default = 30)
 
 /**
@@ -136,21 +133,15 @@ object EmitStateStatsToSegment : Temporary<Boolean>(key = "platform.emit-state-s
 
 object LogStreamNamesInSateMessage : Temporary<Boolean>(key = "platform.logs-stream-names-state", default = false)
 
-object WorkloadApiRouting : Permanent<String>(key = "workload-api-routing", default = "workload_default")
-
 object PrintLongRecordPks : Temporary<Boolean>(key = "platform.print-long-record-pks", default = false)
 
 object InjectAwsSecretsToConnectorPods : Temporary<Boolean>(key = "platform.inject-aws-secrets-to-connector-pods", default = false)
-
-object WorkloadCheckFrequencyInSeconds : Permanent<Int>(key = "platform.workload-check-frequency-in-seconds", default = 1)
 
 object FailSyncOnInvalidChecksum : Temporary<Boolean>(key = "platform.fail-sync-on-invalid-checksum", default = false)
 
 object HydrateAggregatedStats : Temporary<Boolean>(key = "platform.hydrate-aggregated-stats", default = true)
 
 object WriteOutputCatalogToObjectStorage : Temporary<Boolean>(key = "platform.write-output-catalog-to-object-storage", default = false)
-
-object UseCustomK8sInitCheck : Temporary<Boolean>(key = "platform.use-custom-k8s-init-check", default = true)
 
 object ConnectionFieldLimitOverride : Permanent<Int>(key = "connection-field-limit-override", default = -1)
 
@@ -182,14 +173,31 @@ object AllowSpotInstances : Temporary<Boolean>(key = "platform.allow-spot-instan
 
 object HydrateLimits : Temporary<Boolean>(key = "platform.hydrate.limits", default = false)
 
-object OnlyUseScheduledForGetTime : Temporary<Boolean>(key = "platform.only-use-scheduled", default = true)
-
-object BillingEnableTemporalIngestion : Temporary<Boolean>(key = "billing.enable-temporal-ingestion", default = false)
-
-object BillingPushToOrbWithTemporalNotCron : Temporary<Boolean>(key = "billing.push-to-orb-with-temporal-not-cron", default = false)
+object MergeStreamStatWithMetadata : Temporary<Boolean>(key = "platform.merge-stat-with-metadata", default = false)
 
 object LicenseAllowEnterpriseConnector : Permanent<Boolean>(key = "license.allow-enterprise-connector", default = false)
+
+object AllowConfigTemplateEndpoints : Permanent<Boolean>(key = "platform.allow-config-template-endpoints", default = false)
+
+object AllowConfigWithSecretCoordinatesEndpoints : Permanent<Boolean>(
+  key = "platform.allow-config-with-secret-coordinates-endpoints",
+  default = false,
+)
 
 object LoadShedWorkloadLauncher : Permanent<Boolean>(key = "platform.load-shed.workload-launcher", default = false)
 
 object LoadShedSchedulerBackoffMinutes : Permanent<Int>(key = "platform.load-shed.scheduler-backoff-minutes", default = -1)
+
+object ValidateConflictingDestinationStreams : Temporary<Boolean>(key = "platform.validate-conflicting-destination-streams", default = false)
+
+object LLMSyncJobFailureExplanation : Temporary<Boolean>(key = "platform.llm-sync-job-failure-explanation", default = false)
+
+object WorkloadPollerUsesJitter : Temporary<Boolean>(key = "platform.workload-poller-uses-jitter", default = false)
+
+object PersistSecretConfigsAndReferences : Temporary<Boolean>(key = "platform.persist-secret-configs-and-references", default = false)
+
+object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read-secret-reference-ids-in-configs", default = false)
+
+object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-default-secret-storage", default = false)
+
+object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)

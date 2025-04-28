@@ -83,7 +83,7 @@ internal class SourceDefinitionApiControllerTest {
   @Test
   fun testGetSourceDefinition() {
     every { actorDefinitionAccessValidator.validateWriteAccess(any()) } returns Unit
-    every { sourceDefinitionsHandler.getSourceDefinition(any()) } returns SourceDefinitionRead() andThenThrows ConfigNotFoundException("", "")
+    every { sourceDefinitionsHandler.getSourceDefinition(any(), any()) } returns SourceDefinitionRead() andThenThrows ConfigNotFoundException("", "")
 
     val path = "/api/v1/source_definitions/get"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))

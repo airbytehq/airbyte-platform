@@ -1,0 +1,19 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.removeButton {
+  padding-top: variables.$spacing-md;
+}
+
+.addButtonContainer {
+  padding-bottom: variables.$spacing-xl;
+}
+
+.valueControlContainer {
+  flex-grow: 1;
+  min-width: 250px;
+}
+
+.keyInputContainer {
+  flex-shrink: 0;
+}

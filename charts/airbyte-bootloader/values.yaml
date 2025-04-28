@@ -28,6 +28,8 @@ global:
 
 
 enabled: true
+
+serviceAccountName:
 ##  image.repository The repository to use for the airbyte bootloader image.
 ##  image.pullPolicy the pull policy to use for the airbyte bootloader image
 ##  image.tag The airbyte bootloader image tag. Defaults to the chart's AppVersion

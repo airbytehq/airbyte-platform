@@ -6,7 +6,7 @@ package io.airbyte.commons.protocol;
 
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import java.util.Optional;
 
 /**

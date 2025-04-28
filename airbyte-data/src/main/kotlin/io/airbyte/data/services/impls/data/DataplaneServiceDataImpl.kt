@@ -4,13 +4,12 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Dataplane
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.services.DataplaneService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
-import io.airbyte.data.services.impls.data.mappers.toEntity
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toEntity
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -25,7 +24,7 @@ class DataplaneServiceDataImpl(
     repository
       .findById(id)
       .orElseThrow {
-        ConfigNotFoundException(ConfigSchema.CONNECTOR_ROLLOUT, id)
+        ConfigNotFoundException("ConnectorRollout", id.toString())
       }.toConfigModel()
 
   override fun writeDataplane(dataplane: Dataplane): Dataplane {

@@ -23,6 +23,7 @@ import io.airbyte.publicApi.server.generated.models.DestinationResponse
 import io.airbyte.publicApi.server.generated.models.DestinationsResponse
 import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.helpers.toInternal
 import io.airbyte.server.apis.publicapi.mappers.DestinationReadMapper
 import io.airbyte.server.apis.publicapi.mappers.DestinationsResponseMapper
 import io.micronaut.context.annotation.Secondary
@@ -37,7 +38,10 @@ interface DestinationService {
     destinationDefinitionId: UUID,
   ): DestinationResponse
 
-  fun getDestination(destinationId: UUID): DestinationResponse
+  fun getDestination(
+    destinationId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): DestinationResponse
 
   fun updateDestination(
     destinationId: UUID,
@@ -92,6 +96,7 @@ class DestinationServiceImpl(
     destinationCreateOss.destinationDefinitionId = destinationDefinitionId
     destinationCreateOss.workspaceId = destinationCreateRequest.workspaceId
     destinationCreateOss.connectionConfiguration = destinationCreateRequest.configuration
+    destinationCreateOss.resourceAllocation = destinationCreateRequest.resourceAllocation?.toInternal()
 
     val result =
       kotlin
@@ -110,14 +115,17 @@ class DestinationServiceImpl(
   /**
    * Gets a destination by ID.
    */
-  override fun getDestination(destinationId: UUID): DestinationResponse {
+  override fun getDestination(
+    destinationId: UUID,
+    includeSecretCoordinates: Boolean?,
+  ): DestinationResponse {
     val destinationIdRequestBody = DestinationIdRequestBody()
     destinationIdRequestBody.destinationId = destinationId
 
     val result =
       kotlin
         .runCatching {
-          destinationHandler.getDestination(destinationIdRequestBody)
+          destinationHandler.getDestination(destinationIdRequestBody, includeSecretCoordinates == true)
         }.onFailure {
           log.error("Error while getting destination: ", it)
           ConfigClientErrorHandler.handleError(it)
@@ -136,13 +144,12 @@ class DestinationServiceImpl(
     destinationIdRequestBody.destinationId = destinationId
 
     val result =
-      kotlin
-        .runCatching {
-          destinationHandler.getDestination(destinationIdRequestBody)
-        }.onFailure {
-          log.error("Error while getting destination: ", it)
-          ConfigClientErrorHandler.handleError(it)
-        }
+      runCatching {
+        destinationHandler.getDestination(destinationIdRequestBody)
+      }.onFailure {
+        log.error("Error while getting destination: ", it)
+        ConfigClientErrorHandler.handleError(it)
+      }
 
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     val destinationRead = result.getOrThrow()
@@ -161,6 +168,7 @@ class DestinationServiceImpl(
         .destinationId(destinationId)
         .connectionConfiguration(destinationPutRequest.configuration)
         .name(destinationPutRequest.name)
+        .resourceAllocation(destinationPutRequest.resourceAllocation?.toInternal())
 
     val result =
       kotlin
@@ -187,6 +195,7 @@ class DestinationServiceImpl(
         .destinationId(destinationId)
         .connectionConfiguration(destinationPatchRequest.configuration)
         .name(destinationPatchRequest.name)
+        .resourceAllocation(destinationPatchRequest.resourceAllocation?.toInternal())
 
     val result =
       kotlin
@@ -234,13 +243,12 @@ class DestinationServiceImpl(
     listResourcesForWorkspacesRequestBody.workspaceIds = workspaceIdsToQuery
 
     val result =
-      kotlin
-        .runCatching {
-          destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
-        }.onFailure {
-          log.error("Error while listing destinations for workspaces: ", it)
-          ConfigClientErrorHandler.handleError(it)
-        }
+      runCatching {
+        destinationHandler.listDestinationsForWorkspaces(listResourcesForWorkspacesRequestBody)
+      }.onFailure {
+        log.error("Error while listing destinations for workspaces: ", it)
+        ConfigClientErrorHandler.handleError(it)
+      }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return DestinationsResponseMapper.from(
       result.getOrNull()!!,

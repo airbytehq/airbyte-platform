@@ -221,6 +221,15 @@ components:
       type: "string"
       format: "uuid"
       x-speakeasy-component: true
+    DeclarativeManifest:
+      x-speakeasy-component: true
+      x-speakeasy-type-override: "any"
+      description: "Low code CDK manifest JSON object"
+      type: "object"
+    ManifestVersion:
+      x-speakeasy-component: true
+      type: "integer"
+      format: "int64"
     TagId:
       type: "string"
       format: "uuid"
@@ -529,6 +538,67 @@ components:
       items:
         $ref: "#/components/schemas/SelectedFieldInfo"
       x-speakeasy-component: true
+    ScopedResourceRequirements:
+      x-speakeasy-component: true
+      description: "actor or actor definition specific resource requirements. if default\
+        \ is set, these are the requirements that should be set for ALL jobs run for\
+        \ this actor definition. it is overriden by the job type specific configurations.\
+        \ if not set, the platform will use defaults. these values will be overriden\
+        \ by configuration at the connection level."
+      type: "object"
+      additionalProperties: false
+      properties:
+        default:
+          $ref: "#/components/schemas/ResourceRequirements"
+        jobSpecific:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/JobTypeResourceLimit"
+    JobTypeResourceLimit:
+      x-speakeasy-component: true
+      description: "sets resource requirements for a specific job type for an actor\
+        \ or actor definition. these values override the default, if both are set."
+      type: "object"
+      additionalProperties: false
+      required:
+      - "jobType"
+      - "resourceRequirements"
+      properties:
+        jobType:
+          $ref: "#/components/schemas/JobType"
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+    JobType:
+      x-speakeasy-component: true
+      description: "enum that describes the different types of jobs that the platform\
+        \ runs."
+      type: "string"
+      enum:
+      - "get_spec"
+      - "check_connection"
+      - "discover_schema"
+      - "sync"
+      - "reset_connection"
+      - "connection_updater"
+      - "replicate"
+    ResourceRequirements:
+      x-speakeasy-component: true
+      description: "optional resource requirements to run workers (blank for unbounded\
+        \ allocations)"
+      type: "object"
+      properties:
+        cpu_request:
+          type: "string"
+        cpu_limit:
+          type: "string"
+        memory_request:
+          type: "string"
+        memory_limit:
+          type: "string"
+        ephemeral_storage_request:
+          type: "string"
+        ephemeral_storage_limit:
+          type: "string"
     OAuthConfiguration:
       description: "The values required to configure OAuth flows. The schema for this\
         \ must match the `OAuthConfigSpecification.oauthUserInputFromConnectorConfigSpecification`\
@@ -703,7 +773,12 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          deprecated: true
+          x-speakeasy-deprecation-message: "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
         namespaceFormat:
@@ -741,7 +816,12 @@ components:
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnumNoDefault"
+          deprecated: true
+          x-speakeasy-deprecation-message: "We no longer support modifying dataResidency\
+            \ on Community and Enterprise connections. This will be supported on Cloud\
+            \ until May 31, at which time all connections will use the dataResidency\
+            \ of their associated workspace."
+          type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
         namespaceFormat:
@@ -828,6 +908,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -842,6 +924,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/SourceConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -860,6 +944,8 @@ components:
         secretId:
           description: "Optional secretID obtained through the  OAuth redirect flow."
           type: "string"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Source"
       x-speakeasy-param-suppress-computed-diff: true
@@ -927,7 +1013,7 @@ components:
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -986,21 +1072,6 @@ components:
       - "manual"
       - "cron"
       - "basic"
-      x-speakeasy-component: true
-    GeographyEnum:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
-      default: "auto"
-      x-speakeasy-component: true
-    GeographyEnumNoDefault:
-      type: "string"
-      enum:
-      - "auto"
-      - "us"
-      - "eu"
       x-speakeasy-component: true
     ConnectionStatusEnum:
       type: "string"
@@ -1078,6 +1149,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         destinationId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1116,6 +1189,8 @@ components:
         createdAt:
           format: "int64"
           type: "integer"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       example:
         sourceId: "18dccc91-0ab1-4f72-9ed7-0b8fc27c5826"
         name: "Analytics Team Postgres"
@@ -1199,6 +1274,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1210,6 +1287,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1224,6 +1303,8 @@ components:
           type: "string"
         configuration:
           $ref: "#/components/schemas/DestinationConfiguration"
+        resourceAllocation:
+          $ref: "#/components/schemas/ScopedResourceRequirements"
       x-implements: "io.airbyte.api.common.ConfigurableActor"
       x-speakeasy-entity: "Destination"
       x-speakeasy-param-suppress-computed-diff: true
@@ -1242,6 +1323,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1253,6 +1337,9 @@ components:
           type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
+        regionId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-entity: "Workspace"
       x-speakeasy-param-suppress-computed-diff: true
       x-speakeasy-component: true
@@ -1272,7 +1359,7 @@ components:
         name:
           type: "string"
         dataResidency:
-          $ref: "#/components/schemas/GeographyEnum"
+          type: "string"
         notifications:
           $ref: "#/components/schemas/NotificationsConfig"
       x-speakeasy-entity: "Workspace"
@@ -1577,6 +1664,131 @@ components:
           items:
             $ref: "#/components/schemas/ConnectorDefinitionResponse"
       x-speakeasy-component: true
+    CreateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "workspaceId"
+      - "name"
+      - "manifest"
+      properties:
+        name:
+          type: "string"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    UpdateDeclarativeSourceDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "manifest"
+      properties:
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+    DeclarativeSourceDefinitionsResponse:
+      title: "Root Type for DeclarativeSourceDefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DeclarativeSourceDefinitionResponse"
+    DeclarativeSourceDefinitionResponse:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "manifest"
+      - "version"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        manifest:
+          $ref: "#/components/schemas/DeclarativeManifest"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
+    CreateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
+          format: "uri"
+    UpdateDefinitionRequest:
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "name"
+      - "dockerImageTag"
+      properties:
+        name:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+    DefinitionsResponse:
+      title: "Root Type for DefinitionsResponse"
+      description: ""
+      x-speakeasy-component: true
+      required:
+      - "data"
+      type: "object"
+      properties:
+        previous:
+          type: "string"
+        next:
+          type: "string"
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DefinitionResponse"
+    DefinitionResponse:
+      title: "Root Type for DefinitionResponse"
+      description: "Provides details of a single connector definition."
+      type: "object"
+      x-speakeasy-component: true
+      required:
+      - "id"
+      - "name"
+      - "dockerRepository"
+      - "dockerImageTag"
+      properties:
+        id:
+          format: "UUID"
+          type: "string"
+        name:
+          type: "string"
+        dockerRepository:
+          type: "string"
+        dockerImageTag:
+          type: "string"
+        documentationUrl:
+          type: "string"
     WorkspacesResponse:
       title: "Root Type for WorkspacesResponse"
       description: ""
@@ -1638,6 +1850,10 @@ components:
             type: "array"
             items:
               type: "string"
+        includeFiles:
+          description: "Whether to move raw files from the source to the destination\
+            \ during the sync."
+          type: "boolean"
         selectedFields:
           description: "By default (if not provided in the request) all fields will\
             \ be synced. Otherwise, only the fields in this list will be synced."
@@ -1708,9 +1924,135 @@ components:
       - "source"
       - "destination"
       x-speakeasy-component: true
+    RegionCreateRequest:
+      type: "object"
+      required:
+      - "name"
+      - "organizationId"
+      - "enabled"
+      properties:
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionPatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionResponse:
+      type: "object"
+      required:
+      - "regionId"
+      - "name"
+      - "organizationId"
+      - "enabled"
+      - "createdAt"
+      - "updatedAt"
+      properties:
+        regionId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Region"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    RegionsResponse:
+      type: "object"
+      required:
+      - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/RegionResponse"
+      x-speakeasy-component: true
+    DataplaneCreateRequest:
+      type: "object"
+      required:
+      - "name"
+      - "enabled"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanePatchRequest:
+      type: "object"
+      properties:
+        name:
+          type: "string"
+        enabled:
+          type: "boolean"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplaneResponse:
+      type: "object"
+      required:
+      - "dataplaneId"
+      - "name"
+      - "regionId"
+      - "enabled"
+      - "createdAt"
+      - "updatedAt"
+      properties:
+        dataplaneId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        regionId:
+          type: "string"
+          format: "uuid"
+        enabled:
+          type: "boolean"
+        createdAt:
+          type: "string"
+        updatedAt:
+          type: "string"
+      x-speakeasy-entity: "Dataplane"
+      x-speakeasy-param-suppress-computed-diff: true
+      x-speakeasy-component: true
+    DataplanesResponse:
+      type: "object"
+      required:
+      - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/DataplaneResponse"
+      x-speakeasy-component: true
+
     SourceConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
+
     DestinationConfiguration:
       description: The values required to configure the destination.
       example: { user: "charles" }

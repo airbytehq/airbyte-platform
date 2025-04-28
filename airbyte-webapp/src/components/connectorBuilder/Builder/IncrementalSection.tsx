@@ -11,6 +11,7 @@ import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { AssistButton } from "./Assist/AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
@@ -21,6 +22,7 @@ import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestIncrementalSyncToBuilder } from "../convertManifestToBuilderForm";
 import {
   BuilderIncrementalSync,
+  CreationRequesterPathFn,
   DATETIME_FORMAT_OPTIONS,
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
@@ -33,7 +35,7 @@ import { useBuilderWatch } from "../useBuilderWatch";
 import { LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME, useGetUniqueKey } from "../useLockedInputs";
 
 interface IncrementalSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
   currentStreamIndex: number;
 }
 
@@ -47,6 +49,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
+      labelAction={<AssistButton assistKey="incremental_sync" streamNum={currentStreamIndex} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("incrementalSync"),
@@ -81,7 +84,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
         },
       }}
       copyConfig={{
-        path: "incrementalSync",
+        path: streamFieldPath("incrementalSync"),
         currentStreamIndex,
         componentName: label,
       }}
@@ -342,7 +345,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
 const CURSOR_PATH = "incrementalSync.cursor_field";
 const CURSOR_DATETIME_FORMATS_PATH = "incrementalSync.cursor_datetime_formats";
 
-const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn | CreationRequesterPathFn }) => {
   const {
     streamRead: { data },
   } = useConnectorBuilderTestRead();
@@ -353,7 +356,8 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
     <BuilderField
       preview={(fieldValue) => {
         const mostRecentRecordValues = data?.slices?.at(0)?.pages.at(0)?.records.at(0);
-        const cursorValue = mostRecentRecordValues?.[fieldValue];
+        const rawCursorValue = mostRecentRecordValues?.[fieldValue];
+        const cursorValue = typeof rawCursorValue === "string" ? rawCursorValue : null;
         return cursorValue != null ? (
           <FormattedMessage id="connectorBuilder.incremental.cursorValuePreview" values={{ cursorValue }} />
         ) : undefined;
@@ -366,18 +370,23 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => 
   );
 };
 
-const CursorDatetimeFormatField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+const CursorDatetimeFormatField = ({
+  streamFieldPath,
+}: {
+  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
+}) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
-  const cursorDatetimeFormats = useBuilderWatch(streamFieldPath(CURSOR_DATETIME_FORMATS_PATH));
-  const cursorField = useBuilderWatch(streamFieldPath(CURSOR_PATH));
+  const cursorDatetimeFormats = useBuilderWatch(streamFieldPath(CURSOR_DATETIME_FORMATS_PATH)) as string[];
+  const cursorField = useBuilderWatch(streamFieldPath(CURSOR_PATH)) as string;
   const {
     streamRead: { data },
   } = useConnectorBuilderTestRead();
-  const detectedFormat = data?.inferred_datetime_formats?.[cursorField];
+  const rawDetectedFormat = data?.inferred_datetime_formats?.[cursorField];
+  const detectedFormat = typeof rawDetectedFormat === "string" ? rawDetectedFormat : null;
   return (
     <>
-      {!cursorDatetimeFormats?.includes(detectedFormat) && cursorField && detectedFormat && (
+      {detectedFormat && !cursorDatetimeFormats?.includes(detectedFormat) && cursorField && (
         <Message
           type="info"
           text={

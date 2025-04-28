@@ -1,6 +1,7 @@
 import isString from "lodash/isString";
 import { useMemo } from "react";
 
+import { convertToConnectorDefinitionWithMetrics } from "components/connector/ConnectorQualityMetrics";
 import { FlexContainer } from "components/ui/Flex";
 
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
@@ -120,10 +121,12 @@ const getNumericMetric = (
     return 1;
   }
 
+  const connectorDefinitionWithMetrics = convertToConnectorDefinitionWithMetrics(connectorDefinition);
+
   const rawMetricValue =
     metric === "successRate"
-      ? connectorDefinition.metrics?.all?.sync_success_rate
-      : connectorDefinition.metrics?.all?.usage;
+      ? connectorDefinitionWithMetrics.metrics?.all?.sync_success_rate
+      : connectorDefinitionWithMetrics.metrics?.all?.usage;
 
   if (!isString(rawMetricValue)) {
     return 1;

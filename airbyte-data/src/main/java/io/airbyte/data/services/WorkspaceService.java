@@ -4,7 +4,6 @@
 
 package io.airbyte.data.services;
 
-import io.airbyte.config.Geography;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
@@ -59,7 +58,7 @@ public interface WorkspaceService {
 
   void writeWorkspaceServiceAccountNoSecrets(WorkspaceServiceAccount workspaceServiceAccount) throws IOException;
 
-  Geography getGeographyForWorkspace(UUID workspaceId) throws IOException;
+  String getGeographyForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
 

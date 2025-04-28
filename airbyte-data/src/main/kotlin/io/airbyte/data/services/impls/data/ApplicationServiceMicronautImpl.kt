@@ -9,10 +9,12 @@ import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.auth.config.AuthMode
+import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.config.InstanceAdminConfig
 import io.airbyte.data.services.ApplicationService
+import io.micronaut.context.annotation.Property
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import jakarta.ws.rs.BadRequestException
@@ -25,7 +27,10 @@ import java.util.UUID
 @RequiresAuthMode(AuthMode.SIMPLE)
 class ApplicationServiceMicronautImpl(
   private val instanceAdminConfig: InstanceAdminConfig,
+  private val tokenExpirationConfig: TokenExpirationConfig,
   private val jwtTokenGenerator: JwtTokenGenerator,
+  @Property(name = "airbyte.auth.token-issuer")
+  private val tokenIssuer: String,
 ) : ApplicationService {
   override fun listApplicationsByUser(user: AuthenticatedUser): List<Application> =
     listOf(
@@ -48,7 +53,8 @@ class ApplicationServiceMicronautImpl(
     return jwtTokenGenerator
       .generateToken(
         mapOf(
-          "iss" to "airbyte-server",
+          "iss" to tokenIssuer,
+          "aud" to "airbyte-server",
           "sub" to DEFAULT_AUTH_USER_ID,
           "roles" to
             buildSet {
@@ -56,9 +62,16 @@ class ApplicationServiceMicronautImpl(
               addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
               addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
             },
-          "exp" to Instant.now().plus(24, ChronoUnit.HOURS).epochSecond,
+          "exp" to
+            Instant
+              .now()
+              .plus(
+                tokenExpirationConfig.applicationTokenExpirationInMinutes,
+                ChronoUnit.MINUTES,
+              ).epochSecond,
         ),
-      ) // Necessary now that this is no longer optional, but I don't know under what conditions we could
+      )
+      // Necessary now that this is no longer optional, but I don't know under what conditions we could
       // end up here.
       .orElseThrow { BadRequestException("Could not generate token") }
   }

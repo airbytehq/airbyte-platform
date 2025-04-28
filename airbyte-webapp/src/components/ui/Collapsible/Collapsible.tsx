@@ -55,7 +55,7 @@ export const Collapsible: React.FC<React.PropsWithChildren<CollapsibleProps>> = 
             onClick={() => onClick?.(!open)}
           >
             <FlexContainer
-              alignItems="stretch"
+              alignItems="center"
               gap="sm"
               className={classNames({
                 [styles.buttonOpen]: open,

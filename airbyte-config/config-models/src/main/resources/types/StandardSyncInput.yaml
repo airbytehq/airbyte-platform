@@ -75,3 +75,11 @@ properties:
     type: array
     items:
       type: string
+  includesFiles:
+    description: Whether or not the sync may move files.
+    type: boolean
+    default: false
+  omitFileTransferEnvVar:
+    description: whether to omit the file transfer env var when using file transfer. Deprecated, to delete when destinations no longer support the old flow.
+    type: boolean
+    default: false

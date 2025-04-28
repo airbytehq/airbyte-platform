@@ -10,10 +10,7 @@ import com.google.common.collect.Lists;
 import io.airbyte.api.model.generated.ActorDefinitionVersionBreakingChanges;
 import io.airbyte.api.model.generated.ActorStatus;
 import io.airbyte.api.model.generated.ConnectionRead;
-import io.airbyte.api.model.generated.DestinationCloneConfiguration;
-import io.airbyte.api.model.generated.DestinationCloneRequestBody;
 import io.airbyte.api.model.generated.DestinationCreate;
-import io.airbyte.api.model.generated.DestinationDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.model.generated.DestinationRead;
 import io.airbyte.api.model.generated.DestinationReadList;
@@ -31,20 +28,31 @@ import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.errors.BadRequestException;
 import io.airbyte.commons.server.handlers.helpers.ActorDefinitionHandlerHelper;
 import io.airbyte.commons.server.handlers.helpers.OAuthSecretHelper;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Configs;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
+import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
@@ -77,6 +85,11 @@ public class DestinationHandler {
   private final WorkspaceHelper workspaceHelper;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final Configs.AirbyteEdition airbyteEdition;
+  private final SecretsRepositoryWriter secretsRepositoryWriter;
+  private final SecretPersistenceService secretPersistenceService;
+  private final SecretStorageService secretStorageService;
+  private final SecretReferenceService secretReferenceService;
+  private final CurrentUserService currentUserService;
 
   @VisibleForTesting
   public DestinationHandler(final JsonSchemaValidator integrationSchemaValidation,
@@ -92,7 +105,12 @@ public class DestinationHandler {
                             final ApiPojoConverters apiPojoConverters,
                             final WorkspaceHelper workspaceHelper,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
-                            final Configs.AirbyteEdition airbyteEdition) {
+                            final Configs.AirbyteEdition airbyteEdition,
+                            final SecretsRepositoryWriter secretsRepositoryWriter,
+                            final SecretPersistenceService secretPersistenceService,
+                            final SecretStorageService secretStorageService,
+                            final SecretReferenceService secretReferenceService,
+                            final CurrentUserService currentUserService) {
     this.validator = integrationSchemaValidation;
     this.connectionsHandler = connectionsHandler;
     this.uuidGenerator = uuidGenerator;
@@ -107,6 +125,11 @@ public class DestinationHandler {
     this.workspaceHelper = workspaceHelper;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.airbyteEdition = airbyteEdition;
+    this.secretsRepositoryWriter = secretsRepositoryWriter;
+    this.secretPersistenceService = secretPersistenceService;
+    this.secretStorageService = secretStorageService;
+    this.secretReferenceService = secretReferenceService;
+    this.currentUserService = currentUserService;
   }
 
   public DestinationRead createDestination(final DestinationCreate destinationCreate)
@@ -156,16 +179,23 @@ public class DestinationHandler {
 
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(destination.getWorkspaceId());
+    final ConfigWithSecretReferences configWithSecretReferences =
+        secretReferenceService.getConfigWithSecretReferences(destination.getDestinationId(), destination.getConnectionConfiguration(),
+            destination.getWorkspaceId());
 
-    final ConnectorSpecification spec =
-        getSpecForDestinationId(destination.getDestinationDefinitionId(), destination.getWorkspaceId(), destination.getDestinationId());
+    // Delete airbyte-managed secrets for this destination
+    secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence);
 
-    // Delete secrets and config in this destination and mark it tombstoned.
+    // Delete secret references for this destination
+    secretReferenceService.deleteActorSecretReferences(destination.getDestinationId());
+
+    // Mark destination as tombstoned and clear config
     try {
       destinationService.tombstoneDestination(
           destination.getName(),
           destination.getWorkspaceId(),
-          destination.getDestinationId(), spec);
+          destination.getDestinationId());
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -178,15 +208,14 @@ public class DestinationHandler {
     }
 
     // get existing implementation
-    final DestinationConnection updatedDestination = configurationUpdate
-        .destination(destinationUpdate.getDestinationId(), destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
+    final DestinationConnection updatedDestination = configurationUpdate.destination(destinationUpdate.getDestinationId(),
+        destinationUpdate.getName(), destinationUpdate.getConnectionConfiguration());
 
     final ConnectorSpecification spec =
         getSpecForDestinationId(updatedDestination.getDestinationDefinitionId(), updatedDestination.getWorkspaceId(),
             updatedDestination.getDestinationId());
 
-    // validate configuration
-    validateDestination(spec, updatedDestination.getConfiguration());
+    validateDestinationUpdate(destinationUpdate.getConnectionConfiguration(), updatedDestination, spec);
 
     // persist
     persistDestinationConnection(
@@ -221,8 +250,7 @@ public class DestinationHandler {
 
     OAuthSecretHelper.validateNoSecretsInConfiguration(spec, partialDestinationUpdate.getConnectionConfiguration());
 
-    // validate configuration
-    validateDestination(spec, updatedDestination.getConfiguration());
+    validateDestinationUpdate(partialDestinationUpdate.getConnectionConfiguration(), updatedDestination, spec);
 
     // persist
     persistDestinationConnection(
@@ -255,36 +283,12 @@ public class DestinationHandler {
 
   public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return buildDestinationRead(destinationIdRequestBody.getDestinationId());
+    return getDestination(destinationIdRequestBody, false);
   }
 
-  public DestinationRead cloneDestination(final DestinationCloneRequestBody destinationCloneRequestBody)
+  public DestinationRead getDestination(final DestinationIdRequestBody destinationIdRequestBody, final Boolean includeSecretCoordinates)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    // read destination configuration from db
-    final DestinationRead destinationToClone = buildDestinationReadWithSecrets(destinationCloneRequestBody.getDestinationCloneId());
-    final DestinationCloneConfiguration destinationCloneConfiguration = destinationCloneRequestBody.getDestinationConfiguration();
-
-    final String copyText = " (Copy)";
-    final String destinationName = destinationToClone.getName() + copyText;
-
-    final DestinationCreate destinationCreate = new DestinationCreate()
-        .name(destinationName)
-        .destinationDefinitionId(destinationToClone.getDestinationDefinitionId())
-        .connectionConfiguration(destinationToClone.getConnectionConfiguration())
-        .workspaceId(destinationToClone.getWorkspaceId())
-        .resourceAllocation(destinationToClone.getResourceAllocation());
-
-    if (destinationCloneConfiguration != null) {
-      if (destinationCloneConfiguration.getName() != null) {
-        destinationCreate.name(destinationCloneConfiguration.getName());
-      }
-
-      if (destinationCloneConfiguration.getConnectionConfiguration() != null) {
-        destinationCreate.connectionConfiguration(destinationCloneConfiguration.getConnectionConfiguration());
-      }
-    }
-
-    return createDestination(destinationCreate);
+    return buildDestinationRead(destinationIdRequestBody.getDestinationId(), includeSecretCoordinates);
   }
 
   public DestinationReadList listDestinationsForWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody)
@@ -328,12 +332,12 @@ public class DestinationHandler {
     return new DestinationReadList().destinations(reads);
   }
 
-  public DestinationReadList listDestinationsForDestinationDefinition(final DestinationDefinitionIdRequestBody destinationDefinitionIdRequestBody)
+  public DestinationReadList listDestinationsForDestinationDefinition(final UUID destinationDefinitionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final List<DestinationRead> reads = Lists.newArrayList();
 
     for (final DestinationConnection destinationConnection : destinationService
-        .listDestinationsForDefinition(destinationDefinitionIdRequestBody.getDestinationDefinitionId())) {
+        .listDestinationsForDefinition(destinationDefinitionId)) {
       reads.add(buildDestinationRead(destinationConnection));
     }
 
@@ -360,6 +364,31 @@ public class DestinationHandler {
     validator.ensure(spec.getConnectionSpecification(), configuration);
   }
 
+  /**
+   * Validates the provided update JSON against the spec by merging it into the full updated
+   * destination config.
+   * <p>
+   * Note: The existing destination config may have been persisted with secret object nodes instead of
+   * raw values, which must be replaced with placeholder text nodes in order to pass validation.
+   */
+  private void validateDestinationUpdate(final JsonNode providedUpdateJson,
+                                         final DestinationConnection updatedDestination,
+                                         final ConnectorSpecification spec)
+      throws JsonValidationException {
+    // Replace any secret object nodes with placeholder text nodes that will pass validation.
+    final JsonNode updatedDestinationConfigWithSecretPlaceholders =
+        SecretReferenceHelpers.INSTANCE.configWithTextualSecretPlaceholders(
+            updatedDestination.getConfiguration(),
+            spec.getConnectionSpecification());
+    // Merge the provided update JSON into the updated destination config with secret placeholders.
+    // The final result should pass validation as long as the provided update JSON is valid.
+    final JsonNode mergedConfig = Optional.ofNullable(providedUpdateJson)
+        .map(update -> Jsons.mergeNodes(updatedDestinationConfigWithSecretPlaceholders, update))
+        .orElse(updatedDestinationConfigWithSecretPlaceholders);
+
+    validateDestination(spec, mergedConfig);
+  }
+
   public ConnectorSpecification getSpecForDestinationId(final UUID destinationDefinitionId, final UUID workspaceId, final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
@@ -375,7 +404,12 @@ public class DestinationHandler {
     return destinationVersion.getSpec();
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
+  /**
+   * Persists a destination to the database, with secret masking and handling applied for OAuth and
+   * other secret values in the provided configuration json. Raw secret values and prefixed secret
+   * coordinates are split out from the provided config and replaced with coordinates or secret
+   * reference IDs, depending on whether the workspace has a secret storage configured.
+   */
   private void persistDestinationConnection(final String name,
                                             final UUID destinationDefinitionId,
                                             final UUID workspaceId,
@@ -384,63 +418,126 @@ public class DestinationHandler {
                                             final boolean tombstone,
                                             final ConnectorSpecification spec,
                                             final io.airbyte.api.model.generated.ScopedResourceRequirements resourceRequirements)
-      throws JsonValidationException, IOException, ConfigNotFoundException {
+      throws JsonValidationException, IOException {
     final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
     licenseEntitlementChecker.ensureEntitled(organizationId, Entitlement.DESTINATION_CONNECTOR, destinationDefinitionId);
 
-    final JsonNode oAuthMaskedConfigurationJson =
-        oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
+    final JsonNode maskedConfig = oAuthConfigSupplier.maskDestinationOAuthParameters(destinationDefinitionId, workspaceId, configurationJson, spec);
+    final Optional<UUID> secretStorageId = Optional.ofNullable(secretStorageService.getByWorkspaceId(workspaceId)).map(SecretStorage::getIdJava);
+
     final DestinationConnection destinationConnection = new DestinationConnection()
         .withName(name)
         .withDestinationDefinitionId(destinationDefinitionId)
         .withWorkspaceId(workspaceId)
         .withDestinationId(destinationId)
-        .withConfiguration(oAuthMaskedConfigurationJson)
         .withTombstone(tombstone)
         .withResourceRequirements(apiPojoConverters.scopedResourceReqsToInternal(resourceRequirements));
-    try {
-      destinationService.writeDestinationConnectionWithSecrets(destinationConnection, spec);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+
+    JsonNode updatedConfig = persistConfigRawSecretValues(maskedConfig, secretStorageId, workspaceId, spec, destinationId);
+
+    if (secretStorageId.isPresent()) {
+      final ConfigWithProcessedSecrets reprocessedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+          updatedConfig, spec.getConnectionSpecification(), secretStorageId.get());
+      updatedConfig = secretReferenceService.createAndInsertSecretReferencesWithStorageId(
+          reprocessedConfig,
+          destinationId,
+          workspaceId,
+          secretStorageId.get(),
+          currentUserService.getCurrentUser().getUserId());
+    }
+
+    destinationConnection.setConfiguration(updatedConfig);
+    destinationService.writeDestinationConnectionNoSecrets(destinationConnection);
+  }
+
+  /**
+   * Persists raw secret values for the given config. Creates or updates depending on whether a prior
+   * config exists.
+   *
+   * @return new config with secret values replaced with secret coordinate nodes.
+   */
+  private JsonNode persistConfigRawSecretValues(final JsonNode config,
+                                                final Optional<UUID> secretStorageId,
+                                                final UUID workspaceId,
+                                                final ConnectorSpecification spec,
+                                                final UUID destinationId)
+      throws JsonValidationException {
+    final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
+    final ConfigWithProcessedSecrets processedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+        config, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+    final Optional<JsonNode> previousConfig = destinationService.getDestinationConnectionIfExists(destinationId)
+        .map(DestinationConnection::getConfiguration);
+    if (previousConfig.isPresent()) {
+      final ConfigWithSecretReferences priorConfigWithSecretReferences =
+          secretReferenceService.getConfigWithSecretReferences(
+              destinationId,
+              previousConfig.get(),
+              workspaceId);
+      return secretsRepositoryWriter.updateFromConfig(
+          workspaceId,
+          priorConfigWithSecretReferences,
+          processedConfig,
+          spec.getConnectionSpecification(),
+          secretPersistence);
+    } else {
+      return secretsRepositoryWriter.createFromConfig(
+          workspaceId,
+          processedConfig,
+          secretPersistence);
     }
   }
 
   public DestinationRead buildDestinationRead(final UUID destinationId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    return buildDestinationRead(destinationService.getDestinationConnection(destinationId));
+    return buildDestinationRead(destinationId, false);
+  }
+
+  public DestinationRead buildDestinationRead(final UUID destinationId, final Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildDestinationRead(destinationService.getDestinationConnection(destinationId), includeSecretCoordinates);
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection)
       throws JsonValidationException, IOException, ConfigNotFoundException {
+    return buildDestinationRead(destinationConnection, false);
+  }
+
+  private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final Boolean includeSecretCoordinates)
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final ConnectorSpecification spec =
         getSpecForDestinationId(destinationConnection.getDestinationDefinitionId(), destinationConnection.getWorkspaceId(),
             destinationConnection.getDestinationId());
-    return buildDestinationRead(destinationConnection, spec);
+    return buildDestinationRead(destinationConnection, spec, includeSecretCoordinates);
   }
 
   private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection, final ConnectorSpecification spec)
       throws ConfigNotFoundException, IOException, JsonValidationException {
-
-    // remove secrets from config before returning the read
-    final DestinationConnection dci = Jsons.clone(destinationConnection);
-    dci.setConfiguration(secretsProcessor.prepareSecretsForOutput(dci.getConfiguration(), spec.getConnectionSpecification()));
-
-    final StandardDestinationDefinition standardDestinationDefinition =
-        destinationService.getStandardDestinationDefinition(dci.getDestinationDefinitionId());
-    return toDestinationRead(dci, standardDestinationDefinition);
+    return buildDestinationRead(destinationConnection, spec, false);
   }
 
-  @SuppressWarnings("PMD.PreserveStackTrace")
-  private DestinationRead buildDestinationReadWithSecrets(final UUID destinationId)
+  private DestinationRead buildDestinationRead(final DestinationConnection destinationConnection,
+                                               final ConnectorSpecification spec,
+                                               final Boolean includeSecretCoordinates)
       throws ConfigNotFoundException, IOException, JsonValidationException {
 
     // remove secrets from config before returning the read
-    final DestinationConnection dci;
-    try {
-      dci = Jsons.clone(destinationService.getDestinationConnectionWithSecrets(destinationId));
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    final DestinationConnection dci = Jsons.clone(destinationConnection);
+    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.getWorkspaceId());
+    if (includeSecretCoordinates
+        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
+      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
     }
+    final ConfigWithSecretReferences configWithRefs =
+        this.secretReferenceService.getConfigWithSecretReferences(dci.getDestinationId(), dci.getConfiguration(),
+            destinationConnection.getWorkspaceId());
+    final JsonNode sanitizedConfig =
+        includeSecretCoordinates
+            ? secretsProcessor.simplifySecretsForOutput(
+                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
+                spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+    dci.setConfiguration(sanitizedConfig);
+
     final StandardDestinationDefinition standardDestinationDefinition =
         destinationService.getStandardDestinationDefinition(dci.getDestinationDefinitionId());
     return toDestinationRead(dci, standardDestinationDefinition);

@@ -145,7 +145,10 @@ open class DestinationsController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicGetDestination(destinationId: String): Response {
+  override fun publicGetDestination(
+    destinationId: String,
+    includeSecretCoordinates: Boolean?,
+  ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     apiAuthorizationHelper.checkWorkspacePermission(
       destinationId,
@@ -159,6 +162,7 @@ open class DestinationsController(
         {
           destinationService.getDestination(
             UUID.fromString(destinationId),
+            includeSecretCoordinates,
           )
         },
         DESTINATIONS_WITH_ID_PATH,

@@ -41,7 +41,7 @@ class ProfilerContainerFactory(
       "AWS_DEFAULT_REGION",
     )
 
-  fun create(
+  internal fun create(
     runtimeEnvVars: List<EnvVar>,
     profilerVolumeMounts: List<VolumeMount>,
   ): Container {
@@ -58,8 +58,5 @@ class ProfilerContainerFactory(
       .build()
   }
 
-  private fun filterProfilerEnvVars(envVars: List<EnvVar>): List<EnvVar> =
-    envVars.filter { env ->
-      profilerEnvVars.contains(env.name)
-    }
+  private fun filterProfilerEnvVars(envVars: List<EnvVar>): List<EnvVar> = envVars.filter { env -> profilerEnvVars.contains(env.name) }
 }

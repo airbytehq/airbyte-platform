@@ -18,6 +18,7 @@ data class AirbyteLicense(
   val maxNodes: Int? = null,
   val maxEditors: Int? = null,
   val enterpriseConnectorIds: Set<UUID> = emptySet(),
+  val isEmbedded: Boolean = false,
 ) {
   enum class LicenseType(
     @get:JsonValue val value: String,

@@ -7,6 +7,7 @@ package io.airbyte.workload.api.client.config
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.UserAgentInterceptor
 import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
+import io.airbyte.api.client.auth.DataplaneAccessTokenInterceptor
 import io.airbyte.api.client.config.ClientApiType
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
 import io.airbyte.metrics.MetricClient
@@ -62,12 +63,21 @@ class WorkloadApiClientSupportFactory {
     @Value("\${airbyte.workload-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.workload-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     @Named("workloadApiAuthenticationInterceptor") workloadApiAuthenticationInterceptor: WorkloadApiAuthenticationInterceptor,
+    dataplaneAccessTokenInterceptor: DataplaneAccessTokenInterceptor?,
     @Named("userAgentInterceptor") userAgentInterceptor: UserAgentInterceptor,
     @Named("airbyteAuthHeaderInterceptor") airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
   ): OkHttpClient {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
-    builder.addInterceptor(workloadApiAuthenticationInterceptor)
-    builder.addInterceptor(airbyteAuthHeaderInterceptor)
+    // If a dataplaneAccessTokenInterceptor is available, use it. Otherwise, fall back on the
+    // workloadApiAuthenticationInterceptor which still uses the workload API bearer token from
+    // the environment. This is still necessary for non-dataplane applications that call the
+    // workload API, like the airbyte-cron.
+    if (dataplaneAccessTokenInterceptor != null) {
+      builder.addInterceptor(dataplaneAccessTokenInterceptor)
+    } else {
+      builder.addInterceptor(workloadApiAuthenticationInterceptor)
+      builder.addInterceptor(airbyteAuthHeaderInterceptor) // TODO(parker) look into removing this, may not be doing anything?
+    }
     builder.addInterceptor(userAgentInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))
     builder.connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))

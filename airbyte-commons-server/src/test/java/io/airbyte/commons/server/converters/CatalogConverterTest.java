@@ -28,13 +28,15 @@ import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.FieldType;
 import io.airbyte.config.mapper.configs.HashingMapperConfig;
 import io.airbyte.mappers.helpers.MapperHelperKt;
-import io.airbyte.protocol.models.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.validation.json.JsonValidationException;
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest;
 import jakarta.inject.Inject;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @MicronautTest
 class CatalogConverterTest {
@@ -86,6 +88,19 @@ class CatalogConverterTest {
 
     assertEquals(hashingMapper, mappers.getFirst());
     assertEquals(hashingMapper2, mappers.get(1));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testConvertInternalWithFiles(final boolean includeFiles) throws JsonValidationException {
+    final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    final var apiStream = apiCatalog.getStreams().getFirst();
+    apiStream.getConfig().setIncludeFiles(includeFiles);
+
+    final var internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog);
+    assertEquals(1, internalCatalog.getStreams().size());
+    final var internalStream = internalCatalog.getStreams().getFirst();
+    assertEquals(includeFiles, internalStream.getIncludeFiles());
   }
 
   @Test
@@ -250,7 +265,7 @@ class CatalogConverterTest {
   void testDiscoveredToApiDefaultSyncModesSourceCursorNoFullRefresh() throws JsonValidationException {
     final AirbyteCatalog persistedCatalog = catalogConverter.toProtocol(ConnectionHelpers.generateBasicApiCatalog());
     persistedCatalog.getStreams().get(0).withSourceDefinedCursor(true)
-        .withSupportedSyncModes(List.of(io.airbyte.protocol.models.SyncMode.INCREMENTAL));
+        .withSupportedSyncModes(List.of(io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL));
     final var actualStreamConfig = catalogConverter.toApi(persistedCatalog, null).getStreams().get(0).getConfig();
     final var actualSyncMode = actualStreamConfig.getSyncMode();
     final var actualDestinationSyncMode = actualStreamConfig.getDestinationSyncMode();

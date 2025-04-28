@@ -1,7 +1,7 @@
 import type { KnownApiProblem, KnownApiProblemTypeAndPrefixes } from "./problems";
 import type { RequestOptions } from "../apiCall";
 
-import { I18nError } from "core/errors";
+import { FormatMessageParams } from "core/errors/I18nError";
 import errorMessages from "locales/en.errors.json";
 
 import { HttpError } from "./HttpError";
@@ -13,7 +13,7 @@ type TranslationType = "exact" | "hierarchical" | "detail" | "title";
 
 function getTranslation(response: KnownApiProblem): {
   key: string;
-  params?: I18nError["i18nParams"];
+  params?: FormatMessageParams;
   type: TranslationType;
 } {
   const match = response.type.match(/^error:(?<error>.*)$/);
@@ -21,7 +21,8 @@ function getTranslation(response: KnownApiProblem): {
   const errorType = match?.groups?.error || response.type;
   if (messages[errorType]) {
     // If we have an exact match on the type or in case if it's a hierarchical type only on the part behind "error:" use this message.
-    return { key: `error:${errorType}`, params: response.data, type: "exact" };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return { key: `error:${errorType}`, params: response.data as any, type: "exact" };
   }
 
   if (isHierarchicalType) {
@@ -30,7 +31,8 @@ function getTranslation(response: KnownApiProblem): {
     for (let i = hierarchy.length - 1; i > 0; i--) {
       const parentType = hierarchy.slice(0, i).join("/");
       if (messages[parentType]) {
-        return { key: `error:${parentType}`, params: response.data, type: "hierarchical" };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        return { key: `error:${parentType}`, params: response.data as any, type: "hierarchical" };
       }
     }
   }

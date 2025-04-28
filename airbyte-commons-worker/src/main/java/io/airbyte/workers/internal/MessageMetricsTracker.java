@@ -8,7 +8,7 @@ import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
-import io.airbyte.protocol.models.AirbyteMessage.Type;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 

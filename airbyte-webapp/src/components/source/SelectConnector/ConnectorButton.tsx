@@ -1,7 +1,7 @@
 import classNames from "classnames";
 import { FormattedMessage } from "react-intl";
 
-import { MetricIcon } from "components/connector/ConnectorQualityMetrics";
+import { convertToConnectorDefinitionWithMetrics, MetricIcon } from "components/connector/ConnectorQualityMetrics";
 import { ConnectorIcon } from "components/ConnectorIcon";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -56,8 +56,8 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
         // Conditionally render the metrics only if it is not an EnterpriseSourceStub
         showMetrics && !("isEnterprise" in definition) && (
           <FlexContainer className={styles.metrics}>
-            <MetricIcon metric="success" connectorDefinition={definition} />
-            <MetricIcon metric="usage" connectorDefinition={definition} />
+            <MetricIcon metric="success" connectorDefinition={convertToConnectorDefinitionWithMetrics(definition)} />
+            <MetricIcon metric="usage" connectorDefinition={convertToConnectorDefinitionWithMetrics(definition)} />
           </FlexContainer>
         )
       }

@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransformUpdateStream;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.FailureReason;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.DestinationInfo;
@@ -93,7 +94,9 @@ class SlackNotificationClientTest {
         Instant.MIN,
         Instant.MAX,
         0, 0, 0, 0, 0, 0,
-        "");
+        "",
+        null,
+        null);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
@@ -110,7 +113,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        null,
+        null);
     assertFalse(client.notifyJobFailure(summary, null));
   }
 
@@ -126,7 +131,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        FailureReason.FailureType.CONFIG_ERROR,
+        FailureReason.FailureOrigin.DESTINATION);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobFailure(summary, null));
@@ -144,7 +151,9 @@ class SlackNotificationClientTest {
         false,
         null, null,
         0, 0, 0, 0, 0, 0,
-        JOB_DESCRIPTION);
+        JOB_DESCRIPTION,
+        null,
+        null);
     final SlackNotificationClient client =
         new SlackNotificationClient(new SlackNotificationConfiguration().withWebhook(WEBHOOK_URL + server.getAddress().getPort() + TEST_PATH));
     assertTrue(client.notifyJobSuccess(summary, null));
@@ -177,7 +186,9 @@ class SlackNotificationClientTest {
         null,
         null,
         0, 0, 0, 0, 0, 0,
-        "job description.");
+        "job description.",
+        null,
+        null);
     assertTrue(client.notifyConnectionDisabled(summary, ""));
   }
 
@@ -208,7 +219,9 @@ class SlackNotificationClientTest {
         null,
         null,
         0, 0, 0, 0, 0, 0,
-        "job description.");
+        "job description.",
+        null,
+        null);
 
     assertTrue(client.notifyConnectionDisableWarning(summary, ""));
   }

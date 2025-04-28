@@ -18,6 +18,7 @@ import jakarta.inject.Singleton
 import org.openapitools.client.infrastructure.ClientException
 import java.util.Optional
 import java.util.function.Function
+import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -29,24 +30,30 @@ class SuccessHandler(
 ) {
   fun accept(io: LaunchStageIO) {
     withLoggingContext(io.logCtx) {
+      val attrs =
+        arrayOf(
+          MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
+          MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
+        )
+
       metricClient.count(
         metric = OssMetricsRegistry.WORKLOAD_PROCESSED,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
-            MetricAttribute(MetricTags.STATUS_TAG, MeterFilterFactory.SUCCESS_STATUS),
-          ),
+        attributes = attrs,
       )
       if (io.msg.startTimeMs != null) {
         metricClient.gauge(
           metric = OssMetricsRegistry.PRODUCER_TO_POD_STARTED_LATENCY_MS,
           stateObject = System.currentTimeMillis() - io.msg.startTimeMs,
           function = { it.toDouble() },
-          attributes =
-            arrayOf(
-              MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, io.msg.workloadType.toString()),
-            ),
+          attributes = attrs,
         )
+      }
+      if (io.receivedAt != null) {
+        metricClient
+          .timer(
+            metric = OssMetricsRegistry.WORKLOAD_LAUNCH_DURATION,
+            attributes = attrs,
+          )?.record(io.receivedAt!!.elapsedNow().toJavaDuration())
       }
 
       // If we skipped then we didn't launch the workload on this run, so we don't set its status to "launched".

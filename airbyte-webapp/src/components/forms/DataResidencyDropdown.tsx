@@ -1,12 +1,9 @@
-import * as Flags from "country-flag-icons/react/3x2";
 import React, { ReactNode } from "react";
 import { Path } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { useAvailableGeographies } from "core/api";
-import { Geography } from "core/api/types/AirbyteClient";
 
-import styles from "./DataResidencyDropdown.module.scss";
 import { FormValues } from "./Form";
 import { FormControl } from "./FormControl";
 import { SelectWrapper } from "./SelectWrapper";
@@ -32,15 +29,12 @@ export const DataResidencyDropdown = <T extends FormValues>({
   const { geographies } = useAvailableGeographies();
 
   const options = geographies.map((geography) => {
-    const Flag =
-      geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
     return {
       label: formatMessage({
         id: `connection.geography.${geography}`,
-        defaultMessage: geography.toUpperCase(),
+        defaultMessage: geography,
       }),
       value: geography,
-      icon: <Flag className={styles.flag} />,
     };
   });
 
@@ -66,15 +60,12 @@ export const StandaloneDataResidencyDropdown = <T extends FormValues>({
   const { geographies } = useAvailableGeographies();
 
   const options = geographies.map((geography) => {
-    const Flag =
-      geography === "auto" ? Flags.US : Flags[geography.toUpperCase() as Uppercase<Exclude<Geography, "auto">>];
     return {
       label: formatMessage({
         id: `connection.geography.${geography}`,
-        defaultMessage: geography.toUpperCase(),
+        defaultMessage: geography,
       }),
       value: geography,
-      icon: <Flag className={styles.flag} />,
     };
   });
 

@@ -5,6 +5,8 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes.TESTING_CONFIG_DB_TABLE
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -14,7 +16,7 @@ import org.jooq.exception.DataAccessException
 import io.micronaut.transaction.annotation.Transactional as TransactionalAdvice
 
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^testing_config_db_table$")
+@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^$TESTING_CONFIG_DB_TABLE$")
 @Named("secretPersistence")
 open class LocalTestingSecretPersistence(
   @Named("local-secrets") val dslContext: DSLContext,
@@ -48,7 +50,7 @@ open class LocalTestingSecretPersistence(
   @Transactional
   @TransactionalAdvice("local-secrets")
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     initialize()
@@ -64,7 +66,7 @@ open class LocalTestingSecretPersistence(
 
   @Transactional
   @TransactionalAdvice("local-secrets")
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     initialize()
     dslContext.execute("DELETE FROM secrets WHERE coordinate = ?;", coordinate.fullCoordinate)
   }

@@ -1,4 +1,4 @@
-ARG NGINX_IMAGE=airbyte/nginx-unprivileged:alpine3.20-2
+ARG NGINX_IMAGE=airbyte/airbyte-base-nginx-image:1.27.3
 FROM ${NGINX_IMAGE}
 
 ARG BUILD_DIR=bin/build

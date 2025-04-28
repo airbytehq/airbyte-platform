@@ -12,25 +12,25 @@ import java.time.ZoneOffset
 typealias EntityDataplaneGroup = DataplaneGroup
 typealias ModelDataplaneGroup = io.airbyte.config.DataplaneGroup
 
-fun EntityDataplaneGroup.toConfigModel(): ModelDataplaneGroup =
-  ModelDataplaneGroup()
-    .withId(this.id)
-    .withOrganizationId(this.organizationId)
-    .withName(this.name)
-    .withEnabled(this.enabled)
-    .withCreatedAt(this.createdAt?.toEpochSecond())
-    .withUpdatedAt(this.updatedAt?.toEpochSecond())
-    .withUpdatedBy(this.updatedBy)
-    .withTombstone(this.tombstone)
+object DataplaneGroupMapper {
+  fun EntityDataplaneGroup.toConfigModel(): ModelDataplaneGroup =
+    ModelDataplaneGroup()
+      .withId(this.id)
+      .withOrganizationId(this.organizationId)
+      .withName(this.name)
+      .withEnabled(this.enabled)
+      .withCreatedAt(this.createdAt?.toEpochSecond())
+      .withUpdatedAt(this.updatedAt?.toEpochSecond())
+      .withTombstone(this.tombstone)
 
-fun ModelDataplaneGroup.toEntity(): EntityDataplaneGroup =
-  EntityDataplaneGroup(
-    id = this.id,
-    organizationId = this.organizationId,
-    name = this.name,
-    enabled = this.enabled,
-    createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
-    updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
-    updatedBy = this.updatedBy,
-    tombstone = this.tombstone ?: false,
-  )
+  fun ModelDataplaneGroup.toEntity(): EntityDataplaneGroup =
+    EntityDataplaneGroup(
+      id = this.id,
+      organizationId = this.organizationId,
+      name = this.name,
+      enabled = this.enabled,
+      createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+      updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
+      tombstone = this.tombstone ?: false,
+    )
+}

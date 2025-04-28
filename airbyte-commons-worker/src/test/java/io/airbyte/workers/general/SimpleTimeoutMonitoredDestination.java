@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.general;
 
-import io.airbyte.protocol.models.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
 import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.SimpleAirbyteDestination;
 

@@ -20,6 +20,7 @@ import {
   getDeclarativeManifestBaseImage,
   createForkedConnectorBuilderProject,
   getConnectorBuilderProjectIdForDefinitionId,
+  fullResolveManifestBuilderProject,
 } from "../generated/AirbyteClient";
 import { SCOPE_WORKSPACE } from "../scopes";
 import {
@@ -27,6 +28,7 @@ import {
   DeclarativeManifestVersionRead,
   ConnectorBuilderProjectRead,
   SourceDefinitionIdBody,
+  ConnectorBuilderProjectFullResolveRequestBody,
   ConnectorBuilderProjectStreamReadRequestBody,
   ConnectorBuilderProjectStreamRead,
   ConnectorBuilderProjectTestingValuesUpdate,
@@ -42,7 +44,12 @@ import {
   SourceDefinitionId,
   BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
-import { DeclarativeComponentSchema, DeclarativeStream, NoPaginationType } from "../types/ConnectorManifest";
+import {
+  DeclarativeComponentSchema,
+  DeclarativeComponentSchemaStreamsItem,
+  NoPaginationType,
+  StateDelegatingStreamType,
+} from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -58,6 +65,7 @@ const connectorBuilderProjectsKeys = {
   getBaseImage: (version: string) => [...connectorBuilderProjectsKeys.all, "getBaseImage", version] as const,
   getProjectForDefinition: (sourceDefinitionId: string | undefined) =>
     [...connectorBuilderProjectsKeys.all, "getProjectByDefinition", sourceDefinitionId] as const,
+  fullResolve: (projectId?: string) => ["builder_project_full_resolve", projectId] as const,
 };
 
 export interface BuilderProject {
@@ -489,7 +497,7 @@ export const useChangeBuilderProjectVersion = () => {
 
 export const useBuilderProjectReadStream = (
   params: ConnectorBuilderProjectStreamReadRequestBody,
-  testStream: DeclarativeStream | undefined,
+  testStream: DeclarativeComponentSchemaStreamsItem | undefined,
   onSuccess: (data: StreamReadTransformedSlices) => void
 ) => {
   const requestOptions = useRequestOptions();
@@ -501,6 +509,7 @@ export const useBuilderProjectReadStream = (
         // this shouldn't happen, because read stream can only be triggered when a stream is selected
         throw new Error("No test stream provided - this state should not be reached!");
       }
+
       const streamRead = await readConnectorBuilderProjectStream(params, requestOptions);
       return transformSlices(streamRead, testStream);
     },
@@ -510,6 +519,28 @@ export const useBuilderProjectReadStream = (
       onSuccess,
     }
   );
+};
+
+export const useBuilderProjectFullResolveManifest = (params: ConnectorBuilderProjectFullResolveRequestBody) => {
+  const requestOptions = useRequestOptions();
+
+  const projectId = params.builderProjectId;
+
+  return useQuery(
+    connectorBuilderProjectsKeys.fullResolve(projectId),
+    () => fullResolveManifestBuilderProject(params, requestOptions),
+    {
+      enabled: false,
+      refetchOnWindowFocus: false,
+    }
+  );
+};
+
+export const useCancelBuilderProjectStreamRead = (builderProjectId: string, streamName: string) => {
+  const queryClient = useQueryClient();
+  return () => {
+    queryClient.cancelQueries(connectorBuilderProjectsKeys.read(builderProjectId, streamName));
+  };
 };
 
 export type Page = ConnectorBuilderProjectStreamReadSlicesItemPagesItem & {
@@ -526,8 +557,12 @@ export type StreamReadTransformedSlices = Omit<ConnectorBuilderProjectStreamRead
 
 const transformSlices = (
   streamReadData: ConnectorBuilderProjectStreamRead,
-  stream: DeclarativeStream
+  stream: DeclarativeComponentSchemaStreamsItem
 ): StreamReadTransformedSlices => {
+  if (stream.type === StateDelegatingStreamType.StateDelegatingStream) {
+    return streamReadData;
+  }
+
   // With the addition of ResumableFullRefresh, when pagination is configured and both incremental_sync and
   // partition_routers are NOT configured, the CDK splits up each page into a separate slice, each with its own state.
   // This is to allow full refresh syncs to resume from the last page read in the event of a failure.
@@ -598,6 +633,7 @@ export const useGetBuilderProjectBaseImage = (params: DeclarativeManifestRequest
   const requestOptions = useRequestOptions();
 
   return useQuery<DeclarativeManifestBaseImageRead>(
+    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     connectorBuilderProjectsKeys.getBaseImage(params.manifest.version),
     () => getDeclarativeManifestBaseImage(params, requestOptions)
   );

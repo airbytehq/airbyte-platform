@@ -1,1 +1,1 @@
-export type ConnectionConfiguration = unknown;
+export type ConnectionConfiguration = Record<string, unknown>;

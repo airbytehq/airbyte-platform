@@ -68,10 +68,22 @@ import {
   useGetUniqueKey,
 } from "../useLockedInputs";
 
-const AUTH_PATH = "formValues.global.authenticator";
-const authPath = <T extends string>(path: T) => `${AUTH_PATH}.${path}` as const;
+export type AuthPath =
+  | "formValues.global.authenticator"
+  | `formValues.streams.${number}.creationRequester.authenticator`
+  | `formValues.streams.${number}.pollingRequester.authenticator`
+  | `formValues.streams.${number}.downloadRequester.authenticator`;
+type AuthFieldPathFn = <T extends string>(fieldPath: T) => `${AuthPath}.${T}`;
 
-export const AuthenticationSection: React.FC = () => {
+interface AuthenticationSectionProps {
+  authPath: AuthPath;
+}
+
+export const AuthenticationSection: React.FC<AuthenticationSectionProps> = ({ authPath }) => {
+  const authFieldPath: AuthFieldPathFn = useCallback(
+    <T extends string>(fieldPath: T) => `${authPath}.${fieldPath}` as const,
+    [authPath]
+  );
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const getUniqueKey = useGetUniqueKey();
@@ -79,7 +91,7 @@ export const AuthenticationSection: React.FC = () => {
 
   const manifestAuthToBuilder = useCallback(
     (authenticator: HttpRequesterAuthenticator | undefined) =>
-      manifestAuthenticatorToBuilder(authenticator, builderInputsToSpec(inputs)),
+      manifestAuthenticatorToBuilder(authenticator, undefined, builderInputsToSpec(inputs)),
     [inputs]
   );
 
@@ -101,7 +113,7 @@ export const AuthenticationSection: React.FC = () => {
       children: (
         <>
           <BuilderRequestInjection
-            path={authPath("inject_into")}
+            path={authFieldPath("inject_into")}
             descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
             excludeValues={["path"]}
           />
@@ -147,9 +159,9 @@ export const AuthenticationSection: React.FC = () => {
         algorithm: "HS256",
         base64_encode_secret_key: false,
       },
-      children: <JwtAuthForm />,
+      children: <JwtAuthForm authFieldPath={authFieldPath} />,
     },
-    ...useOauthOptions(),
+    ...useOauthOptions(authPath, authFieldPath),
     {
       label: formatMessage({ id: "connectorBuilder.authentication.method.sessionToken" }),
       default: {
@@ -181,7 +193,7 @@ export const AuthenticationSection: React.FC = () => {
           },
         },
       },
-      children: <SessionTokenForm />,
+      children: <SessionTokenForm authFieldPath={authFieldPath} />,
     },
   ];
 
@@ -192,7 +204,7 @@ export const AuthenticationSection: React.FC = () => {
       labelAction={<AssistButton assistKey="auth" />}
       inputsConfig={{
         toggleable: false,
-        path: AUTH_PATH,
+        path: authPath,
         defaultValue: {
           type: NO_AUTH,
         },
@@ -206,7 +218,7 @@ export const AuthenticationSection: React.FC = () => {
       }}
     >
       <BuilderOneOf<BuilderFormAuthenticator>
-        path={AUTH_PATH}
+        path={authPath}
         label={formatMessage({ id: "connectorBuilder.authentication.method.label" })}
         manifestPath="HttpRequester.properties.authenticator"
         manifestOptionPaths={[
@@ -228,33 +240,33 @@ export const AuthenticationSection: React.FC = () => {
   );
 };
 
-const JwtAuthForm = () => {
+const JwtAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathFn }) => {
   return (
     <>
       <BuilderInputPlaceholder label="Secret Key" manifestPath="JwtAuthenticator.properties.secret_key" />
       <BuilderField
         label="Encode Secret Key (Base64 encoding)"
         type="boolean"
-        path={authPath("base64_encode_secret_key")}
+        path={authFieldPath("base64_encode_secret_key")}
         manifestPath="JwtAuthenticator.properties.base64_encode_secret_key"
       />
       <BuilderField
         label="Aglorithm"
         type="enum"
-        path={authPath("algorithm")}
+        path={authFieldPath("algorithm")}
         options={getOptionsByManifest("JwtAuthenticator.properties.algorithm")}
         manifestPath="JwtAuthenticator.properties.algorithm"
       />
       <BuilderField
         type="string"
         optional
-        path={authPath("header_prefix")}
+        path={authFieldPath("header_prefix")}
         manifestPath="JwtAuthenticator.properties.header_prefix"
       />
       <BuilderField
         type="number"
         optional
-        path={authPath("token_duration")}
+        path={authFieldPath("token_duration")}
         manifestPath="JwtAuthenticator.properties.token_duration"
       />
       <GroupControls
@@ -265,7 +277,7 @@ const JwtAuthForm = () => {
           tooltip="The 'kid' (Key Identifier) Header Parameter is a key ID for the user's account."
           type="jinja"
           optional
-          path={authPath("jwt_headers.kid")}
+          path={authFieldPath("jwt_headers.kid")}
           manifestPath="JwtAuthenticator.properties.jwt_headers.kid"
         />
         <BuilderField
@@ -273,7 +285,7 @@ const JwtAuthForm = () => {
           tooltip="The 'typ' (type) Header Parameter is used by JWT applications to declare the media type of this complete JWT."
           type="string"
           optional
-          path={authPath("jwt_headers.typ")}
+          path={authFieldPath("jwt_headers.typ")}
           manifestPath="JwtAuthenticator.properties.jwt_headers.typ"
         />
         <BuilderField
@@ -281,13 +293,13 @@ const JwtAuthForm = () => {
           tooltip="The 'cty' (content type) Header Parameter is used to convey structural information about the JWT."
           type="string"
           optional
-          path={authPath("jwt_headers.cty")}
+          path={authFieldPath("jwt_headers.cty")}
           manifestPath="JwtAuthenticator.properties.jwt_headers.cty"
         />
         <KeyValueListField
           label="Additional JWT Header Key-Value Pairs"
           tooltip="Add additional JWT header parameters as required."
-          path={authPath("additional_jwt_headers")}
+          path={authFieldPath("additional_jwt_headers")}
           manifestPath="JwtAuthenticator.properties.additional_jwt_headers"
           optional
         />
@@ -300,7 +312,7 @@ const JwtAuthForm = () => {
           tooltip="The 'iss' (Issuer) payload field is the user/principal that issued the JWT. Commonly a value unique to the user."
           type="jinja"
           optional
-          path={authPath("jwt_payload.iss")}
+          path={authFieldPath("jwt_payload.iss")}
           manifestPath="JwtAuthenticator.properties.jwt_payload.iss"
         />
         <BuilderField
@@ -308,7 +320,7 @@ const JwtAuthForm = () => {
           tooltip="The 'sub' (Subject) payload field of the JWT. Commonly defined by the API."
           type="string"
           optional
-          path={authPath("jwt_payload.sub")}
+          path={authFieldPath("jwt_payload.sub")}
           manifestPath="JwtAuthenticator.properties.jwt_payload.sub"
         />
         <BuilderField
@@ -316,13 +328,13 @@ const JwtAuthForm = () => {
           tooltip="The 'aud' (Audience) payload field recipient that the JWT is intended for. Commonly defined by the API."
           type="string"
           optional
-          path={authPath("jwt_payload.aud")}
+          path={authFieldPath("jwt_payload.aud")}
           manifestPath="JwtAuthenticator.properties.jwt_payload.aud"
         />
         <KeyValueListField
           label="Additional JWT Payload Key-Value Pairs"
           tooltip="Add additional JWT payload fields as required."
-          path={authPath("additional_jwt_payload")}
+          path={authFieldPath("additional_jwt_payload")}
           manifestPath="JwtAuthenticator.properties.additional_jwt_payload"
           optional
         />
@@ -331,30 +343,30 @@ const JwtAuthForm = () => {
   );
 };
 
-const OAuthForm = () => {
+const OAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathFn }) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
-  const { fieldValue: grantType } = useBuilderWatchWithPreview(authPath("grant_type"));
+  const { fieldValue: grantType } = useBuilderWatchWithPreview(authFieldPath("grant_type"));
   const getUniqueKey = useGetUniqueKey();
 
   return (
     <>
       <BuilderField
         type="jinja"
-        path={authPath("token_refresh_endpoint")}
+        path={authFieldPath("token_refresh_endpoint")}
         manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
       />
       <BuilderField
         type="enum"
-        path={authPath("grant_type")}
+        path={authFieldPath("grant_type")}
         options={["refresh_token", "client_credentials"]}
         manifestPath="OAuthAuthenticator.properties.grant_type"
         onChange={(newValue) => {
           if (newValue === "client_credentials") {
-            setValue(authPath("refresh_token"), undefined);
+            setValue(authFieldPath("refresh_token"), undefined);
           } else if (newValue === "refresh_token") {
             setValue(
-              authPath("refresh_token"),
+              authFieldPath("refresh_token"),
               interpolateConfigKey(
                 getUniqueKey(LOCKED_INPUT_BY_FIELD_NAME_BY_AUTH_TYPE[OAUTH_AUTHENTICATOR].refresh_token.key)
               )
@@ -370,7 +382,7 @@ const OAuthForm = () => {
           <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
             label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
             tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
-            fieldPath={authPath("refresh_token_updater")}
+            fieldPath={authFieldPath("refresh_token_updater")}
             initialValues={{
               refresh_token_name: "",
               access_token: interpolateConfigKey(
@@ -389,7 +401,7 @@ const OAuthForm = () => {
           >
             <BuilderField
               type="jinja"
-              path={authPath("refresh_token_updater.refresh_token_name")}
+              path={authFieldPath("refresh_token_updater.refresh_token_name")}
               optional
               manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
             />
@@ -399,30 +411,30 @@ const OAuthForm = () => {
       <BuilderOptional>
         <BuilderField
           type="array"
-          path={authPath("scopes")}
+          path={authFieldPath("scopes")}
           optional
           manifestPath="OAuthAuthenticator.properties.scopes"
         />
         <BuilderField
           type="jinja"
-          path={authPath("token_expiry_date_format")}
+          path={authFieldPath("token_expiry_date_format")}
           optional
           manifestPath="OAuthAuthenticator.properties.token_expiry_date_format"
         />
         <BuilderField
           type="jinja"
-          path={authPath("expires_in_name")}
+          path={authFieldPath("expires_in_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.expires_in_name"
         />
         <BuilderField
           type="jinja"
-          path={authPath("access_token_name")}
+          path={authFieldPath("access_token_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.access_token_name"
         />
         <KeyValueListField
-          path={authPath("refresh_request_body")}
+          path={authFieldPath("refresh_request_body")}
           manifestPath="OAuthAuthenticator.properties.refresh_request_body"
         />
       </BuilderOptional>
@@ -437,7 +449,7 @@ const payloadHasField = <FieldKey extends string>(
   return fieldKey in payload;
 };
 
-const DeclarativeOAuthForm = () => {
+const DeclarativeOAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathFn }) => {
   const { projectId } = useInitializedBuilderProject();
   const { setValue, getValues } = useFormContext();
   const testingValuesErrors = useTestingValuesErrors();
@@ -445,10 +457,10 @@ const DeclarativeOAuthForm = () => {
 
   const canPerformOauthFlow = savingState === "saved";
 
-  const { field: authenticatorScopesField } = useController({ name: authPath("scopes") });
-  const { field: authenticatorAccessTokenNameField } = useController({ name: authPath("access_token_name") });
-  const authenticatorAccessTokenValueField = useBuilderWatch(authPath("access_token_value"));
-  const authenticatorRefreshTokenValueField = useBuilderWatch(authPath("refresh_token"));
+  const { field: authenticatorScopesField } = useController({ name: authFieldPath("scopes") });
+  const { field: authenticatorAccessTokenNameField } = useController({ name: authFieldPath("access_token_name") });
+  const authenticatorAccessTokenValueField = useBuilderWatch(authFieldPath("access_token_value")) as string;
+  const authenticatorRefreshTokenValueField = useBuilderWatch(authFieldPath("refresh_token")) as string;
 
   const { formatMessage } = useIntl();
   const getUniqueKey = useGetUniqueKey();
@@ -483,19 +495,19 @@ const DeclarativeOAuthForm = () => {
                       text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
                       type: "info",
                     });
-                    setValue("view", "inputs");
-                    validateAndTouch(undefined, ["inputs"]);
+                    setValue("view", { type: "inputs" });
+                    validateAndTouch(undefined, [{ type: "inputs" }]);
                   }
             }
             onComplete={async (payload) => {
               const testingValues = getValues("testingValues"); // ensure we have the latest testing values
-              const areRefreshTokensEnabled = !!getValues(authPath("refresh_token_updater"));
+              const areRefreshTokensEnabled = !!getValues(authFieldPath("refresh_token_updater"));
 
               if (!areRefreshTokensEnabled) {
-                const accessTokenKey = getValues(authPath("declarative.access_token_key"));
+                const accessTokenKey = getValues(authFieldPath("declarative.access_token_key"));
                 if (payloadHasField(payload, accessTokenKey)) {
                   // update testing values with the returned access token
-                  const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField)!;
+                  const accessTokenConfigKey = extractInterpolatedConfigKey(authenticatorAccessTokenValueField);
                   setValue(
                     "testingValues",
                     {
@@ -522,7 +534,7 @@ const DeclarativeOAuthForm = () => {
                 }
               } else if (payloadHasField(payload, "refresh_token")) {
                 // update testing values with the returned refresh token
-                const refreshTokenConfigKey = extractInterpolatedConfigKey(authenticatorRefreshTokenValueField)!;
+                const refreshTokenConfigKey = extractInterpolatedConfigKey(authenticatorRefreshTokenValueField);
                 setValue(
                   "testingValues",
                   {
@@ -560,17 +572,17 @@ const DeclarativeOAuthForm = () => {
       <BuilderInputPlaceholder manifestPath="OAuthAuthenticator.properties.client_secret" />
       <BuilderField
         type="string"
-        path={authPath("declarative.consent_url")}
+        path={authFieldPath("declarative.consent_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.consent_url"
       />
       <BuilderField
         type="string"
-        path={authPath("declarative.access_token_url")}
+        path={authFieldPath("declarative.access_token_url")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_url"
       />
       <BuilderField
         type="string"
-        path={authPath("declarative.scope")}
+        path={authFieldPath("declarative.scope")}
         manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.scope"
         optional
         onChange={(newValue) => {
@@ -580,7 +592,7 @@ const DeclarativeOAuthForm = () => {
       />
       <BuilderField
         type="string"
-        path={authPath("declarative.access_token_key")}
+        path={authFieldPath("declarative.access_token_key")}
         manifestPath="OAuthAuthenticator.properties.access_token_name"
         onChange={
           // also apply to authenticator's access token
@@ -590,7 +602,7 @@ const DeclarativeOAuthForm = () => {
       <ToggleGroupField<BuilderFormOAuthAuthenticator["refresh_token_updater"]>
         label={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.label" })}
         tooltip={formatMessage({ id: "connectorBuilder.authentication.refreshTokenUpdater.tooltip" })}
-        fieldPath={authPath("refresh_token_updater")}
+        fieldPath={authFieldPath("refresh_token_updater")}
         initialValues={{
           refresh_token_name: "refresh_token",
           access_token: interpolateConfigKey(
@@ -609,67 +621,67 @@ const DeclarativeOAuthForm = () => {
       >
         <BuilderField
           type="jinja"
-          path={authPath("token_refresh_endpoint")}
+          path={authFieldPath("token_refresh_endpoint")}
           manifestPath="OAuthAuthenticator.properties.token_refresh_endpoint"
         />
         <BuilderField
           type="jinja"
-          path={authPath("refresh_token_updater.refresh_token_name")}
+          path={authFieldPath("refresh_token_updater.refresh_token_name")}
           optional
           manifestPath="OAuthAuthenticator.properties.refresh_token_updater.properties.refresh_token_name"
         />
       </ToggleGroupField>
       <BuilderOptional>
         <KeyValueListField
-          path={authPath("declarative.access_token_headers")}
+          path={authFieldPath("declarative.access_token_headers")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_headers"
         />
         <KeyValueListField
-          path={authPath("declarative.access_token_params")}
+          path={authFieldPath("declarative.access_token_params")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.access_token_params"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.auth_code_key")}
+          path={authFieldPath("declarative.auth_code_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.auth_code_key"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.client_id_key")}
+          path={authFieldPath("declarative.client_id_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.client_id_key"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.client_secret_key")}
+          path={authFieldPath("declarative.client_secret_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.client_secret_key"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.redirect_uri_key")}
+          path={authFieldPath("declarative.redirect_uri_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.redirect_uri_key"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.scope_key")}
+          path={authFieldPath("declarative.scope_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.scope_key"
         />
         <BuilderField
           type="string"
-          path={authPath("declarative.state_key")}
+          path={authFieldPath("declarative.state_key")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.state_key"
         />
         <BuilderField
           type="jsoneditor"
           className={styles.stateField}
-          path={authPath("declarative.state")}
+          path={authFieldPath("declarative.state")}
           optional
           manifestPath="OAuthConfigSpecification.properties.oauth_connector_input_specification.properties.state"
         />
@@ -678,7 +690,7 @@ const DeclarativeOAuthForm = () => {
   );
 };
 
-const SessionTokenForm = () => {
+const SessionTokenForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathFn }) => {
   const { formatMessage } = useIntl();
   const { label: loginRequesterLabel, tooltip: loginRequesterTooltip } = getLabelAndTooltip(
     formatMessage({ id: "connectorBuilder.authentication.loginRequester.label" }),
@@ -693,25 +705,25 @@ const SessionTokenForm = () => {
       <GroupControls label={<ControlLabels label={loginRequesterLabel} infoTooltipContent={loginRequesterTooltip} />}>
         <BuilderField
           type="jinja"
-          path={authPath("login_requester.url")}
+          path={authFieldPath("login_requester.url")}
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.label" })}
           tooltip={formatMessage({ id: "connectorBuilder.authentication.loginRequester.url.tooltip" })}
         />
         <BuilderField
           type="enum"
-          path={authPath("login_requester.httpMethod")}
+          path={authFieldPath("login_requester.httpMethod")}
           options={getOptionsByManifest("HttpRequester.properties.http_method")}
           manifestPath="HttpRequester.properties.http_method"
         />
         <BuilderField
           type="enum"
-          path={authPath("decoder")}
+          path={authFieldPath("decoder")}
           label={formatMessage({ id: "connectorBuilder.decoder.label" })}
           tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
           options={[...BUILDER_SESSION_TOKEN_AUTH_DECODER_TYPES]}
         />
         <BuilderOneOf<BuilderFormAuthenticator>
-          path={authPath("login_requester.authenticator")}
+          path={authFieldPath("login_requester.authenticator")}
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.authenticator.label" })}
           manifestPath="HttpRequester.properties.authenticator"
           manifestOptionPaths={[API_KEY_AUTHENTICATOR, BEARER_AUTHENTICATOR, BASIC_AUTHENTICATOR]}
@@ -736,7 +748,7 @@ const SessionTokenForm = () => {
               children: (
                 <>
                   <BuilderRequestInjection
-                    path={authPath("login_requester.authenticator.inject_into")}
+                    path={authFieldPath("login_requester.authenticator.inject_into")}
                     descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.token" })}
                     excludeValues={["path"]}
                   />
@@ -774,32 +786,32 @@ const SessionTokenForm = () => {
             },
           ]}
         />
-        <RequestOptionSection inline basePath={authPath("login_requester.requestOptions")} />
+        <RequestOptionSection inline basePath={authFieldPath("login_requester.requestOptions")} />
         <ToggleGroupField<BuilderErrorHandler[]>
           label={formatMessage({ id: "connectorBuilder.authentication.loginRequester.errorHandler" })}
           tooltip={getDescriptionByManifest("DefaultErrorHandler")}
-          fieldPath={authPath("login_requester.errorHandler")}
+          fieldPath={authFieldPath("login_requester.errorHandler")}
           initialValues={[{ type: "DefaultErrorHandler" }]}
         >
-          <ErrorHandlerSection inline basePath={authPath("login_requester.errorHandler")} />
+          <ErrorHandlerSection inline basePath={authFieldPath("login_requester.errorHandler")} />
         </ToggleGroupField>
       </GroupControls>
       <BuilderField
         type="array"
-        path={authPath("session_token_path")}
+        path={authFieldPath("session_token_path")}
         label={formatMessage({ id: "connectorBuilder.authentication.sessionTokenPath.label" })}
         tooltip={formatMessage({ id: "connectorBuilder.authentication.sessionTokenPath.tooltip" })}
         directionalStyle
       />
       <BuilderField
         type="combobox"
-        path={authPath("expiration_duration")}
+        path={authFieldPath("expiration_duration")}
         options={LARGE_DURATION_OPTIONS}
         manifestPath="SessionTokenAuthenticator.properties.expiration_duration"
         optional
       />
       <BuilderOneOf<SessionTokenAuthenticatorRequestAuthentication>
-        path={authPath("request_authentication")}
+        path={authFieldPath("request_authentication")}
         manifestPath="SessionTokenAuthenticator.properties.request_authentication"
         manifestOptionPaths={["SessionTokenRequestApiKeyAuthenticator", "SessionTokenRequestBearerAuthenticator"]}
         options={[
@@ -815,7 +827,7 @@ const SessionTokenForm = () => {
             },
             children: (
               <BuilderRequestInjection
-                path={authPath("request_authentication.inject_into")}
+                path={authFieldPath("request_authentication.inject_into")}
                 descriptor={formatMessage({ id: "connectorBuilder.authentication.injectInto.sessionToken" })}
                 label={formatMessage({ id: "connectorBuilder.authentication.requestAuthentication.injectInto.label" })}
                 tooltip={formatMessage({
@@ -835,10 +847,11 @@ const SessionTokenForm = () => {
   );
 };
 
-const useOauthOptions = () => {
+const useOauthOptions = (authPath: AuthPath, authFieldPath: AuthFieldPathFn) => {
   const { formatMessage } = useIntl();
   const getUniqueKey = useGetUniqueKey();
-  const isDeclarativeOAuthEnabled = useExperiment("connectorBuilder.declarativeOauth");
+  const isDeclarativeOAuthEnabled =
+    useExperiment("connectorBuilder.declarativeOauth") && authPath === "formValues.global.authenticator";
 
   const baseOauthOption = {
     refresh_request_body: [],
@@ -859,7 +872,7 @@ const useOauthOptions = () => {
     ? [
         {
           label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth" }),
-          children: <OAuthForm />,
+          children: <OAuthForm authFieldPath={authFieldPath} />,
           default: {
             type: OAUTH_AUTHENTICATOR,
             ...baseOauthOption,
@@ -869,7 +882,7 @@ const useOauthOptions = () => {
     : [
         {
           label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth.declarative" }),
-          children: <DeclarativeOAuthForm />,
+          children: <DeclarativeOAuthForm authFieldPath={authFieldPath} />,
           default: {
             type: DeclarativeOAuthAuthenticatorType,
             ...baseOauthOption,
@@ -895,7 +908,7 @@ const useOauthOptions = () => {
         },
         {
           label: formatMessage({ id: "connectorBuilder.authentication.method.oAuth.legacy" }),
-          children: <OAuthForm />,
+          children: <OAuthForm authFieldPath={authFieldPath} />,
           default: {
             type: OAUTH_AUTHENTICATOR,
             ...baseOauthOption,

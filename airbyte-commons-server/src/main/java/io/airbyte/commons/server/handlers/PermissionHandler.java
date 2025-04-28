@@ -429,7 +429,7 @@ public class PermissionHandler {
    */
   public void deleteUserFromWorkspace(final PermissionDeleteUserFromWorkspaceRequestBody deleteUserFromWorkspaceRequestBody)
       throws IOException {
-    final UUID userId = deleteUserFromWorkspaceRequestBody.getUserIdToRemove();
+    final UUID userId = deleteUserFromWorkspaceRequestBody.getUserId();
     final UUID workspaceId = deleteUserFromWorkspaceRequestBody.getWorkspaceId();
 
     // delete all workspace-level permissions that match the userId and workspaceId

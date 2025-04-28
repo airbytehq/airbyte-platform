@@ -8,7 +8,7 @@ import datadog.trace.api.Trace
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ActorType
-import io.airbyte.cron.MicronautCronRunner
+import io.airbyte.cron.SCHEDULED_TRACE_OPERATION_NAME
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
@@ -33,21 +33,25 @@ class ConnectionEntitlementsValidator(
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) {
   @Scheduled(fixedRate = "1h")
-  @Trace(operationName = MicronautCronRunner.SCHEDULED_TRACE_OPERATION_NAME)
+  @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
   fun validateEntitlements() {
     logger.info { "Validating entitlements for actively used source connectors..." }
-    val enterpriseSourceDefs = sourceService.listPublicSourceDefinitions(false).filter { it.enterprise }
-    for (sourceDef in enterpriseSourceDefs) {
-      val connectionsByOrg = getActiveConnectionsByOrg(sourceDef.sourceDefinitionId, ActorType.SOURCE)
-      checkEntitlementsAndDisable(connectionsByOrg, sourceDef.sourceDefinitionId, ActorType.SOURCE)
-    }
+    sourceService
+      .listPublicSourceDefinitions(false)
+      .filter { it.enterprise }
+      .forEach { sourceDef ->
+        val connectionsByOrg = getActiveConnectionsByOrg(sourceDef.sourceDefinitionId, ActorType.SOURCE)
+        checkEntitlementsAndDisable(connectionsByOrg, sourceDef.sourceDefinitionId, ActorType.SOURCE)
+      }
 
     logger.info { "Validating entitlements for actively used destination connectors..." }
-    val enterpriseDestDefs = destinationService.listPublicDestinationDefinitions(false).filter { it.enterprise }
-    for (destDef in enterpriseDestDefs) {
-      val connectionsByOrg = getActiveConnectionsByOrg(destDef.destinationDefinitionId, ActorType.DESTINATION)
-      checkEntitlementsAndDisable(connectionsByOrg, destDef.destinationDefinitionId, ActorType.DESTINATION)
-    }
+    destinationService
+      .listPublicDestinationDefinitions(false)
+      .filter { it.enterprise }
+      .forEach { destDef ->
+        val connectionsByOrg = getActiveConnectionsByOrg(destDef.destinationDefinitionId, ActorType.DESTINATION)
+        checkEntitlementsAndDisable(connectionsByOrg, destDef.destinationDefinitionId, ActorType.DESTINATION)
+      }
   }
 
   private fun getActiveConnectionsByOrg(

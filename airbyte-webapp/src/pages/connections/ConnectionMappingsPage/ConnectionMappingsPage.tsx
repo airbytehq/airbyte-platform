@@ -5,14 +5,17 @@ import { PageContainer } from "components/PageContainer";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
+import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
+import { links } from "core/utils/links";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";
+import styles from "./ConnectionMappingsPage.module.scss";
 import { MappingContextProvider, useMappingContext, MAPPING_VALIDATION_ERROR_KEY } from "./MappingContext";
 import { MappingsEmptyState } from "./MappingsEmptyState";
 import { MappingsUpsellEmptyState } from "./MappingsUpsellEmptyState";
@@ -71,13 +74,23 @@ const ConnectionMappingsPageContent = () => {
     <>
       <IfFeatureEnabled feature={FeatureItem.MappingsUI}>
         <FlexContainer direction="column">
-          <FlexContainer direction="row" justifyContent="space-between" alignItems="center">
+          <FlexContainer
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            className={styles.pageTitleContainer}
+          >
             <Heading as="h3" size="sm">
               <FormattedMessage id="connections.mappings.title" />
             </Heading>
             <FormChangeTracker formId="mapping-form" changed={hasMappingsChanged} />
             {showSubmissionButtons && (
               <FlexContainer>
+                <ExternalLink href={links.connectionMappings}>
+                  <Button variant="clear" icon="share" iconPosition="right" iconSize="sm">
+                    <FormattedMessage id="connections.mappings.docsLink" />
+                  </Button>
+                </ExternalLink>
                 <Button
                   variant="secondary"
                   onClick={clear}

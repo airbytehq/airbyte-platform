@@ -55,10 +55,11 @@ export const SimplifiedDestinationNamespaceFormField: React.FC<{
     return null;
   }
 
+  const defaultNamespacePath =
+    destinationNamespaceAbilities.defaultNamespacePath &&
+    get(destination.connectionConfiguration, destinationNamespaceAbilities.defaultNamespacePath);
   const destinationDefinedNamespace =
-    (destinationNamespaceAbilities.defaultNamespacePath &&
-      get(destination.connectionConfiguration, destinationNamespaceAbilities.defaultNamespacePath)) ??
-    "no_value_provided";
+    typeof defaultNamespacePath === "string" ? defaultNamespacePath : "no_value_provided";
 
   const destinationDefinedDescriptionValues = {
     destinationDefinedNamespace,

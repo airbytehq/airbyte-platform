@@ -151,6 +151,7 @@ object AcceptanceTestUtils {
               config.aliasName,
               replacementSelected.orElse(config.selected),
               config.suggested,
+              config.includeFiles,
               replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
               replacementSelectedFields.orElse(config.selectedFields),
               config.hashedFields,

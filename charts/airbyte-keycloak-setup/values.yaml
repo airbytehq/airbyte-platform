@@ -28,6 +28,9 @@ global:
 
 
 enabled: true
+
+serviceAccountName:
+
 ##  image.repository The repository to use for the airbyte keycloak-setup image.
 ##  image.pullPolicy the pull policy to use for the airbyte keycloak-setup image
 ##  image.tag The airbyte keycloak-setup image tag. Defaults to the chart's AppVersion

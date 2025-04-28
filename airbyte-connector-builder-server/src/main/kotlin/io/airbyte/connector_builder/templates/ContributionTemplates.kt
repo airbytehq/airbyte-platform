@@ -129,7 +129,7 @@ class ContributionTemplates {
       mapOf(
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
       )
     return renderTemplateString("contribution_templates/readme.md.peb", context)
   }
@@ -143,7 +143,7 @@ class ContributionTemplates {
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
         "versionTag" to contributionInfo.versionTag,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
         "specProperties" to specProperties,
         "streams" to streams,
         "releaseDate" to contributionInfo.updateDate,
@@ -191,7 +191,8 @@ class ContributionTemplates {
       mapOf(
         "connectorImageName" to contributionInfo.connectorImageName,
         "connectorName" to contributionInfo.connectorName,
-        "description" to contributionInfo.description,
+        "connectorDescription" to contributionInfo.connectorDescription,
+        "contributionDescription" to contributionInfo.contributionDescription,
         "specProperties" to specProperties,
         "streams" to streams,
       )

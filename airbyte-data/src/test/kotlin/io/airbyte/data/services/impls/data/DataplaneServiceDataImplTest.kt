@@ -7,7 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.repositories.entities.Dataplane
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -119,7 +119,6 @@ class DataplaneServiceDataImplTest {
       dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID,
       name = "Test Dataplane ",
       enabled = true,
-      updatedBy = UUID.randomUUID(),
       tombstone = false,
       createdAt = OffsetDateTime.now(),
       updatedAt = OffsetDateTime.now(),

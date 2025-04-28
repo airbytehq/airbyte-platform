@@ -2,8 +2,9 @@
 @use "scss/colors";
 
 .streamsHeader {
-  width: 100%;
-  padding: 0 variables.$spacing-sm 0 variables.$spacing-md;
+  width: calc(100% - variables.$spacing-sm);
+  padding: 0 0 0 variables.$spacing-md;
+  box-sizing: content-box;
 }
 
 .streamsHeading {
@@ -26,7 +27,7 @@
   padding: variables.$spacing-md;
   display: flex;
   align-items: center;
-  gap: variables.$spacing-sm;
+  gap: variables.$spacing-md;
   overflow: hidden;
 }
 
@@ -45,7 +46,7 @@
 }
 
 .streamListContainer {
-  flex-grow: 1;
+  flex-basis: fit-content;
   width: 100%;
   min-height: 0;
 }
@@ -82,4 +83,15 @@
 
 .emptyStreamViewText {
   color: colors.$grey-300;
+}
+
+.streamViewButtonContent {
+  width: 100%;
+}
+
+.asyncBadge {
+  background-color: colors.$grey-50;
+  color: colors.$grey-400;
+  padding: variables.$spacing-xs variables.$spacing-sm;
+  border-radius: variables.$border-radius-md;
 }

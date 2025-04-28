@@ -5,7 +5,7 @@
 package io.airbyte.config.adapters
 
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
 
 interface AirbyteRecord {
   enum class Change {

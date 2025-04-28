@@ -35,7 +35,7 @@ class JwtUserAuthenticationResolverTest {
   @BeforeEach
   void setup() {
     securityService = mock(SecurityService.class);
-    jwtUserAuthenticationResolver = new JwtUserAuthenticationResolver(Optional.of(securityService));
+    jwtUserAuthenticationResolver = new JwtUserAuthenticationResolver(securityService);
   }
 
   @Test
@@ -56,8 +56,7 @@ class JwtUserAuthenticationResolverTest {
 
     // In this case we do not have ssoRealm in the attributes; expecting not throw and treat it as a
     // request without realm.
-    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
-    assertTrue(realm.isEmpty());
+    assertNull(jwtUserAuthenticationResolver.resolveRealm());
   }
 
   @Test
@@ -67,8 +66,7 @@ class JwtUserAuthenticationResolverTest {
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_AUTH_PROVIDER, AuthProvider.GOOGLE_IDENTITY_PLATFORM)));
     when(securityService.getAuthentication()).thenReturn(authentication);
 
-    final Optional<String> realm = jwtUserAuthenticationResolver.resolveRealm();
-    assertTrue(realm.isEmpty());
+    assertNull(jwtUserAuthenticationResolver.resolveRealm());
   }
 
   @Test
@@ -77,7 +75,7 @@ class JwtUserAuthenticationResolverTest {
     final Optional<Authentication> authentication =
         Optional.of(Authentication.build(AUTH_USER_ID, Map.of(JWT_SSO_REALM, "airbyte")));
     when(securityService.getAuthentication()).thenReturn(authentication);
-    final String realm = jwtUserAuthenticationResolver.resolveRealm().orElseThrow();
+    final String realm = jwtUserAuthenticationResolver.resolveRealm();
     assertEquals("airbyte", realm);
   }
 

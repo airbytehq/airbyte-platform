@@ -9,7 +9,11 @@
 Renders the temporal.autoSetup value
 */}}
 {{- define "airbyte.temporal.autoSetup" }}
-    {{- .Values.temporal.autoSetup | default true }}
+	{{- if eq .Values.temporal.autoSetup nil }}
+    	{{- true }}
+	{{- else }}
+    	{{- .Values.temporal.autoSetup }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -175,7 +179,7 @@ Renders the temporal.database.sqlTlsDisableHostVerification environment variable
 Renders the temporal.host value
 */}}
 {{- define "airbyte.temporal.host" }}
-    {{- (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) }}
+    {{- ternary (include "airbyte.temporal.cloud.host" .) (printf "%s-temporal:%d" .Release.Name (int .Values.temporal.service.port)) (eq (include "airbyte.temporal.cloud.enabled" .) "true") }}
 {{- end }}
 
 {{/*
@@ -386,18 +390,66 @@ TEMPORAL_CLI_TLS_KEY: {{ include "airbyte.temporal.cli.tlsKey" . | quote }}
 Renders the temporal.cloud secret name
 */}}
 {{- define "airbyte.temporal.cloud.secretName" }}
-{{- if .Values.global.temporal.cloud.secretName }}
-    {{- .Values.global.temporal.cloud.secretName }}
+{{- if .Values.global.temporal.secretName }}
+    {{- .Values.global.temporal.secretName }}
 {{- else }}
     {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
 {{- end }}
 
 {{/*
+Renders the temporal.cloud.billing.host environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.billing.host.env" }}
+- name: TEMPORAL_CLOUD_BILLING_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_HOST
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.billing.namespace environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.billing.namespace.env" }}
+- name: TEMPORAL_CLOUD_BILLING_NAMESPACE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_NAMESPACE
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.connectorRollout.host environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.connectorRollout.host.env" }}
+- name: TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_HOST
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.connectorRollout.namespace environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.connectorRollout.namespace.env" }}
+- name: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: TEMPORAL_CLOUD_NAMESPACE
+{{- end }}
+
+{{/*
 Renders the global.temporal.cloud.enabled value
 */}}
 {{- define "airbyte.temporal.cloud.enabled" }}
-    {{- .Values.global.temporal.cloud.enabled | default false }}
+	{{- if eq .Values.global.temporal.cloud.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.temporal.cloud.enabled }}
+	{{- end }}
 {{- end }}
 
 {{/*
@@ -501,6 +553,10 @@ Renders the temporal.cloud.host environment variable
 Renders the set of all temporal.cloud environment variables
 */}}
 {{- define "airbyte.temporal.cloud.envs" }}
+{{- include "airbyte.temporal.cloud.billing.host.env" . }}
+{{- include "airbyte.temporal.cloud.billing.namespace.env" . }}
+{{- include "airbyte.temporal.cloud.connectorRollout.host.env" . }}
+{{- include "airbyte.temporal.cloud.connectorRollout.namespace.env" . }}
 {{- include "airbyte.temporal.cloud.enabled.env" . }}
 {{- include "airbyte.temporal.cloud.clientCert.env" . }}
 {{- include "airbyte.temporal.cloud.clientKey.env" . }}

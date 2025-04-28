@@ -9,10 +9,12 @@ import io.airbyte.api.model.generated.DataplaneGroupDeleteRequestBody
 import io.airbyte.api.model.generated.DataplaneGroupListRequestBody
 import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
-import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
-import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
+import io.airbyte.server.services.DataplaneService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -20,23 +22,22 @@ import org.jooq.exception.DataAccessException
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.OffsetDateTime
-import java.util.Optional
 import java.util.UUID
 
 class DataplaneGroupApiControllerTest {
   companion object {
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
-    private val currentUserService = mockk<CurrentUserService>()
-    private val dataplaneGroupApiController = DataplaneGroupApiController(dataplaneGroupService, currentUserService)
+    private val dataplaneService = mockk<DataplaneService>()
+    private val dataplaneGroupApiController = DataplaneGroupApiController(dataplaneGroupService, dataplaneService)
     private val MOCK_ORGANIZATION_ID = UUID.randomUUID()
     private const val DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE =
       "duplicate key value violates unique constraint: dataplane_group_organization_id_name_key"
   }
 
   @Test
-  fun `writeDataplaneGroup returns the dataplane group`() {
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
+  fun `createDataplaneGroup returns the dataplane group`() {
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns createDataplaneGroup()
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
 
     val dataplaneGroup = dataplaneGroupApiController.createDataplaneGroup(DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID))
     val responseDataplaneGroups = dataplaneGroup!!
@@ -45,8 +46,7 @@ class DataplaneGroupApiControllerTest {
   }
 
   @Test
-  fun `writeDataplaneGroup with a duplicate name returns a problem`() {
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
+  fun `createDataplaneGroup with a duplicate name returns a problem`() {
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
     val dataplaneGroupCreateRequestBody = DataplaneGroupCreateRequestBody().organizationId(MOCK_ORGANIZATION_ID)
@@ -62,13 +62,13 @@ class DataplaneGroupApiControllerTest {
     val newName = "new name"
     val newEnabled = true
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } returns
       mockDataplaneGroup.apply {
         name = newName
         enabled = newEnabled
       }
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
 
     val updatedDataplaneGroup =
       dataplaneGroupApiController.updateDataplaneGroup(
@@ -88,7 +88,6 @@ class DataplaneGroupApiControllerTest {
   fun `updateDataplaneGroup with a duplicate name returns a problem`() {
     val mockDataplaneGroup = createDataplaneGroup()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(any()) } throws DataAccessException(DATAPLANE_GROUP_NAME_CONSTRAINT_VIOLATION_MESSAGE)
 
@@ -98,20 +97,81 @@ class DataplaneGroupApiControllerTest {
   }
 
   @Test
+  fun `updateDataplaneGroup with only name set should preserve enabled`() {
+    val originalEnabled = true
+    val newName = "patched group name"
+    val mockDataplaneGroup =
+      createDataplaneGroup().apply {
+        enabled = originalEnabled
+      }
+
+    every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
+    every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+
+    val updated =
+      dataplaneGroupApiController.updateDataplaneGroup(
+        DataplaneGroupUpdateRequestBody()
+          .dataplaneGroupId(mockDataplaneGroup.id)
+          .name(newName),
+      )
+
+    assert(updated!!.name == newName)
+    assert(updated.enabled == originalEnabled)
+  }
+
+  @Test
+  fun `updateDataplaneGroup with only enabled set should preserve name`() {
+    val originalName = "Original Group"
+    val newEnabled = true
+    val mockDataplaneGroup =
+      createDataplaneGroup().apply {
+        name = originalName
+      }
+
+    every { dataplaneGroupService.getDataplaneGroup(mockDataplaneGroup.id) } returns mockDataplaneGroup
+    every { dataplaneGroupService.writeDataplaneGroup(any()) } answers { firstArg() }
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+
+    val updated =
+      dataplaneGroupApiController.updateDataplaneGroup(
+        DataplaneGroupUpdateRequestBody()
+          .dataplaneGroupId(mockDataplaneGroup.id)
+          .enabled(newEnabled),
+      )
+
+    assert(updated!!.enabled == newEnabled)
+    assert(updated.name == originalName)
+  }
+
+  @Test
   fun `deleteDataplaneGroup tombstones dataplane group `() {
     val mockDataplaneGroup = createDataplaneGroup()
+    val mockDataplane =
+      Dataplane().apply {
+        id = UUID.randomUUID()
+        dataplaneGroupId = mockDataplaneGroup.id
+        name = "name"
+        enabled = true
+        createdAt = OffsetDateTime.now().toEpochSecond()
+        updatedAt = OffsetDateTime.now().toEpochSecond()
+      }
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
     every { dataplaneGroupService.getDataplaneGroup(any()) } returns mockDataplaneGroup
     every { dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true }) } returns
       mockDataplaneGroup.apply { tombstone = true }
+    every { dataplaneService.listDataplanes(any()) } returns listOf(mockDataplane)
+    every { dataplaneService.deleteDataplane(any()) } returns mockDataplane
 
     val dataplaneGroupDeleteRequestBody =
       DataplaneGroupDeleteRequestBody().dataplaneGroupId(mockDataplaneGroup.id)
 
     dataplaneGroupApiController.deleteDataplaneGroup(dataplaneGroupDeleteRequestBody)
 
-    verify { dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true }) }
+    verify {
+      dataplaneGroupService.writeDataplaneGroup(mockDataplaneGroup.apply { tombstone = true })
+      dataplaneService.deleteDataplane(any())
+    }
   }
 
   @Test
@@ -119,12 +179,13 @@ class DataplaneGroupApiControllerTest {
     val dataplaneGroupId1 = UUID.randomUUID()
     val dataplaneGroupId2 = UUID.randomUUID()
 
-    every { currentUserService.currentUserIdIfExists } returns Optional.of(UUID.randomUUID())
-    every { dataplaneGroupService.listDataplaneGroups(MOCK_ORGANIZATION_ID, any()) } returns
+    every { dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID, MOCK_ORGANIZATION_ID), any()) } returns
       listOf(
         createDataplaneGroup(dataplaneGroupId1),
         createDataplaneGroup(dataplaneGroupId2),
       )
+    every { dataplaneService.listDataplanes(any()) } returns emptyList()
+
     val dataplaneGroups = dataplaneGroupApiController.listDataplaneGroups(DataplaneGroupListRequestBody().organizationId(MOCK_ORGANIZATION_ID))
 
     val responseDataplaneGroups = dataplaneGroups?.dataplaneGroups!!
@@ -142,7 +203,6 @@ class DataplaneGroupApiControllerTest {
         enabled = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
-        updatedBy = UUID.randomUUID(),
         tombstone = false,
       ).toConfigModel()
 }

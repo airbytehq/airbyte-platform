@@ -1,7 +1,7 @@
 import { HTMLAttributes, Ref, forwardRef, useContext, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { Virtuoso } from "react-virtuoso";
-import { InferType, SchemaOf } from "yup";
+import { z } from "zod";
 
 import { LoadingPage } from "components";
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
@@ -12,90 +12,25 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 
 import { useCurrentConnection, useGetConnectionSyncProgress, useListConnectionEventsInfinite } from "core/api";
-import { ConnectionEvent, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { ConnectionEvent, ConnectionEventSummary, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
 
-import { CatalogChangeEventItem } from "./components/CatalogChangeEventItem";
-import { ClearEventItem } from "./components/ClearEventItem";
-import { ConnectionDisabledEventItem } from "./components/ConnectionDisabledEventItem";
-import { ConnectionEnabledEventItem } from "./components/ConnectionEnabledEventItem";
-import { ConnectionSettingsUpdateEventItem } from "./components/ConnectionSettingsUpdateEventItem";
-import { ConnectorUpdateEventItem } from "./components/ConnectorUpdateEventItem";
-import { JobStartEventItem } from "./components/JobStartEventItem";
-import { MappingEventItem } from "./components/MappingEventItem";
-import { RefreshEventItem } from "./components/RefreshEventItem";
-import { RunningJobItem } from "./components/RunningJobItem";
-import { SchemaUpdateEventItem } from "./components/SchemaUpdateEventItem";
-import { SyncEventItem } from "./components/SyncEventItem";
-import { SyncFailEventItem } from "./components/SyncFailEventItem";
 import styles from "./ConnectionTimelineAllEventsList.module.scss";
-import {
-  ConnectionTimelineRunningEvent,
-  clearEventSchema,
-  connectionDisabledEventSchema,
-  connectionEnabledEventSchema,
-  connectionSettingsUpdateEventSchema,
-  connectorUpdateEventSchema,
-  generalEventSchema,
-  jobRunningSchema,
-  jobStartedEventSchema,
-  mappingEventSchema,
-  refreshEventSchema,
-  schemaConfigUpdateEventSchema,
-  schemaUpdateEventSchema,
-  syncEventSchema,
-  syncFailEventSchema,
-} from "./types";
+import { ConnectionTimelineRunningEvent, EventTypeToSchema, eventTypeToSchemaMap } from "./types";
 import { eventTypeByStatusFilterValue, TimelineFilterValues, eventTypeByTypeFilterValue } from "./utils";
 
-type AllSchemaEventTypes =
-  | InferType<typeof jobRunningSchema>
-  | InferType<typeof syncEventSchema>
-  | InferType<typeof syncFailEventSchema>
-  | InferType<typeof refreshEventSchema>
-  | InferType<typeof clearEventSchema>
-  | InferType<typeof jobStartedEventSchema>
-  | InferType<typeof connectionEnabledEventSchema>
-  | InferType<typeof connectionDisabledEventSchema>
-  | InferType<typeof connectionSettingsUpdateEventSchema>
-  | InferType<typeof schemaUpdateEventSchema>
-  | InferType<typeof schemaUpdateEventSchema>
-  | InferType<typeof connectorUpdateEventSchema>
-  | InferType<typeof schemaConfigUpdateEventSchema>
-  | InferType<typeof mappingEventSchema>;
-
-interface EventSchemaComponentMapItem<T> {
-  schema: SchemaOf<T>;
-  component: React.FC<{ event: T }>;
-}
-
-const eventSchemaComponentMap = [
-  { schema: jobRunningSchema, component: RunningJobItem },
-  { schema: syncEventSchema, component: SyncEventItem },
-  { schema: syncFailEventSchema, component: SyncFailEventItem },
-  { schema: refreshEventSchema, component: RefreshEventItem },
-  { schema: clearEventSchema, component: ClearEventItem },
-  { schema: jobStartedEventSchema, component: JobStartEventItem },
-  { schema: connectionEnabledEventSchema, component: ConnectionEnabledEventItem },
-  { schema: connectionDisabledEventSchema, component: ConnectionDisabledEventItem },
-  { schema: connectionSettingsUpdateEventSchema, component: ConnectionSettingsUpdateEventItem },
-  { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
-  { schema: connectorUpdateEventSchema, component: ConnectorUpdateEventItem },
-  { schema: schemaConfigUpdateEventSchema, component: CatalogChangeEventItem },
-  { schema: mappingEventSchema, component: MappingEventItem },
-] as Array<EventSchemaComponentMapItem<AllSchemaEventTypes>>;
+const onlyResourceRequirements = z
+  .object({
+    patches: z
+      .object({
+        resourceRequirements: z.unknown().optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
 
 export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineRunningEvent) => {
-  for (const { schema, component: Component } of eventSchemaComponentMap) {
-    if (schema.isValidSync(event, { recursive: true, stripUnknown: true })) {
-      return (
-        <Box py="lg" key={event.id}>
-          <Component event={event} />
-        </Box>
-      );
-    }
-  }
-
   /**
    * known cases for excluding timeline events that we should not trigger error reporting for:
    * - events with only resourceRequirement patches
@@ -106,13 +41,30 @@ export const validateAndMapEvent = (event: ConnectionEvent | ConnectionTimelineR
     return !createdAt || createdAt > threshold;
   };
 
-  const hasOnlyResourceRequirementPatches = (summary: InferType<typeof generalEventSchema>["summary"]): boolean => {
-    return summary.patches && Object.keys(summary.patches).length === 1 && summary.patches.resourceRequirements;
-  };
+  const hasOnlyResourceRequirementPatches = (summary: ConnectionEventSummary): boolean =>
+    onlyResourceRequirements.safeParse(summary).success;
+
+  const eventType = event.eventType as string; // eventType can be out of sync with the eventTypeToSchemaMap
+
+  if (eventType in eventTypeToSchemaMap) {
+    const { schema, component: Component } = eventTypeToSchemaMap[eventType as keyof EventTypeToSchema];
+    const result = schema.safeParse(event);
+
+    if (result.success) {
+      const EventComponent = Component as React.FC<{ event: typeof result.data }>;
+
+      return (
+        <Box py="lg" key={event.id}>
+          <EventComponent event={result.data} />
+        </Box>
+      );
+    }
+  }
 
   if (isEventRecent(event.createdAt) && !hasOnlyResourceRequirementPatches(event.summary)) {
     trackError(new Error("Invalid connection timeline event"), { event });
   }
+
   return null;
 };
 
@@ -176,35 +128,32 @@ export const ConnectionTimelineAllEventsList: React.FC<{
 
   const showRunningJob = isRunning && !!syncProgressData && filtersShouldShowRunningJob;
 
-  const connectionEventsToShow: Array<ConnectionEvent | ConnectionTimelineRunningEvent> = useMemo(() => {
-    const events = [
-      ...(showRunningJob && !!syncProgressData.jobId && !!syncProgressData.syncStartedAt
+  const connectionEventsToShow = useMemo(
+    () => [
+      ...(showRunningJob && !!syncProgressData?.jobId && !!syncProgressData?.syncStartedAt
         ? [
             {
               id: "running",
-              eventType: "RUNNING_JOB",
+              eventType: "RUNNING_JOB" as const,
               connectionId: connection.connectionId,
               createdAt: syncProgressData.syncStartedAt ?? Date.now() / 1000,
               summary: {
-                streams: syncProgressData.streams.map((stream) => {
-                  return {
-                    streamName: stream.streamName,
-                    streamNamespace: stream.streamNamespace,
-                    configType: stream.configType,
-                  };
-                }),
+                streams: syncProgressData.streams.map((stream) => ({
+                  streamName: stream.streamName,
+                  streamNamespace: stream.streamNamespace,
+                  configType: stream.configType,
+                })),
                 configType: syncProgressData.configType,
                 jobId: syncProgressData.jobId,
               },
-              user: { email: "", name: "", id: "" },
+              user: { email: "", name: "", id: "", isDeleted: false },
             },
           ]
         : []), // if there is a running sync, append an item to the top of the list
       ...(connectionEventsData?.pages.flatMap<ConnectionEvent>((page) => page.data.events) ?? []),
-    ];
-
-    return events;
-  }, [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]);
+    ],
+    [connection.connectionId, connectionEventsData?.pages, showRunningJob, syncProgressData]
+  );
 
   const validatedEvents = connectionEventsToShow
     .map((event) => validateAndMapEvent(event))

@@ -3,13 +3,17 @@ import merge from "lodash/merge";
 import omit from "lodash/omit";
 import { useCallback } from "react";
 
-import { DEFAULT_JSON_MANIFEST_VALUES } from "components/connectorBuilder/types";
+import {
+  DEFAULT_JSON_MANIFEST_VALUES,
+  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
+} from "components/connectorBuilder/types";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useDebounceValue } from "core/utils/useDebounceValue";
+import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { ApiCallOptions } from "../apiCall";
@@ -19,6 +23,7 @@ import {
   resolveManifest,
   generateContribution,
   checkContribution,
+  getHealthCheck,
 } from "../generated/ConnectorBuilderClient";
 import { KnownExceptionInfo } from "../generated/ConnectorBuilderClient.schemas";
 import {
@@ -32,6 +37,7 @@ import {
   GenerateContributionRequestBody,
   CheckContributionRead,
   CheckContributionRequestBody,
+  HealthCheckRead,
 } from "../types/ConnectorBuilderClient";
 import { DeclarativeComponentSchema } from "../types/ConnectorManifest";
 import { useRequestOptions } from "../useRequestOptions";
@@ -97,15 +103,16 @@ export const useBuilderResolveManifestQuery = () => {
 
 export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest, projectId?: string) => {
   const resolveManifestQuery = useBuilderResolveManifestQuery();
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   return useSuspenseQuery(connectorBuilderKeys.resolveSuspense(manifest), async () => {
     if (!manifest) {
-      return DEFAULT_JSON_MANIFEST_VALUES;
+      return isSchemaFormEnabled ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM : DEFAULT_JSON_MANIFEST_VALUES;
     }
     try {
       return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;
     } catch {
-      return null;
+      return undefined;
     }
   });
 };
@@ -244,4 +251,29 @@ export const useBuilderCheckContribution = () => {
     getCachedCheck,
     fetchContributionCheck,
   };
+};
+
+export const useBuilderHealthCheck = () => {
+  const requestOptions = useRequestOptions();
+  return useQuery<HealthCheckRead, HttpError<KnownExceptionInfo>>(["builderHealthCheck"], () =>
+    getHealthCheck(requestOptions)
+  );
+};
+
+/**
+ * Hook to check if custom components are enabled.
+ * Returns true if either the feature flag is enabled or the global override is set.
+ *
+ * PROBLEM TO WORKAROUND: We do not have the ability to set feature flags for OSS/Enterprise customers.
+ *
+ * HACK: We in stead use a global override from the server in the form of an environment variable AIRBYTE_ENABLE_UNSAFE_CODE.
+ *       Any customer can set this environment variable to enable unsafe code execution.
+ *
+ * TODO: Remove this when we have the ability to set feature flags for OSS/Enterprise customers.
+ * @returns boolean indicating if custom components are enabled
+ */
+export const useCustomComponentsEnabled = () => {
+  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const { data } = useBuilderHealthCheck();
+  return areCustomComponentsEnabled || data?.capabilities?.custom_code_execution;
 };

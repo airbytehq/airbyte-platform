@@ -64,6 +64,23 @@ data class VolumeFactory(
     return VolumeMountPair(volume, mount)
   }
 
+  private fun socket(): VolumeMountPair {
+    val unixSocketVolume =
+      VolumeBuilder()
+        .withName("unix-socket-volume")
+        .withNewEmptyDir()
+        .withMedium("Memory")
+        .endEmptyDir()
+        .build()
+
+    val unixSocketVolumeMount =
+      VolumeMountBuilder()
+        .withName("unix-socket-volume")
+        .withMountPath("/var/run/sockets") // common mount point for the Unix sockets
+        .build()
+    return VolumeMountPair(unixSocketVolume, unixSocketVolumeMount)
+  }
+
   private fun secret(): VolumeMountPair? {
     val hasSecrets =
       StringUtils.isNotEmpty(secretName) &&
@@ -255,7 +272,8 @@ data class VolumeFactory(
 
   fun replication(
     useStaging: Boolean,
-    enableAsyncProfiler: Boolean,
+    enableAsyncProfiler: Boolean = false,
+    socketTest: Boolean = false,
   ): ReplicationVolumes {
     val volumes = mutableListOf<Volume>()
     val orchVolumeMounts = mutableListOf<VolumeMount>()
@@ -317,6 +335,16 @@ data class VolumeFactory(
 
     if (enableAsyncProfiler) {
       sharedTmp().also {
+        volumes.add(it.volume)
+        orchVolumeMounts.add(it.mount)
+        sourceVolumeMounts.add(it.mount)
+        destVolumeMounts.add(it.mount)
+        profilerVolumeMounts.add(it.mount)
+      }
+    }
+
+    if (socketTest) {
+      socket().also {
         volumes.add(it.volume)
         orchVolumeMounts.add(it.mount)
         sourceVolumeMounts.add(it.mount)

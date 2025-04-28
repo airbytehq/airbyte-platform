@@ -9,6 +9,7 @@ import io.airbyte.config.AwsAccessKeySecretPersistenceConfig
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
 import io.airbyte.config.SecretPersistenceConfig
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.metrics.MetricClient
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlin.jvm.optionals.getOrElse
@@ -69,7 +70,7 @@ class RuntimeSecretPersistence(
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     log.debug { "Writing secret to secret persistence: $coordinate" }
@@ -78,7 +79,7 @@ class RuntimeSecretPersistence(
     secretPersistence.write(coordinate, payload)
   }
 
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     return
   }
 

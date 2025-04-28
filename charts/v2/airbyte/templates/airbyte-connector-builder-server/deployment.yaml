@@ -33,7 +33,7 @@ spec:
         {{- include "airbyte.tplvalues.render" (dict "value" .Values.connectorBuilderServer.podAnnotations "context" $) | nindent 8 }}
       {{- end }}
     spec:
-      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      serviceAccountName: {{ default .Values.global.serviceAccountName .Values.connectorBuilderServer.serviceAccountName }}
       {{- if .Values.global.imagePullSecrets }}
       imagePullSecrets:
         {{- range .Values.global.imagePullSecrets }}
@@ -73,7 +73,7 @@ spec:
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
-        {{- if (ne (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise"))) }}
+        {{- if not (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end }}
 

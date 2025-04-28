@@ -1,28 +1,32 @@
 import { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon, IconColor, IconType } from "components/ui/Icon";
+import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 import { Text } from "components/ui/Text";
 
-import { HttpError } from "core/api";
+import { HttpError, useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
+  useSelectedPageAndSlice,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { GlobalRequestsDisplay } from "./GlobalRequestsDisplay";
+import { AuxiliaryRequestsDisplay } from "./AuxiliaryRequestsDisplay";
 import { LogsDisplay } from "./LogsDisplay";
 import { ResultDisplay } from "./ResultDisplay";
 import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
+import { isStreamDynamicStream } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -31,7 +35,8 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { streamNames, isResolving, resolveErrorMessage, resolveError } = useConnectorBuilderFormState();
+  const { streamNames, dynamicStreamNames, isResolving, resolveErrorMessage, resolveError } =
+    useConnectorBuilderFormState();
   const {
     streamRead: {
       data: streamReadData,
@@ -43,14 +48,19 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
+    generateStreams,
     queuedStreamRead,
     queueStreamRead,
+    cancelStreamRead,
+    testStreamRequestType,
   } = useConnectorBuilderTestRead();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
-  const testStreamIndex = useBuilderWatch("testStreamIndex");
-  const auxiliaryRequests = streamReadData?.auxiliary_requests;
+  const testStreamId = useBuilderWatch("testStreamId");
+  const { selectedSlice } = useSelectedPageAndSlice();
+  const globalAuxiliaryRequests = streamReadData?.auxiliary_requests;
 
-  const streamName = streamNames[testStreamIndex];
+  const streamIsDynamic = isStreamDynamicStream(testStreamId);
+  const streamName = streamIsDynamic ? dynamicStreamNames[testStreamId.index] : streamNames[testStreamId.index];
 
   const analyticsService = useAnalyticsService();
 
@@ -65,12 +75,18 @@ export const StreamTester: React.FC<{
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
 
-  const { getStreamTestWarnings, getStreamTestMetadataStatus } = useStreamTestMetadata();
-  const streamTestWarnings = useMemo(() => getStreamTestWarnings(streamName), [getStreamTestWarnings, streamName]);
+  const { getStreamTestWarnings, getStreamTestMetadataStatus, getStreamHasCustomType } = useStreamTestMetadata();
+  const streamTestWarnings = useMemo(
+    () => getStreamTestWarnings(streamName, true),
+    [getStreamTestWarnings, streamName]
+  );
   const streamTestMetadataStatus = useMemo(
     () => getStreamTestMetadataStatus(streamName),
     [getStreamTestMetadataStatus, streamName]
   );
+  const streamHasCustomType = getStreamHasCustomType(streamName);
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 
   const logNumByType = useMemo(
     () =>
@@ -99,13 +115,23 @@ export const StreamTester: React.FC<{
     [streamReadData?.logs, streamTestWarnings.length]
   );
 
-  const hasAuxiliaryRequests = auxiliaryRequests && auxiliaryRequests.length > 0;
-  const hasRegularRequests =
+  const hasGlobalAuxiliaryRequests = globalAuxiliaryRequests && globalAuxiliaryRequests.length > 0;
+  const hasSlices =
     streamReadData !== undefined && !isError && streamReadData.slices && streamReadData.slices.length > 0;
 
-  const SECONDARY_PANEL_SIZE = 0.5;
+  const sliceAuxiliaryRequests = useMemo(() => {
+    if (!hasSlices || selectedSlice === undefined) {
+      return undefined;
+    }
+    return streamReadData.slices[selectedSlice]?.auxiliary_requests;
+  }, [hasSlices, selectedSlice, streamReadData?.slices]);
+
+  const hasSliceAuxiliaryRequests = sliceAuxiliaryRequests && sliceAuxiliaryRequests.length > 0;
+  const hasAnyAuxiliaryRequests = hasGlobalAuxiliaryRequests || hasSliceAuxiliaryRequests;
+
+  const SECONDARY_PANEL_SIZE = 0.25;
   const logsFlex = logNumByType.error > 0 || logNumByType.warning > 0 ? SECONDARY_PANEL_SIZE : 0;
-  const auxiliaryRequestsFlex = hasAuxiliaryRequests && !hasRegularRequests ? SECONDARY_PANEL_SIZE : 0;
+  const auxiliaryRequestsFlex = hasAnyAuxiliaryRequests && !hasSlices ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
     // This will only be true if the data was manually refetched by the user clicking the Test button,
@@ -126,6 +152,30 @@ export const StreamTester: React.FC<{
     }
   }, [analyticsService, errorMessage, isFetchedAfterMount, streamName, dataUpdatedAt, errorUpdatedAt]);
 
+  const streamTestButton = (
+    <StreamTestButton
+      variant={streamIsDynamic ? "secondary" : undefined}
+      queueStreamRead={() => {
+        queueStreamRead();
+        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
+          actionDescription: "Stream test initiated",
+          stream_name: streamName,
+        });
+      }}
+      cancelStreamRead={cancelStreamRead}
+      hasTestingValuesErrors={hasTestingValuesErrors}
+      setTestingValuesInputOpen={setTestingValuesInputOpen}
+      hasResolveErrors={Boolean(resolveErrorMessage)}
+      isStreamTestQueued={queuedStreamRead}
+      isStreamTestRunning={isFetching}
+      isStreamTestStale={
+        !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+      }
+      forceDisabled={cantProcessCustomComponents}
+      requestType={testStreamRequestType}
+    />
+  );
+
   return (
     <div className={styles.container}>
       {streamName === undefined && isResolving && (
@@ -134,21 +184,29 @@ export const StreamTester: React.FC<{
         </Text>
       )}
 
-      <StreamTestButton
-        queueStreamRead={() => {
-          queueStreamRead();
-          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
-            actionDescription: "Stream test initiated",
-            stream_name: streamName,
-          });
-        }}
-        hasTestingValuesErrors={hasTestingValuesErrors}
-        setTestingValuesInputOpen={setTestingValuesInputOpen}
-        hasResolveErrors={Boolean(resolveErrorMessage)}
-        isStreamTestQueued={queuedStreamRead}
-        isStreamTestRunning={isFetching}
-        className={!streamTestMetadataStatus || streamTestMetadataStatus.isStale ? styles.pulsateButton : undefined}
-      />
+      {cantProcessCustomComponents && (
+        <Message
+          type="error"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.warnings.containsCustomComponent"
+              values={{
+                lnk: (...lnk: React.ReactNode[]) => (
+                  <ExternalLink href={links.connectorBuilderCustomComponents}>{lnk}</ExternalLink>
+                ),
+              }}
+            />
+          }
+        />
+      )}
+
+      {streamIsDynamic && (
+        <div className={styles.dynamicStreamButtonContainer}>
+          {streamTestButton}
+          <Button onClick={generateStreams}>Generate Streams</Button>
+        </div>
+      )}
+      {!streamIsDynamic && streamTestButton}
 
       {resolveErrorMessage !== undefined && (
         <div className={styles.listErrorDisplay}>
@@ -209,7 +267,7 @@ export const StreamTester: React.FC<{
           {
             children: (
               <>
-                {hasRegularRequests && (
+                {hasSlices && (
                   <ResultDisplay slices={streamReadData.slices} inferredSchema={streamReadData.inferred_schema} />
                 )}
               </>
@@ -240,13 +298,17 @@ export const StreamTester: React.FC<{
                 },
               ]
             : []),
-          ...(hasAuxiliaryRequests
+          ...(hasAnyAuxiliaryRequests
             ? [
                 {
                   children: (
-                    // key causes GlobalRequestsDisplay to re-mount when the selected stream changes, which is needed
-                    // to reset the selected request index in case the number of requests differs between streams
-                    <GlobalRequestsDisplay key={`globalRequests_${streamName}`} requests={auxiliaryRequests} />
+                    // key causes AuxiliaryRequestsDisplay to re-mount when the selected stream or slice changes
+                    <AuxiliaryRequestsDisplay
+                      key={`requests_${streamName}_${selectedSlice}`}
+                      globalRequests={globalAuxiliaryRequests}
+                      sliceRequests={sliceAuxiliaryRequests}
+                      sliceIndex={selectedSlice}
+                    />
                   ),
                   minWidth: 0,
                   flex: auxiliaryRequestsFlex,
@@ -254,7 +316,7 @@ export const StreamTester: React.FC<{
                     <Splitter
                       label={formatMessage(
                         { id: "connectorBuilder.auxiliaryRequests" },
-                        { count: auxiliaryRequests.length }
+                        { count: (globalAuxiliaryRequests?.length || 0) + (sliceAuxiliaryRequests?.length || 0) }
                       )}
                     />
                   ),

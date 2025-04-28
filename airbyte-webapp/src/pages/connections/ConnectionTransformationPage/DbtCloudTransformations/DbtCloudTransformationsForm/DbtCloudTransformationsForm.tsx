@@ -1,7 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import { SchemaOf } from "yup";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -10,26 +9,25 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { useCurrentConnection } from "core/api";
 import { DbtCloudJob, isSameJob, useDbtIntegration } from "core/api/cloud";
-import { DbtCloudJobInfo } from "core/api/types/CloudApi";
+import { DbtCloudJobInfo } from "core/api/types/AirbyteClient";
 import { trackError } from "core/utils/datadog";
+import { ToZodSchema } from "core/utils/zod";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { DbtCloudTransformationsFormControls } from "./DbtCloudTransformationsFormControls";
 
-export interface DbtCloudTransformationsFormValues {
-  jobs: DbtCloudJob[];
-}
+const DbtCloudJobSchema = z.object({
+  jobId: z.number(),
+  accountId: z.number(),
+  operationId: z.string().optional(),
+  jobName: z.string().optional(),
+} satisfies ToZodSchema<DbtCloudJob>);
 
-const dbtJobsValidationSchema: SchemaOf<DbtCloudTransformationsFormValues> = yup.object({
-  jobs: yup.array().of(
-    yup.object().shape({
-      jobId: yup.number().required("form.empty.error"),
-      accountId: yup.number().required("form.empty.error"),
-      operationId: yup.string().optional(),
-      jobName: yup.string().optional(),
-    })
-  ),
+const dbtJobsValidationSchema = z.object({
+  jobs: z.array(DbtCloudJobSchema),
 });
+
+export type DbtCloudTransformationsFormValues = z.infer<typeof dbtJobsValidationSchema>;
 
 interface DbtCloudTransformationsFormProps {
   availableDbtCloudJobs?: DbtCloudJobInfo[];
@@ -82,7 +80,7 @@ export const DbtCloudTransformationsForm: React.FC<DbtCloudTransformationsFormPr
 
   return (
     <Form<DbtCloudTransformationsFormValues>
-      schema={dbtJobsValidationSchema}
+      zodSchema={dbtJobsValidationSchema}
       defaultValues={{ jobs: hasDbtIntegration ? jobs : dbtCloudJobs }}
       onSubmit={onSubmit}
       onSuccess={onSuccess}

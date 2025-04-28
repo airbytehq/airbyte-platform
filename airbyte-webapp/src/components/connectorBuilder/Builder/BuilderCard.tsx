@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import { dump, load, YAMLException } from "js-yaml";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FieldPath, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -26,14 +26,14 @@ import { ManifestCompatibilityError } from "../convertManifestToBuilderForm";
 import { BuilderState, BuilderStream, isYamlString } from "../types";
 import { UiYamlToggleButton } from "../UiYamlToggleButton";
 import { useBuilderWatch, useBuilderWatchWithPreview } from "../useBuilderWatch";
-import { useCopyValueIncludingArrays } from "../utils";
+import { useCopyValueIncludingArrays, StreamFieldPath } from "../utils";
 
 export interface BuilderCardProps {
   className?: string;
   label?: string;
   tooltip?: string;
   copyConfig?: {
-    path: string;
+    path: StreamFieldPath;
     currentStreamIndex: number;
     componentName: string;
   };
@@ -325,14 +325,27 @@ const CopyButtons = ({ copyConfig }: Pick<BuilderCardProps, "copyConfig">) => {
   const [isCopyToOpen, setCopyToOpen] = useState(false);
   const [isCopyFromOpen, setCopyFromOpen] = useState(false);
   const copyValueIncludingArrays = useCopyValueIncludingArrays();
-  const streams = useBuilderWatch("formValues.streams");
   const currentRelevantConfig = useWatch({
-    name: `formValues.streams.${copyConfig?.currentStreamIndex}.${copyConfig?.path}`,
+    name: copyConfig?.path ?? "",
     disabled: !copyConfig,
   });
-  if (streams.length <= 1 || !copyConfig) {
+  const streams = useBuilderWatch("formValues.streams");
+  const otherStreamsWithSameRequestType = useMemo(() => {
+    if (!copyConfig) {
+      return [];
+    }
+
+    return streams.filter(
+      (stream, index) =>
+        index !== copyConfig.currentStreamIndex &&
+        stream.requestType === streams[copyConfig.currentStreamIndex]?.requestType
+    );
+  }, [streams, copyConfig]);
+
+  if (otherStreamsWithSameRequestType.length === 0 || !copyConfig) {
     return null;
   }
+
   return (
     <div className={styles.copyButtonContainer}>
       <Button
@@ -413,20 +426,26 @@ const CopyToModal: React.FC<{
         }}
       >
         <ModalBody className={styles.modalStreamListContainer}>
-          {streams.map((stream, index) =>
-            index === currentStreamIndex ? null : (
-              <label htmlFor={`copy-to-stream-${index}`} key={index} className={styles.toggleContainer}>
-                <CheckBox
-                  id={`copy-to-stream-${index}`}
-                  checked={selectMap[index] || false}
-                  onChange={() => {
-                    setSelectMap({ ...selectMap, [index]: !selectMap[index] });
-                  }}
-                />
-                <Text>{getStreamName(stream)}</Text>
-              </label>
-            )
-          )}
+          {streams.map((stream, index) => (
+            <label
+              htmlFor={`copy-to-stream-${index}`}
+              key={index}
+              className={classNames(styles.toggleContainer, {
+                // hide these options instead of filtering out, because we still need the right stream indexes to be used in onApply
+                [styles.hiddenCopyOption]:
+                  stream.requestType !== streams[currentStreamIndex].requestType || index === currentStreamIndex,
+              })}
+            >
+              <CheckBox
+                id={`copy-to-stream-${index}`}
+                checked={selectMap[index] || false}
+                onChange={() => {
+                  setSelectMap({ ...selectMap, [index]: !selectMap[index] });
+                }}
+              />
+              <Text>{getStreamName(stream)}</Text>
+            </label>
+          ))}
         </ModalBody>
         <ModalFooter>
           <Button variant="secondary" onClick={onCancel}>
@@ -451,19 +470,21 @@ const CopyFromModal: React.FC<{
   return (
     <Modal size="sm" title={title} onCancel={onCancel}>
       <ModalBody className={styles.modalStreamListContainer}>
-        {streams.map((stream, index) =>
-          currentStreamIndex === index ? null : (
-            <button
-              key={index}
-              onClick={() => {
-                onSelect(index);
-              }}
-              className={styles.streamItem}
-            >
-              <Text>{getStreamName(stream)}</Text>
-            </button>
-          )
-        )}
+        {streams.map((stream, index) => (
+          <button
+            key={index}
+            onClick={() => {
+              onSelect(index);
+            }}
+            className={classNames(styles.streamItem, {
+              // hide these options instead of filtering out, because we still need the right stream indexes to be used in onSelect
+              [styles.hiddenCopyOption]:
+                stream.requestType !== streams[currentStreamIndex].requestType || index === currentStreamIndex,
+            })}
+          >
+            <Text>{getStreamName(stream)}</Text>
+          </button>
+        ))}
       </ModalBody>
     </Modal>
   );

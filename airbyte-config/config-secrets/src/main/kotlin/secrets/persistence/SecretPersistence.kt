@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import java.time.Instant
 
 /**
@@ -18,9 +19,19 @@ fun interface ReadOnlySecretPersistence {
 /**
  * Provides the ability to read and write secrets to a backing store. Assumes that secret payloads
  * are always strings. See {@link SecretCoordinate} for more information on how secrets are
- * identified.
+ * identified. Note that write/delete operations only operate on [AirbyteManagedSecretCoordinate]s,
+ * because external secret coordinates should never be written to or updated by Airbyte code.
  */
 interface SecretPersistence : ReadOnlySecretPersistence {
+  object ImplementationTypes {
+    const val AWS_SECRET_MANAGER = "aws_secret_manager"
+    const val AZURE_KEY_VAULT = "azure_key_vault"
+    const val GOOGLE_SECRET_MANAGER = "google_secret_manager"
+    const val VAULT = "vault"
+    const val TESTING_CONFIG_DB_TABLE = "testing_config_db_table"
+    const val NO_OP = "no_op"
+  }
+
   /**
    * Performs any initialization prior to utilization of the persistence object. This exists to make
    * it possible to create instances within a dependency management framework, where any
@@ -34,12 +45,12 @@ interface SecretPersistence : ReadOnlySecretPersistence {
   override fun read(coordinate: SecretCoordinate): String
 
   fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   )
 
   fun writeWithExpiry(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
     expiry: Instant? = null,
   ) {
@@ -47,9 +58,9 @@ interface SecretPersistence : ReadOnlySecretPersistence {
     write(coordinate, payload)
   }
 
-  fun delete(coordinate: SecretCoordinate)
+  fun delete(coordinate: AirbyteManagedSecretCoordinate)
 
-  fun disable(coordinate: SecretCoordinate) {
+  fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     println("secret persistence has not implemented disable.")
   }
 }

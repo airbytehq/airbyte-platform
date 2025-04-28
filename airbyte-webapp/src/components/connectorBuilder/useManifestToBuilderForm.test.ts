@@ -2,6 +2,7 @@ import { dump } from "js-yaml";
 import merge from "lodash/merge";
 
 import {
+  AddedFieldDefinitionType,
   ConnectorManifest,
   DeclarativeStream,
   DeclarativeStreamIncrementalSync,
@@ -36,6 +37,7 @@ const baseManifest: ConnectorManifest = {
   check: {
     type: "CheckStream",
     stream_names: [],
+    dynamic_streams_check_configs: [],
   },
   streams: [],
 };
@@ -172,7 +174,7 @@ describe("Conversion throws error when", () => {
       };
       return convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
     };
-    await expect(convert).rejects.toThrow("doesn't use a SimpleRetriever");
+    await expect(convert).rejects.toThrow("doesn't use a AsyncRetriever");
   });
 
   it("manifest has incorrect requester type", async () => {
@@ -202,13 +204,13 @@ describe("Conversion throws error when", () => {
         api_token: "abcd1234",
         header: "API_KEY",
       };
-      return manifestAuthenticatorToBuilder(authenticator, undefined);
+      return manifestAuthenticatorToBuilder(authenticator, undefined, undefined);
     };
     expect(convert).toThrow('ApiKeyAuthenticator.api_token must be of the form {{ config["key"] }}');
   });
 
   it("manifest has an authenticator with an interpolated key that doesn't match any spec key", async () => {
-    const convert = () => manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined);
+    const convert = () => manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined, undefined);
     expect(convert).toThrow(
       'ApiKeyAuthenticator.api_token references spec key "api_token", which must appear in the spec'
     );
@@ -216,7 +218,7 @@ describe("Conversion throws error when", () => {
 
   it("manifest has an authenticator with a required interpolated key that is not required in the spec", async () => {
     const convert = () =>
-      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined, {
         type: "Spec",
         connection_specification: {
           type: "object",
@@ -236,7 +238,7 @@ describe("Conversion throws error when", () => {
 
   it("manifest has an authenticator with an interpolated key that is not type string in the spec", async () => {
     const convert = () =>
-      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined, {
         type: "Spec",
         connection_specification: {
           type: "object",
@@ -257,7 +259,7 @@ describe("Conversion throws error when", () => {
 
   it("manifest has an authenticator with an interpolated secret key that is not secret in the spec", async () => {
     const convert = () =>
-      manifestAuthenticatorToBuilder(apiTokenAuthenticator, {
+      manifestAuthenticatorToBuilder(apiTokenAuthenticator, undefined, {
         type: "Spec",
         connection_specification: {
           type: "object",
@@ -292,7 +294,7 @@ describe("Conversion throws error when", () => {
         token_refresh_endpoint: "https://api.com/refresh_token",
         grant_type: "client_credentials",
       };
-      return manifestAuthenticatorToBuilder(authenticator, oauthSpec);
+      return manifestAuthenticatorToBuilder(authenticator, undefined, oauthSpec);
     };
     expect(convert).toThrow("OAuthAuthenticator contains a refresh_request_body with non-string values");
   });
@@ -322,7 +324,7 @@ describe("Conversion throws error when", () => {
           },
         },
       };
-      return manifestAuthenticatorToBuilder(authenticator, undefined);
+      return manifestAuthenticatorToBuilder(authenticator, undefined, undefined);
     };
     expect(convert).toThrow(
       "SessionTokenAuthenticator.login_requester.authenticator must have one of the following types: NoAuth, ApiKeyAuthenticator, BearerAuthenticator, BasicHttpAuthenticator"
@@ -468,6 +470,7 @@ describe("Conversion throws error when", () => {
           type: "AddFields" as const,
           fields: [
             {
+              type: AddedFieldDefinitionType.AddedFieldDefinition,
               path: ["path", "to", "field"],
               value: "my_value",
             },
@@ -512,6 +515,7 @@ describe("Conversion successfully results in", () => {
         key: "api_key",
         required: true,
         isLocked: false,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         definition: manifest.spec?.connection_specification.properties.api_key,
       },
     ]);
@@ -541,6 +545,7 @@ describe("Conversion successfully results in", () => {
         key: "api_key",
         required: false,
         isLocked: false,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         definition: manifest.spec?.connection_specification.properties.api_key,
       },
     ]);
@@ -588,12 +593,14 @@ describe("Conversion successfully results in", () => {
         key: "api_key",
         required: true,
         isLocked: true,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         definition: manifest.spec?.connection_specification.properties.api_key,
       },
       {
         key: "numeric_key",
         required: false,
         isLocked: false,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         definition: manifest.spec?.connection_specification.properties.numeric_key,
       },
     ]);
@@ -616,6 +623,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].requestOptions.requestParameters).toEqual([
       ["k1", "v1"],
       ["k2", "v2"],
@@ -639,6 +649,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "json_list",
       values: [
@@ -666,6 +679,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "json_freeform",
       value: formatJson(body),
@@ -689,6 +705,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "form_list",
       values: [
@@ -721,6 +740,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].recordSelector).toEqual({
       fieldPath: ["a", "b"],
       filterCondition: "{{ record.c > 1 }}",
@@ -742,6 +764,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].requestOptions.requestBody).toEqual({
       type: "string_freeform",
       value: "abc def",
@@ -758,6 +783,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].primaryKey).toEqual(["id"]);
   });
 
@@ -784,6 +812,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[0].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[0].parameterizedRequests).toEqual([
       {
         type: "ListPartitionRouter",
@@ -821,6 +852,9 @@ describe("Conversion successfully results in", () => {
       ],
     };
     const formValues = await convertToBuilderFormValues(noOpResolve, manifest, DEFAULT_CONNECTOR_NAME);
+    if (formValues.streams[1].requestType === "async") {
+      throw new Error("Request type should not be async");
+    }
     expect(formValues.streams[1].parentStreams).toEqual([
       {
         parent_key: "key",

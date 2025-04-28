@@ -22,7 +22,7 @@ import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitio
 import io.airbyte.config.persistence.version_overrides.ConfigurationDefinitionVersionOverrideProvider;
 import io.airbyte.config.persistence.version_overrides.DefinitionVersionOverrideProvider;
 import io.airbyte.data.services.ActorDefinitionService;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;

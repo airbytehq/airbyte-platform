@@ -15,9 +15,9 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.FailureReason.FailureOrigin;
 import io.airbyte.config.FailureReason.FailureType;
 import io.airbyte.config.Metadata;
-import io.airbyte.protocol.models.AirbyteErrorTraceMessage;
-import io.airbyte.protocol.models.AirbyteTraceMessage;
-import io.airbyte.protocol.models.StreamDescriptor;
+import io.airbyte.protocol.models.v0.AirbyteErrorTraceMessage;
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
+import io.airbyte.protocol.models.v0.StreamDescriptor;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.FailureHelper.ConnectorCommand;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
@@ -94,7 +94,7 @@ class FailureHelperTest {
     final var oneMbString = String.format("%1048576s", "");
 
     final var traceMsg = new AirbyteTraceMessage()
-        .withType(io.airbyte.protocol.models.AirbyteTraceMessage.Type.ERROR)
+        .withType(io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ERROR)
         .withError(new AirbyteErrorTraceMessage()
             .withFailureType(AirbyteErrorTraceMessage.FailureType.CONFIG_ERROR)
             .withMessage(oneMbString)

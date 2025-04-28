@@ -47,7 +47,7 @@ val genPublicApiServer =
   tasks.register<GenerateTask>("generatePublicApiServer") {
     val serverOutputDir = "${getLayout().buildDirectory.get()}/generated/public_api/server"
 
-    inputs.file(internalApiSpecFile)
+    inputs.file(internalApiSpecFile).withPathSensitivity(PathSensitivity.RELATIVE)
     outputs.dir(serverOutputDir)
 
     generatorName = "kotlin-server"

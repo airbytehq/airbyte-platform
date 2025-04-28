@@ -26,6 +26,8 @@ const testStreamButton = "[data-testid='read-stream']";
 const sliceDropdown = '[data-testid="tag-select-slice"]';
 
 export const goToConnectorBuilderCreatePage = () => {
+  // Clear any stored connector chat builder params before visiting
+  window.sessionStorage.removeItem("launch-connector-builder");
   cy.visit("/connector-builder/create");
 };
 
@@ -67,6 +69,9 @@ export const selectActiveVersion = (name: string, version: number) => {
 };
 
 export const goToView = (view: string) => {
+  // First ensure we're on the correct page
+  cy.url().should("include", "/connector-builder");
+  // Then click the navigation button
   cy.get(`button[data-testid=navbutton-${view}]`, { timeout: 20000 }).click();
 };
 
@@ -140,7 +145,7 @@ export const getUrlPathInput = () => {
 
 export const enterUrlPath = (urlPath: string) => {
   focusAndType(streamUrlPathFromForm, "{selectAll}{backspace}");
-  cy.get(streamUrlPathFromForm).type(urlPath);
+  focusAndType(streamUrlPathFromForm, urlPath);
 };
 
 export const submitForm = () => {

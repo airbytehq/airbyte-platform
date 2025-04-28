@@ -19,6 +19,8 @@ import com.google.cloud.secretmanager.v1.SecretPayload
 import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes.GOOGLE_SECRET_MANAGER
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -45,7 +47,7 @@ private val logger = KotlinLogging.logger {}
  * order (or depending on our retention for the secrets pretend to insert earlier versions).
  */
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^google_secret_manager$")
+@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^$GOOGLE_SECRET_MANAGER$")
 @Named("secretPersistence")
 class GoogleSecretManagerPersistence(
   @Value("\${airbyte.secret.store.gcp.project-id}") val gcpProjectId: String,
@@ -69,7 +71,7 @@ class GoogleSecretManagerPersistence(
   }
 
   override fun write(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
   ) {
     writeWithExpiry(coordinate, payload)
@@ -91,7 +93,7 @@ class GoogleSecretManagerPersistence(
   }
 
   override fun writeWithExpiry(
-    coordinate: SecretCoordinate,
+    coordinate: AirbyteManagedSecretCoordinate,
     payload: String,
     expiry: Instant?,
   ) {
@@ -143,14 +145,14 @@ class GoogleSecretManagerPersistence(
     client.addSecretVersion(name, secretPayload)
   }
 
-  override fun delete(coordinate: SecretCoordinate) {
+  override fun delete(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       client.deleteSecret(secretName)
     }
   }
 
-  override fun disable(coordinate: SecretCoordinate) {
+  override fun disable(coordinate: AirbyteManagedSecretCoordinate) {
     googleSecretManagerServiceClient.createClient().use { client ->
       val secretVersionName = SecretName.of(gcpProjectId, coordinate.fullCoordinate)
       val request = ListSecretVersionsRequest.newBuilder().setParent(secretVersionName.toString()).build()

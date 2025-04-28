@@ -48,8 +48,8 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
    * This is private as the to protocol serialization should be handled through the serializer rather
    * than a plain to class conversion because we may adapt data based on the protocol version.
    */
-  private io.airbyte.protocol.models.ConfiguredAirbyteCatalog toProtocol(final ConfiguredAirbyteCatalog catalog) {
-    return new io.airbyte.protocol.models.ConfiguredAirbyteCatalog()
+  private io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog toProtocol(final ConfiguredAirbyteCatalog catalog) {
+    return new io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog()
         .withStreams(catalog.getStreams().stream().map(this::toProtocol).toList());
   }
 
@@ -59,15 +59,16 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
    * This is private as the to protocol serialization should be handled through the serializer rather
    * than a plain to class conversion because we may adapt data based on the protocol version.
    */
-  private io.airbyte.protocol.models.ConfiguredAirbyteStream toProtocol(final ConfiguredAirbyteStream stream) {
-    return new io.airbyte.protocol.models.ConfiguredAirbyteStream()
+  private io.airbyte.protocol.models.v0.ConfiguredAirbyteStream toProtocol(final ConfiguredAirbyteStream stream) {
+    return new io.airbyte.protocol.models.v0.ConfiguredAirbyteStream()
         .withStream(ProtocolConverters.toProtocol(stream.getStream()))
-        .withSyncMode(Enums.convertTo(stream.getSyncMode(), io.airbyte.protocol.models.SyncMode.class))
-        .withDestinationSyncMode(Enums.convertTo(stream.getDestinationSyncMode(), io.airbyte.protocol.models.DestinationSyncMode.class))
+        .withSyncMode(Enums.convertTo(stream.getSyncMode(), io.airbyte.protocol.models.v0.SyncMode.class))
+        .withDestinationSyncMode(Enums.convertTo(stream.getDestinationSyncMode(), io.airbyte.protocol.models.v0.DestinationSyncMode.class))
         .withCursorField(stream.getCursorField())
         .withPrimaryKey(stream.getPrimaryKey())
         .withGenerationId(stream.getGenerationId())
         .withMinimumGenerationId(stream.getMinimumGenerationId())
+        .withIncludeFiles(stream.getIncludeFiles())
         .withSyncId(stream.getSyncId());
   }
 

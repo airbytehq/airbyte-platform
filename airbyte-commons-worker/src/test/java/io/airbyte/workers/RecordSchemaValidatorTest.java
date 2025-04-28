@@ -8,10 +8,10 @@ import static org.junit.Assert.assertEquals;
 
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.protocol.models.AirbyteMessage;
-import io.airbyte.protocol.models.AirbyteStream;
-import io.airbyte.protocol.models.AirbyteStreamNameNamespacePair;
 import io.airbyte.protocol.models.Jsons;
+import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteStream;
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import io.airbyte.workers.testutils.TestConfigHelpers;
 import java.io.IOException;

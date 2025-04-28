@@ -5,7 +5,7 @@ import styles from "./Heading.module.scss";
 
 type HeadingSize = "sm" | "md" | "lg" | "xl";
 type HeadingColor = "darkBlue" | "blue";
-type HeadingElementType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+export type HeadingElementType = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
 type HeadingProps = HTMLAttributes<HTMLHeadingElement> & {
   className?: string;

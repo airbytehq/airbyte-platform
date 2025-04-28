@@ -13,6 +13,7 @@ export const enum Namespace {
   STREAM_SELECTION = "StreamSelection",
   FORM = "Form",
   ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
+  CONNECTIONS = "Connections",
 }
 
 export const enum Action {
@@ -61,10 +62,13 @@ export const enum Action {
   USER_INPUT_CREATE = "UserInputCreate",
   USER_INPUT_EDIT = "UserInputEdit",
   USER_INPUT_DELETE = "UserInputDelete",
+  DYNAMIC_STREAM_SELECT = "DynamicStreamSelect",
   STREAM_SELECT = "StreamSelect",
+  DYNAMIC_STREAM_CREATE = "DynamicStreamCreate",
   STREAM_CREATE = "StreamCreate",
   STREAM_COPY = "StreamCopy",
   STREAM_DELETE = "StreamDelete",
+  DYNAMIC_STREAM_DELETE = "DynamicStreamDelete",
   STREAM_TEST = "StreamTest",
   STREAM_TEST_SUCCESS = "StreamTestSuccess",
   STREAM_TEST_FAILURE = "StreamTestFailure",
@@ -96,6 +100,12 @@ export const enum Action {
   CONNECTOR_BUILDER_ASSIST_DISABLED = "ConnectorBuilderAssistDisabled",
   CONNECTOR_BUILDER_ASSIST_SUGGESTION_VIEWED = "ConnectorBuilderAssistSuggestionViewed",
   CONNECTOR_BUILDER_ASSIST_SUGGESTION_ACCEPTED = "ConnectorBuilderAssistSuggestionAccepted",
+
+  // Connections Actions
+  CONNECTIONS_GRAPH_DRAWER_OPENED = "ConnectionGraphDrawerOpened",
+  CONNECTIONS_GRAPH_DRAWER_LOADED = "ConnectionGraphDrawerLoaded",
+  SYNC_FAILURE_EXPLANATION_OPENED = "SyncFailureExplanationOpened",
+  REFRESH_FAILURE_EXPLANATION_OPENED = "RefreshFailureExplanationOpened",
 }
 
 export type EventParams = Record<string, unknown>;

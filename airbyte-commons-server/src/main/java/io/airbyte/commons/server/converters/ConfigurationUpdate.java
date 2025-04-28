@@ -16,7 +16,7 @@ import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -69,7 +69,7 @@ public class ConfigurationUpdate {
     // get existing source
     final SourceConnection persistedSource;
     try {
-      persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
+      persistedSource = sourceService.getSourceConnection(sourceId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -103,9 +103,7 @@ public class ConfigurationUpdate {
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
       throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
     // get existing source
-    final SourceConnection persistedSource;
-    persistedSource = sourceService.getSourceConnectionWithSecrets(sourceId);
-
+    final SourceConnection persistedSource = sourceService.getSourceConnection(sourceId);
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
@@ -132,7 +130,7 @@ public class ConfigurationUpdate {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
-      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+      persistedDestination = destinationService.getDestinationConnection(destinationId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }
@@ -169,7 +167,7 @@ public class ConfigurationUpdate {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
-      persistedDestination = destinationService.getDestinationConnectionWithSecrets(destinationId);
+      persistedDestination = destinationService.getDestinationConnection(destinationId);
     } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
       throw new ConfigNotFoundException(e.getType(), e.getConfigId());
     }

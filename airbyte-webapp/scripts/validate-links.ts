@@ -8,9 +8,6 @@ const IGNORED_LINKS = [
   // Cloudflare in front prevents us from checking this without a real browser.
   // We assume that the URL won't change really, so it should be fine not validating it.
   "supportPortal",
-  // Our demo link doesn't change but the demo tends to be unreliable down, so excluding
-  // it's excluded from the link validation
-  "demoLink",
 ];
 
 let retries = 0;

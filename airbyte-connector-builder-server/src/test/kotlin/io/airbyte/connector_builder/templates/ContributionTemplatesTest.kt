@@ -13,6 +13,7 @@ import io.airbyte.connector_builder.utils.ManifestParser
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 
 fun jacksonSerialize(input: String): String {
@@ -34,9 +35,11 @@ class ContributionTemplatesTest {
       connectorName = "Test Connector",
       connectorImageName = "test",
       actorDefinitionId = "test-uuid",
-      description = "This is a test connector.",
+      connectorDescription = "This is a test connector.",
+      contributionDescription = "This is a test contribution description.",
       githubToken = "test-token",
       manifestYaml = serialzedYamlContent,
+      customComponents = null,
       baseImage = "test-base-image",
       versionTag = "0.0.1",
       authorUsername = "testuser",
@@ -53,7 +56,7 @@ class ContributionTemplatesTest {
     assert(readme.contains(newConnectorContributionInfo.connectorName))
 
     // Assert that the rendered readme contains the connector description
-    assert(readme.contains(newConnectorContributionInfo.description))
+    assert(readme.contains(newConnectorContributionInfo.connectorDescription))
   }
 
   @Test
@@ -67,7 +70,7 @@ class ContributionTemplatesTest {
     val docs = contributionTemplates.renderContributionDocsMd(newConnectorContributionInfo)
 
     assert(docs.contains(newConnectorContributionInfo.connectorName))
-    assert(docs.contains(newConnectorContributionInfo.description))
+    assert(docs.contains(newConnectorContributionInfo.connectorDescription))
     assert(docs.contains(newConnectorContributionInfo.versionTag))
     assert(docs.contains(newConnectorContributionInfo.updateDate)) // Release date = updateDate
     assert(docs.contains(newConnectorContributionInfo.changelogMessage))
@@ -95,7 +98,8 @@ class ContributionTemplatesTest {
 
     assert(prDescription.contains(newConnectorContributionInfo.connectorName))
     assert(prDescription.contains(newConnectorContributionInfo.connectorImageName))
-    assert(prDescription.contains(newConnectorContributionInfo.description))
+    assert(prDescription.contains(newConnectorContributionInfo.connectorDescription))
+    assert(prDescription.contains(newConnectorContributionInfo.contributionDescription))
 
     for (stream in manifestParser.streams) {
       // Assert that the rendered PR description contains the stream name
@@ -119,7 +123,8 @@ class ContributionTemplatesTest {
 
     assert(prDescription.contains(editConnectorContributionInfo.connectorName))
     assert(prDescription.contains(editConnectorContributionInfo.connectorImageName))
-    assert(prDescription.contains(editConnectorContributionInfo.description))
+    assert(prDescription.contains(editConnectorContributionInfo.contributionDescription))
+    assertFalse(prDescription.contains(editConnectorContributionInfo.connectorDescription))
   }
 
   @Test

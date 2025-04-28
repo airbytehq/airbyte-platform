@@ -6,9 +6,9 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
-import io.airbyte.protocol.models.AirbyteAnalyticsTraceMessage
-import io.airbyte.protocol.models.AirbyteMessage
-import io.airbyte.protocol.models.AirbyteTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
+import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
 import io.airbyte.workers.internal.stateaggregator.StateAggregator

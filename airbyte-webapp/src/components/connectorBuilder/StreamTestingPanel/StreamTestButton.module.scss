@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/mixins";
 
 .testButton {
   width: 100%;
@@ -11,4 +12,19 @@
 
 .testButtonText {
   color: colors.$white;
+}
+
+.longRequestWarning {
+  color: colors.$foreground;
+}
+
+.pulsate {
+  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+
+  & > * {
+    // keep content visible above the pulses
+    display: inline-block;
+    position: relative;
+    z-index: 1;
+  }
 }

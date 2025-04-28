@@ -78,7 +78,7 @@ public class ConnectorDefinitionSpecificationHandler {
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.getWorkspaceId(), sourceIdRequestBody.getSourceId());
-    final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
+    final io.airbyte.protocol.models.v0.ConnectorSpecification spec = sourceVersion.getSpec();
 
     return getSourceSpecificationRead(sourceDefinition, spec, source.getWorkspaceId());
   }
@@ -98,7 +98,7 @@ public class ConnectorDefinitionSpecificationHandler {
     final StandardSourceDefinition source = sourceService.getStandardSourceDefinition(sourceDefinitionId);
     final ActorDefinitionVersion sourceVersion =
         actorDefinitionVersionHelper.getSourceVersion(source, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
-    final io.airbyte.protocol.models.ConnectorSpecification spec = sourceVersion.getSpec();
+    final io.airbyte.protocol.models.v0.ConnectorSpecification spec = sourceVersion.getSpec();
 
     return getSourceSpecificationRead(source, spec, sourceDefinitionIdWithWorkspaceId.getWorkspaceId());
   }
@@ -120,7 +120,7 @@ public class ConnectorDefinitionSpecificationHandler {
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.getWorkspaceId(),
             destinationIdRequestBody.getDestinationId());
-    final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
+    final io.airbyte.protocol.models.v0.ConnectorSpecification spec = destinationVersion.getSpec();
     return getDestinationSpecificationRead(destinationDefinition, spec, destinationVersion.getSupportsRefreshes(), destination.getWorkspaceId());
   }
 
@@ -141,7 +141,7 @@ public class ConnectorDefinitionSpecificationHandler {
     final StandardDestinationDefinition destination = destinationService.getStandardDestinationDefinition(destinationDefinitionId);
     final ActorDefinitionVersion destinationVersion =
         actorDefinitionVersionHelper.getDestinationVersion(destination, destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
-    final io.airbyte.protocol.models.ConnectorSpecification spec = destinationVersion.getSpec();
+    final io.airbyte.protocol.models.v0.ConnectorSpecification spec = destinationVersion.getSpec();
 
     return getDestinationSpecificationRead(destination, spec, destinationVersion.getSupportsRefreshes(),
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
@@ -149,7 +149,7 @@ public class ConnectorDefinitionSpecificationHandler {
 
   @VisibleForTesting
   SourceDefinitionSpecificationRead getSourceSpecificationRead(final StandardSourceDefinition sourceDefinition,
-                                                               final io.airbyte.protocol.models.ConnectorSpecification spec,
+                                                               final io.airbyte.protocol.models.v0.ConnectorSpecification spec,
                                                                final UUID workspaceId)
       throws IOException {
     final SourceDefinitionSpecificationRead specRead = new SourceDefinitionSpecificationRead()
@@ -174,7 +174,7 @@ public class ConnectorDefinitionSpecificationHandler {
 
   @VisibleForTesting
   DestinationDefinitionSpecificationRead getDestinationSpecificationRead(final StandardDestinationDefinition destinationDefinition,
-                                                                         final io.airbyte.protocol.models.ConnectorSpecification spec,
+                                                                         final io.airbyte.protocol.models.v0.ConnectorSpecification spec,
                                                                          final boolean supportsRefreshes,
                                                                          final UUID workspaceId)
       throws IOException {
@@ -196,7 +196,7 @@ public class ConnectorDefinitionSpecificationHandler {
     return specRead;
   }
 
-  private List<DestinationSyncMode> getFinalDestinationSyncModes(final List<io.airbyte.protocol.models.DestinationSyncMode> syncModes,
+  private List<DestinationSyncMode> getFinalDestinationSyncModes(final List<io.airbyte.protocol.models.v0.DestinationSyncMode> syncModes,
                                                                  final boolean supportsRefreshes) {
     final List<DestinationSyncMode> finalSyncModes = new ArrayList<>();
     boolean hasDedup = false;

@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
+import static io.airbyte.commons.constants.AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE;
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.CONNECTION_SPECIFICATION_FIELD;
 import static io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler.SPEC_FIELD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -93,9 +94,9 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.oauth.OAuthImplementationFactory;
 import io.airbyte.oauth.declarative.DeclarativeOAuthFlow;
-import io.airbyte.protocol.models.AdvancedAuth;
-import io.airbyte.protocol.models.ConnectorSpecification;
-import io.airbyte.protocol.models.OAuthConfigSpecification;
+import io.airbyte.protocol.models.v0.AdvancedAuth;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.OAuthConfigSpecification;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.net.URI;
@@ -662,7 +663,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .withCustom(true)), eq(
             new ActorDefinitionVersion()
                 .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
-                .withDockerRepository("airbyte/source-declarative-manifest")
+                .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
                 .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
                 .withSpec(adaptedConnectorSpecification)
                 .withSupportLevel(SupportLevel.NONE)
@@ -727,7 +728,7 @@ class ConnectorBuilderProjectsHandlerTest {
         }""");
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
-    when(secretsRepositoryWriter.createFromConfig(workspaceId, testingValues, spec, null))
+    when(secretsRepositoryWriter.createFromConfigLegacy(workspaceId, testingValues, spec, null))
         .thenReturn(testingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(testingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -761,7 +762,7 @@ class ConnectorBuilderProjectsHandlerTest {
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(secretsRepositoryReader.hydrateConfigFromDefaultSecretPersistence(testingValuesWithSecretCoordinates)).thenReturn(testingValues);
     when(secretsProcessor.copySecrets(testingValues, newTestingValues, spec)).thenReturn(newTestingValues);
-    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates,
+    when(secretsRepositoryWriter.updateFromConfigLegacy(workspaceId, testingValuesWithSecretCoordinates,
         newTestingValues, spec, null)).thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(testingValuesWithObfuscatedSecrets);
 
@@ -799,7 +800,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .pageLimit(null)
         .sliceLimit(null);
 
-    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, null, false,
         project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode record1 = Jsons.deserialize(
@@ -864,7 +865,7 @@ class ConnectorBuilderProjectsHandlerTest {
         .pageLimit(null)
         .sliceLimit(null);
 
-    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, false,
+    final StreamReadRequestBody streamReadRequestBody = new StreamReadRequestBody(testingValues, project.getManifestDraft(), streamName, null, false,
         project.getBuilderProjectId().toString(), null, null, null, List.of(), project.getWorkspaceId().toString());
 
     final JsonNode newTestingValues = Jsons.deserialize(
@@ -891,7 +892,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
     when(connectorBuilderService.getConnectorBuilderProject(project.getBuilderProjectId(), false)).thenReturn(project);
     when(connectorBuilderServerApiClient.readStream(streamReadRequestBody)).thenReturn(streamRead);
-    when(secretsRepositoryWriter.updateFromConfig(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
+    when(secretsRepositoryWriter.updateFromConfigLegacy(workspaceId, testingValuesWithSecretCoordinates, newTestingValues, spec, null))
         .thenReturn(newTestingValuesWithSecretCoordinates);
     when(secretsProcessor.prepareSecretsForOutput(newTestingValuesWithSecretCoordinates, spec)).thenReturn(newTestingValuesWithObfuscatedSecrets);
 

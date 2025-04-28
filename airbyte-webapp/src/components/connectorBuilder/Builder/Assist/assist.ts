@@ -7,8 +7,9 @@ import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
-import { AssistV1ProcessRequestBody, KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
+import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
+  DatetimeBasedCursor,
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
   HttpRequesterHttpMethod,
@@ -19,7 +20,14 @@ import {
 } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
+export type AssistKey =
+  | "urlbase"
+  | "auth"
+  | "metadata"
+  | "record_selector"
+  | "paginator"
+  | "request_options"
+  | "incremental_sync";
 
 export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
   const update = updates.manifest_update;
@@ -49,10 +57,12 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
             request_headers: update?.request_headers ?? undefined,
+            request_body_json: update?.request_body_json ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
         primary_key: update?.primary_key ?? undefined,
+        incremental_sync: update?.incremental_sync ?? undefined,
       },
     ],
     spec: {
@@ -87,9 +97,6 @@ export interface BuilderAssistInputStreamParams {
   stream_name: string;
   stream_response?: object;
 }
-type BuilderAssistUseProject = BuilderAssistCoreParams & BuilderAssistProjectMetadataParams;
-type BuilderAssistUseProjectStream = BuilderAssistUseProject & BuilderAssistInputStreamParams;
-
 export type BuilderAssistApiAllParams = BuilderAssistCoreParams &
   BuilderAssistProjectMetadataParams &
   BuilderAssistProjectMetadataParams &
@@ -107,6 +114,8 @@ export interface ManifestUpdate {
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
   request_headers: Record<string, string> | null;
+  request_body_json: Record<string, string> | null;
+  incremental_sync: DatetimeBasedCursor | null;
 }
 
 export interface BuilderAssistBaseResponse {
@@ -122,7 +131,7 @@ export interface BuilderAssistManifestResponse extends BuilderAssistBaseResponse
 const useAssistProxyQuery = <T>(
   controller: string,
   enabled: boolean,
-  input: AssistV1ProcessRequestBody,
+  input: Record<string, unknown>,
   ignoreCacheKeys: Array<keyof BuilderAssistApiAllParams>
 ) => {
   const { params: globalParams } = useAssistGlobalContext();
@@ -147,18 +156,18 @@ const hasAllOf = <T>(params: T, keys: Array<keyof T>) => {
   return keys.every((key) => !!(params[key] as string)?.trim());
 };
 
-const useAssistGlobalContext = (): { params: BuilderAssistGlobalMetadataParams } => {
-  const params: BuilderAssistGlobalMetadataParams = {
+const useAssistGlobalContext = (): { params: Record<string, unknown> } => {
+  const params = {
     cdk_version: CDK_VERSION,
     workspace_id: useCurrentWorkspaceId(),
   };
   return { params };
 };
 
-const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequiredParams: boolean } => {
+const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
   const { assistEnabled, projectId, assistSessionId, jsonManifest } = useConnectorBuilderFormState();
   // session id on form
-  const params: BuilderAssistUseProject = {
+  const params = {
     docs_url: useBuilderWatch("formValues.assist.docsUrl"),
     openapi_spec_url: useBuilderWatch("formValues.assist.openapiSpecUrl"),
     app_name: useBuilderWatch("name") || "Connector",
@@ -174,7 +183,7 @@ const useAssistProjectContext = (): { params: BuilderAssistUseProject; hasRequir
 
 const useAssistProjectStreamContext = (
   input: BuilderAssistInputStreamParams
-): { params: BuilderAssistUseProjectStream; hasRequiredParams: boolean } => {
+): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
   const { params: baseParams, hasRequiredParams: baseRequiredParams } = useAssistProjectContext();
   const params = { ...baseParams, ...input };
   const hasStream = hasAllOf(params, ["stream_name"]);
@@ -225,6 +234,13 @@ export const useBuilderAssistFindRequestOptions = (input: BuilderAssistInputStre
   ]);
 };
 
+export const useBuilderAssistFindIncrementalSync = (input: BuilderAssistInputStreamParams) => {
+  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
+  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_stream_incremental_sync", hasRequiredParams, params, [
+    "url_base",
+  ]);
+};
+
 export interface BuilderAssistFindStreamsParams {
   enabled: boolean;
 }
@@ -251,7 +267,7 @@ export interface BuilderAssistCreateConnectorResponse extends BuilderAssistBaseR
 
 export const useBuilderAssistCreateConnectorMutation = () => {
   const { params: globalParams } = useAssistGlobalContext();
-  return useAssistApiMutation<BuilderAssistCreateConnectorParams, BuilderAssistCreateConnectorResponse>(globalParams);
+  return useAssistApiMutation<Record<string, unknown>, BuilderAssistCreateConnectorResponse>(globalParams);
 };
 
 const assistErrorCodesToi18n = {
@@ -314,7 +330,7 @@ export const parseAssistErrorToFormErrors = (assistError: Error | null): AssistE
     return [];
   }
 
-  const validationErrors = details?.validation_errors;
+  const validationErrors = Array.isArray(details?.validation_errors) ? details.validation_errors : [];
   return validationErrors?.map(safeCastAssistValidationError) ?? [];
 };
 

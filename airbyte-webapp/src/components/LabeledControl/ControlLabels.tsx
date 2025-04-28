@@ -26,31 +26,33 @@ export interface ControlLabelsProps {
 
 const ControlLabels = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlLabelsProps>>((props, ref) => (
   <div ref={ref} className={className(styles.controlContainer, props.className)}>
-    <FlexContainer gap="sm" alignItems="center" className={className(styles.headerContainer, props.headerClassName)}>
-      <Label
-        error={props.error}
-        success={props.success}
-        message={props.message}
-        nextLine={props.nextLine}
-        htmlFor={props.htmlFor}
-        endBlock={props.format}
-      >
-        <FlexContainer gap="none" alignItems="center">
-          {props.label}
-          {props.infoTooltipContent && (
-            <InfoTooltip className={styles.tooltip} placement="top-start">
-              {props.infoTooltipContent}
-            </InfoTooltip>
-          )}
-          {props.optional && (
-            <Text size="sm" className={styles.optionalText}>
-              <FormattedMessage id="form.optional" />
-            </Text>
-          )}
-        </FlexContainer>
-      </Label>
-      {props.labelAction && <div>{props.labelAction}</div>}
-    </FlexContainer>
+    {(props.label || props.labelAction) && (
+      <FlexContainer gap="sm" alignItems="center" className={className(styles.headerContainer, props.headerClassName)}>
+        <Label
+          error={props.error}
+          success={props.success}
+          message={props.message}
+          nextLine={props.nextLine}
+          htmlFor={props.htmlFor}
+          endBlock={props.format}
+        >
+          <FlexContainer gap="none" alignItems="center">
+            {props.label}
+            {props.infoTooltipContent && (
+              <InfoTooltip className={styles.tooltip} placement="top-start">
+                {props.infoTooltipContent}
+              </InfoTooltip>
+            )}
+            {props.optional && (
+              <Text size="sm" className={styles.optionalText}>
+                <FormattedMessage id="form.optional" />
+              </Text>
+            )}
+          </FlexContainer>
+        </Label>
+        {props.labelAction && <div>{props.labelAction}</div>}
+      </FlexContainer>
+    )}
     {props.children}
   </div>
 ));

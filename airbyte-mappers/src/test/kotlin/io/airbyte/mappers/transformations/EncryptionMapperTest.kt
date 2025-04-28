@@ -19,7 +19,7 @@ import io.airbyte.config.mapper.configs.AesPadding
 import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
-import io.airbyte.protocol.models.AirbyteRecordMessageMetaChange
+import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

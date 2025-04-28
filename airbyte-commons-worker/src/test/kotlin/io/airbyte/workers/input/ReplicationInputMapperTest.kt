@@ -11,7 +11,7 @@ import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
-import io.airbyte.workers.input.ReplicationInputMapperTest.Fixtures.getActivityInputForSourceConfig
+import io.airbyte.workers.input.ReplicationInputMapperTest.Fixtures.newActivityInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -47,12 +47,13 @@ class ReplicationInputMapperTest {
     assertEquals(replicationActivityInput.sourceConfiguration, replicationInput.sourceConfiguration)
     assertEquals(replicationActivityInput.destinationConfiguration, replicationInput.destinationConfiguration)
     assertEquals(replicationActivityInput.connectionContext, replicationInput.connectionContext)
-    assertEquals(true, replicationInput.useFileTransfer)
+    assertEquals(replicationActivityInput.includesFiles, replicationInput.useFileTransfer)
+    assertEquals(replicationActivityInput.omitFileTransferEnvVar, replicationInput.omitFileTransferEnvVar)
   }
 
   @Test
   fun `map activity input to repl input file transfer default`() {
-    val replicationActivityInputSimpleFileTransfer = getActivityInputForSourceConfig(Jsons.jsonNode(mapOf("no" to "file transfer")))
+    val replicationActivityInputSimpleFileTransfer = newActivityInput(Jsons.jsonNode(mapOf("no" to "file transfer")))
 
     val mapper = ReplicationInputMapper()
 
@@ -65,13 +66,17 @@ class ReplicationInputMapperTest {
     @JvmStatic
     fun useFileTransferFormat(): Stream<Arguments> =
       Stream.of(
-        Arguments.of(Fixtures.replicationActivityInputSimpleFileTransfer),
-        Arguments.of(Fixtures.replicationActivityInputNewFileTransfer),
+        Arguments.of(Fixtures.fileEnabledActivityInputViaSourceConfigFlag),
+        Arguments.of(Fixtures.fileEnabledActivityInputViaSourceConfigDeliveryMethod),
+        Arguments.of(Fixtures.fileEnabledActivityInputViaInputFlag),
       )
   }
 
   object Fixtures {
-    fun getActivityInputForSourceConfig(sourceConfig: JsonNode): ReplicationActivityInput =
+    fun newActivityInput(
+      sourceConfig: JsonNode? = null,
+      includeFiles: Boolean = false,
+    ): ReplicationActivityInput =
       ReplicationActivityInput(
         UUID.randomUUID(),
         UUID.randomUUID(),
@@ -92,12 +97,15 @@ class ReplicationInputMapperTest {
         ConnectionContext().withOrganizationId(UUID.randomUUID()),
         null,
         emptyList(),
+        includeFiles,
       )
 
-    val replicationActivityInputSimpleFileTransfer =
-      getActivityInputForSourceConfig(Jsons.jsonNode(mapOf("use_file_transfer" to true)))
+    val fileEnabledActivityInputViaSourceConfigFlag =
+      newActivityInput(Jsons.jsonNode(mapOf("use_file_transfer" to true)))
 
-    val replicationActivityInputNewFileTransfer =
-      getActivityInputForSourceConfig(Jsons.jsonNode(mapOf("delivery_method" to mapOf("delivery_type" to "use_file_transfer"))))
+    val fileEnabledActivityInputViaSourceConfigDeliveryMethod =
+      newActivityInput(Jsons.jsonNode(mapOf("delivery_method" to mapOf("delivery_type" to "use_file_transfer"))))
+
+    val fileEnabledActivityInputViaInputFlag = newActivityInput(includeFiles = true)
   }
 }

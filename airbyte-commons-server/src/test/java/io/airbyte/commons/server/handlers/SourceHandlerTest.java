@@ -4,7 +4,8 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.protocol.models.CatalogHelpers.createAirbyteStream;
+import static io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt.buildConfigWithSecretRefsJava;
+import static io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -27,10 +28,7 @@ import io.airbyte.api.model.generated.ConnectionReadList;
 import io.airbyte.api.model.generated.DiscoverCatalogResult;
 import io.airbyte.api.model.generated.ResourceRequirements;
 import io.airbyte.api.model.generated.ScopedResourceRequirements;
-import io.airbyte.api.model.generated.SourceCloneConfiguration;
-import io.airbyte.api.model.generated.SourceCloneRequestBody;
 import io.airbyte.api.model.generated.SourceCreate;
-import io.airbyte.api.model.generated.SourceDefinitionIdRequestBody;
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead;
 import io.airbyte.api.model.generated.SourceDiscoverSchemaWriteRequestBody;
 import io.airbyte.api.model.generated.SourceIdRequestBody;
@@ -53,7 +51,9 @@ import io.airbyte.commons.server.helpers.ConnectionHelpers;
 import io.airbyte.commons.server.helpers.ConnectorSpecificationHelpers;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
+import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
@@ -62,29 +62,36 @@ import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
+import io.airbyte.config.secrets.ConfigWithProcessedSecrets;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
-import io.airbyte.config.secrets.SecretCoordinate;
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
+import io.airbyte.config.secrets.SecretsRepositoryWriter;
+import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
-import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.SourceService;
-import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
+import io.airbyte.domain.models.SecretStorage;
+import io.airbyte.domain.services.secrets.SecretPersistenceService;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
+import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.AirbyteCatalog;
-import io.airbyte.protocol.models.CatalogHelpers;
-import io.airbyte.protocol.models.ConnectorSpecification;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Assertions;
@@ -110,8 +117,6 @@ class SourceHandlerTest {
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
-  private TestClient featureFlagClient;
-  private MetricClient metricClient;
 
   private static final String API_KEY_FIELD = "apiKey";
   private static final String API_KEY_VALUE = "987-xyz";
@@ -127,14 +132,20 @@ class SourceHandlerTest {
   private static final String DEFAULT_MEMORY = "2 GB";
   private static final String DEFAULT_CPU = "2";
   private static final ScopedResourceRequirements RESOURCE_ALLOCATION = getResourceRequirementsForSourceRequest(DEFAULT_CPU, DEFAULT_MEMORY);
+  private static final UUID ORG_ID = UUID.randomUUID();
 
   private SourceService sourceService;
-  private WorkspaceService workspaceService;
   private WorkspaceHelper workspaceHelper;
-  private SecretPersistenceConfigService secretPersistenceConfigService;
   private ActorDefinitionHandlerHelper actorDefinitionHandlerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
   private CatalogService catalogService;
+  private SecretsRepositoryWriter secretsRepositoryWriter;
+  private SecretPersistenceService secretPersistenceService;
+  private SecretStorageService secretStorageService;
+  private SecretReferenceService secretReferenceService;
+  private CurrentUserService currentUserService;
+  private SecretPersistence secretPersistence;
+
   private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.emptyList());
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
 
@@ -150,17 +161,21 @@ class SourceHandlerTest {
     secretsProcessor = mock(JsonSecretsProcessor.class);
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     actorDefinitionVersionHelper = mock(ActorDefinitionVersionHelper.class);
-    featureFlagClient = mock(TestClient.class);
     sourceService = mock(SourceService.class);
-    workspaceService = mock(WorkspaceService.class);
     workspaceHelper = mock(WorkspaceHelper.class);
-    secretPersistenceConfigService = mock(SecretPersistenceConfigService.class);
+    secretPersistenceService = mock(SecretPersistenceService.class);
     actorDefinitionHandlerHelper = mock(ActorDefinitionHandlerHelper.class);
     actorDefinitionVersionUpdater = mock(ActorDefinitionVersionUpdater.class);
-    metricClient = mock(MetricClient.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
+    secretStorageService = mock(SecretStorageService.class);
+    secretReferenceService = mock(SecretReferenceService.class);
+    currentUserService = mock(CurrentUserService.class);
+    secretPersistence = mock(SecretPersistence.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
+    when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(ORG_ID);
+    when(secretPersistenceService.getPersistenceFromWorkspaceId(any())).thenReturn(secretPersistence);
 
     connectorSpecification = ConnectorSpecificationHelpers.generateConnectorSpecification();
 
@@ -196,20 +211,26 @@ class SourceHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
-        featureFlagClient,
         sourceService,
-        workspaceService,
         workspaceHelper,
-        secretPersistenceConfigService,
+        secretPersistenceService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.COMMUNITY);
+        catalogConverter,
+        apiPojoConverters,
+        Configs.AirbyteEdition.COMMUNITY,
+        secretsRepositoryWriter,
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
   }
 
   @Test
   void testCreateSource()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    // ===== GIVEN =====
+    // Create the SourceCreate request with the necessary fields.
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
         .workspaceId(sourceConnection.getWorkspaceId())
@@ -217,37 +238,96 @@ class SourceHandlerTest {
         .connectionConfiguration(sourceConnection.getConfiguration())
         .resourceAllocation(RESOURCE_ALLOCATION);
 
+    // Set up basic mocks.
     when(uuidGenerator.get()).thenReturn(sourceConnection.getSourceId());
-    when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
         .thenReturn(sourceDefinitionVersion);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(
+        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
-        sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec())).thenReturn(sourceCreate.getConnectionConfiguration());
-    when(secretsProcessor.prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(sourceCreate.getConnectionConfiguration());
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+        sourceCreate.getConnectionConfiguration(),
+        sourceDefinitionVersion.getSpec())).thenReturn(sourceCreate.getConnectionConfiguration());
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
+        standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
+            .thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
+    // Set up current user context.
+    final AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
+    final UUID currentUserId = UUID.randomUUID();
+    when(currentUser.getUserId()).thenReturn(currentUserId);
+    when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+
+    // Set up secret storage mocks.
+    final SecretStorage secretStorage = mock(SecretStorage.class);
+    final UUID secretStorageId = UUID.randomUUID();
+    when(secretStorage.getIdJava()).thenReturn(secretStorageId);
+    when(secretStorageService.getByWorkspaceId(sourceConnection.getWorkspaceId())).thenReturn(secretStorage);
+
+    // Set up secret reference service mocks for the input configuration.
+    final ConfigWithSecretReferences configWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(
+        sourceConnection.getSourceId(),
+        sourceCreate.getConnectionConfiguration(),
+        sourceConnection.getWorkspaceId()))
+            .thenReturn(configWithRefs);
+
+    // Simulate secret persistence and reference ID insertion.
+    final ConfigWithProcessedSecrets configWithProcessedSecrets = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+        sourceCreate.getConnectionConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification(), secretStorageId);
+    when(secretsRepositoryWriter.createFromConfig(sourceConnection.getWorkspaceId(), configWithProcessedSecrets, secretPersistence))
+        .thenReturn(sourceCreate.getConnectionConfiguration());
+
+    final JsonNode configWithSecretRefIds = Jsons.clone(sourceCreate.getConnectionConfiguration());
+    ((ObjectNode) configWithSecretRefIds).put("updated_with", "secret_reference_ids");
+    when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
+        configWithProcessedSecrets,
+        sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
+        secretStorageId,
+        currentUserId))
+            .thenReturn(configWithSecretRefIds);
+
+    // Mock the persisted config that is retrieved after creation and persistence.
+    final SourceConnection persistedConfig = Jsons.clone(sourceConnection).withConfiguration(configWithSecretRefIds);
+    when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
+        .thenReturn(persistedConfig);
+    final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds);
+    when(secretReferenceService.getConfigWithSecretReferences(
+        sourceConnection.getSourceId(),
+        configWithSecretRefIds,
+        sourceConnection.getWorkspaceId()))
+            .thenReturn(configWithRefsAfterPersist);
+
+    // Prepare secret output.
+    when(secretsProcessor.prepareSecretsForOutput(
+        configWithSecretRefIds,
+        sourceDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(configWithSecretRefIds);
+
+    // ===== WHEN =====
+    // Call the method under test.
     final SourceRead actualSourceRead = sourceHandler.createSource(sourceCreate);
 
-    final SourceRead expectedSourceRead =
-        SourceHelpers
-            .getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE, RESOURCE_ALLOCATION)
-            .connectionConfiguration(sourceConnection.getConfiguration()).resourceAllocation(RESOURCE_ALLOCATION);
+    // ===== THEN =====
+    // Build the expected SourceRead using the updated configuration.
+    final SourceRead expectedSourceRead = SourceHelpers
+        .getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE, RESOURCE_ALLOCATION)
+        .connectionConfiguration(configWithSecretRefIds)
+        .resourceAllocation(RESOURCE_ALLOCATION);
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
-    verify(secretsProcessor).prepareSecretsForOutput(sourceCreate.getConnectionConfiguration(),
-        sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(), sourceCreate.getConnectionConfiguration(), sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(sourceConnection, connectorSpecification);
+    verify(secretsProcessor).prepareSecretsForOutput(configWithSecretRefIds, sourceDefinitionSpecificationRead.getConnectionSpecification());
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(
+        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+        sourceConnection.getWorkspaceId(),
+        sourceCreate.getConnectionConfiguration(),
+        sourceDefinitionVersion.getSpec());
+    verify(sourceService).writeSourceConnectionNoSecrets(persistedConfig);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
-    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceConnection.getConfiguration());
+    verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), sourceCreate.getConnectionConfiguration());
   }
 
   @Test
@@ -291,15 +371,19 @@ class SourceHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
-        featureFlagClient,
         sourceService,
-        workspaceService,
         workspaceHelper,
-        secretPersistenceConfigService,
+        secretPersistenceService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
+        catalogConverter,
+        apiPojoConverters,
+        Configs.AirbyteEdition.CLOUD,
+        secretsRepositoryWriter,
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -322,12 +406,14 @@ class SourceHandlerTest {
   @Test
   void testUpdateSource()
       throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+    // ===== GIVEN =====
+    // Update the source name and configuration.
     final String updatedSourceName = "my updated source name";
-    final JsonNode newConfiguration = sourceConnection.getConfiguration();
+    final JsonNode newConfiguration = Jsons.clone(sourceConnection.getConfiguration());
     ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
     final ScopedResourceRequirements newResourceAllocation = getResourceRequirementsForSourceRequest("3", "3 GB");
 
-    final SourceConnection expectedSourceConnection = Jsons.clone(sourceConnection)
+    final SourceConnection updatedSource = Jsons.clone(sourceConnection)
         .withName(updatedSourceName)
         .withConfiguration(newConfiguration)
         .withTombstone(false)
@@ -339,41 +425,108 @@ class SourceHandlerTest {
         .connectionConfiguration(newConfiguration)
         .resourceAllocation(newResourceAllocation);
 
-    when(secretsProcessor
-        .copySecrets(sourceConnection.getConfiguration(), newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(newConfiguration);
-    when(secretsProcessor.prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification()))
-        .thenReturn(newConfiguration);
-    when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+    // Set up basic mocks for the update.
+    when(oAuthConfigSupplier.maskSourceOAuthParameters(
+        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
-        newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
+        newConfiguration,
+        sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
     when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
         .thenReturn(standardSourceDefinition);
     when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId()))
         .thenReturn(sourceDefinitionVersion);
     when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId()))
         .thenReturn(standardSourceDefinition);
+    when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
+        .thenReturn(updatedSource);
+    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
+        sourceConnection.getSourceId()))
+            .thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(sourceService.getSourceConnectionIfExists(sourceConnection.getSourceId()))
+        .thenReturn(Optional.of(sourceConnection));
+
+    // Set up current user context.
+    final AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
+    final UUID currentUserId = UUID.randomUUID();
+    when(currentUser.getUserId()).thenReturn(currentUserId);
+    when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+
+    // Set up secret storage mocks.
+    final SecretStorage secretStorage = mock(SecretStorage.class);
+    final UUID secretStorageId = UUID.randomUUID();
+    when(secretStorage.getIdJava()).thenReturn(secretStorageId);
+    when(secretStorageService.getByWorkspaceId(sourceConnection.getWorkspaceId())).thenReturn(secretStorage);
+
+    // Set up secret reference service mocks for the previous config.
+    final ConfigWithSecretReferences previousConfigWithRefs = buildConfigWithSecretRefsJava(sourceConnection.getConfiguration());
+    when(secretReferenceService.getConfigWithSecretReferences(
+        sourceConnection.getSourceId(),
+        sourceConnection.getConfiguration(),
+        sourceConnection.getWorkspaceId()))
+            .thenReturn(previousConfigWithRefs);
+
+    // Simulate the secret update and reference ID creation/insertion.
+    final ConfigWithProcessedSecrets newConfigWithProcessedSecrets = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
+        newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification(), secretStorageId);
+    when(secretsRepositoryWriter.updateFromConfig(
+        sourceConnection.getWorkspaceId(),
+        previousConfigWithRefs,
+        newConfigWithProcessedSecrets,
+        sourceDefinitionVersion.getSpec().getConnectionSpecification(),
+        secretPersistence))
+            .thenReturn(newConfigWithProcessedSecrets.getOriginalConfig());
+
+    final JsonNode newConfigWithSecretRefIds = Jsons.clone(newConfiguration);
+    ((ObjectNode) newConfigWithSecretRefIds).put("updated_with", "secret_reference_ids");
+    when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
+        newConfigWithProcessedSecrets,
+        sourceConnection.getSourceId(),
+        sourceConnection.getWorkspaceId(),
+        secretStorageId,
+        currentUserId))
+            .thenReturn(newConfigWithSecretRefIds);
+
+    // Mock the updated config that is persisted and retrieved for building the source read.
+    final SourceConnection updatedSourceWithSecretRefIds = Jsons.clone(updatedSource).withConfiguration(newConfigWithSecretRefIds);
+
+    // First call returns the original source connection, second call returns the updated one.
     when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
-        .thenReturn(expectedSourceConnection);
-    when(configurationUpdate.source(sourceConnection.getSourceId(), updatedSourceName, newConfiguration))
-        .thenReturn(expectedSourceConnection);
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+        .thenReturn(updatedSourceWithSecretRefIds);
 
+    final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(newConfigWithSecretRefIds);
+    when(secretReferenceService.getConfigWithSecretReferences(
+        sourceConnection.getSourceId(),
+        newConfigWithSecretRefIds,
+        sourceConnection.getWorkspaceId()))
+            .thenReturn(configWithRefsAfterPersist);
+
+    // Prepare secret output.
+    when(secretsProcessor.prepareSecretsForOutput(
+        newConfigWithSecretRefIds,
+        sourceDefinitionSpecificationRead.getConnectionSpecification()))
+            .thenReturn(newConfigWithSecretRefIds);
+
+    // ===== WHEN =====
+    // Call the method under test.
     final SourceRead actualSourceRead = sourceHandler.updateSource(sourceUpdate);
-    final SourceRead expectedSourceRead =
-        SourceHelpers
-            .getSourceRead(expectedSourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-                newResourceAllocation)
-            .connectionConfiguration(newConfiguration);
+
+    // ===== THEN =====
+    // Build the expected SourceRead using the updated configuration.
+    final SourceRead expectedSourceRead = SourceHelpers
+        .getSourceRead(updatedSourceWithSecretRefIds, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
+            newResourceAllocation)
+        .connectionConfiguration(newConfigWithSecretRefIds);
 
     assertEquals(expectedSourceRead, actualSourceRead);
 
-    verify(secretsProcessor).prepareSecretsForOutput(newConfiguration, sourceDefinitionSpecificationRead.getConnectionSpecification());
-    verify(oAuthConfigSupplier).maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
-        sourceConnection.getWorkspaceId(), newConfiguration, sourceDefinitionVersion.getSpec());
-    verify(sourceService).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
+    verify(secretsProcessor).prepareSecretsForOutput(newConfigWithSecretRefIds, sourceDefinitionSpecificationRead.getConnectionSpecification());
+    verify(oAuthConfigSupplier).maskSourceOAuthParameters(
+        sourceDefinitionSpecificationRead.getSourceDefinitionId(),
+        sourceConnection.getWorkspaceId(),
+        newConfiguration,
+        sourceDefinitionVersion.getSpec());
+    verify(sourceService).writeSourceConnectionNoSecrets(updatedSourceWithSecretRefIds);
     verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId());
     verify(validator).ensure(sourceDefinitionSpecificationRead.getConnectionSpecification(), newConfiguration);
@@ -438,15 +591,19 @@ class SourceHandlerTest {
         configurationUpdate,
         oAuthConfigSupplier,
         actorDefinitionVersionHelper,
-        featureFlagClient,
         sourceService,
-        workspaceService,
         workspaceHelper,
-        secretPersistenceConfigService,
+        secretPersistenceService,
         actorDefinitionHandlerHelper,
         actorDefinitionVersionUpdater,
         licenseEntitlementChecker,
-        catalogConverter, apiPojoConverters, metricClient, Configs.AirbyteEdition.CLOUD);
+        catalogConverter,
+        apiPojoConverters,
+        Configs.AirbyteEdition.CLOUD,
+        secretsRepositoryWriter,
+        secretStorageService,
+        secretReferenceService,
+        currentUserService);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
@@ -497,6 +654,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceRead actualSourceRead = sourceHandler.getSource(sourceIdRequestBody);
 
@@ -506,87 +665,6 @@ class SourceHandlerTest {
         sourceConnection.getSourceId());
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
         sourceDefinitionSpecificationRead.getConnectionSpecification());
-  }
-
-  @Test
-  void testCloneSourceWithoutConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(
-        standardSourceDefinition.getSourceDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-    final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-
-    final SourceCloneRequestBody sourceCloneRequestBody = new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId());
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
-
-    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
-        .thenReturn(standardSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
-        .thenReturn(sourceDefinitionVersion);
-    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
-    when(
-        secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(sourceConnection.getConfiguration());
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
-
-    assertEquals(expectedClonedSourceRead, actualSourceRead);
-    verify(actorDefinitionVersionHelper).getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId());
-  }
-
-  @Test
-  void testCloneSourceWithConfigChange()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final SourceConnection clonedConnection = SourceHelpers.generateSource(
-        standardSourceDefinition.getSourceDefinitionId(),
-        apiPojoConverters.scopedResourceReqsToInternal(RESOURCE_ALLOCATION));
-    final SourceRead expectedClonedSourceRead =
-        SourceHelpers.getSourceRead(clonedConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-    final SourceRead sourceRead =
-        SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
-            RESOURCE_ALLOCATION);
-
-    final SourceCloneConfiguration sourceCloneConfiguration = new SourceCloneConfiguration().name("Copy Name");
-    final SourceCloneRequestBody sourceCloneRequestBody =
-        new SourceCloneRequestBody().sourceCloneId(sourceRead.getSourceId()).sourceConfiguration(sourceCloneConfiguration);
-
-    when(uuidGenerator.get()).thenReturn(clonedConnection.getSourceId());
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId())).thenReturn(sourceConnection);
-    when(sourceService.getSourceConnection(clonedConnection.getSourceId())).thenReturn(clonedConnection);
-
-    when(sourceService.getStandardSourceDefinition(sourceDefinitionSpecificationRead.getSourceDefinitionId()))
-        .thenReturn(standardSourceDefinition);
-    when(actorDefinitionVersionHelper.getSourceVersion(standardSourceDefinition, sourceConnection.getWorkspaceId()))
-        .thenReturn(sourceDefinitionVersion);
-    when(sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId())).thenReturn(standardSourceDefinition);
-    when(
-        secretsProcessor.prepareSecretsForOutput(sourceConnection.getConfiguration(), sourceDefinitionSpecificationRead.getConnectionSpecification()))
-            .thenReturn(sourceConnection.getConfiguration());
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
-        sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, clonedConnection.getWorkspaceId(),
-        clonedConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
-
-    final SourceRead actualSourceRead = sourceHandler.cloneSource(sourceCloneRequestBody);
-
-    assertEquals(expectedClonedSourceRead, actualSourceRead);
   }
 
   @Test
@@ -612,6 +690,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceReadList actualSourceReadList = sourceHandler.listSourcesForWorkspace(workspaceIdRequestBody);
 
@@ -628,8 +708,6 @@ class SourceHandlerTest {
     final SourceRead expectedSourceRead =
         SourceHelpers.getSourceRead(sourceConnection, standardSourceDefinition, IS_VERSION_OVERRIDE_APPLIED, IS_ENTITLED, SUPPORT_STATE,
             RESOURCE_ALLOCATION);
-    final SourceDefinitionIdRequestBody sourceDefinitionIdRequestBody =
-        new SourceDefinitionIdRequestBody().sourceDefinitionId(sourceConnection.getSourceDefinitionId());
 
     when(sourceService.getSourceConnection(sourceConnection.getSourceId())).thenReturn(sourceConnection);
     when(sourceService.listSourcesForDefinition(sourceConnection.getSourceDefinitionId())).thenReturn(Lists.newArrayList(sourceConnection));
@@ -643,8 +721,10 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
-    final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceDefinitionIdRequestBody);
+    final SourceReadList actualSourceReadList = sourceHandler.listSourcesForSourceDefinition(sourceConnection.getSourceDefinitionId());
 
     assertEquals(expectedSourceRead, actualSourceReadList.getSources().get(0));
     verify(secretsProcessor).prepareSecretsForOutput(sourceConnection.getConfiguration(),
@@ -669,6 +749,8 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final SourceSearch validSourceSearch = new SourceSearch().name(sourceConnection.getName());
     SourceReadList actualSourceReadList = sourceHandler.searchSources(validSourceSearch);
@@ -697,9 +779,6 @@ class SourceHandlerTest {
     when(sourceService.getSourceConnection(sourceConnection.getSourceId()))
         .thenReturn(sourceConnection)
         .thenReturn(expectedSourceConnection);
-    when(sourceService.getSourceConnectionWithSecrets(sourceConnection.getSourceId()))
-        .thenReturn(sourceConnection)
-        .thenReturn(expectedSourceConnection);
     when(oAuthConfigSupplier.maskSourceOAuthParameters(sourceDefinitionSpecificationRead.getSourceDefinitionId(),
         sourceConnection.getWorkspaceId(),
         newConfiguration, sourceDefinitionVersion.getSpec())).thenReturn(newConfiguration);
@@ -714,15 +793,15 @@ class SourceHandlerTest {
             .thenReturn(sourceConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(standardSourceDefinition, sourceConnection.getWorkspaceId(),
         sourceConnection.getSourceId())).thenReturn(sourceDefinitionVersionWithOverrideStatus);
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     sourceHandler.deleteSource(sourceIdRequestBody);
 
-    // We should not no longer get secrets or write secrets anymore (since we are deleting the source).
-    verify(sourceService, times(0)).writeSourceConnectionWithSecrets(expectedSourceConnection, connectorSpecification);
-    verify(sourceService, times(0)).getSourceConnectionWithSecrets(any());
-    verify(sourceService).tombstoneSource(any(), any(), any(), any());
+    verify(sourceService).tombstoneSource(any(), any(), any());
     verify(connectionsHandler).listConnectionsForWorkspace(workspaceIdRequestBody);
     verify(connectionsHandler).deleteConnection(connectionRead.getConnectionId());
+    verify(secretReferenceService).deleteActorSecretReferences(sourceConnection.getSourceId());
   }
 
   @Test
@@ -826,7 +905,7 @@ class SourceHandlerTest {
     verify(sourceHandlerSpy, never()).hydrateOAuthResponseSecret(any(), any());
 
     // Test that calling createSourceHandleSecret hits new code path if we have a secretId set.
-    final SecretCoordinate secretCoordinate = new SecretCoordinate("test", 1);
+    final AirbyteManagedSecretCoordinate secretCoordinate = new AirbyteManagedSecretCoordinate("airbyte_test", 1);
     sourceCreate.setSecretId(secretCoordinate.getFullCoordinate());
     sourceHandlerSpy.createSourceWithOptionalSecret(sourceCreate);
     verify(sourceHandlerSpy, times(2)).createSource(sourceCreate);

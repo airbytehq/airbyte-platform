@@ -28,7 +28,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient)
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
@@ -49,7 +49,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns true
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient)
 
     val originalInput =
       LaunchStageIO(
@@ -79,7 +79,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForAutoId(autoId)
     } returns false
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient)
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))
@@ -100,7 +100,7 @@ class CheckStatusStageTest {
       kubernetesClient.podsExistForAutoId(autoId)
     } throws Exception("Bang!")
 
-    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient, "dataplane-id")
+    val checkStatusStage = CheckStatusStage(kubernetesClient, metricClient)
 
     val originalInput =
       LaunchStageIO(RecordFixtures.launcherInput(workloadId, "{}", mapOf("label_key" to "label_value"), "/log/path", autoId = autoId))

@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.persistence
 
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -18,7 +19,7 @@ class LocalTestingSecretPersistenceTest {
   @Test
   fun `test reading secret from database`() {
     val secret = "secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = SecretCoordinate.fromFullCoordinate("airbyte_secret_coordinate_v1")
     val mockDslContext: DSLContext = mockk()
     val mockResult: org.jooq.Result<Record> = mockk()
     val mockRecord: Record = mockk()
@@ -37,7 +38,7 @@ class LocalTestingSecretPersistenceTest {
 
   @Test
   fun `test reading missing secret from database`() {
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = SecretCoordinate.fromFullCoordinate("airbyte_secret_coordinate_v1")
     val mockDslContext: DSLContext = mockk()
     val mockResult: org.jooq.Result<Record> = mockk()
     val mockRecord: Record = mockk()
@@ -56,7 +57,7 @@ class LocalTestingSecretPersistenceTest {
 
   @Test
   fun `test reading from database with no result`() {
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = SecretCoordinate.fromFullCoordinate("airbyte_secret_coordinate_v1")
     val mockDslContext: DSLContext = mockk()
     val mockResult: org.jooq.Result<Record> = mockk()
     val mockRecord: Record = mockk()
@@ -75,7 +76,7 @@ class LocalTestingSecretPersistenceTest {
   @Test
   fun `test writing a secret to the database`() {
     val secret = "a secret value"
-    val coordinate = SecretCoordinate.fromFullCoordinate("secret_coordinate_v1")
+    val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1)
     val mockDslContext: DSLContext = mockk()
     val mockRowCountQuery: RowCountQuery = mockk()
 

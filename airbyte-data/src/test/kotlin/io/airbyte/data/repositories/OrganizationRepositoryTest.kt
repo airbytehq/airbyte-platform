@@ -111,6 +111,7 @@ class OrganizationRepositoryTest : AbstractConfigRepositoryTest() {
         name = "Test Workspace",
         slug = "test-workspace",
         organizationId = savedOrg.id!!,
+        dataplaneGroupId = UUID.randomUUID(),
       )
     val savedWorkspace = workspaceRepository.save(workspace)
 

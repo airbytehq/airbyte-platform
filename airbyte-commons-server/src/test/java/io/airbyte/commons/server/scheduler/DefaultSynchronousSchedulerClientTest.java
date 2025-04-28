@@ -43,14 +43,17 @@ import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ConfigInjector;
+import io.airbyte.config.secrets.ConfigWithSecretReferences;
+import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.persistence.job.errorreporter.ConnectorJobReportingContext;
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
 import io.airbyte.persistence.job.tracker.JobTracker;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -80,6 +83,8 @@ class DefaultSynchronousSchedulerClientTest {
       .put("username", "airbyte")
       .put("password", "abc")
       .build());
+
+  private static final ConfigWithSecretReferences CONFIG_WITH_REFS = new ConfigWithSecretReferences(CONFIGURATION, Map.of());
   private static final SourceConnection SOURCE_CONNECTION = new SourceConnection()
       .withWorkspaceId(WORKSPACE_ID)
       .withSourceId(UUID1)
@@ -104,6 +109,7 @@ class DefaultSynchronousSchedulerClientTest {
   private JobErrorReporter jobErrorReporter;
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ConfigInjector configInjector;
+  private SecretReferenceService secretReferenceService;
   private DefaultSynchronousSchedulerClient schedulerClient;
   private ContextBuilder contextBuilder;
 
@@ -115,14 +121,18 @@ class DefaultSynchronousSchedulerClientTest {
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
     configInjector = mock(ConfigInjector.class);
     contextBuilder = mock(ContextBuilder.class);
+    secretReferenceService = mock(SecretReferenceService.class);
     schedulerClient =
         new DefaultSynchronousSchedulerClient(temporalClient, jobTracker, jobErrorReporter, oAuthConfigSupplier, configInjector,
-            contextBuilder);
+            contextBuilder, secretReferenceService);
 
     when(oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
     when(oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), eq(CONFIGURATION))).thenReturn(CONFIGURATION);
 
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
+
+    when(secretReferenceService.getConfigWithSecretReferences(any(), eq(CONFIGURATION), any()))
+        .thenReturn(CONFIG_WITH_REFS);
 
     when(contextBuilder.fromDestination(any())).thenReturn(new ActorContext());
     when(contextBuilder.fromSource(any())).thenReturn(new ActorContext());
@@ -225,7 +235,7 @@ class DefaultSynchronousSchedulerClientTest {
       final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
           .withActorType(ActorType.SOURCE)
           .withActorId(SOURCE_CONNECTION.getSourceId())
-          .withConnectionConfiguration(SOURCE_CONNECTION.getConfiguration())
+          .withConnectionConfiguration(CONFIG_WITH_REFS)
           .withDockerImage(DOCKER_IMAGE)
           .withProtocolVersion(PROTOCOL_VERSION).withIsCustomConnector(false);
 
@@ -243,15 +253,20 @@ class DefaultSynchronousSchedulerClientTest {
     @Test
     void testCreateSourceCheckConnectionJobWithConfigInjection() throws IOException {
       final JsonNode configAfterInjection = new ObjectMapper().readTree("{\"injected\": true }");
+      final ConfigWithSecretReferences configWithRefsAfterInjection = new ConfigWithSecretReferences(configAfterInjection, Map.of());
       final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
           .withActorType(ActorType.SOURCE)
           .withActorId(SOURCE_CONNECTION.getSourceId())
-          .withConnectionConfiguration(configAfterInjection)
+          .withConnectionConfiguration(configWithRefsAfterInjection)
           .withDockerImage(DOCKER_IMAGE)
           .withProtocolVersion(PROTOCOL_VERSION).withIsCustomConnector(false);
 
       when(configInjector.injectConfig(SOURCE_CONNECTION.getConfiguration(), SOURCE_CONNECTION.getSourceDefinitionId()))
           .thenReturn(configAfterInjection);
+      when(
+          secretReferenceService.getConfigWithSecretReferences(SOURCE_CONNECTION.getSourceId(), configAfterInjection,
+              SOURCE_CONNECTION.getWorkspaceId()))
+                  .thenReturn(configWithRefsAfterInjection);
 
       final StandardCheckConnectionOutput mockOutput = mock(StandardCheckConnectionOutput.class);
       final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withCheckConnection(mockOutput);
@@ -268,7 +283,7 @@ class DefaultSynchronousSchedulerClientTest {
       final JobCheckConnectionConfig jobCheckConnectionConfig = new JobCheckConnectionConfig()
           .withActorType(ActorType.DESTINATION)
           .withActorId(DESTINATION_CONNECTION.getDestinationId())
-          .withConnectionConfiguration(DESTINATION_CONNECTION.getConfiguration())
+          .withConnectionConfiguration(CONFIG_WITH_REFS)
           .withDockerImage(DOCKER_IMAGE)
           .withProtocolVersion(PROTOCOL_VERSION)
           .withIsCustomConnector(false);

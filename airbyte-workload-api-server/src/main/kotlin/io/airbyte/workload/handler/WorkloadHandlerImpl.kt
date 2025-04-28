@@ -20,12 +20,16 @@ import io.airbyte.workload.api.domain.WorkloadQueueStats
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
+import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Singleton
+import java.time.Duration
 import java.time.OffsetDateTime
 import java.util.UUID
+import io.airbyte.workload.repository.domain.Workload as DomainWorkload
 import io.airbyte.workload.repository.domain.WorkloadType as DomainWorkloadType
 
 private val logger = KotlinLogging.logger {}
@@ -36,9 +40,11 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class WorkloadHandlerImpl(
   private val workloadRepository: WorkloadRepository,
+  private val workloadQueueRepository: WorkloadQueueRepository,
   private val airbyteApi: AirbyteApiClient,
   private val metricClient: MetricClient,
   private val featureFlagClient: FeatureFlagClient,
+  @Property(name = "airbyte.workload-api.workload-redelivery-window") private val workloadRedeliveryWindow: Duration,
 ) : WorkloadHandler {
   companion object {
     val ACTIVE_STATUSES: List<WorkloadStatus> =
@@ -134,7 +140,12 @@ class WorkloadHandlerImpl(
     deadline: OffsetDateTime,
   ): Boolean {
     val workload = workloadRepository.claim(workloadId, dataplaneId, deadline)
-    return workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
+    val claimed = workload != null && workload.status == WorkloadStatus.CLAIMED && workload.dataplaneId == dataplaneId
+    if (claimed) {
+      workload?.let { emitTimeToTransitionMetric(it, WorkloadStatus.CLAIMED) }
+      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+    }
+    return claimed
   }
 
   override fun cancelWorkload(
@@ -154,6 +165,8 @@ class WorkloadHandlerImpl(
           null,
         )
         sendSignal(workload.type, workload.signalInput)
+
+        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
       }
       WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -179,6 +192,8 @@ class WorkloadHandlerImpl(
           null,
         )
         sendSignal(workload.type, workload.signalInput)
+
+        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
       }
       WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
       else -> throw InvalidStatusTransitionException(
@@ -235,6 +250,7 @@ class WorkloadHandlerImpl(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
+    // TODO rework for atomicity and track time to transition to LAUNCHED from start
     val workload = getDomainWorkload(workloadId)
 
     when (workload.status) {
@@ -301,7 +317,13 @@ class WorkloadHandlerImpl(
     priority: WorkloadPriority?,
     quantity: Int,
   ): List<Workload> {
-    val domainWorkloads = workloadRepository.getPendingWorkloads(dataplaneGroup, priority?.toInt(), quantity)
+    val domainWorkloads =
+      workloadQueueRepository.pollWorkloadQueue(
+        dataplaneGroup,
+        priority?.toInt(),
+        quantity,
+        redeliveryWindowSecs = workloadRedeliveryWindow.seconds.toInt(),
+      )
 
     return domainWorkloads.map { it.toApi() }
   }
@@ -309,12 +331,17 @@ class WorkloadHandlerImpl(
   override fun countWorkloadQueueDepth(
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
-  ): Long = workloadRepository.countPendingWorkloads(dataplaneGroup, priority?.toInt())
+  ): Long = workloadQueueRepository.countEnqueuedWorkloads(dataplaneGroup, priority?.toInt())
 
   override fun getWorkloadQueueStats(): List<WorkloadQueueStats> {
-    val domainStats = workloadRepository.getPendingWorkloadQueueStats()
+    val domainStats =
+      workloadQueueRepository.getEnqueuedWorkloadStats()
 
     return domainStats.map { it.toApi() }
+  }
+
+  override fun cleanWorkloadQueue(limit: Int) {
+    workloadQueueRepository.cleanUpAckedEntries(limit)
   }
 
   override fun getWorkloadsWithExpiredDeadline(
@@ -330,6 +357,22 @@ class WorkloadHandlerImpl(
       )
 
     return domainWorkloads.map { it.toApi() }
+  }
+
+  private fun emitTimeToTransitionMetric(
+    workload: DomainWorkload,
+    status: WorkloadStatus,
+  ) {
+    workload.timeSinceCreateInMillis()?.let {
+      metricClient.distribution(
+        OssMetricsRegistry.WORKLOAD_TIME_TO_TRANSITION_FROM_CREATE,
+        it.toDouble(),
+        MetricAttribute(MetricTags.WORKLOAD_TYPE_TAG, workload.type.name),
+        MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, workload.dataplaneGroup ?: "undefined"),
+        MetricAttribute(MetricTags.DATA_PLANE_ID_TAG, workload.dataplaneId ?: "undefined"),
+        MetricAttribute(MetricTags.STATUS_TAG, status.name),
+      )
+    }
   }
 
   private fun sendSignal(
@@ -390,4 +433,11 @@ class WorkloadHandlerImpl(
       }
     }
   }
+
+  private fun DomainWorkload.timeSinceCreateInMillis(): Long? =
+    createdAt?.let { createdAt ->
+      updatedAt?.let { updatedAt ->
+        updatedAt.toInstant().toEpochMilli() - createdAt.toInstant().toEpochMilli()
+      }
+    }
 }

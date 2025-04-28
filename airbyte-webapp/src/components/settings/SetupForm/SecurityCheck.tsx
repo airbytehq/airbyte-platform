@@ -1,5 +1,5 @@
 import React, { memo, useEffect } from "react";
-import { useFormContext, useFormState } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
@@ -14,23 +14,23 @@ import { useOssSecurityCheck } from "core/api";
 import { links } from "core/utils/links";
 import { CheckBoxControl } from "packages/cloud/views/auth/components/CheckBoxControl";
 
-import { SetupFormValues } from "./SetupForm";
+import { SetupFormValues, SecurityCheckStatus } from "./SetupForm";
 
 export const SecurityCheck: React.FC = memo(() => {
   const { formatMessage } = useIntl();
-  const { errors } = useFormState<SetupFormValues>();
   const { setValue } = useFormContext<SetupFormValues>();
   const { data, isLoading, isError } = useOssSecurityCheck(window.location.origin);
+  const securityCheck = useWatch<SetupFormValues>({ name: "securityCheck" });
 
   useEffect(() => {
     if (isLoading) {
-      setValue("securityCheck", "loading");
+      setValue("securityCheck", SecurityCheckStatus.loading);
     } else if (isError) {
-      setValue("securityCheck", "check_failed");
+      setValue("securityCheck", SecurityCheckStatus.check_failed);
     } else if (data?.status === "closed") {
-      setValue("securityCheck", "succeeded");
+      setValue("securityCheck", SecurityCheckStatus.succeeded);
     } else {
-      setValue("securityCheck", "failed", { shouldValidate: true }); // enforce validation since we set invalid value
+      setValue("securityCheck", SecurityCheckStatus.failed);
     }
   }, [data?.status, isError, isLoading, setValue]);
 
@@ -82,9 +82,11 @@ export const SecurityCheck: React.FC = memo(() => {
               label={formatMessage({ id: "setupForm.check.overwrite" })}
               data-testid="overwriteSecurityCheck"
               name="overwriteSecurityCheck"
-              checked={!errors.securityCheck}
+              checked={securityCheck === SecurityCheckStatus.ignored}
               onChange={({ target: { checked } }) => {
-                setValue("securityCheck", checked ? "ignored" : "failed", { shouldValidate: true });
+                setValue("securityCheck", checked ? SecurityCheckStatus.ignored : SecurityCheckStatus.failed, {
+                  shouldValidate: true,
+                });
               }}
             />
           </Collapsible>

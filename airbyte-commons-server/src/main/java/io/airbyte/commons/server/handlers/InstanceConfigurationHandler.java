@@ -162,6 +162,9 @@ public class InstanceConfigurationHandler {
       if (oidcEndpointConfig.isPresent()) {
         authConfig.setAuthorizationServerUrl(oidcEndpointConfig.get().getAuthorizationServerEndpoint());
         authConfig.setClientId(oidcEndpointConfig.get().getClientId());
+        if (oidcEndpointConfig.get().getAudience() != null) {
+          authConfig.setAudience(oidcEndpointConfig.get().getAudience());
+        }
       } else if (authConfigs.getKeycloakConfig() != null && airbyteUrl.isPresent()) {
         authConfig.setClientId(authConfigs.getKeycloakConfig().getWebClientId());
         authConfig.setAuthorizationServerUrl(

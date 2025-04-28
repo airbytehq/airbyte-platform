@@ -72,8 +72,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
+  private static final String GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY = "generate_replication_activity_input_activity";
+  private static final int GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY_VERSION = 1;
+
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private GenerateReplicationActivityInputActivity generateReplicationActivityInputActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ReportRunTimeActivity reportRunTimeActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -250,26 +255,36 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     } else {
       signalInput = null;
     }
-    return new ReplicationActivityInput(
-        syncInput.getSourceId(),
-        syncInput.getDestinationId(),
-        syncInput.getSourceConfiguration(),
-        syncInput.getDestinationConfiguration(),
-        jobRunConfig,
-        sourceLauncherConfig,
-        destinationLauncherConfig,
-        syncInput.getSyncResourceRequirements(),
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        taskQueue,
-        syncInput.getIsReset(),
-        syncInput.getNamespaceDefinition(),
-        syncInput.getNamespaceFormat(),
-        syncInput.getPrefix(),
-        refreshSchemaOutput,
-        syncInput.getConnectionContext(),
-        signalInput,
-        syncInput.getNetworkSecurityTokens());
+    final int version =
+        Workflow.getVersion(GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY, Workflow.DEFAULT_VERSION,
+            GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY_VERSION);
+    if (version == Workflow.DEFAULT_VERSION) {
+      return new ReplicationActivityInput(
+          syncInput.getSourceId(),
+          syncInput.getDestinationId(),
+          syncInput.getSourceConfiguration(),
+          syncInput.getDestinationConfiguration(),
+          jobRunConfig,
+          sourceLauncherConfig,
+          destinationLauncherConfig,
+          syncInput.getSyncResourceRequirements(),
+          syncInput.getWorkspaceId(),
+          syncInput.getConnectionId(),
+          taskQueue,
+          syncInput.getIsReset(),
+          syncInput.getNamespaceDefinition(),
+          syncInput.getNamespaceFormat(),
+          syncInput.getPrefix(),
+          refreshSchemaOutput,
+          syncInput.getConnectionContext(),
+          signalInput,
+          syncInput.getNetworkSecurityTokens(),
+          syncInput.getIncludesFiles(),
+          syncInput.getOmitFileTransferEnvVar());
+    } else {
+      return generateReplicationActivityInputActivity.generate(syncInput, jobRunConfig, sourceLauncherConfig,
+          destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput);
+    }
   }
 
 }

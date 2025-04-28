@@ -1,7 +1,6 @@
 import React from "react";
 import { useIntl } from "react-intl";
-import { SchemaOf } from "yup";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
@@ -11,13 +10,11 @@ import { trackError } from "core/utils/datadog";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
-interface MetricsFormValues {
-  anonymousDataCollection: boolean;
-}
-
-const ValidationSchema: SchemaOf<MetricsFormValues> = yup.object().shape({
-  anonymousDataCollection: yup.boolean().required(),
+const ValidationSchema = z.object({
+  anonymousDataCollection: z.boolean(),
 });
+
+type MetricsFormValues = z.infer<typeof ValidationSchema>;
 
 export const MetricsForm: React.FC = () => {
   const { formatMessage } = useIntl();
@@ -56,7 +53,7 @@ export const MetricsForm: React.FC = () => {
       defaultValues={{
         anonymousDataCollection,
       }}
-      schema={ValidationSchema}
+      zodSchema={ValidationSchema}
       onSubmit={onSubmit}
       onSuccess={onSuccess}
       onError={onError}

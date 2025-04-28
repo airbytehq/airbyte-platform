@@ -35,7 +35,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.VersionBreakingChange;
-import io.airbyte.protocol.models.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -373,11 +373,11 @@ class ConnectorRegistryConvertersTest {
 
     ConnectorRollout rollout = ConnectorRegistryConverters.toConnectorRollout(rcDef, rcAdv, initialAdv);
 
-    assertEquals(rollout.getActorDefinitionId(), actorDefinitionId);
-    assertEquals(rollout.getInitialRolloutPct(), rolloutConfiguration.getInitialPercentage());
-    assertEquals(rollout.getFinalTargetRolloutPct(), rolloutConfiguration.getMaxPercentage());
-    assertEquals(rollout.getMaxStepWaitTimeMins(), rolloutConfiguration.getAdvanceDelayMinutes());
-    assertEquals(rollout.getState(), ConnectorEnumRolloutState.INITIALIZED);
+    assertEquals(actorDefinitionId, rollout.getActorDefinitionId());
+    assertEquals(rolloutConfiguration.getInitialPercentage().intValue(), rollout.getInitialRolloutPct());
+    assertEquals(rolloutConfiguration.getMaxPercentage().intValue(), rollout.getFinalTargetRolloutPct());
+    assertEquals(rolloutConfiguration.getAdvanceDelayMinutes().intValue(), rollout.getMaxStepWaitTimeMins());
+    assertEquals(ConnectorEnumRolloutState.INITIALIZED, rollout.getState());
 
     // With dockerImageTag mismatch
     ConnectorRegistrySourceDefinition rcDefWithDockerImageTagMismatch =

@@ -15,7 +15,7 @@ class InitialUserConfigFactory {
   /**
    * Returns the InitialUserConfig with values from the environment, if present. This is the preferred way
    * to configure the initial user and should take precedence over `airbyte.yml`.
-   * This bean checks requires a non-empty `email` property so that it can remain unloaded
+   * This bean requires a non-empty `email` property so that it can remain unloaded
    * if the initial-user configuration is coming from `airbyte.yml` instead of the environment,
    * for backwards compatibility.
    */

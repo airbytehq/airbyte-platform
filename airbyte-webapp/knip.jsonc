@@ -21,7 +21,10 @@
     "src/area/connector/utils/oauthCallback.ts",
 
     // Debug utility meant to be used only temporary for local debugging
-    "src/core/utils/useMemoDebug.ts"
+    "src/core/utils/useMemoDebug.ts",
+
+    // Ignore schema form files, as it is still under development
+    "src/components/forms/SchemaForm/**"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file
@@ -29,7 +32,12 @@
     // Knip does not detect the pure `/// <reference />` import for this
     "@types/segment-analytics",
     // Knip does not detect its usage by the `react-inline-svg-unique-id` plugin
-    "@inline-svg-unique-id/react"
+    "@inline-svg-unique-id/react",
+    // Ignore schema form dependencies, as it is still under development
+    "json-schema-to-ts",
+    "ajv",
+    "ajv-formats",
+    "ajv-keywords"
   ],
   "include": ["files", "dependencies"]
 }

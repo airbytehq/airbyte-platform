@@ -5,15 +5,20 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
-import io.airbyte.config.Geography
+import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.SsoConfig
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.init.PostLoadExecutor
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.db.init.DatabaseInitializer
 import io.airbyte.db.instance.DatabaseMigrator
@@ -23,6 +28,7 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 private val log = KotlinLogging.logger {}
 
@@ -44,6 +50,11 @@ class Bootloader(
   @param:Value("\${airbyte.bootloader.run-migration-on-startup}") private val runMigrationOnStartup: Boolean,
   @param:Value("\${airbyte.auth.default-realm}") private val defaultRealm: String,
   private val postLoadExecution: PostLoadExecutor?,
+  private val dataplaneGroupService: DataplaneGroupService,
+  private val dataplaneInitializer: DataplaneInitializer,
+  val airbyteEdition: AirbyteEdition,
+  private val authSecretInitializer: AuthKubernetesSecretInitializer?,
+  private val secretStorageInitializer: SecretStorageInitializer,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -56,10 +67,15 @@ class Bootloader(
    *  * Create default deployment
    *  * Perform post migration tasks
    *
-   *
    * @throws Exception if unable to perform any of the bootstrap operations.
    */
   fun load() {
+    if (authSecretInitializer != null) {
+      log.info { "Initializing auth secrets..." }
+      authSecretInitializer.checkAccessToSecrets(currentAirbyteVersion)
+      authSecretInitializer.initializeSecrets()
+    }
+
     log.info { "Initializing databases..." }
     initializeDatabases()
 
@@ -72,6 +88,12 @@ class Bootloader(
     log.info { "Running database migrations..." }
     runFlywayMigration(runMigrationOnStartup, configsDatabaseMigrator, jobsDatabaseMigrator)
 
+    log.info { "Creating dataplane group (if none exists)..." }
+    createDataplaneGroupIfNoneExists(dataplaneGroupService, airbyteEdition)
+
+    log.info { "Registering dataplane (if none exists)..." }
+    dataplaneInitializer.createDataplaneIfNotExists()
+
     log.info { "Creating workspace (if none exists)..." }
     createWorkspaceIfNoneExists(workspaceService)
 
@@ -79,7 +101,12 @@ class Bootloader(
     createDeploymentIfNoneExists(jobPersistence)
 
     log.info { "assign default organization to sso realm config..." }
-    createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
+    if (airbyteEdition != AirbyteEdition.CLOUD) {
+      createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
+    }
+
+    log.info { "Initializing default secret storage..." }
+    secretStorageInitializer.createOrUpdateDefaultSecretStorage()
 
     val airbyteVersion = currentAirbyteVersion.serialize()
     log.info { "Setting Airbyte version to '$airbyteVersion'" }
@@ -100,7 +127,7 @@ class Bootloader(
     // version in the database when the server main method is called. may be empty if this is the first
     // time the server is started.
     log.info { "Checking for illegal upgrade..." }
-    val initialAirbyteDatabaseVersion = jobPersistence.version.map { version: String? -> AirbyteVersion(version) }
+    val initialAirbyteDatabaseVersion = jobPersistence.version.map { version: String -> AirbyteVersion(version) }
     val requiredVersionUpgrade = getRequiredVersionUpgrade(initialAirbyteDatabaseVersion.orElse(null), airbyteVersion)
     if (requiredVersionUpgrade != null) {
       val attentionBanner = MoreResources.readResource("banner/attention-banner.txt")
@@ -120,13 +147,12 @@ class Bootloader(
     jobPersistence: JobPersistence,
     autoUpgradeConnectors: Boolean,
   ) {
-    val newProtocolRange = protocolVersionChecker.validate(autoUpgradeConnectors)
-    if (newProtocolRange == null) {
-      throw RuntimeException(
-        "Aborting bootloader to avoid breaking existing connection after an upgrade. " +
-          "Please address airbyte protocol version support issues in the connectors before retrying.",
-      )
-    }
+    val newProtocolRange =
+      protocolVersionChecker.validate(autoUpgradeConnectors)
+        ?: throw RuntimeException(
+          "Aborting bootloader to avoid breaking existing connection after an upgrade. " +
+            "Please address airbyte protocol version support issues in the connectors before retrying.",
+        )
     trackProtocolVersion(jobPersistence, newProtocolRange)
   }
 
@@ -142,14 +168,21 @@ class Bootloader(
   }
 
   private fun createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence: OrganizationPersistence) {
-    if (organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).isPresent) {
-      log.info { "SsoConfig already exists for the default organization." }
-      return
-    }
+    organizationPersistence
+      .getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+      .getOrNull()
+      ?.let {
+        if (it.keycloakRealm != defaultRealm) {
+          log.info { "SsoConfig already exists for the default organization, updating the config." }
+          organizationPersistence.updateSsoConfig(it.apply { it.keycloakRealm = defaultRealm })
+        }
+        return
+      }
     if (organizationPersistence.getSsoConfigByRealmName(defaultRealm).isPresent) {
       log.info { "An SsoConfig with realm $defaultRealm already exists, so one cannot be created for the default organization." }
       return
     }
+
     organizationPersistence.createSsoConfig(
       SsoConfig()
         .withSsoConfigId(UUID.randomUUID())
@@ -179,11 +212,50 @@ class Bootloader(
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withDefaultGeography(Geography.AUTO) // attach this new workspace to the Default Organization which should always exist at this point.
+        .withDefaultGeography(if (airbyteEdition == AirbyteEdition.CLOUD) GEOGRAPHY_US else GEOGRAPHY_AUTO)
+        // attach this new workspace to the Default Organization which should always exist at this point.
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
+  }
+
+  private fun createDataplaneGroupIfNoneExists(
+    dataplaneGroupService: DataplaneGroupService,
+    airbyteEdition: AirbyteEdition,
+  ) {
+    val dataplaneGroups = dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
+
+    // Cloud currently depends on a "US" Dataplane group to exist. Once this is no longer the case,
+    // we can remove Cloud-specific code from the bootloader.
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      if (!dataplaneGroups.any { it.name == "US" }) {
+        log.info { "Creating US dataplane group." }
+        val dataplaneGroupId = UUID.randomUUID()
+        val dataplaneGroup =
+          DataplaneGroup()
+            .withId(dataplaneGroupId)
+            .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+            .withName(GEOGRAPHY_US)
+            .withEnabled(true)
+            .withTombstone(false)
+        dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
+      }
+      return
+    } else if (dataplaneGroups.isNotEmpty()) {
+      log.info { "Dataplane group already exists for the deployment." }
+      return
+    }
+
+    val dataplaneGroupId = UUID.randomUUID()
+    val dataplaneGroup =
+      DataplaneGroup()
+        .withId(dataplaneGroupId)
+        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withName(GEOGRAPHY_AUTO)
+        .withEnabled(true)
+        .withTombstone(false)
+    dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
   }
 
   private fun initializeDatabases() {

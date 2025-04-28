@@ -4,6 +4,7 @@
 
 package io.airbyte.cron.jobs
 
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -39,6 +40,7 @@ class WorkloadMonitorTest {
   lateinit var workloadApi: WorkloadApi
   lateinit var workloadApiClient: WorkloadApiClient
   lateinit var workloadMonitor: WorkloadMonitor
+  lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun beforeEach() {
@@ -49,6 +51,7 @@ class WorkloadMonitorTest {
     workloadApi = mockk()
     workloadApiClient = mockk()
     every { workloadApiClient.workloadApi } returns workloadApi
+    featureFlagClient = mockk()
     workloadMonitor =
       WorkloadMonitor(
         workloadApiClient = workloadApiClient,
@@ -56,6 +59,8 @@ class WorkloadMonitorTest {
         syncWorkloadTimeout = syncTimeout,
         metricClient = metricClient,
         timeProvider = Optional.of { _: ZoneId -> currentTime },
+        deletionBatchSizeLimit = 100,
+        featureFlagClient = featureFlagClient,
       )
   }
 

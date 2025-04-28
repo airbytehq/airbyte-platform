@@ -6,15 +6,12 @@ package io.airbyte.workload.launcher.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.featureflag.Context
-import io.airbyte.featureflag.Geography
-import io.airbyte.featureflag.PlaneName
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micronaut.context.annotation.Factory
-import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -97,15 +94,7 @@ class ApplicationBeanFactory {
 
   @Singleton
   @Named("infraFlagContexts")
-  fun staticFlagContext(
-    @Property(name = "airbyte.workload-launcher.geography") geography: String,
-    @Property(name = "airbyte.data-plane-name") dataPlaneName: String?,
-  ): List<Context> =
-    if (dataPlaneName.isNullOrBlank()) {
-      listOf(Geography(geography))
-    } else {
-      listOf(Geography(geography), PlaneName(dataPlaneName))
-    }
+  fun staticFlagContext(): List<Context> = emptyList()
 
   @Singleton
   fun connectorApmSupportHelper(): ConnectorApmSupportHelper = ConnectorApmSupportHelper()

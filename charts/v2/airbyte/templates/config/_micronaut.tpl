@@ -9,7 +9,12 @@
 Renders the global.micronaut.environments value
 */}}
 {{- define "airbyte.micronaut.environments" }}
-    {{- join "," (append .Values.global.micronaut.environments (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))) }}
+    {{- join "," (
+      concat .Values.global.micronaut.environments 
+      (list (ternary "control-plane" (include "airbyte.common.cluster.type" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")))
+      (list (ternary "edition-community" (include "airbyte.auth.identityProvider.type" .) (eq (include "airbyte.auth.identityProvider.type" .) "simple")))
+    )
+ }}
 {{- end }}
 
 {{/*

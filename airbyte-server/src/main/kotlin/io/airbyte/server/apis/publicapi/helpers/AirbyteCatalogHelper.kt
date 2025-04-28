@@ -22,6 +22,7 @@ import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
+import io.airbyte.commons.server.helpers.CatalogConfigDiffHelper
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConfiguredStreamMapper
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
@@ -65,6 +66,7 @@ object AirbyteCatalogHelper {
       updatedStreamConfiguration.cursorField = it.cursorField
       updatedStreamConfiguration.fieldSelectionEnabled = it.fieldSelectionEnabled
       updatedStreamConfiguration.selected = it.selected
+      updatedStreamConfiguration.includeFiles = it.includeFiles
       updatedStreamConfiguration.selectedFields = it.selectedFields
       updatedStreamConfiguration.suggested = it.suggested
     }
@@ -141,7 +143,7 @@ object AirbyteCatalogHelper {
       return
     }
 
-    val allTopLevelStreamFields = getStreamTopLevelFields(sourceStream.jsonSchema).toSet()
+    val allTopLevelStreamFields = CatalogConfigDiffHelper.getStreamTopLevelFields(sourceStream.jsonSchema).toSet()
     if (streamConfiguration.selectedFields!!.isEmpty()) {
       // User puts an empty list of selected fields to sync, which is a bad request.
       throw BadRequestProblem(
@@ -331,6 +333,11 @@ object AirbyteCatalogHelper {
     updatedStreamConfiguration.aliasName = config.aliasName
     updatedStreamConfiguration.fieldSelectionEnabled = config.fieldSelectionEnabled
     updatedStreamConfiguration.selectedFields = config.selectedFields
+
+    updatedStreamConfiguration.includeFiles = config.includeFiles
+    if (streamConfiguration.includeFiles != null) {
+      updatedStreamConfiguration.includeFiles = streamConfiguration.includeFiles
+    }
 
     if (streamConfiguration.selectedFields != null) {
       // Override and update
@@ -577,37 +584,6 @@ object AirbyteCatalogHelper {
       }
     }
     return validCombinedSyncModes
-  }
-
-  /**
-   * Parses a connectorSchema to retrieve top level fields only, ignoring the nested fields.
-   *
-   * @param connectorSchema source or destination schema
-   * @return A list of top level fields, ignoring the nested fields.
-   */
-  @VisibleForTesting
-  private fun getStreamTopLevelFields(connectorSchema: JsonNode): List<String> {
-    val yamlMapper = ObjectMapper(YAMLFactory())
-    val streamFields: MutableList<String> = ArrayList()
-    val spec: JsonNode =
-      try {
-        yamlMapper.readTree(connectorSchema.traverse())
-      } catch (e: IOException) {
-        log.error(e) { "Error getting stream fields from schema" }
-        throw UnexpectedProblem()
-      }
-    val fields = spec.fields()
-    while (fields.hasNext()) {
-      val (key, paths) = fields.next()
-      if ("properties" == key) {
-        val propertyFields = paths.fields()
-        while (propertyFields.hasNext()) {
-          val (propertyName, _) = propertyFields.next()
-          streamFields.add(propertyName)
-        }
-      }
-    }
-    return streamFields.toList()
   }
 
   /**

@@ -22,7 +22,7 @@ import io.airbyte.config.StreamTransform;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
-import io.airbyte.protocol.models.AirbyteStateMessage;
+import io.airbyte.protocol.models.v0.AirbyteStateMessage;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import jakarta.inject.Singleton;
 import java.util.ArrayList;

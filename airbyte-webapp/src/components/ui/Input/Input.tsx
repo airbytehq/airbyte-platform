@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { ReactNode, useCallback, useImperativeHandle, useRef, useState } from "react";
+import React, { ReactNode, useCallback, useImperativeHandle, useRef } from "react";
 import { useIntl } from "react-intl";
 import { useToggle } from "react-use";
 
@@ -27,7 +27,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     useImperativeHandle(ref, () => inputRef.current as HTMLInputElement, []);
 
     const [isContentVisible, toggleIsContentVisible] = useToggle(false);
-    const [focused, setFocused] = useState(false);
 
     const isPassword = props.type === "password";
     const isVisibilityButtonVisible = isPassword && !props.disabled;
@@ -51,17 +50,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       }
     }, [inputRef]);
 
-    const onContainerFocus: React.FocusEventHandler<HTMLDivElement> = () => {
-      setFocused(true);
-    };
-
     const onContainerBlur: React.FocusEventHandler<HTMLDivElement> = (event) => {
       if (isVisibilityButtonVisible && event.target === inputRef.current) {
         // Save the previous selection
         inputSelectionStartRef.current = inputRef.current?.selectionStart;
       }
-
-      setFocused(false);
 
       if (isPassword) {
         window.setTimeout(() => {
@@ -78,13 +71,11 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         className={classNames(containerClassName, styles.container, {
           [styles.disabled]: props.disabled,
           [styles.readOnly]: props.readOnly,
-          [styles.focused]: focused,
           [styles.light]: light,
           [styles.inline]: inline,
           [styles.error]: error,
         })}
         data-testid="input-container"
-        onFocus={onContainerFocus}
         onBlur={onContainerBlur}
       >
         <input

@@ -412,7 +412,7 @@ class UserHandlerTest {
             AuthenticatedUserConverter.toAuthenticatedUser(existingUser, EXISTING_AUTH_USER_ID, AuthProvider.KEYCLOAK);
 
         when(applicationService.listApplicationsByUser(existingAuthedUser)).thenReturn(List.of(new Application().withId("app_id")));
-        when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.of(SSO_REALM));
+        when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(SSO_REALM);
         when(workspacesHandler
             .listWorkspacesInOrganization(new ListWorkspacesInOrganizationRequestBody().organizationId(ORGANIZATION.getOrganizationId())))
                 .thenReturn(new WorkspaceReadList().workspaces(List.of(new WorkspaceRead().workspaceId(UUID.randomUUID()))));
@@ -532,7 +532,7 @@ class UserHandlerTest {
                   .withOrganizationId(domainRestrictedToOrgId).withEmailDomain(emailDomain)));
         }
 
-        when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(Optional.ofNullable(authRealm));
+        when(jwtUserAuthenticationResolver.resolveRealm()).thenReturn(authRealm);
         if (authRealm != null) {
           when(organizationPersistence.getOrganizationBySsoConfigRealm(authRealm)).thenReturn(Optional.of(ORGANIZATION));
         }

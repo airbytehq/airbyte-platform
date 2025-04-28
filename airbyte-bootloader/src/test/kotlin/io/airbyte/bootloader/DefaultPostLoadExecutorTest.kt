@@ -6,9 +6,11 @@ package io.airbyte.bootloader
 
 import io.airbyte.config.init.ApplyDefinitionsHelper
 import io.airbyte.config.init.DeclarativeSourceUpdater
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito
 import java.io.IOException
 
 /**
@@ -17,29 +19,30 @@ import java.io.IOException
 internal class DefaultPostLoadExecutorTest {
   @Test
   fun testPostLoadExecution() {
-    val applyDefinitionsHelper = Mockito.mock(ApplyDefinitionsHelper::class.java)
-    val declarativeSourceUpdater = Mockito.mock(DeclarativeSourceUpdater::class.java)
-    val authSecretInitializer = Mockito.mock(AuthKubernetesSecretInitializer::class.java)
+    val applyDefinitionsHelper = mockk<ApplyDefinitionsHelper>()
+    val declarativeSourceUpdater = mockk<DeclarativeSourceUpdater>()
+
+    // Set up expected behavior
+    every { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) } returns Unit
+    every { declarativeSourceUpdater.apply() } returns Unit
 
     val postLoadExecution =
-      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer)
+      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
 
     Assertions.assertDoesNotThrow { postLoadExecution.execute() }
-    Mockito.verify(applyDefinitionsHelper, Mockito.times(1)).apply(false, true)
-    Mockito.verify(declarativeSourceUpdater, Mockito.times(1)).apply()
-    Mockito.verify(authSecretInitializer, Mockito.times(1)).initializeSecrets()
+    verify(exactly = 1) { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) }
+    verify(exactly = 1) { declarativeSourceUpdater.apply() }
   }
 
   @Test
   fun testPostLoadExecutionWithException() {
-    val applyDefinitionsHelper = Mockito.mock(ApplyDefinitionsHelper::class.java)
-    val declarativeSourceUpdater = Mockito.mock(DeclarativeSourceUpdater::class.java)
-    val authSecretInitializer = Mockito.mock(AuthKubernetesSecretInitializer::class.java)
+    val applyDefinitionsHelper = mockk<ApplyDefinitionsHelper>()
+    val declarativeSourceUpdater = mockk<DeclarativeSourceUpdater>()
 
-    Mockito.doThrow(IOException("test")).`when`(applyDefinitionsHelper).apply(false, true)
+    every { applyDefinitionsHelper.apply(updateAll = false, reImportVersionInUse = true) } throws IOException("test")
 
     val postLoadExecution =
-      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater, authSecretInitializer)
+      DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
 
     Assertions.assertThrows(IOException::class.java) { postLoadExecution.execute() }
   }

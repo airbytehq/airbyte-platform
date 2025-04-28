@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.listBoxError {
+  & button {
+    border: 1px solid colors.$red-200;
+  }
+}

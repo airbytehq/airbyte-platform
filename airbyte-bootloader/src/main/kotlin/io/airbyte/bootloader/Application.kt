@@ -7,6 +7,7 @@ package io.airbyte.bootloader
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.kotlin.context.getBean
 import io.micronaut.runtime.Micronaut
+import kotlin.system.exitProcess
 
 private val log = KotlinLogging.logger {}
 
@@ -22,9 +23,9 @@ fun main(args: Array<String>) {
         .deduceEnvironment(false)
         .start()
     applicationContext.getBean<Bootloader>().load()
-    System.exit(0)
+    exitProcess(0)
   } catch (e: Exception) {
     log.error(e) { "Unable to bootstrap Airbyte environment." }
-    System.exit(-1)
+    exitProcess(-1)
   }
 }

@@ -1,5 +1,5 @@
 import { FormattedMessage } from "react-intl";
-import { InferType } from "yup";
+import { z } from "zod";
 
 import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
@@ -29,7 +29,7 @@ const mapperTypeToMessageIdMap: Record<StreamMapperType, string> = {
 };
 
 interface MappingEventItemProps {
-  event: InferType<typeof mappingEventSchema>;
+  event: z.infer<typeof mappingEventSchema>;
 }
 
 export const MappingEventItem: React.FC<MappingEventItemProps> = ({ event }) => {

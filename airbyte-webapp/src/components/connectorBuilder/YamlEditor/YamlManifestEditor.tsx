@@ -2,12 +2,16 @@ import classNames from "classnames";
 import debounce from "lodash/debounce";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
 
 import { FlexItem } from "components/ui/Flex";
+import { ExternalLink } from "components/ui/Link";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
+import { InfoTooltip } from "components/ui/Tooltip";
 
+import { useCustomComponentsEnabled } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
-import { useExperiment } from "hooks/services/Experiment";
+import { links } from "core/utils/links";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { YamlEditor } from "./YamlEditor";
@@ -37,7 +41,13 @@ export const YamlManifestEditor: React.FC = () => {
   // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
   const debouncedUpdateJsonManifest = useMemo(() => debounce(updateJsonManifest, 200), [updateJsonManifest]);
 
-  const areCustomComponentsEnabled = useExperiment("connectorBuilder.customComponents");
+  const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const customComponentsCodeValue = useBuilderWatch("customComponentsCode");
+
+  // We want to show the custom components tab any time the custom components code is set.
+  // This is to ensure a user can still remove the custom components code if they want to (in the event of a fork).
+  const showCustomComponentsTab = areCustomComponentsEnabled || customComponentsCodeValue;
+
   const [selectedTab, setSelectedTab] = useState(TAB_MANIFEST);
 
   return (
@@ -48,13 +58,29 @@ export const YamlManifestEditor: React.FC = () => {
         </FlexItem>
       </Sidebar>
       <div className={styles.editorContainer}>
-        {areCustomComponentsEnabled && (
+        {showCustomComponentsTab && (
           <Tabs gap="none" className={styles.tabContainer}>
             {Object.values(tabs).map((tab) => (
               <ButtonTab
                 key={tab}
                 id={tab}
-                name={tab}
+                name={
+                  <>
+                    {tab}
+                    {tab === TAB_COMPONENTS && (
+                      <InfoTooltip placement="top">
+                        <FormattedMessage
+                          id="connectorBuilder.customComponents.tooltip"
+                          values={{
+                            lnk: (...lnk: React.ReactNode[]) => (
+                              <ExternalLink href={links.connectorBuilderCustomComponents}>{lnk}</ExternalLink>
+                            ),
+                          }}
+                        />
+                      </InfoTooltip>
+                    )}
+                  </>
+                }
                 className={classNames(styles.editorTab, { [styles.activeTab]: selectedTab === tab })}
                 isActive={selectedTab === tab}
                 onSelect={() => {

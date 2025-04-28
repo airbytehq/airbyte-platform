@@ -1,0 +1,30 @@
+## This file configures generic OIDC auth that is used in conjunction with GenericOidcConfig.kt,
+#  GenericOidcUserAuthenticationResolver.kt etc. It can be loaded by including the `generic-oidc`
+# value in MICRONAUT_ENVIRONMENTS.
+micronaut:
+  security:
+    enabled: true
+    token:
+      jwt:
+        enabled: true
+        signatures:
+          jwks:
+            oidc:
+              url: ${AB_AIRBYTE_AUTH_JWKS_ENDPOINT:}
+
+airbyte:
+  applications:
+    type: database
+  auth:
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}
+      oidc:
+        client-id: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_CLIENT_ID:}
+        audience: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_AUDIENCE:}
+        endpoints:
+          authorization-server-endpoint: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_ENDPOINTS_AUTHORIZATION_SERVER_ENDPOINT:}
+        fields:
+          sub: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_SUB:sub}
+          email: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_EMAIL:email}
+          name: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_NAME:name}
+          issuer: ${AB_AIRBYTE_AUTH_IDENTITY_PROVIDER_OIDC_FIELDS_ISSUER:iss}

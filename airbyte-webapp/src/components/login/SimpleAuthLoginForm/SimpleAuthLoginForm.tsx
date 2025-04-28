@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useFormState } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
-import * as yup from "yup";
+import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { Box } from "components/ui/Box";
@@ -17,15 +17,12 @@ import { links } from "core/utils/links";
 
 import styles from "./SimpleAuthLoginForm.module.scss";
 
-export interface SimpleAuthLoginFormValues {
-  username: string;
-  password: string;
-}
-
-const simpleAuthLoginFormSchema = yup.object().shape({
-  username: yup.string().required("form.empty.error"),
-  password: yup.string().required("form.empty.error"),
+const simpleAuthLoginFormSchema = z.object({
+  username: z.string().trim().nonempty("form.empty.error"),
+  password: z.string().trim().nonempty("form.empty.error"),
 });
+
+export type SimpleAuthLoginFormValues = z.infer<typeof simpleAuthLoginFormSchema>;
 
 export const SimpleAuthLoginForm: React.FC = () => {
   const [loginError, setLoginError] = useState<null | "missing-cookie" | "invalid-credentials">(null);
@@ -39,7 +36,7 @@ export const SimpleAuthLoginForm: React.FC = () => {
   return (
     <Form<SimpleAuthLoginFormValues>
       defaultValues={{ username: defaultOrganizationEmail, password: "" }}
-      schema={simpleAuthLoginFormSchema}
+      zodSchema={simpleAuthLoginFormSchema}
       onSubmit={login}
       onError={(error) => {
         if (error instanceof InvalidCredentialsError) {

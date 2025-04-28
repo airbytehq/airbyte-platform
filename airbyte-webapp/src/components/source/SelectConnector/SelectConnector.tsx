@@ -95,7 +95,7 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   by splitting these into source_* and destination_* , we avoid a fun race condition:
     * the views in this flow are based on a mix of component states and URL params
     * filters are stored in and read from URL params
-  
+
   If the filter names are kept the same between source and destination selection,
   when in an empty workspace (no sources or destinations), and selecting a source connector after applying filters, the following happens:
     * any filters are stored in the URL
@@ -195,12 +195,14 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
     return connectorDefinitions;
   }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions]);
 
+  function keywordMatch(definition: ConnectorDefinitionOrEnterpriseStub, searchTerm: string) {
+    const keywords = searchTerm.split(" ").filter(Boolean);
+    return keywords.every((keyword) => definition.name.toLowerCase().includes(keyword));
+  }
+
   // Filter all connectors based on search term
   const allSearchResults = useMemo(
-    () =>
-      connectorListWithEnterpriseStubs.filter((definition) =>
-        definition.name.toLowerCase().includes(searchTerm.toLocaleLowerCase())
-      ),
+    () => connectorListWithEnterpriseStubs.filter((definition) => keywordMatch(definition, searchTerm)),
     [connectorListWithEnterpriseStubs, searchTerm]
   );
 

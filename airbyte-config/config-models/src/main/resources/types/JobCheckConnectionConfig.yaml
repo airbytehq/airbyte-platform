@@ -16,9 +16,9 @@ properties:
     type: string
     format: uuid
   connectionConfiguration:
-    description: Integration specific blob. Must be a valid JSON string.
+    description: Integration specific configuration.
     type: object
-    existingJavaType: com.fasterxml.jackson.databind.JsonNode
+    existingJavaType: io.airbyte.config.secrets.ConfigWithSecretReferences
   dockerImage:
     type: string
   protocolVersion:

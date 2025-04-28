@@ -154,7 +154,7 @@ class ConnectorRolloutApiController(
           .associate { entry -> entry.key.toString() to entry.value }
 
       val actorSelectionInfo =
-        connectorRolloutHandler.getPinnedActorInfo(connectorRolloutId)
+        connectorRolloutHandler.getActorSelectionInfoForPinnedActors(connectorRolloutId)
 
       val responseData =
         ConnectorRolloutActorSyncInfoResponseData()
@@ -198,7 +198,7 @@ class ConnectorRolloutApiController(
     @Body connectorRolloutManualRolloutRequestBody: ConnectorRolloutManualRolloutRequestBody,
   ): ConnectorRolloutManualRolloutResponse? =
     execute {
-      connectorRolloutHandler.manualDoConnectorRolloutUpdate(
+      connectorRolloutHandler.manualDoConnectorRollout(
         connectorRolloutManualRolloutRequestBody,
       )
     }

@@ -24,6 +24,7 @@ import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationS
 import { LoginPage } from "pages/login/LoginPage";
 import MainView from "views/layout/MainView";
 
+import { EmbeddedSourceCreatePage } from "./embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "./routePaths";
 import { AccountPage } from "./SettingsPage/pages/AccountPage";
 import { DestinationsPage, SourcesPage } from "./SettingsPage/pages/ConnectorsPage";
@@ -66,10 +67,14 @@ const useAddAnalyticsContextForWorkspace = (workspace: WorkspaceRead): void => {
     [workspace.workspaceId, workspace.customerId]
   );
   useAnalyticsRegisterValues(analyticsContext);
-  useAnalyticsIdentifyUser(workspace.workspaceId, {
-    protocol: window.location.protocol,
-    isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
-  });
+  const userTraits = useMemo(
+    () => ({
+      protocol: window.location.protocol,
+      isLocalhost: window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1",
+    }),
+    []
+  );
+  useAnalyticsIdentifyUser(workspace.workspaceId, userTraits);
 };
 
 const MainViewRoutes: React.FC = () => {
@@ -136,7 +141,6 @@ const MainViewRoutes: React.FC = () => {
             <Route path="*" element={<Navigate to={SettingsRoutePaths.Account} replace />} />
           </Route>
           <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
-
           <Route path="*" element={<Navigate to={RoutePaths.Connections} />} />
         </Routes>
       </DefaultErrorBoundary>
@@ -237,6 +241,7 @@ const AuthenticatedRoutes = () => {
 
   return (
     <Routes>
+      <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
       {!initialSetupComplete ? (
         <Route path="*" element={<PreferencesRoutes />} />
       ) : (

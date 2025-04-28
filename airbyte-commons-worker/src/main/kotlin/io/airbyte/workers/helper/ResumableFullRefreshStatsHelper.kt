@@ -73,6 +73,6 @@ class ResumableFullRefreshStatsHelper {
 
   private fun StreamSyncStats.streamDescriptor(): StreamDescriptor = StreamDescriptor().withName(this.streamName).withNamespace(this.streamNamespace)
 
-  private fun io.airbyte.protocol.models.StreamDescriptor.toConfigObject(): StreamDescriptor =
+  private fun io.airbyte.protocol.models.v0.StreamDescriptor.toConfigObject(): StreamDescriptor =
     StreamDescriptor().withName(this.name).withNamespace(this.namespace)
 }

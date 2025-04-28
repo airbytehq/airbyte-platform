@@ -12,6 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { ErrorWithJobInfo } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
@@ -93,6 +94,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
+  const workspaceId = useCurrentWorkspaceId();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -274,6 +276,17 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               }}
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
+              onCopyConfig={() => {
+                const values = getValues();
+                const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
+                return {
+                  name: values.name,
+                  workspaceId,
+                  definitionId,
+                  config: values.connectionConfiguration as Record<string, unknown>,
+                  schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
+                };
+              }}
             />
           </>
         )
