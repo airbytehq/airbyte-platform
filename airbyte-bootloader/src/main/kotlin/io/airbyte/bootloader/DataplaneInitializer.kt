@@ -58,7 +58,7 @@ class DataplaneInitializer(
         }
       }
 
-    val dataplane = getOrCreateDataplane(group)
+    val dataplane = createDataplane(group) ?: return
     val credentials = dataplaneCredentialsService.createCredentials(dataplaneId = dataplane.id)
     createK8sSecret(credentials)
 
@@ -70,11 +70,11 @@ class DataplaneInitializer(
     }
   }
 
-  private fun getOrCreateDataplane(group: DataplaneGroup): Dataplane {
+  private fun createDataplane(group: DataplaneGroup): Dataplane? {
     val planes = service.listDataplanes(group.id, false)
     if (planes.isNotEmpty()) {
       log.info { "At least one dataplane for the group ${group.name} (${group.id}) already exists." }
-      return planes.first()
+      return null
     }
 
     // if were then we have one dataplane group and no dataplanes associated with it

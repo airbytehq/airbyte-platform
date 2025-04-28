@@ -119,10 +119,9 @@ class DataplaneInitializerTest {
   }
 
   @Test
-  fun `if data plane exists recreate credentials`() {
+  fun `data plane is not created if one exists`() {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
     every { service.listDataplanes(dpg.id, false) } returns listOf(dp)
-    every { credsService.createCredentials(any()) } returns dpc
 
     val initializer =
       DataplaneInitializer(
@@ -139,7 +138,10 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify(exactly = 0) { service.writeDataplane(any()) }
-    verify(exactly = 1) { credsService.createCredentials(any()) }
+    verify {
+      credsService wasNot Called
+      k8sClient wasNot Called
+    }
   }
 
   @Test
