@@ -88,6 +88,16 @@ class ConnectorRolloutClient
       }
 
       val workflowId = getWorkflowId(dockerRepository, dockerImageTag, connectorRollout.actorDefinitionId, connectorRollout.tag)
+
+      // If a workflow already exists, terminate it and start a new one.
+      // This is a valid operation because we rely on Postgres constraints to decide whether we're allowed to start a new rollout.
+      // Once we've gotten here, Postgres has allowed us to create a new rollout.
+      // Theoretically there should not be a running workflow if we're starting a new rollout, so this should always be a noop.
+      // In the event that we are in this state, an alternative would be to only start a new workflow if there isn't an existing
+      // one, but if we've gotten into this state the workflow may be unhealthy so termination is safer. Connector rollout workflows
+      // recover their state from postgres and all activities are idempotent, so we can always terminate and restart.
+      //
+      // Note: any connectors pinned to the release candidate will not be unpinned when we terminate via this code path.
       val workflowStub =
         workflowClient.getClient().newWorkflowStub(
           ConnectorRolloutWorkflow::class.java,
@@ -95,7 +105,7 @@ class ConnectorRolloutClient
             .newBuilder()
             .setWorkflowId(workflowId)
             .setTaskQueue(Constants.TASK_QUEUE)
-            .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_FAIL)
+            .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING)
             .build(),
         )
 
