@@ -21,6 +21,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(libs.airbyte.protocol)
+  testImplementation(libs.mockk)
 
   runtimeOnly(libs.bundles.logback)
 }
@@ -52,8 +53,8 @@ airbyte {
         "AIRBYTE_ROLE" to "undefined",
         "AIRBYTE_VERSION" to "dev",
         "DATA_PLANE_ID" to "local",
-        "MICRONAUT_ENVIRONMENTS" to "test"
-      )
+        "MICRONAUT_ENVIRONMENTS" to "test",
+      ),
     )
   }
   docker {

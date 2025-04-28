@@ -22,7 +22,7 @@ class ConnectorRolloutWorkflowInput(
   var actorSelectionInfo: ConnectorRolloutActorSelectionInfo? = null,
   var actorSyncs: Map<UUID, ConnectorRolloutActorSyncInfo>? = null,
   var migratePins: Boolean? = true,
-  var waitBetweenRolloutSeconds: Int,
-  var waitBetweenSyncResultsQueriesSeconds: Int,
-  var rolloutExpirationSeconds: Int,
+  var waitBetweenRolloutSeconds: Int? = null,
+  var waitBetweenSyncResultsQueriesSeconds: Int? = null,
+  var rolloutExpirationSeconds: Int? = null,
 )

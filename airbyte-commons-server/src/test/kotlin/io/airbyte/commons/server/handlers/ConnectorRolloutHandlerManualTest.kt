@@ -243,7 +243,7 @@ internal class ConnectorRolloutHandlerManualTest {
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
+    every { connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     every {
@@ -271,7 +271,7 @@ internal class ConnectorRolloutHandlerManualTest {
     assertEquals(DEFAULT_FILTERS, capturedRollout.filters)
 
     verifyAll {
-      connectorRolloutClient.startRollout(any(), any())
+      connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       connectorRolloutService.listConnectorRollouts(any(), any())
       actorDefinitionService.getActorDefinitionVersion(any())
@@ -305,7 +305,7 @@ internal class ConnectorRolloutHandlerManualTest {
     val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
 
     every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
+    every { connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
     every {
@@ -341,7 +341,7 @@ internal class ConnectorRolloutHandlerManualTest {
     )
 
     verifyAll {
-      connectorRolloutClient.startRollout(any(), any())
+      connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       connectorRolloutService.listConnectorRollouts(any(), any())
       actorDefinitionService.getActorDefinitionVersion(any())
@@ -386,173 +386,19 @@ internal class ConnectorRolloutHandlerManualTest {
     // Rollout has been started
     connectorRollout.apply { this.state = state }
 
-    every { connectorRolloutClient.doRollout(any(), any()) } just Runs
+    every { connectorRolloutClient.doRollout(any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
 
     connectorRolloutHandler.manualDoConnectorRollout(connectorRolloutWorkflowUpdate)
 
     verifyAll {
-      connectorRolloutClient.doRollout(any(), any())
+      connectorRolloutClient.doRollout(any(), any(), any(), any(), any(), any(), any(), any())
       connectorRolloutService.getConnectorRollout(rolloutId)
     }
 
     // Verify that startWorkflow() was not called because the rollout is already in progress
-    verify(exactly = 0) { connectorRolloutClient.startRollout(any(), any()) }
-  }
-
-  @ParameterizedTest
-  @MethodSource("workflowStartedInProgress")
-  fun `test manualDoConnectorRolloutWorkflowUpdate rollout already running with different filters raises`(state: ConnectorEnumRolloutState) {
-    val rolloutId = UUID.randomUUID()
-    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
-    val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutManualRolloutRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        this.actorIds = actorIds
-        this.filters =
-          io.airbyte.api.model.generated
-            .ConnectorRolloutFilters()
-            .tierFilter(
-              ConnectorRolloutTierFilter().tier(
-                io.airbyte.api.model.generated.CustomerTier._1,
-              ),
-            )
-      }
-    val connectorRollout = createMockConnectorRollout(rolloutId)
-    // Rollout has been started
-    connectorRollout.apply { this.state = state }
-    // Rollout filters differ from the input filters
-    connectorRollout.filters = DEFAULT_FILTERS
-
-    every { connectorRolloutClient.doRollout(any(), any()) } just Runs
-    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-
-    assertThrows<RuntimeException> { connectorRolloutHandler.manualDoConnectorRollout(connectorRolloutWorkflowUpdate) }
-
-    verify(exactly = 0) { connectorRolloutClient.startRollout(any(), any()) }
-    verify(exactly = 0) { connectorRolloutClient.doRollout(any(), any()) }
-  }
-
-  @Test
-  fun `test manualDoConnectorRolloutWorkflowUpdate rollout not started uses default filters`() {
-    val rolloutId = UUID.randomUUID()
-    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
-    val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutManualRolloutRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        this.actorIds = actorIds
-      }
-    val connectorRollout = createMockConnectorRollout(rolloutId)
-
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    every { connectorRolloutClient.doRollout(any(), any()) } just Runs
-    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every {
-      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-    } returns Optional.of(createMockActorDefinitionVersion())
-    every {
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-    } returns Optional.of(createMockActorDefinitionVersion())
-
-    val rolloutSlot = slot<ConnectorRollout>()
-    every { connectorRolloutService.writeConnectorRollout(capture(rolloutSlot)) } returns connectorRollout
-
-    connectorRolloutHandler.manualDoConnectorRollout(connectorRolloutWorkflowUpdate)
-
-    val capturedRollout = rolloutSlot.captured
-    assertEquals(DEFAULT_FILTERS, capturedRollout.filters)
-
-    verifyAll {
-      connectorRolloutService.listConnectorRollouts(any(), any())
-      connectorRolloutClient.startRollout(any(), any())
-      connectorRolloutClient.doRollout(any(), any())
-      connectorRolloutService.getConnectorRollout(rolloutId)
-      actorDefinitionService.getActorDefinitionVersion(any())
-      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-      connectorRolloutService.writeConnectorRollout(any())
-    }
-  }
-
-  @Test
-  fun `test manualDoConnectorRolloutWorkflowUpdate workflow not started with filters`() {
-    val rolloutId = UUID.randomUUID()
-    val actorIds = listOf(UUID.randomUUID(), UUID.randomUUID())
-    val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutManualRolloutRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        this.actorIds = actorIds
-        filters =
-          io.airbyte.api.model.generated
-            .ConnectorRolloutFilters()
-            .tierFilter(
-              ConnectorRolloutTierFilter().tier(
-                io.airbyte.api.model.generated.CustomerTier._1,
-              ),
-            )
-      }
-    val connectorRollout = createMockConnectorRollout(rolloutId)
-    // Rollout has been initialized, but workflow hasn't been started
-    connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
-    connectorRollout.filters =
-      ConnectorRolloutFilters(
-        customerTierFilters =
-          listOf(
-            CustomerTierFilter(name = AttributeName.TIER, operator = Operator.IN, value = listOf(CustomerTier.TIER_1)),
-          ),
-      )
-
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    every { connectorRolloutClient.doRollout(any(), any()) } just Runs
-    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
-    every {
-      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-    } returns Optional.of(createMockActorDefinitionVersion())
-    every {
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-    } returns Optional.of(createMockActorDefinitionVersion())
-
-    val rolloutSlot = slot<ConnectorRollout>()
-    every { connectorRolloutService.writeConnectorRollout(capture(rolloutSlot)) } returns connectorRollout
-
-    connectorRolloutHandler.manualDoConnectorRollout(connectorRolloutWorkflowUpdate)
-
-    val capturedRollout = rolloutSlot.captured
-    assertEquals(
-      ConnectorRolloutFilters(
-        customerTierFilters =
-          listOf(
-            CustomerTierFilter(name = AttributeName.TIER, operator = Operator.IN, value = listOf(CustomerTier.TIER_1)),
-          ),
-      ),
-      capturedRollout.filters,
-    )
-
-    verifyAll {
-      connectorRolloutService.listConnectorRollouts(any(), any())
-      connectorRolloutClient.startRollout(any(), any())
-      connectorRolloutClient.doRollout(any(), any())
-      connectorRolloutService.getConnectorRollout(rolloutId)
-      actorDefinitionService.getActorDefinitionVersion(any())
-      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
-      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
-      connectorRolloutService.writeConnectorRollout(any())
-    }
+    verify(exactly = 0) { connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 
   @ParameterizedTest
@@ -573,20 +419,14 @@ internal class ConnectorRolloutHandlerManualTest {
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-      every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    }
-    every { connectorRolloutClient.finalizeRollout(any(), any()) } returns Unit
+    every { connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
 
     connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
 
     verifyAll {
       connectorRolloutService.getConnectorRollout(any())
       actorDefinitionService.getActorDefinitionVersion(any())
-      if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-        connectorRolloutClient.startRollout(any(), any())
-      }
-      connectorRolloutClient.finalizeRollout(any(), any())
+      connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
   }
 
@@ -609,20 +449,14 @@ internal class ConnectorRolloutHandlerManualTest {
 
     every { connectorRolloutService.getConnectorRollout(any()) } returns rollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-    if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-      every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    }
-    every { connectorRolloutClient.finalizeRollout(any(), any()) } returns Unit
+    every { connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
 
     connectorRolloutHandler.manualFinalizeConnectorRollout(connectorRolloutFinalizeWorkflowUpdate)
 
     verifyAll {
       connectorRolloutService.getConnectorRollout(any())
       actorDefinitionService.getActorDefinitionVersion(any())
-      if (initialState == ConnectorEnumRolloutState.INITIALIZED) {
-        connectorRolloutClient.startRollout(any(), any())
-      }
-      connectorRolloutClient.finalizeRollout(any(), any())
+      connectorRolloutClient.finalizeRollout(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
     }
   }
 
@@ -643,8 +477,8 @@ internal class ConnectorRolloutHandlerManualTest {
     // Rollout has been started
     connectorRollout.apply { this.state = state }
 
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    every { connectorRolloutClient.pauseRollout(any(), any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
+    every { connectorRolloutClient.pauseRollout(any(), any(), any(), any(), any(), any(), any()) } returns
+      ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
 
@@ -652,40 +486,7 @@ internal class ConnectorRolloutHandlerManualTest {
 
     assertEquals(connectorRollout.id, result.id)
     verifyAll {
-      connectorRolloutClient.startRollout(any(), any())
-      connectorRolloutClient.pauseRollout(any(), any())
-      connectorRolloutService.getConnectorRollout(rolloutId)
-      actorDefinitionService.getActorDefinitionVersion(any())
-    }
-  }
-
-  @Test
-  fun `test manualPauseConnectorRollout workflow not started`() {
-    val rolloutId = UUID.randomUUID()
-    val connectorRolloutWorkflowUpdate =
-      ConnectorRolloutUpdateStateRequestBody().apply {
-        dockerRepository = DOCKER_REPOSITORY
-        dockerImageTag = DOCKER_IMAGE_TAG
-        actorDefinitionId = ACTOR_DEFINITION_ID
-        id = rolloutId
-        state = ConnectorRolloutState.PAUSED
-        pausedReason = "test"
-      }
-    val connectorRollout = createMockConnectorRollout(rolloutId)
-    // Rollout has been initialized, but workflow hasn't been started
-    connectorRollout.apply { this.state = ConnectorEnumRolloutState.INITIALIZED }
-
-    every { connectorRolloutClient.startRollout(any(), any()) } just Runs
-    every { connectorRolloutClient.pauseRollout(any(), any()) } returns ConnectorRolloutOutput(state = ConnectorEnumRolloutState.PAUSED)
-    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
-    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
-
-    val result = connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutWorkflowUpdate)
-
-    assertEquals(connectorRollout.id, result.id)
-    verifyAll {
-      connectorRolloutClient.startRollout(any(), any())
-      connectorRolloutClient.pauseRollout(any(), any())
+      connectorRolloutClient.pauseRollout(any(), any(), any(), any(), any(), any(), any())
       connectorRolloutService.getConnectorRollout(rolloutId)
       actorDefinitionService.getActorDefinitionVersion(any())
     }

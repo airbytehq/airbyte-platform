@@ -29,10 +29,6 @@ import io.airbyte.config.JobBypassFilter
 import io.airbyte.config.Operator
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
 import io.airbyte.connector.rollout.shared.Constants.AIRBYTE_API_CLIENT_EXCEPTION
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputFinalize
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputPause
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutActivityInputRollout
-import io.airbyte.connector.rollout.shared.models.ConnectorRolloutWorkflowInput
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
 import io.micronaut.context.annotation.Value
@@ -228,24 +224,18 @@ open class ConnectorRolloutHandlerManual
         )
 
       try {
-        connectorRolloutClient.startRollout(
-          ConnectorRolloutWorkflowInput(
-            connectorRolloutManualStart.dockerRepository,
-            connectorRolloutManualStart.dockerImageTag,
-            connectorRolloutManualStart.actorDefinitionId,
-            rollout.id,
-            connectorRolloutManualStart.updatedBy,
-            rollout.rolloutStrategy!!,
-            actorDefinitionService.getActorDefinitionVersion(rollout.initialVersionId).dockerImageTag,
-            rollout,
-            null,
-            null,
-            connectorRolloutManualStart.migratePins,
-            waitBetweenRolloutSeconds,
-            waitBetweenSyncResultsQueriesSeconds,
-            rolloutExpirationSeconds,
-          ),
-          rollout.tag,
+        connectorRolloutClient.startRolloutWorkflow(
+          rollout,
+          connectorRolloutManualStart.dockerRepository,
+          connectorRolloutManualStart.dockerImageTag,
+          connectorRolloutManualStart.actorDefinitionId,
+          actorDefinitionService.getActorDefinitionVersion(rollout.initialVersionId).dockerImageTag,
+          connectorRolloutManualStart.migratePins,
+          waitBetweenRolloutSeconds,
+          waitBetweenSyncResultsQueriesSeconds,
+          rolloutExpirationSeconds,
+          rollout.updatedBy,
+          getRolloutStrategyForManualStart(connectorRolloutManualStart.rolloutStrategy),
         )
       } catch (e: WorkflowUpdateException) {
         rollout.state = ConnectorEnumRolloutState.CANCELED
@@ -257,61 +247,18 @@ open class ConnectorRolloutHandlerManual
     }
 
     open fun manualDoConnectorRollout(connectorRolloutUpdate: ConnectorRolloutManualRolloutRequestBody): ConnectorRolloutManualRolloutResponse {
-      var connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id)
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutUpdate.id)
 
-      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
-        connectorRollout =
-          getOrCreateAndValidateManualStartInput(
-            connectorRolloutUpdate.dockerRepository,
-            connectorRolloutUpdate.actorDefinitionId,
-            connectorRolloutUpdate.dockerImageTag,
-            connectorRolloutUpdate.updatedBy,
-            ConnectorRolloutStrategy.MANUAL,
-            null,
-            null,
-            connectorRolloutUpdate.filters,
-          )
-        try {
-          connectorRolloutClient.startRollout(
-            ConnectorRolloutWorkflowInput(
-              connectorRolloutUpdate.dockerRepository,
-              connectorRolloutUpdate.dockerImageTag,
-              connectorRolloutUpdate.actorDefinitionId,
-              connectorRolloutUpdate.id,
-              connectorRolloutUpdate.updatedBy,
-              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
-              connectorRollout,
-              null,
-              null,
-              connectorRolloutUpdate.migratePins,
-              waitBetweenRolloutSeconds,
-              waitBetweenSyncResultsQueriesSeconds,
-              rolloutExpirationSeconds,
-            ),
-            connectorRollout.tag,
-          )
-        } catch (e: WorkflowUpdateException) {
-          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
-        }
-      } else {
-        if (connectorRolloutUpdate.filters != null) {
-          throw RuntimeException("Cannot modify filters in a running rollout.")
-        }
-      }
       try {
         connectorRolloutClient.doRollout(
-          ConnectorRolloutActivityInputRollout(
-            connectorRolloutUpdate.dockerRepository,
-            connectorRolloutUpdate.dockerImageTag,
-            connectorRolloutUpdate.actorDefinitionId,
-            connectorRolloutUpdate.id,
-            connectorRolloutUpdate.actorIds,
-            connectorRolloutUpdate.targetPercentage,
-            connectorRolloutUpdate.updatedBy,
-            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-          ),
-          connectorRollout.tag,
+          connectorRollout,
+          connectorRolloutUpdate.dockerRepository,
+          connectorRolloutUpdate.dockerImageTag,
+          connectorRolloutUpdate.actorDefinitionId,
+          connectorRolloutUpdate.actorIds,
+          connectorRolloutUpdate.targetPercentage,
+          connectorRolloutUpdate.updatedBy,
+          getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
@@ -324,33 +271,8 @@ open class ConnectorRolloutHandlerManual
     open fun manualFinalizeConnectorRollout(
       connectorRolloutFinalize: ConnectorRolloutManualFinalizeRequestBody,
     ): ConnectorRolloutManualFinalizeResponse {
-      // Start a workflow if one doesn't exist
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutFinalize.id)
 
-      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
-        try {
-          connectorRolloutClient.startRollout(
-            ConnectorRolloutWorkflowInput(
-              connectorRolloutFinalize.dockerRepository,
-              connectorRolloutFinalize.dockerImageTag,
-              connectorRolloutFinalize.actorDefinitionId,
-              connectorRolloutFinalize.id,
-              connectorRolloutFinalize.updatedBy,
-              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
-              connectorRollout,
-              null,
-              null,
-              waitBetweenRolloutSeconds = waitBetweenRolloutSeconds,
-              waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
-              rolloutExpirationSeconds = rolloutExpirationSeconds,
-            ),
-            connectorRollout.tag,
-          )
-        } catch (e: WorkflowUpdateException) {
-          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
-        }
-      }
       logger.info {
         "Finalizing rollout for ${connectorRolloutFinalize.id}; " +
           "dockerRepository=${connectorRolloutFinalize.dockerRepository}" +
@@ -359,20 +281,17 @@ open class ConnectorRolloutHandlerManual
       }
       try {
         connectorRolloutClient.finalizeRollout(
-          ConnectorRolloutActivityInputFinalize(
-            connectorRolloutFinalize.dockerRepository,
-            connectorRolloutFinalize.dockerImageTag,
-            connectorRolloutFinalize.actorDefinitionId,
-            connectorRolloutFinalize.id,
-            actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
-            ConnectorRolloutFinalState.fromValue(connectorRolloutFinalize.state.toString()),
-            connectorRolloutFinalize.errorMsg,
-            connectorRolloutFinalize.failedReason,
-            connectorRolloutFinalize.updatedBy,
-            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-            connectorRolloutFinalize.retainPinsOnCancellation,
-          ),
-          connectorRollout.tag,
+          connectorRollout,
+          connectorRolloutFinalize.dockerRepository,
+          connectorRolloutFinalize.dockerImageTag,
+          connectorRolloutFinalize.actorDefinitionId,
+          actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
+          ConnectorRolloutFinalState.fromValue(connectorRolloutFinalize.state.toString()),
+          connectorRolloutFinalize.errorMsg,
+          connectorRolloutFinalize.failedReason,
+          connectorRolloutFinalize.updatedBy,
+          getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
+          connectorRolloutFinalize.retainPinsOnCancellation,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("finalizeRollout", e)
@@ -383,33 +302,8 @@ open class ConnectorRolloutHandlerManual
     }
 
     open fun manualPauseConnectorRollout(connectorRolloutPause: ConnectorRolloutUpdateStateRequestBody): ConnectorRolloutRead {
-      // Start a workflow if one doesn't exist
       val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)
 
-      if (connectorRollout.state == ConnectorEnumRolloutState.INITIALIZED) {
-        try {
-          connectorRolloutClient.startRollout(
-            ConnectorRolloutWorkflowInput(
-              connectorRolloutPause.dockerRepository,
-              connectorRolloutPause.dockerImageTag,
-              connectorRolloutPause.actorDefinitionId,
-              connectorRolloutPause.id,
-              connectorRolloutPause.updatedBy,
-              getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-              actorDefinitionService.getActorDefinitionVersion(connectorRollout.initialVersionId).dockerImageTag,
-              connectorRollout,
-              null,
-              null,
-              waitBetweenRolloutSeconds = waitBetweenRolloutSeconds,
-              waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
-              rolloutExpirationSeconds = rolloutExpirationSeconds,
-            ),
-            connectorRollout.tag,
-          )
-        } catch (e: WorkflowUpdateException) {
-          throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
-        }
-      }
       logger.info {
         "Pausing rollout for ${connectorRolloutPause.id}; " +
           "dockerRepository=${connectorRolloutPause.dockerRepository}" +
@@ -418,21 +312,18 @@ open class ConnectorRolloutHandlerManual
       }
       try {
         connectorRolloutClient.pauseRollout(
-          ConnectorRolloutActivityInputPause(
-            connectorRolloutPause.dockerRepository,
-            connectorRolloutPause.dockerImageTag,
-            connectorRolloutPause.actorDefinitionId,
-            connectorRolloutPause.id,
-            connectorRolloutPause.pausedReason,
-            connectorRolloutPause.updatedBy,
-            getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
-          ),
-          connectorRollout.tag,
+          connectorRollout,
+          connectorRolloutPause.dockerRepository,
+          connectorRolloutPause.dockerImageTag,
+          connectorRolloutPause.actorDefinitionId,
+          connectorRolloutPause.pausedReason,
+          connectorRolloutPause.updatedBy,
+          getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("pauseRollout", e)
       }
-      return connectorRolloutHelper.buildConnectorRolloutRead(connectorRolloutService.getConnectorRollout(connectorRolloutPause.id)!!, false)
+      return connectorRolloutHelper.buildConnectorRolloutRead(connectorRollout, false)
     }
 
     open fun getActorSelectionInfoForPinnedActors(connectorRolloutId: UUID): ConnectorRolloutActorSelectionInfo =
