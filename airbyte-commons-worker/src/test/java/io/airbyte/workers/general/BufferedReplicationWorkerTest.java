@@ -28,7 +28,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(fieldSelector, mapper, messageTracker, syncPersistence,
         replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), onReplicationRunning, workloadApiClient,
         analyticsMessageTracker, "workload-id", airbyteApiClient, streamStatusCompletionTracker, streamStatusTrackerFactory,
-        recordMapper, featureFlagClient, destinationCatalogGenerator, metricClient));
+        recordMapper, destinationCatalogGenerator, metricClient));
     return new BufferedReplicationWorker(
         JOB_ID,
         JOB_ATTEMPT,
@@ -37,7 +37,7 @@ class BufferedReplicationWorkerTest extends ReplicationWorkerTest {
         syncPersistence,
         recordSchemaValidator,
         heartbeatTimeoutChaperone,
-        replicationFeatureFlagReader,
+        replicationInputFeatureFlagReader,
         replicationWorkerHelper,
         destinationTimeoutMonitor,
         streamStatusCompletionTracker,

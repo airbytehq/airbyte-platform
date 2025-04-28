@@ -73,6 +73,7 @@ import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -273,7 +274,9 @@ class ReplicationInputHydratorTest {
         null,
         List.of(),
         false,
-        false);
+        false,
+        Map.of(),
+        null);
   }
 
   @ParameterizedTest

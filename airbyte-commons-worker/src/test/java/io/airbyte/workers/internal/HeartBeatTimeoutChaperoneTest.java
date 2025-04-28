@@ -7,20 +7,18 @@ package io.airbyte.workers.internal;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,21 +31,19 @@ class HeartBeatTimeoutChaperoneTest {
   private final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
   private final Duration timeoutCheckDuration = Duration.ofMillis(1);
 
-  private final FeatureFlagClient featureFlagClient = mock(TestClient.class);
-  private final UUID workspaceId = UUID.randomUUID();
+  private final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
   private final UUID connectionId = UUID.randomUUID();
   private final MetricClient metricClient = mock(MetricClient.class);
 
   @Test
   void testFailHeartbeat() {
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE))).thenReturn(true);
     when(heartbeatMonitor.getHeartbeatFreshnessThreshold()).thenReturn(Duration.ofSeconds(1));
 
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
-        featureFlagClient,
-        workspaceId,
+        replicationInputFeatureFlagReader,
         Optional.of(() -> {}),
         connectionId,
         metricClient);
@@ -74,8 +70,7 @@ class HeartBeatTimeoutChaperoneTest {
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
-        featureFlagClient,
-        workspaceId,
+        replicationInputFeatureFlagReader,
         Optional.of(() -> {
           try {
             Thread.sleep(Long.MAX_VALUE);
@@ -90,12 +85,11 @@ class HeartBeatTimeoutChaperoneTest {
 
   @Test
   void testNotFailingHeartbeatIfFalseFlag() {
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE))).thenReturn(false);
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
-        featureFlagClient,
-        workspaceId,
+        replicationInputFeatureFlagReader,
         Optional.of(() -> {}),
         connectionId,
         metricClient);
@@ -113,12 +107,11 @@ class HeartBeatTimeoutChaperoneTest {
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
-        featureFlagClient,
-        workspaceId,
+        replicationInputFeatureFlagReader,
         connectionId,
         "docker image",
         metricClient);
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE))).thenReturn(true);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     assertDoesNotThrow(() -> CompletableFuture.runAsync(heartbeatTimeoutChaperone::monitor).get(1000, TimeUnit.MILLISECONDS));
   }
@@ -128,12 +121,11 @@ class HeartBeatTimeoutChaperoneTest {
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(
         heartbeatMonitor,
         timeoutCheckDuration,
-        featureFlagClient,
-        workspaceId,
+        replicationInputFeatureFlagReader,
         connectionId,
         "docker image",
         metricClient);
-    when(featureFlagClient.boolVariation(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE), any())).thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(eq(ShouldFailSyncIfHeartbeatFailure.INSTANCE))).thenReturn(false);
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true), Optional.of(false));
 
     assertDoesNotThrow(() -> CompletableFuture.runAsync(heartbeatTimeoutChaperone::monitor).get(1000, TimeUnit.MILLISECONDS));

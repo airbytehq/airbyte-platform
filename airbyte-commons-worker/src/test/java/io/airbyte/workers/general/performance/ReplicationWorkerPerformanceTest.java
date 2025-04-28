@@ -19,8 +19,12 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.DestinationTimeoutEnabled;
+import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
+import io.airbyte.featureflag.LogConnectorMessages;
+import io.airbyte.featureflag.LogStateMsgs;
+import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.MetricClient;
@@ -30,12 +34,11 @@ import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
-import io.airbyte.workers.context.ReplicationFeatureFlags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.general.BufferedReplicationWorker;
 import io.airbyte.workers.general.EmptyAirbyteDestination;
 import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
-import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
@@ -86,7 +89,7 @@ public abstract class ReplicationWorkerPerformanceTest {
                                                                  final RecordSchemaValidator recordSchemaValidator,
                                                                  final FieldSelector fieldSelector,
                                                                  final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                                                 final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                                                 final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                                                  final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                                  final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                                  final ReplicationWorkerHelper replicationWorkerHelper,
@@ -134,9 +137,20 @@ public abstract class ReplicationWorkerPerformanceTest {
         new AirbyteStreamNameNamespacePair("s1", null),
         CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
-    final var replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
+    final var replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
     final var replicationInput = mock(ReplicationInput.class);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(new ReplicationFeatureFlags(false, 0, 4, false, false, false));
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
+        .thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))
+        .thenReturn(0);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatTimeout.INSTANCE))
+        .thenReturn(4);
+    when(replicationInputFeatureFlagReader.read(FailSyncOnInvalidChecksum.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(LogStateMsgs.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(LogConnectorMessages.INSTANCE))
+        .thenReturn(false);
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
@@ -148,11 +162,9 @@ public abstract class ReplicationWorkerPerformanceTest {
     // TODO: This needs to be fixed to pass a NOOP tracker and a proper container IO handle
     final var versionedAbSource = new LocalContainerAirbyteSource(heartbeatMonitor, versionFac, null, null);
     final var workspaceID = UUID.randomUUID();
-    final FeatureFlagClient featureFlagClient = new TestClient(Map.of("heartbeat.failSync", false));
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
         io.airbyte.workers.internal.HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
-        featureFlagClient,
-        workspaceID,
+        replicationInputFeatureFlagReader,
         UUID.randomUUID(),
         "docker image",
         metricClient);
@@ -188,7 +200,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
             replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, analyticsMessageTracker,
             "workload-id", airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
-            recordMapper, featureFlagClient, mock(DestinationCatalogGenerator.class), metricClient);
+            recordMapper, mock(DestinationCatalogGenerator.class), metricClient);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,
@@ -200,7 +212,7 @@ public abstract class ReplicationWorkerPerformanceTest {
         validator,
         fieldSelector,
         heartbeatTimeoutChaperone,
-        replicationFeatureFlagReader,
+        replicationInputFeatureFlagReader,
         airbyteMessageDataExtractor,
         replicationAirbyteMessageEventPublishingHelper,
         replicationWorkerHelper,

@@ -6,6 +6,8 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.featureflag.FailSyncOnInvalidChecksum
+import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.metrics.MetricClient
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage.Type
@@ -14,7 +16,7 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Parameter
@@ -41,7 +43,7 @@ class ParallelStreamStatsTracker(
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
-  private var replicationFeatureFlags: ReplicationFeatureFlags? = null
+  private var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader? = null
 
   @Volatile
   private var hasEstimatesErrors = false
@@ -83,7 +85,7 @@ class ParallelStreamStatsTracker(
   }
 
   override fun updateSourceStatesStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationInputFeatureFlagReader?.read(FailSyncOnInvalidChecksum) ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -132,7 +134,7 @@ class ParallelStreamStatsTracker(
   }
 
   override fun updateDestinationStateStats(stateMessage: AirbyteStateMessage) {
-    val failOnInvalidChecksum = replicationFeatureFlags?.failOnInvalidChecksum ?: false
+    val failOnInvalidChecksum = replicationInputFeatureFlagReader?.read(FailSyncOnInvalidChecksum) ?: false
 
     when (stateMessage.type) {
       AirbyteStateMessage.AirbyteStateType.GLOBAL -> {
@@ -407,8 +409,8 @@ class ParallelStreamStatsTracker(
 
   override fun getUnreliableStateTimingMetrics() = hasSourceStateErrors()
 
-  override fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?) {
-    this.replicationFeatureFlags = replicationFeatureFlags
+  override fun setReplicationFeatureFlagReader(replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader) {
+    this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader
   }
 
   override fun endOfReplication(completedSuccessfully: Boolean) {
@@ -475,7 +477,7 @@ class ParallelStreamStatsTracker(
         return it
       }
 
-      if (replicationFeatureFlags?.logStateMsgs == true) {
+      if (replicationInputFeatureFlagReader?.read(LogStateMsgs) == true) {
         logger.info { "Creating new stats tracker for stream $pair" }
       }
       // if no existing tracker exists, create a new one and also place it into the trackers map

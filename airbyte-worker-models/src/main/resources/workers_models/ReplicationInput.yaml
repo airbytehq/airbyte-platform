@@ -99,3 +99,9 @@ properties:
     type: array
     items:
       type: string
+  featureFlags:
+    description: Collection of feature flags enabled for this replication sync execution.
+    existingJavaType: "java.util.Map<String,Object>"
+    type: object
+  heartbeatConfig:
+    "$ref": HeartbeatConfig.yaml

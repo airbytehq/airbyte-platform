@@ -8,17 +8,13 @@ import static java.lang.Thread.sleep;
 
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.duration.DurationKt;
-import io.airbyte.featureflag.Connection;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
-import io.airbyte.featureflag.Workspace;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.MetricTags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -49,8 +45,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
   private final HeartbeatMonitor heartbeatMonitor;
   private final Duration timeoutCheckDuration;
-  private final FeatureFlagClient featureFlagClient;
-  private final UUID workspaceId;
+  private final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
   private ExecutorService lazyExecutorService;
   private final Optional<Runnable> customMonitor;
   private final UUID connectionId;
@@ -59,15 +54,13 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
 
   public HeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
                                    final Duration timeoutCheckDuration,
-                                   final FeatureFlagClient featureFlagClient,
-                                   final UUID workspaceId,
+                                   final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                    final UUID connectionId,
                                    final String sourceDockerImage,
                                    final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
     this.heartbeatMonitor = heartbeatMonitor;
-    this.featureFlagClient = featureFlagClient;
-    this.workspaceId = workspaceId;
+    this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader;
     this.connectionId = connectionId;
     this.sourceDockerImage = sourceDockerImage;
     this.metricClient = metricClient;
@@ -77,16 +70,14 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
   @VisibleForTesting
   HeartbeatTimeoutChaperone(final HeartbeatMonitor heartbeatMonitor,
                             final Duration timeoutCheckDuration,
-                            final FeatureFlagClient featureFlagClient,
-                            final UUID workspaceId,
+                            final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                             final Optional<Runnable> customMonitor,
                             final UUID connectionId,
                             final MetricClient metricClient) {
     this.timeoutCheckDuration = timeoutCheckDuration;
 
     this.heartbeatMonitor = heartbeatMonitor;
-    this.featureFlagClient = featureFlagClient;
-    this.workspaceId = workspaceId;
+    this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader;
     this.customMonitor = customMonitor;
     this.connectionId = connectionId;
     this.sourceDockerImage = "docker image";
@@ -122,8 +113,7 @@ public class HeartbeatTimeoutChaperone implements AutoCloseable {
     LOGGER.info("thread status... heartbeat thread: {} , replication thread: {}", heartbeatFuture.isDone(), runnableFuture.isDone());
 
     if (heartbeatFuture.isDone() && !runnableFuture.isDone()) {
-      if (featureFlagClient.boolVariation(ShouldFailSyncIfHeartbeatFailure.INSTANCE,
-          new Multi(List.of(new Workspace(workspaceId), new Connection(connectionId))))) {
+      if (replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE)) {
         runnableFuture.cancel(true);
         metricClient.count(OssMetricsRegistry.SOURCE_HEARTBEAT_FAILURE,
             new MetricAttribute(MetricTags.CONNECTION_ID, connectionId.toString()),
