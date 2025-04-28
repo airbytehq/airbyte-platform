@@ -4,6 +4,7 @@
 
 package io.airbyte.server.apis.controllers
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.ConfigTemplateApi
 import io.airbyte.api.model.generated.ConfigTemplateList
 import io.airbyte.api.model.generated.ConfigTemplateListItem
@@ -16,6 +17,7 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
+import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.annotation.Controller
@@ -61,8 +63,11 @@ open class ConfigTemplateController(
 private fun ConfigTemplateWithActorDetails.toApiModel() =
   ConfigTemplateRead()
     .sourceDefinitionId(this.configTemplate.actorDefinitionId)
-    .configTemplateSpec(this.configTemplate.userConfigSpec)
-    .icon(this.actorIcon)
+    .configTemplateSpec(
+      this.configTemplate.userConfigSpec.let {
+        objectMapper.valueToTree<JsonNode>(it)
+      },
+    ).icon(this.actorIcon)
     .name(this.actorName)
     .id(this.configTemplate.id)
 

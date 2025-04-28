@@ -16,6 +16,9 @@ export const ConfigTemplateSelectList: React.FC = () => {
   };
 
   const { configTemplates } = useListConfigTemplates(workspaceId);
+  if (configTemplates.length === 1) {
+    setSelectedTemplate(configTemplates[0].id);
+  }
 
   const items = configTemplates.map((template) => ({
     id: template.id,
@@ -27,7 +30,6 @@ export const ConfigTemplateSelectList: React.FC = () => {
     <SelectableList
       items={items}
       onSelect={onTemplateSelect}
-      title={<FormattedMessage id="onboarding.sourceSetUp" />}
       emptyState={
         <Box mt="2xl" pt="2xl">
           <EmptyState text={<FormattedMessage id="configTemplates.emptyState" />} />

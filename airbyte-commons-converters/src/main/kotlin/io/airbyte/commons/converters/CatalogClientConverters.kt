@@ -142,6 +142,7 @@ class CatalogClientConverters(
       .generationId(config.generationId)
       .minimumGenerationId(config.minimumGenerationId)
       .syncId(config.syncId)
+      .includeFiles(config.includeFiles ?: false)
       .fields(fieldGenerator.getFieldsFromSchema(convertedStream.jsonSchema))
       .mappers(toConfiguredMappers(config.mappers))
       .build()
@@ -176,6 +177,7 @@ class CatalogClientConverters(
       primaryKey = stream.sourceDefinedPrimaryKey,
       aliasName = Names.toAlphanumericAndUnderscore(stream.name),
       selected = true,
+      includeFiles = false,
       suggested = null,
       fieldSelectionEnabled = null,
       selectedFields = null,

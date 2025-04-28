@@ -53,6 +53,9 @@ class SecretPersistenceService(
 ) {
   fun getPersistenceByStorageId(secretStorageId: SecretStorageId): SecretPersistence {
     val secretStorage = secretStorageService.getById(secretStorageId)
+    if (secretStorage.isDefault()) {
+      return defaultSecretPersistence
+    }
     val secretStorageConfig = secretStorageService.hydrateStorageConfig(secretStorage).config
     val secretPersistenceConfig =
       SecretPersistenceConfig()
@@ -80,16 +83,20 @@ class SecretPersistenceService(
     return RuntimeSecretPersistence(secretPersistenceConfig, metricClient)
   }
 
-  fun getPersistenceFromConfig(
+  fun getPersistenceMapFromConfig(
     config: ConfigWithSecretReferences,
     context: SecretHydrationContext,
-  ): SecretPersistence {
-    val secretStorageId = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdFromConfig(config)?.let { SecretStorageId(it) }
+  ): Map<UUID?, SecretPersistence> {
+    val secretStorageIds = SecretsHelpers.SecretReferenceHelpers.getSecretStorageIdsFromConfig(config)
     val useRuntimeSecretPersistence = featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(context.organizationId.value))
-    return when {
-      secretStorageId != null -> getPersistenceByStorageId(secretStorageId)
-      useRuntimeSecretPersistence -> getLegacyByOrganizationId(context.organizationId)
-      else -> defaultSecretPersistence
+    return secretStorageIds.associate { secretStorageId ->
+      val persistence =
+        when {
+          secretStorageId != null -> getPersistenceByStorageId(SecretStorageId(secretStorageId))
+          useRuntimeSecretPersistence -> getLegacyByOrganizationId(context.organizationId)
+          else -> defaultSecretPersistence
+        }
+      secretStorageId to persistence
     }
   }
 

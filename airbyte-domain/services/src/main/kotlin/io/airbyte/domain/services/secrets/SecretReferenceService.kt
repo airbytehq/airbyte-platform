@@ -12,7 +12,7 @@ import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.SecretReferenceConfig
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers
-import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.ConfigWithSecretReferenceIdReplacements
+import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.ConfigWithSecretReferenceIdsInjected
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretReferenceCreate
@@ -20,6 +20,14 @@ import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
+import io.airbyte.domain.models.WorkspaceId
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.PersistSecretConfigsAndReferences
+import io.airbyte.featureflag.ReadSecretReferenceIdsInConfigs
+import io.airbyte.featureflag.Workspace
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -35,6 +43,8 @@ private val logger = KotlinLogging.logger {}
 class SecretReferenceService(
   private val secretReferenceRepository: SecretReferenceRepository,
   private val secretConfigRepository: SecretConfigRepository,
+  private val featureFlagClient: FeatureFlagClient,
+  private val workspaceHelper: WorkspaceHelper,
 ) {
   /**
    * Given an [actorConfig], create SecretConfig/SecretReference records for each secret
@@ -51,9 +61,23 @@ class SecretReferenceService(
   fun createAndInsertSecretReferencesWithStorageId(
     actorConfig: ConfigWithProcessedSecrets,
     actorId: ActorId,
+    workspaceId: WorkspaceId,
     secretStorageId: SecretStorageId,
     currentUserId: UserId,
-  ): ConfigWithSecretReferenceIdReplacements {
+  ): ConfigWithSecretReferenceIdsInjected {
+    // If the feature flag to persist secret configs and references is not enabled,
+    // return the original config without any changes.
+    // Note: we cannot look up the workspace from the actorId, because the actor may not be
+    // persisted yet.
+    val orgId = workspaceHelper.getOrganizationForWorkspace(workspaceId.value)
+    if (!featureFlagClient.boolVariation(
+        PersistSecretConfigsAndReferences,
+        Multi(listOf(Workspace(workspaceId.value), Organization(orgId))),
+      )
+    ) {
+      return ConfigWithSecretReferenceIdsInjected(actorConfig.originalConfig)
+    }
+
     val createdSecretRefIdByPath = mutableMapOf<String, SecretReferenceId>()
     actorConfig.processedSecrets.forEach { path, secretNode ->
       if (secretNode.secretReferenceId != null) {
@@ -78,7 +102,7 @@ class SecretReferenceService(
 
     cleanupDanglingSecretReferences(actorId, actorConfig)
 
-    return SecretReferenceHelpers.replaceSecretNodesWithSecretReferenceIds(
+    return SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(
       actorConfig.originalConfig,
       createdSecretRefIdByPath,
     )
@@ -162,31 +186,53 @@ class SecretReferenceService(
     }
   }
 
+  @JvmName("getConfigWithSecretReferences")
   fun getConfigWithSecretReferences(
-    scopeType: SecretReferenceScopeType,
-    scopeId: UUID,
+    actorId: ActorId,
     config: JsonNode,
+    workspaceId: WorkspaceId,
   ): ConfigWithSecretReferences {
-    val refsForScope = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(scopeType, scopeId)
-    assertConfigReferenceIdsExist(config, refsForScope.map { it.secretReference.id }.toSet())
+    // If the feature flag to read secret reference IDs in configs is enabled, look up the
+    // secret references for the actorId and "hydrate" them into the config. Otherwise,
+    // skip the secret reference lookup and just use the secrets in the config as-is.
+    // Note: we cannot look up the workspace from the actorId, because the actor may not be
+    // persisted yet.
+    val orgId = workspaceHelper.getOrganizationForWorkspace(workspaceId.value)
+    val refsForScope =
+      if (featureFlagClient.boolVariation(
+          ReadSecretReferenceIdsInConfigs,
+          Multi(listOf(Workspace(workspaceId.value), Organization(orgId))),
+        )
+      ) {
+        val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId.value)
+        assertConfigReferenceIdsExist(config, result.map { it.secretReference.id }.toSet())
+        result
+      } else {
+        emptyList()
+      }
 
-    val secretRefsInConfig = SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config))
+    val nonPersistedSecretRefsInConfig =
+      SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config)).filter {
+        it.value.secretReferenceId == null
+      }
 
     val persistedSecretRefs =
-      refsForScope.filter { it.secretReference.hydrationPath != null }.associateBy(
-        { it.secretReference.hydrationPath!! },
-        {
-          SecretReferenceConfig(
-            secretCoordinate = SecretCoordinate.fromFullCoordinate(it.secretConfig.externalCoordinate),
-            secretStorageId = it.secretConfig.secretStorageId,
-            secretReferenceId = it.secretReference.id.value,
-          )
-        },
-      )
+      refsForScope
+        .filter { it.secretReference.hydrationPath != null }
+        .associateBy(
+          { it.secretReference.hydrationPath!! },
+          {
+            SecretReferenceConfig(
+              secretCoordinate = SecretCoordinate.fromFullCoordinate(it.secretConfig.externalCoordinate),
+              secretStorageId = it.secretConfig.secretStorageId,
+              secretReferenceId = it.secretReference.id.value,
+            )
+          },
+        )
 
-    // for any secret reference in the config, replace the corresponding persisted secret
-    // (if it exists) because it may have been updated in the incoming config
-    val secretRefs = persistedSecretRefs + secretRefsInConfig
+    // apply the non-persisted secret references over the persisted ones, because the non-persisted refs
+    // are updated
+    val secretRefs = persistedSecretRefs + nonPersistedSecretRefsInConfig
     return ConfigWithSecretReferences(config, secretRefs)
   }
 

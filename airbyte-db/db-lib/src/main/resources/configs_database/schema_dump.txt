@@ -265,6 +265,7 @@ create table "public"."connector_rollout" (
   "workflow_run_id" varchar(64),
   "paused_reason" varchar(1024),
   "filters" jsonb,
+  "tag" varchar(256),
   constraint "pk_connector_rollout" primary key ("id")
 );
 create table "public"."dataplane" (
@@ -661,8 +662,8 @@ create index "connection_operation_connection_id_idx" on "public"."connection_op
 create index "connection_tag_connection_id_idx" on "public"."connection_tag"("connection_id" asc);
 create index "idx_connection_timeline_connection_id" on "public"."connection_timeline_event"("connection_id" asc, "created_at" desc, "event_type" asc);
 create index "connector_builder_project_workspace_idx" on "public"."connector_builder_project"("workspace_id" asc);
-create unique index "actor_definition_id_state_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc)
-where (((state)::text = ANY ((ARRAY['errored'::character varying, 'finalizing'::character varying, 'in_progress'::character varying, 'initialized'::character varying, 'paused'::character varying, 'workflow_started'::character varying])::text[])));
+create unique index "actor_definition_id_state_tag_unique_idx" on "public"."connector_rollout"("actor_definition_id" asc, "tag" asc)
+where (((state)::text = ANY ((ARRAY['initialized'::character varying, 'in_progress'::character varying, 'paused'::character varying, 'workflow_started'::character varying, 'finalizing'::character varying, 'errored'::character varying])::text[])));
 create index "organization_email_domain_email_domain_idx" on "public"."organization_email_domain"("email_domain" asc);
 create index "organization_email_domain_organization_id_idx" on "public"."organization_email_domain"("organization_id" asc);
 create index "organization_payment_config_grace_period_end_at_idx" on "public"."organization_payment_config"("grace_period_end_at" asc);

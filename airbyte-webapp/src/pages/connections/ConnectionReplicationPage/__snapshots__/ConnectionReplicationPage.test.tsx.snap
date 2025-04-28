@@ -486,13 +486,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              another_stream
-                                            </span>
-                                          </span>
+                                          another_stream
                                         </p>
                                       </span>
                                     </div>
@@ -619,13 +613,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              pokemon
-                                            </span>
-                                          </span>
+                                          pokemon
                                         </p>
                                       </span>
                                     </div>
@@ -746,13 +734,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              pokemon2
-                                            </span>
-                                          </span>
+                                          pokemon2
                                         </p>
                                       </span>
                                     </div>
@@ -1285,13 +1267,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              another_stream
-                                            </span>
-                                          </span>
+                                          another_stream
                                         </p>
                                       </span>
                                     </div>
@@ -1418,13 +1394,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              pokemon
-                                            </span>
-                                          </span>
+                                          pokemon
                                         </p>
                                       </span>
                                     </div>
@@ -1545,13 +1515,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                           class="<removed-for-snapshot-test>"
                                           data-type="text"
                                         >
-                                          <span>
-                                            <span
-                                              class=""
-                                            >
-                                              pokemon2
-                                            </span>
-                                          </span>
+                                          pokemon2
                                         </p>
                                       </span>
                                     </div>

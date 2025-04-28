@@ -220,8 +220,9 @@ const InputFormControl = ({
     case "integer":
     case "number":
     case "boolean":
-    case "array":
       return <BuilderField type={definition.type} path={fieldPath} />;
+    case "array":
+      return <BuilderField type="array" path={fieldPath} />;
     default:
       return (
         <Message

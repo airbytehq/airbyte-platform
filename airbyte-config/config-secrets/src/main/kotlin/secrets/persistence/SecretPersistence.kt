@@ -23,6 +23,15 @@ fun interface ReadOnlySecretPersistence {
  * because external secret coordinates should never be written to or updated by Airbyte code.
  */
 interface SecretPersistence : ReadOnlySecretPersistence {
+  object ImplementationTypes {
+    const val AWS_SECRET_MANAGER = "aws_secret_manager"
+    const val AZURE_KEY_VAULT = "azure_key_vault"
+    const val GOOGLE_SECRET_MANAGER = "google_secret_manager"
+    const val VAULT = "vault"
+    const val TESTING_CONFIG_DB_TABLE = "testing_config_db_table"
+    const val NO_OP = "no_op"
+  }
+
   /**
    * Performs any initialization prior to utilization of the persistence object. This exists to make
    * it possible to create instances within a dependency management framework, where any

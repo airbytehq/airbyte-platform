@@ -26,13 +26,23 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
-  const { mode } = useConnectionFormService();
+  const { mode, connection } = useConnectionFormService();
 
   if (!row.original.streamNode) {
     return null;
   }
 
   const { config } = row.original.streamNode;
+  const prefix = connection.prefix || "";
+
+  const displayValue = prefix ? (
+    <>
+      <b>{prefix}</b>
+      {value.startsWith(prefix) ? value.replace(prefix, "") : value}
+    </>
+  ) : (
+    value
+  );
 
   // expand stream and field rows
   const onToggleExpand = () => {
@@ -74,7 +84,11 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
         aria-expanded={row.getIsExpanded()}
       />
       <TextWithOverflowTooltip>
-        <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />
+        {globalFilterValue ? (
+          <TextHighlighter searchWords={[globalFilterValue]} textToHighlight={value} />
+        ) : (
+          displayValue
+        )}
       </TextWithOverflowTooltip>
     </FlexContainer>
   );

@@ -113,8 +113,12 @@ public class MockData {
   private static final UUID CONNECTION_ID_6 = UUID.randomUUID();
   private static final UUID SOURCE_OAUTH_PARAMETER_ID_1 = UUID.randomUUID();
   private static final UUID SOURCE_OAUTH_PARAMETER_ID_2 = UUID.randomUUID();
+  private static final UUID SOURCE_OAUTH_PARAMETER_ID_3 = UUID.randomUUID();
+  private static final UUID SOURCE_OAUTH_PARAMETER_ID_4 = UUID.randomUUID();
   private static final UUID DESTINATION_OAUTH_PARAMETER_ID_1 = UUID.randomUUID();
   private static final UUID DESTINATION_OAUTH_PARAMETER_ID_2 = UUID.randomUUID();
+  private static final UUID DESTINATION_OAUTH_PARAMETER_ID_3 = UUID.randomUUID();
+  private static final UUID DESTINATION_OAUTH_PARAMETER_ID_4 = UUID.randomUUID();
   public static final UUID ACTOR_CATALOG_ID_1 = UUID.randomUUID();
   private static final UUID ACTOR_CATALOG_ID_2 = UUID.randomUUID();
   public static final UUID ACTOR_CATALOG_ID_3 = UUID.randomUUID();
@@ -589,7 +593,16 @@ public class MockData {
         .withWorkspaceId(WORKSPACE_ID_1)
         .withSourceDefinitionId(SOURCE_DEFINITION_ID_2)
         .withOauthParameterId(SOURCE_OAUTH_PARAMETER_ID_2);
-    return Arrays.asList(sourceOAuthParameter1, sourceOAuthParameter2);
+    final SourceOAuthParameter sourceOAuthParameter3 = new SourceOAuthParameter()
+        .withConfiguration(Jsons.jsonNode(CONNECTION_SPECIFICATION))
+        .withOrganizationId(ORGANIZATION_ID_1)
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID_3)
+        .withOauthParameterId(SOURCE_OAUTH_PARAMETER_ID_3);
+    final SourceOAuthParameter sourceOAuthParameter4 = new SourceOAuthParameter()
+        .withConfiguration(Jsons.jsonNode(CONNECTION_SPECIFICATION))
+        .withSourceDefinitionId(SOURCE_DEFINITION_ID_4)
+        .withOauthParameterId(SOURCE_OAUTH_PARAMETER_ID_4);
+    return Arrays.asList(sourceOAuthParameter1, sourceOAuthParameter2, sourceOAuthParameter3, sourceOAuthParameter4);
   }
 
   public static List<DestinationOAuthParameter> destinationOauthParameters() {
@@ -603,7 +616,16 @@ public class MockData {
         .withWorkspaceId(WORKSPACE_ID_1)
         .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_2)
         .withOauthParameterId(DESTINATION_OAUTH_PARAMETER_ID_2);
-    return Arrays.asList(destinationOAuthParameter1, destinationOAuthParameter2);
+    final DestinationOAuthParameter destinationOAuthParameter3 = new DestinationOAuthParameter()
+        .withConfiguration(Jsons.jsonNode(CONNECTION_SPECIFICATION))
+        .withOrganizationId(ORGANIZATION_ID_1)
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_3)
+        .withOauthParameterId(DESTINATION_OAUTH_PARAMETER_ID_3);
+    final DestinationOAuthParameter destinationOAuthParameter4 = new DestinationOAuthParameter()
+        .withConfiguration(Jsons.jsonNode(CONNECTION_SPECIFICATION))
+        .withDestinationDefinitionId(DESTINATION_DEFINITION_ID_4)
+        .withOauthParameterId(DESTINATION_OAUTH_PARAMETER_ID_4);
+    return Arrays.asList(destinationOAuthParameter1, destinationOAuthParameter2, destinationOAuthParameter3, destinationOAuthParameter4);
   }
 
   public static List<StandardSyncOperation> standardSyncOperations() {

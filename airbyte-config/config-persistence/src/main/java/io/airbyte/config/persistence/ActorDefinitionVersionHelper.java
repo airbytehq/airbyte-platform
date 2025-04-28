@@ -55,7 +55,7 @@ public class ActorDefinitionVersionHelper {
         configOverrideProvider.getClass().getSimpleName());
   }
 
-  private ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition)
+  public ActorDefinitionVersion getDefaultSourceVersion(final StandardSourceDefinition sourceDefinition)
       throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID versionId = sourceDefinition.getDefaultVersionId();
 
@@ -67,7 +67,7 @@ public class ActorDefinitionVersionHelper {
     return actorDefinitionService.getActorDefinitionVersion(versionId);
   }
 
-  private ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition)
+  public ActorDefinitionVersion getDefaultDestinationVersion(final StandardDestinationDefinition destinationDefinition)
       throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
     final UUID versionId = destinationDefinition.getDefaultVersionId();
 

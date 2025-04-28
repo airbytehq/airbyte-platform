@@ -419,6 +419,7 @@ public class ConnectionHelpers {
         .aliasName(Names.toAlphanumericAndUnderscore(nameSuffix == null ? STREAM_NAME : STREAM_NAME_BASE + nameSuffix))
         .selected(true)
         .suggested(false)
+        .includeFiles(false)
         .fieldSelectionEnabled(false)
         .selectedFields(new ArrayList<>());
   }

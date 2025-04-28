@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useFormContext } from "react-hook-form";
 
+import { useExperiment } from "hooks/services/Experiment";
+
 import {
   API_KEY_AUTHENTICATOR,
   BASIC_AUTHENTICATOR,
@@ -24,8 +26,13 @@ export const useUpdateLockedInputs = () => {
   const formValues = useBuilderWatch("formValues");
   const testingValues = useBuilderWatch("testingValues");
   const { setValue, trigger } = useFormContext();
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   useEffect(() => {
+    if (isSchemaFormEnabled) {
+      return;
+    }
+
     const keyToDesiredLockedInput = getKeyToDesiredLockedInput(formValues.global.authenticator, formValues.streams);
     const existingLockedInputKeys = formValues.inputs.filter((input) => input.isLocked).map((input) => input.key);
     const lockedInputKeysToCreate = Object.keys(keyToDesiredLockedInput).filter(
@@ -53,7 +60,15 @@ export const useUpdateLockedInputs = () => {
     });
     setValue("testingValues", newTestingValues);
     trigger("testingValues");
-  }, [formValues.global.authenticator, formValues.inputs, formValues.streams, setValue, testingValues, trigger]);
+  }, [
+    formValues.global.authenticator,
+    formValues.inputs,
+    formValues.streams,
+    isSchemaFormEnabled,
+    setValue,
+    testingValues,
+    trigger,
+  ]);
 };
 
 export const useGetUniqueKey = () => {

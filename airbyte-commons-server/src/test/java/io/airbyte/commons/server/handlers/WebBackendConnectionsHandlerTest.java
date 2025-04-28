@@ -122,7 +122,6 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
@@ -238,8 +237,8 @@ class WebBackendConnectionsHandlerTest {
     // Always mock the secretReferenceService to return the passed in config for both source and
     // destination
     final SecretReferenceService secretReferenceService = mock(SecretReferenceService.class);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final Supplier uuidGenerator = mock(Supplier.class);
 
@@ -1486,6 +1485,37 @@ class WebBackendConnectionsHandlerTest {
 
     // Keep previously-configured PK
     assertEquals(List.of(List.of(FIELD1)), actual.getStreams().getFirst().getConfig().getPrimaryKey());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateSchemaWithDiscoveryWithIncludeFiles(final boolean includeFiles) {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getConfig()
+        .includeFiles(includeFiles);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    discovered.getStreams().getFirst().getConfig()
+        .includeFiles(false);
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    // Use new value for include files
+    assertEquals(includeFiles, actual.getStreams().getFirst().getConfig().getIncludeFiles());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testUpdateSchemaWithDiscoveryWithFileBased(final boolean isFileBased) {
+    final AirbyteCatalog original = ConnectionHelpers.generateBasicApiCatalog();
+    original.getStreams().getFirst().getStream().isFileBased(false);
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+    discovered.getStreams().getFirst().getStream().isFileBased(isFileBased);
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(original, original, discovered);
+
+    assertEquals(isFileBased, actual.getStreams().getFirst().getStream().getIsFileBased());
   }
 
   @Test

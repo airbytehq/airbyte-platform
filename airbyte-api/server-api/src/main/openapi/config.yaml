@@ -171,19 +171,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/workspaces/list:
-    post:
-      tags:
-        - workspace
-      summary: List all workspaces registered in the current Airbyte deployment
-      operationId: listWorkspaces
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_all_paginated:
     post:
       tags:
@@ -262,6 +249,46 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/workspaces/list_active_workspaces_by_most_recently_running_jobs:
+    post:
+      summary: Lists workspaces with the most recently running jobs within the given time window
+      tags:
+        - workspace
+      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimeWindowRequestBody"
+        required: false
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceIdList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/workspaces/get_available_dbt_jobs:
+    post:
+      tags:
+        - workspace
+      summary: Calls the dbt Cloud `List Accounts` and `List jobs` APIs to get the list of available jobs for the dbt auth token associated with the requested workspace config.
+      operationId: getAvailableDbtJobsForWorkspace
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkspaceGetDbtJobsRequest"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved available dbt Cloud jobs
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkspaceGetDbtJobsResponse"
   /v1/workspaces/get:
     post:
       tags:
@@ -6416,8 +6443,8 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConfigTemplateRead"
-          description: Get an TODO.
+                $ref: "#/components/schemas/ConfigTemplatePublicRead"
+          description: Get a Config Template by id.
         "403":
           description: Not allowed
         "404":
@@ -6425,7 +6452,7 @@ paths:
       operationId: publicGetConfigTemplate
       x-sdk-alias: getConfigTemplate
       x-sdk-group: ConfigTemplates
-      summary: Get TODO
+      summary: Get a Config Template by id.
       parameters:
         - name: configTemplateId
           schema:
@@ -8731,6 +8758,42 @@ paths:
       x-sdk-alias: listOrganizationsForUser
       x-sdk-group: Organizations
 
+  /public/v1/organizations/{organizationId}/oauthCredentials:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOAuthCredentialsRequest"
+        required: true
+      tags:
+        - public_organizations
+        - public
+        - Organizations
+      responses:
+        "200":
+          description: OAuth credential override was successful.
+        "400":
+          description: A field in the body has not been set appropriately.
+        "403":
+          description: API key is invalid.
+      operationId: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-alias: createOrUpdateOrganizationOAuthCredentials
+      x-sdk-group: Organizations
+      summary: Create OAuth override credentials for an organization and source type.
+      description: >-
+        Create/update a set of OAuth credentials to override the Airbyte-provided OAuth credentials used for source/destination OAuth.
+
+        In order to determine what the credential configuration needs to be, please see the connector specification of the relevant
+        source/destination.
+    parameters:
+      - name: organizationId
+        schema:
+          format: UUID
+          type: string
+        in: path
+        required: true
+
   # Public APIs - Users
   /public/v1/users:
     get:
@@ -9215,6 +9278,8 @@ components:
             $ref: "#/components/schemas/ConnectorRolloutActorSyncInfo"
         tier:
           $ref: "#/components/schemas/CustomerTier"
+        tag:
+          type: string
 
     ConnectorRolloutState:
       type: string
@@ -9249,12 +9314,21 @@ components:
         tierFilter:
           type: object
           $ref: "#/components/schemas/ConnectorRolloutTierFilter"
+        jobBypassFilter:
+          type: object
+          $ref: "#/components/schemas/ConnectorRolloutJobBypassFilter"
 
     ConnectorRolloutTierFilter:
       type: object
       properties:
         tier:
           $ref: "#/components/schemas/CustomerTier"
+
+    ConnectorRolloutJobBypassFilter:
+      type: object
+      properties:
+        shouldIgnoreJobs:
+          type: boolean
 
     CustomerTier:
       type: string
@@ -9293,50 +9367,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectorRolloutRead"
-
-    ConnectorRolloutCreateRequestBody:
-      type: object
-      required:
-        - docker_repository
-        - docker_image_tag
-        - actor_definition_id
-      properties:
-        docker_repository:
-          type: string
-        docker_image_tag:
-          type: string
-        actor_definition_id:
-          type: string
-          format: uuid
-        initial_rollout_pct:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 100
-        final_target_rollout_pct:
-          type: integer
-          format: int32
-          minimum: 1
-          maximum: 100
-        has_breaking_changes:
-          type: boolean
-        max_step_wait_time_mins:
-          type: integer
-          format: int32
-          minimum: 0
-        expires_at:
-          type: string
-          format: date-time
-        tier:
-          $ref: "#/components/schemas/CustomerTier"
-
-    ConnectorRolloutCreateResponse:
-      type: object
-      required:
-        - data
-      properties:
-        data:
-          $ref: "#/components/schemas/ConnectorRolloutRead"
 
     ConnectorRolloutReadRequestBody:
       type: object
@@ -9895,6 +9925,26 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceRead"
+    TimeWindowRequestBody:
+      description: Input to filter workspaces with most recently running jobs within the given time window
+      type: object
+      required:
+        - timeWindowInHours
+      properties:
+        timeWindowInHours:
+          description: Time window value (in hours), e.g. 48
+          type: integer
+          format: int32
+    WorkspaceIdList:
+      description: List of workspace IDs
+      type: object
+      required:
+        - workspaceIds
+      properties:
+        workspaceIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceId"
     WorkspaceRead:
       type: object
       required:
@@ -10080,6 +10130,48 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WebhookConfigWrite"
+    WorkspaceGetDbtJobsRequest:
+      description: Get the available dbt Cloud jobs associated with the given workspace config.
+      type: object
+      required:
+        - workspaceId
+        - dbtConfigId
+      properties:
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        dbtConfigId:
+          type: string
+          format: uuid
+          description: The config id associated with the dbt Cloud config, references the webhookConfigId in the core API.
+    DbtCloudJobInfo:
+      type: object
+      description: A dbt Cloud job
+      required:
+        - accountId
+        - jobId
+        - jobName
+      properties:
+        accountId:
+          type: integer
+          format: int64
+          description: The account id associated with the job
+        jobId:
+          type: integer
+          format: int64
+          description: The the specific job id returned by the dbt Cloud API
+        jobName:
+          type: string
+          description: The human-readable name of the job returned by the dbt Cloud API
+    WorkspaceGetDbtJobsResponse:
+      description: The available dbt Cloud jobs for the requested workspace config
+      type: object
+      required:
+        - availableDbtJobs
+      properties:
+        availableDbtJobs:
+          type: array
+          items:
+            $ref: "#/components/schemas/DbtCloudJobInfo"
     WorkspaceUsageRequestBody:
       type: object
       required:
@@ -13510,17 +13602,13 @@ components:
     PermissionDeleteUserFromWorkspaceRequestBody:
       type: object
       required:
-        - userIdToRemove
+        - userId
         - workspaceId
       properties:
-        userIdToRemove:
-          type: string
-          format: uuid
-          description: The user ID for which to remove workspace permissions
+        userId:
+          $ref: "#/components/schemas/UserId"
         workspaceId:
-          type: string
-          format: uuid
-          description: The workspace ID from which to remove all workspace-level permissions for the indicated user
+          $ref: "#/components/schemas/WorkspaceId"
     PermissionRead:
       type: object
       required:
@@ -13868,6 +13956,9 @@ components:
           type: boolean
         suggested:
           description: Does the connector suggest that this stream be enabled by default?
+          type: boolean
+        includeFiles:
+          description: Should the sync move raw files from the source to the destination?
           type: boolean
         fieldSelectionEnabled:
           description: Whether field selection should be enabled. If this is true, only the properties in `selectedFields` will be included.
@@ -17260,6 +17351,23 @@ components:
         configuration:
           $ref: "#/components/schemas/OAuthCredentialsConfiguration"
       x-sdk-component: true
+    OrganizationOAuthCredentialsRequest:
+      title: Root Type for OrganizationOAuthCredentials
+      description: POST body for creating/updating organization level OAuth credentials
+      required:
+        - actorType
+        - name
+        - configuration
+      type: object
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: string
+          description: The name of the source i.e. google-ads
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+      x-sdk-component: true
     OAuthCredentialsConfiguration:
       description: The configuration for this source/destination based on the OAuth section of the relevant specification.
       type: object
@@ -17976,6 +18084,8 @@ components:
       properties:
         name:
           type: string
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18154,6 +18264,9 @@ components:
             type: array
             items:
               type: string
+        includeFiles:
+          description: Whether to move raw files from the source to the destination during the sync.
+          type: boolean
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
@@ -18698,6 +18811,7 @@ components:
           format: uuid
         name:
           type: string
+          description: Name of the associated actor definition
         icon:
           type: string
           description: url to icon in connector asset (svg) registry
@@ -18706,6 +18820,32 @@ components:
           format: uuid
         configTemplateSpec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
+    ConfigTemplatePublicRead:
+      type: object
+      required:
+        - id
+        - name
+        - icon
+        - sourceDefinitionId
+        - configTemplateSpec
+        - partialDefaultConfig
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          description: Name of the associated actor definition
+        icon:
+          type: string
+          description: url to icon in connector asset (svg) registry
+        sourceDefinitionId:
+          type: string
+          format: uuid
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        partialDefaultConfig:
+          type: object
     ListConfigTemplatesRequestBody:
       type: object
       required:
@@ -18767,15 +18907,19 @@ components:
       type: object
       required:
         - partialUserConfigId
+        - workspaceId
       properties:
         partialUserConfigId:
+          type: string
+          format: uuid
+        workspaceId:
           type: string
           format: uuid
     PartialUserConfigRead:
       type: object
       required:
         - id
-        - partialUserConfigProperties
+        - connectionConfiguration
         - configTemplate
         - actorId
       properties:
@@ -18788,13 +18932,13 @@ components:
           description: the actor that this partial user config is for
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigCreate:
       type: object
       required:
         - configTemplateId
-        - partialUserConfigProperties
+        - connectionConfiguration
         - workspaceId
       properties:
         workspaceId:
@@ -18804,7 +18948,7 @@ components:
           description: the template that this user config is connected with
           type: string
           format: uuid
-        partialUserConfigProperties:
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigWithSource:
       type: object
@@ -18829,12 +18973,16 @@ components:
       type: object
       required:
         - partialUserConfigId
-        - partialUserConfigProperties
+        - workspaceId
+        - connectionConfiguration
       properties:
         partialUserConfigId:
           type: string
           format: uuid
-        partialUserConfigProperties:
+        workspaceId:
+          type: string
+          format: uuid
+        connectionConfiguration:
           $ref: "#/components/schemas/SourceConfiguration"
     PartialUserConfigReadList:
       type: object

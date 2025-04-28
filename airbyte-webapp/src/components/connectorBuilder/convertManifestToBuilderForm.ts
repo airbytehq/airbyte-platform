@@ -61,6 +61,9 @@ import {
   DpathExtractor,
   ResponseToFileExtractorType,
   CustomRecordExtractorType,
+  HttpComponentsResolverType,
+  DynamicDeclarativeStreamComponentsResolver,
+  SimpleRetrieverRequester,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -101,6 +104,8 @@ import {
   JWT_AUTHENTICATOR,
   BuilderNestedDecoderConfig,
   BuilderDpathExtractor,
+  BuilderDynamicStream,
+  BuilderComponentsResolver,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -191,6 +196,56 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       streamName,
       `Only ${SimpleRetrieverType.SimpleRetriever} and ${AsyncRetrieverType.AsyncRetriever} are supported`
     );
+  });
+
+  function assertResolverWithSimpleRetriever(
+    resolver: DynamicDeclarativeStreamComponentsResolver
+  ): resolver is DynamicDeclarativeStreamComponentsResolver & { retriever: SimpleRetriever } {
+    return (
+      resolver.type === HttpComponentsResolverType.HttpComponentsResolver &&
+      resolver.retriever.type === SimpleRetrieverType.SimpleRetriever
+    );
+  }
+
+  const dynamicStreams = resolvedManifest.dynamic_streams ?? [];
+  builderFormValues.dynamicStreams = dynamicStreams.map((dynamicStream, idx): BuilderDynamicStream => {
+    if (!assertResolverWithSimpleRetriever(dynamicStream.components_resolver)) {
+      throw new ManifestCompatibilityError(
+        dynamicStream.name,
+        `Only ${HttpComponentsResolverType.HttpComponentsResolver} with ${SimpleRetrieverType.SimpleRetriever} is supported`
+      );
+    }
+
+    const componentsResolver = dynamicStream.components_resolver as BuilderComponentsResolver;
+    componentsResolver.retriever.requester = {
+      $ref: "#/definitions/base_requester",
+      path: dynamicStream.components_resolver.retriever.requester.path,
+    } as unknown as SimpleRetrieverRequester;
+
+    // if there isn't a record filter, add a default one so the form controls pathing works
+    if (!componentsResolver.retriever.record_selector.record_filter) {
+      componentsResolver.retriever.record_selector.record_filter = {
+        type: "RecordFilter",
+        condition: "",
+      };
+    }
+
+    return {
+      dynamicStreamName: dynamicStream.name ?? `dynamic_stream_${idx}`,
+      componentsResolver,
+      streamTemplate: manifestSyncStreamToBuilder(
+        dynamicStream.stream_template,
+        `${dynamicStream.name}_template`,
+        "",
+        streamNameToIndex,
+        serializedStreamToName,
+        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
+        firstSimpleRetriever?.requester?.url_base,
+        firstSimpleRetriever?.requester?.authenticator,
+        builderMetadata,
+        resolvedManifest.spec
+      ),
+    };
   });
 
   builderFormValues.assist = builderMetadata?.assist ?? {};

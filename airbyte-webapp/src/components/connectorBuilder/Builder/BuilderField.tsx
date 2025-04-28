@@ -34,17 +34,6 @@ interface EnumFieldProps {
   disabled?: boolean;
 }
 
-interface ArrayFieldProps {
-  name: string;
-  value: string[];
-  setValue: (value: string[]) => void;
-  error: boolean;
-  itemType?: string;
-  directionalStyle?: boolean;
-  uniqueValues?: boolean;
-  disabled?: boolean;
-}
-
 interface BaseFieldProps {
   // path to the location in the Connector Manifest schema which should be set by this component
   path: string;
@@ -81,13 +70,14 @@ export type BuilderFieldProps = BaseFieldProps &
       }
     | { type: "date" | "date-time"; onChange?: (newValue: string) => void }
     | { type: "boolean"; onChange?: (newValue: boolean) => void; disabledTooltip?: string }
-    | {
+    | ({
         type: "array";
-        onChange?: (newValue: string[]) => void;
-        itemType?: string;
         directionalStyle?: boolean;
         uniqueValues?: boolean;
-      }
+      } & (
+        | { itemType?: "string"; onChange?: (newValue: string[]) => void }
+        | { itemType: "number" | "integer"; onChange?: (newValue: number[]) => void }
+      ))
     | { type: "textarea"; onChange?: (newValue: string[]) => void }
     | { type: "jsoneditor"; onChange?: (newValue: string[]) => void }
     | { type: "graphql"; onChange?: (newValue: string) => void }
@@ -116,30 +106,6 @@ const EnumField: React.FC<EnumFieldProps> = ({ options, value, setValue, error, 
       selectedValue={value}
       hasError={error}
       isDisabled={disabled}
-    />
-  );
-};
-
-const ArrayField: React.FC<ArrayFieldProps> = ({
-  name,
-  value,
-  setValue,
-  error,
-  itemType,
-  directionalStyle,
-  uniqueValues,
-  disabled,
-}) => {
-  return (
-    <TagInput
-      name={name}
-      fieldValue={value}
-      onChange={(value) => setValue(value)}
-      itemType={itemType}
-      error={error}
-      directionalStyle={directionalStyle}
-      uniqueValues={uniqueValues}
-      disabled={disabled}
     />
   );
 };
@@ -208,7 +174,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
   }
 
   const setValue = (newValue: unknown) => {
-    props.onChange?.(newValue as string & string[]);
+    props.onChange?.(newValue as string & string[] & number[]);
     field.onChange(newValue);
   };
 
@@ -324,11 +290,11 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       )}
       {props.type === "array" && (
         <div data-testid={`tag-input-${path}`}>
-          <ArrayField
+          <TagInput
             name={path}
-            value={(fieldValue as string[] | undefined) ?? []}
-            itemType={props.itemType}
-            setValue={setValue}
+            fieldValue={fieldValue ?? []}
+            itemType={props.itemType ?? "string"}
+            onChange={setValue}
             error={hasError}
             directionalStyle={props.directionalStyle ?? true}
             uniqueValues={props.uniqueValues}

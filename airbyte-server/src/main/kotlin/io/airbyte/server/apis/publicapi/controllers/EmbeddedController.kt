@@ -26,6 +26,7 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
+import jakarta.inject.Named
 import jakarta.ws.rs.core.Response
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.time.Clock
@@ -46,7 +47,7 @@ class EmbeddedController(
   val currentUserService: CurrentUserService,
   val workspaceHelper: WorkspaceHelper,
   val licenseEntitlementChecker: LicenseEntitlementChecker,
-  @Property(name = "airbyte.airbyte-url") val airbyteUrl: String,
+  @Named("airbyteUrl") val airbyteUrl: String,
   @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()

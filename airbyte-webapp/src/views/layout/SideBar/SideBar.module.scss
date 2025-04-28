@@ -19,7 +19,7 @@
 
   ul {
     width: 100%;
-    padding: 0;
+    padding: 0 variables.$spacing-sm;
 
     li {
       list-style-type: none;
@@ -29,9 +29,15 @@
 
   &__menuItems {
     width: 100%;
-    padding: 0 variables.$spacing-sm;
     margin-top: variables.$spacing-sm;
     flex: 1 1 auto;
+  }
+
+  &__menuContentSeparator {
+    width: 100%;
+    height: variables.$border-thin;
+    background-color: colors.$grey-100;
+    margin: variables.$spacing-sm 0;
   }
 
   &__logoutButton * {

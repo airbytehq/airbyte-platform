@@ -1,0 +1,29 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  display: inline-flex;
+  align-items: center;
+}
+
+.modalContent {
+  padding: 0 variables.$spacing-xl variables.$spacing-xl variables.$spacing-xl;
+}
+
+.toggleContainer {
+  border: 1px solid colors.$grey-200;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-xs;
+  cursor: pointer;
+}
+
+// The switch is just for presentation only, so disable all interactions with it.
+// A wrapping div was needed to fully isolate the Switch from the toggle container.
+.switchWrapper {
+  pointer-events: none;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

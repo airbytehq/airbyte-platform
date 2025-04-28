@@ -4,13 +4,16 @@
 
 package io.airbyte.config.secrets
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.airbyte.config.secrets.hydration.RealSecretsHydrator
 import io.airbyte.config.secrets.hydration.SecretsHydrator
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
 import java.util.UUID
 
 private val UUID1 = UUID.randomUUID()
@@ -47,5 +50,21 @@ class SecretsRepositoryReaderTest {
     secretPersistence = MemorySecretPersistence()
     val secretsHydrator: SecretsHydrator = RealSecretsHydrator(secretPersistence)
     secretsRepositoryReader = SecretsRepositoryReader(secretsHydrator)
+  }
+
+  @Test
+  fun `test fetchSecretFromSecretPersistence returns hydrated value`() {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test_secret", 1)
+    val secretString = """{ "access_token": "xyz", "request_succeeded": true }"""
+    val secretValue = Jsons.deserialize(secretString)
+    val expectedPayload = secretValue
+
+    secretPersistence.write(secretCoordinate, secretString)
+
+    val result: JsonNode = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence)
+
+    Assertions.assertEquals(expectedPayload, result)
+    Assertions.assertEquals("xyz", result.get("access_token").asText())
+    Assertions.assertEquals(true, result.get("request_succeeded").asBoolean())
   }
 }

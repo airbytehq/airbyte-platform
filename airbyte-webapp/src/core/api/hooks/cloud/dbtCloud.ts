@@ -20,13 +20,14 @@ import {
   WebhookConfigRead,
   WorkspaceRead,
   WebhookConfigWrite,
+  DbtCloudJobInfo,
+  WorkspaceGetDbtJobsResponse,
 } from "core/api/types/AirbyteClient";
 import { useRequestOptions } from "core/api/useRequestOptions";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useNotificationService } from "hooks/services/Notification";
 
-import { webBackendGetAvailableDbtJobsForWorkspace } from "../../generated/CloudApi";
-import { DbtCloudJobInfo, WorkspaceGetDbtJobsResponse } from "../../types/CloudApi";
+import { getAvailableDbtJobsForWorkspace } from "../../generated/AirbyteClient";
 import { useCurrentWorkspace, useUpdateWorkspace } from "../workspaces";
 
 export interface DbtCloudJob {
@@ -188,7 +189,7 @@ export const useAvailableDbtJobs = () => {
 
   const results = useQuery(
     ["dbtCloud", dbtConfigId, "list"],
-    () => webBackendGetAvailableDbtJobsForWorkspace({ workspaceId, dbtConfigId }, requestOptions),
+    () => getAvailableDbtJobsForWorkspace({ workspaceId, dbtConfigId }, requestOptions),
     {
       suspense: true,
     }

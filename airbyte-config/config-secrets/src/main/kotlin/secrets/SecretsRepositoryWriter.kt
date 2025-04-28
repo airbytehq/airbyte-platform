@@ -83,6 +83,7 @@ open class SecretsRepositoryWriter(
     fullConfig: JsonNode,
     connSpec: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+    secretBasePrefix: String,
   ): JsonNode {
     val fullConfigWithProcessedSecrets =
       SecretsHelpers.SecretReferenceHelpers.processConfigSecrets(
@@ -94,8 +95,24 @@ open class SecretsRepositoryWriter(
       secretBaseId = secretBaseId,
       fullConfig = fullConfigWithProcessedSecrets,
       secretPersistence = runtimeSecretPersistence ?: secretPersistence,
+      secretBasePrefix = secretBasePrefix,
     )
   }
+
+  @Deprecated("Use createFromConfig() that takes in InputConfigWithProcessedSecrets instead")
+  fun createFromConfigLegacy(
+    secretBaseId: UUID,
+    fullConfig: JsonNode,
+    connSpec: JsonNode,
+    runtimeSecretPersistence: RuntimeSecretPersistence? = null,
+  ): JsonNode =
+    createFromConfigLegacy(
+      secretBaseId = secretBaseId,
+      fullConfig = fullConfig,
+      connSpec = connSpec,
+      runtimeSecretPersistence = runtimeSecretPersistence,
+      secretBasePrefix = AirbyteManagedSecretCoordinate.DEFAULT_SECRET_BASE_PREFIX,
+    )
 
   /**
    * Pure function to delete secrets from persistence.

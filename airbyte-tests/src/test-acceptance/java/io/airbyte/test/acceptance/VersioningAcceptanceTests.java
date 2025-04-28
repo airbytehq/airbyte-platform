@@ -19,6 +19,7 @@ import io.airbyte.api.client.model.generated.SourceDefinitionRead;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,9 +40,12 @@ class VersioningAcceptanceTests {
   private static final String AIRBYTE_SERVER_HOST = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001");
 
   @BeforeAll
-  static void init() throws IOException {
+  static void init() throws IOException, GeneralSecurityException, URISyntaxException, InterruptedException {
     apiClient2 = createAirbyteApiClient(String.format("%s/api", AIRBYTE_SERVER_HOST), Map.of());
-    workspaceId = apiClient2.getWorkspaceApi().listWorkspaces().getWorkspaces().getFirst().getWorkspaceId();
+
+    AcceptanceTestsResources acceptanceTestsResources = new AcceptanceTestsResources();
+    acceptanceTestsResources.init();
+    workspaceId = acceptanceTestsResources.getWorkspaceId();
   }
 
   @ParameterizedTest

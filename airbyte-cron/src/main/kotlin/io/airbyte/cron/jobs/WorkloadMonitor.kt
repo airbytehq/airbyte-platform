@@ -5,6 +5,9 @@
 package io.airbyte.cron.jobs
 
 import datadog.trace.api.Trace
+import io.airbyte.featureflag.CanCleanWorkloadQueue
+import io.airbyte.featureflag.Empty
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -16,6 +19,7 @@ import io.airbyte.workload.api.client.model.generated.ExpiredDeadlineWorkloadLis
 import io.airbyte.workload.api.client.model.generated.LongRunningWorkloadRequest
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
+import io.airbyte.workload.api.client.model.generated.WorkloadQueueCleanLimit
 import io.airbyte.workload.api.client.model.generated.WorkloadStatus
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Property
@@ -37,6 +41,8 @@ open class WorkloadMonitor(
   @Property(name = "airbyte.workload.monitor.sync-workload-timeout") private val syncWorkloadTimeout: Duration,
   private val metricClient: MetricClient,
   private val timeProvider: Optional<(ZoneId) -> OffsetDateTime>,
+  @Property(name = "airbyte.workload.queue.deletion-batch-size") private val deletionBatchSizeLimit: Int,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   companion object {
     const val CHECK_CLAIMS = "workload-monitor-claim"
@@ -183,6 +189,18 @@ open class WorkloadMonitor(
         MetricAttribute(MetricTags.DATA_PLANE_GROUP_TAG, it.dataplaneGroup ?: "unknown"),
         MetricAttribute(MetricTags.PRIORITY_TAG, it.priority?.name ?: "none"),
       )
+    }
+  }
+
+  @Scheduled(cron = "\${airbyte.workload.queue.deletion-cron}")
+  open fun cleanWorkloadQueue() {
+    val canCleanWorkloadQueue = featureFlagClient.boolVariation(CanCleanWorkloadQueue, Empty)
+    if (canCleanWorkloadQueue) {
+      logger.info { "Cleaning workload queue. With a batch size of $deletionBatchSizeLimit" }
+      workloadApiClient.workloadApi.workloadQueueClean(
+        WorkloadQueueCleanLimit(deletionBatchSizeLimit),
+      )
+      logger.info { "Workload queue cleaned." }
     }
   }
 
