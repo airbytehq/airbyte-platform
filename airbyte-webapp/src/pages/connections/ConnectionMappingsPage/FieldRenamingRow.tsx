@@ -1,24 +1,24 @@
 import React, { useEffect, useMemo } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
-import * as yup from "yup";
 
+import { fieldRenamingMapperConfiguration } from "components/connection/ConnectionForm/schemas/mapperSchema";
 import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Text } from "components/ui/Text";
 
-import { FieldRenamingMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  FieldRenamingMapperConfiguration,
+  MapperValidationErrorType,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
 import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./MappingRow";
 import { MappingTypeListBox } from "./MappingTypeListBox";
+import { MappingValidationErrorMessage } from "./MappingValidationErrorMessage";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
-
-export const fieldRenamingConfigSchema = yup.object().shape({
-  newFieldName: yup.string().required("form.empty.error"),
-  originalFieldName: yup.string().required("form.empty.error"),
-});
 
 interface FieldRenamingRowProps {
   mapping: StreamMapperWithId<FieldRenamingMapperConfiguration>;
@@ -40,15 +40,21 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
 
   const methods = useForm<FieldRenamingMapperConfiguration>({
     defaultValues,
-    resolver: autoSubmitResolver<FieldRenamingMapperConfiguration>(fieldRenamingConfigSchema, (formValues) => {
+    resolver: autoSubmitResolver(fieldRenamingMapperConfiguration, (formValues) => {
       updateLocalMapping(streamDescriptorKey, mapping.id, { mapperConfiguration: formValues });
     }),
     mode: "onBlur",
   });
 
   useEffect(() => {
-    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
-      methods.setError("originalFieldName", { message: mapping.validationError.message });
+    if (
+      mapping.validationError &&
+      mapping.validationError.type === MapperValidationErrorType.FIELD_NOT_FOUND &&
+      "originalFieldName" in methods.formState.touchedFields
+    ) {
+      methods.setError("originalFieldName", {
+        message: "connections.mappings.error.FIELD_NOT_FOUND",
+      });
     } else {
       methods.clearErrors("originalFieldName");
     }
@@ -92,11 +98,10 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
             <FormControlErrorMessage<FieldRenamingMapperConfiguration> name="newFieldName" />
           </MappingRowItem>
         </MappingRowContent>
-        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
-          <Text italicized color="red">
-            {mapping.validationError.message}
-          </Text>
-        )}
+        <MappingValidationErrorMessage<FieldRenamingMapperConfiguration>
+          validationError={mapping.validationError}
+          touchedFields={methods.formState.touchedFields}
+        />
       </form>
     </FormProvider>
   );

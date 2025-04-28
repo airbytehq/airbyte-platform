@@ -166,15 +166,126 @@ internal class SecretsHelpersTest {
     testCase.persistenceUpdater.accept(secretPersistence)
     val inputPartialConfig: JsonNode = testCase.partialConfig
     val inputPartialConfigCopy = inputPartialConfig.deepCopy<JsonNode>()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
     val actualCombinedConfig: JsonNode =
-      SecretsHelpers.combineInlinedConfig(
-        testCase.partialConfig,
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
         secretPersistence,
       )
     Assertions.assertEquals(testCase.fullConfig, actualCombinedConfig)
 
     // check that we didn't mutate the input configs
     Assertions.assertEquals(inputPartialConfigCopy, inputPartialConfig)
+  }
+
+  @ParameterizedTest
+  @MethodSource(PROVIDE_TEST_CASES)
+  fun testCombineWithMap(testCase: SecretsTestCase) {
+    val secretPersistence = MemorySecretPersistence()
+    testCase.persistenceUpdater.accept(secretPersistence)
+    val inputPartialConfig: JsonNode = testCase.partialConfig
+    val inputPartialConfigCopy = inputPartialConfig.deepCopy<JsonNode>()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
+    val actualCombinedConfig: JsonNode =
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
+        mapOf(null to secretPersistence),
+      )
+    Assertions.assertEquals(testCase.fullConfig, actualCombinedConfig)
+
+    // check that we didn't mutate the input configs
+    Assertions.assertEquals(inputPartialConfigCopy, inputPartialConfig)
+  }
+
+  @Test
+  fun testCombineWithMultipleSecretPersistence() {
+    val secretPersistence1 = mockk<ReadOnlySecretPersistence>()
+    val secretPersistence2 = mockk<ReadOnlySecretPersistence>()
+    val defaultPersistence = mockk<ReadOnlySecretPersistence>()
+
+    val storageId1 = UUID.randomUUID()
+    val storageId2 = UUID.randomUUID()
+
+    val secretRefOne =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_456"),
+        secretStorageId = storageId1,
+        secretReferenceId = UUID.randomUUID(),
+      )
+    val secretRefTwo =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_789"),
+        secretStorageId = storageId2,
+        secretReferenceId = UUID.randomUUID(),
+      )
+    val legacyRef =
+      SecretReferenceConfig(
+        secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_workspace_123_secret_456"),
+      )
+
+    val inputConfigWithRefs =
+      ConfigWithSecretReferences(
+        config =
+          Jsons.jsonNode(
+            mapOf(
+              "key1" to
+                mapOf(
+                  "_secret_reference_id" to secretRefOne.secretReferenceId,
+                ),
+              "key2" to
+                mapOf(
+                  "_secret_reference_id" to secretRefTwo.secretReferenceId,
+                ),
+              "legacyKey" to
+                mapOf(
+                  "_secret" to legacyRef.secretCoordinate,
+                ),
+            ),
+          ),
+        referencedSecrets =
+          mapOf(
+            "$.key1" to secretRefOne,
+            "$.key2" to secretRefTwo,
+            "$.legacyKey" to legacyRef,
+          ),
+      )
+
+    val originalConfigCopy = inputConfigWithRefs.config.deepCopy<JsonNode>()
+
+    every {
+      defaultPersistence.read(legacyRef.secretCoordinate)
+    } returns "legacySecretValue"
+    every {
+      secretPersistence1.read(secretRefOne.secretCoordinate)
+    } returns "secretValue1"
+    every {
+      secretPersistence2.read(secretRefTwo.secretCoordinate)
+    } returns "secretValue2"
+
+    val actualCombinedConfig: JsonNode =
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
+        mapOf(
+          null to defaultPersistence,
+          storageId1 to secretPersistence1,
+          storageId2 to secretPersistence2,
+        ),
+      )
+    Assertions.assertNotNull(actualCombinedConfig)
+
+    val expectedConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "key1" to "secretValue1",
+          "key2" to "secretValue2",
+          "legacyKey" to "legacySecretValue",
+        ),
+      )
+
+    Assertions.assertEquals(expectedConfig, actualCombinedConfig)
+
+    // check that we didn't mutate the input config
+    Assertions.assertEquals(originalConfigCopy, inputConfigWithRefs.config)
   }
 
   @Test
@@ -191,13 +302,14 @@ internal class SecretsHelpersTest {
   fun testMissingSecretShouldThrowException() {
     val testCase = SimpleTestCase()
     val secretPersistence: ReadOnlySecretPersistence = mockk()
+    val inputConfigWithRefs = InlinedConfigWithSecretRefs(testCase.partialConfig).toConfigWithRefs()
     every { secretPersistence.read(any()) } returns ""
 
     Assertions.assertThrows(
       RuntimeException::class.java,
     ) {
-      SecretsHelpers.combineInlinedConfig(
-        testCase.partialConfig,
+      SecretsHelpers.combineConfig(
+        inputConfigWithRefs,
         secretPersistence,
       )
     }
@@ -466,6 +578,10 @@ internal class SecretsHelpersTest {
                 "_secret" to "external_secret_abc_v1",
                 "_secret_storage_id" to secretStorageId.value.toString(),
               ),
+            "ephemeral" to
+              mapOf(
+                "_secret" to "airbyte_workspace_123_secret_888_v1",
+              ),
             "refIdField" to
               mapOf(
                 "_secret_reference_id" to refId.value.toString(),
@@ -486,6 +602,7 @@ internal class SecretsHelpersTest {
                 "prefixedField" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "airbyteManaged" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "externalManaged" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
+                "ephemeral" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "refIdField" to mapOf("type" to "string", AIRBYTE_SECRET_FIELD to true),
                 "notSecret" to mapOf("type" to "string"),
               ),
@@ -516,6 +633,11 @@ internal class SecretsHelpersTest {
           secretCoordinate = ExternalSecretCoordinate("external_secret_abc_v1"),
           secretStorageId = secretStorageId,
         )
+      val expectedEphemeralNode =
+        ProcessedSecretNode(
+          secretCoordinate = AirbyteManagedSecretCoordinate.fromFullCoordinate("airbyte_workspace_123_secret_888_v1"),
+          secretStorageId = secretStorageId,
+        )
       val expectedRefIdNode =
         ProcessedSecretNode(
           secretReferenceId = refId,
@@ -527,6 +649,7 @@ internal class SecretsHelpersTest {
           "$.prefixedField" to expectedPrefixedNode,
           "$.airbyteManaged" to expectedAirbyteManagedNode,
           "$.externalManaged" to expectedExternalManagedNode,
+          "$.ephemeral" to expectedEphemeralNode,
           "$.refIdField" to expectedRefIdNode,
         )
 
@@ -535,15 +658,15 @@ internal class SecretsHelpersTest {
     }
 
     @Test
-    fun testReplaceSecretNodesWithSecretReferenceIds() {
+    fun testUpdateSecretNodesWithSecretReferenceIds() {
       val originalConfig =
         Jsons.jsonNode(
           mapOf(
             "username" to "alice",
-            "password" to "old-password",
+            "password" to mapOf("_secret" to "password-coord"),
             "details" to
               mapOf(
-                "apiKey" to "secret-api-key",
+                "apiKey" to mapOf("_secret" to "api-key-coord"),
               ),
           ),
         )
@@ -557,7 +680,7 @@ internal class SecretsHelpersTest {
           "$.details.apiKey" to apiKeySecretRefId,
         )
 
-      val result = SecretsHelpers.SecretReferenceHelpers.replaceSecretNodesWithSecretReferenceIds(originalConfig, secretReferenceIdsByPath)
+      val result = SecretsHelpers.SecretReferenceHelpers.updateSecretNodesWithSecretReferenceIds(originalConfig, secretReferenceIdsByPath)
 
       val expectedJson =
         Jsons.jsonNode(
@@ -565,12 +688,14 @@ internal class SecretsHelpersTest {
             "username" to "alice",
             "password" to
               mapOf(
+                "_secret" to "password-coord",
                 "_secret_reference_id" to passwordSecretRefId.value.toString(),
               ),
             "details" to
               mapOf(
                 "apiKey" to
                   mapOf(
+                    "_secret" to "api-key-coord",
                     "_secret_reference_id" to apiKeySecretRefId.value.toString(),
                   ),
               ),

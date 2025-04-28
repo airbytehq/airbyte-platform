@@ -28,4 +28,5 @@ data class ConnectorRollout(
   var failedReason: String? = null,
   var pausedReason: String? = null,
   var filters: ConnectorRolloutFilters? = null,
+  var tag: String?,
 )

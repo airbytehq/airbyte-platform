@@ -14,6 +14,7 @@ export type IconType =
   | "chart"
   | "chat"
   | "check"
+  | "checkCircle"
   | "chevronDown"
   | "chevronLeft"
   | "chevronRight"

@@ -61,6 +61,7 @@ const streamConfigZodSchema = z.object({
   fieldSelectionEnabled: z.boolean().optional(),
   selectedFields: z.array(fieldSchema).optional(),
   hashedFields: z.array(fieldSchema).optional(),
+  includeFiles: z.boolean().optional(),
   mappers: z.array(mapperSchema).optional(),
   aliasName: z.string().optional(),
   primaryKey: z.array(z.array(z.string())).optional(),

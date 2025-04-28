@@ -64,7 +64,7 @@ class PartialUserConfigHandlerTest {
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
     every { sourceHandler.createSource(any()) } returns savedSource
     every { sourceHandler.persistConfigRawSecretValues(any(), any(), any(), any(), any()) } returns
-      partialUserConfigCreate.partialUserConfigProperties
+      partialUserConfigCreate.connectionConfiguration
 
     val result = handler.createPartialUserConfig(partialUserConfigCreate)
 
@@ -98,10 +98,7 @@ class PartialUserConfigHandlerTest {
   fun `test updatePartialUserConfig with valid inputs`() {
     val initialConnectionConfig = objectMapper.createObjectNode().put("testKey", "initialValue")
 
-    val initialProperties =
-      objectMapper
-        .createObjectNode()
-        .set<JsonNode>("connectionConfiguration", initialConnectionConfig)
+    val initialProperties = initialConnectionConfig
 
     val partialUserConfig =
       createMockPartialUserConfig(
@@ -121,10 +118,6 @@ class PartialUserConfigHandlerTest {
       )
 
     val updateConnectionConfig = objectMapper.createObjectNode().put("testKey", "updatedValue")
-    val updateUserConfig =
-      objectMapper
-        .createObjectNode()
-        .set<JsonNode>("connectionConfiguration", updateConnectionConfig)
 
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
 
@@ -134,7 +127,7 @@ class PartialUserConfigHandlerTest {
         workspaceId = partialUserConfig.partialUserConfig.workspaceId,
         configTemplateId = partialUserConfig.partialUserConfig.configTemplateId,
         actorId = partialUserConfig.partialUserConfig.actorId,
-        partialUserConfigProperties = updateUserConfig,
+        connectionConfiguration = updateConnectionConfig,
       )
 
     every {
@@ -145,8 +138,7 @@ class PartialUserConfigHandlerTest {
         any<ConnectorSpecification>(),
         any(),
       )
-    } returns
-      updateUserConfig
+    } returns updateConnectionConfig
 
     val configSlot = slot<PartialUserConfig>()
     every { partialUserConfigService.updatePartialUserConfig(capture(configSlot)) } returns partialUserConfig
@@ -165,34 +157,32 @@ class PartialUserConfigHandlerTest {
     verify { sourceHandler.partialUpdateSource(any()) }
 
     val capturedConnectionConfig = sourceUpdateSlot.captured.connectionConfiguration
-    val capturedUserConfig = configSlot.captured.partialUserConfigProperties
+    val capturedUserConfig = configSlot.captured.connectionConfiguration
 
     Assertions.assertNotNull(capturedConnectionConfig)
     Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
-    Assertions.assertEquals("updatedValue", capturedUserConfig.get("connectionConfiguration").get("testKey").asText())
+    Assertions.assertEquals("updatedValue", capturedUserConfig.get("testKey").asText())
   }
 
   @Test
   fun `test combineProperties merges flat configurations correctly`() {
-    // Create the template config with connectionConfiguration
+    // Create the template config (just the configuration content)
     val templateConfig = objectMapper.createObjectNode()
-    val templateConnectionConfig = templateConfig.putObject("connectionConfiguration")
-    templateConnectionConfig.put("host", "template-host")
-    templateConnectionConfig.put("port", 5432)
-    templateConnectionConfig.put("database", "template-db")
+    templateConfig.put("host", "template-host")
+    templateConfig.put("port", 5432)
+    templateConfig.put("database", "template-db")
 
-    // Create the user config with connectionConfiguration
+    // Create the user config (just the configuration content)
     val userConfig = objectMapper.createObjectNode()
-    val userConnectionConfig = userConfig.putObject("connectionConfiguration")
-    userConnectionConfig.put("host", "user-host")
-    userConnectionConfig.put("username", "user")
-    userConnectionConfig.put("password", "secret")
+    userConfig.put("host", "user-host")
+    userConfig.put("username", "user")
+    userConfig.put("password", "secret")
 
     // Combine the configs
     val result = handler.combineProperties(templateConfig, userConfig)
 
-    // Assert the results - note that result is the merged connectionConfiguration content
+    // Assert the results
     Assertions.assertNotNull(result, "result should not be null")
     Assertions.assertEquals("user-host", result.get("host").asText())
     Assertions.assertEquals(5432, result.get("port").asInt())
@@ -203,120 +193,141 @@ class PartialUserConfigHandlerTest {
 
   @Test
   fun `test combineProperties merges nested configurations correctly`() {
-    // Create the template config with connectionConfiguration
+    // Create the template config with nested properties
     val templateConfig = objectMapper.createObjectNode()
-    val templateConnectionConfig = templateConfig.putObject("connectionConfiguration")
-    templateConnectionConfig.put("host", "template-host")
-    val templateCredentials = templateConnectionConfig.putObject("credentials")
-    templateCredentials.put("type", "password")
-    templateCredentials.put("username", "template-user")
+    templateConfig.put("simple", "template-value")
+    val templateNestedObj = templateConfig.putObject("nested")
+    templateNestedObj.put("prop1", "template-prop1")
+    templateNestedObj.put("prop2", "template-prop2")
+    val templateDeepNested = templateNestedObj.putObject("deeper")
+    templateDeepNested.put("deepProp", "template-deep")
 
-    // Create the user config with connectionConfiguration
+    // Create the user config with nested properties
     val userConfig = objectMapper.createObjectNode()
-    val userConnectionConfig = userConfig.putObject("connectionConfiguration")
-    userConnectionConfig.put("host", "user-host")
-    val userCredentials = userConnectionConfig.putObject("credentials")
-    userCredentials.put("username", "user")
-    userCredentials.put("password", "secret")
+    userConfig.put("simple", "user-value")
+    val userNestedObj = userConfig.putObject("nested")
+    userNestedObj.put("prop1", "user-prop1")
+    userNestedObj.putArray("newArray").add("item1").add("item2")
+    val userDeepNested = userNestedObj.putObject("deeper")
+    userDeepNested.put("deepProp", "user-deep")
+    userDeepNested.put("newDeepProp", "new-value")
 
     // Combine the configs
     val result = handler.combineProperties(templateConfig, userConfig)
 
-    // Assert the results - note that result is the merged connectionConfiguration content
+    // Assert the results
     Assertions.assertNotNull(result, "result should not be null")
-    Assertions.assertEquals("user-host", result.get("host").asText())
-    Assertions.assertEquals("user", result.get("credentials").get("username").asText())
-    Assertions.assertEquals("secret", result.get("credentials").get("password").asText())
-    Assertions.assertEquals("password", result.get("credentials").get("type").asText())
+    Assertions.assertEquals("user-value", result.get("simple").asText())
+
+    val resultNested = result.get("nested")
+    Assertions.assertNotNull(resultNested)
+    Assertions.assertTrue(resultNested.isObject)
+    Assertions.assertEquals("user-prop1", resultNested.get("prop1").asText())
+    Assertions.assertEquals("template-prop2", resultNested.get("prop2").asText())
+
+    val resultArray = resultNested.get("newArray")
+    Assertions.assertNotNull(resultArray)
+    Assertions.assertTrue(resultArray.isArray)
+    Assertions.assertEquals(2, resultArray.size())
+
+    val resultDeeper = resultNested.get("deeper")
+    Assertions.assertNotNull(resultDeeper)
+    Assertions.assertEquals("user-deep", resultDeeper.get("deepProp").asText())
+    Assertions.assertEquals("new-value", resultDeeper.get("newDeepProp").asText())
   }
 
   @Test
   fun `test combineProperties handles empty configurations`() {
+    // Create empty objects for both configs
     val templateConfig = objectMapper.createObjectNode()
     val userConfig = objectMapper.createObjectNode()
 
+    // Combine the configs
     val result = handler.combineProperties(templateConfig, userConfig)
 
-    Assertions.assertTrue(result.isEmpty)
+    // Assert the result is an empty object
+    Assertions.assertNotNull(result, "result should not be null")
+    Assertions.assertTrue(result.isObject)
+    Assertions.assertEquals(0, result.size())
   }
 
   @Test
   fun `test combineProperties handles null configurations`() {
+    // Test with null template config
+    val userConfig = objectMapper.createObjectNode()
+    userConfig.put("key", "value")
+
+    val resultWithNullTemplate = handler.combineProperties(null, userConfig)
+    Assertions.assertNotNull(resultWithNullTemplate)
+    Assertions.assertEquals("value", resultWithNullTemplate.get("key").asText())
+
+    // Test with null user config
     val templateConfig = objectMapper.createObjectNode()
-    val userConfig = objectMapper.nullNode()
+    templateConfig.put("key", "template-value")
 
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    Assertions.assertTrue(result.isEmpty)
+    val resultWithNullUser = handler.combineProperties(templateConfig, null)
+    Assertions.assertNotNull(resultWithNullUser)
+    Assertions.assertEquals("template-value", resultWithNullUser.get("key").asText())
   }
 
   @Test
   fun `test combineProperties preserves non-overlapping nested objects`() {
-    // Create the template config with connectionConfiguration
+    // Template config with a nested object
     val templateConfig = objectMapper.createObjectNode()
-    val templateConnectionConfig = templateConfig.putObject("connectionConfiguration")
-    val templateSource = templateConnectionConfig.putObject("source")
-    templateSource.put("type", "postgres")
-    templateSource.put("host", "template-host")
+    val templateNestedObj = templateConfig.putObject("templateOnly")
+    templateNestedObj.put("prop1", "value1")
+    templateNestedObj.put("prop2", "value2")
 
-    // Create the user config with connectionConfiguration
+    // User config with a different nested object
     val userConfig = objectMapper.createObjectNode()
-    val userConnectionConfig = userConfig.putObject("connectionConfiguration")
-    val userDestination = userConnectionConfig.putObject("destination")
-    userDestination.put("type", "snowflake")
-    userDestination.put("account", "user-account")
+    val userNestedObj = userConfig.putObject("userOnly")
+    userNestedObj.put("prop3", "value3")
+    userNestedObj.put("prop4", "value4")
 
     // Combine the configs
     val result = handler.combineProperties(templateConfig, userConfig)
 
-    // Assert the results - note that result is the merged connectionConfiguration content
-    Assertions.assertNotNull(result, "result should not be null")
-    Assertions.assertEquals("postgres", result.get("source").get("type").asText())
-    Assertions.assertEquals("template-host", result.get("source").get("host").asText())
-    Assertions.assertEquals("snowflake", result.get("destination").get("type").asText())
-    Assertions.assertEquals("user-account", result.get("destination").get("account").asText())
+    // Assert both nested objects are preserved
+    Assertions.assertTrue(result.has("templateOnly"))
+    Assertions.assertTrue(result.has("userOnly"))
+
+    val templateOnlyResult = result.get("templateOnly")
+    Assertions.assertEquals("value1", templateOnlyResult.get("prop1").asText())
+    Assertions.assertEquals("value2", templateOnlyResult.get("prop2").asText())
+
+    val userOnlyResult = result.get("userOnly")
+    Assertions.assertEquals("value3", userOnlyResult.get("prop3").asText())
+    Assertions.assertEquals("value4", userOnlyResult.get("prop4").asText())
   }
 
   @Test
   fun `test combineProperties gives precedence to user config for conflicting keys`() {
-    // Create the template config with connectionConfiguration
+    // Template config with some values
     val templateConfig = objectMapper.createObjectNode()
-    val templateConnectionConfig = templateConfig.putObject("connectionConfiguration")
-    templateConnectionConfig.put("host", "template-host")
-    templateConnectionConfig.put("port", 5432)
-    templateConnectionConfig.put("username", "template-user")
-    templateConnectionConfig.put("password", "template-password")
-    val templateAdvanced = templateConnectionConfig.putObject("advanced")
-    templateAdvanced.put("ssl", true)
-    templateAdvanced.put("timeout", 30)
+    templateConfig.put("string", "template-string")
+    templateConfig.put("number", 100)
+    templateConfig.put("boolean", false)
+    val templateNestedObj = templateConfig.putObject("nested")
+    templateNestedObj.put("sharedProp", "template-value")
 
-    // Create the user config with connectionConfiguration
+    // User config with overlapping values
     val userConfig = objectMapper.createObjectNode()
-    val userConnectionConfig = userConfig.putObject("connectionConfiguration")
-    userConnectionConfig.put("host", "user-host")
-    userConnectionConfig.put("username", "user")
-    val userAdvanced = userConnectionConfig.putObject("advanced")
-    userAdvanced.put("ssl", false)
-    userAdvanced.put("compression", true)
+    userConfig.put("string", "user-string")
+    userConfig.put("number", 200)
+    userConfig.put("boolean", true)
+    val userNestedObj = userConfig.putObject("nested")
+    userNestedObj.put("sharedProp", "user-value")
 
     // Combine the configs
     val result = handler.combineProperties(templateConfig, userConfig)
 
-    // Assert the results - note that result is the merged connectionConfiguration content
-    Assertions.assertNotNull(result, "result should not be null")
+    // Assert user values take precedence
+    Assertions.assertEquals("user-string", result.get("string").asText())
+    Assertions.assertEquals(200, result.get("number").asInt())
+    Assertions.assertEquals(true, result.get("boolean").asBoolean())
 
-    // User values should override template values for conflicting keys
-    Assertions.assertEquals("user-host", result.get("host").asText())
-    Assertions.assertEquals("user", result.get("username").asText())
-    Assertions.assertEquals(false, result.get("advanced").get("ssl").asBoolean())
-
-    // Template values should be preserved for non-conflicting keys
-    Assertions.assertEquals(5432, result.get("port").asInt())
-    Assertions.assertEquals("template-password", result.get("password").asText())
-    Assertions.assertEquals(30, result.get("advanced").get("timeout").asInt())
-
-    // New values from user config should be added
-    Assertions.assertEquals(true, result.get("advanced").get("compression").asBoolean())
+    val nestedResult = result.get("nested")
+    Assertions.assertEquals("user-value", nestedResult.get("sharedProp").asText())
   }
 
   /**
@@ -333,7 +344,7 @@ class PartialUserConfigHandlerTest {
         actorDefinitionId = actorDefinitionId,
         partialDefaultConfig = partialDefaultConfig,
         organizationId = UUID.randomUUID(),
-        userConfigSpec = objectMapper.createObjectNode().set<ObjectNode>("connectionSpecification", objectMapper.createObjectNode()),
+        userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
         createdAt = null,
         updatedAt = null,
       ),
@@ -349,7 +360,7 @@ class PartialUserConfigHandlerTest {
     PartialUserConfig(
       workspaceId = workspaceId,
       configTemplateId = configTemplateId,
-      partialUserConfigProperties = userConfig,
+      connectionConfiguration = userConfig,
       id = UUID.randomUUID(),
     )
 
@@ -366,7 +377,7 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          partialUserConfigProperties = properties,
+          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       actorName = "test-source",
@@ -385,7 +396,7 @@ class PartialUserConfigHandlerTest {
         actorDefinitionId = UUID.randomUUID(),
         partialDefaultConfig = objectMapper.createObjectNode(),
         organizationId = UUID.randomUUID(),
-        userConfigSpec = objectMapper.createObjectNode(),
+        userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
       ),
   ): PartialUserConfigWithConfigTemplateAndActorDetails =
     PartialUserConfigWithConfigTemplateAndActorDetails(
@@ -394,7 +405,7 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          partialUserConfigProperties = properties,
+          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       configTemplate = configTemplate,

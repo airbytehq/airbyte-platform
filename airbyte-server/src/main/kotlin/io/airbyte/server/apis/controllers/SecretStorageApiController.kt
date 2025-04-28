@@ -31,7 +31,11 @@ class SecretStorageApiController(
     @Body secretStorageIdRequestBody: SecretStorageIdRequestBody,
   ): SecretStorageRead {
     val secretStorage = secretStorageService.getById(SecretStorageId(secretStorageIdRequestBody.secretStorageId))
-    return secretStorageService.hydrateStorageConfig(secretStorage).toApiModel()
+    return if (secretStorage.configuredFromEnvironment) {
+      SecretStorageWithConfig(secretStorage, null).toApiModel()
+    } else {
+      secretStorageService.hydrateStorageConfig(secretStorage).toApiModel()
+    }
   }
 
   @RequiresIntent(Intent.ManageSecretStorages)

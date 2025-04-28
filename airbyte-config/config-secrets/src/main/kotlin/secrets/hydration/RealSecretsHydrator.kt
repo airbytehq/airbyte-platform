@@ -13,6 +13,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence
 import io.airbyte.config.secrets.toConfigWithRefs
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
+import java.util.UUID
 
 /**
  * Adds secrets to a partial config based off a persistence.
@@ -47,4 +48,9 @@ class RealSecretsHydrator(
     config: ConfigWithSecretReferences,
     secretPersistence: SecretPersistence,
   ): JsonNode = SecretsHelpers.combineConfig(config, secretPersistence)
+
+  override fun hydrate(
+    config: ConfigWithSecretReferences,
+    secretPersistenceMap: Map<UUID?, SecretPersistence>,
+  ): JsonNode = SecretsHelpers.combineConfig(config, secretPersistenceMap)
 }

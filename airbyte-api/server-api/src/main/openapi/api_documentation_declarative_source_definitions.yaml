@@ -1633,6 +1633,8 @@ components:
       properties:
         name:
           type: "string"
+        version:
+          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     UpdateDeclarativeSourceDefinitionRequest:
@@ -1809,6 +1811,11 @@ components:
             type: "array"
             items:
               type: "string"
+        includeFiles:
+          description:
+            "Whether to move raw files from the source to the destination\
+            \ during the sync."
+          type: "boolean"
         selectedFields:
           description:
             "By default (if not provided in the request) all fields will\
@@ -2005,9 +2012,11 @@ components:
           items:
             $ref: "#/components/schemas/DataplaneResponse"
       x-speakeasy-component: true
+
     SourceConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
+
     DestinationConfiguration:
       description: The values required to configure the destination.
       example: { user: "charles" }

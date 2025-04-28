@@ -122,6 +122,7 @@ class ReplicationInputHydratorTest {
               null,
               null,
               null,
+              null,
               null))));
   private static final ConnectionState CONNECTION_STATE_RESPONSE = Jsons.deserialize(String
       .format("""
@@ -271,6 +272,7 @@ class ReplicationInputHydratorTest {
         new ConnectionContext().withWorkspaceId(UUID.randomUUID()).withOrganizationId(UUID.randomUUID()),
         null,
         List.of(),
+        false,
         false);
   }
 

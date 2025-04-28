@@ -8,6 +8,7 @@ interface PartialUserConfigFormControlsProps {
   isSubmitting: boolean;
   isValid: boolean;
   dirty: boolean;
+
   onCancel: () => void;
 }
 
@@ -16,14 +17,10 @@ export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormContro
   isSubmitting,
   isValid,
   dirty,
-  onCancel,
 }) => {
   return (
     <FlexContainer justifyContent="flex-end">
-      <Button variant="secondary" onClick={onCancel} disabled={isSubmitting}>
-        <FormattedMessage id="form.cancel" />
-      </Button>
-      <Button type="submit" disabled={!isValid || !dirty || isSubmitting} isLoading={isSubmitting}>
+      <Button full type="submit" disabled={!isValid || !dirty || isSubmitting} isLoading={isSubmitting}>
         {isEditMode ? (
           <FormattedMessage id="form.saveChanges" />
         ) : (

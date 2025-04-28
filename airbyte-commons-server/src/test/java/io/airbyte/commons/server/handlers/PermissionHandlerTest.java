@@ -712,7 +712,7 @@ class PermissionHandlerTest {
       when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(
           List.of(workspacePermission, otherWorkspacePermission, orgPermission));
 
-      permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userIdToRemove(USER_ID).workspaceId(WORKSPACE_ID));
+      permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userId(USER_ID).workspaceId(WORKSPACE_ID));
 
       // verify the intended permission was deleted
       verify(permissionService).deletePermissions(List.of(workspacePermission.getPermissionId()));

@@ -46,14 +46,17 @@ class ConfigTemplateServiceDataImplTest {
 
   private val objectMapper: ObjectMapper = ObjectMapper()
   private val connectorSpecificationWithRequiredFields = createConnectorSpecification(listOf("a_config_field", "an_integer_field"))
-  private val connectorSPecificationWithoutRequiredFields = createConnectorSpecification(emptyList())
+  private val connectorSpecificationWithoutRequiredFields = createConnectorSpecification(emptyList())
 
   // Common test data
   private val actorDefinitionId = UUID.randomUUID()
   private val organizationId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
-  private val partialDefaultConfig: JsonNode = objectMapper.readTree("{\"connectionConfiguration\": {}}")
-  private val userConfigSpec = objectMapper.readTree("{}")
+  private val partialDefaultConfig: JsonNode = objectMapper.readTree("{}")
+  private val userConfigSpecObject =
+    objectMapper.valueToTree<JsonNode>(
+      ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+    )
   private val sourceDefinition =
     StandardSourceDefinition().apply {
       name = "test-source"
@@ -81,7 +84,7 @@ class ConfigTemplateServiceDataImplTest {
         actorDefinitionVersion,
       )
 
-    actorDefinitionVersion.spec = connectorSPecificationWithoutRequiredFields
+    actorDefinitionVersion.spec = connectorSpecificationWithoutRequiredFields
   }
 
   @Nested
@@ -95,14 +98,14 @@ class ConfigTemplateServiceDataImplTest {
             organizationId = UUID.randomUUID(),
             actorDefinitionId = actorDefinitionId,
             partialDefaultConfig = partialDefaultConfig,
-            userConfigSpec = userConfigSpec,
+            userConfigSpec = userConfigSpecObject,
           ),
           EntityConfigTemplate(
             id = UUID.randomUUID(),
             organizationId = UUID.randomUUID(),
             actorDefinitionId = actorDefinitionId,
             partialDefaultConfig = partialDefaultConfig,
-            userConfigSpec = userConfigSpec,
+            userConfigSpec = userConfigSpecObject,
           ),
         )
 
@@ -114,8 +117,8 @@ class ConfigTemplateServiceDataImplTest {
                 id = entityConfigTemplates[0].id!!,
                 organizationId = entityConfigTemplates[0].organizationId,
                 actorDefinitionId = entityConfigTemplates[0].actorDefinitionId,
-                partialDefaultConfig = ObjectMapper().readTree("{\"connectionConfiguration\": {}}"),
-                userConfigSpec = ObjectMapper().createObjectNode(),
+                partialDefaultConfig = ObjectMapper().readTree("{}"),
+                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
               ),
             actorIcon = sourceDefinition.iconUrl,
             actorName = sourceDefinition.name,
@@ -126,8 +129,8 @@ class ConfigTemplateServiceDataImplTest {
                 id = entityConfigTemplates[1].id!!,
                 organizationId = entityConfigTemplates[1].organizationId,
                 actorDefinitionId = entityConfigTemplates[1].actorDefinitionId,
-                partialDefaultConfig = ObjectMapper().readTree("{\"connectionConfiguration\": {}}"),
-                userConfigSpec = ObjectMapper().createObjectNode(),
+                partialDefaultConfig = ObjectMapper().readTree("{}"),
+                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
               ),
             actorIcon = sourceDefinition.iconUrl,
             actorName = sourceDefinition.name,
@@ -138,7 +141,7 @@ class ConfigTemplateServiceDataImplTest {
 
       val configTemplates = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
 
-      assertEquals(configTemplates, expectedConfigTemplates)
+      assertEquals(expectedConfigTemplates, configTemplates)
     }
 
     @Test
@@ -150,7 +153,7 @@ class ConfigTemplateServiceDataImplTest {
           organizationId = UUID.randomUUID(),
           actorDefinitionId = actorDefinitionId,
           partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpec,
+          userConfigSpec = userConfigSpecObject,
         )
 
       val expectedConfigTemplate =
@@ -159,7 +162,7 @@ class ConfigTemplateServiceDataImplTest {
           organizationId = entityConfigTemplate.organizationId,
           actorDefinitionId = entityConfigTemplate.actorDefinitionId,
           partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpec,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
         )
 
       every { repository.findById(configTemplateId) } returns Optional.of(entityConfigTemplate)
@@ -191,10 +194,8 @@ class ConfigTemplateServiceDataImplTest {
     }
   }
 
-  private fun createPartialUserConfigSpec(fields: Map<String, String>): ObjectNode {
-    val partialUserConfigSpec = objectMapper.createObjectNode()
-    partialUserConfigSpec.put("connectionSpecification", objectMapper.createObjectNode())
-    val connectionSpecification = partialUserConfigSpec["connectionSpecification"] as ObjectNode
+  private fun createPartialUserConfigSpecAsObject(fields: Map<String, String>): ObjectNode {
+    val connectionSpecification = objectMapper.createObjectNode()
     val specRequired = objectMapper.createArrayNode()
     connectionSpecification.put("required", specRequired)
     connectionSpecification.put("properties", objectMapper.createObjectNode())
@@ -204,7 +205,9 @@ class ConfigTemplateServiceDataImplTest {
       specProperties.set<ObjectNode>(f.key, objectMapper.createObjectNode().put("type", f.value))
     }
 
-    return partialUserConfigSpec
+    val spec = ConnectorSpecification().withConnectionSpecification(connectionSpecification)
+
+    return objectMapper.valueToTree(spec)
   }
 
   private fun createConnectorSpecification(requiredFields: List<String>): ConnectorSpecification {
@@ -227,8 +230,7 @@ class ConfigTemplateServiceDataImplTest {
     @Test
     fun `test createConfigTemplate`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      partialDefaultConfig.put("connectionConfiguration", objectMapper.createObjectNode())
-      val userConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
 
       val id = UUID.randomUUID()
 
@@ -258,14 +260,13 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(configTemplate.configTemplate.organizationId, organizationId)
       assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
       assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(userConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
     }
 
     @Test
     fun `test create fails if the combination of the default params and user spec does not match the full config spec`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      partialDefaultConfig.put("connectionConfiguration", objectMapper.createObjectNode())
-      val userConfigSpec = createPartialUserConfigSpec(mapOf())
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf())
 
       actorDefinitionVersion.actorDefinitionId = actorDefinitionId
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
@@ -298,11 +299,10 @@ class ConfigTemplateServiceDataImplTest {
     @Test
     fun `test create succeeds if the default params respects the config spec`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      partialDefaultConfig.put("connectionConfiguration", objectMapper.createObjectNode())
-      val connectionConfiguration = partialDefaultConfig.get("connectionConfiguration") as ObjectNode
-      connectionConfiguration.put("a_config_field", "value1")
-      connectionConfiguration.put("an_integer_field", 1)
-      val userConfigSpec = createPartialUserConfigSpec(mapOf())
+
+      partialDefaultConfig.put("a_config_field", "value1")
+      partialDefaultConfig.put("an_integer_field", 1)
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf())
 
       actorDefinitionVersion.actorDefinitionId = actorDefinitionId
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
@@ -335,18 +335,16 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(partialDefaultConfig, configTemplate.configTemplate.partialDefaultConfig)
+      assertEquals(userConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
     }
 
     @Test
     fun `test create fails if the default params do not have the right type`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      partialDefaultConfig.put("connectionConfiguration", objectMapper.createObjectNode())
-      val connectionConfiguration = partialDefaultConfig.get("connectionConfiguration") as ObjectNode
-      connectionConfiguration.put("a_config_field", "value1")
-      connectionConfiguration.put("an_integer_field", "not_an_integer")
-      val userConfigSpec = createPartialUserConfigSpec(mapOf())
+      partialDefaultConfig.put("a_config_field", "value1")
+      partialDefaultConfig.put("an_integer_field", "not_an_integer")
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf())
 
       actorDefinitionVersion.actorDefinitionId = actorDefinitionId
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
@@ -384,8 +382,7 @@ class ConfigTemplateServiceDataImplTest {
     @Test
     fun `test create succeeds if the user spec contains all required fields from the spec`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      partialDefaultConfig.put("connectionConfiguration", objectMapper.createObjectNode())
-      val userConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
+      val userConfigSpecObject = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
 
       actorDefinitionVersion.actorDefinitionId = actorDefinitionId
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
@@ -401,7 +398,7 @@ class ConfigTemplateServiceDataImplTest {
           organizationId = organizationId,
           actorDefinitionId = actorDefinitionId,
           partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpec,
+          userConfigSpec = userConfigSpecObject,
         )
 
       every {
@@ -415,17 +412,17 @@ class ConfigTemplateServiceDataImplTest {
           OrganizationId(organizationId),
           ActorDefinitionId(actorDefinitionId),
           partialDefaultConfig,
-          userConfigSpec,
+          userConfigSpecObject,
         )
 
       assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec), userConfigSpecObject)
     }
 
     @Test
     fun `test an error is raised when the actor definition does not exist`() {
       val partialDefaultConfig = objectMapper.createObjectNode()
-      val userConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
 
       actorDefinitionVersion.actorDefinitionId = actorDefinitionId
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
@@ -655,10 +652,10 @@ class ConfigTemplateServiceDataImplTest {
 
       val partialDefaultConfig =
         objectMapper.readTree(
-          "{\"connectionConfiguration\": {\"repositories\": [\"airbytehq/*\"],\n" +
-            "\"credentials\":{\"personal_access_token\": \"key\"}}}",
+          "{\"repositories\": [\"airbytehq/*\"],\n" +
+            "\"credentials\":{\"personal_access_token\": \"key\"}}",
         )
-      val userConfigSpec = createPartialUserConfigSpec(mapOf())
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf())
 
       val entity =
         EntityConfigTemplate(
@@ -683,8 +680,8 @@ class ConfigTemplateServiceDataImplTest {
           userConfigSpec,
         )
 
-      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
-      assertEquals(configTemplate.configTemplate.userConfigSpec, userConfigSpec)
+      assertEquals(partialDefaultConfig, configTemplate.configTemplate.partialDefaultConfig)
+      assertEquals(userConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
     }
   }
 
@@ -719,7 +716,7 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(configTemplateId, result.configTemplate.id)
       assertEquals("test-source", result.actorName)
       assertEquals("test-icon", result.actorIcon)
-      assertEquals(objectMapper.readTree("{}"), result.configTemplate.userConfigSpec)
+      assertEquals(userConfigSpecObject, objectMapper.valueToTree(result.configTemplate.userConfigSpec))
 
       verify { repository.findById(configTemplateId) }
     }
@@ -731,8 +728,8 @@ class ConfigTemplateServiceDataImplTest {
 
     @BeforeEach
     fun setup() {
-      val partialDefaultConfig = objectMapper.readTree("{\"connectionConfiguration\": {}}")
-      val userConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
+      val partialDefaultConfig = objectMapper.readTree("{}")
+      val userConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string", "an_integer_field" to "integer"))
 
       configTemplateEntity =
         EntityConfigTemplate(
@@ -761,14 +758,14 @@ class ConfigTemplateServiceDataImplTest {
 
       assertEquals(response.configTemplate.id, configTemplateEntity.id)
       assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
-      assertEquals(response.configTemplate.userConfigSpec, configTemplateEntity.userConfigSpec)
+      assertEquals(objectMapper.valueToTree(response.configTemplate.userConfigSpec), configTemplateEntity.userConfigSpec)
       assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
       assertEquals(response.configTemplate.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
     }
 
     @Test
     fun `test update default values`() {
-      val updatedDefaultValues = objectMapper.readTree("{\"connectionConfiguration\": {\"a_config_field\": \"a_value\"}}")
+      val updatedDefaultValues = objectMapper.readTree("{}")
 
       every { repository.save(any()) } returns configTemplateEntity
 
@@ -785,14 +782,14 @@ class ConfigTemplateServiceDataImplTest {
 
       assertEquals(response.configTemplate.id, configTemplateEntity.id)
       assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
-      assertEquals(response.configTemplate.userConfigSpec, configTemplateEntity.userConfigSpec)
+      assertEquals(objectMapper.valueToTree(response.configTemplate.userConfigSpec), configTemplateEntity.userConfigSpec)
       assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
       assertEquals(updatedDefaultValues, response.configTemplate.partialDefaultConfig)
     }
 
     @Test
     fun `test update user spec`() {
-      val updatedUserConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string"))
+      val updatedUserConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string"))
 
       every { repository.save(any()) } returns configTemplateEntity
 
@@ -811,13 +808,13 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(response.configTemplate.organizationId, configTemplateEntity.organizationId)
       assertEquals(response.configTemplate.partialDefaultConfig, configTemplateEntity.partialDefaultConfig)
       assertEquals(response.configTemplate.actorDefinitionId, configTemplateEntity.actorDefinitionId)
-      assertEquals(updatedUserConfigSpec, response.configTemplate.userConfigSpec)
+      assertEquals(updatedUserConfigSpec, objectMapper.valueToTree(response.configTemplate.userConfigSpec))
     }
 
     @Test
     fun `test update fails if spec is not respected`() {
       actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
-      val updatedUserConfigSpec = createPartialUserConfigSpec(mapOf("a_config_field" to "string"))
+      val updatedUserConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string"))
 
       every { repository.save(any()) } returns configTemplateEntity
 
@@ -839,7 +836,7 @@ class ConfigTemplateServiceDataImplTest {
     orgId: UUID = organizationId,
     actorDefId: UUID = actorDefinitionId,
     defaultConfig: JsonNode = partialDefaultConfig,
-    configSpec: JsonNode = userConfigSpec,
+    configSpec: JsonNode = userConfigSpecObject,
   ): io.airbyte.data.repositories.entities.ConfigTemplate =
     io.airbyte.data.repositories.entities.ConfigTemplate(
       id = id,

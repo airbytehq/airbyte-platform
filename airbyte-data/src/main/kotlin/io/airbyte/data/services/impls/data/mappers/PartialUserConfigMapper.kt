@@ -15,7 +15,7 @@ fun EntityPartialUserConfig.toConfigModel(): ModelPartialUserConfig {
     id = this.id!!,
     workspaceId = this.workspaceId,
     configTemplateId = this.configTemplateId,
-    partialUserConfigProperties = this.partialUserConfigProperties,
+    connectionConfiguration = this.partialUserConfigProperties,
     actorId = this.actorId,
   )
 }
@@ -27,7 +27,7 @@ fun ModelPartialUserConfig.toEntity(): EntityPartialUserConfig {
     id = this.id,
     workspaceId = this.workspaceId,
     configTemplateId = this.configTemplateId,
-    partialUserConfigProperties = this.partialUserConfigProperties,
+    partialUserConfigProperties = this.connectionConfiguration,
     actorId = this.actorId!!,
   )
 }

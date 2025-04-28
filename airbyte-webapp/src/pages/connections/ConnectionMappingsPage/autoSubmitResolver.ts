@@ -1,22 +1,21 @@
-import { yupResolver } from "@hookform/resolvers/yup";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { FieldValues, Resolver } from "react-hook-form";
-import * as yup from "yup";
-import { AssertsShape } from "yup/lib/object";
+import { z } from "zod";
 
-export function autoSubmitResolver<TFieldValues extends FieldValues>(
-  schema: yup.SchemaOf<TFieldValues> | ReturnType<typeof yup.lazy<yup.ObjectSchema<TFieldValues>>>,
-  onSubmit: (formValues: AssertsShape<TFieldValues>) => void
+export function autoSubmitResolver<TSchema extends z.ZodSchema<TFieldValues>, TFieldValues extends FieldValues>(
+  schema: TSchema,
+  onSubmit: (formValues: TFieldValues) => void
 ): Resolver<TFieldValues> {
   return async (values, context, options) => {
     try {
-      schema.validateSync(values);
+      schema.parse(values);
       onSubmit(values);
     } catch (e) {
-      if (!(e instanceof yup.ValidationError)) {
+      if (!(e instanceof z.ZodError)) {
         throw e;
       }
-      return yupResolver(schema)(values, context, options);
+      return zodResolver(schema)(values, context, options);
     }
-    return yupResolver(schema)(values, context, options);
+    return zodResolver(schema)(values, context, options);
   };
 }

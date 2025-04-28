@@ -62,7 +62,16 @@ class ConnectorSecretsHydratorTest {
         metricClient,
       )
 
-    val unhydratedConfig = ConfigWithSecretReferences(POJONode("un-hydrated"), mapOf())
+    val unhydratedConfig =
+      ConfigWithSecretReferences(
+        POJONode("un-hydrated"),
+        mapOf(
+          "$" to
+            SecretReferenceConfig(
+              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+            ),
+        ),
+      )
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
@@ -77,7 +86,7 @@ class ConnectorSecretsHydratorTest {
       )
 
     every { secretsApiClient.getSecretsPersistenceConfig(any()) } returns secretConfig
-    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any()) } returns hydratedConfig
+    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) } returns hydratedConfig
 
     val result =
       hydrator.hydrateConfig(
@@ -90,7 +99,7 @@ class ConnectorSecretsHydratorTest {
 
     verify { secretsApiClient.getSecretsPersistenceConfig(SecretPersistenceConfigGetRequestBody(ScopeType.ORGANIZATION, orgId)) }
     verify { constructedWith<RuntimeSecretPersistence>(EqMatcher(secretConfig), EqMatcher(metricClient)) }
-    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any()) }
+    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }
@@ -114,13 +123,23 @@ class ConnectorSecretsHydratorTest {
         metricClient,
       )
 
-    val unhydratedConfig = ConfigWithSecretReferences(POJONode("un-hydrated"), mapOf())
+    val unhydratedConfig =
+      ConfigWithSecretReferences(
+        POJONode("un-hydrated"),
+        mapOf(
+          "$" to
+            SecretReferenceConfig(
+              secretCoordinate = SecretCoordinate.AirbyteManagedSecretCoordinate(),
+            ),
+        ),
+      )
     val hydratedConfig = POJONode("hydrated")
 
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, secretPersistence = defaultSecretPersistence) } returns hydratedConfig
+    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to defaultSecretPersistence)) } returns
+      hydratedConfig
 
     val result =
       hydrator.hydrateConfig(
@@ -131,7 +150,7 @@ class ConnectorSecretsHydratorTest {
         ),
       )
 
-    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, secretPersistence = defaultSecretPersistence) }
+    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, mapOf(null to defaultSecretPersistence)) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }
@@ -170,14 +189,17 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    val secretStorage = mockk<SecretStorageRead>()
+    val secretStorage =
+      mockk<SecretStorageRead> {
+        every { id } returns secretStorageId
+      }
     val secretStorageConfig = mockk<io.airbyte.config.SecretPersistenceConfig>()
 
     mockkStatic("io.airbyte.workers.helper.SecretPersistenceConfigConvertersKt")
     every { secretStorage.toConfigModel() } returns secretStorageConfig
 
     every { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) } returns secretStorage
-    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any()) } returns hydratedConfig
+    every { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) } returns hydratedConfig
 
     val result =
       hydrator.hydrateConfig(
@@ -190,7 +212,7 @@ class ConnectorSecretsHydratorTest {
 
     verify { airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId)) }
     verify { constructedWith<RuntimeSecretPersistence>(EqMatcher(secretStorageConfig), EqMatcher(metricClient)) }
-    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any()) }
+    verify { secretsRepositoryReader.hydrateConfig(unhydratedConfig, any<Map<UUID?, SecretPersistence>>()) }
 
     Assertions.assertEquals(hydratedConfig, result)
   }

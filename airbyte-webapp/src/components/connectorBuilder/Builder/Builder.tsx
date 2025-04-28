@@ -13,6 +13,7 @@ import {
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
 import { ComponentsView } from "./ComponentsView";
+import { DynamicStreamConfigView } from "./DynamicStreamConfigView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
@@ -23,21 +24,19 @@ import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
-  switch (selectedView) {
+  switch (selectedView.type) {
     case "global":
       return <GlobalConfigView />;
     case "inputs":
       return <InputsView />;
     case "components":
       return <ComponentsView />;
-    default:
-      if (typeof selectedView === "string") {
-        // dynamic stream
-        return null;
-      }
-
-      // key is used to re-mount when changing stream
-      return <StreamConfigView streamNum={selectedView} key={selectedView} scrollToTop={scrollToTop} />;
+    case "dynamic_stream":
+      return <DynamicStreamConfigView key={selectedView.index} streamNum={selectedView.index} />;
+    case "stream":
+      return <StreamConfigView streamNum={selectedView.index} key={selectedView.index} scrollToTop={scrollToTop} />;
+    case "generated_stream":
+      return null;
   }
 }
 

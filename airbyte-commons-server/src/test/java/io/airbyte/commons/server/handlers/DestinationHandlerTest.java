@@ -64,7 +64,6 @@ import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -241,9 +240,9 @@ class DestinationHandlerTest {
     // Set up secret reference service mocks for the input configuration.
     final ConfigWithSecretReferences configWithRefs = buildConfigWithSecretRefsJava(destinationConnection.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         destinationConnection.getDestinationId(),
-        destinationCreate.getConnectionConfiguration()))
+        destinationCreate.getConnectionConfiguration(),
+        destinationConnection.getWorkspaceId()))
             .thenReturn(configWithRefs);
 
     // Simulate secret persistence and reference ID insertion.
@@ -257,6 +256,7 @@ class DestinationHandlerTest {
     when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         configWithProcessedSecrets,
         destinationConnection.getDestinationId(),
+        destinationConnection.getWorkspaceId(),
         secretStorageId,
         currentUserId))
             .thenReturn(configWithSecretRefIds);
@@ -267,9 +267,9 @@ class DestinationHandlerTest {
         .thenReturn(persistedConnection);
     final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(configWithSecretRefIds);
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         destinationConnection.getDestinationId(),
-        configWithSecretRefIds))
+        configWithSecretRefIds,
+        destinationConnection.getWorkspaceId()))
             .thenReturn(configWithRefsAfterPersist);
 
     // Prepare secret output.
@@ -431,9 +431,9 @@ class DestinationHandlerTest {
     // Set up secret reference service mocks for the previous config.
     final ConfigWithSecretReferences previousConfigWithRefs = buildConfigWithSecretRefsJava(destinationConnection.getConfiguration());
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         destinationConnection.getDestinationId(),
-        destinationConnection.getConfiguration()))
+        destinationConnection.getConfiguration(),
+        destinationConnection.getWorkspaceId()))
             .thenReturn(previousConfigWithRefs);
 
     // Simulate the secret update and reference ID creation/insertion.
@@ -452,6 +452,7 @@ class DestinationHandlerTest {
     when(secretReferenceService.createAndInsertSecretReferencesWithStorageId(
         newConfigWithProcessedSecrets,
         destinationConnection.getDestinationId(),
+        destinationConnection.getWorkspaceId(),
         secretStorageId,
         currentUserId))
             .thenReturn(newConfigWithSecretRefIds);
@@ -464,9 +465,9 @@ class DestinationHandlerTest {
 
     final ConfigWithSecretReferences configWithRefsAfterPersist = buildConfigWithSecretRefsJava(newConfigWithSecretRefIds);
     when(secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR,
         destinationConnection.getDestinationId(),
-        newConfigWithSecretRefIds))
+        newConfigWithSecretRefIds,
+        destinationConnection.getWorkspaceId()))
             .thenReturn(configWithRefsAfterPersist);
 
     // Prepare secret output.
@@ -628,8 +629,8 @@ class DestinationHandlerTest {
     when(actorDefinitionVersionHelper.getDestinationVersion(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId()))
             .thenReturn(destinationDefinitionVersion);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final DestinationRead actualDestinationRead = destinationHandler.getDestination(destinationIdRequestBody);
 
@@ -673,8 +674,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final DestinationReadList actualDestinationRead = destinationHandler.listDestinationsForWorkspace(workspaceIdRequestBody);
 
@@ -720,8 +721,8 @@ class DestinationHandlerTest {
                 .thenReturn(destinationConnection.getConfiguration());
     when(actorDefinitionVersionHelper.getDestinationVersionWithOverrideStatus(standardDestinationDefinition, destinationConnection.getWorkspaceId(),
         destinationConnection.getDestinationId())).thenReturn(destinationDefinitionVersionWithOverrideStatus);
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     destinationHandler.deleteDestination(destinationIdRequestBody);
 
@@ -760,8 +761,8 @@ class DestinationHandlerTest {
     when(secretsProcessor.prepareSecretsForOutput(destinationConnection.getConfiguration(),
         destinationDefinitionSpecificationRead.getConnectionSpecification()))
             .thenReturn(destinationConnection.getConfiguration());
-    when(secretReferenceService.getConfigWithSecretReferences(eq(SecretReferenceScopeType.ACTOR), any(), any()))
-        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(2), Map.of()));
+    when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
+        .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
 
     final DestinationSearch validDestinationSearch = new DestinationSearch().name(destinationConnection.getName());
     DestinationReadList actualDestinationRead = destinationHandler.searchDestinations(validDestinationSearch);

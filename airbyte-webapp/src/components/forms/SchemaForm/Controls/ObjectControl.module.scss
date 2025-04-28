@@ -1,0 +1,16 @@
+@use "scss/variables";
+
+.advancedCollapsible {
+  padding-bottom: variables.$spacing-xl;
+}
+
+.jsonEditorContainer {
+  padding-bottom: variables.$spacing-xl;
+}
+
+.jsonEditor {
+  min-height: 50px;
+  height: 150px;
+  overflow: hidden;
+  resize: vertical;
+}

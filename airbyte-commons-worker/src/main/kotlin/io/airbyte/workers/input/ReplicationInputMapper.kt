@@ -4,8 +4,6 @@
 
 package io.airbyte.workers.input
 
-import io.airbyte.commons.json.Jsons
-import io.airbyte.config.SourceActorConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import jakarta.inject.Singleton
@@ -16,10 +14,8 @@ import jakarta.inject.Singleton
  */
 @Singleton
 class ReplicationInputMapper {
-  fun toReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput {
-    val useFileTransfer = extractUseFileTransfer(replicationActivityInput)
-
-    return ReplicationInput()
+  fun toReplicationInput(replicationActivityInput: ReplicationActivityInput): ReplicationInput =
+    ReplicationInput()
       .withNamespaceDefinition(replicationActivityInput.namespaceDefinition)
       .withNamespaceFormat(replicationActivityInput.namespaceFormat)
       .withPrefix(replicationActivityInput.prefix)
@@ -36,27 +32,7 @@ class ReplicationInputMapper {
       .withSourceConfiguration(replicationActivityInput.sourceConfiguration)
       .withDestinationConfiguration(replicationActivityInput.destinationConfiguration)
       .withConnectionContext(replicationActivityInput.connectionContext)
-      .withUseFileTransfer(useFileTransfer)
+      .withUseFileTransfer(replicationActivityInput.includesFiles == true)
+      .withOmitFileTransferEnvVar(replicationActivityInput.omitFileTransferEnvVar == true)
       .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
-  }
-
-  private fun extractUseFileTransfer(replicationActivityInput: ReplicationActivityInput): Boolean {
-    if (replicationActivityInput.includesFiles == true) {
-      return true
-    }
-
-    if (replicationActivityInput.sourceConfiguration == null) {
-      return false
-    }
-
-    // TODO: Delete this introspection of connector configs once new file + metadata flow rolled out.
-    val sourceConfiguration: SourceActorConfig = Jsons.`object`(replicationActivityInput.sourceConfiguration, SourceActorConfig::class.java)
-    return sourceConfiguration.useFileTransfer ||
-      (
-        sourceConfiguration.deliveryMethod != null &&
-          "use_file_transfer".equals(
-            sourceConfiguration.deliveryMethod.deliveryType,
-          )
-      )
-  }
 }

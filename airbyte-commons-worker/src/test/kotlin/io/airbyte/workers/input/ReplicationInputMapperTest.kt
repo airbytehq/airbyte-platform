@@ -47,7 +47,8 @@ class ReplicationInputMapperTest {
     assertEquals(replicationActivityInput.sourceConfiguration, replicationInput.sourceConfiguration)
     assertEquals(replicationActivityInput.destinationConfiguration, replicationInput.destinationConfiguration)
     assertEquals(replicationActivityInput.connectionContext, replicationInput.connectionContext)
-    assertEquals(true, replicationInput.useFileTransfer)
+    assertEquals(replicationActivityInput.includesFiles, replicationInput.useFileTransfer)
+    assertEquals(replicationActivityInput.omitFileTransferEnvVar, replicationInput.omitFileTransferEnvVar)
   }
 
   @Test

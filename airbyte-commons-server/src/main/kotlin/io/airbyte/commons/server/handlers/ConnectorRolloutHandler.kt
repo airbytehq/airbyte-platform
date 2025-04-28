@@ -32,6 +32,7 @@ import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
+import io.airbyte.config.JobBypassFilter
 import io.airbyte.config.Operator
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.client.ConnectorRolloutClient
@@ -119,9 +120,10 @@ open class ConnectorRolloutHandler
             },
           ).completedAt(connectorRollout.completedAt?.let { unixTimestampToOffsetDateTime(it) })
           .expiresAt(connectorRollout.expiresAt?.let { unixTimestampToOffsetDateTime(it) })
+          .tag(connectorRollout.tag)
 
       if (withActorSyncAndSelectionInfo) {
-        val pinnedActorInfo = getPinnedActorInfo(connectorRollout.id)
+        val pinnedActorInfo = getActorSelectionInfoForPinnedActors(connectorRollout.id)
         val actorSyncInfo = getActorSyncInfo(connectorRollout.id).mapKeys { (uuidKey, _) -> uuidKey.toString() }
 
         logger.info {
@@ -206,6 +208,7 @@ open class ConnectorRolloutHandler
           )
 
       val filters = createFiltersFromRequest(requestFilters)
+      val tag = createTagFromFilters(filters)
 
       if (initializedRollouts.isEmpty()) {
         val currentTime = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
@@ -225,14 +228,15 @@ open class ConnectorRolloutHandler
             initialRolloutPct = initialRolloutPct,
             finalTargetRolloutPct = finalTargetRolloutPct,
             filters = filters,
+            tag = createTagFromFilters(filters),
           )
         connectorRolloutService.writeConnectorRollout(connectorRollout)
         return connectorRollout
       }
 
-      if (initializedRollouts.size > 1) {
+      if (initializedRollouts.size > 1 && initializedRollouts.any { it.tag == tag }) {
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message("Expected at most 1 rollout in the INITIALIZED state, found ${initializedRollouts.size}."),
+          ProblemMessageData().message("Expected at most 1 rollout in the INITIALIZED state for tag $tag, found ${initializedRollouts.size}."),
         )
       }
       val finalEnumStates =
@@ -243,13 +247,14 @@ open class ConnectorRolloutHandler
         }
       val rolloutsInInvalidState =
         connectorRollouts.filter { rollout: ConnectorRollout ->
-          finalEnumStates.contains(rollout.state) &&
+          rollout.tag == tag &&
+            finalEnumStates.contains(rollout.state) &&
             (rollout.state != ConnectorEnumRolloutState.INITIALIZED && rollout.state != ConnectorEnumRolloutState.CANCELED)
         }
 
       if (rolloutsInInvalidState.isNotEmpty()) {
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message("Found rollouts in invalid states: $rolloutsInInvalidState."),
+          ProblemMessageData().message("Cannot create a new rollout; rollouts with tag $tag already exist in states: $rolloutsInInvalidState."),
         )
       }
       val connectorRollout =
@@ -260,9 +265,22 @@ open class ConnectorRolloutHandler
       connectorRollout.initialRolloutPct = initialRolloutPct
       connectorRollout.finalTargetRolloutPct = finalTargetRolloutPct
       connectorRollout.filters = filters
+      connectorRollout.tag = tag
 
       connectorRolloutService.writeConnectorRollout(connectorRollout)
       return connectorRollout
+    }
+
+    fun createTagFromFilters(filters: io.airbyte.config.ConnectorRolloutFilters?): String? {
+      if (filters?.customerTierFilters.isNullOrEmpty()) {
+        return null
+      }
+
+      return filters!!
+        .customerTierFilters
+        .flatMap { it.value }
+        .sortedBy { it.name }
+        .joinToString("-") { it.name }
     }
 
     @VisibleForTesting
@@ -587,11 +605,11 @@ open class ConnectorRolloutHandler
       }
     }
 
-    fun getPinnedActorInfo(id: UUID): ConnectorRolloutActorSelectionInfo {
+    fun getActorSelectionInfoForPinnedActors(id: UUID): ConnectorRolloutActorSelectionInfo {
       val rollout = connectorRolloutService.getConnectorRollout(id)
-      logger.info { "getPinnedActorInfo: rollout=$rollout" }
+      logger.info { "getActorSelectionInfoForPinnedActors: rollout=$rollout" }
       val actorSelectionInfo = rolloutActorFinder.getActorSelectionInfo(rollout, null, rollout.filters)
-      logger.info { "getPinnedActorInfo: actorSelectionInfo=$actorSelectionInfo" }
+      logger.info { "getActorSelectionInfoForPinnedActors: actorSelectionInfo=$actorSelectionInfo" }
 
       return ConnectorRolloutActorSelectionInfo()
         .numActors(actorSelectionInfo.nActors)
@@ -630,6 +648,7 @@ open class ConnectorRolloutHandler
             waitBetweenSyncResultsQueriesSeconds,
             rolloutExpirationSeconds,
           ),
+          rollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         rollout.state = ConnectorEnumRolloutState.CANCELED
@@ -673,6 +692,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -694,6 +714,7 @@ open class ConnectorRolloutHandler
             connectorRolloutUpdate.updatedBy,
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("doRollout", e)
@@ -727,6 +748,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds = rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -753,6 +775,7 @@ open class ConnectorRolloutHandler
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
             connectorRolloutFinalize.retainPinsOnCancellation,
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("finalizeRollout", e)
@@ -784,6 +807,7 @@ open class ConnectorRolloutHandler
               waitBetweenSyncResultsQueriesSeconds = waitBetweenSyncResultsQueriesSeconds,
               rolloutExpirationSeconds = rolloutExpirationSeconds,
             ),
+            connectorRollout.tag,
           )
         } catch (e: WorkflowUpdateException) {
           throw throwAirbyteApiClientExceptionIfExists("startWorkflow", e)
@@ -806,6 +830,7 @@ open class ConnectorRolloutHandler
             connectorRolloutPause.updatedBy,
             getRolloutStrategyForManualUpdate(connectorRollout.rolloutStrategy),
           ),
+          connectorRollout.tag,
         )
       } catch (e: WorkflowUpdateException) {
         throw throwAirbyteApiClientExceptionIfExists("pauseRollout", e)
@@ -894,31 +919,33 @@ open class ConnectorRolloutHandler
       return rollouts.first()
     }
 
-    private fun createFiltersFromRequest(filters: ConnectorRolloutFilters?): io.airbyte.config.ConnectorRolloutFilters {
-      if (filters?.tierFilter == null) {
-        return io.airbyte.config.ConnectorRolloutFilters(
-          customerTierFilters =
+    private fun createFiltersFromRequest(requestFilters: ConnectorRolloutFilters?): io.airbyte.config.ConnectorRolloutFilters =
+      io.airbyte.config.ConnectorRolloutFilters(
+        jobBypassFilter =
+          if (requestFilters?.jobBypassFilter?.shouldIgnoreJobs != null) {
+            JobBypassFilter(AttributeName.BYPASS_JOBS, requestFilters.jobBypassFilter?.shouldIgnoreJobs!!)
+          } else {
+            null
+          },
+        customerTierFilters =
+          if (requestFilters?.tierFilter == null) {
             listOf(
               CustomerTierFilter(
                 name = AttributeName.TIER,
                 operator = Operator.IN,
                 value = listOf(CustomerTier.TIER_2),
               ),
-            ),
-        )
-      } else {
-        return io.airbyte.config.ConnectorRolloutFilters(
-          customerTierFilters =
+            )
+          } else {
             listOf(
               CustomerTierFilter(
                 name = AttributeName.TIER,
                 operator = Operator.IN,
-                value = listOf(CustomerTier.valueOf(filters.tierFilter!!.tier.toString())),
+                value = listOf(CustomerTier.valueOf(requestFilters.tierFilter!!.tier.toString())),
               ),
-            ),
-        )
-      }
-    }
+            )
+          },
+      )
 
     private fun throwAirbyteApiClientExceptionIfExists(
       handlerName: String,

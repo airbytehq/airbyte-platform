@@ -1,0 +1,104 @@
+@use "scss/colors";
+@use "scss/variables";
+
+$title-height: 20px;
+$group-spacing: variables.$spacing-xl;
+$border-width: variables.$border-thick;
+$space-below: 30px;
+
+.outer {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.container {
+  min-height: $title-height;
+  position: relative;
+  padding-bottom: $space-below;
+  padding-top: calc($title-height / 2);
+
+  &.container--noContent {
+    padding-bottom: calc($space-below + variables.$spacing-sm);
+  }
+}
+
+.titleBar {
+  padding-right: $group-spacing;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: $title-height;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+
+.title {
+  width: auto;
+  height: 100%;
+  padding-right: variables.$spacing-sm;
+  display: flex;
+  align-items: center;
+  background-color: colors.$foreground;
+  white-space: nowrap;
+
+  & label {
+    padding-bottom: 0;
+  }
+
+  &.title--pointer {
+    & label {
+      cursor: pointer;
+    }
+  }
+}
+
+.control {
+  background-color: colors.$foreground;
+}
+
+.content {
+  border-color: colors.$grey-100;
+  border-style: solid;
+  border-width: 0 $border-width $border-width;
+  border-radius: variables.$border-radius-lg;
+
+  &.content--borderless {
+    border-color: transparent;
+  }
+
+  // box-shadow is used for the top border, so that it overlaps with bottom border when height is 0
+  box-shadow: 0 $border-width colors.$grey-100 inset;
+  padding: 0 $group-spacing;
+
+  // only apply padding when there are children, so that empty group sections border is just a single line
+  > :first-child {
+    padding-top: $group-spacing;
+  }
+
+  &.content--title {
+    > :first-child {
+      padding-top: calc($group-spacing + variables.$spacing-md);
+    }
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  &--error {
+    border-color: colors.$red-200;
+    box-shadow: 0 $border-width colors.$red-200 inset;
+  }
+}
+
+.footer {
+  position: absolute;
+  width: auto;
+  padding-top: variables.$spacing-sm;
+  height: $space-below;
+  bottom: 0;
+  left: 0;
+}

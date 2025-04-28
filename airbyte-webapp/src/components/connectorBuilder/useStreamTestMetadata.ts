@@ -79,7 +79,7 @@ export const useStreamTestMetadata = () => {
 
   const getStreamTestMetadataStatus = useCallback(
     (streamName: string): StreamTestMetadataStatus | undefined | null => {
-      const resolvedStream = resolvedManifest?.streams?.find((stream) => stream.name === streamName);
+      const resolvedStream = resolvedManifest?.streams?.find((stream) => stream?.name === streamName);
       if (!resolvedStream) {
         // undefined indicates that the stream has not yet been resolved, so warnings should not be shown
         return undefined;
@@ -186,7 +186,7 @@ export const useStreamTestMetadata = () => {
 
   const getStreamHasCustomType = useCallback(
     (streamName: string): boolean => {
-      const currentStream = resolvedManifest.streams?.find((stream) => stream.name === streamName);
+      const currentStream = resolvedManifest.streams?.find((stream) => stream?.name === streamName);
       return hasCustomType(currentStream);
     },
     [resolvedManifest]

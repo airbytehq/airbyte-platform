@@ -1,0 +1,5 @@
+@use "./StreamConfigView.module.scss";
+
+.streamNameInput {
+  @include mixins.streamNameInput;
+}

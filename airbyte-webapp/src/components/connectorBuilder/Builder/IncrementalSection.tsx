@@ -11,6 +11,7 @@ import { RequestOption } from "core/api/types/ConnectorManifest";
 import { links } from "core/utils/links";
 import { useConnectorBuilderTestRead } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { AssistButton } from "./Assist/AssistButton";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderInputPlaceholder } from "./BuilderInputPlaceholder";
@@ -48,6 +49,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
+      labelAction={<AssistButton assistKey="incremental_sync" streamNum={currentStreamIndex} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("incrementalSync"),

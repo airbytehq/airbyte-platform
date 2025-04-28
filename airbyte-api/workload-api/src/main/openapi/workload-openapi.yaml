@@ -234,6 +234,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkloadListResponse"
+  /api/v1/workload/queue/clean:
+    post:
+      tags:
+      - workload
+      summary: Remove the queue entries which are older than a week up to a certain
+        limit
+      operationId: workloadQueueClean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkloadQueueCleanLimit"
+      responses:
+        "204":
+          description: Cleaning workload queue successfull
   /api/v1/workload/queue/depth:
     post:
       tags:
@@ -613,6 +628,14 @@ components:
       - high
       - default
       x-type: String
+    WorkloadQueueCleanLimit:
+      required:
+      - limit
+      type: object
+      properties:
+        limit:
+          type: integer
+          format: int32
     WorkloadQueuePollRequest:
       required:
       - quantity

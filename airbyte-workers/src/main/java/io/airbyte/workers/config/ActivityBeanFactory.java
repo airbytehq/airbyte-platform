@@ -21,6 +21,7 @@ import io.airbyte.workers.temporal.scheduling.activities.RetryStatePersistenceAc
 import io.airbyte.workers.temporal.scheduling.activities.StreamResetActivity;
 import io.airbyte.workers.temporal.scheduling.activities.WorkflowConfigActivity;
 import io.airbyte.workers.temporal.sync.AsyncReplicationActivity;
+import io.airbyte.workers.temporal.sync.GenerateReplicationActivityInputActivity;
 import io.airbyte.workers.temporal.sync.InvokeOperationsActivity;
 import io.airbyte.workers.temporal.sync.ReportRunTimeActivity;
 import io.airbyte.workers.temporal.sync.WorkloadStatusCheckActivity;
@@ -86,13 +87,14 @@ public class ActivityBeanFactory {
   @Singleton
   @Named("syncActivities")
   public List<Object> syncActivities(final ConfigFetchActivity configFetchActivity,
+                                     final GenerateReplicationActivityInputActivity generateReplicationActivityInputActivity,
                                      final ReportRunTimeActivity reportRunTimeActivity,
                                      final InvokeOperationsActivity invokeOperationsActivity,
                                      final AsyncReplicationActivity asyncReplicationActivity,
                                      final WorkloadStatusCheckActivity workloadStatusCheckActivity,
                                      final DiscoverCatalogHelperActivity discoverCatalogHelperActivity) {
-    return List.of(configFetchActivity, reportRunTimeActivity, invokeOperationsActivity, asyncReplicationActivity,
-        workloadStatusCheckActivity, discoverCatalogHelperActivity);
+    return List.of(configFetchActivity, generateReplicationActivityInputActivity, reportRunTimeActivity,
+        invokeOperationsActivity, asyncReplicationActivity, workloadStatusCheckActivity, discoverCatalogHelperActivity);
   }
 
   @Singleton

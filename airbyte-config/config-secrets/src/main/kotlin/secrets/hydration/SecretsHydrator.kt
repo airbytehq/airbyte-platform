@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import java.util.UUID
 
 /**
  * Adds secrets to a partial config.
@@ -58,5 +59,13 @@ interface SecretsHydrator {
   fun hydrate(
     config: ConfigWithSecretReferences,
     secretPersistence: SecretPersistence,
+  ): JsonNode
+
+  /**
+   * Adds secrets to a partial config based off a map of persistences.
+   */
+  fun hydrate(
+    config: ConfigWithSecretReferences,
+    secretPersistence: Map<UUID?, SecretPersistence>,
   ): JsonNode
 }

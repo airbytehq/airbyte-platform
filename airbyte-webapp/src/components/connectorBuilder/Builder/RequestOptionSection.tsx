@@ -136,6 +136,8 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
         componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
       }}
       labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
+      label={formatMessage({ id: "connectorBuilder.requestOptions.label" })}
+      tooltip={formatMessage({ id: "connectorBuilder.requestOptions.tooltip" })}
     >
       {content}
     </BuilderCard>

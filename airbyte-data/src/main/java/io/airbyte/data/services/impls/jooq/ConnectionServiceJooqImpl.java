@@ -30,7 +30,9 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConnectionSummary;
 import io.airbyte.config.JobSyncConfig;
+import io.airbyte.config.Schedule;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.StreamDescriptorForDestination;
@@ -76,6 +78,7 @@ import org.jooq.Condition;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.Record;
+import org.jooq.Record5;
 import org.jooq.Result;
 import org.jooq.SelectJoinStep;
 import org.jooq.TableField;
@@ -515,6 +518,46 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     return getStandardSyncsFromResult(connectionAndOperationIdsResult, getNotificationConfigurationByConnectionIds(connectionIds),
         getTagsByConnectionIds(connectionIds));
+  }
+
+  /**
+   * List active connections that use a particular actor definition and are associated with one of the
+   * given actor IDs.
+   *
+   * @param actorDefinitionId id of the source or destination definition.
+   * @param actorTypeValue either 'source' or 'destination' enum value.
+   * @param actorIds list of source or destination actor IDs to filter on.
+   * @return List of connections matching the given definition and actor IDs.
+   * @throws IOException in case of database access issues
+   */
+  @Override
+  public List<ConnectionSummary> listConnectionSummaryByActorDefinitionIdAndActorIds(final UUID actorDefinitionId,
+                                                                                     final String actorTypeValue,
+                                                                                     final List<UUID> actorIds)
+      throws IOException {
+    final Condition actorJoinCondition = switch (ActorType.valueOf(actorTypeValue)) {
+      case source -> ACTOR.ACTOR_TYPE.eq(ActorType.source).and(ACTOR.ID.eq(CONNECTION.SOURCE_ID));
+      case destination -> ACTOR.ACTOR_TYPE.eq(ActorType.destination).and(ACTOR.ID.eq(CONNECTION.DESTINATION_ID));
+    };
+
+    final Condition actorIdFilter = ACTOR.ID.in(actorIds);
+
+    final Result<Record5<UUID, Boolean, JSONB, UUID, UUID>> connectionSummaryResult = database.query(ctx -> ctx
+        .select(CONNECTION.ID,
+            CONNECTION.MANUAL,
+            CONNECTION.SCHEDULE,
+            CONNECTION.SOURCE_ID,
+            CONNECTION.DESTINATION_ID)
+        .from(CONNECTION)
+        .leftJoin(ACTOR).on(actorJoinCondition)
+        .where(ACTOR.ACTOR_DEFINITION_ID.eq(actorDefinitionId).and(actorIdFilter))).fetch();
+
+    return connectionSummaryResult.map(record -> new ConnectionSummary(
+        record.get(CONNECTION.ID),
+        record.get(CONNECTION.MANUAL),
+        Jsons.deserialize(record.get(CONNECTION.SCHEDULE).data(), Schedule.class),
+        record.get(CONNECTION.SOURCE_ID),
+        record.get(CONNECTION.DESTINATION_ID)));
   }
 
   /**
