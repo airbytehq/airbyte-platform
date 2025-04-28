@@ -27,6 +27,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutStartResponse
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler
+import io.airbyte.commons.server.handlers.ConnectorRolloutHandlerManual
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
@@ -43,7 +44,10 @@ import java.util.concurrent.Callable
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class ConnectorRolloutApiController(
   private val connectorRolloutHandler: ConnectorRolloutHandler,
+  private val connectorRolloutHandlerManual: ConnectorRolloutHandlerManual,
 ) : ConnectorRolloutApi {
+  //  Endpoints hit by the connector rollout workflow
+
   @Post("/start")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -88,6 +92,35 @@ class ConnectorRolloutApiController(
       response
     }
 
+  @Post("/get")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getConnectorRolloutById(
+    @Body connectorRolloutReadRequestBody: ConnectorRolloutReadRequestBody,
+  ): ConnectorRolloutReadResponse? =
+    execute {
+      val connectorRolloutId = connectorRolloutReadRequestBody.id
+      val connectorRollout =
+        connectorRolloutHandler.getConnectorRollout(connectorRolloutId)
+      ConnectorRolloutReadResponse().data(connectorRollout)
+    }
+
+  @Post("/update_state")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun updateConnectorRolloutState(
+    @Body connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody,
+  ): ConnectorRolloutResponse? =
+    execute {
+      val updatedConnectorRollout =
+        connectorRolloutHandler.updateState(connectorRolloutUpdateStateRequestBody)
+      val response = ConnectorRolloutResponse()
+      response.setData(updatedConnectorRollout)
+      response
+    }
+
+  //  Endpoints hit manually e.g. via the Connector Rollout Manager Retool UI
+
   @Post("/list")
   @Secured(AuthRoleConstants.ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -96,7 +129,7 @@ class ConnectorRolloutApiController(
   ): io.airbyte.api.model.generated.ConnectorRolloutListResponse? =
     execute {
       val connectorRollouts =
-        connectorRolloutHandler.listConnectorRollouts(
+        connectorRolloutHandlerManual.listConnectorRollouts(
           connectorRolloutListRequestBody.actorDefinitionId,
           connectorRolloutListRequestBody.dockerImageTag,
         )
@@ -109,7 +142,7 @@ class ConnectorRolloutApiController(
   override fun getConnectorRolloutsListAll(): ConnectorRolloutListResponse? =
     execute(
       Callable {
-        val connectorRollouts = connectorRolloutHandler.listConnectorRollouts()
+        val connectorRollouts = connectorRolloutHandlerManual.listConnectorRollouts()
         ConnectorRolloutListResponse().connectorRollouts(connectorRollouts)
       },
     )
@@ -122,21 +155,8 @@ class ConnectorRolloutApiController(
   ): io.airbyte.api.model.generated.ConnectorRolloutListResponse? =
     execute {
       val connectorRollouts =
-        connectorRolloutHandler.listConnectorRollouts(connectorRolloutListByActorDefinitionIdRequestBody.actorDefinitionId)
+        connectorRolloutHandlerManual.listConnectorRollouts(connectorRolloutListByActorDefinitionIdRequestBody.actorDefinitionId)
       ConnectorRolloutListResponse().connectorRollouts(connectorRollouts)
-    }
-
-  @Post("/get")
-  @Secured(AuthRoleConstants.ADMIN)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun getConnectorRolloutById(
-    @Body connectorRolloutReadRequestBody: ConnectorRolloutReadRequestBody,
-  ): ConnectorRolloutReadResponse? =
-    execute {
-      val connectorRolloutId = connectorRolloutReadRequestBody.id
-      val connectorRollout =
-        connectorRolloutHandler.getConnectorRollout(connectorRolloutId)
-      ConnectorRolloutReadResponse().data(connectorRollout)
     }
 
   @Post("/get_actor_sync_info")
@@ -154,26 +174,12 @@ class ConnectorRolloutApiController(
           .associate { entry -> entry.key.toString() to entry.value }
 
       val actorSelectionInfo =
-        connectorRolloutHandler.getActorSelectionInfoForPinnedActors(connectorRolloutId)
+        connectorRolloutHandlerManual.getActorSelectionInfoForPinnedActors(connectorRolloutId)
 
       val responseData =
         ConnectorRolloutActorSyncInfoResponseData()
       responseData.actorSelectionInfo(actorSelectionInfo).syncs(connectorRolloutSyncInfo)
       ConnectorRolloutActorSyncInfoResponse().data(responseData)
-    }
-
-  @Post("/update_state")
-  @Secured(AuthRoleConstants.ADMIN)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun updateConnectorRolloutState(
-    @Body connectorRolloutUpdateStateRequestBody: ConnectorRolloutUpdateStateRequestBody,
-  ): ConnectorRolloutResponse? =
-    execute {
-      val updatedConnectorRollout =
-        connectorRolloutHandler.updateState(connectorRolloutUpdateStateRequestBody)
-      val response = ConnectorRolloutResponse()
-      response.setData(updatedConnectorRollout)
-      response
     }
 
   @Post("/manual_start")
@@ -184,7 +190,7 @@ class ConnectorRolloutApiController(
   ): ConnectorRolloutStartResponse? =
     execute {
       val startedConnectorRollout =
-        connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutStartRequestBody)
+        connectorRolloutHandlerManual.manualStartConnectorRollout(connectorRolloutStartRequestBody)
       val response =
         ConnectorRolloutStartResponse()
       response.setData(startedConnectorRollout)
@@ -198,7 +204,7 @@ class ConnectorRolloutApiController(
     @Body connectorRolloutManualRolloutRequestBody: ConnectorRolloutManualRolloutRequestBody,
   ): ConnectorRolloutManualRolloutResponse? =
     execute {
-      connectorRolloutHandler.manualDoConnectorRollout(
+      connectorRolloutHandlerManual.manualDoConnectorRollout(
         connectorRolloutManualRolloutRequestBody,
       )
     }
@@ -210,7 +216,7 @@ class ConnectorRolloutApiController(
     @Body connectorRolloutFinalizeRequestBody: ConnectorRolloutManualFinalizeRequestBody,
   ): ConnectorRolloutManualFinalizeResponse? =
     execute {
-      connectorRolloutHandler.manualFinalizeConnectorRollout(
+      connectorRolloutHandlerManual.manualFinalizeConnectorRollout(
         connectorRolloutFinalizeRequestBody,
       )
     }
@@ -223,7 +229,7 @@ class ConnectorRolloutApiController(
   ): ConnectorRolloutResponse? =
     execute {
       val updatedConnectorRollout =
-        connectorRolloutHandler.manualPauseConnectorRollout(connectorRolloutPauseRequestBody)
+        connectorRolloutHandlerManual.manualPauseConnectorRollout(connectorRolloutPauseRequestBody)
       val response = ConnectorRolloutResponse()
       response.setData(updatedConnectorRollout)
       response

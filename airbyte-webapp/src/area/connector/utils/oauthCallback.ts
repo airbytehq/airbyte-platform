@@ -17,5 +17,13 @@ const search = new URLSearchParams(window.location.search);
 const query = Object.fromEntries(search);
 const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
 bc.postMessage({ type: "completed", query });
+
+const redirectToIndex = "redirect_to_index" in query ? true : false;
 // Close popup window once we're done
-window.close();
+if (redirectToIndex) {
+  // Redirect to the index page to support Shopify's strange integration requirements
+  // see https://shopify.dev/docs/apps/launch/app-requirements-checklist#b-permissions for more details
+  window.location.href = "/";
+} else {
+  window.close();
+}

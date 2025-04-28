@@ -28,7 +28,8 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
-import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.WorkloadHeartbeatRate
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricAttribute
@@ -42,7 +43,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
@@ -100,7 +101,6 @@ class ReplicationWorkerHelper(
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
   private val streamStatusTrackerFactory: StreamStatusTrackerFactory,
   private val recordMapper: RecordMapper,
-  private val featureFlagClient: FeatureFlagClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
 ) {
@@ -121,7 +121,7 @@ class ReplicationWorkerHelper(
   private var totalRecordsRead: Long = 0
   private var destinationConfig: WorkerDestinationConfig? = null
   private var ctx: ReplicationContext? = null
-  private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
+  private lateinit var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader
   private lateinit var streamStatusTracker: StreamStatusTracker
   private var supportRefreshes by Delegates.notNull<Boolean>()
   private lateinit var mappersPerStreamDescriptor: Map<StreamDescriptor, List<MapperConfig>>
@@ -137,7 +137,7 @@ class ReplicationWorkerHelper(
   }
 
   fun getWorkloadStatusHeartbeat(mdc: Map<String, String>): Runnable =
-    getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate.toLong()), workloadId, mdc)
+    getWorkloadStatusHeartbeat(Duration.ofSeconds(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate).toLong()), workloadId, mdc)
 
   private fun getWorkloadStatusHeartbeat(
     heartbeatInterval: Duration,
@@ -148,7 +148,7 @@ class ReplicationWorkerHelper(
       MDC.setContextMap(mdc)
       logger.info { "Starting workload heartbeat" }
       var lastSuccessfulHeartbeat: Instant = Instant.now()
-      val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes)
+      val heartbeatTimeoutDuration: Duration = Duration.ofMinutes(replicationInputFeatureFlagReader.read(WorkloadHeartbeatTimeout).toLong())
       do {
         ctx?.let { _ ->
           try {
@@ -186,7 +186,7 @@ class ReplicationWorkerHelper(
 
   fun initialize(
     ctx: ReplicationContext,
-    replicationFeatureFlags: ReplicationFeatureFlags,
+    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     jobRoot: Path,
     configuredAirbyteCatalog: ConfiguredAirbyteCatalog,
     state: State?,
@@ -194,7 +194,7 @@ class ReplicationWorkerHelper(
     timeTracker.trackReplicationStartTime()
 
     this.ctx = ctx
-    this.replicationFeatureFlags = replicationFeatureFlags
+    this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader
     this.streamStatusTracker = streamStatusTrackerFactory.create(ctx)
 
     analyticsMessageTracker.ctx = ctx

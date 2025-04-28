@@ -189,10 +189,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     val rollout = getRollout(ConnectorRolloutActivityInputGet(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, input.rolloutId))
 
     var nextRolloutStageAt = getCurrentTimeMilli()
-    val expirationTime = nextRolloutStageAt.plusSeconds(input.rolloutExpirationSeconds.toLong())
+    val expirationTime = nextRolloutStageAt.plusSeconds((input.rolloutExpirationSeconds ?: Constants.DEFAULT_ROLLOUT_EXPIRATION_SECONDS).toLong())
 
-    val waitBetweenRolloutsSeconds = input.waitBetweenRolloutSeconds
-    val waitBetweenResultPollsSeconds = input.waitBetweenSyncResultsQueriesSeconds
+    val waitBetweenRolloutsSeconds = (input.waitBetweenRolloutSeconds ?: Constants.DEFAULT_WAIT_BETWEEN_ROLLOUTS_SECONDS)
+    val waitBetweenResultPollsSeconds = (input.waitBetweenSyncResultsQueriesSeconds ?: Constants.DEFAULT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS)
     val stepSizePercentage = rollout.initialRolloutPct ?: Constants.DEFAULT_INITIAL_ROLLOUT_PERCENTAGE
 
     // Continuously manage the rollout until we reach a terminal state, the workflow is paused, or the rollout expires.

@@ -9,12 +9,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import io.airbyte.config.FailureReason;
+import io.airbyte.featureflag.LogConnectorMessages;
+import io.airbyte.featureflag.LogStateMsgs;
 import io.airbyte.protocol.models.v0.AirbyteMessage;
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type;
 import io.airbyte.protocol.models.v0.Config;
 import io.airbyte.protocol.models.v0.StreamDescriptor;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.helper.FailureHelper;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.ArrayList;
@@ -25,18 +29,26 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class AirbyteMessageTrackerTest {
 
   private AirbyteMessageTracker messageTracker;
   @Mock
   private SyncStatsTracker syncStatsTracker;
+  @Mock
+  private ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
 
   @BeforeEach
   void setup() {
+    when(replicationInputFeatureFlagReader.read(LogConnectorMessages.INSTANCE)).thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(LogStateMsgs.INSTANCE)).thenReturn(false);
+
     this.messageTracker =
-        new AirbyteMessageTracker(syncStatsTracker, false, false, "airbyte/source-image", "airbyte/destination-image");
+        new AirbyteMessageTracker(syncStatsTracker, replicationInputFeatureFlagReader, "airbyte/source-image", "airbyte/destination-image");
   }
 
   @Test

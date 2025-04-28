@@ -1,0 +1,13 @@
+---
+"$schema": http://json-schema.org/draft-07/schema#
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ReplicationInput.yaml
+title: HeartbeatConfig
+description: inputs necessary for the configuration of heartbeat monitors during replication
+type: object
+additionalProperties: true
+required:
+  - maxSecondsBetweenMessages
+properties:
+  maxSecondsBetweenMessages:
+    description: Max time in seconds between messages that needs to elapse before the heartbeat monitor considers there to be a violation
+    type: integer

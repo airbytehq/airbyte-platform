@@ -100,6 +100,7 @@ class SecretStorageServiceTest {
 
     @Test
     fun `should return organization scoped secret storage if workspace scoped is not available`() {
+      every { featureFlagClient.boolVariation(any(), any()) } returns true
       every {
         secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value)
       } returns emptyList()
@@ -135,7 +136,7 @@ class SecretStorageServiceTest {
 
     @Test
     fun `should return null if runtime secret persistence feature flag is enabled`() {
-      every { featureFlagClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns true
+      every { featureFlagClient.boolVariation(any(), any()) } returns true
       every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value) } returns emptyList()
       every { organizationRepository.getOrganizationForWorkspaceId(workspaceId.value) } returns Optional.of(org)
       every { secretStorageRepository.listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId.value) } returns emptyList()
