@@ -7,9 +7,9 @@ package io.airbyte.workers.general.performance;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.general.BufferConfiguration;
 import io.airbyte.workers.general.BufferedReplicationWorker;
-import io.airbyte.workers.general.ReplicationFeatureFlagReader;
 import io.airbyte.workers.general.ReplicationWorkerHelper;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
@@ -40,7 +40,7 @@ class BufferedReplicationWorkerPerformanceTest extends ReplicationWorkerPerforma
                                                         final RecordSchemaValidator recordSchemaValidator,
                                                         final FieldSelector fieldSelector,
                                                         final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                                        final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                                        final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                                         final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
                                                         final ReplicationWorkerHelper replicationWorkerHelper,
@@ -49,7 +49,7 @@ class BufferedReplicationWorkerPerformanceTest extends ReplicationWorkerPerforma
                                                         final MetricClient metricClient,
                                                         final ReplicationInput replicationInput) {
     return new BufferedReplicationWorker(jobId, attempt, source, destination, syncPersistence, recordSchemaValidator,
-        srcHeartbeatTimeoutChaperone, replicationFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor,
+        srcHeartbeatTimeoutChaperone, replicationInputFeatureFlagReader, replicationWorkerHelper, destinationTimeoutMonitor,
         streamStatusCompletionTracker, BufferConfiguration.withDefaultConfiguration(), metricClient, replicationInput, metricClient);
   }
 

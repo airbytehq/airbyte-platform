@@ -25,6 +25,7 @@ import okhttp3.Response
 import okhttp3.ResponseBody
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -530,6 +531,26 @@ class TestClientTest {
       assertTrue { boolVariation(evFalse, ctx) }
       assertFalse("undefined flags should always return false") { boolVariation(evEmpty, ctx) }
     }
+  }
+
+  @Test
+  @Suppress("UNCHECKED_CAST")
+  fun `verify generic variation retrieval by type`() {
+    val boolFlag = Temporary(key = "flag1", default = false)
+    val intFlag = Temporary(key = "flag2", default = 0)
+    val stringFlag = Temporary(key = "flag3", default = "default")
+    val unsupportedType = Temporary(key = "flag4", default = listOf("this", "should", "fail"))
+    val nullType = Temporary(key = "flag5", default = null)
+    val values = mapOf(intFlag.key to 123, boolFlag.key to true, stringFlag.key to "test")
+    val ctx = User("test")
+
+    val client: FeatureFlagClient = TestClient(values)
+
+    assertEquals(123, client.variation(intFlag, ctx))
+    assertEquals(true, client.variation(boolFlag, ctx))
+    assertEquals("test", client.variation(stringFlag, ctx))
+    assertThrows<IllegalArgumentException> { client.variation(unsupportedType, ctx) }
+    assertThrows<IllegalArgumentException> { client.variation(nullType, ctx) }
   }
 }
 

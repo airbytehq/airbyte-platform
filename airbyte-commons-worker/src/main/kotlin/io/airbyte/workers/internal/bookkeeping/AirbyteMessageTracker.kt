@@ -6,9 +6,12 @@ package io.airbyte.workers.internal.bookkeeping
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
+import io.airbyte.featureflag.LogConnectorMessages
+import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
 import io.airbyte.workers.internal.stateaggregator.StateAggregator
@@ -25,8 +28,7 @@ private val logger = KotlinLogging.logger {}
  */
 class AirbyteMessageTracker(
   val syncStatsTracker: SyncStatsTracker,
-  private val logStateMsgs: Boolean,
-  private val logConnectorMsgs: Boolean,
+  private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val sourceDockerImage: String,
   private val destinationDockerImage: String,
 ) {
@@ -127,9 +129,9 @@ class AirbyteMessageTracker(
     caller: String,
     msg: AirbyteMessage,
   ) {
-    if (logConnectorMsgs) {
+    if (replicationInputFeatureFlagReader.read(LogConnectorMessages)) {
       logger.info { "$caller message | ${Jsons.serialize(msg)}" }
-    } else if (logStateMsgs && msg.type == AirbyteMessage.Type.STATE) {
+    } else if (replicationInputFeatureFlagReader.read(LogStateMsgs) && msg.type == AirbyteMessage.Type.STATE) {
       logger.info { "$caller state message | ${Jsons.serialize(msg)}" }
     }
   }
