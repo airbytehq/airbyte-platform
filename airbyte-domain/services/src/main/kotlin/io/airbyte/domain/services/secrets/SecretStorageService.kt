@@ -73,6 +73,10 @@ open class SecretStorageService(
     }
 
     val orgId = organizationRepository.getOrganizationForWorkspaceId(workspaceId.value).orElseThrow().organizationId
+    if (!featureFlagClient.boolVariation(EnableDefaultSecretStorage, Multi(listOf(Workspace(workspaceId.value), Organization(orgId))))) {
+      return null
+    }
+
     val orgStorage =
       secretStorageRepository
         .listByScopeTypeAndScopeId(
@@ -85,10 +89,6 @@ open class SecretStorageService(
 
     if (featureFlagClient.boolVariation(UseRuntimeSecretPersistence, Organization(orgId))) {
       logger.info { "Runtime secret persistence flag is enabled for organization $orgId. Skipping default secret storage lookup." }
-      return null
-    }
-
-    if (!featureFlagClient.boolVariation(EnableDefaultSecretStorage, Multi(listOf(Workspace(workspaceId.value), Organization(orgId))))) {
       return null
     }
 
