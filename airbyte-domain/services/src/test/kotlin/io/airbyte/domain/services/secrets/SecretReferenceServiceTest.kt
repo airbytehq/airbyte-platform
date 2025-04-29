@@ -158,6 +158,64 @@ class SecretReferenceServiceTest {
     }
   }
 
+  @Test
+  fun `applies raw values over persisted secret refs`() {
+    val actorId = UUID.randomUUID()
+    val storageId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val clientSecretRefId = UUID.randomUUID()
+    val accessTokenRefId = UUID.randomUUID()
+
+    val jsonConfig =
+      Jsons.jsonNode(
+        mapOf(
+          "username" to "bob",
+          "auth" to
+            mapOf(
+              "clientSecret" to "my-client-secret", // raw value coming from oauth cred injection
+              "accessToken" to mapOf("_secret_reference_id" to accessTokenRefId.toString()),
+            ),
+        ),
+      )
+
+    val clientSecretRef =
+      mockk<SecretReferenceWithConfig> {
+        every { secretReference.id } returns SecretReferenceId(clientSecretRefId)
+        every { secretReference.hydrationPath } returns "$.auth.clientSecret"
+        every { secretConfig.secretStorageId } returns storageId
+        every { secretConfig.airbyteManaged } returns true
+        every { secretConfig.externalCoordinate } returns SecretCoordinate.AirbyteManagedSecretCoordinate().fullCoordinate
+      }
+
+    val accessTokenCoord = SecretCoordinate.AirbyteManagedSecretCoordinate()
+    val accessTokenRef =
+      mockk<SecretReferenceWithConfig> {
+        every { secretReference.id } returns SecretReferenceId(accessTokenRefId)
+        every { secretReference.hydrationPath } returns "$.auth.accessToken"
+        every { secretConfig.secretStorageId } returns storageId
+        every { secretConfig.airbyteManaged } returns true
+        every { secretConfig.externalCoordinate } returns accessTokenCoord.fullCoordinate
+      }
+
+    every { workspaceHelper.getOrganizationForWorkspace(any()) } returns workspaceId
+    every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns true
+
+    every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
+      listOf(
+        clientSecretRef,
+        accessTokenRef,
+      )
+
+    val expectedReferencedSecretsMap =
+      mapOf(
+        "$.auth.accessToken" to SecretReferenceConfig(accessTokenCoord, storageId, accessTokenRefId),
+      )
+
+    val actual = secretReferenceService.getConfigWithSecretReferences(ActorId(actorId), jsonConfig, WorkspaceId(workspaceId))
+    assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
+  }
+
   @Nested
   inner class CreateSecretConfigAndReference {
     private val secretStorageId = SecretStorageId(UUID.randomUUID())
