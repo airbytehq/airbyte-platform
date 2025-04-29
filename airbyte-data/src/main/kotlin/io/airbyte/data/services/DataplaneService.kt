@@ -25,4 +25,9 @@ interface DataplaneService {
     dataplaneGroupId: UUID,
     withTombstone: Boolean,
   ): List<Dataplane>
+
+  /**
+   * List all dataplanes
+   */
+  fun listDataplanes(withTombstone: Boolean): List<Dataplane>
 }
