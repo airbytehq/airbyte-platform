@@ -6,8 +6,9 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PartialSourceUpdate
+import io.airbyte.api.model.generated.SourceCreate
+import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
@@ -15,7 +16,6 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
-import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
@@ -26,7 +26,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class PartialUserConfigHandlerTest {
@@ -35,7 +34,6 @@ class PartialUserConfigHandlerTest {
   private lateinit var sourceHandler: SourceHandler
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
-  private lateinit var secretsProcessor: JsonSecretsProcessor
 
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
@@ -48,8 +46,7 @@ class PartialUserConfigHandlerTest {
     partialUserConfigService = mockk<PartialUserConfigService>()
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
-    secretsProcessor = mockk<JsonSecretsProcessor>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
+    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler)
     objectMapper = ObjectMapper()
   }
 
@@ -62,51 +59,27 @@ class PartialUserConfigHandlerTest {
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
-    every { sourceHandler.createSource(any()) } returns savedSource
-    every { sourceHandler.persistConfigRawSecretValues(any(), any(), any(), any(), any()) } returns
-      partialUserConfigCreate.connectionConfiguration
 
-    val result = handler.createPartialUserConfig(partialUserConfigCreate)
+    val sourceCreateSlot = slot<SourceCreate>()
+    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+
+    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
 
     Assertions.assertNotNull(result)
-    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
+    Assertions.assertEquals(sourceId, result.sourceId)
 
     verify { partialUserConfigService.createPartialUserConfig(any()) }
     verify { sourceHandler.createSource(any()) }
   }
 
   @Test
-  fun `test createPartialUserConfig does not create config if creating source fails`() {
-    // Arrange
-    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
-    val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
-
-    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
-
-    every { sourceHandler.createSource(any()) } throws RuntimeException("Source creation failed")
-
-    assertThrows<RuntimeException> {
-      handler.createPartialUserConfig(partialUserConfigCreate)
-    }
-
-    // Verify that the partial user config service was never called to write the config
-    verify(exactly = 0) { partialUserConfigService.createPartialUserConfig(any()) }
-  }
-
-  @Test
   fun `test updatePartialUserConfig with valid inputs`() {
-    val initialConnectionConfig = objectMapper.createObjectNode().put("testKey", "initialValue")
-
-    val initialProperties = initialConnectionConfig
-
     val partialUserConfig =
       createMockPartialUserConfig(
         partialUserConfigId,
         workspaceId,
         configTemplateId,
         sourceId,
-        initialProperties,
       )
     val partialUserConfigWithTemplate =
       createMockPartialUserConfigWithTemplate(
@@ -114,7 +87,6 @@ class PartialUserConfigHandlerTest {
         workspaceId = workspaceId,
         configTemplateId = configTemplateId,
         sourceId = sourceId,
-        properties = initialProperties,
       )
 
     val updateConnectionConfig = objectMapper.createObjectNode().put("testKey", "updatedValue")
@@ -127,21 +99,7 @@ class PartialUserConfigHandlerTest {
         workspaceId = partialUserConfig.partialUserConfig.workspaceId,
         configTemplateId = partialUserConfig.partialUserConfig.configTemplateId,
         actorId = partialUserConfig.partialUserConfig.actorId,
-        connectionConfiguration = updateConnectionConfig,
       )
-
-    every {
-      sourceHandler.persistConfigRawSecretValues(
-        any(),
-        any(),
-        any(),
-        any<ConnectorSpecification>(),
-        any(),
-      )
-    } returns updateConnectionConfig
-
-    val configSlot = slot<PartialUserConfig>()
-    every { partialUserConfigService.updatePartialUserConfig(capture(configSlot)) } returns partialUserConfig
 
     every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfigWithTemplate
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
@@ -149,20 +107,37 @@ class PartialUserConfigHandlerTest {
     val sourceUpdateSlot = slot<PartialSourceUpdate>()
     every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId)
 
-    val result = handler.updatePartialUserConfig(partialUserConfigRequest)
+    val result = handler.updateSourceFromPartialConfig(partialUserConfigRequest, updateConnectionConfig)
 
-    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
-    verify { partialUserConfigService.updatePartialUserConfig(any()) }
+    Assertions.assertEquals(sourceId, result.sourceId)
     verify { sourceHandler.partialUpdateSource(any()) }
 
     val capturedConnectionConfig = sourceUpdateSlot.captured.connectionConfiguration
-    val capturedUserConfig = configSlot.captured.connectionConfiguration
 
     Assertions.assertNotNull(capturedConnectionConfig)
     Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
-    Assertions.assertEquals("updatedValue", capturedUserConfig.get("testKey").asText())
+  }
+
+  @Test
+  fun `test getPartialUserConfig returns correct config with template`() {
+    // Arrange
+    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
+    val sourceRead = createMockSourceRead(sourceId)
+
+    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns
+      createMockPartialUserConfigWithTemplate(partialUserConfigId, workspaceId, configTemplateId, sourceId)
+    every { sourceHandler.getSource(any<SourceIdRequestBody>()) } returns sourceRead
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+
+    // Act
+    val result = handler.getPartialUserConfig(partialUserConfigId)
+
+    // Assert
+    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
+    Assertions.assertEquals(configTemplateId, result.partialUserConfig.configTemplateId)
+    Assertions.assertEquals(workspaceId, result.partialUserConfig.workspaceId)
+    Assertions.assertNotNull(result.configTemplate)
   }
 
   /**
@@ -172,6 +147,7 @@ class PartialUserConfigHandlerTest {
     id: UUID,
     actorDefinitionId: UUID = UUID.randomUUID(),
     partialDefaultConfig: JsonNode = objectMapper.createObjectNode(),
+    userConfigSpec: ConnectorSpecification = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
   ): ConfigTemplateWithActorDetails =
     ConfigTemplateWithActorDetails(
       ConfigTemplate(
@@ -179,7 +155,7 @@ class PartialUserConfigHandlerTest {
         actorDefinitionId = actorDefinitionId,
         partialDefaultConfig = partialDefaultConfig,
         organizationId = UUID.randomUUID(),
-        userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+        userConfigSpec = userConfigSpec,
         createdAt = null,
         updatedAt = null,
       ),
@@ -190,12 +166,10 @@ class PartialUserConfigHandlerTest {
   private fun createMockPartialUserConfigCreate(
     workspaceId: UUID,
     configTemplateId: UUID,
-    userConfig: JsonNode = objectMapper.createObjectNode().set<ObjectNode>("connectionConfiguration", objectMapper.createObjectNode()),
   ): PartialUserConfig =
     PartialUserConfig(
       workspaceId = workspaceId,
       configTemplateId = configTemplateId,
-      connectionConfiguration = userConfig,
       id = UUID.randomUUID(),
     )
 
@@ -204,7 +178,6 @@ class PartialUserConfigHandlerTest {
     workspaceId: UUID,
     configTemplateId: UUID,
     sourceId: UUID? = null,
-    properties: JsonNode = objectMapper.createObjectNode(),
   ): PartialUserConfigWithActorDetails =
     PartialUserConfigWithActorDetails(
       partialUserConfig =
@@ -212,7 +185,6 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       actorName = "test-source",
@@ -224,7 +196,6 @@ class PartialUserConfigHandlerTest {
     workspaceId: UUID,
     configTemplateId: UUID,
     sourceId: UUID? = null,
-    properties: JsonNode = objectMapper.createObjectNode(),
     configTemplate: ConfigTemplate =
       ConfigTemplate(
         id = configTemplateId,
@@ -240,7 +211,6 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       configTemplate = configTemplate,
@@ -252,6 +222,7 @@ class PartialUserConfigHandlerTest {
     SourceRead().apply {
       sourceId = id
       name = "test-source"
+      icon = "test-icon"
       sourceDefinitionId = UUID.randomUUID()
       connectionConfiguration = objectMapper.createObjectNode()
     }
