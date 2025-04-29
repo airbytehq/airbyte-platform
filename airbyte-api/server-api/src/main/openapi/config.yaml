@@ -6971,7 +6971,7 @@ paths:
         required: true
 
   # Dataplanes endpoints
-  /public/v1/regions/{regionId}/dataplanes:
+  /public/v1/dataplanes:
     get:
       tags:
         - public_dataplanes
@@ -7020,15 +7020,8 @@ paths:
       summary: Create a dataplane
       x-sdk-alias: createDataplane
       x-sdk-group: Dataplanes
-    parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
 
-  /public/v1/regions/{regionId}/dataplanes/{dataplaneId}:
+  /public/v1/dataplanes/{dataplaneId}:
     get:
       tags:
         - public_dataplanes
@@ -7098,12 +7091,6 @@ paths:
       x-sdk-group: Dataplanes
       summary: Delete a dataplane
     parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
       - name: dataplaneId
         schema:
           type: string
@@ -18464,10 +18451,14 @@ components:
       type: object
       required:
         - dataplane_id
+        - region_id
         - client_id
         - client_secret
       properties:
         dataplane_id:
+          type: string
+          format: UUID
+        region_id:
           type: string
           format: UUID
         client_id:
@@ -18609,7 +18600,6 @@ components:
       required:
         - name
         - organizationId
-        - enabled
       properties:
         name:
           type: string
@@ -18676,9 +18666,12 @@ components:
     DataplaneCreateRequest:
       type: object
       required:
+        - regionId
         - name
-        - enabled
       properties:
+        regionId:
+          type: string
+          format: uuid
         name:
           type: string
         enabled:
@@ -18690,13 +18683,17 @@ components:
     DataplaneCreateResponseBody:
       type: object
       required:
+        - regionId
         - dataplaneId
         - clientId
         - clientSecret
       properties:
         dataplaneId:
           type: string
-          format: UUID
+          format: uuid
+        regionId:
+          type: string
+          format: uuid
         clientId:
           type: string
         clientSecret:
