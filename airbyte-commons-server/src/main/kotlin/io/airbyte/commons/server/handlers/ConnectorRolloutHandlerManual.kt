@@ -104,6 +104,10 @@ open class ConnectorRolloutHandlerManual
             ProblemMessageData().message("Could not find initial version for actor definition id: $actorDefinitionId"),
           )
 
+      if (rolloutStrategy == ConnectorRolloutStrategy.AUTOMATED) {
+        validateAutomatedInitialRolloutPercent(initialRolloutPct)
+      }
+
       val filters = createFiltersFromRequest(requestFilters)
       val tag = createTagFromFilters(filters)
 
@@ -210,6 +214,14 @@ open class ConnectorRolloutHandlerManual
         )
       return connectorRollouts.map { connectorRollout ->
         connectorRolloutHelper.buildConnectorRolloutRead(connectorRollout, false)
+      }
+    }
+
+    fun validateAutomatedInitialRolloutPercent(initialRolloutPct: Int?) {
+      if (initialRolloutPct == null || !(0 < initialRolloutPct && initialRolloutPct <= 100)) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message("Invalid initial rollout pct: $initialRolloutPct for automated rollout"),
+        )
       }
     }
 

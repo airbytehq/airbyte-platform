@@ -40,6 +40,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import io.mockk.verify
 import io.mockk.verifyAll
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
@@ -47,6 +48,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.junit.jupiter.params.provider.NullSource
+import org.junit.jupiter.params.provider.ValueSource
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -401,7 +404,7 @@ internal class ConnectorRolloutHandlerManualTest {
   }
 
   @Test
-  fun `test manuaCancelConnectorRollout without pin retention`() {
+  fun `test manualCancelConnectorRollout without pin retention`() {
     val rolloutId = UUID.randomUUID()
     val rollout = createMockConnectorRollout(rolloutId)
     val state = ConnectorRolloutStateTerminal.CANCELED
@@ -569,6 +572,29 @@ internal class ConnectorRolloutHandlerManualTest {
   }
 
   @Test
+  fun `test validateAutomatedInitialRolloutPercent`() {
+    val validPercents = listOf(1, 50, 100)
+
+    validPercents.forEach { pct ->
+      assertDoesNotThrow {
+        connectorRolloutHandler.validateAutomatedInitialRolloutPercent(pct)
+      }
+    }
+
+    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+      connectorRolloutHandler.validateAutomatedInitialRolloutPercent(null)
+    }
+
+    val invalidPercents = listOf(0, -1, 101)
+
+    invalidPercents.forEach { pct ->
+      assertThrows<ConnectorRolloutInvalidRequestProblem> {
+        connectorRolloutHandler.validateAutomatedInitialRolloutPercent(pct)
+      }
+    }
+  }
+
+  @Test
   fun `test getOrCreateAndValidateManualStartInput creates new connector rollout if not found`() {
     val rolloutId = UUID.randomUUID()
     val actorDefinitionVersion = createMockActorDefinitionVersion()
@@ -644,6 +670,39 @@ internal class ConnectorRolloutHandlerManualTest {
 
     verifyAll {
       actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    }
+  }
+
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(ints = [0, -1, 101])
+  fun `test getOrCreateAndValidateManualStartInput throws ConnectorRolloutInvalidRequestProblem when automated and initial rollout pct is invalid`(
+    initialRolloutPct: Int?,
+  ) {
+    val rolloutId = UUID.randomUUID()
+    val actorDefinitionVersion = createMockActorDefinitionVersion()
+
+    val connectorRollout =
+      createMockConnectorRollout(rolloutId).apply {
+        this.state = ConnectorEnumRolloutState.INITIALIZED
+      }
+
+    every { connectorRolloutService.listConnectorRollouts(ACTOR_DEFINITION_ID, actorDefinitionVersion.versionId) } returns emptyList()
+    every { actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG) } returns Optional.of(actorDefinitionVersion)
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(ACTOR_DEFINITION_ID) } returns Optional.of(actorDefinitionVersion)
+    every { connectorRolloutService.writeConnectorRollout(any()) } returns connectorRollout
+
+    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+      connectorRolloutHandler.getOrCreateAndValidateManualStartInput(
+        DOCKER_REPOSITORY,
+        ACTOR_DEFINITION_ID,
+        DOCKER_IMAGE_TAG,
+        UPDATED_BY,
+        ConnectorRolloutStrategy.AUTOMATED,
+        initialRolloutPct,
+        null,
+        null,
+      )
     }
   }
 

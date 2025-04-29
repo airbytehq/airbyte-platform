@@ -5,7 +5,6 @@
 package io.airbyte.connector.rollout.worker
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.problems.model.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
@@ -232,21 +231,19 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
             )
         } catch (e: Exception) {
           logger.error { "Failed to advance the rollout. workflowId=$workflowId e=${e.message} e.cause=${e.cause} e=$e" }
-          if (!rolloutPercentageReached(e)) {
-            connectorRollout =
-              pauseRollout(
-                ConnectorRolloutActivityInputPause(
-                  input.dockerRepository,
-                  input.dockerImageTag,
-                  input.actorDefinitionId,
-                  input.rolloutId,
-                  "Paused due to an exception while pinning connections: $e",
-                  null,
-                  ConnectorEnumRolloutStrategy.AUTOMATED,
-                ),
-              )
-            break
-          }
+          connectorRollout =
+            pauseRollout(
+              ConnectorRolloutActivityInputPause(
+                input.dockerRepository,
+                input.dockerImageTag,
+                input.actorDefinitionId,
+                input.rolloutId,
+                "Paused due to an exception while pinning connections: $e",
+                null,
+                ConnectorEnumRolloutStrategy.AUTOMATED,
+              ),
+            )
+          break
         }
       }
 
@@ -283,14 +280,24 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       }
     }
 
+    if (!rolloutStateIsTerminal() && !isPaused && Workflow.currentTimeMillis() >= expirationTime.toEpochMilli()) {
+      logger.info { "Rollout expiration time reached. Pausing rollout. workflowId=$workflowId" }
+      connectorRollout =
+        pauseRollout(
+          ConnectorRolloutActivityInputPause(
+            dockerRepository = input.dockerRepository,
+            dockerImageTag = input.dockerImageTag,
+            actorDefinitionId = input.actorDefinitionId,
+            rolloutId = input.rolloutId,
+            pausedReason = "Rollout expired without reaching a terminal state.",
+            rolloutStrategy = ConnectorEnumRolloutStrategy.AUTOMATED,
+          ),
+        )
+    }
+
     // We've timed out waiting for results or the rollout is paused. At this point we require a dev to manually finalize the rollout.
     Workflow.await { rolloutStateIsTerminal() }
     return getRolloutState()
-  }
-
-  private fun rolloutPercentageReached(e: Exception): Boolean {
-    logger.info { "e.cause.message = ${e.cause?.message}" }
-    return e.cause?.message?.contains(ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse().type) ?: false
   }
 
   private fun getCurrentTimeMilli(): Instant = Instant.ofEpochMilli(Workflow.currentTimeMillis())
