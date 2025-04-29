@@ -6,7 +6,6 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.commons.server.handlers.SourceHandler
@@ -17,6 +16,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.validation.json.JsonMergingHelper
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
@@ -29,6 +29,8 @@ class PartialUserConfigHandler(
   private val sourceHandler: SourceHandler,
   @Named("jsonSecretsProcessorWithCopy") val secretsProcessor: JsonSecretsProcessor,
 ) {
+  private val jsonMergingHelper = JsonMergingHelper()
+
   /**
    * Creates a partial user config and its associated source.
    *
@@ -40,7 +42,11 @@ class PartialUserConfigHandler(
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
 
     // Create and persist the source
-    val combinedConfigs = combineProperties(configTemplate.configTemplate.partialDefaultConfig, partialUserConfigCreate.connectionConfiguration)
+    val combinedConfigs =
+      jsonMergingHelper.combineProperties(
+        configTemplate.configTemplate.partialDefaultConfig,
+        partialUserConfigCreate.connectionConfiguration,
+      )
     val sourceCreate =
       createSourceCreateFromPartialUserConfig(configTemplate.configTemplate, partialUserConfigCreate, combinedConfigs, configTemplate.actorName)
     val savedSource = sourceHandler.createSource(sourceCreate)
@@ -110,7 +116,7 @@ class PartialUserConfigHandler(
 
     // Combine the template's default config and user config
     val combinedConfigs =
-      combineProperties(
+      jsonMergingHelper.combineProperties(
         ObjectMapper().valueToTree(configTemplate.configTemplate.partialDefaultConfig),
         ObjectMapper().valueToTree(partialUserConfig.connectionConfiguration),
       )
@@ -166,59 +172,4 @@ class PartialUserConfigHandler(
       workspaceId = partialUserConfig.workspaceId
       connectionConfiguration = combinedConfigs
     }
-
-  /**
-   * Combines all properties from ConfigTemplate.partialDefaultConfig and
-   * PartialUserConfig.connectionConfiguration into a single JSON object.
-   * Recursively merges the JSON structures, with user config values taking precedence.
-   */
-  internal fun combineProperties(
-    configTemplateNode: JsonNode?,
-    partialUserConfigNode: JsonNode?,
-  ): JsonNode {
-    val objectMapper = ObjectMapper()
-    val combinedNode = objectMapper.createObjectNode()
-
-    // Helper function to merge two JSON objects recursively
-    fun mergeObjects(
-      target: JsonNode,
-      source: JsonNode,
-    ) {
-      // Ensure both nodes are objects
-      if (!target.isObject || !source.isObject) {
-        throw IllegalArgumentException("Both nodes must be objects to merge")
-      }
-
-      val targetObject = target as ObjectNode
-
-      source.fields().forEach { (key, value) ->
-        if (targetObject.has(key)) {
-          val targetValue = targetObject.get(key)
-          if (targetValue.isObject && value.isObject) {
-            // Both are objects, merge them recursively
-            mergeObjects(targetValue, value)
-          } else if (targetValue.isObject != value.isObject) {
-            // One is an object, the other isn't - this is a type conflict
-            throw IllegalArgumentException(
-              "Type mismatch for property '$key': Cannot merge object with non-object",
-            )
-          } else {
-            // Neither is an object, just override
-            targetObject.set<JsonNode>(key, value)
-          }
-        } else {
-          // Key doesn't exist in target, just set it
-          targetObject.set<JsonNode>(key, value)
-        }
-      }
-    }
-
-    // Apply default configuration first
-    configTemplateNode?.let { mergeObjects(combinedNode, it) }
-
-    // Then apply user configuration (which will override defaults where they overlap)
-    partialUserConfigNode?.let { mergeObjects(combinedNode, it) }
-
-    return combinedNode
-  }
 }
