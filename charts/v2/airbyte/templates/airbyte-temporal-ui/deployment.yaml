@@ -3,7 +3,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: airbyte-temporal-ui
+  name: {{ .Release.Name }}-temporal-ui
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
 spec:

@@ -1,10 +1,10 @@
 # if Cloud or Pro/Enterprise, render the keycloak StatefulSet template.
-{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "enterprise") }}
 {{- if .Values.keycloak.enabled }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: airbyte-keycloak
+  name: {{ .Release.Name }}-keycloak
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
       {{- if .Values.keycloak.extraLabels }}
@@ -66,6 +66,10 @@ spec:
               PGPASSWORD=$DATABASE_PASSWORD psql -h $DATABASE_HOST -p $DATABASE_PORT -U $DATABASE_USER -d $DATABASE_DB -c "CREATE SCHEMA IF NOT EXISTS keycloak";
           env:
             {{- include "airbyte.database.envs" . | nindent 12 }}
+
+            {{- if .Values.keycloak.extraEnv }}
+            {{ .Values.keycloak.extraEnv | toYaml | nindent 12 }}
+            {{- end }}
 
           securityContext: 
             {{- toYaml .Values.keycloak.initContainerSecurityContext | nindent 14 }}

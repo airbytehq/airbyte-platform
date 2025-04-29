@@ -343,11 +343,11 @@ Renders the global.storage.minio.s3PathStyleAccess value
 Renders the storage.minio.s3PathStyleAccess environment variable
 */}}
 {{- define "airbyte.storage.minio.s3PathStyleAccess.env" }}
-- name: S3_PATH_STYLE
+- name: S3_PATH_STYLE_ACCESS
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: S3_PATH_STYLE
+      key: S3_PATH_STYLE_ACCESS
 {{- end }}
 
 {{/*
@@ -406,7 +406,7 @@ GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.storage.gcs.credentialsJsonP
 
 {{- if eq $opt "minio" }}
 MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
-S3_PATH_STYLE: {{ include "airbyte.storage.minio.s3PathStyleAccess" . | quote }}
+S3_PATH_STYLE_ACCESS: {{ include "airbyte.storage.minio.s3PathStyleAccess" . | quote }}
 {{- end }}
 
 {{- if eq $opt "s3" }}
