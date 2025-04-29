@@ -46,22 +46,22 @@ class AwsSecretManagerPersistence(
   private val awsCache: AwsCache,
 ) : SecretPersistence {
   override fun read(coordinate: SecretCoordinate): String {
-    if (coordinate !is AirbyteManagedSecretCoordinate) {
-      throw IllegalArgumentException("AWS Secret Manager requires a versioned secret coordinate.")
-    }
     var secretString = ""
     try {
       logger.debug { "Reading secret ${coordinate.fullCoordinate}" }
       secretString = awsCache.cache.getSecretString(coordinate.fullCoordinate)
     } catch (e: ResourceNotFoundException) {
       logger.warn { "Secret ${coordinate.fullCoordinate} not found" }
-      // Attempt to use up old bad secrets
-      // If this is just a read, this should work
-      // If this is for an update, we should read the secret, return it, and then create a new correctly versioned one and delete the bad one.
-      try {
-        secretString = awsCache.cache.getSecretString(coordinate.coordinateBase)
-      } catch (e: ResourceNotFoundException) {
-        logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+
+      if (coordinate is AirbyteManagedSecretCoordinate) {
+        // Attempt to use up old bad secrets
+        // If this is just a read, this should work
+        // If this is for an update, we should read the secret, return it, and then create a new correctly versioned one and delete the bad one.
+        try {
+          secretString = awsCache.cache.getSecretString(coordinate.coordinateBase)
+        } catch (e: ResourceNotFoundException) {
+          logger.warn { "Secret ${coordinate.coordinateBase} not found" }
+        }
       }
     }
     return secretString
