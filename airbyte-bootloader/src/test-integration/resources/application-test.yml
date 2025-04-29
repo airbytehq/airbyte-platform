@@ -20,7 +20,7 @@ flyway:
     config-wrapped-data:
       enabled: false # disable automatic migrations because the app will run them manually
       locations:
-        - "classpath:io/airbyte/cloud/db/instance/configs_wrapped/data_migrations"
+        - "classpath:io/airbyte/cloud/db/instance/configswrapped/datamigrations"
 
 jooq:
   datasources:
