@@ -21,6 +21,7 @@ import io.airbyte.domain.models.OrganizationId
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -35,6 +36,8 @@ import java.util.Optional
 import java.util.UUID
 
 typealias EntityConfigTemplate = io.airbyte.data.repositories.entities.ConfigTemplate
+
+private val logger = KotlinLogging.logger {}
 
 class ConfigTemplateServiceDataImplTest {
   private lateinit var service: ConfigTemplateService
@@ -197,6 +200,7 @@ class ConfigTemplateServiceDataImplTest {
   private fun createPartialUserConfigSpecAsObject(fields: Map<String, String>): ObjectNode {
     val connectionSpecification = objectMapper.createObjectNode()
     val specRequired = objectMapper.createArrayNode()
+    connectionSpecification.put("type", "object")
     connectionSpecification.put("required", specRequired)
     connectionSpecification.put("properties", objectMapper.createObjectNode())
     val specProperties = connectionSpecification["properties"] as ObjectNode
@@ -261,6 +265,240 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
       assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
       assertEquals(userConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
+    }
+
+    @Test
+    fun `createDefaultValuesFromSchema constructs default values`() {
+      val schemaDefaultValueService = SchemaDefaultValueHelper()
+      val jsonNodeString =
+        """
+        {
+          "type": "object",
+          "properties": {
+            "string": {
+              "type": "string"
+            },
+            "integer": {
+              "type": "integer"
+            },
+            "number": {
+              "type": "number"
+            },
+            "boolean": {
+              "type": "boolean"
+            },
+            "array_of_objects": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "string": {
+                    "type": "string"
+                  }
+                },
+                "required": ["string"]
+              }
+            },
+            "array_of_numbers": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              }
+            },
+            "array_no_items": {
+              "type": "array"
+            },
+            "object": {
+              "type": "object",
+              "properties": {
+                "string": {
+                  "type": "string"
+                },
+                "integer": {
+                  "type": "integer"
+                }
+              },
+              "required": ["string", "integer"]
+            },
+            "object_deeply_nested": {
+              "type": "object",
+              "properties": {
+                "nested": {
+                  "type": "object",
+                  "properties": {
+                    "string": {
+                      "type": "string"
+                    },
+                    "date": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  },
+                  "required": ["string", "date"]
+                },
+                "integer": {
+                  "type": "integer"
+                }
+              },
+              "required": ["nested", "integer"]
+            },
+            "date": {
+              "type": "string",
+              "format": "date"
+            },
+            "date_time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "oneOf": {
+              "type": "object",
+              "oneOf": [
+                {
+                  "properties": {
+                    "password": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["password"]
+                },
+                {
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["key"]
+                }
+              ]
+            }
+          },
+          "required": ["string", "integer", "number", "boolean", "array_of_objects", "array_of_numbers", "array_no_items", "object", "object_deeply_nested", "date", "date_time", "oneOf"]
+        }
+        """.trimIndent()
+      val jsonNode = objectMapper.readTree(jsonNodeString)
+
+      val expectedJsonString =
+        """
+        {
+          "string": "mock_string",
+          "integer": 42,
+          "number": 3.14,
+          "boolean": true,
+          "array_of_objects": [{"string": "mock_string"}],
+          "array_of_numbers": [3.14],
+          "array_no_items": ["mock_string"],
+          "object": {
+            "string": "mock_string",
+            "integer": 42
+          },
+          "object_deeply_nested": {
+            "nested": {
+              "string": "mock_string",
+              "date": "1970-01-01"
+            },
+            "integer": 42
+          },
+          "date": "1970-01-01",
+          "date_time": "1970-01-01T00:00:00Z",
+          "oneOf": {
+            "password": "mock_string"
+          }
+        }
+        """.trimIndent()
+      val expected = objectMapper.readTree(expectedJsonString)
+      val actual = schemaDefaultValueService.createDefaultValuesFromSchema(jsonNode)
+
+      assertEquals(expected, actual)
+    }
+
+    @Test
+    fun `test createConfigTemplate where default params have complex values`() {
+      // Set up the actor definition spec
+      val actorDefinitionSpecJsonString =
+        """
+        {
+          "type": "object",
+          "properties": {
+            "regex_pattern": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9]+$",
+              "pattern_descriptor": "aToZ123"
+            },
+            "nested": {
+              "type": "object",
+              "properties": {
+                "regex_pattern": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z0-9]+$",
+                  "pattern_descriptor": "aToZ123"
+                },
+                "date_time": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": ["regex_pattern", "date_time"]
+            },
+            "date": {
+              "type": "string",
+              "format": "date"
+            },
+            "integer_property": {
+              "type": "integer"
+            }
+          },
+          "required": ["regex_pattern", "nested", "date"]
+        }
+        """.trimIndent()
+      val actorDefinitionVersion = ActorDefinitionVersion()
+      every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
+        Optional.of(
+          actorDefinitionVersion,
+        )
+      actorDefinitionVersion.spec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree(actorDefinitionSpecJsonString))
+
+      val partialDefaultConfigJsonString =
+        """
+        {
+          "integer_property": 42
+        }
+        """.trimIndent()
+      val partialDefaultConfig = objectMapper.readTree(partialDefaultConfigJsonString)
+
+      // The user config can be exactly the same as the actor config
+      val userConfigSpecJsonString = actorDefinitionSpecJsonString
+      val userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree(userConfigSpecJsonString))
+      val userConfigSpecJsonObject = objectMapper.valueToTree<JsonNode>(userConfigSpec)
+
+      val id = UUID.randomUUID()
+
+      val entity =
+        EntityConfigTemplate(
+          id = id,
+          organizationId = organizationId,
+          actorDefinitionId = actorDefinitionId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = userConfigSpecJsonObject,
+        )
+
+      every {
+        repository.save(
+          any(),
+        )
+      } returns entity
+
+      val configTemplate =
+        service.createTemplate(
+          OrganizationId(organizationId),
+          ActorDefinitionId(actorDefinitionId),
+          partialDefaultConfig,
+          userConfigSpecJsonObject,
+        )
+
+      assertEquals(configTemplate.configTemplate.organizationId, organizationId)
+      assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(userConfigSpecJsonObject, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
     }
 
     @Test

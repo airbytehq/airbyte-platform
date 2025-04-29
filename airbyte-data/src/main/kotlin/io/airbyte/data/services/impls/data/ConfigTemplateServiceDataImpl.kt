@@ -5,8 +5,10 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.NullNode
+import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.repositories.ConfigTemplateRepository
@@ -19,6 +21,7 @@ import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.validation.json.JsonMergingHelper
 import io.airbyte.validation.json.JsonSchemaValidator
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -30,6 +33,9 @@ open class ConfigTemplateServiceDataImpl(
   private val sourceService: SourceService,
   private val validator: JsonSchemaValidator,
 ) : ConfigTemplateService {
+  private val jsonMergingHelper = JsonMergingHelper()
+  private val schemaDefaultValueHelper = SchemaDefaultValueHelper()
+
   override fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateWithActorDetails {
     val configTemplate = repository.findById(configTemplateId).orElseThrow().toConfigModel()
     val actorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
@@ -177,55 +183,94 @@ open class ConfigTemplateServiceDataImpl(
       throw IllegalArgumentException("Default config must be object")
     }
 
-    val objectMapper = ObjectMapper()
-    val result = objectMapper.createObjectNode()
+    val mockValuesFromUserConfigSpec = schemaDefaultValueHelper.createDefaultValuesFromSchema(partialUserConfigSpec.connectionSpecification)
 
-    // Add all keys from defaultConfig
-    defaultConfig
-      .fields()
-      .forEach { (key, value) ->
-        result.set<JsonNode>(key, value)
-      }
+    return jsonMergingHelper.combineProperties(
+      defaultConfig,
+      mockValuesFromUserConfigSpec,
+    )
+  }
+}
 
-    val requiredFields: List<String> =
-      partialUserConfigSpec
-        .connectionSpecification
-        .get("required")
-        .map { it.asText() }
-        .toList()
-
-    for (field in requiredFields) {
-      result.set<JsonNode>(
-        field,
-        fieldDescriptionToMockValue(
-          partialUserConfigSpec.connectionSpecification.get("properties")?.get(field) ?: objectMapper.nullNode(),
-        ),
-      )
+class SchemaDefaultValueHelper {
+  fun createDefaultValuesFromSchema(schema: JsonNode): JsonNode =
+    when (schema.get("type")?.asText()) {
+      "object" -> buildObjectDefault(schema)
+      "string" -> buildStringDefault(schema)
+      "array" -> buildArrayDefault(schema)
+      "integer" -> JsonNodeFactory.instance.numberNode(42)
+      "number" -> JsonNodeFactory.instance.numberNode(3.14)
+      "boolean" -> JsonNodeFactory.instance.booleanNode(true)
+      else -> NullNode.instance
     }
 
+  private fun buildArrayDefault(schema: JsonNode): ArrayNode {
+    val nodeFactory = JsonNodeFactory.instance
+    val result = nodeFactory.arrayNode()
+    // If no template for the array contents is provided, just return a mock string
+    val items = schema.get("items") ?: return result.add(buildStringDefault(nodeFactory.textNode("mock_string")))
+    return items
+      .takeIf { it.isObject }
+      ?.let { result.add(createDefaultValuesFromSchema(it)) }
+      ?: result.add(buildStringDefault(nodeFactory.textNode("mock_string")))
+  }
+
+  private fun buildObjectDefault(schema: JsonNode): JsonNode {
+    val nodeFactory = JsonNodeFactory.instance
+    val result = nodeFactory.objectNode()
+
+    // If it's a oneOf, return the first schema
+    if (schema.has("oneOf")) {
+      val oneOf = schema.get("oneOf")
+      if (oneOf.isArray && oneOf.size() > 0) {
+        val firstSchema = oneOf[0]
+        if (firstSchema.has("type")) {
+          return createDefaultValuesFromSchema(firstSchema)
+        } else {
+          // Some of our connector schemas have objects in the oneOf array that don't have a "type": "object"
+          return buildObjectDefault(oneOf[0])
+        }
+      }
+    }
+
+    val properties = schema.get("properties") ?: return result
+    // only include required props
+    val requiredFields =
+      schema
+        .get("required")
+        ?.map { it.asText() }
+        ?.toSet()
+        ?: emptySet()
+
+    for ((propName, propSchema) in properties.fields()) {
+      if (propName in requiredFields) {
+        result.set<JsonNode>(
+          propName,
+          createDefaultValuesFromSchema(propSchema),
+        )
+      }
+    }
     return result
   }
 
-  private fun fieldDescriptionToMockValue(jsonNode: JsonNode): JsonNode {
-    /*
-    Checks the type of the JSON object and returns a mock value based on the type.
-    This will be used to create a merged config and validate that it respects a JSON schema.
-     */
-    if (!jsonNode.isObject) {
-      throw IllegalArgumentException("Expected a JSON object. got ${jsonNode.nodeType}")
-    }
-
-    val typeNode = jsonNode.get("type") ?: throw IllegalArgumentException("Missing 'type' field")
-    return when (val type = typeNode.asText()) {
-      "string" -> jsonNode.get("default") ?: JsonNodeFactory.instance.textNode("mock_string")
-      "integer" -> jsonNode.get("default") ?: JsonNodeFactory.instance.numberNode(42)
-      "number" -> jsonNode.get("default") ?: JsonNodeFactory.instance.numberNode(3.14)
-      "boolean" -> jsonNode.get("default") ?: JsonNodeFactory.instance.booleanNode(true)
-      "array" -> JsonNodeFactory.instance.arrayNode()
-
-      "object" -> JsonNodeFactory.instance.objectNode()
-
-      else -> throw IllegalArgumentException("Unsupported type: $type")
+  private fun buildStringDefault(schema: JsonNode): TextNode {
+    // 1. check the “default” field
+    schema.get("default")?.asText()?.let { return TextNode(it) }
+    // 2. fall back to the pattern_descriptor
+    schema.get("pattern_descriptor")?.asText()?.let { return TextNode(it) }
+    // 3. fall back to the first example in the examples array
+    schema
+      .get("examples")
+      ?.takeIf { it.isArray && it.size() > 0 }
+      ?.get(0)
+      ?.asText()
+      ?.let { return TextNode(it) }
+    // 4. explicit format-based values
+    return when (schema.get("format")?.asText()) {
+      "date" -> TextNode("1970-01-01")
+      "date-time" -> TextNode("1970-01-01T00:00:00Z")
+      // If all else fails, use a mock string
+      else -> TextNode("mock_string")
     }
   }
 }
