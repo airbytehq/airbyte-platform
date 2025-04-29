@@ -168,6 +168,28 @@ Renders the worker.syncJobInitRetryTimeoutMinutes environment variable
 {{- end }}
 
 {{/*
+Renders the worker.useCustomNodeSelector value
+*/}}
+{{- define "airbyte.worker.useCustomNodeSelector" }}
+	{{- if eq .Values.worker.useCustomNodeSelector nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.worker.useCustomNodeSelector }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the worker.useCustomNodeSelector environment variable
+*/}}
+{{- define "airbyte.worker.useCustomNodeSelector.env" }}
+- name: USE_CUSTOM_NODE_SELECTOR
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: USE_CUSTOM_NODE_SELECTOR
+{{- end }}
+
+{{/*
 Renders the worker.useStreamCapableState value
 */}}
 {{- define "airbyte.worker.useStreamCapableState" }}
@@ -274,6 +296,7 @@ Renders the set of all worker environment variables
 {{- include "airbyte.worker.syncJobMaxAttempts.env" . }}
 {{- include "airbyte.worker.syncJobMaxTimeoutDays.env" . }}
 {{- include "airbyte.worker.syncJobInitRetryTimeoutMinutes.env" . }}
+{{- include "airbyte.worker.useCustomNodeSelector.env" . }}
 {{- include "airbyte.worker.useStreamCapableState.env" . }}
 {{- include "airbyte.worker.workflowFailureRestartDelaySeconds.env" . }}
 {{- include "airbyte.worker.workspaceDockerMount.env" . }}
@@ -294,6 +317,7 @@ MAX_SYNC_WORKERS: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}
 SYNC_JOB_MAX_ATTEMPTS: {{ include "airbyte.worker.syncJobMaxAttempts" . | quote }}
 SYNC_JOB_MAX_TIMEOUT_DAYS: {{ include "airbyte.worker.syncJobMaxTimeoutDays" . | quote }}
 SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES: {{ include "airbyte.worker.syncJobInitRetryTimeoutMinutes" . | quote }}
+USE_CUSTOM_NODE_SELECTOR: {{ include "airbyte.worker.useCustomNodeSelector" . | quote }}
 USE_STREAM_CAPABLE_STATE: {{ include "airbyte.worker.useStreamCapableState" . | quote }}
 WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: {{ include "airbyte.worker.workflowFailureRestartDelaySeconds" . | quote }}
 WORKSPACE_DOCKER_MOUNT: {{ include "airbyte.worker.workspaceDockerMount" . | quote }}

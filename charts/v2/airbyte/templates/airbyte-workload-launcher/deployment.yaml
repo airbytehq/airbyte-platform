@@ -66,7 +66,7 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadLauncher.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
-        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
         {{- end }}
@@ -77,6 +77,7 @@ spec:
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.scheduling.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
@@ -95,11 +96,19 @@ spec:
         {{- include "airbyte.workloadLauncher.dataPlane.envs" . | nindent 8 }}
         {{- include "airbyte.workloadLauncher.images.envs" . | nindent 8 }}
 
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE 
+          value: {{ include "airbyte.componentName" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
+
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
         {{- end }}
 
         {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- end }}
 

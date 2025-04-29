@@ -9,9 +9,9 @@ Expand the name of the chart.
 Returns the name of a given component
 */}}
 {{- define "airbyte.componentName" -}}
-{{ $tplPathParts := split "/" $.Template.Name }}
-{{ $indexLast := printf "_%d" (sub (len $tplPathParts) 2) }}
-{{ $componentName := trimPrefix "airbyte-" (index $tplPathParts $indexLast) }}
+{{- $tplPathParts := split "/" $.Template.Name }}
+{{- $indexLast := printf "_%d" (sub (len $tplPathParts) 2) }}
+{{- $componentName := trimPrefix "airbyte-" (index $tplPathParts $indexLast) }}
 {{- printf "%s" $componentName }}
 {{- end }}
 

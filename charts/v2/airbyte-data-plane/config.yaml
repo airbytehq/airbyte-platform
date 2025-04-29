@@ -27,10 +27,6 @@ common:
 dataPlane:
   keyBasePath: dataPlane
   config:
-    - env: DATA_PLANE_ID
-      key: id
-      defaultValue: local
-
     - env: CONTROL_PLANE_AUTH_ENDPOINT
       key: controlPlaneAuthEndpoint
       defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
@@ -45,10 +41,10 @@ dataPlane:
 
     - env: DATAPLANE_CLIENT_ID_SECRET_NAME
       key: clientIdSecretName 
+      defaultValueExp: (include "airbyte-data-plane.dataPlane.secretName" .)
 
     - env: DATAPLANE_CLIENT_ID_SECRET_KEY
       key: clientIdSecretKey
-      #refKey: '{{ include "airbyte-data-plane.dataPlane.clientId.secretKey" . }}'
       defaultValue: DATAPLANE_CLIENT_ID
 
     - env: DATAPLANE_CLIENT_SECRET
@@ -57,11 +53,11 @@ dataPlane:
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
       key: clientSecretSecretName 
+      defaultValueExp: (include "airbyte-data-plane.dataPlane.secretName" .)
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_KEY
       key: clientSecretSecretKey
-      #refKey: '{{ include "airbyte-data-plane.dataPlane.clientSecret.secretKey" . }}'
-      defaulValue: DATAPLANE_CLIENT_SECRET
+      defaultValue: DATAPLANE_CLIENT_SECRET
 
 enterprise:
   keyBasePath: enterprise
@@ -152,25 +148,6 @@ jobs.scheduling:
 
     - env: JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME
       key: isolated.runtimeClassName
-
-keycloak.client:
-  keyBasePath: keycloak
-  config:
-    - env: KEYCLOAK_HOST
-      key: host
-      valueExp: (get (urlParse .Values.airbyteUrl) "host")
-
-    - env: KEYCLOAK_INTERNAL_REALM
-      key: internalRealm
-      defaultValue: _airbyte-internal
-
-    - env: KEYCLOAK_INTERNAL_REALM_ISSUER
-      key: realmIssuer
-      valueExp: (printf "%s/auth/realms/%s" (include "airbyte-data-plane.common.airbyteUrl" .) (include "airbyte-data-plane.keycloak.client.internalRealm" .))
-
-    - env: KEYCLOAK_PROTOCOL
-      key: protocol
-      defaultValue: https
 
 logging:
   keyBasePath: logging
@@ -506,7 +483,6 @@ tracking:
 
     - env: SEGMENT_WRITE_KEY
       key: segment.writeKeySecretKey
-      defaultValue: 7UDdp5K55CyiGgsauOr2pNNujGvmhaeu
 
 worker:
   config:
@@ -601,15 +577,18 @@ workloadApiServer:
       key: host
       defaultValueExp: (include "airbyte-data-plane.common.airbyteUrl" .)
 
+    # DEPRECATED: ?
     - env: WORKLOAD_API_BEARER_TOKEN
       key: bearerToken
       defaultValue: token
       sensitive: true
 
+    # DEPRECATED: ?
     - env: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
       key: bearerTokenSecretName
       defaultValueExp: (include "airbyte-data-plane.workloadApiServer.secretName" .)
 
+    # DEPRECATED: ?
     - env: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
       key: bearerTokenSecretKey
       defaultValue: WORKLOAD_API_BEARER_TOKEN

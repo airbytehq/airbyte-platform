@@ -4,7 +4,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: keycloak-setup
+  name: {{ .Release.Name }}-keycloak-setup
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.keycloakSetup.extraLabels }}

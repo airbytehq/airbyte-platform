@@ -121,7 +121,7 @@ Renders the workloadLauncher.dataPlane.clientId environment variable
 Renders the workloadLauncher.dataPlane.clientIdSecretName value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientIdSecretName" }}
-    {{- .Values.workloadLauncher.dataPlane.clientIdSecretName | default .Values.global.auth.secretName }}
+    {{- .Values.workloadLauncher.dataPlane.clientIdSecretName | default (include "airbyte.auth.bootstrap.managedSecretName" .) }}
 {{- end }}
 
 {{/*
@@ -182,7 +182,7 @@ Renders the workloadLauncher.dataPlane.clientSecret environment variable
 Renders the workloadLauncher.dataPlane.clientSecretSecretName value
 */}}
 {{- define "airbyte.workloadLauncher.dataPlane.clientSecretSecretName" }}
-    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretName | default .Values.global.auth.secretName }}
+    {{- .Values.workloadLauncher.dataPlane.clientSecretSecretName | default (include "airbyte.auth.bootstrap.managedSecretName" .) }}
 {{- end }}
 
 {{/*
