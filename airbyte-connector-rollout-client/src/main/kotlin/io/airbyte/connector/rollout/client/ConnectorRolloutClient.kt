@@ -27,6 +27,7 @@ import io.temporal.client.WorkflowOptions
 import io.temporal.client.WorkflowStub
 import io.temporal.client.WorkflowUpdateException
 import io.temporal.client.WorkflowUpdateStage
+import io.temporal.common.RetryOptions
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -106,6 +107,7 @@ class ConnectorRolloutClient
             .setWorkflowId(workflowId)
             .setTaskQueue(Constants.TASK_QUEUE)
             .setWorkflowIdConflictPolicy(WorkflowIdConflictPolicy.WORKFLOW_ID_CONFLICT_POLICY_TERMINATE_EXISTING)
+            .setRetryOptions(RetryOptions.newBuilder().setMaximumAttempts(1).build())
             .build(),
         )
 
