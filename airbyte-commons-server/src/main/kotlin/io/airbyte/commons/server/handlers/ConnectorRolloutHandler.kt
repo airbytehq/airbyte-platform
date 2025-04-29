@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.model.generated.ConnectorRolloutActorSyncInfo
 import io.airbyte.api.model.generated.ConnectorRolloutFinalizeRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutRead
 import io.airbyte.api.model.generated.ConnectorRolloutRequestBody
@@ -15,14 +14,12 @@ import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
-import io.airbyte.api.problems.throwable.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblem
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.shared.ActorSelectionInfo
 import io.airbyte.connector.rollout.shared.Constants.DEFAULT_MAX_ROLLOUT_PERCENTAGE
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
@@ -30,11 +27,9 @@ import io.airbyte.data.exceptions.InvalidRequestException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectorRolloutService
-import io.micronaut.cache.annotation.Cacheable
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Inject
 import jakarta.inject.Singleton
-import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -51,7 +46,6 @@ open class ConnectorRolloutHandler
     private val connectorRolloutService: ConnectorRolloutService,
     private val actorDefinitionService: ActorDefinitionService,
     private val actorDefinitionVersionUpdater: ActorDefinitionVersionUpdater,
-    private val userPersistence: UserPersistence,
     private val rolloutActorFinder: RolloutActorFinder,
     private val connectorRolloutHelper: ConnectorRolloutHelper,
   ) {
@@ -103,7 +97,37 @@ open class ConnectorRolloutHandler
 
     @VisibleForTesting
     open fun getAndRollOutConnectorRollout(connectorRolloutRequest: ConnectorRolloutRequestBody): ConnectorRollout {
-      var connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutRequest.id)
+      val connectorRollout = connectorRolloutService.getConnectorRollout(connectorRolloutRequest.id)
+
+      validateRolloutState(connectorRollout)
+
+      if (connectorRolloutRequest.actorIds == null &&
+        (connectorRolloutRequest.targetPercentage == null || connectorRolloutRequest.targetPercentage == 0)
+      ) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message("ActorIds or targetPercentage must be provided, but neither were found."),
+        )
+      }
+
+      connectorRolloutRequest.actorIds?.let { actorIds ->
+        pinActors(actorIds, connectorRollout)
+      }
+
+      connectorRolloutRequest.targetPercentage?.let { targetPercentage ->
+        pinByPercentage(connectorRollout, targetPercentage, connectorRolloutRequest.rolloutStrategy!!)
+      }
+
+      connectorRollout.apply {
+        state = ConnectorEnumRolloutState.IN_PROGRESS
+        rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString())
+        updatedAt = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
+        currentTargetRolloutPct = getPercentagePinned(this)
+      }
+
+      return connectorRollout
+    }
+
+    fun validateRolloutState(connectorRollout: ConnectorRollout) {
       val validStates =
         setOf(
           ConnectorEnumRolloutState.INITIALIZED,
@@ -113,46 +137,75 @@ open class ConnectorRolloutHandler
         )
       if (connectorRollout.state !in validStates) {
         throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message(
-            "Connector rollout must be in $validStates state to update the rollout, but was in state " +
-              connectorRollout.state.toString(),
-          ),
+          ProblemMessageData().message("Connector rollout must be in $validStates state to update, but was ${connectorRollout.state}."),
         )
       }
-      if (connectorRolloutRequest.actorIds == null && connectorRolloutRequest.targetPercentage == null) {
-        throw ConnectorRolloutInvalidRequestProblem(
-          ProblemMessageData().message(
-            "ActorIds or targetPercentage must be provided, but neither were found.",
-          ),
-        )
-      }
-      if (connectorRolloutRequest.actorIds != null) {
-        try {
-          actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
-            connectorRolloutRequest.actorIds.toSet(),
-            connectorRollout.actorDefinitionId,
-            connectorRollout.releaseCandidateVersionId,
-            connectorRollout.id,
-          )
-        } catch (e: InvalidRequestException) {
-          throw ConnectorRolloutInvalidRequestProblem(
-            ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"),
-          )
-        }
-        connectorRollout.state = ConnectorEnumRolloutState.IN_PROGRESS
-        connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(connectorRolloutRequest.rolloutStrategy.toString())
-        connectorRollout.updatedAt = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
-      }
-      if (connectorRolloutRequest.targetPercentage != null) {
-        connectorRollout = pinByPercentage(connectorRollout, connectorRolloutRequest.targetPercentage!!, connectorRolloutRequest.rolloutStrategy!!)
-      }
-
-      // get current percentage pinned
-      connectorRollout.currentTargetRolloutPct = getPercentagePinned(getActorSelectionInfo(connectorRollout, 0))
-      return connectorRollout
     }
 
-    fun getPercentagePinned(actorSelectionInfo: ActorSelectionInfo): Int {
+    private fun pinActors(
+      actorIds: List<UUID>,
+      connectorRollout: ConnectorRollout,
+    ) {
+      try {
+        actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
+          actorIds.toSet(),
+          connectorRollout.actorDefinitionId,
+          connectorRollout.releaseCandidateVersionId,
+          connectorRollout.id,
+        )
+      } catch (e: InvalidRequestException) {
+        throw ConnectorRolloutInvalidRequestProblem(
+          ProblemMessageData().message("Failed to create release candidate pins: ${e.message}"),
+        )
+      }
+    }
+
+    open fun pinByPercentage(
+      connectorRollout: ConnectorRollout,
+      requestedTargetPercentage: Int,
+      rolloutStrategy: ConnectorRolloutStrategy,
+    ) {
+      val cappedTarget =
+        getValidPercentageToPin(connectorRollout.id, connectorRollout.finalTargetRolloutPct, requestedTargetPercentage, rolloutStrategy)
+      val percentageAlreadyPinned = getPercentagePinned(connectorRollout)
+
+      if (percentageAlreadyPinned >= cappedTarget) {
+        logger.info { "Already pinned $percentageAlreadyPinned% of actors, no action needed for target $cappedTarget%." }
+        return
+      }
+
+      val actorSelectionInfo = getActorSelectionInfo(connectorRollout, cappedTarget)
+
+      if (actorSelectionInfo.actorIdsToPin.isEmpty()) {
+        logger.info { "No eligible actors to pin for target $cappedTarget% (already at $percentageAlreadyPinned%)." }
+        return
+      }
+
+      pinActors(actorSelectionInfo.actorIdsToPin, connectorRollout)
+    }
+
+    internal fun getValidPercentageToPin(
+      rolloutId: UUID,
+      maxRolloutPercentage: Int?,
+      requestedTargetPercentage: Int,
+      rolloutStrategy: ConnectorRolloutStrategy,
+    ): Int {
+      if (rolloutStrategy != ConnectorRolloutStrategy.AUTOMATED) {
+        return requestedTargetPercentage
+      }
+
+      val maxRolloutPct = maxRolloutPercentage ?: DEFAULT_MAX_ROLLOUT_PERCENTAGE
+      val capped = min(requestedTargetPercentage, maxRolloutPct)
+
+      if (requestedTargetPercentage > capped) {
+        logger.info { "Rollout $rolloutId requested $requestedTargetPercentage% but capped at $capped%." }
+      }
+      return capped
+    }
+
+    fun getPercentagePinned(connectorRollout: ConnectorRollout): Int {
+      val actorSelectionInfo = getActorSelectionInfo(connectorRollout, 0)
+
       logger.info {
         "getPercentagePinned actorSelectionInfo=$actorSelectionInfo percentagePinned=${ceil(
           (actorSelectionInfo.nPreviouslyPinned + actorSelectionInfo.nNewPinned) / actorSelectionInfo.nActorsEligibleOrAlreadyPinned.toDouble(),
@@ -161,79 +214,6 @@ open class ConnectorRolloutHandler
       return ceil(
         (100 * actorSelectionInfo.nPreviouslyPinned + actorSelectionInfo.nNewPinned) / actorSelectionInfo.nActorsEligibleOrAlreadyPinned.toDouble(),
       ).toInt()
-    }
-
-    open fun pinByPercentage(
-      connectorRollout: ConnectorRollout,
-      targetPercentage: Int,
-      rolloutStrategy: ConnectorRolloutStrategy,
-    ): ConnectorRollout {
-      val percentageAlreadyPinned = getPercentagePinned(getActorSelectionInfo(connectorRollout, 0))
-
-      val actualPercentageToPin =
-        getValidPercentageToPin(
-          connectorRollout,
-          targetPercentage,
-          rolloutStrategy,
-          percentageAlreadyPinned,
-        )
-
-      val actorSelectionInfo = getActorSelectionInfo(connectorRollout, actualPercentageToPin)
-      if (actorSelectionInfo.actorIdsToPin.isEmpty()) {
-        throw ConnectorRolloutNotEnoughActorsProblem(
-          ProblemMessageData().message(
-            "No additional actors are eligible to be pinned for the progressive rollout.",
-          ),
-        )
-      }
-
-      try {
-        actorDefinitionVersionUpdater.createReleaseCandidatePinsForActors(
-          actorSelectionInfo.actorIdsToPin.toSet(),
-          connectorRollout.actorDefinitionId,
-          connectorRollout.releaseCandidateVersionId,
-          connectorRollout.id,
-        )
-      } catch (e: InvalidRequestException) {
-        throw ConnectorRolloutInvalidRequestProblem(ProblemMessageData().message("Failed to create release candidate pins for actors: ${e.message}"))
-      }
-
-      connectorRollout.state = ConnectorEnumRolloutState.IN_PROGRESS
-      connectorRollout.rolloutStrategy = ConnectorEnumRolloutStrategy.fromValue(rolloutStrategy.toString())
-      connectorRollout.updatedAt = OffsetDateTime.now(ZoneOffset.UTC).toEpochSecond()
-      return connectorRollout
-    }
-
-    @VisibleForTesting
-    internal fun getValidPercentageToPin(
-      connectorRollout: ConnectorRollout,
-      targetPercentage: Int,
-      rolloutStrategy: ConnectorRolloutStrategy,
-      percentageAlreadyPinned: Int,
-    ): Int {
-      if (rolloutStrategy != ConnectorRolloutStrategy.AUTOMATED) {
-        return targetPercentage
-      }
-      val maxRolloutPct =
-        if (connectorRollout.finalTargetRolloutPct == null) {
-          DEFAULT_MAX_ROLLOUT_PERCENTAGE
-        } else {
-          connectorRollout.finalTargetRolloutPct!!
-        }
-
-      val actualTargetRolloutPct = min(targetPercentage, maxRolloutPct)
-      if (targetPercentage > actualTargetRolloutPct) {
-        logger.info { "Requested to pin $targetPercentage% of actors but capped at $actualTargetRolloutPct." }
-      }
-
-      if (percentageAlreadyPinned >= actualTargetRolloutPct) {
-        throw ConnectorRolloutMaximumRolloutPercentageReachedProblem(
-          ProblemMessageData().message(
-            "Requested to pin $actualTargetRolloutPct% of actors but already pinned ${connectorRollout.currentTargetRolloutPct}.",
-          ),
-        )
-      }
-      return actualTargetRolloutPct
     }
 
     @VisibleForTesting
@@ -296,8 +276,6 @@ open class ConnectorRolloutHandler
       return connectorRollout
     }
 
-    private fun unixTimestampToOffsetDateTime(unixTimestamp: Long): OffsetDateTime = Instant.ofEpochSecond(unixTimestamp).atOffset(ZoneOffset.UTC)
-
     @Transactional("config")
     open fun startConnectorRollout(connectorRolloutStart: ConnectorRolloutStartRequestBody): ConnectorRolloutRead {
       val connectorRollout = getAndValidateStartRequest(connectorRolloutStart)
@@ -310,7 +288,7 @@ open class ConnectorRolloutHandler
           connectorRollout.id.toString(),
           connectorRollout.releaseCandidateVersionId,
         )
-        connectorRollout.currentTargetRolloutPct = getPercentagePinned(getActorSelectionInfo(connectorRollout, 0))
+        connectorRollout.currentTargetRolloutPct = getPercentagePinned(connectorRollout)
       }
 
       val updatedConnectorRollout = connectorRolloutService.writeConnectorRollout(connectorRollout)
@@ -358,18 +336,6 @@ open class ConnectorRolloutHandler
       return connectorRolloutHelper.buildConnectorRolloutRead(updatedConnectorRollout, true)
     }
 
-    fun getActorSyncInfo(id: UUID): Map<UUID, ConnectorRolloutActorSyncInfo> {
-      val rollout = connectorRolloutService.getConnectorRollout(id)
-      val actorSyncInfoMap = rolloutActorFinder.getSyncInfoForPinnedActors(rollout)
-      return actorSyncInfoMap.mapValues { (id, syncInfo) ->
-        ConnectorRolloutActorSyncInfo()
-          .actorId(id)
-          .numConnections(syncInfo.nConnections)
-          .numSucceeded(syncInfo.nSucceeded)
-          .numFailed(syncInfo.nFailed)
-      }
-    }
-
     @Transactional("config")
     open fun getActorSelectionInfo(
       connectorRollout: ConnectorRollout,
@@ -392,16 +358,6 @@ open class ConnectorRolloutHandler
       }
       return actorSelectionInfo
     }
-
-    @Cacheable("rollout-updated-by")
-    open fun getUpdatedBy(
-      rolloutStrategy: ConnectorEnumRolloutStrategy,
-      updatedById: UUID,
-    ): String =
-      when (rolloutStrategy) {
-        ConnectorEnumRolloutStrategy.MANUAL -> userPersistence.getUser(updatedById).get().email
-        else -> ""
-      }
 
     private fun isTerminalState(state: ConnectorEnumRolloutState): Boolean =
       ConnectorRolloutFinalState.entries
