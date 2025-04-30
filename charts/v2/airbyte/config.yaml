@@ -867,6 +867,18 @@ secretsManager:
         - GOOGLE_SECRET_MANAGER
       sensitive: true
 
+    - env: SECRET_STORE_GCP_SECRET_KEY
+      key: googleSecretManager.credentialsSecretKey
+      valueExp: (include "airbyte.secretsManager.googleSecretManager.credentials.secretKey" .)
+      discriminatorOpts: 
+        - GOOGLE_SECRET_MANAGER
+  
+    - env: SECRET_STORE_GCP_SECRET_NAME
+      key: googleSecretManager.credentailsSecretName
+      valueExp: (include "airbyte.secretsManager.secretName" .)
+      discriminatorOpts: 
+        - GOOGLE_SECRET_MANAGER
+
     - env: VAULT_ADDRESS
       key: vault.address
       defaultValueExp: (printf "http://airbyte-vault-svc.%s:8200" .Release.Namespace)
