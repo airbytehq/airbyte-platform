@@ -166,3 +166,20 @@ Hook for passing in extra secrets
 */}}
 {{- define "airbyte.extra.secrets" }}
 {{- end }}
+
+
+{{/*
+Returns a comma-delimited string of imagePullSecret names.
+Usage:
+  {{ include "airbyte.imagePullSecretNames" (dict "secrets" .Values.global.imagePullSecrets "extra" (list "foo" "bar")) }}
+*/}}
+{{- define "airbyte.imagePullSecretNames" -}}
+  {{- $secrets := default list .secrets }}
+  {{- $extra := default list .extra }}
+  {{- $names := list }}
+  {{- range $secrets }}
+    {{- $names = append $names .name }}
+  {{- end }}
+  {{- $all := concat $names $extra }}
+  {{- join "," $all }}
+{{- end }}

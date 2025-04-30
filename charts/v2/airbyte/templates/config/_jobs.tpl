@@ -67,7 +67,7 @@ Renders the jobs.kube.localVolume.enabled environment variable
 Renders the global.jobs.kube.mainContainerImagePullSecret value
 */}}
 {{- define "airbyte.jobs.kube.mainContainerImagePullSecret" }}
-    {{- join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.mainContainerImagePullSecret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.mainContainerImagePullSecret)) }}
+    {{- (include "airbyte.imagePullSecretNames" (dict "secrets" .Values.global.imagePullSecrets "extra" (list .Values.global.jobs.kube.mainContainerImagePullSecret))) }}
 {{- end }}
 
 {{/*

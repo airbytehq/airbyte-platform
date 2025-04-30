@@ -494,7 +494,7 @@ jobs:
 
     - env: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
       key: kube.mainContainerImagePullSecret
-      valueExp: join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.mainContainerImagePullSecret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.mainContainerImagePullSecret))
+      valueExp: (include "airbyte.imagePullSecretNames" (dict "secrets" .Values.global.imagePullSecrets "extra" (list .Values.global.jobs.kube.mainContainerImagePullSecret)))
 
     - env: JOB_KUBE_ANNOTATIONS
       key: kube.annotations
