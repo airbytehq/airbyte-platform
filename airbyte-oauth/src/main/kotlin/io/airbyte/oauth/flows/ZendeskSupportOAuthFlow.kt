@@ -22,7 +22,7 @@ class ZendeskSupportOAuthFlow(
 ) : BaseOAuth2Flow(httpClient) {
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,

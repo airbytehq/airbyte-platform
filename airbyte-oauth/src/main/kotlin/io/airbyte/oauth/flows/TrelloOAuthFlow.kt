@@ -37,7 +37,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class)
   override fun getSourceConsentUrl(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
     oauthConfigSpecification: OAuthConfigSpecification?,
@@ -47,7 +47,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class)
   override fun getDestinationConsentUrl(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
     oauthConfigSpecification: OAuthConfigSpecification?,
@@ -81,7 +81,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,
@@ -90,7 +90,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
@@ -102,7 +102,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class)
   override fun completeDestinationOAuth(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,
@@ -111,7 +111,7 @@ class TrelloOAuthFlow : BaseOAuthFlow {
   @Throws(IOException::class, JsonValidationException::class)
   override fun completeDestinationOAuth(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
