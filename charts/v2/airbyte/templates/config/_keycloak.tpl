@@ -24,6 +24,24 @@ Renders the keycloak.url environment variable
 {{- end }}
 
 {{/*
+Renders the keycloak.host value
+*/}}
+{{- define "airbyte.keycloak.host" }}
+    {{- (get (urlParse .Values.global.airbyteUrl) "host") }}
+{{- end }}
+
+{{/*
+Renders the keycloak.host environment variable
+*/}}
+{{- define "airbyte.keycloak.host.env" }}
+- name: KEYCLOAK_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_HOST
+{{- end }}
+
+{{/*
 Renders the keycloak.service.port value
 */}}
 {{- define "airbyte.keycloak.service.port" }}
@@ -82,6 +100,7 @@ Renders the set of all keycloak environment variables
 */}}
 {{- define "airbyte.keycloak.envs" }}
 {{- include "airbyte.keycloak.url.env" . }}
+{{- include "airbyte.keycloak.host.env" . }}
 {{- include "airbyte.keycloak.service.port.env" . }}
 {{- include "airbyte.keycloak.protocol.env" . }}
 {{- include "airbyte.keycloak.javaOpts.env" . }}
@@ -92,6 +111,7 @@ Renders the set of all keycloak config map variables
 */}}
 {{- define "airbyte.keycloak.configVars" }}
 KEYCLOAK_HOSTNAME_URL: {{ include "airbyte.keycloak.url" . | quote }}
+KEYCLOAK_HOST: {{ include "airbyte.keycloak.host" . | quote }}
 KEYCLOAK_PORT: {{ include "airbyte.keycloak.service.port" . | quote }}
 KEYCLOAK_PROTOCOL: {{ include "airbyte.keycloak.protocol" . | quote }}
 JAVA_OPTS_APPEND: {{ include "airbyte.keycloak.javaOpts" . | quote }}
