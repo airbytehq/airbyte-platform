@@ -30,13 +30,6 @@ import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
 
-/**
- * This class is migrated from cloud-server PermissionApiController
- * [io.airbyte.cloud.server.apis.PermissionApiController].
- *
- * TODO: migrate all Permission endpoints (including some endpoints in WebBackend API) from Cloud to
- * OSS.
- */
 @Controller("/api/v1/permissions")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 @ExecuteOn(AirbyteTaskExecutors.IO)

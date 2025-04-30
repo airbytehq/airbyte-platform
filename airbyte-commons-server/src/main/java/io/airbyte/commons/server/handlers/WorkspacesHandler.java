@@ -39,7 +39,6 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.random.RandomKt;
-import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceConverter;
@@ -57,9 +56,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
@@ -94,15 +91,13 @@ public class WorkspacesHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final WorkspacePersistence workspacePersistence;
   private final OrganizationPersistence organizationPersistence;
-  private final SecretsRepositoryWriter secretsRepositoryWriter;
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
   private final ConnectionsHandler connectionsHandler;
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
   private final TrackingClient trackingClient;
-  private final ApiPojoConverters apiPojoConverters;
   private final ProductLimitsProvider limitsProvider;
   private final ConsumptionService consumptionService;
   private final FeatureFlagClient ffClient;
@@ -111,30 +106,26 @@ public class WorkspacesHandler {
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
                            final OrganizationPersistence organizationPersistence,
-                           final SecretsRepositoryWriter secretsRepositoryWriter,
-                           final PermissionPersistence permissionPersistence,
+                           final PermissionHandler permissionHandler,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler,
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
                            final TrackingClient trackingClient,
-                           final ApiPojoConverters apiPojoConverters,
                            final ProductLimitsProvider limitsProvider,
                            final ConsumptionService consumptionService,
                            final FeatureFlagClient ffClient,
                            final Configs.AirbyteEdition airbyteEdition) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
-    this.secretsRepositoryWriter = secretsRepositoryWriter;
-    this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
     this.connectionsHandler = connectionsHandler;
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
     this.trackingClient = trackingClient;
-    this.apiPojoConverters = apiPojoConverters;
     this.limitsProvider = limitsProvider;
     this.consumptionService = consumptionService;
     this.ffClient = ffClient;
@@ -356,7 +347,7 @@ public class WorkspacesHandler {
   public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
       throws IOException {
     // If user has instance_admin permission, list all workspaces.
-    if (permissionPersistence.isUserInstanceAdmin(request.getUserId())) {
+    if (permissionHandler.isUserInstanceAdmin(request.getUserId())) {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.

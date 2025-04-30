@@ -50,7 +50,6 @@ public class PermissionPersistence {
    * @return the permission information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-
   public Optional<Permission> getPermission(final UUID permissionId) throws IOException {
 
     final Result<Record> result = database.query(ctx -> ctx

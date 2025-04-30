@@ -9,10 +9,10 @@ import io.airbyte.commons.auth.AuthRoleConstants;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.helpers.PermissionHelper;
-import io.airbyte.config.persistence.PermissionPersistence;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -34,11 +34,11 @@ public class RbacRoleHelper {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AuthenticationHeaderResolver headerResolver;
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
 
-  public RbacRoleHelper(final AuthenticationHeaderResolver headerResolver, final PermissionPersistence permissionPersistence) {
+  public RbacRoleHelper(final AuthenticationHeaderResolver headerResolver, final PermissionHandler permissionHandler) {
     this.headerResolver = headerResolver;
-    this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
   }
 
   public Collection<String> getRbacRoles(final String authUserId, final Map<String, String> headerMap) {
@@ -67,7 +67,7 @@ public class RbacRoleHelper {
       allRoles.add(AuthRoleConstants.SELF);
     }
     try {
-      if (permissionPersistence.isAuthUserInstanceAdmin(authUserId)) {
+      if (permissionHandler.isAuthUserInstanceAdmin(authUserId)) {
         allRoles.addAll(getInstanceAdminRoles());
       }
     } catch (final IOException ex) {
@@ -110,7 +110,7 @@ public class RbacRoleHelper {
 
   private Permission.PermissionType fetchWorkspacePermission(final String authUserId, final UUID workspaceId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
+      return permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
     } catch (final IOException ex) {
       log.error("Failed to get permission for user {} and workspaces {}", authUserId, workspaceId, ex);
       throw new RuntimeException(ex);
@@ -142,7 +142,7 @@ public class RbacRoleHelper {
 
   private Permission.PermissionType fetchOrganizationPermission(final String authUserId, final UUID orgId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndOrganization(orgId, authUserId);
+      return permissionHandler.findPermissionTypeForUserAndOrganization(orgId, authUserId);
     } catch (final IOException ex) {
       log.error("Failed to get permission for user {} and organization {}", authUserId, orgId, ex);
       throw new RuntimeException(ex);

@@ -57,7 +57,6 @@ import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.SQLOperationNotAllowedException;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ApplicationService;
@@ -95,7 +94,6 @@ public class UserHandler {
 
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
-  private final PermissionPersistence permissionPersistence;
   private final PermissionService permissionService;
   private final ExternalUserService externalUserService;
   private final Optional<ApplicationService> applicationService;
@@ -112,7 +110,6 @@ public class UserHandler {
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
-                     final PermissionPersistence permissionPersistence,
                      final PermissionService permissionService,
                      final ExternalUserService externalUserService,
                      final OrganizationPersistence organizationPersistence,
@@ -130,7 +127,6 @@ public class UserHandler {
     this.externalUserService = externalUserService;
     this.organizationPersistence = organizationPersistence;
     this.organizationEmailDomainService = organizationEmailDomainService;
-    this.permissionPersistence = permissionPersistence;
     this.permissionService = permissionService;
     this.applicationService = applicationService;
     this.workspacesHandler = workspacesHandler;
@@ -160,10 +156,9 @@ public class UserHandler {
    * @param userAuthIdRequestBody The {@link UserAuthIdRequestBody} that contains the auth ID.
    * @return The user associated with the auth ID.
    * @throws IOException if unable to retrieve the user.
-   * @throws JsonValidationException if unable to retrieve the user.
    */
   public UserRead getUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException {
     final Optional<AuthenticatedUser> user = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
     if (user.isPresent()) {
       return buildUserRead(AuthenticatedUserConverter.toUser(user.get()));
@@ -178,10 +173,9 @@ public class UserHandler {
    * @param userEmailRequestBody The {@link UserEmailRequestBody} that contains the email.
    * @return The user associated with the email.
    * @throws IOException if unable to retrieve the user.
-   * @throws JsonValidationException if unable to retrieve the user.
    */
   public UserRead getUserByEmail(final UserEmailRequestBody userEmailRequestBody)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException {
     final Optional<User> user = userPersistence.getUserByEmail(userEmailRequestBody.getEmail());
     if (user.isPresent()) {
       return buildUserRead(user.get());
@@ -190,7 +184,7 @@ public class UserHandler {
     }
   }
 
-  private UserRead buildUserRead(final UUID userId) throws ConfigNotFoundException, IOException, JsonValidationException {
+  private UserRead buildUserRead(final UUID userId) throws ConfigNotFoundException, IOException {
     final Optional<User> user = userPersistence.getUser(userId);
     if (user.isEmpty()) {
       throw new ConfigNotFoundException(ConfigSchema.USER, userId);
@@ -302,13 +296,13 @@ public class UserHandler {
 
   public OrganizationUserReadList listUsersInOrganization(final OrganizationIdRequestBody organizationIdRequestBody) throws IOException {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
-    final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(organizationId);
+    final List<UserPermission> userPermissions = permissionHandler.listUsersInOrganization(organizationId);
     return buildOrganizationUserReadList(userPermissions, organizationId);
   }
 
   public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
     final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
-    final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(workspaceId);
+    final List<UserPermission> userPermissions = permissionHandler.listUsersInWorkspace(workspaceId);
     return buildWorkspaceUserReadList(userPermissions, workspaceId);
   }
 
@@ -319,7 +313,7 @@ public class UserHandler {
   }
 
   public UserWithPermissionInfoReadList listInstanceAdminUsers() throws IOException {
-    final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
+    final List<UserPermission> userPermissions = permissionHandler.listInstanceAdminUsers();
     return new UserWithPermissionInfoReadList().users(userPermissions.stream()
         .map(userPermission -> new UserWithPermissionInfoRead()
             .userId(userPermission.getUser().getUserId())
@@ -529,17 +523,16 @@ public class UserHandler {
 
   private AuthenticatedUser resolveIncomingJwtUser(final UserAuthIdRequestBody userAuthIdRequestBody) {
     final String authUserId = userAuthIdRequestBody.getAuthUserId();
-    final AuthenticatedUser incomingJwtUser = userAuthenticationResolver.resolveUser(authUserId);
-    return incomingJwtUser;
+    return userAuthenticationResolver.resolveUser(authUserId);
   }
 
   private UserRead createUserFromIncomingUser(final AuthenticatedUser incomingUser)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws ConfigNotFoundException, IOException {
 
     final UUID userId = uuidGenerator.get();
     final AuthenticatedUser user = incomingUser.withUserId(userId);
 
-    LOGGER.debug("Creating User: " + user);
+    LOGGER.debug("Creating User: {}", user);
 
     try {
       userPersistence.writeAuthenticatedUser(user);
@@ -571,7 +564,7 @@ public class UserHandler {
     // look for any existing user permissions for this organization. exclude the default user that comes
     // with the Airbyte installation, since we want the first real SSO user to be the org admin.
     final List<UserPermission> orgPermissionsExcludingDefaultUser =
-        permissionPersistence.listPermissionsForOrganization(organization.getOrganizationId())
+        permissionHandler.listPermissionsForOrganization(organization.getOrganizationId())
             .stream()
             .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
             .toList();

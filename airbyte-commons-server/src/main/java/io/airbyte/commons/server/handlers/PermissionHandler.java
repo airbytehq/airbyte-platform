@@ -21,6 +21,7 @@ import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
+import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
@@ -42,8 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PermissionHandler, provides basic CRUD operation access for permissions. Some are migrated from
- * Cloud PermissionHandler {@link io.airbyte.cloud.server.handlers.PermissionHandler}.
+ * PermissionHandler, provides basic CRUD operation access for permissions.
  */
 @Singleton
 public class PermissionHandler {
@@ -365,21 +365,6 @@ public class PermissionHandler {
   }
 
   /**
-   * Lists the permissions for a workspace.
-   *
-   * @param workspaceId The workspace identifier.
-   * @return The permissions for the given workspace.
-   * @throws IOException if unable to retrieve the permissions for the user.
-   * @throws JsonValidationException if unable to retrieve the permissions for the user.
-   */
-  public PermissionReadList listPermissionsByWorkspaceId(final UUID workspaceId) throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionByWorkspace(workspaceId);
-    return new PermissionReadList().permissions(permissions.stream()
-        .map(PermissionHandler::buildPermissionRead)
-        .collect(Collectors.toList()));
-  }
-
-  /**
    * Lists the permissions by user.
    *
    * @param userId The user ID.
@@ -443,6 +428,32 @@ public class PermissionHandler {
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
+  }
+
+  public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
+    return permissionPersistence.listUsersInOrganization(organizationId);
+  }
+
+  public List<UserPermission> listUsersInWorkspace(final UUID workspaceId) throws IOException {
+    return permissionPersistence.listUsersInWorkspace(workspaceId);
+  }
+
+  public List<UserPermission> listInstanceAdminUsers() throws IOException {
+    return permissionPersistence.listInstanceAdminUsers();
+  }
+
+  public List<UserPermission> listPermissionsForOrganization(final UUID organizationId) throws IOException {
+    return permissionPersistence.listPermissionsForOrganization(organizationId);
+  }
+
+  public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
+      throws IOException {
+    return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
+  }
+
+  public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId)
+      throws IOException {
+    return permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, authUserId);
   }
 
 }

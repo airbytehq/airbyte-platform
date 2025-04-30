@@ -56,7 +56,6 @@ import io.airbyte.config.WorkspaceUserAccessInfo;
 import io.airbyte.config.helpers.AuthenticatedUserConverter;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ApplicationService;
 import io.airbyte.data.services.ExternalUserService;
@@ -92,7 +91,6 @@ class UserHandlerTest {
   private Supplier<UUID> uuidSupplier;
   private UserHandler userHandler;
   private UserPersistence userPersistence;
-  private PermissionPersistence permissionPersistence;
 
   PermissionHandler permissionHandler;
   WorkspacesHandler workspacesHandler;
@@ -125,7 +123,6 @@ class UserHandlerTest {
   @BeforeEach
   void setUp() {
     userPersistence = mock(UserPersistence.class);
-    permissionPersistence = mock(PermissionPersistence.class);
     permissionService = mock(PermissionService.class);
     permissionHandler = mock(PermissionHandler.class);
     workspacesHandler = mock(WorkspacesHandler.class);
@@ -143,7 +140,7 @@ class UserHandlerTest {
     when(featureFlagClient.boolVariation(eq(RestrictLoginsForSSODomains.INSTANCE), any())).thenReturn(true);
 
     userHandler =
-        new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
+        new UserHandler(userPersistence, permissionService, externalUserService, organizationPersistence,
             organizationEmailDomainService, Optional.of(applicationService),
             permissionHandler, workspacesHandler,
             uuidSupplier, jwtUserAuthenticationResolver, Optional.of(initialUserConfig), resourceBootstrapHandler, featureFlagClient);
@@ -163,7 +160,7 @@ class UserHandlerTest {
         .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.ORGANIZATION_ADMIN));
 
-    when(permissionPersistence.listUsersInOrganization(organizationId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
+    when(permissionHandler.listUsersInOrganization(organizationId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
 
     // no default user present
     final var expectedListResult = new OrganizationUserReadList().users(List.of(new OrganizationUserRead()
@@ -192,7 +189,7 @@ class UserHandlerTest {
         .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL).withDefaultWorkspaceId(workspaceId))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN));
 
-    when(permissionPersistence.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
+    when(permissionHandler.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
 
     // no default user present
     final var expectedListResult = new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead()
@@ -210,7 +207,7 @@ class UserHandlerTest {
 
   @Test
   void testListInstanceAdminUser() throws Exception {
-    when(permissionPersistence.listInstanceAdminUsers()).thenReturn(List.of(new UserPermission().withUser(
+    when(permissionHandler.listInstanceAdminUsers()).thenReturn(List.of(new UserPermission().withUser(
         new User().withName(USER_NAME).withUserId(USER_ID).withEmail(USER_EMAIL))
         .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.INSTANCE_ADMIN))));
 
@@ -418,10 +415,10 @@ class UserHandlerTest {
                 .thenReturn(new WorkspaceReadList().workspaces(List.of(new WorkspaceRead().workspaceId(UUID.randomUUID()))));
 
         if (doesExistingUserHaveOrgPermission) {
-          when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
+          when(permissionHandler.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
               .thenReturn(List.of(new UserPermission().withUser(existingUser)));
         } else {
-          when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
+          when(permissionHandler.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
               .thenReturn(List.of(new UserPermission().withUser(new User().withUserId(UUID.randomUUID()))));
         }
 
@@ -459,7 +456,6 @@ class UserHandlerTest {
       private static final String NEW_AUTH_USER_ID = "new_auth_user_id";
       private static final UUID NEW_USER_ID = UUID.randomUUID();
       private static final String NEW_EMAIL = "new@gmail.com";
-      private static final String EXISTING_AUTH_USER_ID = "existing_auth_user_id";
       private static final UUID EXISTING_USER_ID = UUID.randomUUID();
       private static final String EXISTING_EMAIL = "existing@gmail.com";
       private static final UUID WORKSPACE_ID = UUID.randomUUID();
@@ -544,20 +540,20 @@ class UserHandlerTest {
         } else {
           // replace default user handler with one that doesn't use initial user config (ie to test what
           // happens in Cloud)
-          userHandler = new UserHandler(userPersistence, permissionPersistence, permissionService, externalUserService, organizationPersistence,
+          userHandler = new UserHandler(userPersistence, permissionService, externalUserService, organizationPersistence,
               organizationEmailDomainService, Optional.of(applicationService), permissionHandler, workspacesHandler,
               uuidSupplier, jwtUserAuthenticationResolver, Optional.empty(), resourceBootstrapHandler, featureFlagClient);
         }
 
         if (isFirstOrgUser) {
-          when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId())).thenReturn(List.of());
+          when(permissionHandler.listPermissionsForOrganization(ORGANIZATION.getOrganizationId())).thenReturn(List.of());
         } else {
           // add a pre-existing admin user for the org if this isn't the first user
           final var existingUserPermission = new UserPermission()
               .withUser(existingUser)
               .withPermission(new Permission().withPermissionType(PermissionType.ORGANIZATION_ADMIN));
 
-          when(permissionPersistence.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
+          when(permissionHandler.listPermissionsForOrganization(ORGANIZATION.getOrganizationId()))
               .thenReturn(List.of(existingUserPermission));
         }
 
