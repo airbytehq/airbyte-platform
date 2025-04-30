@@ -30,7 +30,7 @@ class SlackOAuthFlow : BaseOAuth2Flow {
    */
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
