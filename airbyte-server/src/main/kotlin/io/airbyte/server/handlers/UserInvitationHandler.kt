@@ -23,7 +23,6 @@ import io.airbyte.config.ConfigSchema
 import io.airbyte.config.InvitationStatus
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
-import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.InvitationDuplicateException
@@ -52,7 +51,6 @@ class UserInvitationHandler(
   val workspaceService: WorkspaceService,
   val organizationService: OrganizationService,
   val userPersistence: UserPersistence,
-  val permissionPersistence: PermissionPersistence,
   val permissionHandler: PermissionHandler,
   val trackingClient: TrackingClient,
 ) {
@@ -221,7 +219,7 @@ class UserInvitationHandler(
     log.info { "userIdsWithEmail: $userIdsWithEmail" }
 
     val existingOrgUserIds =
-      permissionPersistence
+      permissionHandler
         .listUsersInOrganization(orgId)
         .map { it.user.userId }
         .toSet()

@@ -8,9 +8,9 @@ import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
@@ -30,12 +30,12 @@ import java.util.UUID;
 @Replaces(CommunityActorDefinitionAccessValidator.class)
 public class EnterpriseActorDefinitionAccessValidator implements ActorDefinitionAccessValidator {
 
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
   private final SecurityService securityService;
 
-  public EnterpriseActorDefinitionAccessValidator(final PermissionPersistence permissionPersistence,
+  public EnterpriseActorDefinitionAccessValidator(final PermissionHandler permissionHandler,
                                                   final SecurityService securityService) {
-    this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
     this.securityService = securityService;
   }
 
@@ -55,7 +55,7 @@ public class EnterpriseActorDefinitionAccessValidator implements ActorDefinition
       // are explicitly scoped by organization within the configDb, we can replace this with a more
       // conventional RBAC check via @Secured annotations.
       final PermissionType defaultOrgPermissionType =
-          permissionPersistence.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, authId);
+          permissionHandler.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, authId);
 
       if (defaultOrgPermissionType.equals(PermissionType.ORGANIZATION_ADMIN)) {
         return;

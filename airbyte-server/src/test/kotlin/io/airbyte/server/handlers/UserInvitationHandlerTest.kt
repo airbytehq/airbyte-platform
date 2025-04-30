@@ -23,7 +23,6 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.UserPermission
-import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
@@ -73,9 +72,6 @@ internal class UserInvitationHandlerTest {
   var userPersistence: UserPersistence? = null
 
   @Mock
-  var permissionPersistence: PermissionPersistence? = null
-
-  @Mock
   var permissionHandler: PermissionHandler? = null
 
   @Mock
@@ -94,7 +90,6 @@ internal class UserInvitationHandlerTest {
         workspaceService!!,
         organizationService!!,
         userPersistence!!,
-        permissionPersistence!!,
         permissionHandler!!,
         trackingClient!!,
       )
@@ -206,7 +201,7 @@ internal class UserInvitationHandlerTest {
         // the org has a user with a different email, but not the one we're inviting.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
         Mockito
-          .`when`<List<UserPermission>>(permissionPersistence!!.listUsersInOrganization(orgId))
+          .`when`<List<UserPermission>>(permissionHandler!!.listUsersInOrganization(orgId))
           .thenReturn(java.util.List.of<UserPermission>(UserPermission().withUser(otherUserInOrg)))
 
         // call the handler method under test.
@@ -314,7 +309,7 @@ internal class UserInvitationHandlerTest {
 
         // set up two users inside the workspace's org, one with the same email and one with a different email.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
-        Mockito.`when`(permissionPersistence!!.listUsersInOrganization(orgId)).thenReturn(
+        Mockito.`when`(permissionHandler!!.listUsersInOrganization(orgId)).thenReturn(
           listOf(
             UserPermission().withUser(matchingUserInOrg1),
             UserPermission().withUser(otherUserInOrg),
