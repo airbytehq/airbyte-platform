@@ -574,6 +574,10 @@ keycloak:
       key: url
       valueExp: ternary (printf "%s/auth" .Values.global.airbyteUrl) "" (ne .Values.global.edition "enterprise")
 
+    - env: KEYCLOAK_HOST
+      key: host
+      valueExp: (get (urlParse .Values.global.airbyteUrl) "host")
+
     - env: KEYCLOAK_PORT
       key: service.port
       defaultValue: 8180
