@@ -3136,6 +3136,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/get_embedded_consent_url:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source connector definition ID, return the URL to the consent screen where to redirect the user to. This endpoint is specific for the embedded widget, and does not allow configuring the oAuthInputConfiguration for security purposes.
+      operationId: getEmbeddedSourceOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedSourceOauthConsentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthConsentRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connector_builder_projects/get_oauth_consent_url:
     post:
       tags:
@@ -15422,6 +15445,22 @@ components:
                     }
                   }
           $ref: "#/components/schemas/OAuthConfiguration"
+    EmbeddedSourceOauthConsentRequest:
+      type: object
+      required:
+        - sourceDefinitionId
+        - workspaceId
+        - redirectUrl
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        redirectUrl:
+          description: The url to redirect to after getting the user consent
+          type: string
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
     SourceOauthConsentRequest:
       type: object
       required:
