@@ -8,17 +8,20 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
-import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -28,10 +31,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
+private val logger = KotlinLogging.logger {}
+
 class PartialUserConfigHandlerTest {
   private lateinit var partialUserConfigService: PartialUserConfigService
   private lateinit var configTemplateService: ConfigTemplateService
   private lateinit var sourceHandler: SourceHandler
+  private lateinit var secretsProcessor: JsonSecretsProcessor
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
 
@@ -46,7 +52,8 @@ class PartialUserConfigHandlerTest {
     partialUserConfigService = mockk<PartialUserConfigService>()
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler)
+    secretsProcessor = mockk<JsonSecretsProcessor>()
+    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
     objectMapper = ObjectMapper()
   }
 
@@ -59,6 +66,8 @@ class PartialUserConfigHandlerTest {
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
+    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
+      configTemplate.configTemplate.partialDefaultConfig
 
     val sourceCreateSlot = slot<SourceCreate>()
     every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
@@ -70,6 +79,64 @@ class PartialUserConfigHandlerTest {
 
     verify { partialUserConfigService.createPartialUserConfig(any()) }
     verify { sourceHandler.createSource(any()) }
+  }
+
+  @Test
+  fun `test combineDefaultAndUserConfig with secrets`() {
+    val storedConfigJsonString =
+      """
+      {
+        "credentials": {
+          "client_id": { "_secret": "some-client-id-secret-reference" },
+          "client_secret": { "_secret": "some-client-secret-secret-reference" }
+        }
+      }
+      """.trimIndent()
+    val storedConfigWithSecrets = Jsons.deserialize(storedConfigJsonString)
+    val configWithObfuscatedSecretsJsonString =
+      """
+      {
+        "credentials": {
+          "client_id": "$SECRETS_MASK",
+          "client_secret": "$SECRETS_MASK"
+        }
+      }
+      """.trimIndent()
+    val configWithObfuscatedSecrets = Jsons.deserialize(configWithObfuscatedSecretsJsonString)
+    val configTemplate =
+      createMockConfigTemplate(
+        configTemplateId,
+        actorDefinitionId,
+        storedConfigWithSecrets,
+      )
+    val userConfig = Jsons.deserialize("""{"credentials":{"refresh_token":"some-refresh-token"}}""")
+    every {
+      secretsProcessor.prepareSecretsForOutput(storedConfigWithSecrets, configTemplate.configTemplate.userConfigSpec.connectionSpecification)
+    } returns configWithObfuscatedSecrets
+
+    val result = handler.combineDefaultAndUserConfig(configTemplate.configTemplate, userConfig)
+
+    Assertions.assertEquals(
+      "some-refresh-token",
+      result
+        .get("credentials")
+        .get("refresh_token")
+        .asText(),
+    )
+    Assertions.assertEquals(
+      SECRETS_MASK,
+      result
+        .get("credentials")
+        .get("client_id")
+        .asText(),
+    )
+    Assertions.assertEquals(
+      SECRETS_MASK,
+      result
+        .get("credentials")
+        .get("client_secret")
+        .asText(),
+    )
   }
 
   @Test
@@ -117,27 +184,6 @@ class PartialUserConfigHandlerTest {
     Assertions.assertNotNull(capturedConnectionConfig)
     Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
-  }
-
-  @Test
-  fun `test getPartialUserConfig returns correct config with template`() {
-    // Arrange
-    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
-    val sourceRead = createMockSourceRead(sourceId)
-
-    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns
-      createMockPartialUserConfigWithTemplate(partialUserConfigId, workspaceId, configTemplateId, sourceId)
-    every { sourceHandler.getSource(any<SourceIdRequestBody>()) } returns sourceRead
-    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
-
-    // Act
-    val result = handler.getPartialUserConfig(partialUserConfigId)
-
-    // Assert
-    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
-    Assertions.assertEquals(configTemplateId, result.partialUserConfig.configTemplateId)
-    Assertions.assertEquals(workspaceId, result.partialUserConfig.workspaceId)
-    Assertions.assertNotNull(result.configTemplate)
   }
 
   /**

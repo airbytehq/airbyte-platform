@@ -120,10 +120,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     selectedConnectorDefinitionId ||
     (selectedConnectorDefinitionSpecification && ConnectorSpecification.id(selectedConnectorDefinitionSpecification));
 
-  const selectedConnectorDefinition = useMemo(
-    () => availableConnectorDefinitions.find((s) => Connector.id(s) === selectedConnectorDefinitionSpecificationId),
-    [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]
-  );
+  const selectedConnectorDefinition = useMemo(() => {
+    const definition = availableConnectorDefinitions.find(
+      (s) => Connector.id(s) === selectedConnectorDefinitionSpecificationId
+    );
+    if (!definition) {
+      throw new Error(`Connector definition not found for id: ${selectedConnectorDefinitionSpecificationId}`);
+    }
+    return definition;
+  }, [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]);
 
   // Handle Doc panel
   useEffect(() => {
@@ -200,8 +205,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     if (isEditMode && connector) {
       return connector;
     }
-    return { name: selectedConnectorDefinition?.name };
-  }, [isEditMode, connector, selectedConnectorDefinition?.name]);
+    return { name: selectedConnectorDefinition.name };
+  }, [isEditMode, connector, selectedConnectorDefinition.name]);
 
   return (
     <ConnectorForm
@@ -215,7 +220,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
             <div className={styles.loaderContainer}>
               <Spinner />
               <div className={styles.loadingMessage}>
-                <ShowLoadingMessage connector={selectedConnectorDefinition?.name} />
+                <ShowLoadingMessage connector={selectedConnectorDefinition.name} />
               </div>
             </div>
           )}
