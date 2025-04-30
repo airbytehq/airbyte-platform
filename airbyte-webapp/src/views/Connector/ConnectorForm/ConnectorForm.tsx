@@ -23,7 +23,7 @@ export interface ConnectorFormProps extends Omit<FormRootProps, "formFields" | "
   /**
    * Definition of the connector might not be available if it's not released but only exists in frontend heap
    */
-  selectedConnectorDefinition?: ConnectorDefinition;
+  selectedConnectorDefinition: ConnectorDefinition;
   selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   onSubmit: (values: ConnectorFormValues) => Promise<void>;
   isEditMode?: boolean;

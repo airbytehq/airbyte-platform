@@ -16,6 +16,7 @@ import { PartialUserConfigEditForm } from "./components/PartialUserConfigEditFor
 import { PartialUserConfigList } from "./components/PartialUserConfigList";
 import styles from "./EmbeddedSourcePage.module.scss";
 import { useEmbeddedSourceParams } from "./hooks/useEmbeddedSourceParams";
+
 export const EmbeddedSourceCreatePage: React.FC = () => {
   const {
     workspaceId,

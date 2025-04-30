@@ -4,6 +4,7 @@ import { FieldPath, useFormContext } from "react-hook-form";
 
 import { ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecificationDraft } from "core/domain/connector/source";
+import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { trackError } from "core/utils/datadog";
 
 import { useConnectorForm } from "./connectorFormContext";
@@ -72,6 +73,7 @@ export const useAuthentication = (): AuthenticationHook => {
     manualOAuthMode,
     toggleManualOAuthMode,
   } = useConnectorForm();
+  const isAirbyteEmbedded = useIsAirbyteEmbeddedContext();
 
   const advancedAuth = connectorSpec?.advancedAuth;
 
@@ -110,7 +112,7 @@ export const useAuthentication = (): AuthenticationHook => {
   );
 
   const shouldShowRedirectUrlTooltip =
-    connectorSpec?.advancedAuthGlobalCredentialsAvailable === false && !manualOAuthMode;
+    !isAirbyteEmbedded && connectorSpec?.advancedAuthGlobalCredentialsAvailable === false && !manualOAuthMode;
 
   // Fields that are filled by the OAuth flow and thus won't need to be shown in the UI if OAuth is available
   const implicitAuthFieldPaths = useMemo(

@@ -6,6 +6,7 @@ import { v4 as uuid } from "uuid";
 
 import { OAuthEvent } from "area/connector/types/oauthCallback";
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useCompleteOAuth, useCompleteOAuthBuilder, useConsentUrls, useConsentUrlsBuilder } from "core/api";
 import {
   CompleteOAuthResponse,
@@ -15,11 +16,7 @@ import {
   BuilderProjectOauthConsentRequest,
   CompleteConnectorBuilderProjectOauthRequest,
 } from "core/api/types/AirbyteClient";
-import {
-  ConnectorDefinition,
-  ConnectorDefinitionSpecificationRead,
-  ConnectorSpecification,
-} from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { useFormatError } from "core/errors";
 import { trackError } from "core/utils/datadog";
@@ -82,7 +79,7 @@ export function useConnectorAuth(): {
   ) => Promise<CompleteOAuthResponse>;
 } {
   const { formatMessage } = useIntl();
-  const { workspaceId } = useCurrentWorkspace();
+  const workspaceId = useCurrentWorkspaceId();
   const { getDestinationConsentUrl, getSourceConsentUrl } = useConsentUrls();
   const { completeDestinationOAuth, completeSourceOAuth } = useCompleteOAuth();
   const notificationService = useNotificationService();
@@ -248,17 +245,16 @@ const OAUTH_ERROR_ID = "connector.oauthError";
 
 export function useRunOauthFlow({
   connector,
-  connectorDefinition,
   onDone,
 }: {
   connector: ConnectorDefinitionSpecificationRead;
-  connectorDefinition?: ConnectorDefinition;
   onDone?: (values: CompleteOAuthResponseAuthPayload) => void;
 }): {
   loading: boolean;
   done?: boolean;
   run: (oauthInputParams: Record<string, unknown>) => void;
 } {
+  const { selectedConnectorDefinition } = useConnectorForm();
   const { getConsentUrl, completeOauthRequest } = useConnectorAuth();
   const { registerNotification } = useNotificationService();
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
@@ -292,7 +288,7 @@ export function useRunOauthFlow({
         return false;
       }
 
-      trackOAuthSuccess(connectorDefinition);
+      trackOAuthSuccess(selectedConnectorDefinition);
       onDone?.(completeOauthResponse.auth_payload);
       return true;
     },
@@ -301,7 +297,7 @@ export function useRunOauthFlow({
 
   const [{ loading }, onStartOauth] = useAsyncFn(
     async (oauthInputParams: Record<string, unknown>) => {
-      trackOAuthAttemp(connectorDefinition);
+      trackOAuthAttemp(selectedConnectorDefinition);
       const consentRequestInProgress = await getConsentUrl(connector, oauthInputParams);
 
       param.current = consentRequestInProgress.payload;

@@ -103,6 +103,7 @@ class PartialUserConfigController(
               objectMapper.valueToTree(it)
             },
           ).icon(this.actorIcon)
-          .name(this.actorName),
+          .name(this.actorName)
+          .sourceDefinitionId(this.configTemplate.actorDefinitionId),
       )
 }

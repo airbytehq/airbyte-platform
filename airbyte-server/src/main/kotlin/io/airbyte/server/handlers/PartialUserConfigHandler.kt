@@ -16,10 +16,12 @@ import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithFullDetails
+import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.validation.json.JsonMergingHelper
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -28,6 +30,7 @@ class PartialUserConfigHandler(
   private val partialUserConfigService: PartialUserConfigService,
   private val configTemplateService: ConfigTemplateService,
   private val sourceHandler: SourceHandler,
+  @Named("jsonSecretsProcessorWithCopy") val secretsProcessor: JsonSecretsProcessor,
 ) {
   private val jsonMergingHelper = JsonMergingHelper()
 
@@ -44,12 +47,8 @@ class PartialUserConfigHandler(
     // Get the config template and actor definition
     val configTemplate = configTemplateService.getConfigTemplate(partialUserConfigCreate.configTemplateId)
 
-    // Create and persist the source
-    val combinedConfigs =
-      jsonMergingHelper.combineProperties(
-        configTemplate.configTemplate.partialDefaultConfig,
-        connectionConfiguration,
-      )
+    val combinedConfigs = combineDefaultAndUserConfig(configTemplate.configTemplate, connectionConfiguration)
+
     val sourceCreate =
       createSourceCreateFromPartialUserConfig(
         configTemplate.configTemplate,
@@ -72,6 +71,22 @@ class PartialUserConfigHandler(
     return sourceRead
   }
 
+  fun combineDefaultAndUserConfig(
+    configTemplate: ConfigTemplate,
+    userConfig: JsonNode,
+  ): JsonNode {
+    val maskedConfigTemplate =
+      secretsProcessor.prepareSecretsForOutput(
+        configTemplate.partialDefaultConfig,
+        configTemplate.userConfigSpec.connectionSpecification,
+      )
+
+    return jsonMergingHelper.combineProperties(
+      maskedConfigTemplate,
+      userConfig,
+    )
+  }
+
   /**
    * Gets a partial config from a source
    *
@@ -86,6 +101,12 @@ class PartialUserConfigHandler(
 
     val filteredConnectionConfiguration = filterConnectionConfigurationBySpec(sourceRead, configTemplate)
 
+    val sanitizedConnectionConfiguration =
+      secretsProcessor.prepareSecretsForOutput(
+        filteredConnectionConfiguration,
+        configTemplate.configTemplate.userConfigSpec.connectionSpecification,
+      )
+
     return PartialUserConfigWithFullDetails(
       partialUserConfig =
         PartialUserConfig(
@@ -94,7 +115,7 @@ class PartialUserConfigHandler(
           configTemplateId = configTemplate.configTemplate.id,
           actorId = sourceRead.sourceId,
         ),
-      connectionConfiguration = filteredConnectionConfiguration,
+      connectionConfiguration = sanitizedConnectionConfiguration,
       configTemplate = configTemplate.configTemplate,
       actorName = sourceRead.name,
       actorIcon = sourceRead.icon,

@@ -136,6 +136,7 @@ const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec }) => {
     setConnectorFormValues(values);
   }, []);
   const incrementConnectorFormKey = useCallback(() => setConnectorFormKey((prev) => prev + 1), []);
+  const { currentProject } = useConnectorBuilderFormState();
 
   const connectorDefinitionSpecification: SourceDefinitionSpecificationDraft | undefined = useMemo(
     () =>
@@ -154,6 +155,12 @@ const TestingValuesForm: React.FC<TestingValuesFormProps> = ({ spec }) => {
       key={`testing-values-form-${connectorFormKey}`}
       formType="source"
       bodyClassName={styles.formContent}
+      selectedConnectorDefinition={{
+        name: currentProject.name,
+        dockerImageTag: "none",
+        dockerRepository: "none",
+        sourceDefinitionId: "none",
+      }}
       selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
       formValues={{ connectionConfiguration: connectorFormValues }}
       onSubmit={async (values) => {
