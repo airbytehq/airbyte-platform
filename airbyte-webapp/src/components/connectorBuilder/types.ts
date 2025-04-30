@@ -112,7 +112,7 @@ export interface BuilderState {
   testStreamId: StreamId;
   generatedStreams: Record<string, DeclarativeStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
-  manifest?: ConnectorManifest;
+  manifest: ConnectorManifest | null;
 }
 
 export interface AssistData {
