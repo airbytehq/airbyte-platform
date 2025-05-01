@@ -449,8 +449,8 @@ create table "public"."secret_config" (
   "descriptor" varchar(256) not null,
   "external_coordinate" varchar(256) not null,
   "tombstone" boolean not null default false,
-  "created_by" uuid not null,
-  "updated_by" uuid not null,
+  "created_by" uuid,
+  "updated_by" uuid,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "airbyte_managed" boolean not null,
@@ -764,7 +764,6 @@ alter table "public"."permission" add constraint "permission_user_id_fkey" forei
 alter table "public"."permission" add constraint "permission_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
-alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey1" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
 alter table "public"."secret_reference" add constraint "secret_reference_secret_config_id_fkey" foreign key ("secret_config_id") references "public"."secret_config" ("id");
 alter table "public"."sso_config" add constraint "sso_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
