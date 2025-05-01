@@ -443,7 +443,7 @@ public class DestinationHandler {
           destinationId,
           workspaceId,
           secretStorageId.get(),
-          currentUserService.getCurrentUser().getUserId());
+          currentUserService.getCurrentUserIdIfExists().orElse(null));
     }
 
     destinationConnection.setConfiguration(updatedConfig);

@@ -63,7 +63,7 @@ class SecretReferenceService(
     actorId: ActorId,
     workspaceId: WorkspaceId,
     secretStorageId: SecretStorageId,
-    currentUserId: UserId,
+    currentUserId: UserId?,
   ): ConfigWithSecretReferenceIdsInjected {
     // If the feature flag to persist secret configs and references is not enabled,
     // return the original config without any changes.
@@ -139,7 +139,7 @@ class SecretReferenceService(
     secretStorageId: SecretStorageId,
     externalCoordinate: String,
     airbyteManaged: Boolean,
-    currentUserId: UserId,
+    currentUserId: UserId?,
     hydrationPath: String,
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,

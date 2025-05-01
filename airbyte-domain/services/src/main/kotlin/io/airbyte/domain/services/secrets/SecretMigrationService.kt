@@ -137,7 +137,7 @@ class SecretMigrationService(
           secretStorageId = toSecretStorageId,
           externalCoordinate = newCoordinate.fullCoordinate,
           airbyteManaged = oldSecretConfig.airbyteManaged,
-          currentUserId = UserId(oldSecretConfig.createdBy),
+          currentUserId = oldSecretConfig.createdBy?.let { UserId(it) },
           hydrationPath = oldReference.hydrationPath!!,
           scopeType = oldReference.scopeType,
           scopeId = oldReference.scopeId,
