@@ -4,27 +4,36 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.api.model.generated.PermissionCreate
+import io.airbyte.api.model.generated.PermissionIdRequestBody
+import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
 import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
 import io.airbyte.publicApi.server.generated.models.PermissionCreateRequest
+import io.airbyte.publicApi.server.generated.models.PermissionResponse
 import io.airbyte.publicApi.server.generated.models.PermissionUpdateRequest
 import io.airbyte.publicApi.server.generated.models.PermissionsResponse
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.airbyte.server.apis.publicapi.constants.API_PATH
 import io.airbyte.server.apis.publicapi.constants.DELETE
 import io.airbyte.server.apis.publicapi.constants.GET
+import io.airbyte.server.apis.publicapi.constants.HTTP_RESPONSE_BODY_DEBUG_MESSAGE
 import io.airbyte.server.apis.publicapi.constants.PATCH
 import io.airbyte.server.apis.publicapi.constants.PERMISSIONS_PATH
 import io.airbyte.server.apis.publicapi.constants.PERMISSIONS_WITH_ID_PATH
 import io.airbyte.server.apis.publicapi.constants.POST
-import io.airbyte.server.apis.publicapi.services.PermissionService
+import io.airbyte.server.apis.publicapi.errorHandlers.ConfigClientErrorHandler
+import io.airbyte.server.apis.publicapi.mappers.PermissionReadMapper
+import io.airbyte.server.apis.publicapi.mappers.PermissionResponseReadMapper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Patch
 import io.micronaut.scheduling.annotation.ExecuteOn
@@ -34,13 +43,15 @@ import jakarta.ws.rs.Path
 import jakarta.ws.rs.core.Response
 import java.util.UUID
 
+private val log = KotlinLogging.logger {}
+
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PermissionsController(
-  private val permissionService: PermissionService,
   private val trackingHelper: TrackingHelper,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
+  private val permissionHandler: PermissionHandler,
 ) : PublicPermissionsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreatePermission(permissionCreateRequest: PermissionCreateRequest): Response {
@@ -77,7 +88,7 @@ open class PermissionsController(
     val permissionResponse =
       trackingHelper.callWithTracker(
         {
-          permissionService.createPermission(
+          doCreatePermission(
             permissionCreateRequest,
           )
         },
@@ -106,7 +117,7 @@ open class PermissionsController(
     // process and monitor the request
     trackingHelper.callWithTracker(
       {
-        permissionService.deletePermission(UUID.fromString(permissionId))
+        doDeletePermission(UUID.fromString(permissionId))
       },
       PERMISSIONS_WITH_ID_PATH,
       DELETE,
@@ -132,7 +143,7 @@ open class PermissionsController(
     val permissionResponse =
       trackingHelper.callWithTracker(
         {
-          permissionService.getPermission(UUID.fromString(permissionId))
+          doGetPermission(UUID.fromString(permissionId))
         },
         PERMISSIONS_WITH_ID_PATH,
         GET,
@@ -170,7 +181,7 @@ open class PermissionsController(
       permissionsResponse =
         trackingHelper.callWithTracker(
           {
-            permissionService.getPermissionsByUserInAnOrganization(permissionUserId, UUID.fromString(organizationId))
+            doGetPermissionsByUserInAnOrganization(permissionUserId, UUID.fromString(organizationId))
           },
           PERMISSIONS_PATH,
           GET,
@@ -181,7 +192,7 @@ open class PermissionsController(
       permissionsResponse =
         trackingHelper.callWithTracker(
           {
-            permissionService.getPermissionsByUserId(permissionUserId)
+            doGetPermissionsByUserId(permissionUserId)
           },
           PERMISSIONS_PATH,
           GET,
@@ -214,7 +225,7 @@ open class PermissionsController(
     val updatePermissionResponse =
       trackingHelper.callWithTracker(
         {
-          permissionService.updatePermission(UUID.fromString(permissionId), permissionUpdateRequest)
+          doUpdatePermission(UUID.fromString(permissionId), permissionUpdateRequest)
         },
         PERMISSIONS_WITH_ID_PATH,
         PATCH,
@@ -224,5 +235,114 @@ open class PermissionsController(
       .status(Response.Status.OK.statusCode)
       .entity(updatePermissionResponse)
       .build()
+  }
+
+  /**
+   * Creates a permission.
+   */
+  private fun doCreatePermission(permissionCreateRequest: PermissionCreateRequest): PermissionResponse {
+    val permissionCreateOss = PermissionCreate()
+    permissionCreateOss.permissionType = enumValueOf(permissionCreateRequest.permissionType.name)
+    permissionCreateOss.userId = permissionCreateRequest.userId
+    permissionCreateOss.organizationId = permissionCreateRequest.organizationId
+    permissionCreateOss.workspaceId = permissionCreateRequest.workspaceId
+
+    val result =
+      runCatching { permissionHandler.createPermission(permissionCreateOss) }
+        .onFailure {
+          log.error(it) { "Error for createPermission" }
+          ConfigClientErrorHandler.handleError(it)
+        }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
+    return PermissionReadMapper.from(result.getOrThrow())
+  }
+
+  /**
+   * Gets all permissions of a single user (by user ID).
+   */
+  private fun doGetPermissionsByUserId(userId: UUID): PermissionsResponse {
+    val result =
+      runCatching { permissionHandler.listPermissionsByUser(userId) }
+        .onFailure {
+          log.error(it) { "Error for getPermissionsByUserId" }
+          ConfigClientErrorHandler.handleError(it)
+        }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
+    val permissionReadList = result.getOrThrow().permissions
+    return PermissionsResponse(
+      data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) },
+    )
+  }
+
+  /**
+   * Gets all permissions of a single user (by user ID) in a single organization.
+   */
+  private fun doGetPermissionsByUserInAnOrganization(
+    userId: UUID,
+    organizationId: UUID,
+  ): PermissionsResponse {
+    val result =
+      runCatching { permissionHandler.listPermissionsByUserInAnOrganization(userId, organizationId) }
+        .onFailure {
+          log.error(it) { "Error for getPermissionsByUserInAnOrganization" }
+          ConfigClientErrorHandler.handleError(it)
+        }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
+    val permissionReadList = result.getOrThrow().permissions
+    return PermissionsResponse(data = permissionReadList.mapNotNull { PermissionResponseReadMapper.from(it) })
+  }
+
+  /**
+   * Gets a permission.
+   */
+  private fun doGetPermission(permissionId: UUID): PermissionResponse {
+    val permissionIdRequestBody = PermissionIdRequestBody()
+    permissionIdRequestBody.permissionId = permissionId
+    val result =
+      runCatching { permissionHandler.getPermission(permissionIdRequestBody) }
+        .onFailure {
+          log.error(it) { "Error for getPermission" }
+          ConfigClientErrorHandler.handleError(it)
+        }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
+    return PermissionReadMapper.from(result.getOrThrow())
+  }
+
+  /**
+   * Updates a permission.
+   */
+  private fun doUpdatePermission(
+    permissionId: UUID,
+    permissionUpdateRequest: PermissionUpdateRequest,
+  ): PermissionResponse {
+    val permissionUpdate = PermissionUpdate()
+    permissionUpdate.permissionId = permissionId
+    permissionUpdate.permissionType = enumValueOf(permissionUpdateRequest.permissionType.name)
+    val updatedPermission =
+      runCatching {
+        permissionHandler.updatePermission(permissionUpdate)
+        val updatedPermission = permissionHandler.getPermission(PermissionIdRequestBody().permissionId(permissionId))
+        updatedPermission
+      }.onFailure {
+        log.error(it) { "Error for updatePermission" }
+        ConfigClientErrorHandler.handleError(it)
+      }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + updatedPermission }
+    return PermissionReadMapper.from(updatedPermission.getOrThrow())
+  }
+
+  /**
+   * Deletes a permission.
+   */
+  private fun doDeletePermission(permissionId: UUID) {
+    val permissionIdRequestBody = PermissionIdRequestBody()
+    permissionIdRequestBody.permissionId = permissionId
+    val result =
+      runCatching { permissionHandler.deletePermission(permissionIdRequestBody) }
+        .onFailure {
+          log.error(it) { "Error for deletePermission" }
+          ConfigClientErrorHandler.handleError(it)
+        }
+    log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
   }
 }
