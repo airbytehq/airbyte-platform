@@ -392,7 +392,6 @@ create table "public"."partial_user_config" (
   "id" uuid not null,
   "workspace_id" uuid not null,
   "config_template_id" uuid not null,
-  "partial_user_config_properties" jsonb,
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
