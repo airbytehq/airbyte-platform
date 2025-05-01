@@ -72,8 +72,24 @@ class ClaimedProcessorTest {
     every { workloadApi.workloadList(any()) } returns
       WorkloadListResponse(
         listOf(
-          Workload("1", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
-          Workload("2", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
+          Workload(
+            id = "1",
+            labels = listOf(),
+            inputPayload = "payload",
+            logPath = "logPath",
+            geography = "US",
+            type = WorkloadType.SYNC,
+            autoId = UUID.randomUUID(),
+          ),
+          Workload(
+            id = "2",
+            labels = listOf(),
+            inputPayload = "payload",
+            logPath = "logPath",
+            geography = "US",
+            type = WorkloadType.SYNC,
+            autoId = UUID.randomUUID(),
+          ),
         ),
       )
     claimedProcessor.retrieveAndProcess("dataplane1")
@@ -110,9 +126,33 @@ class ClaimedProcessorTest {
       ).andThenAnswer {
         WorkloadListResponse(
           listOf(
-            Workload("1", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
-            Workload("2", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
-            Workload("3", listOf(), "payload", "logPath", "US", WorkloadType.SYNC, UUID.randomUUID()),
+            Workload(
+              id = "1",
+              labels = listOf(),
+              inputPayload = "payload",
+              logPath = "logPath",
+              geography = "US",
+              type = WorkloadType.SYNC,
+              autoId = UUID.randomUUID(),
+            ),
+            Workload(
+              id = "2",
+              labels = listOf(),
+              inputPayload = "payload",
+              logPath = "logPath",
+              geography = "US",
+              type = WorkloadType.SYNC,
+              autoId = UUID.randomUUID(),
+            ),
+            Workload(
+              id = "3",
+              labels = listOf(),
+              inputPayload = "payload",
+              logPath = "logPath",
+              geography = "US",
+              type = WorkloadType.SYNC,
+              autoId = UUID.randomUUID(),
+            ),
           ),
         )
       }

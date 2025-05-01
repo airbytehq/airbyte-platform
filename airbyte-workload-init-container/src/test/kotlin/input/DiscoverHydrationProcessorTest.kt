@@ -108,13 +108,13 @@ class DiscoverHydrationProcessorTest {
 
     val workload =
       Workload(
-        WORKLOAD_ID,
-        listOf(),
-        "inputPayload",
-        "logPath",
-        "geography",
-        WorkloadType.DISCOVER,
-        UUID.randomUUID(),
+        id = WORKLOAD_ID,
+        labels = listOf(),
+        inputPayload = "inputPayload",
+        logPath = "logPath",
+        geography = "geography",
+        type = WorkloadType.DISCOVER,
+        autoId = UUID.randomUUID(),
       )
   }
 }
