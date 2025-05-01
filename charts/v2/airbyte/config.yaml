@@ -52,7 +52,7 @@ common:
 
     - env: WEBAPP_URL
       key: webapp.url
-      valueExp: (printf "http://%s-airbyte-webapp-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.webapp.service.port))
+      valueExp: (include "airbyte.common.airbyteUrl" .)
 
 auth:
   keyBasePath: global.auth

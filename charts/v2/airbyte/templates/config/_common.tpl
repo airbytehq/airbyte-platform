@@ -251,7 +251,7 @@ Renders the common.local environment variable
 Renders the global.webapp.url value
 */}}
 {{- define "airbyte.common.webapp.url" }}
-    {{- (printf "http://%s-airbyte-webapp-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.webapp.service.port)) }}
+    {{- (include "airbyte.common.airbyteUrl" .) }}
 {{- end }}
 
 {{/*
