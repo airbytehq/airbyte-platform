@@ -108,7 +108,6 @@ spec:
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- else if (eq .Values.global.edition "cloud") }}
-        {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
         {{- include "airbyte.connectorRollout.envs" . | nindent 8 }}
         {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}

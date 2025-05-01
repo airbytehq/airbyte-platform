@@ -5,7 +5,6 @@ export interface AirbyteWebappConfig {
   apiUrl: string;
   connectorBuilderApiUrl: string;
   version?: string;
-  cloudApiUrl: string;
   cloudPublicApiUrl?: string;
   zendeskKey?: string;
   launchDarkly?: string;
