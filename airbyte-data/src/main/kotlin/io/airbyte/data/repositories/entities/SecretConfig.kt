@@ -21,8 +21,8 @@ data class SecretConfig(
   val externalCoordinate: String,
   val tombstone: Boolean = false,
   val airbyteManaged: Boolean,
-  val createdBy: UUID,
-  val updatedBy: UUID,
+  val createdBy: UUID? = null,
+  val updatedBy: UUID? = null,
   @DateCreated
   val createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated

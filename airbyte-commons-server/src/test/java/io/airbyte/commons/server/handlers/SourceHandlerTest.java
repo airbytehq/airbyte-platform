@@ -53,7 +53,6 @@ import io.airbyte.commons.server.helpers.DestinationHelpers;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSourceDefinition;
@@ -254,10 +253,8 @@ class SourceHandlerTest {
             .thenReturn(sourceDefinitionVersionWithOverrideStatus);
 
     // Set up current user context.
-    final AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
     final UUID currentUserId = UUID.randomUUID();
-    when(currentUser.getUserId()).thenReturn(currentUserId);
-    when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+    when(currentUserService.getCurrentUserIdIfExists()).thenReturn(Optional.of(currentUserId));
 
     // Set up secret storage mocks.
     final SecretStorage secretStorage = mock(SecretStorage.class);
@@ -446,10 +443,8 @@ class SourceHandlerTest {
         .thenReturn(Optional.of(sourceConnection));
 
     // Set up current user context.
-    final AuthenticatedUser currentUser = mock(AuthenticatedUser.class);
     final UUID currentUserId = UUID.randomUUID();
-    when(currentUser.getUserId()).thenReturn(currentUserId);
-    when(currentUserService.getCurrentUser()).thenReturn(currentUser);
+    when(currentUserService.getCurrentUserIdIfExists()).thenReturn(Optional.of(currentUserId));
 
     // Set up secret storage mocks.
     final SecretStorage secretStorage = mock(SecretStorage.class);

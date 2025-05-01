@@ -83,6 +83,33 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
     assertThat(retrievedSecretConfig).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(persistedSecretConfig)
   }
 
+  @Test
+  fun `test db insertion and retrieval with null users`() {
+    val secretConfig =
+      SecretConfig(
+        secretStorageId = persistedSecretStorage.id!!,
+        descriptor = "test",
+        externalCoordinate = "some.coordinate",
+        airbyteManaged = true,
+        createdBy = null,
+        updatedBy = null,
+      )
+
+    val countBeforeSave = secretConfigRepository.count()
+    assertEquals(0L, countBeforeSave)
+
+    val persistedSecretConfig = secretConfigRepository.save(secretConfig)
+
+    val countAfterSave = secretConfigRepository.count()
+    assertEquals(1L, countAfterSave)
+
+    val retrievedSecretConfig = secretConfigRepository.findById(persistedSecretConfig.id).get()
+
+    assertNotNull(retrievedSecretConfig.createdAt)
+    assertNotNull(retrievedSecretConfig.updatedAt)
+    assertThat(retrievedSecretConfig).usingRecursiveComparison().ignoringFields("createdAt", "updatedAt").isEqualTo(persistedSecretConfig)
+  }
+
   @Nested
   inner class FindBySecretStorageIdAndExternalCoordinate {
     @Test
