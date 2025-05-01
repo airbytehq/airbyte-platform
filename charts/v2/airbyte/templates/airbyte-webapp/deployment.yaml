@@ -67,7 +67,7 @@ spec:
 
         {{- if .Values.global.datadog.enabled }}
         - name: DD_SERVICE 
-          value: {{ include "airbyte.componentName" . }}
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
         {{- include "airbyte.datadog.envs" . | nindent 8 }}
         {{- include "airbyte.otel.envs" . | nindent 8 }}
         {{- end}}
