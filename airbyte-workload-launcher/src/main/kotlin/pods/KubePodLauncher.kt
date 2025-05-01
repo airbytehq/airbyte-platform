@@ -261,15 +261,29 @@ class KubePodLauncher(
    */
   private fun isTerminal(pod: Pod?): Boolean {
     // if pod is null or there is no status default to false.
-    if (pod?.status == null) {
+    if (pod?.status?.initContainerStatuses == null) {
+      return false
+    }
+
+    val hasInitContainerStatus = pod.status.initContainerStatuses.size > 0
+    if (!hasInitContainerStatus) {
+      return false
+    }
+
+    val initContainerExitCode =
+      pod.status.initContainerStatuses[0]
+        ?.state
+        ?.terminated
+        ?.exitCode
+    // we are certainly not terminal if the init container hasn't exited
+    if (initContainerExitCode == null) {
       return false
     }
 
     // Edge case of the init container exiting with specific error codes
     // Those are configuration related errors that cause the main container to never start however, we did not fail
     // because the launch was a success from a workload-infra pov
-    if (pod.status.initContainerStatuses[0]
-        .state.terminated.exitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE
+    if (initContainerExitCode == InitContainerConstants.SECRET_HYDRATION_ERROR_EXIT_CODE
     ) {
       return true
     }
