@@ -88,9 +88,14 @@ export const StreamTester: React.FC<{
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 
+  const cleanedLogs = useMemo(
+    () => streamReadData?.logs?.filter((log) => !(log.level === "WARN" && log.message.includes("deprecated"))),
+    [streamReadData?.logs]
+  );
+
   const logNumByType = useMemo(
     () =>
-      (streamReadData?.logs ?? []).reduce(
+      (cleanedLogs ?? []).reduce(
         (acc, log) => {
           switch (log.level) {
             case "ERROR":
@@ -112,7 +117,7 @@ export const StreamTester: React.FC<{
           error: 0,
         }
       ),
-    [streamReadData?.logs, streamTestWarnings.length]
+    [cleanedLogs, streamTestWarnings.length]
   );
 
   const hasGlobalAuxiliaryRequests = globalAuxiliaryRequests && globalAuxiliaryRequests.length > 0;
@@ -128,9 +133,10 @@ export const StreamTester: React.FC<{
 
   const hasSliceAuxiliaryRequests = sliceAuxiliaryRequests && sliceAuxiliaryRequests.length > 0;
   const hasAnyAuxiliaryRequests = hasGlobalAuxiliaryRequests || hasSliceAuxiliaryRequests;
+  const hasLogs = errorMessage || (cleanedLogs && cleanedLogs.length > 0) || streamTestWarnings.length > 0;
 
   const SECONDARY_PANEL_SIZE = 0.25;
-  const logsFlex = logNumByType.error > 0 || logNumByType.warning > 0 ? SECONDARY_PANEL_SIZE : 0;
+  const logsFlex = hasLogs ? SECONDARY_PANEL_SIZE : 0;
   const auxiliaryRequestsFlex = hasAnyAuxiliaryRequests && !hasSlices ? SECONDARY_PANEL_SIZE : 0;
 
   useEffect(() => {
@@ -274,15 +280,11 @@ export const StreamTester: React.FC<{
             ),
             minWidth: 40,
           },
-          ...(errorMessage || (streamReadData?.logs && streamReadData.logs.length > 0) || streamTestWarnings.length > 0
+          ...(hasLogs
             ? [
                 {
                   children: (
-                    <LogsDisplay
-                      logs={streamReadData?.logs ?? []}
-                      error={errorMessage}
-                      testWarnings={streamTestWarnings}
-                    />
+                    <LogsDisplay logs={cleanedLogs ?? []} error={errorMessage} testWarnings={streamTestWarnings} />
                   ),
                   minWidth: 0,
                   flex: logsFlex,
