@@ -105,3 +105,7 @@ properties:
     type: object
   heartbeatConfig:
     "$ref": HeartbeatConfig.yaml
+  supportsRefreshes:
+    description: whether the sync supports refreshes
+    type: boolean
+    default: false

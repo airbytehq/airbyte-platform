@@ -38,4 +38,5 @@ class ReplicationInputMapper {
       .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
       .withFeatureFlags(replicationActivityInput.featureFlags)
       .withHeartbeatConfig(HeartbeatConfig().withMaxSecondsBetweenMessages(replicationActivityInput.heartbeatMaxSecondsBetweenMessages))
+      .withSupportsRefreshes(replicationActivityInput.supportsRefreshes)
 }

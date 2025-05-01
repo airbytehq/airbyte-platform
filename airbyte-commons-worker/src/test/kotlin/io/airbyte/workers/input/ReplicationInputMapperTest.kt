@@ -51,6 +51,7 @@ class ReplicationInputMapperTest {
     assertEquals(replicationActivityInput.omitFileTransferEnvVar, replicationInput.omitFileTransferEnvVar)
     assertEquals(replicationActivityInput.featureFlags, replicationInput.featureFlags)
     assertEquals(replicationActivityInput.heartbeatMaxSecondsBetweenMessages, replicationInput.heartbeatConfig.maxSecondsBetweenMessages)
+    assertEquals(replicationActivityInput.supportsRefreshes, replicationInput.supportsRefreshes)
   }
 
   @Test
@@ -103,6 +104,7 @@ class ReplicationInputMapperTest {
         omitFileTransferEnvVar = false,
         featureFlags = mapOf("feature-flag" to true),
         heartbeatMaxSecondsBetweenMessages = 1000,
+        supportsRefreshes = true,
       )
 
     val fileEnabledActivityInputViaSourceConfigFlag =
