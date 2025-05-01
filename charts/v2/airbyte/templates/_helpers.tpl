@@ -15,6 +15,12 @@ Returns the name of a given component
 {{- printf "%s" $componentName }}
 {{- end }}
 
+{{/*
+Returns the name of a given component with the `airbyte-` prefix
+*/}}
+{{- define "airbyte.componentNameWithAirbytePrefix" -}}
+{{- printf "airbyte-%s" (include "airbyte.componentName" .) }}
+{{- end }}
 
 {{/*
 Create a default fully qualified app name.

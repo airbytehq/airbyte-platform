@@ -1219,6 +1219,10 @@ worker:
       key: configRoot
       defaultValue: /configs
 
+    - env: MAX_CHECK_WORKERS
+      key: maxCheckWorkers
+      defaultValue: 30
+
     - env: MAX_NOTIFY_WORKERS
       key: maxNotifyWorkers
       defaultValue: 30

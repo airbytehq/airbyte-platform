@@ -1068,7 +1068,9 @@ worker:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-  maxNotifyWorkers: 5
+  maxNotifyWorkers: ""
+  maxCheckWorkers: ""
+  maxSyncWorkers: ""
 
   workloadApi: {}
 
@@ -1254,8 +1256,6 @@ workloadLauncher:
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
 
-  maxNotifyWorkers: 5
-
   workloadApi: {}
 
 ## @section Rollout Worker Parameters
@@ -1405,8 +1405,6 @@ connectorRolloutWorker:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-
-  maxNotifyWorkers: 5
 
 ## @section Metrics parameters
 metrics:
