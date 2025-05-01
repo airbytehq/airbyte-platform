@@ -179,7 +179,6 @@ class WorkloadApiQueuePollerTest {
         labels = labels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         type = type,
         autoId = autoId,
       )

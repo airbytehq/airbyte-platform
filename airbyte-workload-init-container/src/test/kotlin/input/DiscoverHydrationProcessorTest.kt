@@ -112,7 +112,6 @@ class DiscoverHydrationProcessorTest {
         labels = listOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
-        geography = "geography",
         type = WorkloadType.DISCOVER,
         autoId = UUID.randomUUID(),
       )

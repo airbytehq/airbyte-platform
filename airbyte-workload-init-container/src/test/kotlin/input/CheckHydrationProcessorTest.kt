@@ -112,7 +112,6 @@ class CheckHydrationProcessorTest {
         labels = listOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
-        geography = "geography",
         type = WorkloadType.CHECK,
         autoId = UUID.randomUUID(),
       )
