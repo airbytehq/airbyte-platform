@@ -130,6 +130,7 @@ public class BaseConfigDatabaseTest {
               actor_definition_workspace_grant,
               actor_oauth_parameter,
               auth_user,
+              commands,
               connection,
               connection_operation,
               connection_timeline_event,
