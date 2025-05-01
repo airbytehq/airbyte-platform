@@ -64,6 +64,7 @@ import {
   HttpComponentsResolverType,
   DynamicDeclarativeStreamComponentsResolver,
   SimpleRetrieverRequester,
+  HttpRequesterRequestParameters,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -106,6 +107,7 @@ import {
   BuilderDpathExtractor,
   BuilderDynamicStream,
   BuilderComponentsResolver,
+  BuilderRequestOptions,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -393,7 +395,7 @@ const manifestSyncStreamToBuilder = (
     httpMethod: http_method === "POST" ? "POST" : "GET",
     decoder: manifestDecoderToBuilder(decoder, streamName),
     requestOptions: {
-      requestParameters: Object.entries(request_parameters ?? {}),
+      requestParameters: manifestRequestParametersToBuilder(request_parameters, streamName),
       requestHeaders: Object.entries(request_headers ?? {}),
       requestBody: requesterToRequestBody(requester),
     },
@@ -608,12 +610,10 @@ const manifestDpathExtractorToBuilder = (extractor: DpathExtractor): BuilderDpat
 
 const manifestAsyncHttpRequesterToBuilder = (requester: HttpRequester, streamName: string, spec?: Spec) => {
   return {
-    url: requester.path
-      ? `${removeTrailingSlashes(requester.url_base)}/${removeLeadingSlashes(requester.path)}`
-      : requester.url_base,
+    url: extractFullUrl(requester),
     httpMethod: requester.http_method === "POST" ? ("POST" as const) : ("GET" as const),
     requestOptions: {
-      requestParameters: Object.entries(requester.request_parameters ?? {}),
+      requestParameters: manifestRequestParametersToBuilder(requester.request_parameters, streamName),
       requestHeaders: Object.entries(requester.request_headers ?? {}),
       requestBody: requesterToRequestBody(requester),
     },
@@ -632,6 +632,32 @@ const manifestAsyncHttpRequesterToBuilder = (requester: HttpRequester, streamNam
     ),
   };
 };
+
+function extractFullUrl(requester: HttpRequester): string {
+  if (requester.url) {
+    return requester.url;
+  }
+  if (requester.url_base && requester.path) {
+    return `${removeTrailingSlashes(requester.url_base)}/${removeLeadingSlashes(requester.path)}`;
+  }
+  return requester.url_base ?? requester.path ?? "";
+}
+
+function manifestRequestParametersToBuilder(
+  requestParameters: HttpRequesterRequestParameters | undefined,
+  streamName?: string
+): BuilderRequestOptions["requestParameters"] {
+  if (!requestParameters) {
+    return [];
+  }
+  if (isString(requestParameters)) {
+    throw new ManifestCompatibilityError(streamName, "request_parameters must be an object");
+  }
+  if (!Object.values(requestParameters).every((value) => isString(value))) {
+    throw new ManifestCompatibilityError(streamName, "all request_parameters values must be strings");
+  }
+  return Object.entries(requestParameters as Record<string, string>);
+}
 
 function requesterToRequestBody(requester: HttpRequester): BuilderRequestBody {
   if (requester.request_body_data && isObject(requester.request_body_data)) {
@@ -1744,18 +1770,17 @@ export function manifestAuthenticatorToBuilder(
       return {
         ...sessionTokenAuth,
         login_requester: {
-          url: manifestLoginRequester.path
-            ? `${removeTrailingSlashes(manifestLoginRequester.url_base)}/${removeLeadingSlashes(
-                manifestLoginRequester.path
-              )}`
-            : manifestLoginRequester.url_base,
+          url: extractFullUrl(manifestLoginRequester),
           authenticator: builderLoginRequesterAuthenticator as
             | ApiKeyAuthenticator
             | BearerAuthenticator
             | BasicHttpAuthenticator,
           httpMethod: manifestLoginRequester.http_method === "GET" ? "GET" : "POST",
           requestOptions: {
-            requestParameters: Object.entries(manifestLoginRequester.request_parameters ?? {}),
+            requestParameters: manifestRequestParametersToBuilder(
+              manifestLoginRequester.request_parameters,
+              streamName
+            ),
             requestHeaders: Object.entries(manifestLoginRequester.request_headers ?? {}),
             requestBody: requesterToRequestBody(manifestLoginRequester),
           },

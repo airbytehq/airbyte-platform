@@ -252,7 +252,7 @@ export const DECODER_CONFIGS: Partial<Record<(typeof BUILDER_DECODER_TYPES)[numb
   },
 };
 
-interface BuilderRequestOptions {
+export interface BuilderRequestOptions {
   requestParameters: Array<[string, string]>;
   requestHeaders: Array<[string, string]>;
   requestBody: BuilderRequestBody;
