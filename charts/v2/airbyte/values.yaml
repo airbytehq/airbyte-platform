@@ -106,9 +106,6 @@ global:
   api:
     authHeaderName: X-Airbyte-Auth
     
-  cloudApi:
-    url: ""
-
   # -- Environment variables
   env_vars: {}
 
