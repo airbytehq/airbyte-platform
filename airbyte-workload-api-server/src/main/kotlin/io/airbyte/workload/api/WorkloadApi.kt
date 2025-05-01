@@ -27,6 +27,7 @@ import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadQueueStatsResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.handler.DefaultDeadlineValues
 import io.airbyte.workload.handler.WorkloadHandler
 import io.micronaut.http.HttpResponse

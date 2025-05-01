@@ -120,7 +120,6 @@ class InputFetcherTest {
         labels = listOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
-        geography = "geography",
         type = WorkloadType.SYNC,
         autoId = UUID.randomUUID(),
       )

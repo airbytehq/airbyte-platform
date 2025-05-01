@@ -8,6 +8,7 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.domain.WorkloadQueueItem
 import io.micrometer.core.instrument.Counter

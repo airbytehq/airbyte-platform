@@ -89,7 +89,6 @@ class SpecHydrationProcessorTest {
         labels = listOf(),
         inputPayload = "inputPayload",
         logPath = "logPath",
-        geography = "geography",
         type = WorkloadType.SPEC,
         autoId = UUID.randomUUID(),
       )

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.api
+package io.airbyte.workload.common
 
 import datadog.trace.api.Trace
 import io.airbyte.config.WorkloadPriority
