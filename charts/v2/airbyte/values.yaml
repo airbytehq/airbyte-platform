@@ -1682,7 +1682,7 @@ temporal:
   autoSetup: true
 
   database:
-    engine: postgresql
+    engine: postgres12
     host: ""
     port: ""
     user: ""

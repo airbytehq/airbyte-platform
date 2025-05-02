@@ -746,7 +746,7 @@ otel:
   config:
     - env: OTEL_EXPORTER_OTLP_ENDPOINT
       key: exporter.endpoint
-      defaultValueExp: (ternary "http://$(DD_AGENT_HOST):4317" "" .Values.global.datadog.enabled)
+      defaultValueExp: (ternary "http://${DD_AGENT_HOST}:4317" "" .Values.global.datadog.enabled)
 
     - env: OTEL_EXPORTER_OTLP_PROTOCOL
       key: exporter.protocol
