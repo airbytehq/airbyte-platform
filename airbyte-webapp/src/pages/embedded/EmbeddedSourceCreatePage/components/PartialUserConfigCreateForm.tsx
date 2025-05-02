@@ -1,5 +1,6 @@
 import { useCreatePartialUserConfig, useGetConfigTemplate } from "core/api";
 import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
+import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
@@ -24,13 +25,15 @@ export const PartialUserConfigCreateForm: React.FC = () => {
   };
 
   return (
-    <PartialUserConfigForm
-      isEditMode={false}
-      connectorName={configTemplate.name}
-      icon={configTemplate.icon}
-      onSubmit={onSubmit}
-      sourceDefinitionSpecification={sourceDefinitionSpecification}
-      showSuccessView={isSuccess}
-    />
+    <IsAirbyteEmbeddedContext.Provider value>
+      <PartialUserConfigForm
+        isEditMode={false}
+        connectorName={configTemplate.name}
+        icon={configTemplate.icon}
+        onSubmit={onSubmit}
+        sourceDefinitionSpecification={sourceDefinitionSpecification}
+        showSuccessView={isSuccess}
+      />
+    </IsAirbyteEmbeddedContext.Provider>
   );
 };
