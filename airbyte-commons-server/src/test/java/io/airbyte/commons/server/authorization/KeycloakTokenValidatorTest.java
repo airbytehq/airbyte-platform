@@ -12,9 +12,9 @@ import static org.mockito.Mockito.when;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
@@ -121,7 +121,7 @@ class KeycloakTokenValidatorTest {
     verifyNoInteractions(tokenRoleResolver);
 
     StepVerifier.create(responsePublisher)
-        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, RbacRoleHelper.getInstanceAdminRoles()))
+        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, AuthRole.getInstanceAdminRoles()))
         .verifyComplete();
   }
 

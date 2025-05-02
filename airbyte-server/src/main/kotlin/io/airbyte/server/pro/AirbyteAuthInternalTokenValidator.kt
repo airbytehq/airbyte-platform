@@ -5,7 +5,7 @@
 package io.airbyte.server.pro
 
 import io.airbyte.commons.auth.AirbyteAuthConstants
-import io.airbyte.commons.server.support.RbacRoleHelper
+import io.airbyte.commons.auth.AuthRole
 import io.airbyte.config.persistence.UserPersistence
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
@@ -48,6 +48,6 @@ class AirbyteAuthInternalTokenValidator : TokenValidator<HttpRequest<*>?> {
       // for now, all internal services get instance admin roles.
       Authentication.build(
         UserPersistence.DEFAULT_USER_ID.toString(),
-        RbacRoleHelper.getInstanceAdminRoles(),
+        AuthRole.getInstanceAdminRoles(),
       )
 }

@@ -5,9 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.AuthRole
-import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
-import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.config.Application
@@ -56,12 +54,7 @@ class ApplicationServiceMicronautImpl(
           "iss" to tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to DEFAULT_AUTH_USER_ID,
-          "roles" to
-            buildSet {
-              addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN))
-              addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN))
-              addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN))
-            },
+          "roles" to AuthRole.getInstanceAdminRoles(),
           "exp" to
             Instant
               .now()

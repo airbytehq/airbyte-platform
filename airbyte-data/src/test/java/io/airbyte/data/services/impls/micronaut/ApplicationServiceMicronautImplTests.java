@@ -14,8 +14,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import io.airbyte.commons.auth.AuthRole;
-import io.airbyte.commons.auth.OrganizationAuthRole;
-import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.auth.config.TokenExpirationConfig;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
@@ -66,9 +64,7 @@ class ApplicationServiceMicronautImplTests {
         issuer);
 
     final var expectedRoles = new HashSet<>();
-    expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-    expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
-    expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+    expectedRoles.addAll(AuthRole.getInstanceAdminRoles());
     final var token = applicationServer.getToken("test-client-id", "test-client-secret");
     final var claims = getTokenClaims(token);
 

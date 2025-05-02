@@ -16,7 +16,6 @@ import io.airbyte.config.helpers.PermissionHelper;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -41,7 +40,7 @@ public class RbacRoleHelper {
     this.permissionHandler = permissionHandler;
   }
 
-  public Collection<String> getRbacRoles(final String authUserId, final Map<String, String> headerMap) {
+  public Set<String> getRbacRoles(final String authUserId, final Map<String, String> headerMap) {
     final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
     final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
     final Set<String> targetAuthUserIds = headerResolver.resolveAuthUserIds(headerMap);
@@ -68,25 +67,13 @@ public class RbacRoleHelper {
     }
     try {
       if (permissionHandler.isAuthUserInstanceAdmin(authUserId)) {
-        allRoles.addAll(getInstanceAdminRoles());
+        allRoles.addAll(AuthRole.getInstanceAdminRoles());
       }
     } catch (final IOException ex) {
       log.error("Failed to get instance admin roles for user {}", authUserId, ex);
       throw new RuntimeException(ex);
     }
     return allRoles;
-  }
-
-  public static Set<String> getInstanceAdminRoles() {
-    final Set<String> roles = new HashSet<>();
-    roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-    roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
-    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
-    // For now, SELF is intentionally excluded from instance admin roles. If a user-centric endpoint
-    // should be
-    // callable by an instance admin, then the endpoint should be annotated with ADMIN in addition to
-    // SELF.
-    return roles;
   }
 
   private Set<String> getWorkspaceAuthRoles(final String authUserId, final List<UUID> workspaceIds) {
