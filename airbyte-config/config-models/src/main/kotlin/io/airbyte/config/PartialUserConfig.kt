@@ -30,6 +30,7 @@ data class PartialUserConfigWithActorDetails(
   val partialUserConfig: PartialUserConfig,
   val actorIcon: String,
   val actorName: String,
+  val configTemplateId: UUID,
 )
 
 /**

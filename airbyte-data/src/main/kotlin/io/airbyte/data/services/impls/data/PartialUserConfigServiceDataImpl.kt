@@ -49,6 +49,7 @@ open class PartialUserConfigServiceDataImpl(
         partialUserConfig = partialUserConfig,
         actorName = sourceDefinitions[index].name,
         actorIcon = sourceDefinitions[index].iconUrl,
+        configTemplateId = partialUserConfig.configTemplateId,
       )
     }
   }
@@ -60,6 +61,7 @@ open class PartialUserConfigServiceDataImpl(
       partialUserConfig = storedPartialUserConfig,
       actorName = sourceDefinition.name,
       actorIcon = sourceDefinition.iconUrl,
+      configTemplateId = storedPartialUserConfig.configTemplateId,
     )
   }
 
@@ -78,6 +80,7 @@ open class PartialUserConfigServiceDataImpl(
       partialUserConfig = updatedPartialUserConfig,
       actorName = sourceDefinition.name,
       actorIcon = sourceDefinition.iconUrl,
+      configTemplateId = updatedPartialUserConfig.configTemplateId,
     )
   }
 }

@@ -84,6 +84,7 @@ class PartialUserConfigController(
           .partialUserConfigId(partialUserConfig.partialUserConfig.id)
           .configTemplateIcon(partialUserConfig.actorIcon)
           .configTemplateName(partialUserConfig.actorName)
+          .configTemplateId(partialUserConfig.configTemplateId)
       }
     return PartialUserConfigReadList().partialUserConfigs(items)
   }
