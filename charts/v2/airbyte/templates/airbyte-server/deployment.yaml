@@ -77,6 +77,7 @@ spec:
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
+        {{- include "airbyte.customerio.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
         {{- include "airbyte.jobs.envs" . | nindent 8 }}
