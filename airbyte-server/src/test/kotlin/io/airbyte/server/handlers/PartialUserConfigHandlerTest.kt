@@ -21,7 +21,6 @@ import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.protocol.models.v0.ConnectorSpecification
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -30,8 +29,6 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
-
-private val logger = KotlinLogging.logger {}
 
 class PartialUserConfigHandlerTest {
   private lateinit var partialUserConfigService: PartialUserConfigService
@@ -235,6 +232,7 @@ class PartialUserConfigHandlerTest {
         ),
       actorName = "test-source",
       actorIcon = "test-icon",
+      configTemplateId = configTemplateId,
     )
 
   private fun createMockPartialUserConfigWithTemplate(

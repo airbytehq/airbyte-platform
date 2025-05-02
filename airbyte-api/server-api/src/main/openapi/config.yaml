@@ -19050,6 +19050,7 @@ components:
         - partialUserConfigId
         - configTemplateName
         - configTemplateIcon
+        - configTemplateId
       properties:
         partialUserConfigId:
           type: string
@@ -19060,6 +19061,10 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
+        configTemplateId:
+          type: string
+          format: uuid
+          description: config template corresponding to this partial config
     EmbeddedWidgetRequest:
       type: object
       required:
