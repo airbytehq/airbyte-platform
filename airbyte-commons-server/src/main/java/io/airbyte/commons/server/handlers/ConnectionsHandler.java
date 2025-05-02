@@ -1880,7 +1880,7 @@ public class ConnectionsHandler {
     }
 
     for (final AirbyteStreamAndConfiguration pair : catalog.getStreams()) {
-      final var streamIsFileBased = pair.getStream().getIsFileBased();
+      final var streamIsFileBased = pair.getStream().getIsFileBased() != null && pair.getStream().getIsFileBased();
       final var includeFilesIsUnset = pair.getConfig().getIncludeFiles() == null;
       if (streamIsFileBased && includeFilesIsUnset) {
         final var defaultValue = destinationVersion.getSupportsFileTransfer();
