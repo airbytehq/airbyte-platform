@@ -4,7 +4,6 @@
 
 package io.airbyte.workers.config;
 
-import io.airbyte.config.AirbyteConfigValidator;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
@@ -50,11 +49,6 @@ public class ApplicationBeanFactory {
   @Named("currentSecondsSupplier")
   public Supplier<Long> currentSecondsSupplier() {
     return () -> Instant.now().getEpochSecond();
-  }
-
-  @Singleton
-  public AirbyteConfigValidator airbyteConfigValidator() {
-    return new AirbyteConfigValidator();
   }
 
   @Prototype
