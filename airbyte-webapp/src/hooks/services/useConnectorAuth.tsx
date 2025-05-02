@@ -19,6 +19,7 @@ import {
 import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
 import { isSourceDefinitionSpecification } from "core/domain/connector/source";
 import { useFormatError } from "core/errors";
+import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { trackError } from "core/utils/datadog";
 import { useAnalyticsTrackFunctions } from "views/Connector/ConnectorForm/components/Sections/auth/useAnalyticsTrackFunctions";
 import { useConnectorForm } from "views/Connector/ConnectorForm/connectorFormContext";
@@ -260,6 +261,7 @@ export function useRunOauthFlow({
   const param = useRef<SourceOauthConsentRequest | DestinationOauthConsentRequest>();
   const connectorType = isSourceDefinitionSpecification(connector) ? "source" : "destination";
   const { trackOAuthSuccess, trackOAuthAttemp } = useAnalyticsTrackFunctions(connectorType);
+  const isAirbyteEmbedded = useIsAirbyteEmbeddedContext();
 
   const [{ loading: loadingCompleteOauth, value }, completeOauth] = useAsyncFn(
     async (queryParams: Record<string, unknown>) => {
@@ -314,26 +316,49 @@ export function useRunOauthFlow({
         // popup window is not open, so open it and start listening on broadcast channel
         const popupWindow = openWindow(consentRequestInProgress.consentUrl);
 
-        const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
-        bc.postMessage({ type: "takeover" });
-        bc.onmessage = async (event) => {
-          if (event.type === "cancel" && event.tabUuid !== tabUuid) {
-            // cancel event is not meant for this tab, so ignore it
-            return;
-          }
-          if (event.type === "completed") {
-            const queryParams = {
-              ...consentUrlQueryParams, // ensure we pass along params from the consent url
-              ...event.query, // but any params provided here take priority and override
-            };
+        /**
+         * Airbyte Embedded runs within an iframe, so we need to use postMessage to communicate with the parent window.
+         * BroadcastChannel is not supported in iframes in all browsers, so we use postMessage instead.
+         */
+        if (isAirbyteEmbedded) {
+          // For embedded context, use postMessage
+          const messageHandler = async (event: MessageEvent) => {
+            if (event.origin === window.location.origin && event.data.type === "completed") {
+              const queryParams = {
+                ...consentUrlQueryParams, // ensure we pass along params from the consent url
+                ...event.data.query, // but any params provided here take priority and override
+              };
 
-            await completeOauth(queryParams);
-          }
-          // OAuth flow is completed or taken over by another tab, so close the broadcast channel
-          // and popup window if it is still open.
-          await bc.close();
-          popupWindow?.close();
-        };
+              await completeOauth(queryParams);
+              window.removeEventListener("message", messageHandler);
+              popupWindow?.close();
+            }
+          };
+          window.addEventListener("message", messageHandler);
+        } else {
+          // For non-embedded contexts, use BroadcastChannel
+          const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+
+          bc.postMessage({ type: "takeover" });
+          bc.onmessage = async (event) => {
+            if (event.type === "cancel" && event.tabUuid !== tabUuid) {
+              // cancel event is not meant for this tab, so ignore it
+              return;
+            }
+            if (event.type === "completed") {
+              const queryParams = {
+                ...consentUrlQueryParams, // ensure we pass along params from the consent url
+                ...event.query, // but any params provided here take priority and override
+              };
+
+              await completeOauth(queryParams);
+            }
+            // OAuth flow is completed or taken over by another tab, so close the broadcast channel
+            // and popup window if it is still open.
+            await bc.close();
+            popupWindow?.close();
+          };
+        }
       }
     },
     [connector]
@@ -341,9 +366,11 @@ export function useRunOauthFlow({
 
   // close the popup window and broadcast channel when unmounting
   useUnmount(() => {
-    const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
-    cancelBc.postMessage({ type: "cancel", tabUuid });
-    cancelBc.close();
+    if (!isAirbyteEmbedded) {
+      const cancelBc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
+      cancelBc.postMessage({ type: "cancel", tabUuid });
+      cancelBc.close();
+    }
   });
 
   const onCloseWindow = useCallback(() => {
