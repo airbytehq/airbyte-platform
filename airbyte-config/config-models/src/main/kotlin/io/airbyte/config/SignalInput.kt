@@ -10,9 +10,9 @@ import java.io.Serializable
 
 @JsonDeserialize(builder = SignalInput.Builder::class)
 data class SignalInput(
-  @JsonProperty("workflow_type")
+  @get:JsonProperty("workflow_type")
   val workflowType: String,
-  @JsonProperty("workflow_id")
+  @get:JsonProperty("workflow_id")
   val workflowId: String,
 ) : Serializable {
   companion object {
