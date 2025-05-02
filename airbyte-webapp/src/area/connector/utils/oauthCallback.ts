@@ -15,6 +15,14 @@ import { OAUTH_BROADCAST_CHANNEL_NAME } from "./oauthConstants";
 // The code in useConnectorAuth is listening for this message.
 const search = new URLSearchParams(window.location.search);
 const query = Object.fromEntries(search);
+
+// Try to send via postMessage first (for Embedded context)
+// Only send if opener exists and is from our domain
+if (window.opener && window.opener.location.origin === window.location.origin) {
+  window.opener.postMessage({ type: "completed", query }, window.location.origin);
+}
+
+// Also send via broadcast channel (for non-embedded context)
 const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
 bc.postMessage({ type: "completed", query });
 

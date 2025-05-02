@@ -70,14 +70,8 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
               onSubmit(values);
             }}
             canEdit
-            renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm }) => (
-              <PartialUserConfigFormControls
-                isEditMode={isEditMode}
-                isSubmitting={isSubmitting}
-                isValid={isValid}
-                dirty={dirty}
-                onCancel={resetConnectorForm}
-              />
+            renderFooter={({ dirty, isSubmitting }) => (
+              <PartialUserConfigFormControls isEditMode={isEditMode} isSubmitting={isSubmitting} dirty={dirty} />
             )}
           />
         </FlexContainer>
