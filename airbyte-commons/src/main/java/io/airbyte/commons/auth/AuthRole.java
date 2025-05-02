@@ -92,4 +92,14 @@ public enum AuthRole implements AuthRoleInterface {
         .collect(Collectors.toCollection(LinkedHashSet::new));
   }
 
+  /**
+   * Get all possible RBAC roles for instance admin users that should have global access.
+   */
+  public static Set<String> getInstanceAdminRoles() {
+    Set<String> roles = buildAuthRolesSet(AuthRole.ADMIN);
+    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+    roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
+    return roles;
+  }
+
 }

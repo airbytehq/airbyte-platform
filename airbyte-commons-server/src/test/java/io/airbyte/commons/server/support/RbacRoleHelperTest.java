@@ -95,9 +95,7 @@ class RbacRoleHelperTest {
       when(permissionHandler.isAuthUserInstanceAdmin(AUTH_USER_ID)).thenReturn(true);
 
       // expect all roles that are admin and below
-      expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-      expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
-      expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+      expectedRoles.addAll(AuthRole.getInstanceAdminRoles());
     }
 
     final Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -220,7 +218,7 @@ class RbacRoleHelperTest {
         OrganizationAuthRole.ORGANIZATION_READER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_MEMBER.getLabel());
 
-    final Set<String> actualRoles = RbacRoleHelper.getInstanceAdminRoles();
+    final Set<String> actualRoles = AuthRole.getInstanceAdminRoles();
 
     Assertions.assertEquals(expectedRoles, actualRoles);
   }
