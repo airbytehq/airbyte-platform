@@ -150,7 +150,7 @@ spec:
       {{- if .Values.global.extraContainers }}
       {{ toYaml .Values.global.extraContainers | nindent 6 }}
       {{- end }}
-      securityContext: {{- toYaml .Values.connectorRolloutWorker.podSecurityContext | nindent 6 }}
+      securityContext: {{- toYaml .Values.connectorRolloutWorker.podSecurityContext | nindent 8 }}
       {{- if .Values.connectorRolloutWorker.extraVolumes }}
       volumes:
   {{ toYaml .Values.connectorRolloutWorker.extraVolumes | nindent 4 }}
