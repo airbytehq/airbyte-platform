@@ -25,7 +25,7 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
 
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
@@ -96,7 +96,7 @@ class GitlabOAuthFlow : BaseOAuth2Flow {
   @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,

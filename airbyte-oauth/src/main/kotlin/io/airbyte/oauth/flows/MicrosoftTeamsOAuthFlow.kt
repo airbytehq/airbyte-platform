@@ -33,7 +33,7 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
    */
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
@@ -108,7 +108,7 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
   @Throws(IOException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,
@@ -119,7 +119,7 @@ class MicrosoftTeamsOAuthFlow : BaseOAuth2Flow {
   @Throws(IOException::class)
   override fun completeDestinationOAuth(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,

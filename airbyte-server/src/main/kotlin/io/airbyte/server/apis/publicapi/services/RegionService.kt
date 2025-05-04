@@ -77,7 +77,7 @@ class RegionServiceImpl(
         .apply {
           name = regionCreateRequest.name
           organizationId = regionCreateRequest.organizationId
-          enabled = regionCreateRequest.enabled
+          enabled = regionCreateRequest.enabled ?: true
         }
 
     val created =

@@ -8,7 +8,7 @@ import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.context.ReplicationFeatureFlags
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 
 /**
  * Track stats during a sync.
@@ -163,7 +163,7 @@ interface SyncStatsTracker {
 
   fun getUnreliableStateTimingMetrics(): Boolean
 
-  fun setReplicationFeatureFlags(replicationFeatureFlags: ReplicationFeatureFlags?)
+  fun setReplicationFeatureFlagReader(replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader)
 
   fun endOfReplication(completedSuccessfully: Boolean)
 }

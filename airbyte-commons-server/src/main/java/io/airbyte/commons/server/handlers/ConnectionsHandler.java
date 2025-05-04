@@ -614,6 +614,7 @@ public class ConnectionsHandler {
             null);
       }
 
+      applyDefaultIncludeFiles(connectionCreate.getSyncCatalog(), sourceVersion, destinationVersion);
       assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
           catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
@@ -796,6 +797,7 @@ public class ConnectionsHandler {
       final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper
           .getDestinationVersion(destinationDefinition, workspaceId, sync.getDestinationId());
       validateCatalogIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
+      applyDefaultIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
     }
 
     if (isPatchRelevantForDestinationValidation(connectionPatch)
@@ -1861,6 +1863,32 @@ public class ConnectionsHandler {
       map.put(streamDescriptor, stat);
     }
     return map;
+  }
+
+  /**
+   * Applies defaults to the config of a sync catalog based off catalog and actor definition versions.
+   * Mainly here to apply includeFiles default logic — this can be deleted once we default to
+   * includesFiles to true from the UI. Mutates!
+   */
+  @VisibleForTesting
+  protected AirbyteCatalog applyDefaultIncludeFiles(
+                                                    final AirbyteCatalog catalog,
+                                                    final ActorDefinitionVersion sourceVersion,
+                                                    final ActorDefinitionVersion destinationVersion) {
+    if (!sourceVersion.getSupportsFileTransfer()) {
+      return catalog;
+    }
+
+    for (final AirbyteStreamAndConfiguration pair : catalog.getStreams()) {
+      final var streamIsFileBased = pair.getStream().getIsFileBased() != null && pair.getStream().getIsFileBased();
+      final var includeFilesIsUnset = pair.getConfig().getIncludeFiles() == null;
+      if (streamIsFileBased && includeFilesIsUnset) {
+        final var defaultValue = destinationVersion.getSupportsFileTransfer();
+        pair.getConfig().setIncludeFiles(defaultValue);
+      }
+    }
+
+    return catalog;
   }
 
 }

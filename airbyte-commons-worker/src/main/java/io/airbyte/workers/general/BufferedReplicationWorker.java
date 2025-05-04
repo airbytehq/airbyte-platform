@@ -13,6 +13,7 @@ import io.airbyte.commons.io.LineGobbler;
 import io.airbyte.commons.timer.Stopwatch;
 import io.airbyte.config.PerformanceMetrics;
 import io.airbyte.config.ReplicationOutput;
+import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -24,7 +25,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.context.ReplicationContext;
-import io.airbyte.workers.context.ReplicationFeatureFlags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -65,7 +66,7 @@ public class BufferedReplicationWorker {
   private final AirbyteSource source;
   private final AirbyteDestination destination;
   private final ReplicationWorkerHelper replicationWorkerHelper;
-  private final ReplicationFeatureFlagReader replicationFeatureFlagReader;
+  private final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
   private final RecordSchemaValidator recordSchemaValidator;
   private final SyncPersistence syncPersistence;
   private final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone;
@@ -96,7 +97,7 @@ public class BufferedReplicationWorker {
                                    final SyncPersistence syncPersistence,
                                    final RecordSchemaValidator recordSchemaValidator,
                                    final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                   final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                   final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                    final ReplicationWorkerHelper replicationWorkerHelper,
                                    final DestinationTimeoutMonitor destinationTimeoutMonitor,
                                    final StreamStatusCompletionTracker streamStatusCompletionTracker,
@@ -110,7 +111,7 @@ public class BufferedReplicationWorker {
     this.destination = destination;
     this.replicationWorkerHelper = replicationWorkerHelper;
     this.destinationTimeoutMonitor = destinationTimeoutMonitor;
-    this.replicationFeatureFlagReader = replicationFeatureFlagReader;
+    this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader;
     this.recordSchemaValidator = recordSchemaValidator;
     this.syncPersistence = syncPersistence;
     this.srcHeartbeatTimeoutChaperone = srcHeartbeatTimeoutChaperone;
@@ -143,10 +144,10 @@ public class BufferedReplicationWorker {
 
     try {
       final ReplicationContext replicationContext = getReplicationContext(replicationInput);
-      final ReplicationFeatureFlags flags = replicationFeatureFlagReader.readReplicationFeatureFlags();
-      replicationWorkerHelper.initialize(replicationContext, flags, jobRoot, replicationInput.getCatalog(), replicationInput.getState());
+      replicationWorkerHelper.initialize(replicationContext, replicationInputFeatureFlagReader, jobRoot, replicationInput.getCatalog(),
+          replicationInput.getState());
 
-      final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, flags);
+      final CloseableWithTimeout destinationWithCloseTimeout = new CloseableWithTimeout(destination, mdc, replicationInputFeatureFlagReader);
       // note: resources are closed in the opposite order in which they are declared. thus source will be
       // closed first (which is what we want).
       try (recordSchemaValidator; syncPersistence; srcHeartbeatTimeoutChaperone; source; destinationTimeoutMonitor; destinationWithCloseTimeout) {
@@ -163,7 +164,8 @@ public class BufferedReplicationWorker {
         CompletableFuture.allOf(
             runAsyncWithHeartbeatCheck(this::readFromSource, mdc),
             runAsync(this::processMessage, mdc),
-            flags.isDestinationTimeoutEnabled() ? runAsyncWithTimeout(this::writeToDestination, mdc) : runAsync(this::writeToDestination, mdc),
+            replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE) ? runAsyncWithTimeout(this::writeToDestination, mdc)
+                : runAsync(this::writeToDestination, mdc),
             runAsync(this::readFromDestination, mdc)).join();
 
       } catch (final CompletionException e) {
@@ -530,17 +532,19 @@ public class BufferedReplicationWorker {
 
     final AutoCloseable autoCloseable;
     private final Map<String, String> mdc;
-    private final ReplicationFeatureFlags flags;
+    private final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
 
-    public CloseableWithTimeout(final AutoCloseable autoCloseable, final Map<String, String> mdc, final ReplicationFeatureFlags flags) {
+    public CloseableWithTimeout(final AutoCloseable autoCloseable,
+                                final Map<String, String> mdc,
+                                final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader) {
       this.autoCloseable = autoCloseable;
       this.mdc = mdc;
-      this.flags = flags;
+      this.replicationInputFeatureFlagReader = replicationInputFeatureFlagReader;
     }
 
     @Override
     public void close() throws Exception {
-      if (flags.isDestinationTimeoutEnabled()) {
+      if (replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE)) {
         runAsyncWithTimeout(() -> {
           try {
             autoCloseable.close();

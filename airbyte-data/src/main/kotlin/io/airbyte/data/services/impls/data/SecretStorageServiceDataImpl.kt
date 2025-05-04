@@ -49,7 +49,7 @@ class SecretStorageServiceDataImpl(
         updatedBy = updatedBy.value,
       )
 
-    return secretStorageRepository.save(patched.toEntity()).toConfigModel()
+    return secretStorageRepository.update(patched.toEntity()).toConfigModel()
   }
 
   override fun findById(id: SecretStorageId): SecretStorage? = secretStorageRepository.findById(id.value).orElse(null)?.toConfigModel()

@@ -57,6 +57,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons-temporal-core"))
   implementation(project(":oss:airbyte-commons-server"))
   implementation(project(":oss:airbyte-commons-with-dependencies"))
+  implementation(project(":oss:airbyte-commons-workload"))
   implementation(project(":oss:airbyte-domain:services"))
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-config:init"))

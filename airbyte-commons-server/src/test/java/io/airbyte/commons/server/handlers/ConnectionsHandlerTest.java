@@ -963,6 +963,64 @@ class ConnectionsHandlerTest {
       assertTrue(Enums.isCompatible(NamespaceDefinitionType.class, io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.class));
     }
 
+    @ParameterizedTest
+    @CsvSource({"true,false", "true,true", "false,true", "false,false"})
+    void defaultsForIncludeFiles(final boolean sourceSupportsFiles, final boolean destSupportsFiles) {
+      final var sourceDefinitionVersion = new ActorDefinitionVersion();
+      sourceDefinitionVersion.setSupportsFileTransfer(sourceSupportsFiles);
+
+      final var destDefinitionVersion = new ActorDefinitionVersion();
+      destDefinitionVersion.setSupportsFileTransfer(destSupportsFiles);
+
+      final List<AirbyteStreamAndConfiguration> streams = new ArrayList<>();
+
+      // file based and no include files value set
+      final var stream1 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream1").isFileBased(true))
+          .config(new AirbyteStreamConfiguration());
+      // not file based
+      final var stream2 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream2").isFileBased(false))
+          .config(new AirbyteStreamConfiguration());
+      // file based and include files set to false
+      final var stream3 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream3").isFileBased(true))
+          .config(new AirbyteStreamConfiguration().includeFiles(false));
+      // file based and include files set to true
+      final var stream4 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream4").isFileBased(true))
+          .config(new AirbyteStreamConfiguration().includeFiles(true));
+      // file based and no include files value set (same as stream1)
+      final var stream5 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream5").isFileBased(true))
+          .config(new AirbyteStreamConfiguration());
+
+      streams.add(stream1);
+      streams.add(stream2);
+      streams.add(stream3);
+      streams.add(stream4);
+      streams.add(stream5);
+      final var catalog = new AirbyteCatalog().streams(streams);
+
+      final AirbyteCatalog actual = connectionsHandler.applyDefaultIncludeFiles(catalog, sourceDefinitionVersion, destDefinitionVersion);
+
+      if (!sourceSupportsFiles) {
+        // existing values are respected; others remain unset
+        assertEquals(null, actual.getStreams().get(0).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(1).getConfig().getIncludeFiles());
+        assertEquals(false, actual.getStreams().get(2).getConfig().getIncludeFiles());
+        assertEquals(true, actual.getStreams().get(3).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(4).getConfig().getIncludeFiles());
+      } else {
+        // default to whether the destination supports; non-file based streams remain unset
+        assertEquals(destSupportsFiles, actual.getStreams().get(0).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(1).getConfig().getIncludeFiles());
+        assertEquals(false, actual.getStreams().get(2).getConfig().getIncludeFiles());
+        assertEquals(true, actual.getStreams().get(3).getConfig().getIncludeFiles());
+        assertEquals(destSupportsFiles, actual.getStreams().get(4).getConfig().getIncludeFiles());
+      }
+    }
+
     @Nested
     class CreateConnection {
 
@@ -973,6 +1031,12 @@ class ConnectionsHandlerTest {
         // for update calls
         when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
         when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(organizationId);
+        final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+        final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+        when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
       }
 
       private ConnectionCreate buildConnectionCreateRequest(final StandardSync standardSync, final AirbyteCatalog catalog) {
@@ -1539,6 +1603,12 @@ class ConnectionsHandlerTest {
             .thenReturn(new StandardSourceDefinition().withName("source").withSourceDefinitionId(UUID.randomUUID()));
         when(destinationService.getDestinationDefinitionFromConnection(connection3Id))
             .thenReturn(new StandardDestinationDefinition().withName("destination").withDestinationDefinitionId(UUID.randomUUID()));
+        final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+        final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+        when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
       }
 
       private ConfiguredAirbyteStream buildConfiguredStream(final String name) {
@@ -3406,6 +3476,13 @@ class ConnectionsHandlerTest {
           .withDestinationDefinitionId(DESTINATION_DEFINITION_ID);
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
           .withSourceDefinitionId(UUID.randomUUID());
+
+      final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+      final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+      when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+      when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+      when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+      when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
 
       when(catalogService.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);

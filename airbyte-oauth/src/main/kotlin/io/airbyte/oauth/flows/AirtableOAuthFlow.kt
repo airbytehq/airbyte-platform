@@ -76,7 +76,7 @@ class AirtableOAuthFlow(
 
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
@@ -125,7 +125,7 @@ class AirtableOAuthFlow(
   @Throws(IOException::class, JsonValidationException::class)
   override fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,

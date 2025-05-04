@@ -14,7 +14,6 @@ import static io.temporal.workflow.Workflow.DEFAULT_VERSION;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
@@ -53,10 +52,13 @@ import io.temporal.failure.CanceledFailure;
 import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -103,7 +105,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
   public StandardSyncOutput run(final JobRunConfig jobRunConfig,
                                 final IntegrationLauncherConfig sourceLauncherConfig,
                                 final IntegrationLauncherConfig destinationLauncherConfig,
-                                final StandardSyncInput syncInput,
+                                @NotNull final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
     final long startTime = Workflow.currentTimeMillis();
@@ -217,7 +219,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           .withConnectionConfiguration(syncInput.getSourceConfiguration())
           .withSourceId(syncInput.getSourceId().toString())
           .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
-              Charsets.UTF_8)).toString())
+              StandardCharsets.UTF_8)).toString())
           .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
           .withManual(false);
       final ConnectorCommandWorkflow childDiscoverWorkflow = Workflow.newChildWorkflowStub(
@@ -259,28 +261,9 @@ public class SyncWorkflowImpl implements SyncWorkflow {
         Workflow.getVersion(GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY, Workflow.DEFAULT_VERSION,
             GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY_VERSION);
     if (version == Workflow.DEFAULT_VERSION) {
-      return new ReplicationActivityInput(
-          syncInput.getSourceId(),
-          syncInput.getDestinationId(),
-          syncInput.getSourceConfiguration(),
-          syncInput.getDestinationConfiguration(),
-          jobRunConfig,
-          sourceLauncherConfig,
-          destinationLauncherConfig,
-          syncInput.getSyncResourceRequirements(),
-          syncInput.getWorkspaceId(),
-          syncInput.getConnectionId(),
-          taskQueue,
-          syncInput.getIsReset(),
-          syncInput.getNamespaceDefinition(),
-          syncInput.getNamespaceFormat(),
-          syncInput.getPrefix(),
-          refreshSchemaOutput,
-          syncInput.getConnectionContext(),
-          signalInput,
-          syncInput.getNetworkSecurityTokens(),
-          syncInput.getIncludesFiles(),
-          syncInput.getOmitFileTransferEnvVar());
+      return GenerateReplicationActivityInputActivity.toReplicationActivityInput(syncInput, jobRunConfig,
+          sourceLauncherConfig, destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput,
+          Map.of(), TimeUnit.HOURS.toSeconds(24), false);
     } else {
       return generateReplicationActivityInputActivity.generate(syncInput, jobRunConfig, sourceLauncherConfig,
           destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput);

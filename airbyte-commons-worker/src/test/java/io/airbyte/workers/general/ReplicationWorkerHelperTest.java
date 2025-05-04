@@ -31,8 +31,6 @@ import io.airbyte.config.State;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.MetricClient;
@@ -44,7 +42,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage;
 import io.airbyte.workers.context.ReplicationContext;
-import io.airbyte.workers.context.ReplicationFeatureFlags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
@@ -93,7 +91,7 @@ class ReplicationWorkerHelperTest {
   private ActorDefinitionVersionApi actorDefinitionVersionApi;
   private ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   private RecordMapper recordMapper;
-  private FeatureFlagClient featureFlagClient;
+  private ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
   private DestinationCatalogGenerator destinationCatalogGenerator;
 
   private final ReplicationContext replicationContext = new ReplicationContext(true, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), 0L,
@@ -120,8 +118,8 @@ class ReplicationWorkerHelperTest {
     when(airbyteApiClient.getActorDefinitionVersionApi()).thenReturn(actorDefinitionVersionApi);
     when(streamStatusTrackerFactory.create(any())).thenReturn(streamStatusTracker);
     recordMapper = mock(RecordMapper.class);
-    featureFlagClient = mock(TestClient.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
+    replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
     replicationWorkerHelper = spy(new ReplicationWorkerHelper(
         mock(FieldSelector.class),
         mapper,
@@ -137,7 +135,6 @@ class ReplicationWorkerHelperTest {
         streamStatusCompletionTracker,
         streamStatusTrackerFactory,
         recordMapper,
-        featureFlagClient,
         destinationCatalogGenerator,
         mock(MetricClient.class)));
   }
@@ -157,7 +154,7 @@ class ReplicationWorkerHelperTest {
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -187,7 +184,7 @@ class ReplicationWorkerHelperTest {
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -256,7 +253,7 @@ class ReplicationWorkerHelperTest {
 
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -276,7 +273,7 @@ class ReplicationWorkerHelperTest {
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -299,7 +296,7 @@ class ReplicationWorkerHelperTest {
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(catalog, Map.of()));
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -323,7 +320,7 @@ class ReplicationWorkerHelperTest {
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));
@@ -380,7 +377,7 @@ class ReplicationWorkerHelperTest {
     // Need to pass in a replication context
     replicationWorkerHelper.initialize(
         replicationContext,
-        mock(ReplicationFeatureFlags.class),
+        replicationInputFeatureFlagReader,
         mock(Path.class),
         catalog,
         mock(State.class));

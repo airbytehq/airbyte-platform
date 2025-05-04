@@ -24,42 +24,6 @@ Renders the cluster.type environment variable
 {{- end }}
 
 {{/*
-Renders the global.cluster.controlPlane.remoteDataPlaneServiceAccounts value
-*/}}
-{{- define "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts" }}
-    {{- (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) }}
-{{- end }}
-
-{{/*
-Renders the cluster.controlPlane.remoteDataPlaneServiceAccounts environment variable
-*/}}
-{{- define "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" }}
-- name: REMOTE_DATAPLANE_SERVICEACCOUNTS
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: REMOTE_DATAPLANE_SERVICEACCOUNTS
-{{- end }}
-
-{{/*
-Renders the global.cluster.dataPlane.id value
-*/}}
-{{- define "airbyte.cluster.dataPlane.id" }}
-    {{- .Values.global.cluster.dataPlane.id | default "local" }}
-{{- end }}
-
-{{/*
-Renders the cluster.dataPlane.id environment variable
-*/}}
-{{- define "airbyte.cluster.dataPlane.id.env" }}
-- name: DATA_PLANE_ID
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATA_PLANE_ID
-{{- end }}
-
-{{/*
 Renders the global.cluster.dataPlane.controlPlaneAuthEndpoint value
 */}}
 {{- define "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint" }}
@@ -78,42 +42,6 @@ Renders the cluster.dataPlane.controlPlaneAuthEndpoint environment variable
 {{- end }}
 
 {{/*
-Renders the global.cluster.dataPlane.serviceAccountEmail value
-*/}}
-{{- define "airbyte.cluster.dataPlane.serviceAccountEmail" }}
-    {{- .Values.global.cluster.dataPlane.serviceAccountEmail }}
-{{- end }}
-
-{{/*
-Renders the cluster.dataPlane.serviceAccountEmail environment variable
-*/}}
-{{- define "airbyte.cluster.dataPlane.serviceAccountEmail.env" }}
-- name: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATA_PLANE_SERVICE_ACCOUNT_EMAIL
-{{- end }}
-
-{{/*
-Renders the global.cluster.dataPlane.serviceAccountCredentialsPath value
-*/}}
-{{- define "airbyte.cluster.dataPlane.serviceAccountCredentialsPath" }}
-    {{- .Values.global.cluster.dataPlane.serviceAccountCredentialsPath | default "/secrets/dataplane-creds/sa.json" }}
-{{- end }}
-
-{{/*
-Renders the cluster.dataPlane.serviceAccountCredentialsPath environment variable
-*/}}
-{{- define "airbyte.cluster.dataPlane.serviceAccountCredentialsPath.env" }}
-- name: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH
-{{- end }}
-
-{{/*
 Renders the set of all cluster environment variables
 */}}
 {{- define "airbyte.cluster.envs" }}
@@ -121,22 +49,14 @@ Renders the set of all cluster environment variables
 {{- $opt := (include "airbyte.cluster.type" .) }}
 
 {{- if eq $opt "control-plane" }}
-{{- include "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" . }}
 {{- end }}
 
 {{- if eq $opt "data-plane" }}
-{{- include "airbyte.cluster.dataPlane.id.env" . }}
 {{- include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint.env" . }}
-{{- include "airbyte.cluster.dataPlane.serviceAccountEmail.env" . }}
-{{- include "airbyte.cluster.dataPlane.serviceAccountCredentialsPath.env" . }}
 {{- end }}
 
 {{- if eq $opt "hybrid" }}
-{{- include "airbyte.cluster.controlPlane.remoteDataPlaneServiceAccounts.env" . }}
-{{- include "airbyte.cluster.dataPlane.id.env" . }}
 {{- include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint.env" . }}
-{{- include "airbyte.cluster.dataPlane.serviceAccountEmail.env" . }}
-{{- include "airbyte.cluster.dataPlane.serviceAccountCredentialsPath.env" . }}
 {{- end }}
 
 {{- end }}
@@ -149,94 +69,14 @@ CLUSTER_TYPE: {{ include "airbyte.cluster.type" . | quote }}
 {{- $opt := (include "airbyte.cluster.type" .) }}
 
 {{- if eq $opt "control-plane" }}
-REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) | quote }}
 {{- end }}
 
 {{- if eq $opt "data-plane" }}
-DATA_PLANE_ID: {{ include "airbyte.cluster.dataPlane.id" . | quote }}
 CONTROL_PLANE_AUTH_ENDPOINT: {{ include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_EMAIL: {{ include "airbyte.cluster.dataPlane.serviceAccountEmail" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH: {{ include "airbyte.cluster.dataPlane.serviceAccountCredentialsPath" . | quote }}
 {{- end }}
 
 {{- if eq $opt "hybrid" }}
-REMOTE_DATAPLANE_SERVICEACCOUNTS: {{ (.Values.global.cluster.controlPlane.remoteDataPlaneServiceAccounts | toJson ) | quote }}
-DATA_PLANE_ID: {{ include "airbyte.cluster.dataPlane.id" . | quote }}
 CONTROL_PLANE_AUTH_ENDPOINT: {{ include "airbyte.cluster.dataPlane.controlPlaneAuthEndpoint" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_EMAIL: {{ include "airbyte.cluster.dataPlane.serviceAccountEmail" . | quote }}
-DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH: {{ include "airbyte.cluster.dataPlane.serviceAccountCredentialsPath" . | quote }}
 {{- end }}
 
-{{- end }}
-
-{{/*
-Renders the global.cluster.controlPlane.bootstrap.dataPlane.secretName value
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName" }}
-    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.secretName | default "dataplane-creds" }}
-{{- end }}
-
-{{/*
-Renders the cluster.controlPlane.bootstrap.dataPlane.secretName environment variable
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName.env" }}
-- name: DATAPLANE_SECRET_NAME
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATAPLANE_SECRET_NAME
-{{- end }}
-
-{{/*
-Renders the global.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey value
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey" }}
-    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey }}
-{{- end }}
-
-{{/*
-Renders the cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey environment variable
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey.env" }}
-- name: DATAPLANE_CLIENT_ID_SECRET_KEY
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATAPLANE_CLIENT_ID_SECRET_KEY
-{{- end }}
-
-{{/*
-Renders the global.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey value
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey" }}
-    {{- .Values.global.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey }}
-{{- end }}
-
-{{/*
-Renders the cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey environment variable
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey.env" }}
-- name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DATAPLANE_CLIENT_SECRET_SECRET_KEY
-{{- end }}
-
-{{/*
-Renders the set of all cluster.controlPlane.bootstrap environment variables
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.envs" }}
-{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName.env" . }}
-{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey.env" . }}
-{{- include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey.env" . }}
-{{- end }}
-
-{{/*
-Renders the set of all cluster.controlPlane.bootstrap config map variables
-*/}}
-{{- define "airbyte.cluster.controlPlane.bootstrap.configVars" }}
-DATAPLANE_SECRET_NAME: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.secretName" . | quote }}
-DATAPLANE_CLIENT_ID_SECRET_KEY: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientIdSecretKey" . | quote }}
-DATAPLANE_CLIENT_SECRET_SECRET_KEY: {{ include "airbyte.cluster.controlPlane.bootstrap.dataPlane.clientSecretSecretKey" . | quote }}
 {{- end }}

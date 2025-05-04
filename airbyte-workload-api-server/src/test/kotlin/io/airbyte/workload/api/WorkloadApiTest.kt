@@ -18,6 +18,7 @@ import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
 import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.ApiWorkload

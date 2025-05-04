@@ -140,6 +140,7 @@ create index "jobs_config_type_idx" on "public"."jobs"("config_type" asc);
 create index "jobs_scope_idx" on "public"."jobs"("scope" asc);
 create index "jobs_status_idx" on "public"."jobs"("status" asc);
 create index "jobs_updated_at_idx" on "public"."jobs"("updated_at" asc);
+create index "scope_created_at_covering_idx" on "public"."jobs"("scope" asc, "created_at" desc, "status" asc, "config_type" asc);
 create index "scope_created_at_idx" on "public"."jobs"("scope" asc, "created_at" desc);
 create index "scope_non_terminal_status_idx" on "public"."jobs"("scope" asc, "status" asc)
 where ((status <> ALL (ARRAY['failed'::job_status, 'succeeded'::job_status, 'cancelled'::job_status])));

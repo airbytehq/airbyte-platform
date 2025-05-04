@@ -33,7 +33,6 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     [styles.typeDanger]: variant === "danger",
     [styles.typeClear]: variant === "clear",
     [styles.typeMagic]: variant === "magic",
-    [styles.typeLight]: variant === "light",
     [styles.typePrimary]: variant === "primary",
     [styles.typeSecondary]: variant === "secondary",
     [styles.typeClearDark]: variant === "clearDark",

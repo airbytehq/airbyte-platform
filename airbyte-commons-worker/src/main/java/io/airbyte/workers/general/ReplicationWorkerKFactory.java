@@ -6,11 +6,13 @@ package io.airbyte.workers.general;
 
 import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.commons.concurrency.VoidCallable;
+import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.workers.RecordSchemaValidator;
-import io.airbyte.workers.context.ReplicationFeatureFlags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.general.buffered.worker.ReplicationContextProvider;
 import io.airbyte.workers.general.buffered.worker.ReplicationWorkerContext;
 import io.airbyte.workers.general.buffered.worker.ReplicationWorkerHelperK;
@@ -45,7 +47,7 @@ public class ReplicationWorkerKFactory {
                                           final SyncPersistence syncPersistence,
                                           final RecordSchemaValidator recordSchemaValidator,
                                           final FieldSelector fieldSelector,
-                                          final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+                                          final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                           final ReplicationAirbyteMessageEventPublishingHelper msgEventPublisher,
                                           final VoidCallable onReplicationRunning,
                                           final DestinationTimeoutMonitor destinationTimeout,
@@ -80,7 +82,7 @@ public class ReplicationWorkerKFactory {
         destination,
         syncPersistence,
         onReplicationRunning,
-        getWorkloadHeartbeatSender(replicationFeatureFlagReader,
+        getWorkloadHeartbeatSender(replicationInputFeatureFlagReader,
             destinationTimeout,
             heartbeatMonitor,
             workloadApiClient,
@@ -120,7 +122,7 @@ public class ReplicationWorkerKFactory {
         destinationCatalogGenerator);
   }
 
-  private static WorkloadHeartbeatSender getWorkloadHeartbeatSender(final ReplicationFeatureFlagReader replicationFeatureFlagReader,
+  private static WorkloadHeartbeatSender getWorkloadHeartbeatSender(final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
                                                                     final DestinationTimeoutMonitor destinationTimeout,
                                                                     final HeartbeatMonitor heartbeatMonitor,
                                                                     final WorkloadApiClient workloadApiClient,
@@ -128,14 +130,13 @@ public class ReplicationWorkerKFactory {
                                                                     final ReplicationWorkerState replicationWorkerState,
                                                                     final String jobId,
                                                                     final int attempt) {
-    final ReplicationFeatureFlags replicationFeatureFlags = replicationFeatureFlagReader.readReplicationFeatureFlags();
     return new WorkloadHeartbeatSender(
         workloadApiClient,
         replicationWorkerState,
         destinationTimeout,
         heartbeatMonitor,
-        Duration.ofSeconds(replicationFeatureFlags.workloadHeartbeatRate()),
-        Duration.ofMinutes(replicationFeatureFlags.workloadHeartbeatTimeoutInMinutes()),
+        Duration.ofSeconds(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE)),
+        Duration.ofMinutes(replicationInputFeatureFlagReader.read(WorkloadHeartbeatTimeout.INSTANCE)),
         workloadId,
         Long.parseLong(jobId),
         attempt);

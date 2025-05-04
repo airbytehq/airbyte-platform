@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: airbyte-connector-rollout-worker
+  name: {{ .Release.Name }}-connector-rollout-worker
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.connectorRolloutWorker.extraLabels }}
@@ -66,7 +66,7 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.connectorRolloutWorker.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end }}
 
-        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
         {{- end }}
@@ -77,6 +77,17 @@ spec:
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.worker.envs" . | nindent 8 }}
+
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE 
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
+
+        {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.connectorRollout.temporal.envs" . | nindent 8 }}
+        {{- end }}
 
         # Values from secret
         {{- if .Values.connectorRolloutWorker.secrets }}
@@ -132,25 +143,28 @@ spec:
           containerPort: 8016 # for heartbeat server
 
         {{- if .Values.connectorRolloutWorker.resources }}
-        resources: {{- toYaml .Values.connectorRolloutWorker.resources | nindent 8 }}
+        resources: {{- toYaml .Values.connectorRolloutWorker.resources | nindent 10 }}
         {{- end }}
+
         {{- if .Values.connectorRolloutWorker.containerSecurityContext }}
-        securityContext: {{- toYaml .Values.connectorRolloutWorker.containerSecurityContext | nindent 8 }}
+        securityContext: {{- toYaml .Values.connectorRolloutWorker.containerSecurityContext | nindent 10 }}
         {{- end }}
+
         volumeMounts:
         {{- if .Values.connectorRolloutWorker.extraVolumeMounts }}
-        {{ toYaml .Values.connectorRolloutWorker.extraVolumeMounts | nindent 8 }}
+        {{ toYaml .Values.connectorRolloutWorker.extraVolumeMounts | nindent 10 }}
         {{- end }}
         {{- if .Values.global.extraVolumeMounts }}
-        {{ toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{ toYaml .Values.global.extraVolumeMounts | nindent 10 }}
         {{- end }}
+
       {{- if .Values.connectorRolloutWorker.extraContainers }}
-      {{ toYaml .Values.connectorRolloutWorker.extraContainers | nindent 6 }}
+      {{ toYaml .Values.connectorRolloutWorker.extraContainers | nindent 8 }}
       {{- end }}
       {{- if .Values.global.extraContainers }}
-      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{ toYaml .Values.global.extraContainers | nindent 8 }}
       {{- end }}
-      securityContext: {{- toYaml .Values.connectorRolloutWorker.podSecurityContext | nindent 6 }}
+      securityContext: {{- toYaml .Values.connectorRolloutWorker.podSecurityContext | nindent 8 }}
       volumes:
       {{- if .Values.connectorRolloutWorker.extraVolumes }}
   {{ toYaml .Values.connectorRolloutWorker.extraVolumes | nindent 4 }}

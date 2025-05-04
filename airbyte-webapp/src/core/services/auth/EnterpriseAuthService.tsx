@@ -25,7 +25,7 @@ export const EnterpriseAuthService: React.FC<PropsWithChildren<unknown>> = ({ ch
   const oidcConfig = {
     authority: auth.authorizationServerUrl != null ? auth.authorizationServerUrl : "",
     client_id: auth.clientId,
-    redirect_uri: createUriWithoutSsoParams(true), // creates redirect uri and adds `checkLicense=true` query param to trigger Enterprise license check.
+    redirect_uri: createUriWithoutSsoParams(),
     scope: "openid profile email",
     extraQueryParams: !!auth.audience ? { audience: auth.audience } : undefined,
     onSigninCallback: () => {

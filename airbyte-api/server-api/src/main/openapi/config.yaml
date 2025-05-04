@@ -3136,6 +3136,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/get_embedded_consent_url:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source connector definition ID, return the URL to the consent screen where to redirect the user to. This endpoint is specific for the embedded widget, and does not allow configuring the oAuthInputConfiguration for security purposes.
+      operationId: getEmbeddedSourceOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedSourceOauthConsentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthConsentRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connector_builder_projects/get_oauth_consent_url:
     post:
       tags:
@@ -6268,7 +6291,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PartialUserConfigWithSource"
+                $ref: "#/components/schemas/SourceRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/list:
@@ -6348,6 +6371,7 @@ paths:
       x-sdk-group: Health
   /public/v1/config_templates:
     get:
+      description: List all config templates available to a workspace. This endpoint is only available when Airbyte Embedded is enabled.
       tags:
         - public_config_templates
         - public
@@ -6374,6 +6398,7 @@ paths:
           in: query
           required: true
     post:
+      description: Create a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
       requestBody:
         content:
           application/json:
@@ -6390,7 +6415,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfigTemplateCreateResponse"
-          description: Create a config template.
+          description: Created a config template.
         "403":
           description: Not allowed
       operationId: publicCreateConfigTemplate
@@ -6399,6 +6424,7 @@ paths:
       x-sdk-group: ConfigTemplates
   /public/v1/config_templates/{configTemplateId}:
     patch:
+      description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
       requestBody:
         content:
           application/json:
@@ -6434,6 +6460,7 @@ paths:
           in: path
           required: true
     get:
+      description: Get a config template. This endpoint is only available when Airbyte Embedded is enabled.
       tags:
         - public_config_templates
         - public
@@ -6971,7 +6998,7 @@ paths:
         required: true
 
   # Dataplanes endpoints
-  /public/v1/regions/{regionId}/dataplanes:
+  /public/v1/dataplanes:
     get:
       tags:
         - public_dataplanes
@@ -7020,15 +7047,8 @@ paths:
       summary: Create a dataplane
       x-sdk-alias: createDataplane
       x-sdk-group: Dataplanes
-    parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
 
-  /public/v1/regions/{regionId}/dataplanes/{dataplaneId}:
+  /public/v1/dataplanes/{dataplaneId}:
     get:
       tags:
         - public_dataplanes
@@ -7098,12 +7118,6 @@ paths:
       x-sdk-group: Dataplanes
       summary: Delete a dataplane
     parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
       - name: dataplaneId
         schema:
           type: string
@@ -8981,9 +8995,11 @@ paths:
 
   /public/v1/embedded/widget:
     post:
+      description: "Get a token for the embedded widget. This endpoint is only available when Airbyte Embedded is enabled."
       operationId: getEmbeddedWidget
-      summary: Get a token for Airbyte Embedded
+      x-sdk-alias: getEmbeddedWidget
       x-sdk-group: EmbeddedWidget
+      summary: Get a token for Airbyte Embedded
       requestBody:
         content:
           application/json:
@@ -11118,6 +11134,7 @@ components:
       description: The specification for what values are required to configure the sourceDefinition.
       type: object
       example: { user: { type: string } }
+      x-sdk-component: true
     SourceDefinitionSpecificationRead:
       type: object
       required:
@@ -15206,6 +15223,7 @@ components:
       description: A unique identifier for an actor definition.
       type: string
       format: uuid
+      x-sdk-component: true
     ActorDefinitionRequestBody:
       type: object
       additionalProperties: false
@@ -15435,6 +15453,22 @@ components:
                     }
                   }
           $ref: "#/components/schemas/OAuthConfiguration"
+    EmbeddedSourceOauthConsentRequest:
+      type: object
+      required:
+        - sourceDefinitionId
+        - workspaceId
+        - redirectUrl
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        redirectUrl:
+          description: The url to redirect to after getting the user consent
+          type: string
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
     SourceOauthConsentRequest:
       type: object
       required:
@@ -18464,10 +18498,14 @@ components:
       type: object
       required:
         - dataplane_id
+        - region_id
         - client_id
         - client_secret
       properties:
         dataplane_id:
+          type: string
+          format: UUID
+        region_id:
           type: string
           format: UUID
         client_id:
@@ -18609,7 +18647,6 @@ components:
       required:
         - name
         - organizationId
-        - enabled
       properties:
         name:
           type: string
@@ -18676,9 +18713,12 @@ components:
     DataplaneCreateRequest:
       type: object
       required:
+        - regionId
         - name
-        - enabled
       properties:
+        regionId:
+          type: string
+          format: uuid
         name:
           type: string
         enabled:
@@ -18690,13 +18730,17 @@ components:
     DataplaneCreateResponseBody:
       type: object
       required:
+        - regionId
         - dataplaneId
         - clientId
         - clientSecret
       properties:
         dataplaneId:
           type: string
-          format: UUID
+          format: uuid
+        regionId:
+          type: string
+          format: uuid
         clientId:
           type: string
         clientSecret:
@@ -18762,6 +18806,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConfigTemplateListItem"
+      x-sdk-component: true
     ConfigTemplateList:
       type: object
       required:
@@ -18785,6 +18830,7 @@ components:
           type: string
         icon:
           type: string
+      x-sdk-component: true
     ConfigTemplateRequestBody:
       type: object
       required:
@@ -18846,6 +18892,7 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         partialDefaultConfig:
           type: object
+      x-sdk-component: true
     ListConfigTemplatesRequestBody:
       type: object
       required:
@@ -18871,6 +18918,7 @@ components:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
           $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
     ConfigTemplateSpec:
       type: object
     ConfigTemplateCreateResponse:
@@ -18881,6 +18929,7 @@ components:
         id:
           type: string
           format: uuid
+      x-sdk-component: true
     ConfigTemplateUpdateRequestBody:
       type: object
       required:
@@ -18893,6 +18942,7 @@ components:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
           $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
     ConfigTemplateUpdateResponse:
       type: object
       required:
@@ -18901,6 +18951,7 @@ components:
         id:
           type: string
           format: uuid
+      x-sdk-component: true
 
     # PARTIAL USER CONFIGS
     PartialUserConfigRequestBody:
@@ -18999,6 +19050,7 @@ components:
         - partialUserConfigId
         - configTemplateName
         - configTemplateIcon
+        - configTemplateId
       properties:
         partialUserConfigId:
           type: string
@@ -19009,6 +19061,10 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
+        configTemplateId:
+          type: string
+          format: uuid
+          description: config template corresponding to this partial config
     EmbeddedWidgetRequest:
       type: object
       required:
@@ -19022,6 +19078,7 @@ components:
           type: string
         externalUserId:
           type: string
+      x-sdk-component: true
 
   responses:
     NotFoundResponse:

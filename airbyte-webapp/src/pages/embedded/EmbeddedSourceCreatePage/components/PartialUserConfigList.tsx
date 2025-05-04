@@ -16,6 +16,7 @@ export const PartialUserConfigList: React.FC<ConfigListProps> = ({ workspaceId, 
       id: config.partialUserConfigId,
       name: config.configTemplateName,
       icon: config.configTemplateIcon,
+      configured: true,
     }));
   return <SelectableList items={items} onSelect={onSelectConfig} />;
 };

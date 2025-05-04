@@ -14,7 +14,7 @@ interface ConnectorFormContext {
   formType: "source" | "destination";
   getValues: (values: ConnectorFormValues) => ConnectorFormValues;
   resetConnectorForm: () => void;
-  selectedConnectorDefinition?: ConnectorDefinition;
+  selectedConnectorDefinition: ConnectorDefinition;
   selectedConnectorDefinitionSpecification?: ConnectorDefinitionSpecificationRead | SourceDefinitionSpecificationDraft;
   isEditMode?: boolean;
   validationSchema: AnySchema;
@@ -34,7 +34,7 @@ export const useConnectorForm = (): ConnectorFormContext => {
 };
 
 interface ConnectorFormContextProviderProps {
-  selectedConnectorDefinition?: ConnectorDefinition;
+  selectedConnectorDefinition: ConnectorDefinition;
   formType: "source" | "destination";
   isEditMode?: boolean;
   getValues: (values: ConnectorFormValues) => ConnectorFormValues;

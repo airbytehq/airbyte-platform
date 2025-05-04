@@ -46,10 +46,8 @@ import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
 import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
-import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.config.Configs;
@@ -62,18 +60,14 @@ import io.airbyte.config.Organization;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
-import io.airbyte.metrics.MetricClient;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -111,7 +105,6 @@ class WorkspacesHandlerTest {
   private static final String TEST_WORKSPACE_NAME = "test workspace";
   private static final String TEST_WORKSPACE_SLUG = "test-workspace";
   private static final String TEST_ORGANIZATION_NAME = "test organization";
-  private SecretsRepositoryWriter secretsRepositoryWriter;
   private ConnectionsHandler connectionsHandler;
   private DestinationHandler destinationHandler;
   private SourceHandler sourceHandler;
@@ -119,7 +112,7 @@ class WorkspacesHandlerTest {
   private StandardWorkspace workspace;
   private SecretPersistence secretPersistence;
 
-  private PermissionPersistence permissionPersistence;
+  private PermissionHandler permissionHandler;
   private WorkspacePersistence workspacePersistence;
   private WorkspaceService workspaceService;
   private OrganizationPersistence organizationPersistence;
@@ -127,7 +120,6 @@ class WorkspacesHandlerTest {
   private ProductLimitsProvider limitsProvider;
   private ConsumptionService consumptionService;
   private FeatureFlagClient ffClient;
-  private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -135,8 +127,7 @@ class WorkspacesHandlerTest {
     workspacePersistence = mock(WorkspacePersistence.class);
     organizationPersistence = mock(OrganizationPersistence.class);
     secretPersistence = mock(SecretPersistence.class);
-    permissionPersistence = mock(PermissionPersistence.class);
-    secretsRepositoryWriter = new SecretsRepositoryWriter(secretPersistence, mock(MetricClient.class));
+    permissionHandler = mock(PermissionHandler.class);
     connectionsHandler = mock(ConnectionsHandler.class);
     destinationHandler = mock(DestinationHandler.class);
     sourceHandler = mock(SourceHandler.class);
@@ -153,15 +144,13 @@ class WorkspacesHandlerTest {
   private WorkspacesHandler getWorkspacesHandler(Configs.AirbyteEdition airbyteEdition) {
     return new WorkspacesHandler(workspacePersistence,
         organizationPersistence,
-        secretsRepositoryWriter,
-        permissionPersistence,
+        permissionHandler,
         connectionsHandler,
         destinationHandler,
         sourceHandler,
         uuidSupplier,
         workspaceService,
         trackingClient,
-        apiPojoConverters,
         limitsProvider,
         consumptionService,
         ffClient,
@@ -963,7 +952,7 @@ class WorkspacesHandlerTest {
   }
 
   @Test
-  void testSetFeedbackDone() throws JsonValidationException, ConfigNotFoundException, IOException {
+  void testSetFeedbackDone() throws ConfigNotFoundException, IOException {
     final WorkspaceGiveFeedback workspaceGiveFeedback = new WorkspaceGiveFeedback()
         .workspaceId(UUID.randomUUID());
 
@@ -976,11 +965,10 @@ class WorkspacesHandlerTest {
   @EnumSource(Configs.AirbyteEdition.class)
   void testWorkspaceIsWrittenThroughSecretsWriter(final Configs.AirbyteEdition airbyteEdition)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     final WorkspacesHandler workspacesHandler =
         new WorkspacesHandler(workspacePersistence, organizationPersistence,
-            secretsRepositoryWriter, permissionPersistence, connectionsHandler,
-            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient, apiPojoConverters,
+            permissionHandler, connectionsHandler,
+            destinationHandler, sourceHandler, uuidSupplier, workspaceService, trackingClient,
             limitsProvider, consumptionService, ffClient, airbyteEdition);
 
     final UUID uuid = UUID.randomUUID();

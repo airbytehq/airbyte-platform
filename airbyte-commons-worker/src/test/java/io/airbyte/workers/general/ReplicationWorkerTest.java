@@ -55,8 +55,13 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.WorkerDestinationConfig;
 import io.airbyte.config.WorkerSourceConfig;
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter;
-import io.airbyte.featureflag.FeatureFlagClient;
-import io.airbyte.featureflag.TestClient;
+import io.airbyte.featureflag.DestinationTimeoutEnabled;
+import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
+import io.airbyte.featureflag.LogConnectorMessages;
+import io.airbyte.featureflag.LogStateMsgs;
+import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
+import io.airbyte.featureflag.WorkloadHeartbeatRate;
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.MetricAttribute;
@@ -76,7 +81,7 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.WorkerUtils;
 import io.airbyte.workers.context.ReplicationContext;
-import io.airbyte.workers.context.ReplicationFeatureFlags;
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.FailureHelper;
@@ -178,7 +183,7 @@ abstract class ReplicationWorkerTest {
   protected HeartbeatTimeoutChaperone heartbeatTimeoutChaperone;
   protected ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper;
   protected AirbyteMessageDataExtractor airbyteMessageDataExtractor;
-  protected ReplicationFeatureFlagReader replicationFeatureFlagReader;
+  protected ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader;
   protected DestinationTimeoutMonitor destinationTimeoutMonitor;
 
   protected VoidCallable onReplicationRunning;
@@ -194,7 +199,6 @@ abstract class ReplicationWorkerTest {
   protected ActorDefinitionVersionApi actorDefinitionVersionApi;
   protected StreamStatusTrackerFactory streamStatusTrackerFactory;
   protected RecordMapper recordMapper;
-  protected FeatureFlagClient featureFlagClient;
   protected DestinationCatalogGenerator destinationCatalogGenerator;
 
   BufferedReplicationWorker getDefaultReplicationWorker() {
@@ -232,11 +236,25 @@ abstract class ReplicationWorkerTest {
     workerMetricReporter = new WorkerMetricReporter(metricClient, "docker_image:v1.0.0");
     airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     onReplicationRunning = mock(VoidCallable.class);
-    replicationFeatureFlagReader = mock(ReplicationFeatureFlagReader.class);
+    replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))
+        .thenReturn(60);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatTimeout.INSTANCE))
+        .thenReturn(4);
+    when(replicationInputFeatureFlagReader.read(FailSyncOnInvalidChecksum.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(LogStateMsgs.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(LogConnectorMessages.INSTANCE))
+        .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE))
+        .thenReturn(false);
 
     final HeartbeatMonitor heartbeatMonitor = mock(HeartbeatMonitor.class);
     heartbeatTimeoutChaperone =
-        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), null, null, null, "docker image", metricClient);
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMinutes(5), replicationInputFeatureFlagReader, null, "docker image", metricClient);
     destinationTimeoutMonitor = mock(DestinationTimeoutMonitor.class);
     replicationAirbyteMessageEventPublishingHelper = mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     workloadApi = mock(WorkloadApi.class);
@@ -303,12 +321,9 @@ abstract class ReplicationWorkerTest {
     when(mapper.mapMessage(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
     when(mapper.revertMap(STATE_MESSAGE)).thenReturn(STATE_MESSAGE);
     when(mapper.revertMap(CONFIG_MESSAGE)).thenReturn(CONFIG_MESSAGE);
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags()).thenReturn(
-        new ReplicationFeatureFlags(false, 60, 4, false, false, false));
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(true));
 
     recordMapper = mock(RecordMapper.class);
-    featureFlagClient = mock(TestClient.class);
     destinationCatalogGenerator = mock(DestinationCatalogGenerator.class);
     when(destinationCatalogGenerator.generateDestinationCatalog(any()))
         .thenReturn(new DestinationCatalogGenerator.CatalogGenerationResult(destinationConfig.getCatalog(), Map.of()));
@@ -893,8 +908,12 @@ abstract class ReplicationWorkerTest {
     when(heartbeatMonitor.isBeating()).thenReturn(Optional.of(false));
     final UUID connectionId = UUID.randomUUID();
     final MetricClient mMetricClient = mock(MetricClient.class);
+
+    when(replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE))
+        .thenReturn(true);
+
     heartbeatTimeoutChaperone =
-        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), new TestClient(Map.of("heartbeat.failSync", true)), UUID.randomUUID(),
+        new HeartbeatTimeoutChaperone(heartbeatMonitor, Duration.ofMillis(1), replicationInputFeatureFlagReader,
             connectionId, "docker image", mMetricClient);
     sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1);
 
@@ -913,8 +932,10 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testDestinationAcceptTimeout() throws Exception {
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
+        .thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))
+        .thenReturn(0);
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -961,8 +982,10 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testDestinationNotifyEndOfInputTimeout() throws Exception {
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
+        .thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))
+        .thenReturn(0);
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),
@@ -1007,8 +1030,10 @@ abstract class ReplicationWorkerTest {
 
   @Test
   void testDestinationTimeoutWithCloseFailure() throws Exception {
-    when(replicationFeatureFlagReader.readReplicationFeatureFlags())
-        .thenReturn(new ReplicationFeatureFlags(true, 0, 4, false, false, false));
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
+        .thenReturn(true);
+    when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))
+        .thenReturn(0);
 
     destinationTimeoutMonitor = spy(new DestinationTimeoutMonitor(
         UUID.randomUUID(),

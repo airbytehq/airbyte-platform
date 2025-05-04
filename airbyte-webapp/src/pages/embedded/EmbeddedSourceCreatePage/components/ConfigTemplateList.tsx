@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 import { EmptyState } from "components/EmptyState";
 import { Box } from "components/ui/Box";
 
-import { useListConfigTemplates } from "core/api";
+import { useListConfigTemplates, useListPartialUserConfigs } from "core/api";
 
 import { SelectableList } from "./SelectableList";
 import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
@@ -19,11 +19,13 @@ export const ConfigTemplateSelectList: React.FC = () => {
   if (configTemplates.length === 1) {
     setSelectedTemplate(configTemplates[0].id);
   }
+  const { partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
   const items = configTemplates.map((template) => ({
     id: template.id,
     name: template.name,
     icon: template.icon,
+    configured: partialUserConfigs.some((config) => config.configTemplateId === template.id),
   }));
 
   return (

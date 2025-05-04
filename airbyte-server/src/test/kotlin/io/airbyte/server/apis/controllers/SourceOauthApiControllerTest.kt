@@ -55,6 +55,15 @@ internal class SourceOauthApiControllerTest {
   }
 
   @Test
+  fun testGetEmbeddedSourceOAuthConsent() {
+    every { oAuthHandler.getSourceOAuthConsent(any()) } returns OAuthConsentRead() andThenThrows ConfigNotFoundException("", "")
+
+    val path = "/api/v1/source_oauths/get_embedded_consent_url"
+    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
+    assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
+  }
+
+  @Test
   fun testSetInstancewideSourceOauthParams() {
     every { oAuthHandler.setSourceInstancewideOauthParams(any()) } returns Unit
 

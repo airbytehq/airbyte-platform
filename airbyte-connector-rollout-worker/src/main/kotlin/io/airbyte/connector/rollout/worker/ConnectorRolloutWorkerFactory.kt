@@ -17,8 +17,10 @@ import io.airbyte.connector.rollout.worker.activities.VerifyDefaultVersionActivi
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Factory
 import io.temporal.client.WorkflowClient
+import io.temporal.worker.NonDeterministicException
 import io.temporal.worker.Worker
 import io.temporal.worker.WorkerFactory
+import io.temporal.worker.WorkflowImplementationOptions
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -43,7 +45,13 @@ class ConnectorRolloutWorkerFactory {
     logger.info { "ConnectorRolloutWorkerFactory registering workflow" }
     val workerFactory = WorkerFactory.newInstance(workflowClient)
     val worker: Worker = workerFactory.newWorker(Constants.TASK_QUEUE)
-    worker.registerWorkflowImplementationTypes(ConnectorRolloutWorkflowImpl::class.java)
+    worker.registerWorkflowImplementationTypes(
+      WorkflowImplementationOptions
+        .newBuilder()
+        .setFailWorkflowExceptionTypes(NonDeterministicException::class.java)
+        .build(),
+      ConnectorRolloutWorkflowImpl::class.java,
+    )
     worker.registerActivitiesImplementations(
       startRolloutActivityImpl,
       getRolloutActivityImpl,

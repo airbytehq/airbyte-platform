@@ -166,6 +166,17 @@ create table "public"."auth_user" (
   constraint "auth_user_pkey" primary key ("id"),
   constraint "auth_user_auth_user_id_auth_provider_key" unique ("auth_user_id", "auth_provider")
 );
+create table "public"."commands" (
+  "id" varchar(2147483647) not null,
+  "workload_id" varchar(2147483647) not null,
+  "command_type" varchar(2147483647) not null,
+  "command_input" jsonb not null,
+  "workspace_id" uuid not null,
+  "organization_id" uuid not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "commands_pkey" primary key ("id")
+);
 create table "public"."config_template" (
   "id" uuid not null,
   "organization_id" uuid not null,
@@ -381,7 +392,6 @@ create table "public"."partial_user_config" (
   "id" uuid not null,
   "workspace_id" uuid not null,
   "config_template_id" uuid not null,
-  "partial_user_config_properties" jsonb not null,
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
@@ -439,8 +449,8 @@ create table "public"."secret_config" (
   "descriptor" varchar(256) not null,
   "external_coordinate" varchar(256) not null,
   "tombstone" boolean not null default false,
-  "created_by" uuid not null,
-  "updated_by" uuid not null,
+  "created_by" uuid,
+  "updated_by" uuid,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "airbyte_managed" boolean not null,
@@ -720,6 +730,9 @@ alter table "public"."actor_definition_config_injection" add constraint "actor_d
 alter table "public"."actor_definition_version" add constraint "actor_definition_version_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."actor_definition_workspace_grant" add constraint "actor_definition_workspace_grant_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."auth_user" add constraint "auth_user_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
+alter table "public"."commands" add constraint "commands_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."commands" add constraint "commands_workload_id_fkey" foreign key ("workload_id") references "public"."workload" ("id");
+alter table "public"."commands" add constraint "commands_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."config_template" add constraint "config_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection" add constraint "connection_actor_catalog_id_fk" foreign key ("source_catalog_id") references "public"."actor_catalog" ("id");
@@ -751,7 +764,6 @@ alter table "public"."permission" add constraint "permission_user_id_fkey" forei
 alter table "public"."permission" add constraint "permission_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
 alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
-alter table "public"."secret_config" add constraint "secret_config_secret_storage_id_fkey1" foreign key ("secret_storage_id") references "public"."secret_storage" ("id");
 alter table "public"."secret_reference" add constraint "secret_reference_secret_config_id_fkey" foreign key ("secret_config_id") references "public"."secret_config" ("id");
 alter table "public"."sso_config" add constraint "sso_config_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."state" add constraint "state_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");

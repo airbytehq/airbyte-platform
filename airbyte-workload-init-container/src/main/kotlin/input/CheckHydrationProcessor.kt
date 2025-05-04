@@ -39,18 +39,22 @@ class CheckHydrationProcessor(
       try {
         inputHydrator.getHydratedStandardCheckInput(parsed.checkConnectionInput)
       } catch (e: SecretCoordinateException) {
+        val attrs =
+          mutableListOf(
+            MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
+            MetricAttribute(
+              CONNECTOR_TYPE,
+              parsed.checkConnectionInput.actorContext.actorType
+                .toString(),
+            ),
+          )
+        if (parsed.launcherConfig.connectionId != null) {
+          attrs.add(MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()))
+        }
+
         metricClient.count(
           metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
-          attributes =
-            arrayOf(
-              MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
-              MetricAttribute(
-                CONNECTOR_TYPE,
-                parsed.checkConnectionInput.actorContext.actorType
-                  .toString(),
-              ),
-              MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
-            ),
+          attributes = attrs.toTypedArray(),
         )
         throw e
       }

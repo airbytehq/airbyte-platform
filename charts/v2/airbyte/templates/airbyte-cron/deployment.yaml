@@ -59,49 +59,56 @@ spec:
           image: {{ include "imageUrl" (list .Values.cron.image $) }}
           imagePullPolicy: "{{ .Values.cron.image.pullPolicy }}"
           env:
+            {{- include "airbyte.common.envs" . | nindent 12 }}
+            {{- include "airbyte.cron.envs" . | nindent 12 }}
+            {{- include "airbyte.database.envs" . | nindent 12 }}
+            {{- include "airbyte.database.migrations.envs" . | nindent 12 }}
+            {{- include "airbyte.featureFlags.envs" . | nindent 12 }}
+            {{- include "airbyte.metrics.envs" . | nindent 12 }}
+            {{- include "airbyte.micronaut.envs" . | nindent 12 }}
+            {{- include "airbyte.temporal.envs" . | nindent 12 }}
+            {{- include "airbyte.tracking.envs" . | nindent 12 }}
+            {{- include "airbyte.worker.envs" . | nindent 12 }}
+            {{- include "airbyte.workloadApiServer.envs" . | nindent 12 }}
 
-          {{- include "airbyte.common.envs" . | nindent 10 }}
-          {{- include "airbyte.cron.envs" . | nindent 10 }}
-          {{- include "airbyte.database.envs" . | nindent 10 }}
-          {{- include "airbyte.database.migrations.envs" . | nindent 10 }}
-          {{- include "airbyte.featureFlags.envs" . | nindent 10 }}
-          {{- include "airbyte.metrics.envs" . | nindent 10 }}
-          {{- include "airbyte.micronaut.envs" . | nindent 10 }}
-          {{- include "airbyte.temporal.envs" . | nindent 10 }}
-          {{- include "airbyte.tracking.envs" . | nindent 10 }}
-          {{- include "airbyte.worker.envs" . | nindent 10 }}
+            {{- if .Values.global.datadog.enabled }}
+            - name: DD_SERVICE 
+              value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+            {{- include "airbyte.datadog.envs" . | nindent 12 }}
+            {{- include "airbyte.otel.envs" . | nindent 12 }}
+            {{- end}}
 
-          {{- if (eq .Values.global.edition "enterprise") }}
-          {{- include "airbyte.enterprise.envs" . | nindent 10 }}
-          {{- end }}
+            {{- if (eq .Values.global.edition "enterprise") }}
+            {{- include "airbyte.enterprise.envs" . | nindent 12 }}
+            {{- end }}
 
-          {{- if (eq .Values.global.edition "cloud") }}
-          {{- include "airbyte.temporal.cloud.envs" . | nindent 10 }}
-          {{- end }}
+            {{- if (eq .Values.global.edition "cloud") }}
+            {{- include "airbyte.temporal.cloud.envs" . | nindent 12 }}
+            {{- end }}
 
-          # Values from secret
-          {{- if .Values.cron.secrets }}
-          {{- range $k, $v := .Values.cron.secrets }}
-          - name: {{ $k }}
-            valueFrom:
-              secretKeyRef:
-                name: cron-secrets
-                key: {{ $k }}
-          {{- end }}
-          {{- end }}
+            # Values from secret
+            {{- if .Values.cron.secrets }}
+            {{- range $k, $v := .Values.cron.secrets }}
+            - name: {{ $k }}
+              valueFrom:
+                secretKeyRef:
+                  name: cron-secrets
+                  key: {{ $k }}
+            {{- end }}
+            {{- end }}
 
-          # Values from env
-          {{- if or .Values.cron.env_vars .Values.global.env_vars }}
-          {{- range $k, $v := mergeOverwrite .Values.cron.env_vars .Values.global.env_vars }}
-          - name: {{ $k }}
-            value: {{ $v | quote }}
-          {{- end }}
-          {{- end }}
+            # Values from env
+            {{- if or .Values.cron.env_vars .Values.global.env_vars }}
+            {{- range $k, $v := mergeOverwrite .Values.cron.env_vars .Values.global.env_vars }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+            {{- end }}
 
-          # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
-          {{- if .Values.cron.extraEnv }}
-          {{- toYaml .Values.cron.extraEnv | nindent 10 }}
-          {{- end }}
+            # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+            {{- if .Values.cron.extraEnv }}
+            {{- toYaml .Values.cron.extraEnv | nindent 12 }}
+            {{- end }}
 
           {{- if .Values.cron.containerSecurityContext }}
           securityContext: {{- toYaml .Values.cron.containerSecurityContext | nindent 12 }}
@@ -112,7 +119,7 @@ spec:
           {{- end }}
 
           {{- if .Values.cron.extraVolumeMounts }}
-          volumeMounts: {{ toYaml .Values.cron.extraVolumeMounts | nindent 10 }}
+          volumeMounts: {{ toYaml .Values.cron.extraVolumeMounts | nindent 12 }}
           {{- end }}
 
         {{- if .Values.cron.extraContainers }}
@@ -121,8 +128,9 @@ spec:
         {{- if .Values.global.extraContainers }}
           {{ toYaml .Values.global.extraContainers | nindent 8 }}
         {{- end }}
-      securityContext: {{- toYaml .Values.cron.podSecurityContext | nindent 10 }}
+
+      securityContext: {{- toYaml .Values.cron.podSecurityContext | nindent 8 }}
       {{- if .Values.cron.extraVolumes }}
-      volumes: {{ toYaml .Values.cron.extraVolumes | nindent 6 }}
+      volumes: {{ toYaml .Values.cron.extraVolumes | nindent 8 }}
       {{- end }}
 {{- end }}

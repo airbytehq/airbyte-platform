@@ -579,6 +579,17 @@ object SecretsHelpers {
       return secretRefIds
     }
 
+    fun getSecretReferenceIdAtPath(
+      config: JsonNode,
+      nodePath: String,
+    ): SecretReferenceId? =
+      JsonPaths
+        .getSingleValue(config, nodePath)
+        .map { it.get(SECRET_REF_ID_FIELD) }
+        .filter { it.isTextual }
+        .map { SecretReferenceId(UUID.fromString(it.asText())) }
+        .orElse(null)
+
     private enum class SecretNodeType {
       AIRBYTE_MANAGED_SECRET_COORDINATE,
       EXTERNAL_SECRET_COORDINATE,
