@@ -13,9 +13,9 @@ import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateServ
 import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
+import styles from "./DynamicStreamConfigView.module.scss";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import { StreamConfigView } from "./StreamConfigView";
-import styles from "./StreamConfigView.module.scss";
 import { manifestRecordSelectorToBuilder } from "../convertManifestToBuilderForm";
 import { builderRecordSelectorToManifest, DynamicStreamPathFn, StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
@@ -64,7 +64,7 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
   }
 
   return (
-    <BuilderConfigView>
+    <BuilderConfigView className={styles.dynamicStreamConfigView}>
       <FlexContainer justifyContent="space-between" alignItems="center">
         <BuilderField
           type="string"
@@ -75,7 +75,6 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
           <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />
         </Button>
       </FlexContainer>
-
       <BuilderCard>
         <BuilderField
           type="jinja"
@@ -84,7 +83,6 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
           preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
         />
       </BuilderCard>
-
       <BuilderCard
         docLink={links.connectorBuilderRecordSelector}
         label={getLabelByManifest("RecordSelector")}
@@ -117,7 +115,6 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
           optional
         />
       </BuilderCard>
-
       <StreamConfigView streamId={streamId} scrollToTop={scrollToTop} />
     </BuilderConfigView>
   );

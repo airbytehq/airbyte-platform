@@ -826,7 +826,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
-  const generatedStreams = useBuilderWatch("generatedStreams");
+  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -947,7 +947,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       return acc;
     }, {});
 
-    setValue("generatedStreams", groupedStreams);
+    setValue("formValues.generatedStreams", groupedStreams);
 
     registerNotification({
       id: "connectorBuilder.generateStreamsSuccess",
@@ -1002,14 +1002,30 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
               schema: result.inferred_schema,
             } as const;
           }
+        } else if (testStreamId.type === "generated_stream") {
+          // write the inferred schema to the generated stream's parent dynamic stream
+          const dynamicStreamIndex = resolvedManifest.dynamic_streams?.findIndex(
+            (stream) => stream.name === testStreamId.dynamicStreamName
+          );
+          if (dynamicStreamIndex !== undefined) {
+            setValue(
+              `formValues.dynamicStreams.${dynamicStreamIndex}.streamTemplate.schema`,
+              formatJson(result.inferred_schema, true),
+              {
+                shouldValidate: true,
+                shouldTouch: true,
+                shouldDirty: true,
+              }
+            );
+          }
         }
       }
 
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(jsonManifest);
 
-      if (testStreamId.type === "stream") {
-        updateStreamTestResults(result, testStream, streamName, testStreamId.index);
+      if (testStreamId.type !== "dynamic_stream") {
+        updateStreamTestResults(result, testStream, testStreamId);
       }
     }
   );
@@ -1128,7 +1144,7 @@ export const useConnectorBuilderTestRead = (): TestReadContext => {
   return connectorBuilderState;
 };
 
-export const useConnectorBuilderFormState = (): FormStateContext => {
+export const useConnectorBuilderFormState = () => {
   const connectorBuilderState = useContext(ConnectorBuilderFormStateContext);
   if (!connectorBuilderState) {
     throw new Error("useConnectorBuilderFormState must be used within a ConnectorBuilderFormStateProvider.");

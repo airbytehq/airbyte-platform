@@ -67,10 +67,13 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
-  const generatedStreams: GeneratedBuilderStream[] | undefined = useBuilderWatch("generatedStreams")[name];
+  const generatedStreams: GeneratedBuilderStream[] | undefined = useBuilderWatch("formValues.generatedStreams")[name];
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
-  const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
+  const testWarnings = useMemo(
+    () => getStreamTestWarnings({ type: "dynamic_stream", index: num }, true),
+    [getStreamTestWarnings, num]
+  );
 
   const [isOpen, setIsOpen] = useState(false);
 
@@ -112,7 +115,7 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
                 key={stream.name}
                 data-testid={`navbutton-${String(num)}`}
                 selected={view.type === "generated_stream" && view.index === index}
-                showIndicator={hasErrors([streamId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+                showIndicator={getStreamTestWarnings(streamId, true).length > 0 ? "warning" : undefined}
                 onClick={() => {
                   setValue("view", streamId);
                   analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
@@ -144,7 +147,10 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ id, name, num, asyn
   const view = useBuilderWatch("view");
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
-  const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
+  const testWarnings = useMemo(
+    () => getStreamTestWarnings({ type: "stream", index: num }, true),
+    [getStreamTestWarnings, num]
+  );
 
   const viewId: StreamId = { type: "stream", index: num };
 

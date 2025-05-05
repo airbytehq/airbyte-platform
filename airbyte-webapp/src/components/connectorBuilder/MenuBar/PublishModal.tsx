@@ -1,6 +1,6 @@
 import classNames from "classnames";
 import debounce from "lodash/debounce";
-import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 import { ReactMarkdown } from "react-markdown/lib/react-markdown";
@@ -41,10 +41,12 @@ import { RoutePaths, SourcePaths } from "pages/routePaths";
 import {
   useConnectorBuilderFormState,
   convertJsonToYaml,
+  ConnectorBuilderMainRHFContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishModal.module.scss";
 import { useExperiment } from "../../../hooks/services/Experiment";
+import { BuilderDynamicStream } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -76,11 +78,28 @@ const PublishTypeSwitcher: React.FC<{
   const analyticsService = useAnalyticsService();
   const { streamNames } = useConnectorBuilderFormState();
   const { getStreamTestWarnings } = useStreamTestMetadata();
+  const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!watch) {
+    throw new Error("rhf context not available");
+  }
+  const dynamicStreams: BuilderDynamicStream[] = watch("formValues.dynamicStreams");
 
   const streamsWithWarnings = useMemo(() => {
-    return streamNames.filter((streamName) => getStreamTestWarnings(streamName).length > 0);
+    return streamNames
+      .filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0)
+      .map((streamName) => streamName);
   }, [getStreamTestWarnings, streamNames]);
-  const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
+  const dynamicStreamsWithWarnings = useMemo(() => {
+    return dynamicStreams
+      .filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
+      .map(({ dynamicStreamName }) => dynamicStreamName);
+  }, [getStreamTestWarnings, dynamicStreams]);
+
+  const namesWithWarnings = useMemo(() => {
+    return [...dynamicStreamsWithWarnings, ...streamsWithWarnings];
+  }, [streamsWithWarnings, dynamicStreamsWithWarnings]);
+
+  const isMarketplaceContributionActionDisabled = namesWithWarnings.length > 0;
 
   return (
     <FlexContainer>

@@ -268,21 +268,25 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       set(streamTemplateWithMappings, field_path, value);
     });
 
+    const dynamicStreamName = dynamicStream.name ?? `dynamic_stream_${idx}`;
     return {
-      dynamicStreamName: dynamicStream.name ?? `dynamic_stream_${idx}`,
+      dynamicStreamName,
       componentsResolver,
-      streamTemplate: manifestSyncStreamToBuilder(
-        streamTemplateWithMappings,
-        streamTemplateWithMappings.name ?? "",
-        "",
-        streamNameToIndex,
-        serializedStreamToName,
-        // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
-        firstSimpleRetriever?.requester?.url_base,
-        firstSimpleRetriever?.requester?.authenticator,
-        builderMetadata,
-        resolvedManifest.spec
-      ),
+      streamTemplate: {
+        ...manifestSyncStreamToBuilder(
+          streamTemplateWithMappings,
+          streamTemplateWithMappings.name ?? "",
+          "",
+          streamNameToIndex,
+          serializedStreamToName,
+          // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
+          firstSimpleRetriever?.requester?.url_base,
+          firstSimpleRetriever?.requester?.authenticator,
+          builderMetadata,
+          resolvedManifest.spec
+        ),
+        autoImportSchema: builderMetadata?.autoImportSchema?.[dynamicStreamName] === true,
+      },
     };
   });
 

@@ -37,6 +37,7 @@ export const StreamTester: React.FC<{
   const { formatMessage } = useIntl();
   const { streamNames, dynamicStreamNames, isResolving, resolveErrorMessage, resolveError } =
     useConnectorBuilderFormState();
+  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
   const {
     streamRead: {
       data: streamReadData,
@@ -60,7 +61,11 @@ export const StreamTester: React.FC<{
   const globalAuxiliaryRequests = streamReadData?.auxiliary_requests;
 
   const streamIsDynamic = isStreamDynamicStream(testStreamId);
-  const streamName = streamIsDynamic ? dynamicStreamNames[testStreamId.index] : streamNames[testStreamId.index];
+  const streamName = streamIsDynamic
+    ? dynamicStreamNames[testStreamId.index]
+    : testStreamId.type === "generated_stream"
+    ? generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index]?.name
+    : streamNames[testStreamId.index];
 
   const analyticsService = useAnalyticsService();
 
@@ -77,12 +82,12 @@ export const StreamTester: React.FC<{
 
   const { getStreamTestWarnings, getStreamTestMetadataStatus, getStreamHasCustomType } = useStreamTestMetadata();
   const streamTestWarnings = useMemo(
-    () => getStreamTestWarnings(streamName, true),
-    [getStreamTestWarnings, streamName]
+    () => getStreamTestWarnings(testStreamId, true),
+    [getStreamTestWarnings, testStreamId]
   );
   const streamTestMetadataStatus = useMemo(
-    () => getStreamTestMetadataStatus(streamName),
-    [getStreamTestMetadataStatus, streamName]
+    () => getStreamTestMetadataStatus(testStreamId),
+    [getStreamTestMetadataStatus, testStreamId]
   );
   const streamHasCustomType = getStreamHasCustomType(streamName);
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
@@ -119,6 +124,8 @@ export const StreamTester: React.FC<{
       ),
     [cleanedLogs, streamTestWarnings.length]
   );
+
+  const hasGeneratedStreams = generatedStreams?.[streamName]?.length > 0;
 
   const hasGlobalAuxiliaryRequests = globalAuxiliaryRequests && globalAuxiliaryRequests.length > 0;
   const hasSlices =
@@ -175,7 +182,9 @@ export const StreamTester: React.FC<{
       isStreamTestQueued={queuedStreamRead}
       isStreamTestRunning={isFetching}
       isStreamTestStale={
-        !cantProcessCustomComponents && (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
+        !cantProcessCustomComponents &&
+        testStreamId.type !== "dynamic_stream" &&
+        (!streamTestMetadataStatus || streamTestMetadataStatus.isStale)
       }
       forceDisabled={cantProcessCustomComponents}
       requestType={testStreamRequestType}
@@ -209,7 +218,11 @@ export const StreamTester: React.FC<{
       {streamIsDynamic && (
         <div className={styles.dynamicStreamButtonContainer}>
           {streamTestButton}
-          <Button isLoading={isGeneratingStreams} onClick={() => generateStreams()}>
+          <Button
+            className={hasGeneratedStreams ? undefined : styles.pulsate}
+            isLoading={isGeneratingStreams}
+            onClick={() => generateStreams()}
+          >
             <FormattedMessage id="connectorBuilder.generateStreams" />
           </Button>
         </div>

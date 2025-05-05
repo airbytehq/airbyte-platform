@@ -87,18 +87,23 @@ import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
-interface GeneratedStreamId {
+export interface GeneratedStreamId {
   type: "generated_stream";
   index: number;
   dynamicStreamName: string;
 }
 
-interface BaseStreamId {
-  type: "stream" | "dynamic_stream";
+export interface StaticStreamId {
+  type: "stream";
   index: number;
 }
 
-export type StreamId = BaseStreamId | GeneratedStreamId;
+export interface DynamicStreamId {
+  type: "dynamic_stream";
+  index: number;
+}
+
+export type StreamId = StaticStreamId | GeneratedStreamId | DynamicStreamId;
 
 export interface BuilderState {
   name: string;
@@ -110,7 +115,6 @@ export interface BuilderState {
   view: { type: "global" } | { type: "inputs" } | { type: "components" } | StreamId;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
-  generatedStreams: Record<string, GeneratedBuilderStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
   manifest: ConnectorManifest | null;
 }
@@ -323,6 +327,7 @@ export interface BuilderFormValues {
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
   dynamicStreams: BuilderDynamicStream[];
+  generatedStreams: Record<string, GeneratedBuilderStream[]>;
   checkStreams: string[];
   dynamicStreamCheckConfigs: DynamicStreamCheckConfig[];
   version: string;
@@ -625,6 +630,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   inputs: [],
   streams: [],
   dynamicStreams: [],
+  generatedStreams: {},
   checkStreams: [],
   dynamicStreamCheckConfigs: [],
   version: CDK_VERSION,
@@ -1487,10 +1493,26 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
     }
   });
 
+  Object.values(values.generatedStreams)
+    .flat()
+    .forEach((generatedStream) => {
+      if (generatedStream.testResults) {
+        testedStreams[generatedStream.name] = generatedStream.testResults;
+      }
+    });
+
   const assistData = values.assist ?? {};
 
   return {
-    autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+    autoImportSchema: {
+      ...Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+      ...Object.fromEntries(
+        values.dynamicStreams.map((dynamicStream) => [
+          dynamicStream.dynamicStreamName,
+          dynamicStream.streamTemplate.autoImportSchema,
+        ])
+      ),
+    },
     testedStreams,
     assist: assistData,
   };
@@ -1770,7 +1792,7 @@ export type DynamicStreamStreamTemplatePathFn = <T extends string>(
 
 export type GeneratedStreamStreamTemplatePathFn = <T extends string>(
   fieldPath: T
-) => `generatedStreams.${string}.${number}.${T}`;
+) => `formValues.generatedStreams.${string}.${number}.${T}`;
 
 export type AnyDeclarativeStreamPathFn =
   | StreamPathFn
@@ -1800,7 +1822,10 @@ export function getStreamFieldPath<T extends "stream" | "dynamic_stream", K exte
   if (streamId.type === "stream") {
     return `formValues.streams.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
   } else if (streamId.type === "generated_stream") {
-    return `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
+    return `formValues.generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<
+      T,
+      K
+    >;
   }
   return `formValues.dynamicStreams.${streamId.index}.streamTemplate.${fieldPath}` as StreamIdToFieldPath<T, K>;
 }

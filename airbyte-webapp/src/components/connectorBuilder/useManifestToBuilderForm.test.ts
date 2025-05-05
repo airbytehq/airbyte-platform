@@ -31,6 +31,8 @@ import {
 import { convertToBuilderFormValues } from "./useManifestToBuilderForm";
 import { formatJson } from "./utils";
 
+jest.mock("services/connectorBuilder/ConnectorBuilderStateService", () => ({}));
+
 const baseManifest: ConnectorManifest = {
   type: "DeclarativeSource",
   version: OLDEST_SUPPORTED_CDK_VERSION,

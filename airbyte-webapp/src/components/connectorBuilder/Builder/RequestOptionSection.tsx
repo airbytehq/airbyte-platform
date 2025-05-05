@@ -19,7 +19,7 @@ type RequestOptionSectionProps =
         | `formValues.streams.${number}.pollingRequester.requestOptions`
         | `formValues.streams.${number}.downloadRequester.requestOptions`
         | `formValues.dynamicStreams.${number}.streamTemplate.requestOptions`
-        | `generatedStreams.${string}.${number}.requestOptions`;
+        | `formValues.generatedStreams.${string}.${number}.requestOptions`;
       streamId: StreamId;
     }
   | {

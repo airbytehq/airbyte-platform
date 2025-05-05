@@ -73,9 +73,9 @@ export type AuthPath =
   | `formValues.streams.${number}.creationRequester.authenticator`
   | `formValues.streams.${number}.pollingRequester.authenticator`
   | `formValues.streams.${number}.downloadRequester.authenticator`
-  | `generatedStreams.${string}.${number}.creationRequester.authenticator`
-  | `generatedStreams.${string}.${number}.pollingRequester.authenticator`
-  | `generatedStreams.${string}.${number}.downloadRequester.authenticator`;
+  | `formValues.generatedStreams.${string}.${number}.creationRequester.authenticator`
+  | `formValues.generatedStreams.${string}.${number}.pollingRequester.authenticator`
+  | `formValues.generatedStreams.${string}.${number}.downloadRequester.authenticator`;
 
 type AuthFieldPathFn = <T extends string>(fieldPath: T) => `${AuthPath}.${T}`;
 

@@ -48,7 +48,7 @@ function limitErrorReportByView(errorReport: ErrorReport, limitToViews: BuilderV
         report.generated_stream[view.index] = errorReport.generated_stream[view.index];
       }
     } else {
-      assertNever(view.type);
+      assertNever(view);
     }
     return report;
   }, structuredClone(EMPTY_ERROR_REPORT));

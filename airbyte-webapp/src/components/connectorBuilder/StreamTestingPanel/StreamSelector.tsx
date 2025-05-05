@@ -51,7 +51,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-  const generatedStreams = useBuilderWatch("generatedStreams");
+  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
   const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
@@ -103,7 +103,6 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
       };
     } else if (type === "dynamic_stream") {
       const selectedStreamIndex = dynamicStreamNames.findIndex((streamName) => selectedStreamName === streamName);
-
       selectedStreamId = { type: "dynamic_stream" as const, index: selectedStreamIndex };
     } else if (type === "generated_stream") {
       const selectedGeneratedStreams = generatedStreams[selectedStream.dynamicStreamName];
@@ -130,9 +129,16 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   const selectedValueType: SelectorOption["type"] = testStreamId.type;
 
-  const selectedValue = options.find(
-    (option) => option.value.type === selectedValueType && option.value.idx === testStreamId.index
-  )?.value;
+  const selectedValue = options.find((option) => {
+    if (option.value.type === "generated_stream") {
+      return (
+        option.value.type === selectedValueType &&
+        option.value.idx === testStreamId.index &&
+        option.value.dynamicStreamName === ("dynamicStreamName" in testStreamId ? testStreamId.dynamicStreamName : "")
+      );
+    }
+    return option.value.type === selectedValueType && option.value.idx === testStreamId.index;
+  })?.value;
 
   return (
     <ListBox

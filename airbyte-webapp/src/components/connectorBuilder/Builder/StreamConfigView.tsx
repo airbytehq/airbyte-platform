@@ -82,7 +82,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
 
   const streams = useBuilderWatch("formValues.streams");
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  const generatedStreams = useBuilderWatch("generatedStreams");
+  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
 
   const { setValue } = useFormContext();
 
@@ -165,6 +165,7 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
   const { formatMessage } = useIntl();
   const { permission } = useConnectorBuilderFormState();
   const streamTab = useBuilderWatch("streamTab");
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
   const { setValue } = useFormContext();
   const { hasErrors } = useBuilderErrors();
 
@@ -207,10 +208,7 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
         )}
       </FlexContainer>
       {streamTab === "requester" ? (
-        <fieldset
-          disabled={permission === "readOnly" || streamId.type === "generated_stream"}
-          className={styles.fieldset}
-        >
+        <fieldset disabled={permission !== "write" || streamId.type === "generated_stream"} className={styles.fieldset}>
           {streamId.type === "dynamic_stream" && (
             <BuilderCard>
               <BuilderField
@@ -283,7 +281,22 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
         </fieldset>
       ) : streamTab === "schema" ? (
         <BuilderCard className={styles.schemaEditor}>
-          <SchemaEditor streamFieldPath={streamFieldPath} />
+          <SchemaEditor
+            streamFieldPath={
+              streamId.type === "generated_stream"
+                ? (((field: string) =>
+                    getStreamFieldPath(
+                      {
+                        type: "dynamic_stream",
+                        index: dynamicStreams.findIndex(
+                          (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
+                        ),
+                      },
+                      field
+                    )) as AnyDeclarativeStreamPathFn)
+                : streamFieldPath
+            }
+          />
         </BuilderCard>
       ) : null}
     </>
@@ -310,7 +323,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
     return ((fieldPath: string) => {
       return `${
         streamId.type === "generated_stream"
-          ? (`generatedStreams.${streamId.dynamicStreamName}` as const)
+          ? (`formValues.generatedStreams.${streamId.dynamicStreamName}` as const)
           : ("formValues.streams" as const)
       }.${streamId.index}.${fieldPath}`;
     }) as AnyDeclarativeStreamPathFn;
@@ -776,7 +789,7 @@ const SchemaTab = ({
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
   const { hasErrors } = useBuilderErrors();
-  const autoImportSchema = useAutoImportSchema({ type: "stream", index: streamId.index });
+  const autoImportSchema = useAutoImportSchema(streamId);
 
   return (
     <StreamTab
@@ -801,9 +814,8 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
   const schema = useBuilderWatch(schemaFieldPath) as BuilderStream["schema"];
   const testStreamId = useBuilderWatch("testStreamId");
   const { setValue } = useFormContext();
-  const path = streamFieldPath("schema");
-  const { errors } = useFormState({ name: path });
-  const error = get(errors, path);
+  const { errors } = useFormState({ name: schemaFieldPath });
+  const error = get(errors, schemaFieldPath);
   const { streamRead } = useConnectorBuilderTestRead();
 
   const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
@@ -822,9 +834,13 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
         path={autoImportSchemaFieldPath}
         type="boolean"
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
-        disabled={(error && !streamRead.data?.inferred_schema) || permission === "readOnly"}
+        disabled={
+          (error && !streamRead.data?.inferred_schema) ||
+          permission !== "write" ||
+          testStreamId.type === "generated_stream"
+        }
         disabledTooltip={
-          permission === "readOnly"
+          permission !== "write"
             ? undefined
             : formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })
         }
@@ -836,7 +852,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
           variant="secondary"
           onClick={() => {
             const formattedJson = formatJson(streamRead.data?.inferred_schema, true);
-            setValue(path, formattedJson);
+            setValue(schemaFieldPath, formattedJson);
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
               ...streamIdToStreamRepresentation(testStreamId),
@@ -853,12 +869,12 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
       ) : (
         <div className={styles.editorContainer}>
           <CodeEditor
-            readOnly={permission === "readOnly"}
+            readOnly={permission !== "write" || testStreamId.type === "generated_stream"}
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
             onChange={(val: string | undefined) => {
-              setValue(path, val, {
+              setValue(schemaFieldPath, val, {
                 shouldValidate: true,
                 shouldDirty: true,
                 shouldTouch: true,
