@@ -28,7 +28,7 @@ import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.data.services.PermissionService;
+import io.airbyte.data.services.PermissionDao;
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
@@ -52,15 +52,15 @@ class PermissionHandlerTest {
   private PermissionPersistence permissionPersistence;
   private WorkspaceService workspaceService;
   private PermissionHandler permissionHandler;
-  private PermissionService permissionService;
+  private PermissionDao permissionDao;
 
   @BeforeEach
   void setUp() {
     permissionPersistence = mock(PermissionPersistence.class);
     uuidSupplier = mock(Supplier.class);
     workspaceService = mock(WorkspaceService.class);
-    permissionService = mock(PermissionService.class);
-    permissionHandler = new PermissionHandler(permissionPersistence, workspaceService, uuidSupplier, permissionService);
+    permissionDao = mock(PermissionDao.class);
+    permissionHandler = new PermissionHandler(permissionPersistence, workspaceService, uuidSupplier, permissionDao);
   }
 
   @Test
@@ -89,13 +89,13 @@ class PermissionHandlerTest {
     @Test
     void testCreatePermission() throws Exception {
       final List<Permission> existingPermissions = List.of();
-      when(permissionService.getPermissionsForUser(any())).thenReturn(existingPermissions);
+      when(permissionDao.getPermissionsForUser(any())).thenReturn(existingPermissions);
       when(uuidSupplier.get()).thenReturn(PERMISSION_ID);
       final Permission permissionCreate = new Permission()
           .withPermissionType(Permission.PermissionType.WORKSPACE_OWNER)
           .withUserId(USER_ID)
           .withWorkspaceId(WORKSPACE_ID);
-      when(permissionService.createPermission(any())).thenReturn(PERMISSION);
+      when(permissionDao.createPermission(any())).thenReturn(PERMISSION);
       final Permission actual = permissionHandler.createPermission(permissionCreate);
       final Permission expected = new Permission()
           .withPermissionId(PERMISSION_ID)
@@ -164,7 +164,7 @@ class PermissionHandlerTest {
 
       permissionHandler.updatePermission(update);
 
-      verify(permissionService).updatePermission(new Permission()
+      verify(permissionDao).updatePermission(new Permission()
           .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
           .withPermissionType(PermissionType.WORKSPACE_ADMIN)
           .withUserId(PERMISSION_WORKSPACE_READER.getUserId())
@@ -186,7 +186,7 @@ class PermissionHandlerTest {
           .permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
           .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_EDITOR); // changing to organization_editor
 
-      doThrow(RemoveLastOrgAdminPermissionException.class).when(permissionService).updatePermission(any());
+      doThrow(RemoveLastOrgAdminPermissionException.class).when(permissionDao).updatePermission(any());
       assertThrows(ConflictException.class, () -> permissionHandler.updatePermission(update));
     }
 
@@ -198,7 +198,7 @@ class PermissionHandlerTest {
 
       permissionHandler.updatePermission(workspacePermissionUpdate);
 
-      verify(permissionService).updatePermission(new Permission()
+      verify(permissionDao).updatePermission(new Permission()
           .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
           .withPermissionType(PermissionType.WORKSPACE_EDITOR)
           .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId()) // workspace ID preserved from original permission
@@ -213,7 +213,7 @@ class PermissionHandlerTest {
 
       permissionHandler.updatePermission(orgPermissionUpdate);
 
-      verify(permissionService).updatePermission(new Permission()
+      verify(permissionDao).updatePermission(new Permission()
           .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
           .withPermissionType(PermissionType.ORGANIZATION_EDITOR)
           .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId()) // organization ID preserved from original permission
@@ -252,12 +252,12 @@ class PermissionHandlerTest {
 
       permissionHandler.deletePermission(new PermissionIdRequestBody().permissionId(PERMISSION_WORKSPACE_READER.getPermissionId()));
 
-      verify(permissionService).deletePermission(PERMISSION_WORKSPACE_READER.getPermissionId());
+      verify(permissionDao).deletePermission(PERMISSION_WORKSPACE_READER.getPermissionId());
     }
 
     @Test
     void throwsConflictIfPersistenceBlocks() throws Exception {
-      doThrow(RemoveLastOrgAdminPermissionException.class).when(permissionService).deletePermission(any());
+      doThrow(RemoveLastOrgAdminPermissionException.class).when(permissionDao).deletePermission(any());
 
       assertThrows(ConflictException.class, () -> permissionHandler.deletePermission(
           new PermissionIdRequestBody().permissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())));
@@ -713,10 +713,10 @@ class PermissionHandlerTest {
       permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userId(USER_ID).workspaceId(WORKSPACE_ID));
 
       // verify the intended permission was deleted
-      verify(permissionService).deletePermissions(List.of(workspacePermission.getPermissionId()));
+      verify(permissionDao).deletePermissions(List.of(workspacePermission.getPermissionId()));
 
       // verify the other permissions were not deleted
-      verifyNoMoreInteractions(permissionService);
+      verifyNoMoreInteractions(permissionDao);
     }
 
   }

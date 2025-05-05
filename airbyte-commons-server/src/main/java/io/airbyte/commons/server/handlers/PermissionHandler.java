@@ -24,8 +24,8 @@ import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.data.services.PermissionDao;
 import io.airbyte.data.services.PermissionRedundantException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
@@ -51,17 +51,17 @@ public class PermissionHandler {
   private final Supplier<UUID> uuidGenerator;
   private final PermissionPersistence permissionPersistence;
   private final WorkspaceService workspaceService;
-  private final PermissionService permissionService;
+  private final PermissionDao permissionDao;
 
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
                            final WorkspaceService workspaceService,
                            @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
-                           final PermissionService permissionService) {
+                           final PermissionDao permissionDao) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
     this.workspaceService = workspaceService;
-    this.permissionService = permissionService;
+    this.permissionDao = permissionDao;
   }
 
   /**
@@ -92,11 +92,11 @@ public class PermissionHandler {
       permissionCreate.setPermissionId(uuidGenerator.get());
     }
 
-    return permissionService.createPermission(permissionCreate);
+    return permissionDao.createPermission(permissionCreate);
   }
 
   public void grantInstanceAdmin(final UUID userId) throws PermissionRedundantException {
-    permissionService.createPermission(new Permission()
+    permissionDao.createPermission(new Permission()
         .withPermissionId(uuidGenerator.get())
         .withUserId(userId)
         .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN));
@@ -193,7 +193,7 @@ public class PermissionHandler {
         .withWorkspaceId(existingPermission.getWorkspaceId()) // cannot be updated
         .withUserId(existingPermission.getUserId()); // cannot be updated
     try {
-      permissionService.updatePermission(updatedPermission);
+      permissionDao.updatePermission(updatedPermission);
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
@@ -393,7 +393,7 @@ public class PermissionHandler {
    */
   public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) {
     try {
-      permissionService.deletePermission(permissionIdRequestBody.getPermissionId());
+      permissionDao.deletePermission(permissionIdRequestBody.getPermissionId());
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
@@ -414,7 +414,7 @@ public class PermissionHandler {
         .toList();
 
     try {
-      permissionService.deletePermissions(userWorkspacePermissionIds);
+      permissionDao.deletePermissions(userWorkspacePermissionIds);
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
@@ -443,7 +443,7 @@ public class PermissionHandler {
             Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
             Permission.PermissionType.WORKSPACE_RUNNER);
 
-    return permissionService.listPermissions().stream()
+    return permissionDao.listPermissions().stream()
         .filter(p -> editorRoles.contains(p.getPermissionType()))
         .map(Permission::getUserId)
         .collect(Collectors.toSet())
