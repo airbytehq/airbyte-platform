@@ -4,22 +4,27 @@
 
 package io.airbyte.audit.logging
 
+import io.airbyte.audit.logging.model.Actor
+import io.airbyte.audit.logging.model.AuditLogEntry
+import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
+import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.logback.createFileId
 import io.airbyte.commons.storage.AUDIT_LOGGING
+import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.StorageClientFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Value
-import io.micronaut.http.HttpHeaders
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.http.server.netty.NettyHttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
 import jakarta.inject.Singleton
-import org.slf4j.MDC
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { AUDIT_LOGGING }
@@ -34,10 +39,11 @@ class AuditLoggingInterceptor(
   @Value("\${airbyte.cloud.storage.bucket.audit-logging:}") private val auditLoggingBucket: String?,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
+  private val storageClientFactory: StorageClientFactory,
 ) : MethodInterceptor<Any, Any> {
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any {
     if (!auditLoggingEnabled) {
-      logger.debug { "Proceed the request without audit logging because it is disabled." }
+      logger.debug { "Proceeding with the request without audit logging because it is disabled." }
       return context.proceed() ?: Unit
     }
 
@@ -60,18 +66,22 @@ class AuditLoggingInterceptor(
     }
 
     // Get action name
-    val actionName = context.methodName
-    logger.debug { "Audit logging the request, audit action: $actionName" }
+    val operationName = context.methodName
+    logger.debug { "Audit logging the request, audit action: $operationName" }
+
     // Get request headers
     val request =
       ServerRequestContext.currentRequest<Any>().get() as NettyHttpRequest
     val headers = request.headers
-    val user = getCurrentUserInfo(headers)
+    val user = auditLoggingHelper.buildActor(headers)
+
     // Get request body
     val parameters = context.parameters.values
     val requestBody = parameters.firstOrNull()?.value
+
     // Generate the summary from the request, before proceeding the request
     val requestSummary = provider.get().generateSummaryFromRequest(requestBody)
+    val storageClient = storageClientFactory.create(DocumentType.AUDIT_LOGS)
 
     // Proceed the request and log the result/error
     val result =
@@ -79,67 +89,66 @@ class AuditLoggingInterceptor(
         context.proceed()
       } catch (exception: Exception) {
         logAuditInfo(
-          user = user,
-          actionName = actionName,
-          summary = "",
+          actor = user,
+          operationName = operationName,
+          request = requestSummary,
+          response = null,
           success = false,
           error = exception.message,
+          storageClient,
         )
         throw exception
       }
-    val resultSummary = provider.get().generateSummaryFromResult(result)
-    // 1. Merge the summary
-    val summary = auditLoggingHelper.generateSummary(requestSummary, resultSummary)
 
-    // 2. Save the log
+    val resultSummary = provider.get().generateSummaryFromResult(result)
+
     logAuditInfo(
-      user = user,
-      actionName = actionName,
-      summary = summary,
+      actor = user,
+      operationName = operationName,
+      request = requestSummary,
+      response = resultSummary,
       success = true,
       error = null,
+      storageClient,
     )
-    return result ?: Unit
-  }
 
-  private fun getCurrentUserInfo(headers: HttpHeaders): User {
-    val currentUser = auditLoggingHelper.getCurrentUser()
-    val userAgent = headers.get("User-Agent")?.takeIf { it.isNotEmpty() } ?: "unknown"
-    val ipAddress = headers.get("X-Forwarded-For")?.takeIf { it.isNotEmpty() } ?: "unknown"
-    currentUser.userAgent = userAgent
-    currentUser.ipAddress = ipAddress
-    return currentUser
+    return result ?: Unit
   }
 
   @InternalForTesting
   internal fun logAuditInfo(
-    user: User,
-    actionName: String,
-    summary: String,
+    actor: Actor,
+    operationName: String,
+    request: Any?,
+    response: Any?,
     success: Boolean,
     error: String? = null,
+    storageClient: StorageClient,
   ) {
     val auditLogEntry =
       AuditLogEntry(
         id = UUID.randomUUID(),
         timestamp = System.currentTimeMillis(),
-        user = user,
-        actionName = actionName,
-        summary = summary,
+        actor = actor,
+        operation = operationName,
+        request = request,
+        response = response,
         success = success,
         errorMessage = error,
       )
+
+    val serializedAuditLogEntry = Jsons.serialize(auditLogEntry)
     if (auditLoggingBucket.isNullOrBlank()) {
-      // Common log to console only
-      logger.info { "Logging audit entry: $auditLogEntry" }
-    } else {
-      // Log to both cloud storage (via MDC routing) and also console
-      MDC.put(DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY, AUDIT_LOGGING)
-      try {
-        logger.info { "Logging audit entry: $auditLogEntry" }
-      } finally {
-        MDC.remove(DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY)
-      }
+      logger.info { "Audit logging storage bucket is not configured! Logging to console only: $serializedAuditLogEntry" }
+      return
     }
+
+    // We override the default uniqueIdentifier behaviour here to include the
+    // operationName in the log filename.
+    val uniqueIdentifier = operationName + "_" + UUID.randomUUID().toString()
+    val fileId = createFileId(baseId = "", uniqueIdentifier = uniqueIdentifier)
+
+    // TODO: use a batch uploader / appender to optimize these write calls
+    storageClient.write(fileId, serializedAuditLogEntry)
   }
 }

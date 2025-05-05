@@ -8,9 +8,11 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.audit.logging.model.Actor
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
+import io.micronaut.http.HttpHeaders
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -20,11 +22,16 @@ class AuditLoggingHelper(
   private val currentUserService: CurrentUserService,
   private val objectMapper: ObjectMapper,
 ) {
-  fun getCurrentUser(): User {
+  fun buildActor(headers: HttpHeaders): Actor {
     val currentUser = currentUserService.getCurrentUser()
-    return User(
-      userId = currentUser.getUserId().toString(),
+    val userAgent = headers.get("User-Agent")?.takeIf { it.isNotEmpty() } ?: "unknown"
+    val ipAddress = headers.get("X-Forwarded-For")?.takeIf { it.isNotEmpty() } ?: "unknown"
+
+    return Actor(
+      actorId = currentUser.userId.toString(),
       email = currentUser.email,
+      ipAddress = ipAddress,
+      userAgent = userAgent,
     )
   }
 

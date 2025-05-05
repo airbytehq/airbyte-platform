@@ -17,6 +17,8 @@ import io.airbyte.api.model.generated.UserWithPermissionInfoReadList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList
 import io.airbyte.api.model.generated.WorkspaceUserReadList
+import io.airbyte.commons.annotation.AuditLogging
+import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -58,6 +60,7 @@ open class UserApiController(
 
   @Post("/delete")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @AuditLogging(AuditLoggingProvider.EMPTY)
   override fun deleteUser(
     @Body userIdRequestBody: UserIdRequestBody?,
   ) {
@@ -69,6 +72,7 @@ open class UserApiController(
 
   @Post("/update")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
+  @AuditLogging(AuditLoggingProvider.EMPTY)
   override fun updateUser(
     @Body userUpdate: UserUpdate,
   ): UserRead? = execute { userHandler.updateUser(userUpdate) }

@@ -2,10 +2,14 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.audit.logging
+package io.airbyte.audit.logging.provider
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.audit.logging.AuditLoggingHelper
+import io.airbyte.audit.logging.model.AuditPermissionLogEntry
+import io.airbyte.audit.logging.model.TargetScope
+import io.airbyte.audit.logging.model.TargetUser
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import jakarta.inject.Named
 import jakarta.inject.Singleton

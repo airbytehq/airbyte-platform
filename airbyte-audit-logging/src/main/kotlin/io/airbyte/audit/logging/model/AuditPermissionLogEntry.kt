@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.audit.logging
+package io.airbyte.audit.logging.model
 
 data class AuditPermissionLogEntry(
   val targetUser: TargetUser,
