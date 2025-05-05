@@ -1612,6 +1612,7 @@ minio:
     tag: RELEASE.2023-11-20T22-40-07Z
 
   storage:
+    storageClass: ~  # Add the storage class name here
     volumeClaimValue: 500Mi
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
