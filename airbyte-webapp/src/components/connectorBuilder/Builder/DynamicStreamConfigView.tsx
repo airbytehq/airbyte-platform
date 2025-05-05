@@ -14,24 +14,26 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
 import { BuilderField } from "./BuilderField";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
+import { StreamConfigView } from "./StreamConfigView";
 import styles from "./StreamConfigView.module.scss";
 import { manifestRecordSelectorToBuilder } from "../convertManifestToBuilderForm";
-import { builderRecordSelectorToManifest, DynamicStreamPathFn } from "../types";
+import { builderRecordSelectorToManifest, DynamicStreamPathFn, StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface DynamicStreamConfigViewProps {
-  streamNum: number;
+  streamId: StreamId;
+  scrollToTop: () => void;
 }
 
-export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = ({ streamNum }) => {
+export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = ({ streamId, scrollToTop }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
   const { setValue } = useFormContext();
   const { formatMessage } = useIntl();
   const baseUrl = useBuilderWatch("formValues.global.urlBase");
   const dynamicStreamFieldPath: DynamicStreamPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${streamNum}.${fieldPath}` as const,
-    [streamNum]
+    <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${streamId.index}.${fieldPath}` as const,
+    [streamId.index]
   );
 
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
@@ -42,8 +44,8 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
       title: "connectorBuilder.deleteDynamicStreamModal.title",
       submitButtonText: "connectorBuilder.deleteDynamicStreamModal.submitButton",
       onSubmit: () => {
-        const updatedStreams = dynamicStreams.filter((_, index) => index !== streamNum);
-        const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
+        const updatedStreams = dynamicStreams.filter((_, index) => index !== streamId.index);
+        const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
         const viewToSelect: BuilderView =
           updatedStreams.length === 0 ? { type: "global" } : { type: "dynamic_stream", index: streamToSelect };
         setValue("formValues.dynamicStreams", updatedStreams);
@@ -51,11 +53,15 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_DELETE, {
           actionDescription: "Dynamic stream deleted",
-          dynamic_stream_name: dynamicStreams[streamNum].dynamicStreamName,
+          dynamic_stream_name: dynamicStreams[streamId.index].dynamicStreamName,
         });
       },
     });
   };
+
+  if (streamId.type !== "dynamic_stream") {
+    return null;
+  }
 
   return (
     <BuilderConfigView>
@@ -111,6 +117,8 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
           optional
         />
       </BuilderCard>
+
+      <StreamConfigView streamId={streamId} scrollToTop={scrollToTop} />
     </BuilderConfigView>
   );
 };

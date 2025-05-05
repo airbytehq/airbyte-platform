@@ -61,6 +61,10 @@ import {
   DEFAULT_BUILDER_STREAM_VALUES,
   DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
   BuilderPollingTimeout,
+  StreamId,
+  getStreamFieldPath,
+  AnyDeclarativeStreamPathFn,
+  BuilderDecoderConfig,
 } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -68,20 +72,34 @@ import { useBuilderWatch } from "../useBuilderWatch";
 import { formatJson } from "../utils";
 
 interface StreamConfigViewProps {
-  streamNum: number;
+  streamId: StreamId;
   scrollToTop: () => void;
 }
 
-export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamNum, scrollToTop }) => {
+export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamId, scrollToTop }) => {
   const analyticsService = useAnalyticsService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const streams = useBuilderWatch("formValues.streams");
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
+
   const { setValue } = useFormContext();
-  const currentStream = useMemo(() => streams[streamNum], [streams, streamNum]);
+
+  const currentStream = useMemo(() => {
+    if (streamId.type === "stream") {
+      return streams[streamId.index];
+    }
+    return dynamicStreams[streamId.index].streamTemplate;
+  }, [streamId, streams, dynamicStreams]);
+
   const otherStreamsWithSameRequestTypeExist = useMemo(() => {
-    return streams.some((stream, index) => index !== streamNum && stream.requestType === currentStream.requestType);
-  }, [streams, streamNum, currentStream.requestType]);
+    if (streamId.type === "stream") {
+      return streams.some(
+        (stream, index) => index !== streamId.index && stream.requestType === currentStream.requestType
+      );
+    }
+    return false;
+  }, [streams, streamId, currentStream.requestType]);
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -89,17 +107,20 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       title: "connectorBuilder.deleteStreamModal.title",
       submitButtonText: "connectorBuilder.deleteStreamModal.submitButton",
       onSubmit: () => {
-        const updatedStreams: BuilderStream[] = streams.filter((_, index) => index !== streamNum);
-        const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
+        if (streamId.type !== "stream") {
+          return;
+        }
+        const updatedStreams: BuilderStream[] = streams.filter((_, index) => index !== streamId.index);
+        const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
         const viewToSelect: BuilderView =
           updatedStreams.length === 0 ? { type: "global" } : { type: "stream", index: streamToSelect };
         setValue("formValues.streams", updatedStreams);
         setValue("view", viewToSelect);
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_DELETE, {
-          actionDescription: "New stream created from the Add Stream button",
-          stream_id: streams[streamNum].id,
-          stream_name: streams[streamNum].name,
+          actionDescription: "Stream deleted",
+          stream_id: streamId.index,
+          stream_name: currentStream.name,
         });
       },
     });
@@ -109,20 +130,23 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     <BuilderConfigView
       className={classNames(styles.relative, { [styles.multiStreams]: otherStreamsWithSameRequestTypeExist })}
     >
-      <FlexContainer justifyContent="space-between" className={styles.relative} alignItems="center">
-        <BuilderField
-          type="string"
-          path={`formValues.streams.${streamNum}.name`}
-          containerClassName={styles.streamNameInput}
-        />
-        <Button variant="danger" onClick={handleDelete}>
-          <FormattedMessage id="connectorBuilder.deleteStreamModal.title" />
-        </Button>
-      </FlexContainer>
+      {streamId.type === "stream" && (
+        <FlexContainer justifyContent="space-between" className={styles.relative} alignItems="center">
+          <BuilderField
+            type="string"
+            path={getStreamFieldPath(streamId, "name")}
+            containerClassName={styles.streamNameInput}
+          />
+
+          <Button variant="danger" onClick={handleDelete}>
+            <FormattedMessage id="connectorBuilder.deleteStreamModal.title" />
+          </Button>
+        </FlexContainer>
+      )}
       {currentStream.requestType === "sync" ? (
-        <SynchronousStream streamNum={streamNum} scrollToTop={scrollToTop} />
+        <SynchronousStream streamId={streamId} scrollToTop={scrollToTop} />
       ) : (
-        <AsynchronousStream streamNum={streamNum} scrollToTop={scrollToTop} />
+        <AsynchronousStream streamId={streamId} scrollToTop={scrollToTop} />
       )}
     </BuilderConfigView>
   );
@@ -131,10 +155,10 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
 StreamConfigView.displayName = "StreamConfigView";
 
 interface SynchronousStreamProps {
-  streamNum: number;
+  streamId: StreamId;
   scrollToTop: () => void;
 }
-const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scrollToTop }) => {
+const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollToTop }) => {
   const { formatMessage } = useIntl();
   const { permission } = useConnectorBuilderFormState();
   const streamTab = useBuilderWatch("streamTab");
@@ -142,11 +166,9 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
   const { hasErrors } = useBuilderErrors();
 
   const baseUrl = useBuilderWatch("formValues.global.urlBase");
-  const streamFieldPath: StreamPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamNum}.${fieldPath}` as const,
-    [streamNum]
-  );
-  const selectedDecoder = useBuilderWatch(streamFieldPath("decoder"));
+  const streamFieldPath = ((fieldPath: string) =>
+    getStreamFieldPath(streamId, fieldPath)) as unknown as AnyDeclarativeStreamPathFn;
+  const selectedDecoder = useBuilderWatch(streamFieldPath("decoder")) as BuilderDecoderConfig;
 
   useEffect(() => {
     if (streamTab !== "requester" && streamTab !== "schema") {
@@ -166,10 +188,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "requester")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "requester")}
           />
           <SchemaTab
-            streamNum={streamNum}
+            streamId={streamId}
             isSelected={streamTab === "schema"}
             onSelect={() => {
               setValue("streamTab", "schema");
@@ -177,17 +199,28 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
             }}
           />
         </FlexContainer>
-        <RequestTypeSelector streamNum={streamNum} streamFieldPath={streamFieldPath} selectedValue="sync" />
+        {streamId.type === "stream" && (
+          <RequestTypeSelector streamId={streamId} streamFieldPath={streamFieldPath} selectedValue="sync" />
+        )}
       </FlexContainer>
       {streamTab === "requester" ? (
         <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
+          {streamId.type === "dynamic_stream" && (
+            <BuilderCard>
+              <BuilderField
+                type="jinja"
+                path={streamFieldPath("name")}
+                manifestPath="DeclarativeStream.properties.name"
+              />
+            </BuilderCard>
+          )}
           <BuilderCard>
             <BuilderField
               type="jinja"
               path={streamFieldPath("urlPath")}
               manifestPath="HttpRequester.properties.path"
               preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
-              labelAction={<AssistButton assistKey="metadata" streamNum={streamNum} />}
+              labelAction={<AssistButton assistKey="metadata" streamId={streamId} />}
             />
             <BuilderField
               type="enum"
@@ -227,22 +260,19 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
               optional
             />
           </BuilderCard>
-          <RecordSelectorSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <RequestOptionSection
-            inline={false}
-            basePath={streamFieldPath("requestOptions")}
-            currentStreamIndex={streamNum}
-          />
-          <PaginationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <IncrementalSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <ParentStreamsSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <ParameterizedRequestsSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
-          <ErrorHandlerSection
-            inline={false}
-            basePath={streamFieldPath("errorHandler")}
-            currentStreamIndex={streamNum}
-          />
-          <TransformationSection streamFieldPath={streamFieldPath} currentStreamIndex={streamNum} />
+          <RecordSelectorSection streamFieldPath={streamFieldPath} streamId={streamId} />
+          <RequestOptionSection inline={false} basePath={streamFieldPath("requestOptions")} streamId={streamId} />
+          <PaginationSection streamFieldPath={streamFieldPath} streamId={streamId} />
+          <IncrementalSection streamFieldPath={streamFieldPath} streamId={streamId} />
+          {streamId.type === "stream" && (
+            <ParentStreamsSection
+              streamFieldPath={streamFieldPath as StreamPathFn}
+              currentStreamIndex={streamId.index}
+            />
+          )}
+          <ParameterizedRequestsSection streamFieldPath={streamFieldPath} streamId={streamId} />
+          <ErrorHandlerSection inline={false} basePath={streamFieldPath("errorHandler")} streamId={streamId} />
+          <TransformationSection streamFieldPath={streamFieldPath} streamId={streamId} />
           <UnknownFieldsSection streamFieldPath={streamFieldPath} />
         </fieldset>
       ) : streamTab === "schema" ? (
@@ -255,10 +285,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamNum, scroll
 };
 
 interface AsynchronousStreamProps {
-  streamNum: number;
+  streamId: StreamId;
   scrollToTop: () => void;
 }
-const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scrollToTop }) => {
+const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrollToTop }) => {
   const { formatMessage } = useIntl();
   const streamTab = useBuilderWatch("streamTab");
   const { setValue } = useFormContext();
@@ -271,26 +301,26 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
   }, [setValue, streamTab]);
 
   const streamFieldPath: StreamPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamNum}.${fieldPath}` as const,
-    [streamNum]
+    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.${fieldPath}` as const,
+    [streamId.index]
   );
   const creationRequesterPath: CreationRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamNum}.creationRequester.${fieldPath}` as const,
-    [streamNum]
+    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.creationRequester.${fieldPath}` as const,
+    [streamId.index]
   );
   const pollingRequesterPath: PollingRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamNum}.pollingRequester.${fieldPath}` as const,
-    [streamNum]
+    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.pollingRequester.${fieldPath}` as const,
+    [streamId.index]
   );
   const downloadRequesterPath: DownloadRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamNum}.downloadRequester.${fieldPath}` as const,
-    [streamNum]
+    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.downloadRequester.${fieldPath}` as const,
+    [streamId.index]
   );
 
   const selectedCreationDecoder = useBuilderWatch(creationRequesterPath("decoder"));
   const selectedDownloadDecoder = useBuilderWatch(downloadRequesterPath("decoder"));
 
-  const tabContentKey = useMemo(() => `${streamNum}-${streamTab}`, [streamNum, streamTab]);
+  const tabContentKey = useMemo(() => `${streamId.index}-${streamTab}`, [streamId.index, streamTab]);
 
   return (
     <>
@@ -304,7 +334,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "requester")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "requester")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-polling"
@@ -314,7 +344,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "polling");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "polling")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "polling")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-download"
@@ -324,10 +354,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               setValue("streamTab", "download");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "download")}
+            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "download")}
           />
           <SchemaTab
-            streamNum={streamNum}
+            streamId={streamId}
             isSelected={streamTab === "schema"}
             onSelect={() => {
               setValue("streamTab", "schema");
@@ -335,7 +365,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
             }}
           />
         </FlexContainer>
-        <RequestTypeSelector streamNum={streamNum} streamFieldPath={streamFieldPath} selectedValue="async" />
+        <RequestTypeSelector streamId={streamId} streamFieldPath={streamFieldPath} selectedValue="async" />
       </FlexContainer>
       {streamTab === "requester" ? (
         <FlexContainer key={tabContentKey} direction="column">
@@ -375,19 +405,13 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
             )}
           </BuilderCard>
           <AuthenticationSection authPath={creationRequesterPath("authenticator")} />
-          <RequestOptionSection
-            inline={false}
-            basePath={creationRequesterPath("requestOptions")}
-            currentStreamIndex={streamNum}
-          />
-          <IncrementalSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamNum} />
-          <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamNum} />
-          <ParameterizedRequestsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamNum} />
-          <ErrorHandlerSection
-            inline={false}
-            basePath={creationRequesterPath("errorHandler")}
-            currentStreamIndex={streamNum}
-          />
+          <RequestOptionSection inline={false} basePath={creationRequesterPath("requestOptions")} streamId={streamId} />
+          <IncrementalSection streamFieldPath={creationRequesterPath} streamId={streamId} />
+          {streamId.type === "stream" && (
+            <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamId.index} />
+          )}
+          <ParameterizedRequestsSection streamFieldPath={creationRequesterPath} streamId={streamId} />
+          <ErrorHandlerSection inline={false} basePath={creationRequesterPath("errorHandler")} streamId={streamId} />
         </FlexContainer>
       ) : streamTab === "polling" ? (
         <FlexContainer key={tabContentKey} direction="column">
@@ -529,16 +553,8 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
               />
             </GroupControls>
           </BuilderCard>
-          <RequestOptionSection
-            inline={false}
-            basePath={pollingRequesterPath("requestOptions")}
-            currentStreamIndex={streamNum}
-          />
-          <ErrorHandlerSection
-            inline={false}
-            basePath={pollingRequesterPath("errorHandler")}
-            currentStreamIndex={streamNum}
-          />
+          <RequestOptionSection inline={false} basePath={pollingRequesterPath("requestOptions")} streamId={streamId} />
+          <ErrorHandlerSection inline={false} basePath={pollingRequesterPath("errorHandler")} streamId={streamId} />
         </FlexContainer>
       ) : streamTab === "download" ? (
         <FlexContainer key={tabContentKey} direction="column">
@@ -607,19 +623,11 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
             />
           </BuilderCard>
           <AuthenticationSection authPath={downloadRequesterPath("authenticator")} />
-          <RecordSelectorSection streamFieldPath={downloadRequesterPath} currentStreamIndex={streamNum} />
-          <RequestOptionSection
-            inline={false}
-            basePath={downloadRequesterPath("requestOptions")}
-            currentStreamIndex={streamNum}
-          />
-          <PaginationSection streamFieldPath={downloadRequesterPath} currentStreamIndex={streamNum} />
-          <TransformationSection streamFieldPath={downloadRequesterPath} currentStreamIndex={streamNum} />
-          <ErrorHandlerSection
-            inline={false}
-            basePath={downloadRequesterPath("errorHandler")}
-            currentStreamIndex={streamNum}
-          />
+          <RecordSelectorSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
+          <RequestOptionSection inline={false} basePath={downloadRequesterPath("requestOptions")} streamId={streamId} />
+          <PaginationSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
+          <TransformationSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
+          <ErrorHandlerSection inline={false} basePath={downloadRequesterPath("errorHandler")} streamId={streamId} />
         </FlexContainer>
       ) : streamTab === "schema" ? (
         <BuilderCard className={styles.schemaEditor}>
@@ -631,12 +639,12 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamNum, scro
 };
 
 const RequestTypeSelector = ({
-  streamNum,
+  streamId,
   streamFieldPath,
   selectedValue,
 }: {
-  streamNum: number;
-  streamFieldPath: StreamPathFn;
+  streamId: StreamId;
+  streamFieldPath: AnyDeclarativeStreamPathFn;
   selectedValue: BuilderStream["requestType"];
 }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -664,13 +672,13 @@ const RequestTypeSelector = ({
         cancelButtonText: "connectorBuilder.requestType.confirm.cancel",
         onSubmit: () => {
           if (newValue === "sync") {
-            setValue(`formValues.streams.${streamNum}`, {
+            setValue(`formValues.streams.${streamId.index}`, {
               ...DEFAULT_BUILDER_STREAM_VALUES,
               id,
               name,
             });
           } else if (newValue === "async") {
-            setValue(`formValues.streams.${streamNum}`, {
+            setValue(`formValues.streams.${streamId.index}`, {
               ...DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
               id,
               name,
@@ -680,7 +688,7 @@ const RequestTypeSelector = ({
         },
       });
     },
-    [selectedValue, openConfirmationModal, closeConfirmationModal, setValue, streamNum, id, name]
+    [selectedValue, openConfirmationModal, closeConfirmationModal, setValue, streamId.index, id, name]
   );
 
   return (
@@ -740,11 +748,11 @@ const StreamTab = ({
 );
 
 const SchemaTab = ({
-  streamNum,
+  streamId,
   isSelected,
   onSelect,
 }: {
-  streamNum: number;
+  streamId: StreamId;
   isSelected: boolean;
   onSelect: () => void;
 }) => {
@@ -753,7 +761,7 @@ const SchemaTab = ({
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
   const { hasErrors } = useBuilderErrors();
-  const autoImportSchema = useAutoImportSchema({ type: "stream", index: streamNum });
+  const autoImportSchema = useAutoImportSchema({ type: "stream", index: streamId.index });
 
   return (
     <StreamTab
@@ -761,21 +769,21 @@ const SchemaTab = ({
       label={formatMessage({ id: "connectorBuilder.streamSchema" })}
       isSelected={isSelected}
       onSelect={() => onSelect()}
-      showErrorIndicator={hasErrors([{ type: "stream", index: streamNum }], "schema")}
+      showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "schema")}
       showSchemaConflictIndicator={schemaDifferences && !autoImportSchema}
       schemaErrors={incompatibleSchemaErrors}
     />
   );
 };
 
-const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: StreamPathFn }) => {
+const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStreamPathFn }) => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { permission, streamIdToStreamRepresentation } = useConnectorBuilderFormState();
   const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
   const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
   const schemaFieldPath = streamFieldPath("schema");
-  const schema = useBuilderWatch(schemaFieldPath);
+  const schema = useBuilderWatch(schemaFieldPath) as BuilderStream["schema"];
   const testStreamId = useBuilderWatch("testStreamId");
   const { setValue } = useFormContext();
   const path = streamFieldPath("schema");

@@ -6,8 +6,9 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { KeyValueListField } from "./KeyValueListField";
-import { BuilderRequestBody, concatPath } from "../types";
+import { BuilderRequestBody, concatPath, StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { StreamFieldPath } from "../utils";
 
 type RequestOptionSectionProps =
   | {
@@ -16,8 +17,9 @@ type RequestOptionSectionProps =
         | `formValues.streams.${number}.requestOptions`
         | `formValues.streams.${number}.creationRequester.requestOptions`
         | `formValues.streams.${number}.pollingRequester.requestOptions`
-        | `formValues.streams.${number}.downloadRequester.requestOptions`;
-      currentStreamIndex: number;
+        | `formValues.streams.${number}.downloadRequester.requestOptions`
+        | `formValues.dynamicStreams.${number}.streamTemplate.requestOptions`;
+      streamId: StreamId;
     }
   | {
       inline: true;
@@ -130,12 +132,16 @@ export const RequestOptionSection: React.FC<RequestOptionSectionProps> = (props)
     content
   ) : (
     <BuilderCard
-      copyConfig={{
-        path: props.basePath,
-        currentStreamIndex: props.currentStreamIndex,
-        componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
-      }}
-      labelAction={<AssistButton assistKey="request_options" streamNum={props.currentStreamIndex} />}
+      copyConfig={
+        props.streamId.type === "stream"
+          ? {
+              path: props.basePath as StreamFieldPath,
+              currentStreamIndex: props.streamId.index,
+              componentName: formatMessage({ id: "connectorBuilder.requestOptions.label" }),
+            }
+          : undefined
+      }
+      labelAction={<AssistButton assistKey="request_options" streamId={props.streamId} />}
       label={formatMessage({ id: "connectorBuilder.requestOptions.label" })}
       tooltip={formatMessage({ id: "connectorBuilder.requestOptions.tooltip" })}
     >

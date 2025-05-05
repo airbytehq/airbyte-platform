@@ -468,21 +468,14 @@ export type BuilderPollingTimeout =
       value: string;
     };
 
-interface BuilderComponentMappingDefinition {
-  type: "ComponentMappingDefinition";
-  field_path: string[];
-  value: string;
-}
-
 interface BuilderHttpComponentsResolver {
   type: "HttpComponentsResolver";
   retriever: SimpleRetriever;
-  components_mapping: BuilderComponentMappingDefinition[];
 }
 export type BuilderComponentsResolver = BuilderHttpComponentsResolver;
 
 export interface BuilderDynamicStream {
-  streamTemplate: Omit<BuilderStream, "name" | "id">;
+  streamTemplate: BuilderStream;
   dynamicStreamName: string;
   componentsResolver: BuilderComponentsResolver;
 }
@@ -1415,19 +1408,49 @@ function builderStreamToDeclarativeStream(stream: BuilderStream, allStreams: Bui
 }
 
 function builderDynamicStreamToDeclarativeStream(dynamicStream: BuilderDynamicStream): DynamicDeclarativeStream {
+  // the user operates on the streamTemplate, including component-mapped fields using `record`
+  // we need to extract the component-mapped fields and add them to the components_mapping array
+
+  const declarativeStream: DeclarativeStream = {
+    ...builderStreamToDeclarativeStream(dynamicStream.streamTemplate, []),
+    schema_loader: {
+      type: InlineSchemaLoaderType.InlineSchemaLoader,
+      schema: schemaRef(`${dynamicStream.dynamicStreamName}_stream_template`),
+    },
+  };
+
+  const streamTemplateEntries = getRecursiveObjectEntries(declarativeStream);
+  const { templateEntries, mappedEntries } = streamTemplateEntries.reduce<{
+    templateEntries: Array<[string, unknown]>;
+    mappedEntries: Array<[string, unknown]>;
+  }>(
+    (acc, entry) => {
+      const isMapped = typeof entry[1] === "string" && entry[1].includes("components_values");
+      if (isMapped) {
+        acc.mappedEntries.push(entry);
+        acc.templateEntries.push([entry[0], "placeholder"]); // keep a populated string here to ensure validation
+      } else {
+        acc.templateEntries.push(entry);
+      }
+      return acc;
+    },
+    { templateEntries: [], mappedEntries: [] }
+  );
+
+  const unmappedStreamTemplate = objectFromRecursiveEntries(templateEntries) as DeclarativeStream;
+
   const declarativeDynamicStream: DynamicDeclarativeStream = {
     type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
     name: dynamicStream.dynamicStreamName,
-    components_resolver: dynamicStream.componentsResolver,
-    stream_template: {
-      ...builderStreamToDeclarativeStream(
-        {
-          ...dynamicStream.streamTemplate,
-          name: `${dynamicStream.dynamicStreamName}_template`,
-        } as BuilderStream,
-        []
-      ),
+    components_resolver: {
+      ...dynamicStream.componentsResolver,
+      components_mapping: mappedEntries.map(([key, value]) => ({
+        type: "ComponentMappingDefinition" as const,
+        field_path: key.split("."),
+        value: value as string,
+      })),
     },
+    stream_template: unmappedStreamTemplate,
   };
 
   // if there isn't a record filter condition, remove the filter component
@@ -1607,7 +1630,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
         schema = JSON.parse(DEFAULT_SCHEMA);
       }
       schema.additionalProperties = true;
-      return [`${dynamicStream.dynamicStreamName}_template`, schema];
+      return [`${dynamicStream.dynamicStreamName}_stream_template`, schema];
     })
   );
 
@@ -1726,6 +1749,10 @@ export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+export type DynamicStreamStreamTemplatePathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.dynamicStreams.${number}.streamTemplate.${T}`;
+export type AnyDeclarativeStreamPathFn = StreamPathFn | DynamicStreamStreamTemplatePathFn;
 export type DynamicStreamPathFn = <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${number}.${T}`;
 export type CreationRequesterPathFn = <T extends string>(
   fieldPath: T
@@ -1739,3 +1766,47 @@ export type DownloadRequesterPathFn = <T extends string>(
 
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;
+
+type StreamIdToFieldPath<T extends "stream" | "dynamic_stream", K extends string> = T extends "stream"
+  ? `formValues.streams.${number}.${K}`
+  : `formValues.dynamicStreams.${number}.streamTemplate.${K}`;
+export function getStreamFieldPath<T extends "stream" | "dynamic_stream", K extends string>(
+  streamId: StreamId,
+  fieldPath: K
+): StreamIdToFieldPath<T, K> {
+  if (streamId.type === "stream") {
+    return `formValues.streams.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
+  }
+  return `formValues.dynamicStreams.${streamId.index}.streamTemplate.${fieldPath}` as StreamIdToFieldPath<T, K>;
+}
+
+function getRecursiveObjectEntries(obj: object, prefix: string = ""): Array<[string, unknown]> {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const cleanedPrefix = prefix ? `${prefix}.` : "";
+    const valueIsEmptyArray = Array.isArray(value) && value.length === 0;
+    if (typeof value === "object" && value !== null && !valueIsEmptyArray) {
+      return getRecursiveObjectEntries(value as Record<string, unknown>, `${cleanedPrefix}${key}`);
+    }
+    return [[`${cleanedPrefix}${key}`, value]];
+  });
+}
+
+function objectFromRecursiveEntries(entries: Array<[string, unknown]>) {
+  return entries.reduce<Record<string, unknown>>((acc, [key, value]) => {
+    const pathParts = key.split(".");
+    const finalKey = pathParts.at(-1)!;
+    let current = acc;
+
+    while (pathParts.length > 1) {
+      const next = pathParts.shift()!;
+      const peek = pathParts.at(0);
+      const peekIsIndex = peek && peek.match(/^\d+$/);
+
+      current[next] = current[next] || (peekIsIndex ? [] : {});
+      current = current[next] as Record<string, unknown>;
+    }
+
+    current[finalKey] = value;
+    return acc;
+  }, {});
+}

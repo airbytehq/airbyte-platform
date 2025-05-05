@@ -8,6 +8,7 @@ import isObject from "lodash/isObject";
 import isString from "lodash/isString";
 import omit from "lodash/omit";
 import pick from "lodash/pick";
+import set from "lodash/set";
 import { match } from "ts-pattern";
 
 import { formatGraphqlQuery } from "components/ui/CodeEditor/GraphqlFormatter";
@@ -158,13 +159,28 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   ].find((retriever): retriever is SimpleRetriever => retriever.type === "SimpleRetriever");
 
   if (firstSimpleRetriever) {
-    assertType<HttpRequester>(firstSimpleRetriever.requester, "HttpRequester");
+    assertType<HttpRequester>(firstSimpleRetriever.requester, "HttpRequester", "stream");
     builderFormValues.global.urlBase = firstSimpleRetriever.requester.url_base;
-  } else {
+  } else if (declarativeStreams.length > 0) {
     const firstStream = declarativeStreams[0];
-    assertType<AsyncRetriever>(firstStream.retriever, "AsyncRetriever");
+    assertType<AsyncRetriever>(firstStream.retriever, "AsyncRetriever", "stream");
     // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
     builderFormValues.global.urlBase = firstStream.retriever.creation_requester.url_base;
+  } else if (dynamicStreams.length > 0) {
+    const firstDynamicStream = dynamicStreams[0];
+    assertType<SimpleRetriever>(
+      firstDynamicStream.stream_template.retriever,
+      "SimpleRetriever",
+      "dynamic_stream",
+      firstDynamicStream.name
+    );
+    assertType<HttpRequester>(
+      firstDynamicStream.stream_template.retriever.requester,
+      "HttpRequester",
+      "dynamic_stream",
+      firstDynamicStream.name
+    );
+    builderFormValues.global.urlBase = firstDynamicStream.stream_template.retriever.requester.url_base;
   }
 
   // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
@@ -225,8 +241,8 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.dynamicStreams = dynamicStreams.map((dynamicStream, idx): BuilderDynamicStream => {
     if (!assertResolverWithSimpleRetriever(dynamicStream.components_resolver)) {
       throw new ManifestCompatibilityError(
-        dynamicStream.name,
-        `Only ${HttpComponentsResolverType.HttpComponentsResolver} with ${SimpleRetrieverType.SimpleRetriever} is supported`
+        undefined,
+        `Dynamic stream ${dynamicStream.name}: Only ${HttpComponentsResolverType.HttpComponentsResolver} with ${SimpleRetrieverType.SimpleRetriever} is supported`
       );
     }
 
@@ -244,12 +260,19 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       };
     }
 
+    // write any component mappings to the stream template
+    const streamTemplateWithMappings = structuredClone(dynamicStream.stream_template);
+
+    dynamicStream.components_resolver.components_mapping.forEach(({ field_path, value }) => {
+      set(streamTemplateWithMappings, field_path, value);
+    });
+
     return {
       dynamicStreamName: dynamicStream.name ?? `dynamic_stream_${idx}`,
       componentsResolver,
       streamTemplate: manifestSyncStreamToBuilder(
-        dynamicStream.stream_template,
-        `${dynamicStream.name}_template`,
+        streamTemplateWithMappings,
+        streamTemplateWithMappings.name ?? "",
         "",
         streamNameToIndex,
         serializedStreamToName,
@@ -347,7 +370,7 @@ const manifestSyncStreamToBuilder = (
     transformations,
     ...unknownStreamFields
   } = stream;
-  assertType<SimpleRetriever>(retriever, "SimpleRetriever", streamName);
+  assertType<SimpleRetriever>(retriever, "SimpleRetriever", "stream", streamName);
 
   const {
     type: retrieverType,
@@ -358,7 +381,7 @@ const manifestSyncStreamToBuilder = (
     decoder,
     ...unknownRetrieverFields
   } = retriever;
-  assertType<HttpRequester>(requester, "HttpRequester", stream.name);
+  assertType<HttpRequester>(requester, "HttpRequester", "stream", streamName);
 
   const {
     type: requesterType,
@@ -496,7 +519,7 @@ const manifestAsyncStreamToBuilder = (
   spec?: Spec
 ): BuilderStream => {
   const { retriever, schema_loader, incremental_sync, primary_key, transformations, ...unknownStreamFields } = stream;
-  assertType<AsyncRetriever>(retriever, "AsyncRetriever", streamName);
+  assertType<AsyncRetriever>(retriever, "AsyncRetriever", "stream", streamName);
 
   const {
     creation_requester,
@@ -514,9 +537,9 @@ const manifestAsyncStreamToBuilder = (
     polling_job_timeout,
     ...unknownRetrieverFields
   } = retriever;
-  assertType<HttpRequester>(creation_requester, "HttpRequester", streamName);
-  assertType<HttpRequester>(polling_requester, "HttpRequester", streamName);
-  assertType<HttpRequester>(download_requester, "HttpRequester", streamName);
+  assertType<HttpRequester>(creation_requester, "HttpRequester", "stream", streamName);
+  assertType<HttpRequester>(polling_requester, "HttpRequester", "stream", streamName);
+  assertType<HttpRequester>(download_requester, "HttpRequester", "stream", streamName);
 
   if (download_extractor?.type === CustomRecordExtractorType.CustomRecordExtractor) {
     throw new ManifestCompatibilityError(streamName, "CustomRecordExtractor is not supported on download_extractor");
@@ -767,7 +790,7 @@ export function manifestRecordSelectorToBuilder(
   recordSelector: RecordSelector,
   streamName?: string
 ): BuilderRecordSelector | undefined {
-  assertType(recordSelector, "RecordSelector", streamName);
+  assertType(recordSelector, "RecordSelector", "stream", streamName);
   const selector = filterKnownFields(
     recordSelector,
     ["type", "extractor", "record_filter", "schema_normalization"],
@@ -775,7 +798,7 @@ export function manifestRecordSelectorToBuilder(
     streamName
   );
 
-  assertType(selector.extractor, "DpathExtractor", streamName);
+  assertType(selector.extractor, "DpathExtractor", "stream", streamName);
   const extractor = filterKnownFields(
     selector.extractor,
     ["type", "field_path"],
@@ -790,7 +813,7 @@ export function manifestRecordSelectorToBuilder(
     streamName
   );
   if (filter) {
-    assertType(filter, "RecordFilter", streamName);
+    assertType(filter, "RecordFilter", "stream", streamName);
   }
 
   if (
@@ -1162,7 +1185,7 @@ export function manifestIncrementalSyncToBuilder(
       "incremental sync uses an IncrementingCountCursor, which is unsupported"
     );
   }
-  assertType(manifestIncrementalSync, "DatetimeBasedCursor", streamName);
+  assertType(manifestIncrementalSync, "DatetimeBasedCursor", "stream", streamName);
   const datetimeBasedCursor = filterKnownFields(
     manifestIncrementalSync,
     [
@@ -1358,7 +1381,7 @@ export function manifestPaginatorToBuilder(
   if (manifestPaginator === undefined || manifestPaginator.type === "NoPagination") {
     return undefined;
   }
-  assertType(manifestPaginator, "DefaultPaginator", streamName);
+  assertType(manifestPaginator, "DefaultPaginator", "stream", streamName);
   const paginator = filterKnownFields(
     manifestPaginator,
     ["type", "pagination_strategy", "page_size_option", "page_token_option"],
@@ -1843,10 +1866,15 @@ function manifestSpecToBuilderInputs(
 function assertType<T extends { type: string }>(
   object: { type: string },
   typeString: string,
-  streamName?: string
+  entityType: "stream" | "dynamic_stream",
+  entityName?: string
 ): asserts object is T {
   if (object.type !== typeString) {
-    throw new ManifestCompatibilityError(streamName, `doesn't use a ${typeString}`);
+    if (entityType === "stream") {
+      throw new ManifestCompatibilityError(entityName, `doesn't use a ${typeString}`);
+    } else if (entityType === "dynamic_stream") {
+      throw new ManifestCompatibilityError(undefined, `Dynamic stream ${entityName} doesn't use a ${typeString}`);
+    }
   }
 }
 

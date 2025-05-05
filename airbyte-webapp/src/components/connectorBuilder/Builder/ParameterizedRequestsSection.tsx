@@ -15,15 +15,17 @@ import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestListPartitionRouterToBuilder } from "../convertManifestToBuilderForm";
 import {
   LIST_PARTITION_ROUTER,
-  StreamPathFn,
   BuilderParameterizedRequests,
   builderParameterizedRequestsToManifest,
   CreationRequesterPathFn,
+  AnyDeclarativeStreamPathFn,
+  StreamId,
 } from "../types";
+import { StreamFieldPath } from "../utils";
 
 interface ParameterizedRequestsSectionProps {
-  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
-  currentStreamIndex: number;
+  streamFieldPath: AnyDeclarativeStreamPathFn | CreationRequesterPathFn;
+  streamId: StreamId;
 }
 
 const EMPTY_PARAMETERIZED_REQUEST: BuilderParameterizedRequests = {
@@ -34,7 +36,7 @@ const EMPTY_PARAMETERIZED_REQUEST: BuilderParameterizedRequests = {
 
 export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSectionProps> = ({
   streamFieldPath,
-  currentStreamIndex,
+  streamId,
 }) => {
   const { formatMessage } = useIntl();
   const label = formatMessage({ id: "connectorBuilder.parameterizedRequests.label" });
@@ -53,11 +55,15 @@ export const ParameterizedRequestsSection: React.FC<ParameterizedRequestsSection
           manifestToBuilder: manifestListPartitionRouterToBuilder,
         },
       }}
-      copyConfig={{
-        path: streamFieldPath("parameterizedRequests"),
-        currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        streamId.type === "stream"
+          ? {
+              path: streamFieldPath("parameterizedRequests") as StreamFieldPath,
+              currentStreamIndex: streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       <BuilderList
         addButtonLabel={formatMessage({ id: "connectorBuilder.parameterizedRequest.addButton" })}

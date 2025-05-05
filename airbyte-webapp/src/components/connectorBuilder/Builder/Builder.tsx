@@ -32,9 +32,15 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
     case "components":
       return <ComponentsView />;
     case "dynamic_stream":
-      return <DynamicStreamConfigView key={selectedView.index} streamNum={selectedView.index} />;
+      return <DynamicStreamConfigView key={selectedView.index} streamId={selectedView} scrollToTop={scrollToTop} />;
     case "stream":
-      return <StreamConfigView streamNum={selectedView.index} key={selectedView.index} scrollToTop={scrollToTop} />;
+      return (
+        <StreamConfigView
+          streamId={selectedView}
+          key={`${selectedView.type}-${selectedView.index}`}
+          scrollToTop={scrollToTop}
+        />
+      );
     case "generated_stream":
       return null;
   }
