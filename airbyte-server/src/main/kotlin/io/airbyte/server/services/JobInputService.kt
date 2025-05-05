@@ -50,6 +50,7 @@ interface JobInputService {
   fun getCheckInput(
     actorId: UUID,
     jobId: String?,
+    attemptId: Long?,
   ): CheckConnectionInput
 
   fun getCheckInput(
@@ -75,13 +76,14 @@ class JobInputServiceImpl(
   override fun getCheckInput(
     actorId: UUID,
     jobId: String?,
+    attemptId: Long?,
   ): CheckConnectionInput {
     val actor =
       actorRepository.findByActorId(actorId)
         ?: throw NotFoundException() // Better exception?
     return when (actor.actorType) {
-      ActorType.source -> getCheckInputBySourceId(actorId, jobId)
-      ActorType.destination -> getCheckInputByDestinationId(actorId, jobId)
+      ActorType.source -> getCheckInputBySourceId(actorId, jobId, attemptId)
+      ActorType.destination -> getCheckInputByDestinationId(actorId, jobId, attemptId)
       else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
     }
   }
@@ -105,6 +107,7 @@ class JobInputServiceImpl(
   private fun getCheckInputBySourceId(
     sourceId: UUID,
     jobId: String?,
+    attemptId: Long?,
   ): CheckConnectionInput {
     val (source, sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformation(sourceId)
 
@@ -130,6 +133,7 @@ class JobInputServiceImpl(
       allowedHosts = sourceDefinitionVersion.allowedHosts,
       actorContext = contextBuilder.fromSource(source),
       jobId = jobId,
+      attemptId = attemptId,
     )
   }
 
@@ -150,6 +154,7 @@ class JobInputServiceImpl(
       )
 
     val jobId = UUID.randomUUID().toString()
+    val attemptId = 0L
 
     return buildJobCheckConnectionConfig(
       actorType = io.airbyte.config.ActorType.SOURCE,
@@ -164,6 +169,7 @@ class JobInputServiceImpl(
       allowedHosts = sourceDefinitionVersion.allowedHosts,
       actorContext = null,
       jobId = jobId,
+      attemptId = attemptId,
     )
   }
 
@@ -185,6 +191,7 @@ class JobInputServiceImpl(
       )
 
     val jobId = UUID.randomUUID().toString()
+    val attemptId = 0L
 
     return buildJobCheckConnectionConfig(
       actorType = io.airbyte.config.ActorType.DESTINATION,
@@ -199,12 +206,14 @@ class JobInputServiceImpl(
       allowedHosts = destinationInformation.destinationDefinitionVersion.allowedHosts,
       actorContext = null,
       jobId = jobId,
+      attemptId = attemptId,
     )
   }
 
   private fun getCheckInputByDestinationId(
     destinationId: UUID,
     jobId: String?,
+    attemptId: Long?,
   ): CheckConnectionInput {
     val destinationInformation = getDestinationInformation(destinationId)
     val destination = destinationInformation.destination
@@ -232,6 +241,7 @@ class JobInputServiceImpl(
       allowedHosts = destinationInformation.destinationDefinitionVersion.allowedHosts,
       actorContext = contextBuilder.fromDestination(destination),
       jobId = jobId,
+      attemptId = attemptId,
     )
   }
 
@@ -248,6 +258,7 @@ class JobInputServiceImpl(
     allowedHosts: AllowedHosts,
     actorContext: ActorContext?,
     jobId: String?,
+    attemptId: Long?,
   ): CheckConnectionInput {
     val injectedConfig: JsonNode = configInjector.injectConfig(configuration, definitionId)
 
@@ -264,14 +275,16 @@ class JobInputServiceImpl(
         )
       }
 
-    val jobId: String = jobId ?: UUID.randomUUID().toString()
+    val jobId = jobId ?: UUID.randomUUID().toString()
+    val attemptId = attemptId ?: 0L
+
     val configReplacer = ConfigReplacer()
 
     return CheckConnectionInput(
       jobRunConfig =
         JobRunConfig()
           .withJobId(jobId)
-          .withAttemptId(0L),
+          .withAttemptId(attemptId),
       launcherConfig =
         IntegrationLauncherConfig()
           .withJobId(jobId)
@@ -279,7 +292,7 @@ class JobInputServiceImpl(
           .withDockerImage(dockerImage)
           .withProtocolVersion(protocolVersion)
           .withIsCustomConnector(isCustomConnector)
-          .withAttemptId(0L)
+          .withAttemptId(attemptId)
           .withAllowedHosts(configReplacer.getAllowedHosts(allowedHosts, configuration)),
       checkConnectionInput =
         StandardCheckConnectionInput()

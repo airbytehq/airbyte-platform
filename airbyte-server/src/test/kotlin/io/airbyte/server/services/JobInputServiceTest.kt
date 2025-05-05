@@ -126,10 +126,11 @@ class JobInputServiceTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "jobid"
+    val attemptId = 1337L
 
     val expected =
       CheckConnectionInput(
-        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(0L),
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptId),
         launcherConfig =
           IntegrationLauncherConfig()
             .withJobId(jobId)
@@ -149,7 +150,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(sourceId, jobId)
+    val actual = jobInputService.getCheckInput(sourceId, jobId, attemptId)
 
     assertEquals(expected.launcherConfig.jobId, actual.launcherConfig.jobId)
     assertEquals(expected.jobRunConfig.jobId, actual.jobRunConfig.jobId)
@@ -201,10 +202,11 @@ class JobInputServiceTest {
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = "jobid"
+    val attemptId = 1337L
 
     val expected =
       CheckConnectionInput(
-        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(0L),
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptId),
         launcherConfig =
           IntegrationLauncherConfig()
             .withJobId(jobId)
@@ -212,7 +214,7 @@ class JobInputServiceTest {
             .withDockerImage(testDockerImage)
             .withProtocolVersion(Version("0.2.0"))
             .withIsCustomConnector(true)
-            .withAttemptId(0L)
+            .withAttemptId(attemptId)
             .withAllowedHosts(emptyAllowedHosts),
         checkConnectionInput =
           StandardCheckConnectionInput()
@@ -224,7 +226,7 @@ class JobInputServiceTest {
             .withNetworkSecurityTokens(emptyList()),
       )
 
-    val actual = jobInputService.getCheckInput(destinationId, jobId)
+    val actual = jobInputService.getCheckInput(destinationId, jobId, attemptId)
 
     assertEquals(expected.launcherConfig.jobId, actual.launcherConfig.jobId)
     assertEquals(expected.jobRunConfig.jobId, actual.jobRunConfig.jobId)
@@ -239,6 +241,7 @@ class JobInputServiceTest {
     assertEquals(expected.launcherConfig.protocolVersion, actual.launcherConfig.protocolVersion)
     assertEquals(expected.launcherConfig.isCustomConnector, actual.launcherConfig.isCustomConnector)
     assertEquals(expected.launcherConfig.jobId, actual.launcherConfig.jobId)
+    assertEquals(expected.launcherConfig.attemptId, actual.launcherConfig.attemptId)
   }
 
   @Test
