@@ -921,7 +921,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const doGenerateStreams = useCallback(async () => {
     const resolvedManifest = await fullResolveManifest.refetch();
 
-    if (!resolvedManifest.data?.manifest) {
+    if (!resolvedManifest.data?.manifest || resolvedManifest.isError) {
       return;
     }
     const manifestAsBuilderValues = convertToBuilderFormValuesSync(resolvedManifest.data.manifest as ConnectorManifest);

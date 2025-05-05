@@ -1,3 +1,6 @@
+import get from "lodash/get";
+import isObject from "lodash/isObject";
+import isString from "lodash/isString";
 import { useEffect, useMemo } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
@@ -49,7 +52,7 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
-    generateStreams: { refetch: generateStreams, isFetching: isGeneratingStreams },
+    generateStreams: { refetch: generateStreams, isFetching: isGeneratingStreams, error: generateStreamsError },
     queuedStreamRead,
     queueStreamRead,
     cancelStreamRead,
@@ -76,6 +79,8 @@ export const StreamTester: React.FC<{
     ? error instanceof HttpError
       ? error.response?.message || unknownErrorMessage
       : unknownErrorMessage
+    : generateStreamsError
+    ? formatGenerateStreamsError(generateStreamsError)
     : undefined;
 
   const errorExceptionStack = resolveError?.response?.exceptionStack;
@@ -381,3 +386,37 @@ const IconCount = ({ icon, count, color }: { icon: IconType; count: number; colo
     </Text>
   </FlexContainer>
 );
+
+const formatGenerateStreamsError = (error: unknown): string | null => {
+  if (isObject(error)) {
+    const message = get(error, "response.message");
+    if (isString(message)) {
+      // The generate streams error message usually contains some text followed by a stringified JSON object.
+      // That JSON object contains the actual message we want to display to the user.
+      const json = extractJson(message);
+      if (isObject(json) && "message" in json && isString(json.message)) {
+        return json.message.replace("Please contact Airbyte Support.", "");
+      }
+    }
+  }
+
+  return JSON.stringify(error);
+};
+
+/**
+ * Finds any stringfied JSON object in the input string by searching for
+ * any text between `{` and `}`, then attempts to parse it as JSON.
+ *
+ * Returns null if no JSON object is found.
+ */
+const extractJson = (input: string): unknown | null => {
+  const match = input.match(/{[\s\S]*}/);
+  if (match) {
+    try {
+      return JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
