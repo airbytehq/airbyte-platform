@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers;
 import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
-import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
@@ -33,9 +32,9 @@ import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -71,39 +70,39 @@ public class PermissionHandler {
    * @param permissionCreate The new permission.
    * @return The created permission.
    * @throws IOException if unable to retrieve the existing permissions.
-   * @throws ConfigNotFoundException if unable to build the response.
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
-  public PermissionRead createPermission(final PermissionCreate permissionCreate)
-      throws IOException, JsonValidationException {
+  public Permission createPermission(final Permission permissionCreate)
+      throws IOException, JsonValidationException, PermissionRedundantException {
 
     // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
-    if (permissionCreate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+    if (permissionCreate.getPermissionType().equals(Permission.PermissionType.INSTANCE_ADMIN)) {
       throw new JsonValidationException("Cannot create INSTANCE_ADMIN permission record.");
     }
 
-    final Optional<PermissionRead> existingPermission = getExistingPermission(permissionCreate);
-    if (existingPermission.isPresent()) {
-      return existingPermission.get();
+    // Look for an existing permission.
+    final List<Permission> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId());
+    for (final Permission p : existingPermissions) {
+      if (checkPermissionsAreEqual(permissionCreate, p)) {
+        return p;
+      }
     }
 
-    final UUID permissionId = permissionCreate.getPermissionId() != null ? permissionCreate.getPermissionId() : uuidGenerator.get();
-
-    final Permission permission = new Permission()
-        .withPermissionId(permissionId)
-        .withPermissionType(Enums.convertTo(permissionCreate.getPermissionType(), Permission.PermissionType.class))
-        .withUserId(permissionCreate.getUserId())
-        .withWorkspaceId(permissionCreate.getWorkspaceId())
-        .withOrganizationId(permissionCreate.getOrganizationId());
-
-    try {
-      return buildPermissionRead(permissionService.createPermission(permission));
-    } catch (final PermissionRedundantException e) {
-      throw new ConflictException(e.getMessage(), e);
+    if (permissionCreate.getPermissionId() == null) {
+      permissionCreate.setPermissionId(uuidGenerator.get());
     }
+
+    return permissionService.createPermission(permissionCreate);
   }
 
-  private Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
+  public void grantInstanceAdmin(final UUID userId) throws PermissionRedundantException {
+    permissionService.createPermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN));
+  }
+
+  public Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
     final Optional<Permission> permission =
         permissionPersistence.getPermission(permissionId);
     if (permission.isEmpty()) {
@@ -126,20 +125,7 @@ public class PermissionHandler {
         .organizationId(permission.getOrganizationId());
   }
 
-  private Optional<PermissionRead> getExistingPermission(final PermissionCreate permissionCreate) throws IOException {
-    final List<PermissionRead> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId()).stream()
-        .map(PermissionHandler::buildPermissionRead)
-        .filter(permission -> checkPermissionsAreEqual(permission, permissionCreate))
-        .sorted(Comparator.comparing(PermissionRead::getPermissionId))
-        .collect(Collectors.toList());
-
-    if (existingPermissions.isEmpty()) {
-      return Optional.empty();
-    }
-    return Optional.of(existingPermissions.get(0));
-  }
-
-  private boolean checkPermissionsAreEqual(final PermissionRead permission, final PermissionCreate permissionCreate) {
+  private boolean checkPermissionsAreEqual(final Permission permission, final Permission permissionCreate) {
     if (!permission.getPermissionType().equals(permissionCreate.getPermissionType())) {
       return false;
     }
@@ -167,7 +153,7 @@ public class PermissionHandler {
    * @throws ConfigNotFoundException if unable to get the permissions.
    * @throws JsonValidationException if unable to get the permissions.
    */
-  public PermissionRead getPermission(final PermissionIdRequestBody permissionIdRequestBody)
+  public PermissionRead getPermissionRead(final PermissionIdRequestBody permissionIdRequestBody)
       throws ConfigNotFoundException, IOException {
     return buildPermissionRead(permissionIdRequestBody.getPermissionId());
   }
@@ -223,7 +209,7 @@ public class PermissionHandler {
    * @throws IOException if unable to check the permission.
    */
   public PermissionCheckRead checkPermissions(final PermissionCheckRequest permissionCheckRequest) throws IOException {
-    final List<PermissionRead> userPermissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
+    final List<PermissionRead> userPermissions = permissionReadListForUser(permissionCheckRequest.getUserId()).getPermissions();
 
     final boolean anyMatch =
         userPermissions.stream().anyMatch(userPermission -> Exceptions.toRuntime(() -> checkPermissions(permissionCheckRequest, userPermission)));
@@ -372,11 +358,15 @@ public class PermissionHandler {
    * @throws IOException if unable to retrieve the permissions for the user.
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
-  public PermissionReadList listPermissionsByUser(final UUID userId) throws IOException {
+  public PermissionReadList permissionReadListForUser(final UUID userId) throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionsByUser(userId);
     return new PermissionReadList().permissions(permissions.stream()
         .map(PermissionHandler::buildPermissionRead)
         .collect(Collectors.toList()));
+  }
+
+  public List<Permission> listPermissionsForUser(final UUID userId) throws IOException {
+    return permissionPersistence.listPermissionsByUser(userId);
   }
 
   /**
@@ -444,6 +434,20 @@ public class PermissionHandler {
 
   public List<UserPermission> listPermissionsForOrganization(final UUID organizationId) throws IOException {
     return permissionPersistence.listPermissionsForOrganization(organizationId);
+  }
+
+  public int countInstanceEditors() {
+    final Set<Permission.PermissionType> editorRoles =
+        Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
+            Permission.PermissionType.ORGANIZATION_RUNNER,
+            Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
+            Permission.PermissionType.WORKSPACE_RUNNER);
+
+    return permissionService.listPermissions().stream()
+        .filter(p -> editorRoles.contains(p.getPermissionType()))
+        .map(Permission::getUserId)
+        .collect(Collectors.toSet())
+        .size();
   }
 
   public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)

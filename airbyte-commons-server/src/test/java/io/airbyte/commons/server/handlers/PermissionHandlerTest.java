@@ -16,10 +16,8 @@ import static org.mockito.Mockito.when;
 import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
-import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
-import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.api.model.generated.PermissionUpdate;
 import io.airbyte.api.model.generated.PermissionsCheckMultipleWorkspacesRequest;
 import io.airbyte.commons.enums.Enums;
@@ -93,26 +91,26 @@ class PermissionHandlerTest {
       final List<Permission> existingPermissions = List.of();
       when(permissionService.getPermissionsForUser(any())).thenReturn(existingPermissions);
       when(uuidSupplier.get()).thenReturn(PERMISSION_ID);
-      final PermissionCreate permissionCreate = new PermissionCreate()
-          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_OWNER)
-          .userId(USER_ID)
-          .workspaceId(WORKSPACE_ID);
+      final Permission permissionCreate = new Permission()
+          .withPermissionType(Permission.PermissionType.WORKSPACE_OWNER)
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID);
       when(permissionService.createPermission(any())).thenReturn(PERMISSION);
-      final PermissionRead actualRead = permissionHandler.createPermission(permissionCreate);
-      final PermissionRead expectedRead = new PermissionRead()
-          .permissionId(PERMISSION_ID)
-          .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)
-          .userId(USER_ID)
-          .workspaceId(WORKSPACE_ID);
+      final Permission actual = permissionHandler.createPermission(permissionCreate);
+      final Permission expected = new Permission()
+          .withPermissionId(PERMISSION_ID)
+          .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+          .withUserId(USER_ID)
+          .withWorkspaceId(WORKSPACE_ID);
 
-      assertEquals(expectedRead, actualRead);
+      assertEquals(expected, actual);
     }
 
     @Test
     void testCreateInstanceAdminPermissionThrows() {
-      final PermissionCreate permissionCreate = new PermissionCreate()
-          .permissionType(io.airbyte.api.model.generated.PermissionType.INSTANCE_ADMIN)
-          .userId(USER_ID);
+      final Permission permissionCreate = new Permission()
+          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
+          .withUserId(USER_ID);
       assertThrows(JsonValidationException.class, () -> permissionHandler.createPermission(permissionCreate));
     }
 

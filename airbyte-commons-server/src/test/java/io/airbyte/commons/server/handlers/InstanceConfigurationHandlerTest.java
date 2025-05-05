@@ -30,18 +30,15 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
-import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeList;
-import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.NonNamespaceOperation;
 import java.io.IOException;
 import java.time.Clock;
@@ -52,7 +49,6 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -92,9 +88,8 @@ class InstanceConfigurationHandlerTest {
   @Mock
   private AuthConfigs mAuthConfigs;
   @Mock
-  private PermissionService permissionService;
-  @Mock
-  private Optional<KubernetesClient> mKubernetesClient;
+  private PermissionHandler permissionHandler;
+
   @Mock
   private Optional<KubernetesClientPermissionHelper> mKubernetesClientHelper;
   @Mock
@@ -183,7 +178,7 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
@@ -341,7 +336,7 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.empty(),
         Optional.empty(),
         Optional.of(kubernetesClientPermissionHelperMock));
@@ -369,7 +364,7 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
@@ -389,7 +384,7 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.of(Clock.fixed(Instant.MAX, ZoneId.systemDefault())),
         Optional.empty(),
         mKubernetesClientHelper);
@@ -410,14 +405,11 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);
-    when(permissionService.listPermissions()).thenReturn(
-        Stream.generate(UUID::randomUUID)
-            .map(userId -> new Permission().withUserId(userId).withPermissionType(Permission.PermissionType.ORGANIZATION_EDITOR))
-            .limit(MAX_EDITORS + 10).toList());
+    when(permissionHandler.countInstanceEditors()).thenReturn(MAX_EDITORS + 10);
     assertEquals(handler.currentLicenseStatus(), LicenseStatus.EXCEEDED);
   }
 
@@ -459,7 +451,7 @@ class InstanceConfigurationHandlerTest {
         mUserPersistence,
         mOrganizationPersistence,
         mAuthConfigs,
-        permissionService,
+        permissionHandler,
         Optional.empty(),
         Optional.empty(),
         mKubernetesClientHelper);

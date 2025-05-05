@@ -21,6 +21,7 @@ import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.config.Permission
 import io.airbyte.server.apis.execute
 import io.airbyte.validation.json.JsonValidationException
 import io.micronaut.http.annotation.Body
@@ -44,7 +45,7 @@ open class PermissionApiController(
   ): PermissionRead? =
     execute {
       validatePermissionCreation(permissionCreate)
-      permissionHandler.createPermission(permissionCreate)
+      permissionHandler.createPermission(permissionCreate.toDomain()).toApi()
     }
 
   private fun validatePermissionCreation(permissionCreate: PermissionCreate) {
@@ -60,7 +61,7 @@ open class PermissionApiController(
   @Post("/get")
   override fun getPermission(
     @Body permissionIdRequestBody: PermissionIdRequestBody,
-  ): PermissionRead? = execute { permissionHandler.getPermission(permissionIdRequestBody) }
+  ): PermissionRead? = execute { permissionHandler.getPermissionRead(permissionIdRequestBody) }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN, AuthRoleConstants.WORKSPACE_ADMIN)
   @Post("/update")
@@ -110,7 +111,7 @@ open class PermissionApiController(
   @Post("/list_by_user")
   override fun listPermissionsByUser(
     @Body userIdRequestBody: UserIdRequestBody,
-  ): PermissionReadList? = execute { permissionHandler.listPermissionsByUser(userIdRequestBody.userId) }
+  ): PermissionReadList? = execute { permissionHandler.permissionReadListForUser(userIdRequestBody.userId) }
 
   @Secured(AuthRoleConstants.ADMIN) // instance admins only
   @Post("/check")
@@ -124,3 +125,19 @@ open class PermissionApiController(
     @Body request: PermissionsCheckMultipleWorkspacesRequest,
   ): PermissionCheckRead? = execute { permissionHandler.permissionsCheckMultipleWorkspaces(request) }
 }
+
+private fun PermissionCreate.toDomain() =
+  Permission()
+    .withPermissionId(this.permissionId)
+    .withUserId(this.userId)
+    .withWorkspaceId(this.workspaceId)
+    .withOrganizationId(this.organizationId)
+    .withPermissionType(enumValueOf(this.permissionType.name))
+
+private fun Permission.toApi() =
+  PermissionRead()
+    .permissionId(this.permissionId)
+    .userId(this.userId)
+    .workspaceId(this.workspaceId)
+    .organizationId(this.organizationId)
+    .permissionType(enumValueOf(this.permissionType.name))

@@ -206,7 +206,7 @@ class AuthenticationHeaderResolverTest {
     final UUID workspaceId = UUID.randomUUID();
     final UUID permissionId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(PERMISSION_ID_HEADER, permissionId.toString());
-    when(permissionHandler.getPermission(new PermissionIdRequestBody().permissionId(permissionId)))
+    when(permissionHandler.getPermissionRead(new PermissionIdRequestBody().permissionId(permissionId)))
         .thenReturn(new PermissionRead().workspaceId(workspaceId));
 
     final List<UUID> result = resolver.resolveWorkspace(properties);
@@ -218,7 +218,7 @@ class AuthenticationHeaderResolverTest {
     final UUID organizationId = UUID.randomUUID();
     final UUID permissionId = UUID.randomUUID();
     final Map<String, String> properties = Map.of(PERMISSION_ID_HEADER, permissionId.toString());
-    when(permissionHandler.getPermission(new PermissionIdRequestBody().permissionId(permissionId)))
+    when(permissionHandler.getPermissionRead(new PermissionIdRequestBody().permissionId(permissionId)))
         .thenReturn(new PermissionRead().organizationId(organizationId));
 
     final List<UUID> result = resolver.resolveOrganization(properties);

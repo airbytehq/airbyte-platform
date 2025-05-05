@@ -216,7 +216,7 @@ public class AuthenticationHeaderResolver {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }
-    final PermissionRead permission = permissionHandler.getPermission(
+    final PermissionRead permission = permissionHandler.getPermissionRead(
         new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
     return permission.getWorkspaceId();
   }
@@ -226,7 +226,7 @@ public class AuthenticationHeaderResolver {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }
-    final PermissionRead permission = permissionHandler.getPermission(
+    final PermissionRead permission = permissionHandler.getPermissionRead(
         new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
     return permission.getOrganizationId();
   }

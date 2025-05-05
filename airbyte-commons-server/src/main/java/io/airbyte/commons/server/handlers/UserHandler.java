@@ -63,7 +63,6 @@ import io.airbyte.data.services.ApplicationService;
 import io.airbyte.data.services.ExternalUserService;
 import io.airbyte.data.services.OrganizationEmailDomainService;
 import io.airbyte.data.services.PermissionRedundantException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.featureflag.EmailAttribute;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.RestrictLoginsForSSODomains;
@@ -94,7 +93,6 @@ public class UserHandler {
 
   private final Supplier<UUID> uuidGenerator;
   private final UserPersistence userPersistence;
-  private final PermissionService permissionService;
   private final ExternalUserService externalUserService;
   private final Optional<ApplicationService> applicationService;
   private final OrganizationEmailDomainService organizationEmailDomainService;
@@ -110,7 +108,6 @@ public class UserHandler {
   @VisibleForTesting
   public UserHandler(
                      final UserPersistence userPersistence,
-                     final PermissionService permissionService,
                      final ExternalUserService externalUserService,
                      final OrganizationPersistence organizationPersistence,
                      final OrganizationEmailDomainService organizationEmailDomainService,
@@ -127,7 +124,6 @@ public class UserHandler {
     this.externalUserService = externalUserService;
     this.organizationPersistence = organizationPersistence;
     this.organizationEmailDomainService = organizationEmailDomainService;
-    this.permissionService = permissionService;
     this.applicationService = applicationService;
     this.workspacesHandler = workspacesHandler;
     this.permissionHandler = permissionHandler;
@@ -380,7 +376,7 @@ public class UserHandler {
   }
 
   private UserGetOrCreateByAuthIdResponse handleNewUserLogin(final AuthenticatedUser incomingJwtUser)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, PermissionRedundantException {
     final UserRead createdUser = createUserFromIncomingUser(incomingJwtUser);
     handleUserPermissionsAndWorkspace(createdUser);
 
@@ -412,7 +408,7 @@ public class UserHandler {
   }
 
   private UserGetOrCreateByAuthIdResponse handleFirstTimeSSOLogin(final User existingUser, final AuthenticatedUser incomingJwtUser)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, PermissionRedundantException {
     LOGGER.info("Migrating existing user {} to SSO...", existingUser.getUserId());
     // (1) Revoke existing applications
     if (applicationService.isPresent()) {
@@ -462,7 +458,7 @@ public class UserHandler {
   }
 
   public UserGetOrCreateByAuthIdResponse getOrCreateUserByAuthId(final UserAuthIdRequestBody userAuthIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, PermissionRedundantException {
     final AuthenticatedUser incomingJwtUser = resolveIncomingJwtUser(userAuthIdRequestBody);
     final Optional<AuthenticatedUser> existingAuthUser = userPersistence.getUserByAuthId(userAuthIdRequestBody.getAuthUserId());
 
@@ -547,7 +543,7 @@ public class UserHandler {
   }
 
   private void handleUserPermissionsAndWorkspace(final UserRead createdUser)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, PermissionRedundantException {
     createInstanceAdminPermissionIfInitialUser(createdUser);
     final Optional<Organization> ssoOrg = getSsoOrganizationIfExists();
     if (ssoOrg.isPresent()) {
@@ -560,7 +556,7 @@ public class UserHandler {
   }
 
   private void handleSsoUser(final UserRead user, final Organization organization)
-      throws IOException, JsonValidationException, ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, PermissionRedundantException {
     // look for any existing user permissions for this organization. exclude the default user that comes
     // with the Airbyte installation, since we want the first real SSO user to be the org admin.
     final List<UserPermission> orgPermissionsExcludingDefaultUser =
@@ -572,14 +568,14 @@ public class UserHandler {
     // If this is the first real user in the org, create a default workspace for them and make them an
     // org admin.
     if (orgPermissionsExcludingDefaultUser.isEmpty()) {
-      createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), PermissionType.ORGANIZATION_ADMIN);
+      createPermissionForUserAndOrg(user.getUserId(), organization.getOrganizationId(), Permission.PermissionType.ORGANIZATION_ADMIN);
     } else {
       final UUID userId = user.getUserId();
       final boolean hasOrgPermission = orgPermissionsExcludingDefaultUser.stream()
           .anyMatch(userPermission -> userPermission.getUser().getUserId().equals(userId));
       // check to avoid creating duplicate permissions
       if (!hasOrgPermission) {
-        createPermissionForUserAndOrg(userId, organization.getOrganizationId(), PermissionType.ORGANIZATION_MEMBER);
+        createPermissionForUserAndOrg(userId, organization.getOrganizationId(), Permission.PermissionType.ORGANIZATION_MEMBER);
       }
     }
 
@@ -636,12 +632,12 @@ public class UserHandler {
     return organizationPersistence.getOrganizationBySsoConfigRealm(authRealm);
   }
 
-  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final PermissionType permissionType)
-      throws IOException, JsonValidationException {
-    permissionHandler.createPermission(new io.airbyte.api.model.generated.PermissionCreate()
-        .organizationId(orgId)
-        .userId(userId)
-        .permissionType(permissionType));
+  private void createPermissionForUserAndOrg(final UUID userId, final UUID orgId, final Permission.PermissionType permissionType)
+      throws IOException, JsonValidationException, PermissionRedundantException {
+    permissionHandler.createPermission(new Permission()
+        .withOrganizationId(orgId)
+        .withUserId(userId)
+        .withPermissionType(permissionType));
   }
 
   private void createInstanceAdminPermissionIfInitialUser(final UserRead createdUser) {
@@ -667,12 +663,7 @@ public class UserHandler {
         createdUser.getUserId());
 
     try {
-      permissionService.createPermission(new Permission()
-          .withPermissionId(uuidGenerator.get())
-          .withUserId(createdUser.getUserId())
-          .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN)
-          .withOrganizationId(null)
-          .withWorkspaceId(null));
+      permissionHandler.grantInstanceAdmin(createdUser.getUserId());
     } catch (final PermissionRedundantException e) {
       throw new ConflictException(e.getMessage(), e);
     }

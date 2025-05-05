@@ -9,7 +9,6 @@ import com.google.common.collect.Sets
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
-import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.ScopeType
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
@@ -22,6 +21,7 @@ import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.InvitationStatus
+import io.airbyte.config.Permission
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
@@ -244,9 +244,9 @@ class UserInvitationHandler(
     existingUserId: UUID,
   ) {
     val permissionCreate =
-      PermissionCreate()
-        .userId(existingUserId)
-        .permissionType(req.permissionType)
+      Permission()
+        .withUserId(existingUserId)
+        .withPermissionType(Permission.PermissionType.valueOf(req.permissionType.name))
 
     when (req.scopeType) {
       ScopeType.ORGANIZATION -> permissionCreate.organizationId = req.scopeId

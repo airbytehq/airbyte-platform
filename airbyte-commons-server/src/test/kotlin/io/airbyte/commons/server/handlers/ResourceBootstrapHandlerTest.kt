@@ -11,7 +11,6 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Permission
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
-import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
 import io.mockk.every
 import io.mockk.mockk
@@ -28,7 +27,7 @@ class ResourceBootstrapHandlerTest {
   private val uuidSupplier: Supplier<UUID> = Supplier { orgId }
   private val workspaceService: WorkspaceService = mockk()
   private val organizationService: OrganizationService = mockk()
-  private val permissionService: PermissionService = mockk()
+  private val permissionHandler: PermissionHandler = mockk()
   private val currentUserService: CurrentUserService = mockk()
   private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val organizationPaymentConfigService: OrganizationPaymentConfigService = mockk()
@@ -38,7 +37,7 @@ class ResourceBootstrapHandlerTest {
       uuidSupplier,
       workspaceService,
       organizationService,
-      permissionService,
+      permissionHandler,
       currentUserService,
       apiAuthorizationHelper,
       organizationPaymentConfigService,
@@ -56,7 +55,7 @@ class ResourceBootstrapHandlerTest {
         every { it.email } returns "test@airbyte.io"
         every { it.companyName } returns "Airbyte"
       }
-      every { permissionService.createPermission(any()) } returns mockk<Permission>()
+      every { permissionHandler.createPermission(any()) } returns mockk<Permission>()
     }
 
     @Test

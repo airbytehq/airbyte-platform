@@ -5,8 +5,8 @@
 package io.airbyte.audit.logging
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.data.services.PermissionService
 import io.mockk.mockk
 import io.mockk.unmockkAll
 import org.junit.jupiter.api.AfterEach
@@ -15,17 +15,17 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 class AuditLoggingHelperTest {
-  private lateinit var permissionService: PermissionService
+  private lateinit var permissionHandler: PermissionHandler
   private lateinit var currentUserService: CurrentUserService
   private lateinit var objectMapper: ObjectMapper
   private lateinit var auditLoggingHelper: AuditLoggingHelper
 
   @BeforeEach
   fun setUp() {
-    permissionService = mockk()
+    permissionHandler = mockk()
     currentUserService = mockk()
     objectMapper = ObjectMapper()
-    auditLoggingHelper = AuditLoggingHelper(permissionService, currentUserService, objectMapper)
+    auditLoggingHelper = AuditLoggingHelper(permissionHandler, currentUserService, objectMapper)
   }
 
   @AfterEach

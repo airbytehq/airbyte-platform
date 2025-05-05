@@ -8,15 +8,15 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.PermissionRead
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
-import io.airbyte.data.services.PermissionService
 import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
 class AuditLoggingHelper(
-  private val permissionService: PermissionService,
+  private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
   private val objectMapper: ObjectMapper,
 ) {
@@ -28,7 +28,7 @@ class AuditLoggingHelper(
     )
   }
 
-  fun getPermission(permissionId: UUID): Permission = permissionService.getPermission(permissionId = permissionId)
+  fun getPermission(permissionId: UUID): Permission = permissionHandler.getPermissionById(permissionId)
 
   fun getPermissionScope(permissionRead: PermissionRead): String =
     when {

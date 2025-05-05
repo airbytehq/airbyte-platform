@@ -7,7 +7,6 @@ package io.airbyte.server.handlers
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
-import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
@@ -268,7 +267,7 @@ internal class UserInvitationHandlerTest {
         Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)
 
         // make sure we never created a permission, because the invitation path was taken instead.
-        verify(permissionHandler!!, Mockito.times(0)).createPermission(org.mockito.kotlin.any<PermissionCreate>())
+        verify(permissionHandler!!, Mockito.times(0)).createPermission(org.mockito.kotlin.any<Permission>())
 
         // make sure the final result is correct
         Assertions.assertFalse(result.directlyAdded)
@@ -334,7 +333,7 @@ internal class UserInvitationHandlerTest {
         // capture and verify the permissions that are created by the permission handler!!.
         val permissionCreateCaptor =
           ArgumentCaptor.forClass(
-            PermissionCreate::class.java,
+            Permission::class.java,
           )
         verify(permissionHandler!!, Mockito.times(expectedUserIds.size))
           .createPermission(permissionCreateCaptor.capture())
@@ -346,7 +345,7 @@ internal class UserInvitationHandlerTest {
 
         for (capturedPermissionCreate in capturedPermissionCreateValues) {
           Assertions.assertEquals(workspaceId, capturedPermissionCreate.workspaceId)
-          Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.permissionType)
+          Assertions.assertEquals(Permission.PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.permissionType)
           Assertions.assertTrue(expectedUserIds.contains(capturedPermissionCreate.userId))
         }
 

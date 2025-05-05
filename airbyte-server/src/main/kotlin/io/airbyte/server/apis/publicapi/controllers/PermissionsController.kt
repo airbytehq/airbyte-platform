@@ -4,7 +4,6 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionIdRequestBody
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.problems.model.generated.ProblemMessageData
@@ -16,6 +15,7 @@ import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Permission
 import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
 import io.airbyte.publicApi.server.generated.models.PermissionCreateRequest
 import io.airbyte.publicApi.server.generated.models.PermissionResponse
@@ -241,7 +241,7 @@ open class PermissionsController(
    * Creates a permission.
    */
   private fun doCreatePermission(permissionCreateRequest: PermissionCreateRequest): PermissionResponse {
-    val permissionCreateOss = PermissionCreate()
+    val permissionCreateOss = Permission()
     permissionCreateOss.permissionType = enumValueOf(permissionCreateRequest.permissionType.name)
     permissionCreateOss.userId = permissionCreateRequest.userId
     permissionCreateOss.organizationId = permissionCreateRequest.organizationId
@@ -254,7 +254,7 @@ open class PermissionsController(
           ConfigClientErrorHandler.handleError(it)
         }
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
-    return PermissionReadMapper.from(result.getOrThrow())
+    return result.getOrThrow().toApi()
   }
 
   /**
@@ -262,7 +262,7 @@ open class PermissionsController(
    */
   private fun doGetPermissionsByUserId(userId: UUID): PermissionsResponse {
     val result =
-      runCatching { permissionHandler.listPermissionsByUser(userId) }
+      runCatching { permissionHandler.permissionReadListForUser(userId) }
         .onFailure {
           log.error(it) { "Error for getPermissionsByUserId" }
           ConfigClientErrorHandler.handleError(it)
@@ -299,7 +299,7 @@ open class PermissionsController(
     val permissionIdRequestBody = PermissionIdRequestBody()
     permissionIdRequestBody.permissionId = permissionId
     val result =
-      runCatching { permissionHandler.getPermission(permissionIdRequestBody) }
+      runCatching { permissionHandler.getPermissionRead(permissionIdRequestBody) }
         .onFailure {
           log.error(it) { "Error for getPermission" }
           ConfigClientErrorHandler.handleError(it)
@@ -321,7 +321,7 @@ open class PermissionsController(
     val updatedPermission =
       runCatching {
         permissionHandler.updatePermission(permissionUpdate)
-        val updatedPermission = permissionHandler.getPermission(PermissionIdRequestBody().permissionId(permissionId))
+        val updatedPermission = permissionHandler.getPermissionRead(PermissionIdRequestBody().permissionId(permissionId))
         updatedPermission
       }.onFailure {
         log.error(it) { "Error for updatePermission" }
@@ -346,3 +346,12 @@ open class PermissionsController(
     log.debug { HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result }
   }
 }
+
+private fun Permission.toApi() =
+  PermissionResponse(
+    permissionId = this.permissionId,
+    permissionType = enumValueOf(this.permissionType.name),
+    userId = this.userId,
+    workspaceId = this.workspaceId,
+    organizationId = this.organizationId,
+  )
