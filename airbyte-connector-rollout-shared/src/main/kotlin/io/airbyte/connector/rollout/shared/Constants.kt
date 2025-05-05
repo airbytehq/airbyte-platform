@@ -24,7 +24,7 @@ object Constants {
   const val DEFAULT_SUCCESS_THRESHOLD_PERCENTAGE = 100
 
   // Percentage of actors who must have finished syncs to consider a rollout complete
-  const val DEFAULT_PERCENTAGE_OF_ACTORS_WITH_COMPLETED_SYNCS_REQUIRED = 75
+  const val DEFAULT_PERCENTAGE_OF_ACTORS_WITH_COMPLETED_SYNCS_REQUIRED = 50
 
   // 10 mins
   const val VERIFY_ACTIVITY_HEARTBEAT_TIMEOUT_SECONDS = 600
