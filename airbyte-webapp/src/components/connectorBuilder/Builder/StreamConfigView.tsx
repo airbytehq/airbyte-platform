@@ -82,15 +82,18 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
 
   const streams = useBuilderWatch("formValues.streams");
   const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
 
   const { setValue } = useFormContext();
 
   const currentStream = useMemo(() => {
     if (streamId.type === "stream") {
       return streams[streamId.index];
+    } else if (streamId.type === "generated_stream") {
+      return generatedStreams[streamId.dynamicStreamName][streamId.index];
     }
     return dynamicStreams[streamId.index].streamTemplate;
-  }, [streamId, streams, dynamicStreams]);
+  }, [streamId, streams, dynamicStreams, generatedStreams]);
 
   const otherStreamsWithSameRequestTypeExist = useMemo(() => {
     if (streamId.type === "stream") {
@@ -167,7 +170,7 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
 
   const baseUrl = useBuilderWatch("formValues.global.urlBase");
   const streamFieldPath = ((fieldPath: string) =>
-    getStreamFieldPath(streamId, fieldPath)) as unknown as AnyDeclarativeStreamPathFn;
+    getStreamFieldPath(streamId, fieldPath)) as AnyDeclarativeStreamPathFn;
   const selectedDecoder = useBuilderWatch(streamFieldPath("decoder")) as BuilderDecoderConfig;
 
   useEffect(() => {
@@ -204,7 +207,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
         )}
       </FlexContainer>
       {streamTab === "requester" ? (
-        <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
+        <fieldset
+          disabled={permission === "readOnly" || streamId.type === "generated_stream"}
+          className={styles.fieldset}
+        >
           {streamId.type === "dynamic_stream" && (
             <BuilderCard>
               <BuilderField
@@ -300,10 +306,16 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
     }
   }, [setValue, streamTab]);
 
-  const streamFieldPath: StreamPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.${fieldPath}` as const,
-    [streamId.index]
-  );
+  const streamFieldPath = useMemo(() => {
+    return ((fieldPath: string) => {
+      return `${
+        streamId.type === "generated_stream"
+          ? (`generatedStreams.${streamId.dynamicStreamName}` as const)
+          : ("formValues.streams" as const)
+      }.${streamId.index}.${fieldPath}`;
+    }) as AnyDeclarativeStreamPathFn;
+  }, [streamId]);
+
   const creationRequesterPath: CreationRequesterPathFn = useCallback(
     <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.creationRequester.${fieldPath}` as const,
     [streamId.index]
@@ -322,6 +334,9 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
 
   const tabContentKey = useMemo(() => `${streamId.index}-${streamTab}`, [streamId.index, streamTab]);
 
+  if (streamId.type !== "stream") {
+    return null;
+  }
   return (
     <>
       <FlexContainer className={styles.sticky} justifyContent="space-between" alignItems="center">

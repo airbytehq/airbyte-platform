@@ -110,7 +110,7 @@ export interface BuilderState {
   view: { type: "global" } | { type: "inputs" } | { type: "components" } | StreamId;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
-  generatedStreams: Record<string, DeclarativeStream[]>;
+  generatedStreams: Record<string, GeneratedBuilderStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
   manifest: ConnectorManifest | null;
 }
@@ -487,6 +487,7 @@ export type BuilderStream = {
   autoImportSchema: boolean;
   unknownFields?: YamlString;
   testResults?: StreamTestResults;
+  dynamicStreamName?: string;
 } & (
   | {
       requestType: "sync";
@@ -531,6 +532,19 @@ export type BuilderStream = {
       // urlRequester: BuilderBaseRequester;
     }
 );
+
+export type GeneratedDeclarativeStream = DeclarativeStream & {
+  dynamic_stream_name: string;
+};
+
+export type GeneratedBuilderStream = BuilderStream & {
+  dynamicStreamName: string;
+  declarativeStream: GeneratedDeclarativeStream;
+};
+
+export function declarativeStreamIsGenerated(stream: DeclarativeStream): stream is GeneratedDeclarativeStream {
+  return "dynamic_stream_name" in stream;
+}
 
 export interface BuilderBaseRequester {
   url: string;
@@ -1749,10 +1763,19 @@ export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+
 export type DynamicStreamStreamTemplatePathFn = <T extends string>(
   fieldPath: T
 ) => `formValues.dynamicStreams.${number}.streamTemplate.${T}`;
-export type AnyDeclarativeStreamPathFn = StreamPathFn | DynamicStreamStreamTemplatePathFn;
+
+export type GeneratedStreamStreamTemplatePathFn = <T extends string>(
+  fieldPath: T
+) => `generatedStreams.${string}.${number}.${T}`;
+
+export type AnyDeclarativeStreamPathFn =
+  | StreamPathFn
+  | DynamicStreamStreamTemplatePathFn
+  | GeneratedStreamStreamTemplatePathFn;
 export type DynamicStreamPathFn = <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${number}.${T}`;
 export type CreationRequesterPathFn = <T extends string>(
   fieldPath: T
@@ -1776,6 +1799,8 @@ export function getStreamFieldPath<T extends "stream" | "dynamic_stream", K exte
 ): StreamIdToFieldPath<T, K> {
   if (streamId.type === "stream") {
     return `formValues.streams.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
+  } else if (streamId.type === "generated_stream") {
+    return `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
   }
   return `formValues.dynamicStreams.${streamId.index}.streamTemplate.${fieldPath}` as StreamIdToFieldPath<T, K>;
 }

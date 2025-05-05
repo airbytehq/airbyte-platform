@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -17,7 +17,7 @@ import { BuilderView, useConnectorBuilderFormState } from "services/connectorBui
 import { AddStreamButton } from "./AddStreamButton";
 import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
-import { StreamId } from "../types";
+import { GeneratedBuilderStream, StreamId } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
@@ -67,35 +67,67 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
+  const generatedStreams: GeneratedBuilderStream[] | undefined = useBuilderWatch("generatedStreams")[name];
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
   const testWarnings = useMemo(() => getStreamTestWarnings(name, true), [getStreamTestWarnings, name]);
 
+  const [isOpen, setIsOpen] = useState(false);
+
   const viewId: StreamId = { type: "dynamic_stream", index: num };
 
   return (
-    <ViewSelectButton
-      data-testid={`navbutton-${String(num)}`}
-      selected={view.type === "dynamic_stream" && view.index === num}
-      showIndicator={hasErrors([viewId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
-      onClick={() => {
-        setValue("view", viewId);
-        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
-          actionDescription: "Dynamic stream view selected",
-          dynamicStreamName: name,
-        });
-      }}
-    >
-      <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
-        {name && name.trim() ? (
-          <Text className={styles.streamViewText}>{name}</Text>
-        ) : (
-          <Text className={styles.emptyStreamViewText}>
-            <FormattedMessage id="connectorBuilder.emptyName" />
-          </Text>
-        )}
-      </FlexContainer>
-    </ViewSelectButton>
+    <FlexContainer direction="column" gap="none">
+      <ViewSelectButton
+        data-testid={`navbutton-${String(num)}`}
+        selected={view.type === "dynamic_stream" && view.index === num}
+        showIndicator={hasErrors([viewId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+        onClick={() => {
+          setValue("view", viewId);
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
+            actionDescription: "Dynamic stream view selected",
+            dynamicStreamName: name,
+          });
+        }}
+      >
+        <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
+          {generatedStreams && (
+            <Icon type={isOpen ? "chevronDown" : "chevronRight"} onClick={() => setIsOpen((isOpen) => !isOpen)} />
+          )}
+          {name && name.trim() ? (
+            <Text className={styles.streamViewText}>{name}</Text>
+          ) : (
+            <Text className={styles.emptyStreamViewText}>
+              <FormattedMessage id="connectorBuilder.emptyName" />
+            </Text>
+          )}
+        </FlexContainer>
+      </ViewSelectButton>
+      {generatedStreams && isOpen && (
+        <FlexContainer direction="column" gap="none" className={styles.generatedStreamViewContainer}>
+          {generatedStreams.map((stream, index) => {
+            const streamId: StreamId = { type: "generated_stream", index, dynamicStreamName: name };
+            return (
+              <ViewSelectButton
+                key={stream.name}
+                data-testid={`navbutton-${String(num)}`}
+                selected={view.type === "generated_stream" && view.index === index}
+                showIndicator={hasErrors([streamId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+                onClick={() => {
+                  setValue("view", streamId);
+                  analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_SELECT, {
+                    actionDescription: "Dynamic stream view selected",
+                    dynamicStreamName: name,
+                  });
+                }}
+              >
+                <Text>{stream.name}</Text>
+              </ViewSelectButton>
+            );
+          })}
+        </FlexContainer>
+      )}
+    </FlexContainer>
   );
 };
 

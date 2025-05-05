@@ -15,10 +15,13 @@ import { CDK_VERSION } from "components/connectorBuilder/cdk";
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderState,
+  BuilderStream,
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
+  GeneratedBuilderStream,
+  GeneratedDeclarativeStream,
   isStreamDynamicStream,
   StreamId,
 } from "components/connectorBuilder/types";
@@ -53,6 +56,7 @@ import {
   useCancelBuilderProjectStreamRead,
 } from "core/api";
 import {
+  ConnectorBuilderProjectFullResolveResponse,
   ConnectorBuilderProjectTestingValues,
   ConnectorBuilderProjectTestingValuesUpdate,
   SourceDefinitionIdBody,
@@ -72,6 +76,7 @@ import { removeEmptyProperties } from "core/utils/form";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useExperiment } from "hooks/services/Experiment";
+import { useNotificationService } from "hooks/services/Notification";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
 import { IncomingData, OutgoingData } from "./SchemaWorker";
@@ -163,7 +168,7 @@ export interface TestReadContext {
   queueStreamRead: () => void;
   cancelStreamRead: () => void;
   testStreamRequestType: "sync" | "async";
-  generateStreams: () => void;
+  generateStreams: UseQueryResult<ConnectorBuilderProjectFullResolveResponse, unknown>;
 }
 
 interface FormManagementStateContext {
@@ -487,7 +492,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       };
 
       const view = getValues("view");
-      if (typeof view === "number" && manifest.streams && manifest.streams.length <= view) {
+      if (view.type === "stream" && manifest.streams && manifest.streams.length <= view.index) {
         // switch back to global view if the selected stream does not exist anymore
         setValue("view", { type: "global" });
       }
@@ -830,6 +835,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       setValue("testStreamId", { type: "stream", index: view.index });
     } else if (view.type === "dynamic_stream") {
       setValue("testStreamId", { type: "dynamic_stream", index: view.index });
+    } else if (view.type === "generated_stream") {
+      setValue("testStreamId", view);
     }
   }, [setValue, view]);
 
@@ -847,7 +854,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       };
     }
   } else if (testStreamId.type === "generated_stream") {
-    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
+    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index].declarativeStream;
   } else {
     testStream = resolvedManifest.streams?.[testStreamId.index];
   }
@@ -890,10 +897,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
   const streamUsesCustomCode = getStreamHasCustomType(streamName);
 
-  type GeneratedStream = DeclarativeStreamType & {
-    dynamic_stream_name: string;
-  };
-
   const resolvedManifestInput = useMemo(
     () => ({
       manifest: jsonManifest,
@@ -904,23 +907,56 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   );
 
   const fullResolveManifest = useBuilderProjectFullResolveManifest(resolvedManifestInput);
-
-  const generateStreams = useCallback(async () => {
+  const { registerNotification } = useNotificationService();
+  const { formatMessage } = useIntl();
+  const doGenerateStreams = useCallback(async () => {
     const resolvedManifest = await fullResolveManifest.refetch();
-    const streams = (resolvedManifest.data?.manifest?.streams ?? []) as GeneratedStream[];
 
-    const groupedStreams: Record<string, GeneratedStream[]> = {};
+    if (!resolvedManifest.data?.manifest) {
+      return;
+    }
+    const manifestAsBuilderValues = convertToBuilderFormValuesSync(resolvedManifest.data.manifest as ConnectorManifest);
 
-    streams.forEach((stream) => {
-      const dynamicStreamName = stream.dynamic_stream_name || "default";
-      if (!groupedStreams[dynamicStreamName]) {
-        groupedStreams[dynamicStreamName] = [];
+    const originalStreamsByDynamicStreamNameAndName = (
+      (resolvedManifest.data.manifest as ConnectorManifest).streams ?? []
+    ).reduce<Record<string, Record<string, GeneratedDeclarativeStream>>>((acc, stream) => {
+      if (!("dynamic_stream_name" in stream) || stream.name == null) {
+        return acc;
       }
-      groupedStreams[dynamicStreamName].push(stream);
+      const dynamicStreamKey = (stream as GeneratedDeclarativeStream).dynamic_stream_name;
+      if (acc[dynamicStreamKey] == null) {
+        acc[dynamicStreamKey] = {};
+      }
+      acc[dynamicStreamKey][stream.name] = stream as GeneratedDeclarativeStream;
+      return acc;
+    }, {});
+
+    const groupedStreams = manifestAsBuilderValues.streams.reduce<Record<string, BuilderStream[]>>((acc, stream) => {
+      if (stream.dynamicStreamName == null) {
+        return acc;
+      }
+
+      const dynamicStreamName = stream.dynamicStreamName;
+      if (!acc[dynamicStreamName]) {
+        acc[dynamicStreamName] = [];
+      }
+
+      (stream as GeneratedBuilderStream).declarativeStream =
+        originalStreamsByDynamicStreamNameAndName[dynamicStreamName][stream.name];
+      acc[dynamicStreamName].push(stream);
+      return acc;
+    }, {});
+
+    setValue("generatedStreams", groupedStreams);
+
+    registerNotification({
+      id: "connectorBuilder.generateStreamsSuccess",
+      type: "success",
+      text: formatMessage({ id: "connectorBuilder.generateStreamsSuccess" }),
     });
 
-    setValue("generatedStreams", groupedStreams); // assuming this is what you meant
-  }, [setValue, fullResolveManifest]);
+    return resolvedManifest;
+  }, [setValue, fullResolveManifest, formatMessage, registerNotification]);
 
   const streamRead = useBuilderProjectReadStream(
     {
@@ -1024,7 +1060,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever
         ? ("async" as const)
         : ("sync" as const),
-    generateStreams,
+    generateStreams: { ...fullResolveManifest, refetch: doGenerateStreams } as UseQueryResult<
+      ConnectorBuilderProjectFullResolveResponse,
+      unknown
+    >,
   };
 
   return <ConnectorBuilderTestReadContext.Provider value={ctx}>{children}</ConnectorBuilderTestReadContext.Provider>;

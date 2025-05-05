@@ -8,7 +8,7 @@ import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import SchemaFormBuilder from "components/connectorBuilder/SchemaFormBuilder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState } from "components/connectorBuilder/types";
+import { BuilderState, GeneratedBuilderStream } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
@@ -16,7 +16,6 @@ import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
-import { DeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useExperiment } from "hooks/services/Experiment";
 import {
   ConnectorBuilderLocalStorageProvider,
@@ -73,7 +72,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     streamTab: "requester" as const,
     testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
-    generatedStreams: {} as Record<string, DeclarativeStream[]>,
+    generatedStreams: {} as Record<string, GeneratedBuilderStream[]>,
     manifest: resolvedManifest,
   };
   const initialValues = useRef(values);

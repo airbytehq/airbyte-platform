@@ -1683,6 +1683,8 @@
   "connectorBuilder.contribution.modal.connectorAlreadyExists": "Your contribution will edit the existing {name} connector.",
   "connectorBuilder.contribution.modal.connectorDoesNotExist": "Your contribution will create a new connector and add it to the Airbyte catalog.",
   "connectorBuilder.contribution.modal.invalidImageName": "Identifier must start with \"source-\" and contain only lowercase letters, numbers, and hyphens",
+  "connectorBuilder.generateStreams": "Generate Streams",
+  "connectorBuilder.generateStreamsSuccess": "Streams generated successfully! Make sure to test at least one stream.",
   "connectorBuilder.testButton": "Test",
   "connectorBuilder.testButtonDynamic": "Preview endpoint",
   "connectorBuilder.testingValuesMenuTitle": "Input values",

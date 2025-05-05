@@ -48,7 +48,7 @@ export const StreamTester: React.FC<{
       errorUpdatedAt,
     },
     testReadLimits: { recordLimit, pageLimit, sliceLimit },
-    generateStreams,
+    generateStreams: { refetch: generateStreams, isFetching: isGeneratingStreams },
     queuedStreamRead,
     queueStreamRead,
     cancelStreamRead,
@@ -209,7 +209,9 @@ export const StreamTester: React.FC<{
       {streamIsDynamic && (
         <div className={styles.dynamicStreamButtonContainer}>
           {streamTestButton}
-          <Button onClick={generateStreams}>Generate Streams</Button>
+          <Button isLoading={isGeneratingStreams} onClick={() => generateStreams()}>
+            <FormattedMessage id="connectorBuilder.generateStreams" />
+          </Button>
         </div>
       )}
       {!streamIsDynamic && streamTestButton}

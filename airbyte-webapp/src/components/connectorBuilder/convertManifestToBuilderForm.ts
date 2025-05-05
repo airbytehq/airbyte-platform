@@ -110,6 +110,7 @@ import {
   BuilderDynamicStream,
   BuilderComponentsResolver,
   BuilderRequestOptions,
+  declarativeStreamIsGenerated,
 } from "./types";
 import {
   getKeyToDesiredLockedInput,
@@ -364,6 +365,7 @@ const manifestSyncStreamToBuilder = (
     type,
     incremental_sync,
     name,
+    dynamic_stream_name,
     primary_key,
     retriever,
     schema_loader,
@@ -426,6 +428,7 @@ const manifestSyncStreamToBuilder = (
     requestType: "sync" as const,
     id: streamId,
     name: streamName,
+    dynamicStreamName: declarativeStreamIsGenerated(stream) ? stream.dynamic_stream_name : undefined,
     urlPath: path,
     httpMethod: http_method === "POST" ? "POST" : "GET",
     decoder: manifestDecoderToBuilder(decoder, streamName),

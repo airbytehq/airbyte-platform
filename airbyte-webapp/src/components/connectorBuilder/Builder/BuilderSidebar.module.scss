@@ -74,11 +74,16 @@
   background-color: colors.$yellow;
 }
 
+%streamViewText,
 .streamViewText {
   color: inherit;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.generatedStreamViewContainer {
+  margin-left: variables.$spacing-2xl; // indent from dynamic stream's name
 }
 
 .emptyStreamViewText {

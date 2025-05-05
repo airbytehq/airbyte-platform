@@ -26,7 +26,8 @@ type ErrorHandlerSectionProps =
         | `formValues.streams.${number}.creationRequester.errorHandler`
         | `formValues.streams.${number}.pollingRequester.errorHandler`
         | `formValues.streams.${number}.downloadRequester.errorHandler`
-        | `formValues.dynamicStreams.${number}.streamTemplate.errorHandler`;
+        | `formValues.dynamicStreams.${number}.streamTemplate.errorHandler`
+        | `generatedStreams.${string}.${number}.errorHandler`;
       streamId: StreamId;
     }
   | {
