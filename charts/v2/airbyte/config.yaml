@@ -1052,24 +1052,29 @@ temporal.cloud:
   keyBasePath: global.temporal.cloud
   secretNamePath: global.temporal.secretName
   config:
-
     - env: TEMPORAL_CLOUD_ENABLED
       key: enabled
       defaultValue: false
-
-    - env: TEMPORAL_CLOUD_CLIENT_CERT
-      key: clientCert
-      sensitive: true
-
-    - env: TEMPORAL_CLOUD_CLIENT_KEY
-      key: clientKey
-      sensitive: true
 
     - env: TEMPORAL_CLOUD_HOST
       key: host
 
     - env: TEMPORAL_CLOUD_NAMESPACE
       key: namespace
+
+temporal.cloud.credentials:
+  keyBasePath: global.temporal.cloud
+  secretNamePath: global.temporal.secretName
+  config:
+    - env: TEMPORAL_CLOUD_CLIENT_CERT
+      key: clientCert
+      sensitive: true
+      secretRef: airbyte.temporal.cloud.secretName
+
+    - env: TEMPORAL_CLOUD_CLIENT_KEY
+      key: clientKey
+      sensitive: true
+      secretRef: airbyte.temporal.cloud.secretName
 
 temporal.cloud.billing:
   keyBasePath: global.temporal.cloud.billing

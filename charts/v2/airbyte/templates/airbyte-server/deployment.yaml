@@ -119,6 +119,7 @@ spec:
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.billing.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.connectorRollout.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.cloud.credentials.envs" . | nindent 8 }}
         {{- end}}
 
         # Values from secret

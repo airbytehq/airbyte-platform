@@ -258,56 +258,6 @@ Renders the temporal.cloud.enabled environment variable
 {{- end }}
 
 {{/*
-Renders the global.temporal.cloud.clientCert value
-*/}}
-{{- define "airbyte.temporal.cloud.clientCert" }}
-    {{- .Values.global.temporal.cloud.clientCert }}
-{{- end }}
-
-{{/*
-Renders the temporal.cloud.clientCert secret key
-*/}}
-{{- define "airbyte.temporal.cloud.clientCert.secretKey" }}
-	{{- .Values.global.temporal.cloud.clientCertSecretKey | default "TEMPORAL_CLOUD_CLIENT_CERT" }}
-{{- end }}
-
-{{/*
-Renders the temporal.cloud.clientCert environment variable
-*/}}
-{{- define "airbyte.temporal.cloud.clientCert.env" }}
-- name: TEMPORAL_CLOUD_CLIENT_CERT
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.temporal.cloud.secretName" . }}
-      key: {{ include "airbyte.temporal.cloud.clientCert.secretKey" . }}
-{{- end }}
-
-{{/*
-Renders the global.temporal.cloud.clientKey value
-*/}}
-{{- define "airbyte.temporal.cloud.clientKey" }}
-    {{- .Values.global.temporal.cloud.clientKey }}
-{{- end }}
-
-{{/*
-Renders the temporal.cloud.clientKey secret key
-*/}}
-{{- define "airbyte.temporal.cloud.clientKey.secretKey" }}
-	{{- .Values.global.temporal.cloud.clientKeySecretKey | default "TEMPORAL_CLOUD_CLIENT_KEY" }}
-{{- end }}
-
-{{/*
-Renders the temporal.cloud.clientKey environment variable
-*/}}
-{{- define "airbyte.temporal.cloud.clientKey.env" }}
-- name: TEMPORAL_CLOUD_CLIENT_KEY
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.temporal.cloud.secretName" . }}
-      key: {{ include "airbyte.temporal.cloud.clientKey.secretKey" . }}
-{{- end }}
-
-{{/*
 Renders the global.temporal.cloud.host value
 */}}
 {{- define "airbyte.temporal.cloud.host" }}
@@ -348,8 +298,6 @@ Renders the set of all temporal.cloud environment variables
 */}}
 {{- define "airbyte.temporal.cloud.envs" }}
 {{- include "airbyte.temporal.cloud.enabled.env" . }}
-{{- include "airbyte.temporal.cloud.clientCert.env" . }}
-{{- include "airbyte.temporal.cloud.clientKey.env" . }}
 {{- include "airbyte.temporal.cloud.host.env" . }}
 {{- include "airbyte.temporal.cloud.namespace.env" . }}
 {{- end }}
@@ -361,14 +309,6 @@ Renders the set of all temporal.cloud config map variables
 TEMPORAL_CLOUD_ENABLED: {{ include "airbyte.temporal.cloud.enabled" . | quote }}
 TEMPORAL_CLOUD_HOST: {{ include "airbyte.temporal.cloud.host" . | quote }}
 TEMPORAL_CLOUD_NAMESPACE: {{ include "airbyte.temporal.cloud.namespace" . | quote }}
-{{- end }}
-
-{{/*
-Renders the set of all temporal.cloud secret variables
-*/}}
-{{- define "airbyte.temporal.cloud.secrets" }}
-TEMPORAL_CLOUD_CLIENT_CERT: {{ include "airbyte.temporal.cloud.clientCert" . | quote }}
-TEMPORAL_CLOUD_CLIENT_KEY: {{ include "airbyte.temporal.cloud.clientKey" . | quote }}
 {{- end }}
 
 {{/*
@@ -495,6 +435,83 @@ Renders the set of all temporal.cloud.connectorRollout config map variables
 {{- define "airbyte.temporal.cloud.connectorRollout.configVars" }}
 TEMPORAL_CLOUD_HOST_CONNECTOR_ROLLOUT: {{ include "airbyte.temporal.cloud.connectorRollout.host" . | quote }}
 TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT: {{ include "airbyte.temporal.cloud.connectorRollout.namespace" . | quote }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.credentials secret name
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.secretName" }}
+{{- if .Values.global.temporal.secretName }}
+    {{- .Values.global.temporal.secretName }}
+{{- else }}
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Renders the global.temporal.cloud.clientCert value
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientCert" }}
+    {{- .Values.global.temporal.cloud.clientCert }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.credentials.clientCert secret key
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientCert.secretKey" }}
+	{{- .Values.global.temporal.cloud.clientCertSecretKey | default "TEMPORAL_CLOUD_CLIENT_CERT" }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.credentials.clientCert environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientCert.env" }}
+- name: TEMPORAL_CLOUD_CLIENT_CERT
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.temporal.cloud.secretName" . }}
+      key: {{ include "airbyte.temporal.cloud.credentials.clientCert.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the global.temporal.cloud.clientKey value
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientKey" }}
+    {{- .Values.global.temporal.cloud.clientKey }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.credentials.clientKey secret key
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientKey.secretKey" }}
+	{{- .Values.global.temporal.cloud.clientKeySecretKey | default "TEMPORAL_CLOUD_CLIENT_KEY" }}
+{{- end }}
+
+{{/*
+Renders the temporal.cloud.credentials.clientKey environment variable
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.clientKey.env" }}
+- name: TEMPORAL_CLOUD_CLIENT_KEY
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.temporal.cloud.secretName" . }}
+      key: {{ include "airbyte.temporal.cloud.credentials.clientKey.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the set of all temporal.cloud.credentials environment variables
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.envs" }}
+{{- include "airbyte.temporal.cloud.credentials.clientCert.env" . }}
+{{- include "airbyte.temporal.cloud.credentials.clientKey.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all temporal.cloud.credentials secret variables
+*/}}
+{{- define "airbyte.temporal.cloud.credentials.secrets" }}
+TEMPORAL_CLOUD_CLIENT_CERT: {{ include "airbyte.temporal.cloud.credentials.clientCert" . | quote }}
+TEMPORAL_CLOUD_CLIENT_KEY: {{ include "airbyte.temporal.cloud.credentials.clientKey" . | quote }}
 {{- end }}
 
 {{/*
