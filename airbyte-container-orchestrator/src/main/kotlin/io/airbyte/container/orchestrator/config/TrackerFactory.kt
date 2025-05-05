@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.config
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.metrics.MetricClient
@@ -13,7 +14,6 @@ import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
-import io.airbyte.workers.general.buffered.worker.ReplicationContextProvider
 import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker

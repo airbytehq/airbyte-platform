@@ -41,6 +41,7 @@ dependencies {
   implementation(libs.sts)
   implementation(libs.kubernetes.client)
   implementation(libs.bundles.datadog)
+  implementation(libs.kotlin.coroutines)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -77,6 +78,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockk)
+  testImplementation(libs.kotlin.coroutines.test)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

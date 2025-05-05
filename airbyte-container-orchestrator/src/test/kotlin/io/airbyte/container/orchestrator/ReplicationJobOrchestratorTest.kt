@@ -8,6 +8,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
+import io.airbyte.container.orchestrator.worker.ReplicationWorker
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator.BYTES_TO_GB
 import io.airbyte.metrics.MetricClient
@@ -16,7 +17,6 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.general.buffered.worker.ReplicationWorker
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
