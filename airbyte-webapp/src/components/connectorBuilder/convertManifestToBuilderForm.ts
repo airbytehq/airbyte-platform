@@ -65,6 +65,7 @@ import {
   DynamicDeclarativeStreamComponentsResolver,
   SimpleRetrieverRequester,
   HttpRequesterRequestParameters,
+  HttpComponentsResolver,
 } from "core/api/types/ConnectorManifest";
 
 import {
@@ -126,8 +127,10 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   builderFormValues.dynamicStreamCheckConfigs = resolvedManifest.check.dynamic_streams_check_configs ?? [];
   builderFormValues.description = resolvedManifest.description;
 
-  const streams = resolvedManifest.streams;
-  if (streams === undefined || streams.length === 0) {
+  const streams = resolvedManifest.streams ?? [];
+  const dynamicStreams = resolvedManifest.dynamic_streams ?? [];
+
+  if (streams.length === 0 && dynamicStreams.length === 0) {
     builderFormValues.inputs = manifestSpecToBuilderInputs(resolvedManifest.spec, { type: NO_AUTH }, []);
     return builderFormValues;
   }
@@ -140,9 +143,19 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
   }
   const declarativeStreams = streams as DeclarativeStream[];
 
-  const firstSimpleRetriever: SimpleRetriever | undefined = declarativeStreams
-    .map((stream) => stream.retriever)
-    .find((retriever): retriever is SimpleRetriever => retriever.type === "SimpleRetriever");
+  const streamRetrievers = declarativeStreams.map((stream) => stream.retriever);
+  const dynamicStreamSimpleRetrievers = dynamicStreams
+    .filter(
+      (dynamicStream) =>
+        dynamicStream.components_resolver.type === HttpComponentsResolverType.HttpComponentsResolver &&
+        dynamicStream.components_resolver.retriever.type === SimpleRetrieverType.SimpleRetriever
+    )
+    .map((dynamicStream) => (dynamicStream.components_resolver as HttpComponentsResolver).retriever);
+
+  const firstSimpleRetriever: SimpleRetriever | undefined = [
+    ...streamRetrievers,
+    ...dynamicStreamSimpleRetrievers,
+  ].find((retriever): retriever is SimpleRetriever => retriever.type === "SimpleRetriever");
 
   if (firstSimpleRetriever) {
     assertType<HttpRequester>(firstSimpleRetriever.requester, "HttpRequester");
@@ -209,7 +222,6 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
     );
   }
 
-  const dynamicStreams = resolvedManifest.dynamic_streams ?? [];
   builderFormValues.dynamicStreams = dynamicStreams.map((dynamicStream, idx): BuilderDynamicStream => {
     if (!assertResolverWithSimpleRetriever(dynamicStream.components_resolver)) {
       throw new ManifestCompatibilityError(
@@ -218,7 +230,7 @@ export const convertToBuilderFormValuesSync = (resolvedManifest: ConnectorManife
       );
     }
 
-    const componentsResolver = dynamicStream.components_resolver as BuilderComponentsResolver;
+    const componentsResolver = structuredClone(dynamicStream.components_resolver as BuilderComponentsResolver);
     componentsResolver.retriever.requester = {
       $ref: "#/definitions/base_requester",
       path: dynamicStream.components_resolver.retriever.requester.path,
@@ -365,16 +377,16 @@ const manifestSyncStreamToBuilder = (
   const cleanedAuthenticator = pick(authenticator, authenticatorKeysToCheck);
   const cleanedFirstStreamAuthenticator = pick(firstSimpleRetrieverAuthenticator, authenticatorKeysToCheck);
 
+  if (url_base !== firstSimpleRetrieverUrlBase) {
+    throw new ManifestCompatibilityError(streamName, "url_base does not match the first stream's");
+  }
+
   if (
     !firstSimpleRetrieverAuthenticator || firstSimpleRetrieverAuthenticator.type === "NoAuth"
       ? authenticator && authenticator.type !== "NoAuth"
       : !isEqual(cleanedAuthenticator, cleanedFirstStreamAuthenticator)
   ) {
     throw new ManifestCompatibilityError(streamName, "authenticator does not match the first stream's");
-  }
-
-  if (url_base !== firstSimpleRetrieverUrlBase) {
-    throw new ManifestCompatibilityError(streamName, "url_base does not match the first stream's");
   }
 
   if (![undefined, "GET", "POST"].includes(http_method)) {

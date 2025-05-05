@@ -951,26 +951,30 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
         result.inferred_schema.additionalProperties = true;
 
         // Set the inferred schema in the form values when autoImportSchema is enabled
-        setValue(`formValues.streams.${testStreamId.index}.schema`, formatJson(result.inferred_schema, true), {
-          shouldValidate: true,
-          shouldTouch: true,
-          shouldDirty: true,
-        });
+        if (testStreamId.type === "stream") {
+          setValue(`formValues.streams.${testStreamId.index}.schema`, formatJson(result.inferred_schema, true), {
+            shouldValidate: true,
+            shouldTouch: true,
+            shouldDirty: true,
+          });
 
-        // Set the schema_loader on the test stream to the inferred schema as well, so
-        // that it is included in the stream when generating the test result stream hash.
-        if (testStream.type === DeclarativeStreamType.DeclarativeStream) {
-          testStream.schema_loader = {
-            type: "InlineSchemaLoader",
-            schema: result.inferred_schema,
-          } as const;
+          // Set the schema_loader on the test stream to the inferred schema as well, so
+          // that it is included in the stream when generating the test result stream hash.
+          if (testStream.type === DeclarativeStreamType.DeclarativeStream) {
+            testStream.schema_loader = {
+              type: "InlineSchemaLoader",
+              schema: result.inferred_schema,
+            } as const;
+          }
         }
       }
 
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(jsonManifest);
 
-      updateStreamTestResults(result, testStream, streamName, testStreamId.index);
+      if (testStreamId.type === "stream") {
+        updateStreamTestResults(result, testStream, streamName, testStreamId.index);
+      }
     }
   );
 
