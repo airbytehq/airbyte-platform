@@ -15,15 +15,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @SuppressWarnings({"PMD.AvoidDuplicateLiterals", "PMD.ExceptionAsFlowControl"})
 class ConfigReplacerTest {
 
-  final Logger logger = LoggerFactory.getLogger(ConfigReplacerTest.class);
-
-  final ConfigReplacer replacer = new ConfigReplacer(logger);
+  final ConfigReplacer replacer = new ConfigReplacer();
   final ObjectMapper mapper = new ObjectMapper();
 
   @Test
