@@ -111,9 +111,9 @@ class WorkloadHeartbeatSender(
   ): Boolean =
     if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
       logger.warn(exception) { "Heartbeat timeout exceeded. Shutting down heartbeat." }
+      replicationWorkerState.trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", exception), jobId, attempt)
       replicationWorkerState.markFailed()
       replicationWorkerState.abort()
-      replicationWorkerState.trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", exception), jobId, attempt)
       true
     } else {
       false

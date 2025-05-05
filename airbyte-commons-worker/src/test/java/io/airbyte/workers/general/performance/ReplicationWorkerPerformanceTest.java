@@ -23,6 +23,7 @@ import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
 import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.LogStateMsgs;
+import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
 import io.airbyte.mappers.application.RecordMapper;
@@ -36,10 +37,12 @@ import io.airbyte.workers.RecordSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
-import io.airbyte.workers.general.BufferedReplicationWorker;
 import io.airbyte.workers.general.EmptyAirbyteDestination;
 import io.airbyte.workers.general.LimitedFatRecordSourceProcess;
-import io.airbyte.workers.general.ReplicationWorkerHelper;
+import io.airbyte.workers.general.buffered.worker.ReplicationContextProvider;
+import io.airbyte.workers.general.buffered.worker.ReplicationWorker;
+import io.airbyte.workers.general.buffered.worker.ReplicationWorkerHelper;
+import io.airbyte.workers.general.buffered.worker.ReplicationWorkerState;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.helper.StreamStatusCompletionTracker;
 import io.airbyte.workers.internal.AirbyteDestination;
@@ -57,7 +60,7 @@ import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
 import io.airbyte.workers.internal.bookkeeping.events.AirbyteControlMessageEventListener;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent;
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
-import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory;
+import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
 import io.airbyte.workers.tracker.ThreadedTimeTracker;
 import io.airbyte.workload.api.client.WorkloadApiClient;
@@ -79,24 +82,24 @@ public abstract class ReplicationWorkerPerformanceTest {
   public static final Duration DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD = Duration.ofMillis(1);
   private static final CatalogHelpers catalogHelpers = new CatalogHelpers(new FieldGenerator());
 
-  public abstract BufferedReplicationWorker getReplicationWorker(final String jobId,
-                                                                 final int attempt,
-                                                                 final AirbyteSource source,
-                                                                 final AirbyteMapper mapper,
-                                                                 final AirbyteDestination destination,
-                                                                 final AirbyteMessageTracker messageTracker,
-                                                                 final SyncPersistence syncPersistence,
-                                                                 final RecordSchemaValidator recordSchemaValidator,
-                                                                 final FieldSelector fieldSelector,
-                                                                 final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
-                                                                 final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
-                                                                 final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
-                                                                 final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
-                                                                 final ReplicationWorkerHelper replicationWorkerHelper,
-                                                                 final DestinationTimeoutMonitor destinationTimeoutMonitor,
-                                                                 final StreamStatusCompletionTracker streamStatusCompletionTracker,
-                                                                 final MetricClient metricClient,
-                                                                 final ReplicationInput replicationInput);
+  public abstract ReplicationWorker getReplicationWorker(final String jobId,
+                                                         final int attempt,
+                                                         final AirbyteSource source,
+                                                         final AirbyteMapper mapper,
+                                                         final AirbyteDestination destination,
+                                                         final AirbyteMessageTracker messageTracker,
+                                                         final SyncPersistence syncPersistence,
+                                                         final RecordSchemaValidator recordSchemaValidator,
+                                                         final FieldSelector fieldSelector,
+                                                         final HeartbeatTimeoutChaperone srcHeartbeatTimeoutChaperone,
+                                                         final ReplicationInputFeatureFlagReader replicationInputFeatureFlagReader,
+                                                         final AirbyteMessageDataExtractor airbyteMessageDataExtractor,
+                                                         final ReplicationAirbyteMessageEventPublishingHelper messageEventPublishingHelper,
+                                                         final ReplicationWorkerHelper replicationWorkerHelper,
+                                                         final DestinationTimeoutMonitor destinationTimeoutMonitor,
+                                                         final StreamStatusCompletionTracker streamStatusCompletionTracker,
+                                                         final MetricClient metricClient,
+                                                         final ReplicationInput replicationInput);
 
   /**
    * Hook up the DefaultReplicationWorker to a test harness with an insanely quick Source
@@ -151,6 +154,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         .thenReturn(false);
     when(replicationInputFeatureFlagReader.read(LogConnectorMessages.INSTANCE))
         .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE))
+        .thenReturn(false);
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
@@ -192,15 +197,29 @@ public abstract class ReplicationWorkerPerformanceTest {
     when(airbyteApiClient.getDestinationApi()).thenReturn(mock(DestinationApi.class));
     when(airbyteApiClient.getSourceApi()).thenReturn(mock(SourceApi.class));
 
-    final StreamStatusTrackerFactory streamStatusTrackerFactory = mock(StreamStatusTrackerFactory.class);
+    final StreamStatusTracker streamStatusTracker = mock(StreamStatusTracker.class);
 
     final RecordMapper recordMapper = mock(RecordMapper.class);
 
+    final ReplicationWorkerState replicationWorkerState = new ReplicationWorkerState();
+    final ReplicationContextProvider.Context replicationContext = mock(ReplicationContextProvider.Context.class);
+
     final ReplicationWorkerHelper replicationWorkerHelper =
-        new ReplicationWorkerHelper(fieldSelector, dstNamespaceMapper, messageTracker, syncPersistence,
-            replicationAirbyteMessageEventPublishingHelper, new ThreadedTimeTracker(), () -> {}, workloadApiClient, analyticsMessageTracker,
-            "workload-id", airbyteApiClient, mock(StreamStatusCompletionTracker.class), streamStatusTrackerFactory,
-            recordMapper, mock(DestinationCatalogGenerator.class), metricClient);
+        new ReplicationWorkerHelper(
+            fieldSelector,
+            dstNamespaceMapper,
+            messageTracker,
+            syncPersistence,
+            replicationAirbyteMessageEventPublishingHelper,
+            new ThreadedTimeTracker(),
+            analyticsMessageTracker,
+            mock(StreamStatusCompletionTracker.class),
+            streamStatusTracker,
+            recordMapper,
+            replicationWorkerState,
+            replicationContext,
+            mock(DestinationCatalogGenerator.class),
+            metricClient);
     final StreamStatusCompletionTracker streamStatusCompletionTracker = mock(StreamStatusCompletionTracker.class);
 
     final var worker = getReplicationWorker("1", 0,
@@ -222,15 +241,16 @@ public abstract class ReplicationWorkerPerformanceTest {
         replicationInput);
     final AtomicReference<ReplicationOutput> output = new AtomicReference<>();
     final Thread workerThread = new Thread(() -> {
+      final var ignoredPath = Path.of("/");
+      final ReplicationInput testInput = new ReplicationInput().withCatalog(
+          // The stream fields here are intended to match the records emitted by the
+          // LimitedFatRecordSourceProcess
+          // class.
+          catalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
+          .withWorkspaceId(UUID.randomUUID());
       try {
-        final var ignoredPath = Path.of("/");
-        final ReplicationInput testInput = new ReplicationInput().withCatalog(
-            // The stream fields here are intended to match the records emitted by the
-            // LimitedFatRecordSourceProcess
-            // class.
-            catalogHelpers.createConfiguredAirbyteCatalog("s1", null, Field.of("data", JsonSchemaType.STRING)))
-            .withWorkspaceId(UUID.randomUUID());
-        output.set(worker.run(testInput, ignoredPath));
+        final ReplicationOutput replicationOutput = worker.runReplicationBlocking(testInput, ignoredPath);
+        output.set(replicationOutput);
       } catch (final WorkerException e) {
         throw new RuntimeException(e);
       }

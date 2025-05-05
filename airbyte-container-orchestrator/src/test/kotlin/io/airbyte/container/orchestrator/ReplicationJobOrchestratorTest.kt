@@ -10,16 +10,13 @@ import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator
 import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator.BYTES_TO_GB
-import io.airbyte.featureflag.CoRoutineBufferedReplicationWorker
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.general.BufferedReplicationWorker
-import io.airbyte.workers.general.ReplicationWorkerFactory
+import io.airbyte.workers.general.buffered.worker.ReplicationWorker
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
@@ -27,9 +24,11 @@ import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.micrometer.core.instrument.Counter
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -38,11 +37,6 @@ import java.util.UUID
 import java.util.function.ToDoubleFunction
 
 internal class ReplicationJobOrchestratorTest {
-  private val featureFlagClient =
-    mockk<FeatureFlagClient>(relaxed = true) {
-      every { boolVariation(flag = CoRoutineBufferedReplicationWorker, context = any()) } returns false
-    }
-
   @Test
   fun testSuccessfulJobRun() {
     val attemptNumber = 1
@@ -101,23 +95,9 @@ internal class ReplicationJobOrchestratorTest {
           }
         every { failures } returns emptyList()
       }
-    val bufferedReplicationWorker =
-      mockk<BufferedReplicationWorker> {
-        every { run(replicationInput, any()) } returns replicationOutput
-      }
-    val replicationWorkerFactory =
-      mockk<ReplicationWorkerFactory> {
-        every {
-          create(
-            replicationInput,
-            jobRunConfig,
-            sourceIntegrationLauncherConfig,
-            destinationIntegrationLauncherConfig,
-            any(),
-            workloadId,
-          )
-        } returns
-          bufferedReplicationWorker
+    val replicationWorker =
+      mockk<ReplicationWorker> {
+        coEvery { runReplicationBlocking(replicationInput, any()) } returns replicationOutput
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -149,11 +129,10 @@ internal class ReplicationJobOrchestratorTest {
         workloadId,
         workspacePath,
         jobRunConfig,
-        replicationWorkerFactory,
+        replicationWorker,
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
-        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
@@ -238,23 +217,11 @@ internal class ReplicationJobOrchestratorTest {
           }
         every { failures } returns emptyList()
       }
-    val bufferedReplicationWorker =
-      mockk<BufferedReplicationWorker> {
-        every { run(replicationInput, any()) } throws DestinationException("destination")
-      }
-    val replicationWorkerFactory =
-      mockk<ReplicationWorkerFactory> {
-        every {
-          create(
-            replicationInput,
-            jobRunConfig,
-            sourceIntegrationLauncherConfig,
-            destinationIntegrationLauncherConfig,
-            any(),
-            workloadId,
-          )
-        } returns
-          bufferedReplicationWorker
+    val replicationWorker =
+      mockk<ReplicationWorker> {
+        coEvery {
+          runReplicationBlocking(replicationInput, any())
+        } throws DestinationException("destination")
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -287,11 +254,10 @@ internal class ReplicationJobOrchestratorTest {
         workloadId,
         workspacePath,
         jobRunConfig,
-        replicationWorkerFactory,
+        replicationWorker,
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
-        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
@@ -377,23 +343,9 @@ internal class ReplicationJobOrchestratorTest {
           }
         every { failures } returns emptyList()
       }
-    val bufferedReplicationWorker =
-      mockk<BufferedReplicationWorker> {
-        every { run(replicationInput, any()) } throws WorkerException("platform")
-      }
-    val replicationWorkerFactory =
-      mockk<ReplicationWorkerFactory> {
-        every {
-          create(
-            replicationInput,
-            jobRunConfig,
-            sourceIntegrationLauncherConfig,
-            destinationIntegrationLauncherConfig,
-            any(),
-            workloadId,
-          )
-        } returns
-          bufferedReplicationWorker
+    val replicationWorker =
+      mockk<ReplicationWorker> {
+        coEvery { runReplicationBlocking(replicationInput, any()) } throws WorkerException("platform")
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -426,17 +378,18 @@ internal class ReplicationJobOrchestratorTest {
         workloadId,
         workspacePath,
         jobRunConfig,
-        replicationWorkerFactory,
+        replicationWorker,
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
-        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 
-    assertThrows<WorkerException> {
-      replicationJobOrchestrator.runJob()
-    }
+    val e =
+      assertThrows<RuntimeException> {
+        replicationJobOrchestrator.runJob()
+      }
+    assertEquals(WorkerException::class.java, e.cause?.javaClass)
 
     verify(exactly = 0) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadFailure(any()) }
@@ -516,23 +469,9 @@ internal class ReplicationJobOrchestratorTest {
           }
         every { failures } returns emptyList()
       }
-    val bufferedReplicationWorker =
-      mockk<BufferedReplicationWorker> {
-        every { run(replicationInput, any()) } throws SourceException("source")
-      }
-    val replicationWorkerFactory =
-      mockk<ReplicationWorkerFactory> {
-        every {
-          create(
-            replicationInput,
-            jobRunConfig,
-            sourceIntegrationLauncherConfig,
-            destinationIntegrationLauncherConfig,
-            any(),
-            workloadId,
-          )
-        } returns
-          bufferedReplicationWorker
+    val replicationWorker =
+      mockk<ReplicationWorker> {
+        coEvery { runReplicationBlocking(replicationInput, any()) } throws SourceException("source")
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -565,11 +504,10 @@ internal class ReplicationJobOrchestratorTest {
         workloadId,
         workspacePath,
         jobRunConfig,
-        replicationWorkerFactory,
+        replicationWorker,
         workloadApiClient,
         jobOutputDocStore,
         metricClient,
-        featureFlagClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
 

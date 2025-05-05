@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 
-class ReplicationWorkerKTest {
+class ReplicationWorkerTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockSyncPersistence: SyncPersistence
@@ -36,7 +36,7 @@ class ReplicationWorkerKTest {
   private lateinit var mockRecordSchemaValidator: RecordSchemaValidator
   private lateinit var mockContext: ReplicationWorkerContext
 
-  private lateinit var mockWorkerHelper: ReplicationWorkerHelperK
+  private lateinit var mockWorkerHelper: ReplicationWorkerHelper
   private lateinit var mockWorkerState: ReplicationWorkerState
   private lateinit var mockBufferConfig: BufferConfiguration
   private lateinit var mockStreamStatusCompletionTracker: StreamStatusCompletionTracker
@@ -62,7 +62,7 @@ class ReplicationWorkerKTest {
     every { mockContext.replicationWorkerHelper } returns mockWorkerHelper
     every { mockContext.replicationWorkerState } returns mockWorkerState
     every { mockContext.bufferConfiguration } returns mockBufferConfig
-    every { mockContext.jobId } returns "0"
+    every { mockContext.jobId } returns 0L
     every { mockContext.attempt } returns 1
     every { mockContext.streamStatusCompletionTracker } returns mockStreamStatusCompletionTracker
 
@@ -95,7 +95,7 @@ class ReplicationWorkerKTest {
       every { mockWorkerHelper.getReplicationOutput(any<PerformanceMetrics>()) } returns expectedOutput
 
       val worker =
-        ReplicationWorkerK(
+        ReplicationWorker(
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
@@ -146,7 +146,7 @@ class ReplicationWorkerKTest {
       } throws RuntimeException("Simulated start source failure")
 
       val worker =
-        ReplicationWorkerK(
+        ReplicationWorker(
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
@@ -183,7 +183,7 @@ class ReplicationWorkerKTest {
       every { mockDestination.isFinished() } throws RuntimeException("Simulated sub-job failure")
 
       val worker =
-        ReplicationWorkerK(
+        ReplicationWorker(
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
@@ -193,17 +193,12 @@ class ReplicationWorkerKTest {
           context = mockContext,
         )
 
-      val ex =
-        assertThrows<WorkerException> {
-          worker.run(mockReplicationInput, mockPath)
-        }
-      assertTrue(ex.message!!.contains("Sync failed"))
+      worker.run(mockReplicationInput, mockPath)
       // Confirm trackFailure was invoked
       verify(exactly = 1) { mockWorkerState.trackFailure(any(), any(), any()) }
       verify(exactly = 1) { mockWorkerState.markFailed() }
 
-      // endOfReplication won't be called due to error
-      verify(exactly = 0) { mockWorkerHelper.endOfReplication() }
+      verify(exactly = 1) { mockWorkerHelper.endOfReplication() }
 
       // Resources are still closed
       verify(exactly = 1) { mockSyncPersistence.close() }
@@ -223,7 +218,7 @@ class ReplicationWorkerKTest {
       every { mockWorkerHelper.getReplicationOutput(any()) } returns output
 
       val worker =
-        ReplicationWorkerK(
+        ReplicationWorker(
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,
@@ -259,7 +254,7 @@ class ReplicationWorkerKTest {
       every { mockWorkerHelper.getReplicationOutput(any()) } returns expectedOutput
 
       val worker =
-        ReplicationWorkerK(
+        ReplicationWorker(
           source = mockSource,
           destination = mockDestination,
           syncPersistence = mockSyncPersistence,

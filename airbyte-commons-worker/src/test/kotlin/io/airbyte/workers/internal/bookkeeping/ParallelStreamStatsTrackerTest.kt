@@ -48,7 +48,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.mockito.Mockito
-import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
@@ -95,7 +94,7 @@ class ParallelStreamStatsTrackerTest {
     featureFlagClient = TestClient(mapOf(EmitStateStatsToSegment.key to true, LogStateMsgs.key to false))
     checkSumCountEventHandler =
       StateCheckSumCountEventHandler(
-        pubSubWriter = Optional.empty(),
+        pubSubWriter = null,
         featureFlagClient = featureFlagClient,
         deploymentFetcher = DeploymentFetcher { DeploymentMetadataRead(UUID.randomUUID(), "test", "test") },
         trackingIdentityFetcher = trackingIdentityFetcher,
@@ -104,6 +103,8 @@ class ParallelStreamStatsTrackerTest {
         workspaceId = WORKSPACE_ID,
         jobId = JOB_ID,
         attemptNumber = ATTEMPT_NUMBER,
+        epochMilliSupplier = { System.currentTimeMillis() },
+        idSupplier = { UUID.randomUUID() },
       )
     statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, false)
   }
@@ -1333,7 +1334,7 @@ class ParallelStreamStatsTrackerTest {
     streamName: String,
     streamNamespace: String,
   ) {
-    for (i in 1..numRecords) {
+    (1..numRecords).forEach { _ ->
       val record: AirbyteRecordMessage = mockk()
       every { record.data } returns Jsons.jsonNode(mapOf("col1" to "value"))
       every { record.namespace } returns streamNamespace

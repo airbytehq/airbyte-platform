@@ -20,7 +20,7 @@ import java.util.Optional
 
 class MessageProcessorTest {
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
-  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelperK
+  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelper
   private lateinit var mockSourceQueue: ClosableChannelQueue<AirbyteMessage>
   private lateinit var mockDestinationQueue: ClosableChannelQueue<AirbyteMessage>
 

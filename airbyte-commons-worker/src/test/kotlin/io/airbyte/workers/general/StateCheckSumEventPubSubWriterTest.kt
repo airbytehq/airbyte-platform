@@ -100,7 +100,7 @@ class StateCheckSumEventPubSubWriterTest {
       "LOCAL",
       "nope@nope.com",
       UUID.randomUUID().toString(),
-      Random().nextLong().toString(),
+      Random().nextLong(),
       Random().nextLong(),
       UUID.randomUUID().toString(),
       Random().nextLong().toString(),

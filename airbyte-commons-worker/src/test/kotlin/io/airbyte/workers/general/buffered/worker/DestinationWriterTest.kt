@@ -25,7 +25,7 @@ class DestinationWriterTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
-  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelperK
+  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelper
   private lateinit var mockDestinationQueue: ClosableChannelQueue<AirbyteMessage>
 
   @BeforeEach
@@ -248,8 +248,7 @@ class DestinationWriterTest {
         assertThrows<DestinationException> {
           writer.run()
         }
-      // The message should mention "Destination process message delivery failed"
-      assertTrue(ex.message!!.contains("Destination process message delivery failed"))
+      assertTrue(ex.message!!.contains("Something went wrong in getStreamStatusToSend"))
       // The cause is the original exception
       assertEquals(dummyException, ex.cause)
 

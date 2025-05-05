@@ -44,6 +44,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
+  implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-commons-converters"))
@@ -57,6 +58,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:init"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-json-validation"))
+  implementation(project(":oss:airbyte-mappers"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
   implementation(project(":oss:airbyte-worker-models"))

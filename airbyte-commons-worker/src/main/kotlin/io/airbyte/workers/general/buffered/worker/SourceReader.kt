@@ -11,6 +11,7 @@ import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.exception.SourceException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.yield
 
 private val logger = KotlinLogging.logger {}
@@ -19,7 +20,7 @@ class SourceReader(
   private val source: AirbyteSource,
   private val replicationWorkerState: ReplicationWorkerState,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
-  private val replicationWorkerHelper: ReplicationWorkerHelperK,
+  private val replicationWorkerHelper: ReplicationWorkerHelper,
   private val messagesFromSourceQueue: ClosableChannelQueue<AirbyteMessage>,
 ) {
   suspend fun run() {
@@ -48,9 +49,13 @@ class SourceReader(
       } else {
         throw SourceException("Source process exited with non-zero exit code $exitValue")
       }
-    } catch (e: SourceException) {
+    } catch (e: Exception) {
       logger.error(e) { "SourceReader error: " }
-      throw RuntimeException(e)
+      if (e is SourceException) {
+        throw e
+      } else if (e !is CancellationException) {
+        throw SourceException(e.message ?: "Source process message reading failed", e)
+      }
     } finally {
       messagesFromSourceQueue.close()
       logger.info { "SourceReader finished." }

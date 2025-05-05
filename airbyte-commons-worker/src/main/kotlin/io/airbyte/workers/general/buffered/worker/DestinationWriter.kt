@@ -9,6 +9,7 @@ import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.exception.DestinationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 
 private val logger = KotlinLogging.logger {}
 
@@ -16,7 +17,7 @@ class DestinationWriter(
   private val source: AirbyteSource,
   private val destination: AirbyteDestination,
   private val replicationWorkerState: ReplicationWorkerState,
-  private val replicationWorkerHelper: ReplicationWorkerHelperK,
+  private val replicationWorkerHelper: ReplicationWorkerHelper,
   private val destinationQueue: ClosableChannelQueue<AirbyteMessage>,
 ) {
   suspend fun run() {
@@ -36,11 +37,28 @@ class DestinationWriter(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationWriter error: " }
-      throw DestinationException("Destination process message delivery failed", e)
+      handleException(e)
     } finally {
-      destination.notifyEndOfInput()
+      notifyEndOfInput()
       destinationQueue.close()
       logger.info { "DestinationWriter finished." }
+    }
+  }
+
+  private fun notifyEndOfInput() {
+    try {
+      destination.notifyEndOfInput()
+    } catch (e: Exception) {
+      handleException(e)
+    }
+  }
+
+  private fun handleException(e: Exception) {
+    logger.error(e) { "DestinationWriter error: " }
+    if (e is DestinationException) {
+      throw e
+    } else if (e !is CancellationException) {
+      throw DestinationException(e.message ?: "Destination process message delivery failed", e)
     }
   }
 }

@@ -23,7 +23,7 @@ import java.util.Optional
 class DestinationReaderTest {
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
-  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelperK
+  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelper
 
   @BeforeEach
   fun setup() {

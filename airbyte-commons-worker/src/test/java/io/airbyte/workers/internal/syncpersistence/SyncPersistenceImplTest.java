@@ -91,9 +91,8 @@ class SyncPersistenceImplTest {
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
 
-    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
-        flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, metricClient);
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), executorService,
+        flushPeriod, metricClient, syncStatsTracker, connectionId, jobId, attemptNumber);
   }
 
   @AfterEach
@@ -428,9 +427,8 @@ class SyncPersistenceImplTest {
   @Test
   void testSyncStatsTrackerWrapping() {
     syncStatsTracker = mock();
-    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), syncStatsTracker, executorService,
-        flushPeriod, new RetryWithJitterConfig(1, 1, 4),
-        connectionId, jobId, attemptNumber, metricClient);
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), executorService,
+        flushPeriod, metricClient, syncStatsTracker, connectionId, jobId, attemptNumber);
 
     syncPersistence.updateStats(new AirbyteRecordMessage());
     verify(syncStatsTracker).updateStats(new AirbyteRecordMessage());

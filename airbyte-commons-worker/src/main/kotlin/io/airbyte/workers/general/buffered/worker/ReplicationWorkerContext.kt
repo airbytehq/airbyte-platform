@@ -8,10 +8,10 @@ import io.airbyte.workers.general.BufferConfiguration
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 
 data class ReplicationWorkerContext(
-  val jobId: String,
+  val jobId: Long,
   val attempt: Int,
   val bufferConfiguration: BufferConfiguration,
-  val replicationWorkerHelper: ReplicationWorkerHelperK,
+  val replicationWorkerHelper: ReplicationWorkerHelper,
   val replicationWorkerState: ReplicationWorkerState,
   val streamStatusCompletionTracker: StreamStatusCompletionTracker,
 )

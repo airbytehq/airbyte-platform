@@ -12,7 +12,7 @@ private val logger = KotlinLogging.logger {}
 
 class MessageProcessor(
   private val replicationWorkerState: ReplicationWorkerState,
-  private val replicationWorkerHelper: ReplicationWorkerHelperK,
+  private val replicationWorkerHelper: ReplicationWorkerHelper,
   private val sourceQueue: ClosableChannelQueue<AirbyteMessage>,
   private val destinationQueue: ClosableChannelQueue<AirbyteMessage>,
 ) {

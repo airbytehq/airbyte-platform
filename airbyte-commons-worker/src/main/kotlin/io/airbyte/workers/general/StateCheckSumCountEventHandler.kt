@@ -35,12 +35,10 @@ import io.airbyte.workers.internal.bookkeeping.getStateIdForStatsTracking
 import io.airbyte.workers.models.StateCheckSumCountEvent
 import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Parameter
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Duration
-import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -52,17 +50,17 @@ private const val MAX_SUCCESS_EVENTS = 3
 
 @Singleton
 class StateCheckSumCountEventHandler(
-  @Named("pubSubWriter") private val pubSubWriter: Optional<StateCheckSumEventPubSubWriter>,
+  @Named("pubSubWriter") private val pubSubWriter: StateCheckSumEventPubSubWriter?,
   private val featureFlagClient: FeatureFlagClient,
   private val deploymentFetcher: DeploymentFetcher,
   private val trackingIdentityFetcher: TrackingIdentityFetcher,
   private val stateCheckSumReporter: StateCheckSumErrorReporter,
-  @param:Parameter private val connectionId: UUID,
-  @param:Parameter private val workspaceId: UUID,
-  @param:Parameter private val jobId: Long,
-  @param:Parameter private val attemptNumber: Int,
-  @param:Parameter private val epochMilliSupplier: Supplier<Long>? = Supplier { Instant.now().toEpochMilli() },
-  @param:Parameter private val idSupplier: Supplier<UUID>? = Supplier { UUID.randomUUID() },
+  @Named("connectionId") private val connectionId: UUID,
+  @Named("workspaceId") private val workspaceId: UUID,
+  @Value("\${airbyte.job-id}") private val jobId: Long,
+  @Named("attemptId") private val attemptNumber: Int,
+  @Named("epochMilliSupplier") private val epochMilliSupplier: Supplier<Long>,
+  @Named("idSupplier") private val idSupplier: Supplier<UUID>,
 ) {
   private val emitStatsCounterFlag: Boolean by lazy {
     val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
@@ -108,7 +106,7 @@ class StateCheckSumCountEventHandler(
   @Volatile
   private var totalMismatchEvents = 0
 
-  fun getCurrentTimeInMicroSecond() = epochMilliSupplier!!.get() * 1000
+  fun getCurrentTimeInMicroSecond() = epochMilliSupplier.get() * 1000
 
   private fun trackStateCountMetrics(
     eventsToPublish: List<StateCheckSumCountEvent>,
@@ -134,7 +132,7 @@ class StateCheckSumCountEventHandler(
         }
 
       if (totalEvents <= maxEvents) {
-        pubSubWriter.ifPresent { it.publishEvent(eventsToPublish) }
+        pubSubWriter?.publishEvent(eventsToPublish)
         totalEvents += eventsToPublish.size
       }
 
@@ -173,8 +171,8 @@ class StateCheckSumCountEventHandler(
         deployment.getDeploymentId().toString(),
         deployment.getDeploymentMode(),
         trackingIdentity.email,
-        idSupplier!!.get().toString(),
-        jobId.toString(),
+        idSupplier.get().toString(),
+        jobId,
         recordCount.toLong(),
         stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
         stateMessage.getStateIdForStatsTracking().toString(),
@@ -416,7 +414,7 @@ class StateCheckSumCountEventHandler(
       stateCheckSumReporter.reportError(
         workspaceId,
         connectionId,
-        jobId,
+        jobId.toLong(),
         attemptNumber,
         failureOrigin,
         errorMessage,
@@ -442,7 +440,7 @@ class StateCheckSumCountEventHandler(
       )
       isClosed = true
     }
-    pubSubWriter.ifPresent { it.close() }
+    pubSubWriter?.close()
   }
 
   companion object {

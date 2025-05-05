@@ -100,6 +100,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     this.shouldBlock = false;
   }
 
+  @NotNull
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public StandardSyncOutput run(final JobRunConfig jobRunConfig,

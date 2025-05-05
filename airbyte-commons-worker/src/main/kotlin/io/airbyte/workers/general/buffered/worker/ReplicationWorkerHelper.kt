@@ -21,15 +21,21 @@ import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
+import io.airbyte.metrics.MetricAttribute
+import io.airbyte.metrics.MetricClient
+import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
+import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.RECORD
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.STATE
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
+import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.general.buffered.worker.BytesSizeHelper.byteCountToDisplaySize
+import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
@@ -52,7 +58,7 @@ import java.util.Optional
 
 private val logger = KotlinLogging.logger {}
 
-class ReplicationWorkerHelperK(
+class ReplicationWorkerHelper(
   private val fieldSelector: FieldSelector,
   private val mapper: AirbyteMapper,
   private val messageTracker: AirbyteMessageTracker,
@@ -66,15 +72,50 @@ class ReplicationWorkerHelperK(
   private val replicationWorkerState: ReplicationWorkerState,
   private val context: ReplicationContextProvider.Context,
   destinationCatalogGenerator: DestinationCatalogGenerator,
+  private val metricClient: MetricClient,
 ) {
   private val streamMappers: Map<StreamDescriptor, List<MapperConfig>>
   private val destinationConfig: WorkerDestinationConfig
   private val mappersConfigured: Boolean
+  private val metricAttrs: MutableList<MetricAttribute> = mutableListOf()
+
+  private fun toConnectionAttrs(ctx: ReplicationContext?): List<MetricAttribute> {
+    if (ctx == null) {
+      return listOf()
+    }
+
+    return buildList {
+      add(MetricAttribute(MetricTags.CONNECTION_ID, ctx.connectionId.toString()))
+      add(MetricAttribute(MetricTags.JOB_ID, ctx.jobId.toString()))
+      add(MetricAttribute(MetricTags.ATTEMPT_NUMBER, ctx.attempt.toString()))
+      add(MetricAttribute(MetricTags.IS_RESET, ctx.isReset.toString()))
+    }
+  }
 
   init {
+    with(metricAttrs) {
+      clear()
+      addAll(toConnectionAttrs(context.replicationContext))
+    }
+
     analyticsTracker.ctx = context.replicationContext
 
+    if (context.supportRefreshes) {
+      // if configured airbyte catalog has full refresh with state
+      val resumedFRStreams = ResumableFullRefreshStatsHelper().getResumedFullRefreshStreams(context.configuredCatalog, context.replicationInput.state)
+      logger.info { "Number of Resumed Full Refresh Streams: {${resumedFRStreams.size}}" }
+      if (resumedFRStreams.isNotEmpty()) {
+        resumedFRStreams.forEach { streamDescriptor ->
+          logger.info { " Resumed stream name: ${streamDescriptor.name} namespace: ${streamDescriptor.namespace}" }
+        }
+      }
+    }
+
     streamStatusCompletionTracker.startTracking(context.configuredCatalog, context.supportRefreshes)
+
+    if (context.configuredCatalog.streams.isEmpty()) {
+      metricClient.count(metric = OssMetricsRegistry.SYNC_WITH_EMPTY_CATALOG, attributes = metricAttrs.toTypedArray())
+    }
 
     val catalogWithoutInvalidMappers = destinationCatalogGenerator.generateDestinationCatalog(context.configuredCatalog)
     streamMappers = catalogWithoutInvalidMappers.catalog.streams.associate { stream -> stream.streamDescriptor to stream.mappers }
@@ -196,6 +237,16 @@ class ReplicationWorkerHelperK(
       logger.info { "Failures: ${om.writerWithDefaultPrettyPrinter().writeValueAsString(failures)}" }
     }
 
+    // Metric to help investigating https://github.com/airbytehq/airbyte/issues/34567
+    if (failures.any { f ->
+        f.failureOrigin.equals(FailureReason.FailureOrigin.DESTINATION) &&
+          f.internalMessage != null &&
+          f.internalMessage.contains("Unable to deserialize PartialAirbyteMessage")
+      }
+    ) {
+      metricClient.count(metric = OssMetricsRegistry.DESTINATION_DESERIALIZATION_ERROR, attributes = metricAttrs.toTypedArray())
+    }
+
     LineGobbler.endSection("REPLICATION")
     return output
   }
@@ -209,7 +260,13 @@ class ReplicationWorkerHelperK(
     streamStatusTracker.track(sourceRawMessage)
     return when (sourceRawMessage.type) {
       RECORD -> processRecordMessage(sourceRawMessage)
-      STATE -> sourceRawMessage
+      STATE -> {
+        metricClient.count(
+          metric = OssMetricsRegistry.STATE_PROCESSED_FROM_SOURCE,
+          attributes = metricAttrs.toTypedArray(),
+        )
+        sourceRawMessage
+      }
       else -> {
         if (isAnalyticsMessage(sourceRawMessage)) {
           analyticsTracker.addMessage(sourceRawMessage, AirbyteMessageOrigin.SOURCE)
@@ -254,6 +311,7 @@ class ReplicationWorkerHelperK(
     }
     if (destinationRawMessage.type == STATE) {
       syncPersistence.accept(context.replicationContext.connectionId, destinationRawMessage.state)
+      metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, attributes = metricAttrs.toTypedArray())
     }
     handleControlMessage(destinationRawMessage, AirbyteMessageOrigin.DESTINATION)
   }
@@ -263,7 +321,7 @@ class ReplicationWorkerHelperK(
       ?.let { mapper.mapMessage(it) }
       ?.let { Optional.of(it) } ?: Optional.empty()
 
-  private fun applyTransformationMappers(message: AirbyteRecord) {
+  internal fun applyTransformationMappers(message: AirbyteRecord) {
     streamMappers[message.streamDescriptor]?.takeIf { it.isNotEmpty() }?.let { mappers ->
       recordMapper.applyMappers(message, mappers)
     }
@@ -310,9 +368,9 @@ class ReplicationWorkerHelperK(
 
   private fun updateRecordsCount() {
     recordsRead++
-    totalRecordsRead += recordsRead
 
     if (recordsRead == 5000L) {
+      totalRecordsRead += recordsRead
       logger.info {
         val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
         "Records read: $totalRecordsRead ($bytes)"

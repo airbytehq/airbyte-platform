@@ -37,7 +37,6 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
-import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -66,7 +65,7 @@ class StateCheckSumCountEventHandlerTest {
     every { stateCheckSumErrorReporter.reportError(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     handler =
       StateCheckSumCountEventHandler(
-        pubSubWriter = Optional.of(pubSubWriter),
+        pubSubWriter = pubSubWriter,
         featureFlagClient = featureFlagClient,
         deploymentFetcher = deploymentFetcher,
         trackingIdentityFetcher = trackingIdentityFetcher,
@@ -96,7 +95,7 @@ class StateCheckSumCountEventHandlerTest {
   fun `default epochMilliSupplier test`() {
     val handler =
       StateCheckSumCountEventHandler(
-        pubSubWriter = Optional.of(pubSubWriter),
+        pubSubWriter = pubSubWriter,
         featureFlagClient = featureFlagClient,
         deploymentFetcher = deploymentFetcher,
         trackingIdentityFetcher = trackingIdentityFetcher,
@@ -105,6 +104,8 @@ class StateCheckSumCountEventHandlerTest {
         workspaceId = workspaceId,
         jobId = jobId,
         attemptNumber = attemptNumber,
+        epochMilliSupplier = { System.currentTimeMillis() },
+        idSupplier = { UUID.randomUUID() },
       )
     val timeInMicroSecond = handler.getCurrentTimeInMicroSecond()
     val instant = Instant.ofEpochMilli(timeInMicroSecond / 1000)
@@ -540,7 +541,7 @@ class StateCheckSumCountEventHandlerTest {
       deployment.getDeploymentMode(),
       trackingIdentity.email,
       idSupplier.get().toString(),
-      jobId.toString(),
+      jobId,
       recordCount.toLong(),
       stateMessage.getStateHashCode(Hashing.murmur3_32_fixed()).toString(),
       stateMessage.getStateIdForStatsTracking().toString(),

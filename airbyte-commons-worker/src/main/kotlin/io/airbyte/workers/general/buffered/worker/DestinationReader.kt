@@ -7,6 +7,7 @@ package io.airbyte.workers.general.buffered.worker
 import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.exception.DestinationException
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.yield
 
 private val logger = KotlinLogging.logger {}
@@ -14,7 +15,7 @@ private val logger = KotlinLogging.logger {}
 class DestinationReader(
   private val destination: AirbyteDestination,
   private val replicationWorkerState: ReplicationWorkerState,
-  private val replicationWorkerHelper: ReplicationWorkerHelperK,
+  private val replicationWorkerHelper: ReplicationWorkerHelper,
 ) {
   suspend fun run() {
     logger.info { "DestinationReader started." }
@@ -43,7 +44,11 @@ class DestinationReader(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationReader error: " }
-      throw e
+      if (e is DestinationException) {
+        throw e
+      } else if (e !is CancellationException) {
+        throw DestinationException(e.message ?: "Destination process message reading failed", e)
+      }
     } finally {
       logger.info { "DestinationReader finished." }
     }

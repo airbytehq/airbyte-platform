@@ -83,8 +83,6 @@ object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", 
 
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
 
-object CoRoutineBufferedReplicationWorker : Temporary<Boolean>(key = "platform.coroutine-buffered-replication-worker", default = false)
-
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
   override fun enabled(ctx: Context): Boolean {

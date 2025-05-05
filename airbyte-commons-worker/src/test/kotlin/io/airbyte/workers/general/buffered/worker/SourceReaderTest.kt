@@ -16,7 +16,6 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -27,7 +26,7 @@ class SourceReaderTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
   private lateinit var mockStreamStatusCompletionTracker: StreamStatusCompletionTracker
-  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelperK
+  private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelper
   private lateinit var mockMessagesFromSourceQueue: ClosableChannelQueue<AirbyteMessage>
 
   @BeforeEach
@@ -145,12 +144,11 @@ class SourceReaderTest {
         )
 
       val ex =
-        assertThrows<RuntimeException> {
+        assertThrows<SourceException> {
           sourceReader.run()
         }
       // The cause should be SourceException with a message about non-zero exit code
-      assertTrue(ex.cause is SourceException)
-      assertTrue(ex.cause!!.message!!.contains("non-zero exit code 1"))
+      assertTrue(ex.message!!.contains("non-zero exit code 1"))
 
       // Verify endOfSource is not called in this scenario
       verify(exactly = 0) { mockReplicationWorkerHelper.endOfSource() }
@@ -234,13 +232,10 @@ class SourceReaderTest {
         )
 
       val ex =
-        assertThrows<RuntimeException> {
+        assertThrows<SourceException> {
           sourceReader.run()
         }
-      // Confirm it wraps the original SourceException
-      assertNotNull(ex.cause)
-      assertTrue(ex.cause is SourceException)
-      assertTrue(ex.cause!!.message!!.contains("Simulated SourceException"))
+      assertTrue(ex.message!!.contains("Simulated SourceException"))
 
       // The queue should still be closed
       verify(exactly = 1) { mockMessagesFromSourceQueue.close() }
