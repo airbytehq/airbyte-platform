@@ -12,6 +12,7 @@ import {
   CompleteOAuthResponse,
   CompleteOAuthResponseAuthPayload,
   DestinationOauthConsentRequest,
+  EmbeddedSourceOauthConsentRequest,
   SourceOauthConsentRequest,
   BuilderProjectOauthConsentRequest,
   CompleteConnectorBuilderProjectOauthRequest,
@@ -71,31 +72,43 @@ export function useConnectorAuth(): {
     connector: ConnectorDefinitionSpecificationRead,
     oAuthInputConfiguration: Record<string, unknown>
   ) => Promise<{
-    payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
+    payload: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest;
     consentUrl: string;
   }>;
   completeOauthRequest: (
-    params: SourceOauthConsentRequest | DestinationOauthConsentRequest,
+    params: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest,
     queryParams: Record<string, unknown>
   ) => Promise<CompleteOAuthResponse>;
 } {
   const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();
-  const { getDestinationConsentUrl, getSourceConsentUrl } = useConsentUrls();
+  const { getDestinationConsentUrl, getSourceConsentUrl, getEmbeddedSourceConsentUrl } = useConsentUrls();
   const { completeDestinationOAuth, completeSourceOAuth } = useCompleteOAuth();
   const notificationService = useNotificationService();
   const { connectorId } = useConnectorForm();
+  const isEmbedded = useIsAirbyteEmbeddedContext();
 
   return {
     getConsentUrl: async (
       connector: ConnectorDefinitionSpecificationRead,
       oAuthInputConfiguration: Record<string, unknown>
     ): Promise<{
-      payload: SourceOauthConsentRequest | DestinationOauthConsentRequest;
+      payload: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest;
       consentUrl: string;
     }> => {
       try {
         if (isSourceDefinitionSpecification(connector)) {
+          if (isEmbedded) {
+            const payload: EmbeddedSourceOauthConsentRequest = {
+              workspaceId,
+              sourceDefinitionId: ConnectorSpecification.id(connector),
+              redirectUrl: OAUTH_REDIRECT_URL,
+              sourceId: connectorId,
+            };
+            const response = await getEmbeddedSourceConsentUrl(payload);
+
+            return { consentUrl: response.consentUrl, payload };
+          }
           const payload: SourceOauthConsentRequest = {
             workspaceId,
             sourceDefinitionId: ConnectorSpecification.id(connector),
