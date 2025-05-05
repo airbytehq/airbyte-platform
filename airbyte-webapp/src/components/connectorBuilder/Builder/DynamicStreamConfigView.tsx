@@ -4,6 +4,8 @@ import { FormattedMessage, useIntl } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { InfoTooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
@@ -64,58 +66,83 @@ export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = (
   }
 
   return (
-    <BuilderConfigView className={styles.dynamicStreamConfigView}>
-      <FlexContainer justifyContent="space-between" alignItems="center">
-        <BuilderField
-          type="string"
-          path={dynamicStreamFieldPath("dynamicStreamName")}
-          containerClassName={styles.streamNameInput}
-        />
-        <Button variant="danger" onClick={handleDelete}>
-          <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />
-        </Button>
+    <BuilderConfigView className={styles.fullHeight}>
+      <FlexContainer direction="column" gap="2xl" className={styles.fullHeight}>
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <BuilderField
+            type="string"
+            path={dynamicStreamFieldPath("dynamicStreamName")}
+            containerClassName={styles.streamNameInput}
+          />
+          <Button variant="danger" onClick={handleDelete}>
+            <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />
+          </Button>
+        </FlexContainer>
+
+        <FlexContainer direction="column" gap="md">
+          <FlexContainer gap="none">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="connectorBuilder.dynamicStream.retriever.header" />
+            </Heading>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.dynamicStream.retriever.tooltip" />
+            </InfoTooltip>
+          </FlexContainer>
+
+          <BuilderCard>
+            <BuilderField
+              type="jinja"
+              path={dynamicStreamFieldPath("componentsResolver.retriever.requester.path")}
+              manifestPath="HttpRequester.properties.path"
+              preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
+            />
+          </BuilderCard>
+          <BuilderCard
+            docLink={links.connectorBuilderRecordSelector}
+            label={getLabelByManifest("RecordSelector")}
+            tooltip={getDescriptionByManifest("RecordSelector")}
+            inputsConfig={{
+              toggleable: false,
+              path: dynamicStreamFieldPath("componentsResolver.retriever.record_selector"),
+              defaultValue: {
+                fieldPath: [],
+                normalizeToSchema: false,
+              },
+              yamlConfig: {
+                builderToManifest: builderRecordSelectorToManifest,
+                manifestToBuilder: manifestRecordSelectorToBuilder,
+              },
+            }}
+          >
+            <BuilderField
+              type="array"
+              path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.extractor.field_path")}
+              manifestPath="DpathExtractor.properties.field_path"
+              optional
+            />
+            <BuilderField
+              type="jinja"
+              path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.record_filter.condition")}
+              label={getLabelByManifest("RecordFilter")}
+              manifestPath="RecordFilter.properties.condition"
+              pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
+              optional
+            />
+          </BuilderCard>
+        </FlexContainer>
+
+        <FlexContainer direction="column" gap="none" className={styles.fullHeight}>
+          <FlexContainer gap="none">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="connectorBuilder.dynamicStream.template.header" />
+            </Heading>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.dynamicStream.template.tooltip" />
+            </InfoTooltip>
+          </FlexContainer>
+          <StreamConfigView streamId={streamId} scrollToTop={scrollToTop} />
+        </FlexContainer>
       </FlexContainer>
-      <BuilderCard>
-        <BuilderField
-          type="jinja"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.requester.path")}
-          manifestPath="HttpRequester.properties.path"
-          preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
-        />
-      </BuilderCard>
-      <BuilderCard
-        docLink={links.connectorBuilderRecordSelector}
-        label={getLabelByManifest("RecordSelector")}
-        tooltip={getDescriptionByManifest("RecordSelector")}
-        inputsConfig={{
-          toggleable: false,
-          path: dynamicStreamFieldPath("componentsResolver.retriever.record_selector"),
-          defaultValue: {
-            fieldPath: [],
-            normalizeToSchema: false,
-          },
-          yamlConfig: {
-            builderToManifest: builderRecordSelectorToManifest,
-            manifestToBuilder: manifestRecordSelectorToBuilder,
-          },
-        }}
-      >
-        <BuilderField
-          type="array"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.extractor.field_path")}
-          manifestPath="DpathExtractor.properties.field_path"
-          optional
-        />
-        <BuilderField
-          type="jinja"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.record_filter.condition")}
-          label={getLabelByManifest("RecordFilter")}
-          manifestPath="RecordFilter.properties.condition"
-          pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
-          optional
-        />
-      </BuilderCard>
-      <StreamConfigView streamId={streamId} scrollToTop={scrollToTop} />
     </BuilderConfigView>
   );
 };

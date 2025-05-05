@@ -11,6 +11,7 @@ import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
+import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
@@ -145,6 +146,38 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
             <FormattedMessage id="connectorBuilder.deleteStreamModal.title" />
           </Button>
         </FlexContainer>
+      )}
+      {streamId.type === "generated_stream" && (
+        <Message
+          type="info"
+          text={
+            <FormattedMessage
+              id="connectorBuilder.generatedStream.readonlyDescription"
+              values={{
+                lnk: () => (
+                  <Button
+                    variant="link"
+                    onClick={() => {
+                      setValue("view", {
+                        type: "dynamic_stream",
+                        index: dynamicStreams.findIndex(
+                          (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
+                        ),
+                      });
+                    }}
+                  >
+                    <Text bold>
+                      {
+                        dynamicStreams.find((stream) => stream.dynamicStreamName === streamId.dynamicStreamName)
+                          ?.dynamicStreamName
+                      }
+                    </Text>
+                  </Button>
+                ),
+              }}
+            />
+          }
+        />
       )}
       {currentStream.requestType === "sync" ? (
         <SynchronousStream streamId={streamId} scrollToTop={scrollToTop} />

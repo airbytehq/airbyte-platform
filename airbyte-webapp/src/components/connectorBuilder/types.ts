@@ -1633,7 +1633,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
-  const dynamicStreamNames = values.dynamicStreamCheckConfigs.map((s) => s.dynamic_stream_name);
+  const dynamicStreamNames = values.dynamicStreams.map((s) => s.dynamicStreamName);
   const validCheckDynamicStream = (values.dynamicStreamCheckConfigs ?? []).filter((dynamicStreamCheckConfig) =>
     dynamicStreamNames.includes(dynamicStreamCheckConfig.dynamic_stream_name)
   );

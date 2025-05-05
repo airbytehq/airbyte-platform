@@ -297,6 +297,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const { setValue, getValues } = useFormContext();
   const mode = useBuilderWatch("mode");
+  const view = useBuilderWatch("view");
   const name = useBuilderWatch("name");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -433,6 +434,12 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
             componentsFileContent: customComponentsCode,
           });
           setValue("formValues", convertedFormValues, { shouldValidate: true });
+          if (view.type === "generated_stream") {
+            setValue("view", {
+              type: "dynamic_stream",
+              index: dynamicStreamNames.findIndex((name) => name === view.dynamicStreamName),
+            });
+          }
           setValue("mode", "ui");
         } catch (e) {
           confirmDiscard(e.message);
@@ -444,18 +451,20 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       }
     },
     [
-      analyticsService,
-      closeConfirmationModal,
-      currentProject.name,
-      formValues,
-      isResolveError,
-      jsonManifest,
-      openConfirmationModal,
-      openNoUiValueModal,
-      resolveErrorMessage,
-      resolvedManifest,
       setValue,
+      jsonManifest,
+      formValues,
+      openNoUiValueModal,
+      openConfirmationModal,
+      closeConfirmationModal,
+      analyticsService,
+      isResolveError,
+      resolvedManifest,
+      currentProject.name,
       customComponentsCode,
+      view,
+      resolveErrorMessage,
+      dynamicStreamNames,
     ]
   );
 
