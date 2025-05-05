@@ -88,8 +88,13 @@ spec:
         {{- include "airbyte.workloadApiServer.envs" . | nindent 8 }}
 
         {{- if .Values.global.datadog.enabled }}
+        {{- if (eq .Values.global.edition "cloud") }}
+        - name: DD_SERVICE 
+          value: airbyte-cloud-worker
+        {{- else }}
         - name: DD_SERVICE 
           value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- end }}
         {{- include "airbyte.datadog.envs" . | nindent 8 }}
         {{- include "airbyte.otel.envs" . | nindent 8 }}
         {{- end}}
