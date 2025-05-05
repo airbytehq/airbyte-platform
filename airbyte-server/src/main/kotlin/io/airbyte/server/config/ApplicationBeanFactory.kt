@@ -5,6 +5,7 @@
 package io.airbyte.server.config
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater
@@ -32,7 +33,6 @@ import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.DefaultJobCreator
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.DefaultSyncJobFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
@@ -148,11 +148,6 @@ class ApplicationBeanFactory {
       operationService,
       workspaceService,
     )
-
-  @Singleton
-  fun webUrlHelper(
-    @Value("\${airbyte.web-app.url}") webAppUrl: String?,
-  ): WebUrlHelper = WebUrlHelper(webAppUrl)
 
   @Singleton
   @Named("workspaceRoot")

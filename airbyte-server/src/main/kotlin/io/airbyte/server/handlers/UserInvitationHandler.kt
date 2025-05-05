@@ -7,6 +7,7 @@ package io.airbyte.server.handlers
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Sets
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
 import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
@@ -33,7 +34,6 @@ import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.notification.CustomerIoEmailConfig
 import io.airbyte.notification.CustomerIoEmailNotificationSender
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.server.handlers.apidomainmapping.UserInvitationMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton

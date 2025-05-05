@@ -6,6 +6,7 @@ package io.airbyte.persistence.job.errorreporter;
 
 import com.google.common.collect.ImmutableSet;
 import edu.umd.cs.findbugs.annotations.Nullable;
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -24,7 +25,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.HashMap;

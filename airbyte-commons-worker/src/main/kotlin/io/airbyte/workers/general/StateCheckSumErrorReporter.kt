@@ -9,6 +9,7 @@ import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.DestinationIdRequestBody
@@ -22,13 +23,11 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.Metadata
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Parameter
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -46,7 +45,7 @@ class StateCheckSumErrorReporter(
   @Value("\${airbyte.version}") private val airbyteVersion: String,
   private val airbyteEdition: Configs.AirbyteEdition,
   private val airbyteApiClient: AirbyteApiClient,
-  @param:Parameter private val webUrlHelper: WebUrlHelper = WebUrlHelper(BASE_URL),
+  private val webUrlHelper: WebUrlHelper,
 ) {
   @Volatile
   private var errorReported = false

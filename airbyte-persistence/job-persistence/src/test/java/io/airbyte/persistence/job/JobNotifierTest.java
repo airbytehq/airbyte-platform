@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
@@ -121,7 +122,7 @@ class JobNotifierTest {
         .withDockerImageTag(TEST_DOCKER_TAG)
         .withDockerRepository(TEST_DOCKER_REPO);
     when(connectionService.getStandardSync(UUID.fromString(job.getScope())))
-        .thenReturn(new StandardSync().withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID));
+        .thenReturn(new StandardSync().withConnectionId(UUID.fromString(job.getScope())).withSourceId(SOURCE_ID).withDestinationId(DESTINATION_ID));
     when(sourceService.getSourceConnection(SOURCE_ID))
         .thenReturn(new SourceConnection().withWorkspaceId(WORKSPACE_ID).withSourceId(SOURCE_ID).withName(SOURCE_NAME));
     when(destinationService.getDestinationConnection(DESTINATION_ID))

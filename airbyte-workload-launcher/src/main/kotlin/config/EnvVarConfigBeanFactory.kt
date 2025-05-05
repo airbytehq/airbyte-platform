@@ -322,7 +322,7 @@ class EnvVarConfigBeanFactory {
   @Named("apiClientEnvMap")
   fun apiClientEnvMap(
     /*
-     * Reference the environment variable, instead of the resolved property, so that
+     * Reference the environment variable instead of the resolved property, so that
      * the entry in the orchestrator's application.yml is consistent with all other
      * services that use the Airbyte API client.
      */
@@ -336,8 +336,10 @@ class EnvVarConfigBeanFactory {
     @Value("\${micronaut.security.oauth2.clients.keycloak.client-id:}") keycloakAuthClientId: String,
     @Value("\${micronaut.security.oauth2.clients.keycloak.openid.issuer:}") keycloakAuthOpenIdIssuer: String,
     @Value("\${airbyte.auth.control-plane-token-endpoint}") controlPlaneTokenEndpoint: String,
+    @Value("\${airbyte.airbyte-url}") airbyteUrl: String,
   ): Map<String, String> =
     buildMap {
+      put(EnvVarConstants.AIRBYTE_URL, airbyteUrl)
       put(EnvVarConstants.INTERNAL_API_HOST_ENV_VAR, internalApiHost)
       put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_NAME_ENV_VAR, apiAuthHeaderName)
       put(EnvVarConstants.AIRBYTE_API_AUTH_HEADER_VALUE_ENV_VAR, apiAuthHeaderValue)

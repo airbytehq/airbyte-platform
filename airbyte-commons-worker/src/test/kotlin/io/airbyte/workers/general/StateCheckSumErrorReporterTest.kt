@@ -6,6 +6,7 @@ package io.airbyte.workers.general
 
 import com.amazonaws.internal.ExceptionUtils
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead
 import io.airbyte.api.client.model.generated.DestinationRead
@@ -17,7 +18,6 @@ import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.AttemptConfigReportingContext
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient

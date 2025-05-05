@@ -10,6 +10,7 @@ import static io.airbyte.metrics.lib.MetricTags.NOTIFICATION_TRIGGER;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import io.airbyte.analytics.TrackingClient;
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Attempt;

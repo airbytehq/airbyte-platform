@@ -27,6 +27,7 @@ object OrchestratorConstants {
       // add EnvVars
       addAll(
         setOf(
+          EnvVar.AIRBYTE_URL,
           EnvVar.AWS_DEFAULT_REGION,
           EnvVar.GOOGLE_APPLICATION_CREDENTIALS,
           EnvVar.JOB_ERROR_REPORTING_SENTRY_DSN,

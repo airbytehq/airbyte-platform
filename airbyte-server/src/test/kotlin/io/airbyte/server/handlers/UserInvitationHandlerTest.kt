@@ -5,6 +5,7 @@
 package io.airbyte.server.handlers
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
 import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
@@ -31,7 +32,6 @@ import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.notification.CustomerIoEmailConfig
 import io.airbyte.notification.CustomerIoEmailNotificationSender
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.server.handlers.apidomainmapping.UserInvitationMapper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -121,7 +121,7 @@ internal class UserInvitationHandlerTest {
     internal inner class CreateAndSendInvitation {
       @Throws(Exception::class)
       private fun setupSendInvitationMocks() {
-        Mockito.`when`<String>(webUrlHelper!!.getBaseUrl()).thenReturn(webappBaseUrl)
+        Mockito.`when`<String>(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
         Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
         Mockito.`when`<StandardWorkspace>(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
           StandardWorkspace().withName(
