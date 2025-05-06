@@ -46,7 +46,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_6_0_005__AddSupportsDataActivationtoActorDefinitionVersion
+import io.airbyte.db.instance.configs.migrations.V1_6_0_006__DropRestrictiveRulesOnTemplateIds
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_002__AddJobsCoveringIndex
@@ -779,7 +779,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_005__AddSupportsDataActivationtoActorDefinitionVersion::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_006__DropRestrictiveRulesOnTemplateIds::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_002__AddJobsCoveringIndex::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =
