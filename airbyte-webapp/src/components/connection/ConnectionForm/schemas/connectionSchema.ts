@@ -55,6 +55,7 @@ const streamZodSchema = z.object({
 const streamConfigZodSchema = z.object({
   syncMode: z.nativeEnum(SyncMode),
   destinationSyncMode: z.nativeEnum(DestinationSyncMode),
+  namespace: z.string().optional(),
   cursorField: z.array(z.string()).optional(),
   selected: z.boolean().optional(),
   suggested: z.boolean().optional(),

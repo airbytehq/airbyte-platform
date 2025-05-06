@@ -104,6 +104,7 @@ class StreamsController(
       streamList.map { airbyteStream ->
         StreamProperties(
           streamName = airbyteStream.name,
+          streamnamespace = airbyteStream.namespace,
           syncModes = getValidSyncModes(sourceSyncModes = airbyteStream!!.supportedSyncModes!!, destinationSyncModes = destinationSyncModes),
           defaultCursorField = airbyteStream.defaultCursorField,
           sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey,

@@ -147,6 +147,7 @@ object AcceptanceTestUtils {
               replacementSourceSyncMode.orElse(config!!.syncMode),
               replacementDestinationSyncMode.orElse(config.destinationSyncMode),
               replacementCursorFields.orElse(config.cursorField),
+              null,
               replacementPrimaryKeys.orElse(config.primaryKey),
               config.aliasName,
               replacementSelected.orElse(config.selected),

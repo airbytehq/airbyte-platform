@@ -13970,6 +13970,9 @@ components:
             type: string
         destinationSyncMode:
           $ref: "#/components/schemas/DestinationSyncMode"
+        namespace:
+          type: string
+          description: Namespace of the stream.
         primaryKey:
           description: Paths to the fields that will be used as primary key. This field is REQUIRED if `destination_sync_mode` is `*_dedup`. Otherwise it is ignored.
           type: array
@@ -18296,6 +18299,9 @@ components:
       properties:
         name:
           type: string
+        namespace:
+          type: string
+          description: Namespace of the stream.
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -18348,6 +18354,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: string
         defaultCursorField:
           type: array
           items:

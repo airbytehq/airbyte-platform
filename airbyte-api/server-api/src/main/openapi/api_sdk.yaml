@@ -3686,6 +3686,9 @@ components:
       properties:
         name:
           type: "string"
+        namespace:
+          type: "string"
+          description: "Namespace of the stream."
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -3745,6 +3748,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: "string"
         defaultCursorField:
           type: "array"
           items:
@@ -3783,7 +3788,6 @@ components:
       required:
       - "name"
       - "organizationId"
-      - "enabled"
       properties:
         name:
           type: "string"
@@ -3845,9 +3849,12 @@ components:
     DataplaneCreateRequest:
       type: "object"
       required:
+      - "regionId"
       - "name"
-      - "enabled"
       properties:
+        regionId:
+          type: "string"
+          format: "uuid"
         name:
           type: "string"
         enabled:
@@ -45782,6 +45789,103 @@ components:
           - "2023-08-05T00:43:59.244Z"
           default: "2023-08-05T00:43:59.244Z"
           airbyte_secret: false
+    source-awin-advertiser:
+      type: "object"
+      required:
+      - "advertiserId"
+      - "api_key"
+      - "step_increment"
+      - "lookback_days"
+      - "start_date"
+      - "sourceType"
+      properties:
+        advertiserId:
+          type: "string"
+          description: "Your Awin Advertiser ID. You can find this in your Awin dashboard\
+            \ or account settings."
+          name: "advertiserId"
+          order: 0
+          title: "advertiserId"
+        api_key:
+          type: "string"
+          description: "Your Awin API key. Generate this from your Awin account under\
+            \ API Credentials."
+          order: 1
+          title: "API Key"
+          airbyte_secret: true
+          x-speakeasy-param-sensitive: true
+        step_increment:
+          type: "string"
+          description: "The time window size for each API request in ISO8601 duration\
+            \ format.\nFor the campaign performance stream, Awin API explicitly limits\
+            \ the period between startDate and endDate to 400 days maximum.\n"
+          title: "Step Increment"
+          default: "P400D"
+          order: 2
+        lookback_days:
+          type: "integer"
+          description: "Number of days to look back on each sync to catch any updates\
+            \ to existing records."
+          title: "Lookback Days"
+          order: 3
+        start_date:
+          type: "string"
+          description: "Start date for data replication in YYYY-MM-DD format"
+          title: "Start Date"
+          format: "date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          order: 4
+        sourceType:
+          title: "awin-advertiser"
+          const: "awin-advertiser"
+          enum:
+          - "awin-advertiser"
+          order: 0
+          type: "string"
+    source-awin-advertiser-update:
+      type: "object"
+      required:
+      - "advertiserId"
+      - "api_key"
+      - "step_increment"
+      - "lookback_days"
+      - "start_date"
+      properties:
+        advertiserId:
+          type: "string"
+          description: "Your Awin Advertiser ID. You can find this in your Awin dashboard\
+            \ or account settings."
+          name: "advertiserId"
+          order: 0
+          title: "advertiserId"
+        api_key:
+          type: "string"
+          description: "Your Awin API key. Generate this from your Awin account under\
+            \ API Credentials."
+          order: 1
+          title: "API Key"
+          airbyte_secret: true
+        step_increment:
+          type: "string"
+          description: "The time window size for each API request in ISO8601 duration\
+            \ format.\nFor the campaign performance stream, Awin API explicitly limits\
+            \ the period between startDate and endDate to 400 days maximum.\n"
+          title: "Step Increment"
+          default: "P400D"
+          order: 2
+        lookback_days:
+          type: "integer"
+          description: "Number of days to look back on each sync to catch any updates\
+            \ to existing records."
+          title: "Lookback Days"
+          order: 3
+        start_date:
+          type: "string"
+          description: "Start date for data replication in YYYY-MM-DD format"
+          title: "Start Date"
+          format: "date"
+          pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          order: 4
     source-cal-com:
       type: "object"
       required:
@@ -49318,10 +49422,10 @@ components:
       properties:
         domain:
           type: "string"
-          order: 0
-          title: "Custom Domain"
-          description: "Provide only the domain part, like https://{your-domain}.rest.vitally.io/.\
+          description: "Provide only the subdomain part, like https://{your-custom-subdomain}.rest.vitally.io/.\
             \  Keep empty if you don't have a subdomain."
+          order: 0
+          title: "Custom Subdomain"
         status:
           type: "string"
           description: "Status of the Vitally accounts. One of the following values;\
@@ -49361,10 +49465,10 @@ components:
       properties:
         domain:
           type: "string"
-          order: 0
-          title: "Custom Domain"
-          description: "Provide only the domain part, like https://{your-domain}.rest.vitally.io/.\
+          description: "Provide only the subdomain part, like https://{your-custom-subdomain}.rest.vitally.io/.\
             \  Keep empty if you don't have a subdomain."
+          order: 0
+          title: "Custom Subdomain"
         status:
           type: "string"
           description: "Status of the Vitally accounts. One of the following values;\
@@ -62964,16 +63068,16 @@ components:
       properties:
         api_key:
           type: "string"
+          order: 0
           title: "API Key"
           airbyte_secret: true
-          order: 0
           x-speakeasy-param-sensitive: true
         start_date:
           type: "string"
+          order: 1
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          order: 1
         sourceType:
           title: "mixmax"
           const: "mixmax"
@@ -62989,15 +63093,15 @@ components:
       properties:
         api_key:
           type: "string"
+          order: 0
           title: "API Key"
           airbyte_secret: true
-          order: 0
         start_date:
           type: "string"
+          order: 1
           title: "Start date"
           format: "date-time"
           pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
-          order: 1
     source-bing-ads:
       title: "Bing Ads Spec"
       type: "object"
@@ -85979,6 +86083,8 @@ components:
           $ref: "#/components/schemas/source-auth0"
         - title: source-aviationstack
           $ref: "#/components/schemas/source-aviationstack"
+        - title: source-awin-advertiser
+          $ref: "#/components/schemas/source-awin-advertiser"
         - title: source-aws-cloudtrail
           $ref: "#/components/schemas/source-aws-cloudtrail"
         - title: source-azure-blob-storage

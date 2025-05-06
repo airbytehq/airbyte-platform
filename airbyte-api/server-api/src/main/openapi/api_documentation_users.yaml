@@ -1734,6 +1734,9 @@ components:
       properties:
         name:
           type: "string"
+        namespace:
+          type: "string"
+          description: "Namespace of the stream."
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -1798,6 +1801,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: "string"
         defaultCursorField:
           type: "array"
           items:
@@ -1836,7 +1841,6 @@ components:
       required:
         - "name"
         - "organizationId"
-        - "enabled"
       properties:
         name:
           type: "string"
@@ -1898,9 +1902,12 @@ components:
     DataplaneCreateRequest:
       type: "object"
       required:
+        - "regionId"
         - "name"
-        - "enabled"
       properties:
+        regionId:
+          type: "string"
+          format: "uuid"
         name:
           type: "string"
         enabled:
