@@ -780,7 +780,7 @@ class DestinationDefinitionsHandlerTest {
         .thenReturn(destinationDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
-        destinationDefinition.getCustom())).thenReturn(updatedDestinationDefVersion);
+        destinationDefinition.getCustom(), workspaceId)).thenReturn(updatedDestinationDefVersion);
 
     final List<ActorDefinitionBreakingChange> breakingChanges = generateBreakingChangesFromDestinationDefinition(updatedDestination);
     when(actorDefinitionHandlerHelper.getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION)).thenReturn(breakingChanges);
@@ -788,7 +788,7 @@ class DestinationDefinitionsHandlerTest {
     final DestinationDefinitionRead destinationRead =
         destinationDefinitionsHandler.updateDestinationDefinition(
             new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
-                .dockerImageTag(newDockerImageTag));
+                .dockerImageTag(newDockerImageTag).workspaceId(workspaceId));
 
     final DestinationDefinitionRead expectedDestinationDefinitionRead = new DestinationDefinitionRead()
         .destinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
@@ -809,7 +809,7 @@ class DestinationDefinitionsHandlerTest {
 
     assertEquals(expectedDestinationDefinitionRead, destinationRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
-        destinationDefinition.getCustom());
+        destinationDefinition.getCustom(), workspaceId);
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedDestinationDefVersion, ActorType.DESTINATION);
     verify(destinationService).writeConnectorMetadata(updatedDestination, updatedDestinationDefVersion, breakingChanges);
     verify(supportStateUpdater).updateSupportStatesForDestinationDefinition(persistedUpdatedDestination);
@@ -866,15 +866,15 @@ class DestinationDefinitionsHandlerTest {
     assertNotEquals(newDockerImageTag, currentTag);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
-        destinationDefinition.getCustom()))
+        destinationDefinition.getCustom(), workspaceId))
             .thenThrow(UnsupportedProtocolVersionException.class);
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> destinationDefinitionsHandler.updateDestinationDefinition(
         new DestinationDefinitionUpdate().destinationDefinitionId(this.destinationDefinition.getDestinationDefinitionId())
-            .dockerImageTag(newDockerImageTag)));
+            .dockerImageTag(newDockerImageTag).workspaceId(workspaceId)));
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(destinationDefinitionVersion, ActorType.DESTINATION, newDockerImageTag,
-        destinationDefinition.getCustom());
+        destinationDefinition.getCustom(), workspaceId);
     verify(destinationService, never()).writeConnectorMetadata(any(StandardDestinationDefinition.class), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);

@@ -176,16 +176,16 @@ class ActorDefinitionHandlerHelperTest {
       final ConnectorSpecification newSpec =
           new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new");
 
-      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
+      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)).thenReturn(new SynchronousResponse<>(
           newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
-              isCustomConnector);
+              isCustomConnector, WORKSPACE_ID);
 
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
-      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, null);
+      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID);
 
       assertNotEquals(previousDefaultVersion, newVersion);
       assertEquals(newSpec, newVersion.getSpec());
@@ -208,7 +208,7 @@ class ActorDefinitionHandlerHelperTest {
 
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
-              isCustomConnector);
+              isCustomConnector, WORKSPACE_ID);
 
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
@@ -230,18 +230,18 @@ class ActorDefinitionHandlerHelperTest {
 
       final ConnectorSpecification newSpec =
           new ConnectorSpecification().withProtocolVersion(newValidProtocolVersion).withAdditionalProperty(SPEC_KEY, "new");
-      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
+      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)).thenReturn(new SynchronousResponse<>(
           newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
-              isCustomConnector);
+              isCustomConnector, WORKSPACE_ID);
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
 
       assertEquals(previousDefaultVersion.getDockerImageTag(), newVersion.getDockerImageTag());
       assertNotEquals(previousDefaultVersion, newVersion);
-      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, null);
+      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID);
 
       verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
       verifyNoInteractions(remoteDefinitionsProvider);
@@ -254,15 +254,15 @@ class ActorDefinitionHandlerHelperTest {
       final ActorDefinitionVersion previousDefaultVersion = actorDefinitionVersion;
       final String newDockerImageTag = "newTag";
       final String newDockerImage = getDockerImageForTag(newDockerImageTag);
-      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
+      when(synchronousSchedulerClient.createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID)).thenReturn(new SynchronousResponse<>(
           new ConnectorSpecification().withProtocolVersion(INVALID_PROTOCOL_VERSION), SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
       assertThrows(UnsupportedProtocolVersionException.class,
           () -> actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
-              isCustomConnector));
+              isCustomConnector, WORKSPACE_ID));
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
-      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, null);
+      verify(synchronousSchedulerClient).createGetSpecJob(newDockerImage, isCustomConnector, WORKSPACE_ID);
 
       verifyNoMoreInteractions(synchronousSchedulerClient, actorDefinitionVersionResolver);
       verifyNoInteractions(remoteDefinitionsProvider);
@@ -283,7 +283,7 @@ class ActorDefinitionHandlerHelperTest {
 
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, newDockerImageTag,
-              isCustomConnector);
+              isCustomConnector, WORKSPACE_ID);
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), newDockerImageTag);
 
@@ -302,7 +302,7 @@ class ActorDefinitionHandlerHelperTest {
 
       final ConnectorSpecification newSpec =
           new ConnectorSpecification().withProtocolVersion(VALID_PROTOCOL_VERSION).withAdditionalProperty(SPEC_KEY, "new");
-      when(synchronousSchedulerClient.createGetSpecJob(dockerImage, isCustomConnector, null)).thenReturn(new SynchronousResponse<>(
+      when(synchronousSchedulerClient.createGetSpecJob(dockerImage, isCustomConnector, WORKSPACE_ID)).thenReturn(new SynchronousResponse<>(
           newSpec, SynchronousJobMetadata.mock(ConfigType.GET_SPEC)));
 
       final ActorDefinitionVersion oldExistingADV = Jsons.clone(actorDefinitionVersion)
@@ -313,10 +313,10 @@ class ActorDefinitionHandlerHelperTest {
 
       final ActorDefinitionVersion newVersion =
           actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(previousDefaultVersion, ActorType.SOURCE, DEV,
-              isCustomConnector);
+              isCustomConnector, WORKSPACE_ID);
       verify(actorDefinitionVersionResolver).resolveVersionForTag(previousDefaultVersion.getActorDefinitionId(),
           ActorType.SOURCE, previousDefaultVersion.getDockerRepository(), DEV);
-      verify(synchronousSchedulerClient).createGetSpecJob(dockerImage, isCustomConnector, null);
+      verify(synchronousSchedulerClient).createGetSpecJob(dockerImage, isCustomConnector, WORKSPACE_ID);
 
       assertEquals(oldExistingADV.withSpec(newSpec), newVersion);
 

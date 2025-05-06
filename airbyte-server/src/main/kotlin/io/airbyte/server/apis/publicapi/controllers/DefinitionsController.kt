@@ -339,7 +339,8 @@ class DefinitionsController(
         SourceDefinitionUpdate()
           .sourceDefinitionId(definitionId)
           .name(updateDefinitionRequest.name)
-          .dockerImageTag(updateDefinitionRequest.dockerImageTag),
+          .dockerImageTag(updateDefinitionRequest.dockerImageTag)
+          .workspaceId(workspaceId),
       ).toPublicApiModel()
       .ok()
   }
@@ -406,7 +407,8 @@ class DefinitionsController(
         DestinationDefinitionUpdate()
           .destinationDefinitionId(definitionId)
           .name(updateDefinitionRequest.name)
-          .dockerImageTag(updateDefinitionRequest.dockerImageTag),
+          .dockerImageTag(updateDefinitionRequest.dockerImageTag)
+          .workspaceId(workspaceId),
       ).toPublicApiModel()
       .ok()
   }

@@ -10859,6 +10859,7 @@ components:
       required:
         - sourceDefinitionId
         - dockerImageTag
+        - workspaceId
       properties:
         name:
           type: string
@@ -10868,6 +10869,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     SourceDefinitionRead:
       type: object
       required:
@@ -11474,7 +11477,8 @@ components:
       type: object
       required:
         - destinationDefinitionId
-        - dockerImageag
+        - workspaceId
+        - dockerImageTag
       properties:
         name:
           type: string
@@ -11484,6 +11488,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     DestinationDefinitionRead:
       type: object
       required:

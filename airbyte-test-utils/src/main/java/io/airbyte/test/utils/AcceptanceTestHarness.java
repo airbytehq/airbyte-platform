@@ -1102,8 +1102,9 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
-            null,
             dockerImageTag,
+            defaultWorkspaceId,
+            null,
             null));
   }
 
@@ -1112,6 +1113,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            defaultWorkspaceId,
             null,
             null));
   }

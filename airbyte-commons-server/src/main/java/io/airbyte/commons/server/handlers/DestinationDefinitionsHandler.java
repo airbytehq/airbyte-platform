@@ -344,7 +344,8 @@ public class DestinationDefinitionsHandler {
     final StandardDestinationDefinition newDestination = buildDestinationDefinitionUpdate(currentDestination, destinationDefinitionUpdate);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom(),
+        destinationDefinitionUpdate.getWorkspaceId());
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef =
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);
