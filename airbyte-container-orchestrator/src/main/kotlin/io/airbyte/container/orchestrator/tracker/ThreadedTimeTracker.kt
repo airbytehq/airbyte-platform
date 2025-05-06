@@ -2,14 +2,15 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.tracker
+package io.airbyte.container.orchestrator.tracker
+
+import jakarta.inject.Singleton
 
 /**
  * This class exists to track timing information for the sync. It needs to be thread-safe as
  * multiple threads (source, destination, and worker) will be accessing it.
- *
- * TODO: mark as internal once the users of this class have migrated to kotlin
  */
+@Singleton
 class ThreadedTimeTracker {
   /** lock used for synchronization */
   private val lock = Any()

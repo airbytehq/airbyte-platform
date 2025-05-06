@@ -19,6 +19,7 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType;
 import io.airbyte.config.ReplicationOutput;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
+import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker;
 import io.airbyte.container.orchestrator.worker.EmptyAirbyteDestination;
 import io.airbyte.container.orchestrator.worker.LimitedFatRecordSourceProcess;
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider;
@@ -62,7 +63,6 @@ import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageE
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper;
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker;
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence;
-import io.airbyte.workers.tracker.ThreadedTimeTracker;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.generated.WorkloadApi;
 import io.micronaut.context.event.ApplicationEventListener;

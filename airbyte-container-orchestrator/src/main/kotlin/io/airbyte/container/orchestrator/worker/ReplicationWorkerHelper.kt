@@ -19,6 +19,7 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -51,7 +52,6 @@ import io.airbyte.workers.internal.bookkeeping.getTotalStats
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
-import io.airbyte.workers.tracker.ThreadedTimeTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.nio.file.Path

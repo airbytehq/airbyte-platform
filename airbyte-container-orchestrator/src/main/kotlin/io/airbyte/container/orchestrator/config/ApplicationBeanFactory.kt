@@ -7,7 +7,6 @@ package io.airbyte.container.orchestrator.config
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
-import io.airbyte.workers.tracker.ThreadedTimeTracker
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -40,7 +39,4 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("syncPersistenceExecutorService")
   fun syncPersistenceExecutorService(): ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
-
-  @Singleton
-  fun threadedTimeTracker() = ThreadedTimeTracker()
 }
