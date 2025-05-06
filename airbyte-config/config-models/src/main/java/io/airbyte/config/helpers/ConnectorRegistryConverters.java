@@ -134,7 +134,8 @@ public class ConnectorRegistryConverters {
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
         .withSuggestedStreams(def.getSuggestedStreams())
-        .withLanguage(def.getLanguage());
+        .withLanguage(def.getLanguage())
+        .withSupportsFileTransfer(def.getSupportsFileTransfer());
   }
 
   /**

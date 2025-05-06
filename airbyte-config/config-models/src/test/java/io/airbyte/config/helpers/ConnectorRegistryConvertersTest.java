@@ -6,6 +6,7 @@ package io.airbyte.config.helpers;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.google.common.collect.ImmutableMap;
@@ -120,6 +121,7 @@ class ConnectorRegistryConvertersTest {
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withSuggestedStreams(suggestedStreams)
         .withMaxSecondsBetweenMessages(10L)
+        .withSupportsFileTransfer(true)
         .withReleases(new ConnectorReleasesSource().withBreakingChanges(sourceRegistryBreakingChanges));
 
     final StandardSourceDefinition stdSourceDef = new StandardSourceDefinition()
@@ -144,7 +146,8 @@ class ConnectorRegistryConvertersTest {
         .withReleaseDate(RELEASE_DATE)
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
-        .withSuggestedStreams(suggestedStreams);
+        .withSuggestedStreams(suggestedStreams)
+        .withSupportsFileTransfer(true);
 
     assertEquals(stdSourceDef, ConnectorRegistryConverters.toStandardSourceDefinition(registrySourceDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef));
@@ -175,6 +178,7 @@ class ConnectorRegistryConvertersTest {
 
     final ActorDefinitionVersion convertedAdv = ConnectorRegistryConverters.toActorDefinitionVersion(registrySourceDef);
     assertEquals(SupportLevel.NONE, convertedAdv.getSupportLevel());
+    assertFalse(convertedAdv.getSupportsFileTransfer());
   }
 
   @Test
