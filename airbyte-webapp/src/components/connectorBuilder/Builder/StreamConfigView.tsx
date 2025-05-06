@@ -241,7 +241,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
         )}
       </FlexContainer>
       {streamTab === "requester" ? (
-        <fieldset disabled={permission !== "write" || streamId.type === "generated_stream"} className={styles.fieldset}>
+        <fieldset
+          disabled={permission === "readOnly" || streamId.type === "generated_stream"}
+          className={styles.fieldset}
+        >
           {streamId.type === "dynamic_stream" && (
             <BuilderCard>
               <BuilderField
@@ -869,11 +872,11 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
         tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
         disabled={
           (error && !streamRead.data?.inferred_schema) ||
-          permission !== "write" ||
+          permission === "readOnly" ||
           testStreamId.type === "generated_stream"
         }
         disabledTooltip={
-          permission !== "write"
+          permission === "readOnly"
             ? undefined
             : formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })
         }
@@ -902,7 +905,7 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStre
       ) : (
         <div className={styles.editorContainer}>
           <CodeEditor
-            readOnly={permission !== "write" || testStreamId.type === "generated_stream"}
+            readOnly={permission === "readOnly" || testStreamId.type === "generated_stream"}
             key={schemaFieldPath}
             value={schema || ""}
             language="json"
