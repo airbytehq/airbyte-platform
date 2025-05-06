@@ -90,7 +90,7 @@ spec:
         {{- if .Values.global.datadog.enabled }}
         {{- if (eq .Values.global.edition "cloud") }}
         - name: DD_SERVICE 
-          value: airbyte-cloud-worker
+          value: airbyte-cloud-workers
         {{- else }}
         - name: DD_SERVICE 
           value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
