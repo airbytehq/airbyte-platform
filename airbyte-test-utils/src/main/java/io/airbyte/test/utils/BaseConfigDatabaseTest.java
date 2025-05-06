@@ -138,6 +138,7 @@ public class BaseConfigDatabaseTest {
               connector_builder_project,
               connector_rollout,
               config_template,
+              connection_template,
               dataplane,
               dataplane_client_credentials,
               dataplane_group,
