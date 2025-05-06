@@ -13,6 +13,7 @@ import io.airbyte.config.JobSyncConfig
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.dest
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.source
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
+import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteDestination
@@ -28,15 +29,12 @@ import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.EmptyAirbyteSource
-import io.airbyte.workers.internal.HeartbeatMonitor
-import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.time.Duration
 import java.util.Optional
 
 @Factory
@@ -108,10 +106,6 @@ class ConnectorFactory {
     }
 
   @Singleton
-  fun airbyteSourceMonitor(replicationInput: ReplicationInput) =
-    HeartbeatMonitor(Duration.ofSeconds(replicationInput.heartbeatConfig.maxSecondsBetweenMessages))
-
-  @Singleton
   @Named("destinationMdcScopeBuilder")
   fun destinationMdcScopeBuilder(): MdcScope.Builder =
     MdcScope
@@ -143,21 +137,6 @@ class ConnectorFactory {
     MdcScope
       .Builder()
       .setExtraMdcEntries(LogSource.SOURCE.toMdc())
-
-  @Singleton
-  fun sourceHeartbeatTimeoutChaperone(
-    heartbeatMonitor: HeartbeatMonitor,
-    metricClient: MetricClient,
-    replicationInput: ReplicationInput,
-    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
-  ) = HeartbeatTimeoutChaperone(
-    heartbeatMonitor,
-    HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
-    replicationInputFeatureFlagReader,
-    replicationInput.connectionId,
-    replicationInput.sourceLauncherConfig.dockerImage,
-    metricClient,
-  )
 
   @Singleton
   @Named("sourceStreamFactory")

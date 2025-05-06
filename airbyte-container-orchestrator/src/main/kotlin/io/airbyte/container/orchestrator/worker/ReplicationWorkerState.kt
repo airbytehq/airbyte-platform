@@ -7,9 +7,9 @@ package io.airbyte.container.orchestrator.worker
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.config.FailureReason
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
+import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
-import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
 import jakarta.inject.Singleton
@@ -61,7 +61,7 @@ class ReplicationWorkerState {
     when (ex) {
       is SourceException -> FailureHelper.sourceFailure(ex, jobId, attempt)
       is DestinationException -> FailureHelper.destinationFailure(ex, jobId, attempt)
-      is HeartbeatTimeoutChaperone.HeartbeatTimeoutException ->
+      is HeartbeatTimeoutException ->
         FailureHelper.sourceHeartbeatFailure(
           ex,
           jobId,

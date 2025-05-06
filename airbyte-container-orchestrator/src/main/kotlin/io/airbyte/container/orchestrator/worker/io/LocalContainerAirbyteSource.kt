@@ -15,7 +15,6 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.HeartbeatMonitor
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path

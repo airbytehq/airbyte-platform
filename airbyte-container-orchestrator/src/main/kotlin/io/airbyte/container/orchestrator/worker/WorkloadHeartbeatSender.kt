@@ -5,9 +5,9 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
+import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
+import io.airbyte.container.orchestrator.worker.io.HeartbeatTimeoutException
 import io.airbyte.workers.exception.WorkloadHeartbeatException
-import io.airbyte.workers.internal.HeartbeatMonitor
-import io.airbyte.workers.internal.HeartbeatTimeoutChaperone.HeartbeatTimeoutException
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException
 import io.airbyte.workload.api.client.model.generated.WorkloadHeartbeatRequest
@@ -72,7 +72,7 @@ class WorkloadHeartbeatSender(
                 heartbeatTimeoutDuration,
                 HeartbeatTimeoutException(
                   sourceTimeoutMonitor.heartbeatFreshnessThreshold.toMillis(),
-                  sourceTimeoutMonitor.getTimeSinceLastBeat().orElse(Duration.ZERO).toMillis(),
+                  sourceTimeoutMonitor.timeSinceLastBeat.orElse(Duration.ZERO).toMillis(),
                 ),
               )
             ) {
