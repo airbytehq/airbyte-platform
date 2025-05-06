@@ -255,7 +255,7 @@ class JobInputServiceImpl(
     protocolVersion: Version,
     isCustomConnector: Boolean,
     resourceRequirements: ResourceRequirements?,
-    allowedHosts: AllowedHosts,
+    allowedHosts: AllowedHosts?,
     actorContext: ActorContext?,
     jobId: String?,
     attemptId: Long?,

@@ -13,6 +13,6 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ActorDefinitionRepository : PageableRepository<ActorDefinition, UUID> {
-  @Query("SELECT a FROM actor_definition a WHERE a.id = :actorDefinitionId")
+  @Query("SELECT * FROM actor_definition a WHERE a.id = :actorDefinitionId")
   fun findByActorDefinitionId(actorDefinitionId: UUID): ActorDefinition?
 }

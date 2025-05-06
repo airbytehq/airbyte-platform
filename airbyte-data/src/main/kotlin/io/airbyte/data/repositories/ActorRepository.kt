@@ -13,6 +13,6 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface ActorRepository : PageableRepository<Actor, UUID> {
-  @Query("SELECT a FROM Actor a WHERE a.id = :actorId")
+  @Query("SELECT * FROM Actor a WHERE a.id = :actorId")
   fun findByActorId(actorId: UUID): Actor?
 }

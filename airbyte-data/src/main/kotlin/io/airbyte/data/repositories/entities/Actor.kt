@@ -20,13 +20,13 @@ open class Actor(
   @field:Id
   @AutoPopulated
   var id: UUID? = null,
-  var workspaceId: UUID? = null,
-  var actorDefinitionId: UUID? = null,
-  var name: String? = null,
+  var workspaceId: UUID,
+  var actorDefinitionId: UUID,
+  var name: String,
   @field:TypeDef(type = DataType.JSON)
-  var configuration: JsonNode? = null,
+  var configuration: JsonNode,
   @field:TypeDef(type = DataType.OBJECT)
-  var actorType: ActorType? = null,
+  var actorType: ActorType,
   var tombstone: Boolean = false,
   @DateCreated
   var createdAt: java.time.OffsetDateTime? = null,

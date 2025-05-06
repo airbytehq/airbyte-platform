@@ -24,7 +24,7 @@ open class ActorDefinition(
   var name: String? = null,
   var icon: String? = null,
   @field:TypeDef(type = DataType.OBJECT)
-  var actorType: ActorType? = null,
+  var actorType: ActorType,
   @field:TypeDef(type = DataType.OBJECT)
   var sourceType: SourceType? = null,
   @DateCreated
