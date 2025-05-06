@@ -10,6 +10,7 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.container.orchestrator.worker.io.AirbyteMessageBufferedWriterFactory
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.dest
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.source
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
@@ -25,12 +26,10 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.EmptyAirbyteSource
 import io.airbyte.workers.internal.MessageMetricsTracker
-import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
@@ -95,7 +94,7 @@ class ConnectorFactory {
     if (replicationInputFeatureFlagReader.read(SingleContainerTest)) {
       InMemoryDummyAirbyteSource()
     } else if (replicationInput.isReset) {
-      EmptyAirbyteSource(replicationInput.getNamespaceDefinition() == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
+      EmptyAirbyteSource(replicationInput.namespaceDefinition == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
     } else {
       LocalContainerAirbyteSource(
         heartbeatMonitor = heartbeatMonitor,
@@ -116,19 +115,6 @@ class ConnectorFactory {
   fun invalidLineFailureConfiguration(replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader) =
     VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(
       replicationInputFeatureFlagReader.read(PrintLongRecordPks),
-    )
-
-  @Singleton
-  fun messageWriterFactory(
-    replicationInput: ReplicationInput,
-    serDeProvider: AirbyteMessageSerDeProvider,
-    migratorFactory: AirbyteProtocolVersionedMigratorFactory,
-  ): AirbyteMessageBufferedWriterFactory =
-    VersionedAirbyteMessageBufferedWriterFactory(
-      serDeProvider,
-      migratorFactory,
-      replicationInput.destinationLauncherConfig.getProtocolVersion(),
-      Optional.of(replicationInput.getCatalog()),
     )
 
   @Singleton

@@ -15,8 +15,6 @@ import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteMessageBufferedWriter
-import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -39,7 +37,7 @@ class LocalContainerAirbyteDestination(
 ) : AirbyteDestination {
   private val inputHasEnded = AtomicBoolean(false)
   private lateinit var messageIterator: Iterator<AirbyteMessage>
-  private lateinit var writer: AirbyteMessageBufferedWriter
+  private lateinit var writer: AirbyteMessageBufferedWriter<AirbyteMessage>
 
   companion object {
     const val CALLER = "airbyte-destination"
@@ -67,6 +65,7 @@ class LocalContainerAirbyteDestination(
     }
   }
 
+  @Suppress("UNCHECKED_CAST")
   override fun start(
     destinationConfig: WorkerDestinationConfig,
     jobRoot: Path,
@@ -79,7 +78,10 @@ class LocalContainerAirbyteDestination(
     LineGobbler.gobble(containerIOHandle.getErrInputStream(), { msg: String -> logger.error { msg } }, CALLER, containerLogMdcBuilder)
 
     // TODO are these the correct pipes?
-    writer = messageWriterFactory.createWriter(BufferedWriter(OutputStreamWriter(containerIOHandle.getOutputStream(), Charsets.UTF_8)))
+    writer =
+      messageWriterFactory.createWriter(
+        BufferedWriter(OutputStreamWriter(containerIOHandle.getOutputStream(), Charsets.UTF_8)),
+      ) as AirbyteMessageBufferedWriter<AirbyteMessage>
 
     Failsafe.with(LocalContainerConstants.LOCAL_CONTAINER_RETRY_POLICY).run(
       CheckedRunnable {

@@ -8,8 +8,6 @@ import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.AirbyteMessageBufferedWriter
-import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.mockk.every
@@ -45,7 +43,7 @@ internal class LocalContainerAirbyteDestinationTest {
   private lateinit var stream: Stream<AirbyteMessage>
   private lateinit var streamFactory: AirbyteStreamFactory
   private lateinit var terminationFile: File
-  private lateinit var writer: AirbyteMessageBufferedWriter
+  private lateinit var writer: AirbyteMessageBufferedWriter<*>
   private lateinit var workerDestinationConfig: WorkerDestinationConfig
 
   @BeforeEach
@@ -74,7 +72,7 @@ internal class LocalContainerAirbyteDestinationTest {
       mockk<MessageMetricsTracker> {
         every { trackConnectionId(randomConnectionId) } returns Unit
       }
-    writer = mockk<AirbyteMessageBufferedWriter>()
+    writer = mockk<AirbyteMessageBufferedWriter<AirbyteMessage>>()
     messageWriterFactory =
       mockk<AirbyteMessageBufferedWriterFactory> {
         every { createWriter(any()) } returns writer
@@ -434,7 +432,7 @@ internal class LocalContainerAirbyteDestinationTest {
 
   @Test
   fun testFlushAfterWrite() {
-    val writer = mockk<AirbyteMessageBufferedWriter>(relaxed = true)
+    val writer = mockk<AirbyteMessageBufferedWriter<AirbyteMessage>>(relaxed = true)
     every { messageWriterFactory.createWriter(any()) } returns writer
 
     val localContainerAirbyteDestinationWithForcePush =
