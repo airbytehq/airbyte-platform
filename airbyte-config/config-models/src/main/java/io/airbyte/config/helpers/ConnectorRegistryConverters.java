@@ -175,7 +175,8 @@ public class ConnectorRegistryConverters {
         .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes())
         .withLanguage(def.getLanguage())
-        .withSupportsFileTransfer(def.getSupportsFileTransfer());
+        .withSupportsFileTransfer(def.getSupportsFileTransfer())
+        .withSupportsDataActivation(def.getSupportsDataActivation());
   }
 
   /**

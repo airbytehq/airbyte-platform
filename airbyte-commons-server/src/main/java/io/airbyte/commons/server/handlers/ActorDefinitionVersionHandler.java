@@ -147,7 +147,8 @@ public class ActorDefinitionVersionHandler {
         .cdkVersion(actorDefinitionVersion.getCdkVersion())
         .lastPublished(apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
         .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied())
-        .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer());
+        .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer())
+        .supportsDataActivation(actorDefinitionVersion.getSupportsDataActivation());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);

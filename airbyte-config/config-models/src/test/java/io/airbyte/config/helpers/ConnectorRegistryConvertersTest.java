@@ -202,7 +202,8 @@ class ConnectorRegistryConvertersTest {
         .withResourceRequirements(RESOURCE_REQUIREMENTS)
         .withReleases(new ConnectorReleasesDestination().withBreakingChanges(destinationBreakingChanges))
         .withLanguage(LANGUAGE)
-        .withSupportsFileTransfer(true);
+        .withSupportsFileTransfer(true)
+        .withSupportsDataActivation(true);
 
     final StandardDestinationDefinition stdDestinationDef = new StandardDestinationDefinition()
         .withDestinationDefinitionId(DEF_ID)
@@ -226,7 +227,8 @@ class ConnectorRegistryConvertersTest {
         .withProtocolVersion(PROTOCOL_VERSION)
         .withAllowedHosts(ALLOWED_HOSTS)
         .withLanguage(LANGUAGE)
-        .withSupportsFileTransfer(true);
+        .withSupportsFileTransfer(true)
+        .withSupportsDataActivation(true);
 
     assertEquals(stdDestinationDef, ConnectorRegistryConverters.toStandardDestinationDefinition(registryDestinationDef));
     assertEquals(actorDefinitionVersion, ConnectorRegistryConverters.toActorDefinitionVersion(registryDestinationDef));

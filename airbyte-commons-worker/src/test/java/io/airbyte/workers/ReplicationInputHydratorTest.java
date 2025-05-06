@@ -475,6 +475,7 @@ class ReplicationInputHydratorTest {
         "dockerRepo",
         "dockerTag",
         true,
+        false,
         false));
   }
 
@@ -487,6 +488,7 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
+        false,
         false,
         false));
   }

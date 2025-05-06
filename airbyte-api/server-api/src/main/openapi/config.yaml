@@ -11808,6 +11808,7 @@ components:
         - supportState
         - isVersionOverrideApplied
         - supportsFileTransfer
+        - supportsDataActivation
       properties:
         dockerRepository:
           type: string
@@ -11831,6 +11832,8 @@ components:
           type: string
         supportsFileTransfer:
           type: boolean
+        supportsDataActivation:
+          type: boolean
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -11839,6 +11842,7 @@ components:
         - dockerImageTag
         - supportRefreshes
         - supportFileTransfer
+        - supportDataActivation
       properties:
         versionId:
           $ref: "#/components/schemas/ActorDefinitionVersionId"
@@ -11849,6 +11853,8 @@ components:
         supportRefreshes:
           type: boolean
         supportFileTransfer:
+          type: boolean
+        supportDataActivation:
           type: boolean
     ActorDefinitionBreakingChange:
       type: object
