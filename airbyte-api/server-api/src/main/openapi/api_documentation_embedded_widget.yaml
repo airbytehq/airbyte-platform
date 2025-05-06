@@ -8,7 +8,7 @@ servers:
   - url: "https://api.airbyte.com/v1"
     description: "Airbyte API v1"
 paths:
-  /embedded/widget:
+  /embedded/widget_token:
     post:
       description:
         "Get a token for the embedded widget. This endpoint is only available\
@@ -26,9 +26,9 @@ paths:
       responses:
         "200":
           content:
-            text/plain:
+            application/json:
               schema:
-                type: "string"
+                $ref: "#/components/schemas/EmbeddedWidgetResponse"
           description: "Success"
       tags:
         - "public"
@@ -1814,7 +1814,6 @@ components:
       required:
         - "name"
         - "organizationId"
-        - "enabled"
       properties:
         name:
           type: "string"
@@ -1876,9 +1875,12 @@ components:
     DataplaneCreateRequest:
       type: "object"
       required:
+        - "regionId"
         - "name"
-        - "enabled"
       properties:
+        regionId:
+          type: "string"
+          format: "uuid"
         name:
           type: "string"
         enabled:
@@ -2046,6 +2048,14 @@ components:
         allowedOrigin:
           type: "string"
         externalUserId:
+          type: "string"
+      x-speakeasy-component: true
+    EmbeddedWidgetResponse:
+      type: "object"
+      required:
+        - "token"
+      properties:
+        token:
           type: "string"
       x-speakeasy-component: true
 

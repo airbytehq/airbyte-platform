@@ -2660,7 +2660,7 @@ paths:
       operationId: updateTag
       x-speakeasy-alias: updateTag
       x-speakeasy-group: Tags
-  /embedded/widget:
+  /embedded/widget_token:
     post:
       description: Get a token for the embedded widget. This endpoint is only available
         when Airbyte Embedded is enabled.
@@ -2677,9 +2677,9 @@ paths:
       responses:
         '200':
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/EmbeddedWidgetResponse'
           description: Success
       tags:
       - public
@@ -4741,5 +4741,13 @@ components:
         allowedOrigin:
           type: string
         externalUserId:
+          type: string
+      x-speakeasy-component: true
+    EmbeddedWidgetResponse:
+      type: object
+      required:
+      - token
+      properties:
+        token:
           type: string
       x-speakeasy-component: true

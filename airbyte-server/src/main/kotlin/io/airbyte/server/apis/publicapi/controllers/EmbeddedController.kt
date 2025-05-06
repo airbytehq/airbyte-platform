@@ -96,10 +96,10 @@ class EmbeddedController(
     // This endpoint is different from most – it returns an "opaque" base64-encoded string,
     // which decodes to a JSON object. This is because there is an intermediate party (Operator)
     // which needs to pass this value to the Embedded widget code.
-    // Encoding this as an opaque string means the Operator is less likely to have
-    // issues passing this along if the fields are changed.
+    // All fields passed to the EmbeddedWidget should be included in the encoded string.
+    // We still return a json object in case we ever need to return additional information that should not be encoded.
     val encoded = Base64.getEncoder().encodeToString(json.toByteArray())
-    return encoded.ok()
+    return mapOf("token" to encoded).ok()
   }
 
   private fun isDebug(): Boolean = ServerRequestContext.currentRequest<Any>().map { it.parameters.contains("debug") }.orElse(false)

@@ -102,7 +102,8 @@ class EmbeddedControllerTest {
 
     assertEquals(200, res.status)
 
-    val json = Base64.getDecoder().decode(res.entity.toString()).decodeToString()
+    val responseJson: Map<String, Any> = res.entity as Map<String, Any>
+    val json = Base64.getDecoder().decode(responseJson["token"] as String).decodeToString()
     val data = Jsons.deserializeToMap(Jsons.deserialize(json))
 
     assertEquals(
