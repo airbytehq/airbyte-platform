@@ -6,9 +6,9 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.config.FailureReason
+import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.workers.exception.WorkloadHeartbeatException
 import io.airbyte.workers.helper.FailureHelper
-import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
 import com.google.common.annotations.VisibleForTesting
 import dev.failsafe.Failsafe
@@ -14,9 +14,11 @@ import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.LocalContainerConstants.ACCEPTED_MESSAGE_TYPES
-import io.airbyte.workers.internal.LocalContainerConstants.IGNORED_EXIT_CODES
-import io.airbyte.workers.internal.LocalContainerConstants.LOCAL_CONTAINER_RETRY_POLICY
+import io.airbyte.workers.internal.AirbyteDestination
+import io.airbyte.workers.internal.AirbyteMessageBufferedWriter
+import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
+import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedWriter
 import java.io.IOException
@@ -57,7 +59,7 @@ class LocalContainerAirbyteDestination(
 
     val terminationResult = containerIOHandle.terminate()
     if (terminationResult) {
-      if (!IGNORED_EXIT_CODES.contains(exitValue)) {
+      if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
         throw WorkerException("Destination process exit with code $exitValue. This warning is normal if the job was cancelled.")
       }
     } else {
@@ -79,12 +81,12 @@ class LocalContainerAirbyteDestination(
     // TODO are these the correct pipes?
     writer = messageWriterFactory.createWriter(BufferedWriter(OutputStreamWriter(containerIOHandle.getOutputStream(), Charsets.UTF_8)))
 
-    Failsafe.with(LOCAL_CONTAINER_RETRY_POLICY).run(
+    Failsafe.with(LocalContainerConstants.LOCAL_CONTAINER_RETRY_POLICY).run(
       CheckedRunnable {
         messageIterator =
           streamFactory
             .create(IOs.newBufferedReader(containerIOHandle.getInputStream()))
-            .filter { message: AirbyteMessage -> ACCEPTED_MESSAGE_TYPES.contains(message.type) }
+            .filter { message: AirbyteMessage -> LocalContainerConstants.ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },
     )

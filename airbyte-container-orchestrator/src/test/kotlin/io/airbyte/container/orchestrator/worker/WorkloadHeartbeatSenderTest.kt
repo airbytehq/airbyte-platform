@@ -4,8 +4,8 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.workers.exception.WorkloadHeartbeatException
-import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.HeartbeatMonitor
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.infrastructure.ClientException

@@ -2,11 +2,12 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteMessage
+import io.airbyte.workers.internal.AirbyteDestination
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Optional

@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.EXIT_CODE_CHECK_NOT_EMPTY_FAILURE
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.TERMINATION_FILE_BODY
+import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
+import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_NOT_EMPTY_FAILURE
+import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.TERMINATION_FILE_BODY
 import io.mockk.mockk
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals

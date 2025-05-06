@@ -4,9 +4,8 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.workers.exception.WorkloadHeartbeatException
-import io.airbyte.workers.internal.DestinationTimeoutMonitor
-import io.airbyte.workers.internal.DestinationTimeoutMonitor.TimeoutException
 import io.airbyte.workers.internal.HeartbeatMonitor
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone.HeartbeatTimeoutException
 import io.airbyte.workload.api.client.WorkloadApiClient
@@ -56,7 +55,7 @@ class WorkloadHeartbeatSender(
             if (checkIfExpiredAndMarkSyncStateAsFailed(
                 lastSuccessfulHeartbeat,
                 heartbeatTimeoutDuration,
-                TimeoutException(
+                DestinationTimeoutMonitor.TimeoutException(
                   destinationTimeoutMonitor.timeout.toMillis(),
                   destinationTimeoutMonitor.timeSinceLastAction.get(),
                 ),

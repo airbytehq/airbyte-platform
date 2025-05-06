@@ -10,9 +10,14 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.config.JobSyncConfig
-import io.airbyte.featureflag.DestinationTimeoutSeconds
+import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.dest
+import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.source
+import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
+import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteSource
+import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource
 import io.airbyte.featureflag.PrintLongRecordPks
-import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.featureflag.SingleContainerTest
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -22,16 +27,9 @@ import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.dest
-import io.airbyte.workers.internal.ContainerIOHandle.Companion.source
-import io.airbyte.workers.internal.DestinationTimeoutMonitor
 import io.airbyte.workers.internal.EmptyAirbyteSource
 import io.airbyte.workers.internal.HeartbeatMonitor
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone
-import io.airbyte.workers.internal.InMemoryDummyAirbyteDestination
-import io.airbyte.workers.internal.InMemoryDummyAirbyteSource
-import io.airbyte.workers.internal.LocalContainerAirbyteDestination
-import io.airbyte.workers.internal.LocalContainerAirbyteSource
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.airbyte.workers.internal.VersionedAirbyteMessageBufferedWriterFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
@@ -64,20 +62,6 @@ class ConnectorFactory {
       invalidLineFailureConfiguration,
       gsonPksExtractor,
       metricClient,
-    )
-
-  @Singleton
-  fun airbyteDestinationMonitor(
-    replicationInput: ReplicationInput,
-    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
-    metricClient: MetricClient,
-  ): DestinationTimeoutMonitor =
-    DestinationTimeoutMonitor(
-      replicationInput.workspaceId,
-      replicationInput.connectionId,
-      metricClient,
-      Duration.ofSeconds(replicationInputFeatureFlagReader.read(DestinationTimeoutSeconds).toLong()),
-      replicationInputFeatureFlagReader.read(ShouldFailSyncOnDestinationTimeout),
     )
 
   @Singleton

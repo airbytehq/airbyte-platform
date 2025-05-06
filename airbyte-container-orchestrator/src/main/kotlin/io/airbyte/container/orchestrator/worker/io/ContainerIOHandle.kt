@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.workers.pod.FileConstants
 import io.github.oshai.kotlinlogging.KotlinLogging

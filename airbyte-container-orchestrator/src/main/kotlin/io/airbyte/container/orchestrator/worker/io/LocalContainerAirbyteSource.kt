@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
 import dev.failsafe.Failsafe
 import dev.failsafe.function.CheckedRunnable
@@ -13,9 +13,10 @@ import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.LocalContainerConstants.ACCEPTED_MESSAGE_TYPES
-import io.airbyte.workers.internal.LocalContainerConstants.IGNORED_EXIT_CODES
-import io.airbyte.workers.internal.LocalContainerConstants.LOCAL_CONTAINER_RETRY_POLICY
+import io.airbyte.workers.internal.AirbyteSource
+import io.airbyte.workers.internal.AirbyteStreamFactory
+import io.airbyte.workers.internal.HeartbeatMonitor
+import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Optional
@@ -43,7 +44,7 @@ class LocalContainerAirbyteSource(
     messageMetricsTracker.flushSourceReadCountMetric()
     val terminationResult = containerIOHandle.terminate()
     if (terminationResult) {
-      if (!IGNORED_EXIT_CODES.contains(exitValue)) {
+      if (!LocalContainerConstants.IGNORED_EXIT_CODES.contains(exitValue)) {
         throw WorkerException("Source process exit with code $exitValue. This warning is normal if the job was cancelled.")
       }
     } else {
@@ -63,7 +64,7 @@ class LocalContainerAirbyteSource(
     // stdout logs are logged elsewhere since stdout also contains data
     LineGobbler.gobble(containerIOHandle.getErrInputStream(), { msg: String -> logger.error { msg } }, CALLER, containerLogMdcBuilder)
 
-    Failsafe.with(LOCAL_CONTAINER_RETRY_POLICY).run(
+    Failsafe.with(LocalContainerConstants.LOCAL_CONTAINER_RETRY_POLICY).run(
       CheckedRunnable {
         messageIterator =
           streamFactory
@@ -72,7 +73,7 @@ class LocalContainerAirbyteSource(
               if (shouldBeat(message.type)) {
                 heartbeatMonitor.beat()
               }
-            }.filter { message: AirbyteMessage -> ACCEPTED_MESSAGE_TYPES.contains(message.type) }
+            }.filter { message: AirbyteMessage -> LocalContainerConstants.ACCEPTED_MESSAGE_TYPES.contains(message.type) }
             .iterator()
       },
     )

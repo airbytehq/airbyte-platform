@@ -26,7 +26,10 @@ import io.airbyte.container.orchestrator.worker.ReplicationContextProvider;
 import io.airbyte.container.orchestrator.worker.ReplicationWorker;
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerHelper;
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerState;
+import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor;
+import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
+import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
 import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.LogStateMsgs;
@@ -50,11 +53,9 @@ import io.airbyte.workers.internal.AirbyteDestination;
 import io.airbyte.workers.internal.AirbyteMapper;
 import io.airbyte.workers.internal.AirbyteSource;
 import io.airbyte.workers.internal.AnalyticsMessageTracker;
-import io.airbyte.workers.internal.DestinationTimeoutMonitor;
 import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.HeartbeatMonitor;
 import io.airbyte.workers.internal.HeartbeatTimeoutChaperone;
-import io.airbyte.workers.internal.LocalContainerAirbyteSource;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
@@ -154,6 +155,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         .thenReturn(false);
     when(replicationInputFeatureFlagReader.read(LogConnectorMessages.INSTANCE))
         .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(DestinationTimeoutSeconds.INSTANCE))
+        .thenReturn(7200);
     when(replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE))
         .thenReturn(false);
 
@@ -166,7 +169,6 @@ public abstract class ReplicationWorkerPerformanceTest {
     final HeartbeatMonitor heartbeatMonitor = new HeartbeatMonitor(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD);
     // TODO: This needs to be fixed to pass a NOOP tracker and a proper container IO handle
     final var versionedAbSource = new LocalContainerAirbyteSource(heartbeatMonitor, versionFac, null, null);
-    final var workspaceID = UUID.randomUUID();
     final HeartbeatTimeoutChaperone heartbeatTimeoutChaperone = new HeartbeatTimeoutChaperone(heartbeatMonitor,
         io.airbyte.workers.internal.HeartbeatTimeoutChaperone.DEFAULT_TIMEOUT_CHECK_DURATION,
         replicationInputFeatureFlagReader,
@@ -176,11 +178,10 @@ public abstract class ReplicationWorkerPerformanceTest {
     final List<ApplicationEventListener<ReplicationAirbyteMessageEvent>> listeners = List.of(
         new AirbyteControlMessageEventListener(connectorConfigUpdater));
     final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
-        workspaceID,
-        UUID.randomUUID(),
+        replicationInput,
+        replicationInputFeatureFlagReader,
         metricClient,
-        Duration.ofMinutes(120),
-        false);
+        Duration.ofMinutes(120));
     final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
         mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     doAnswer((e) -> {

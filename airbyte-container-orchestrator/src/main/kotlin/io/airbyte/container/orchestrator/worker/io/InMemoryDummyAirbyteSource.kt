@@ -2,12 +2,13 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.workers.internal.AirbyteSource
 import org.joda.time.Instant
 import java.nio.file.Path
 import java.util.Optional
