@@ -27,6 +27,7 @@ export interface Experiments {
   "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
   "connectorBuilder.schemaForm": boolean;
+  "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
@@ -59,6 +60,7 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
   "connectorBuilder.schemaForm": false,
+  "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
