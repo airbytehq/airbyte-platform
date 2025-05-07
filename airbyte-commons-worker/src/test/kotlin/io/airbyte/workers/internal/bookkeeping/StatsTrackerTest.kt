@@ -83,7 +83,6 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
-        true,
       )
 
     val name = "name"
@@ -114,7 +113,6 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
-        true,
       )
 
     val name = "name"
@@ -138,7 +136,6 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
-        false,
       )
 
     val name = "name"
@@ -149,7 +146,6 @@ class StatsTrackerTest {
         .withStream(name)
         .withNamespace(namespace)
         .withData(Jsons.jsonNode(mapOf("id" to 1)))
-        .withAdditionalProperty("file", FileTransferInformations("", "", "", "", size))
 
     streamStatsTracker.trackRecord(record)
 

@@ -103,7 +103,6 @@ private val logger = KotlinLogging.logger { }
 class StreamStatsTracker(
   val nameNamespacePair: AirbyteStreamNameNamespacePair,
   private val metricClient: MetricClient,
-  private val useFileTransfer: Boolean,
 ) {
   val streamStats = StreamStatsCounters()
   private val stateIds = ConcurrentHashMap.newKeySet<Int>()
@@ -133,13 +132,8 @@ class StreamStatsTracker(
    * avoid having to traverse the map to get the global count.
    */
   fun trackRecord(recordMessage: AirbyteRecordMessage) {
-    val estimatedBytesSize: Long =
-      if (!useFileTransfer) {
-        getRecordSize(recordMessage)
-      } else {
-        // Note: to get file and metadata size, use plus instead of elvis
-        getFileSize(recordMessage) ?: getRecordSize(recordMessage)
-      }
+    val fileSize = getFileSize(recordMessage)
+    val bytesToTrack = fileSize ?: getRecordSize(recordMessage)
 
     // Update the current emitted stats
     // We do a local copy of the reference to emittedStats to ensure all the stats are
@@ -150,26 +144,28 @@ class StreamStatsTracker(
     val emittedStatsToUpdate = emittedStats
     with(emittedStatsToUpdate) {
       remittedRecordsCount.incrementAndGet()
-      emittedBytesCount.addAndGet(estimatedBytesSize)
+      emittedBytesCount.addAndGet(bytesToTrack)
     }
 
     // Update the global stream stats
     with(streamStats) {
       emittedRecordsCount.incrementAndGet()
-      emittedBytesCount.addAndGet(estimatedBytesSize)
+      emittedBytesCount.addAndGet(bytesToTrack)
     }
   }
 
   private fun getFileSize(recordMessage: AirbyteRecordMessage): Long? =
     if (recordMessage.fileReference != null) {
       recordMessage.fileReference.fileSizeBytes
-    } else {
+    } else if (recordMessage.additionalProperties != null) {
       // TODO: we can probably wrap this in an extension method and encapsulate the keys somewhere as constants.
       recordMessage.additionalProperties["file"]?.let {
         logger.info { "Received a file transfer record: $it" }
         val fileTransferInformations = Jsons.deserialize(Jsons.serialize(it), FileTransferInformations::class.java)
         fileTransferInformations.bytes
       }
+    } else {
+      null
     }
 
   private fun getRecordSize(recordMessage: AirbyteRecordMessage): Long = Jsons.getEstimatedByteSize(recordMessage.data).toLong()

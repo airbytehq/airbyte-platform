@@ -19,7 +19,6 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.general.StateCheckSumCountEventHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.concurrent.ConcurrentHashMap
@@ -37,7 +36,6 @@ private data class SyncStatsCounters(
 class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
   private val stateCheckSumEventHandler: StateCheckSumCountEventHandler,
-  @Value("\${airbyte.use-file-transfer}") private val useFileTransfer: Boolean,
 ) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
@@ -483,7 +481,6 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
-        useFileTransfer = useFileTransfer,
       ).also { streamTrackers[pair] = it }
     }
   }

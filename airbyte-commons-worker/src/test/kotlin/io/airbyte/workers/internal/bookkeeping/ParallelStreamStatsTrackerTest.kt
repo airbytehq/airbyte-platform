@@ -106,7 +106,7 @@ class ParallelStreamStatsTrackerTest {
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, false)
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
   }
 
   @Test
@@ -1339,6 +1339,8 @@ class ParallelStreamStatsTrackerTest {
       every { record.data } returns Jsons.jsonNode(mapOf("col1" to "value"))
       every { record.namespace } returns streamNamespace
       every { record.stream } returns streamName
+      every { record.fileReference } returns null
+      every { record.additionalProperties } returns null
       statsTracker.updateStats(record)
     }
   }
