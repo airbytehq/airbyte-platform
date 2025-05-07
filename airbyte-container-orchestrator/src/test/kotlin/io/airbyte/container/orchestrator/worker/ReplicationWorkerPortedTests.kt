@@ -11,6 +11,7 @@ import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
+import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.BufferConfiguration
@@ -36,7 +37,6 @@ import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker

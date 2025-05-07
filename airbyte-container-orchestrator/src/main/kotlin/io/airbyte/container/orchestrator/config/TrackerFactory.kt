@@ -4,7 +4,6 @@
 
 package io.airbyte.container.orchestrator.config
 
-import io.airbyte.analytics.TrackingClient
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
@@ -14,7 +13,6 @@ import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
-import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory
@@ -39,9 +37,6 @@ class TrackerFactory {
       destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage,
     )
   }
-
-  @Singleton
-  fun analyticsMessageTracker(trackingClient: TrackingClient) = AnalyticsMessageTracker(trackingClient)
 
   @Singleton
   fun fieldSelector(

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.tracker
 
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.ScopeType
@@ -12,8 +12,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
-import io.airbyte.workers.testutils.TestConfigHelpers.DESTINATION_IMAGE
-import io.airbyte.workers.testutils.TestConfigHelpers.SOURCE_IMAGE
+import io.airbyte.workers.testutils.TestConfigHelpers
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -46,8 +45,8 @@ class AnalyticsMessageTrackerTest {
         1,
         1,
         UUID.randomUUID(),
-        SOURCE_IMAGE,
-        DESTINATION_IMAGE,
+        TestConfigHelpers.SOURCE_IMAGE,
+        TestConfigHelpers.DESTINATION_IMAGE,
         sourceDefinitionId,
         destinationDefinitionId,
       )
