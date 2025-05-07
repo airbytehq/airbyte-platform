@@ -11,6 +11,7 @@ import { InfoTooltip, TooltipLearnMoreLink } from "components/ui/Tooltip";
 import { AirbyteStreamAndConfiguration, AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaField } from "core/domain/catalog";
 import { FeatureItem, useFeature } from "core/services/features";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -79,7 +80,8 @@ export interface SyncCatalogUIModel {
 }
 
 export const SyncCatalogTable: FC = () => {
-  const { mode, connection } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { mode } = useFormMode();
   const initialValues = useInitialFormValues(connection, mode);
   const { control, trigger } = useFormContext<FormConnectionFormValues>();
   const {

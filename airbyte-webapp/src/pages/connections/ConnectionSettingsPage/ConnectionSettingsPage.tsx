@@ -20,9 +20,9 @@ import { ConnectionActionsBlock } from "area/connection/components/ConnectionAct
 import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { trackError } from "core/utils/datadog";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
@@ -42,7 +42,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
 
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
   const zodValidationSchema = useConnectionValidationZodSchema();

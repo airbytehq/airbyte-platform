@@ -8,6 +8,7 @@ import { TextWithOverflowTooltip } from "components/ui/Text";
 import { TextHighlighter } from "components/ui/TextHighlighter";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
@@ -26,7 +27,8 @@ export const StreamNameCell: React.FC<StreamNameCellProps> = ({
   updateStreamField,
   globalFilterValue = "",
 }) => {
-  const { mode, connection } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { mode } = useFormMode();
 
   if (!row.original.streamNode) {
     return null;

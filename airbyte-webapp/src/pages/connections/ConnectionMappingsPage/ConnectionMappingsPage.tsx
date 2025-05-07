@@ -9,9 +9,9 @@ import { ExternalLink } from "components/ui/Link";
 import { ScrollParent } from "components/ui/ScrollParent";
 
 import { FeatureItem, IfFeatureDisabled, IfFeatureEnabled } from "core/services/features";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { ConnectionMappingsList } from "./ConnectionMappingsList";
@@ -34,7 +34,7 @@ export const ConnectionMappingsPage = () => {
 
 const ConnectionMappingsPageContent = () => {
   const { streamsWithMappings, clear, submitMappings, hasMappingsChanged } = useMappingContext();
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { connectionUpdating } = useConnectionEditService();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();

@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { SearchInput } from "components/ui/SearchInput";
 
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 
 import { ExpandCollapseAllControl } from "./ExpandCollapseAllControl";
 import { FormControls } from "./FormControls";
@@ -40,7 +40,7 @@ export const SearchAndFilterControls: FC<SearchAndFilterControlsProps> = ({
   onTabSelect,
 }) => {
   const { formatMessage } = useIntl();
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
 
   const filterDepthOptions = [
     { label: formatMessage({ id: "form.filteringDepth.all" }), value: STREAMS_AND_FIELDS },

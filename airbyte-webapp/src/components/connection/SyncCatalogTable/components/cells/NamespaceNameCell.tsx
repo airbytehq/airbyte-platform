@@ -17,7 +17,7 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { NamespaceDefinitionType } from "core/api/types/AirbyteClient";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useModalService } from "hooks/services/Modal";
 
 interface NamespaceNameCellProps extends Pick<FormConnectionFormValues, "namespaceDefinition" | "namespaceFormat"> {
@@ -37,7 +37,7 @@ export const NamespaceNameCell: React.FC<NamespaceNameCellProps> = ({
   namespaceFormat,
   columnFilters,
 }) => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { name: namespaceName } = row.original;
   const { openModal } = useModalService();
   const { setValue } = useFormContext<FormConnectionFormValues>();
