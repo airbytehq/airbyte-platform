@@ -6,12 +6,12 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.general.BufferConfiguration
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.mockk.clearAllMocks

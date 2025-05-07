@@ -12,6 +12,7 @@ import io.airbyte.commons.logging.LogSource
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestination
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
@@ -32,7 +33,6 @@ import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.general.BufferConfiguration
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteMapper
@@ -197,7 +197,7 @@ class ReplicationWorkerPortedTests {
       ReplicationWorkerContext(
         JOB_ID,
         JOB_ATTEMPT,
-        BufferConfiguration.withPollTimeout(1),
+        withPollTimeout(1),
         replicationWorkerHelper,
         replicationWorkerState,
         streamStatusCompletionTracker,
@@ -331,7 +331,7 @@ class ReplicationWorkerPortedTests {
   @Test fun `destination failure via trace message`() {
     every { messageTracker.errorTraceMessageFailure(any(), any()) } returns
       listOf(
-        FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, JOB_ID.toLong(), JOB_ATTEMPT),
+        FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, JOB_ID, JOB_ATTEMPT),
       )
     val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
     assertTrue(
@@ -399,7 +399,7 @@ class ReplicationWorkerPortedTests {
       ReplicationWorkerContext(
         JOB_ID,
         JOB_ATTEMPT,
-        BufferConfiguration.withPollTimeout(1),
+        withPollTimeout(1),
         helperEnabled,
         replicationWorkerState,
         streamStatusCompletionTracker,
@@ -458,7 +458,7 @@ class ReplicationWorkerPortedTests {
       ReplicationWorkerContext(
         JOB_ID,
         JOB_ATTEMPT,
-        BufferConfiguration.withPollTimeout(1),
+        withPollTimeout(1),
         helperDisabled,
         replicationWorkerState,
         streamStatusCompletionTracker,
