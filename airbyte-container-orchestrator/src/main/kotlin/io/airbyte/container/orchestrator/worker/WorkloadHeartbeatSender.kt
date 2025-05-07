@@ -94,7 +94,11 @@ class WorkloadHeartbeatSender(
             break
           }
 
-          checkIfExpiredAndMarkSyncStateAsFailed(lastSuccessfulHeartbeat, heartbeatTimeoutDuration, e) -> break
+          checkIfExpiredAndMarkSyncStateAsFailed(
+            lastSuccessfulHeartbeat,
+            heartbeatTimeoutDuration,
+            WorkloadHeartbeatException("Workload Heartbeat Error", e),
+          ) -> break
           else -> logger.warn(e) { "Error sending heartbeat; retrying." }
         }
       }
@@ -114,7 +118,7 @@ class WorkloadHeartbeatSender(
   ): Boolean =
     if (Duration.between(lastSuccessfulHeartbeat, Instant.now()) > heartbeatTimeoutDuration) {
       logger.warn(exception) { "Heartbeat timeout exceeded. Shutting down heartbeat." }
-      replicationWorkerState.trackFailure(WorkloadHeartbeatException("Workload Heartbeat Error", exception), jobId, attempt)
+      replicationWorkerState.trackFailure(exception, jobId, attempt)
       replicationWorkerState.markFailed()
       replicationWorkerState.abort()
       true
