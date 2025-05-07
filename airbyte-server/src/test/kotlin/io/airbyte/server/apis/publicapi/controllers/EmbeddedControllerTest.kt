@@ -11,6 +11,7 @@ import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.config.AuthenticatedUser
+import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.server.auth.TokenScopeClaim
 import io.mockk.every
@@ -29,7 +30,8 @@ class EmbeddedControllerTest {
   @Test
   fun basic() {
     val organizationId = UUID.randomUUID()
-    val requestedWorkspaceId = UUID.randomUUID()
+    val workspaceId = WorkspaceId(UUID.randomUUID())
+    val externalId = "cool customer"
     val claims = slot<Map<String, Any>>()
 
     val ctrl =
@@ -53,12 +55,6 @@ class EmbeddedControllerTest {
           mockk {
             every { currentUser } returns AuthenticatedUser().withAuthUserId("user-id-1")
           },
-        workspaceHelper =
-          mockk {
-            every {
-              getOrganizationForWorkspace(requestedWorkspaceId)
-            } returns organizationId
-          },
         licenseEntitlementChecker =
           mockk {
             every {
@@ -67,15 +63,24 @@ class EmbeddedControllerTest {
           },
         airbyteUrl = "http://my.airbyte.com/",
         tokenIssuer = "test-token-issuer",
+        embeddedWorkspacesHandler =
+          mockk {
+            every {
+              getOrCreate(
+                any(),
+                externalId,
+              )
+            } returns workspaceId
+          },
       )
     ctrl.clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"))
 
     val res =
       ctrl.getEmbeddedWidget(
         EmbeddedWidgetRequest(
-          workspaceId = requestedWorkspaceId,
+          organizationId = organizationId,
           allowedOrigin = "http://my.operator.com/",
-          externalUserId = "bob",
+          externalUserId = externalId,
         ),
       )
 
@@ -87,9 +92,9 @@ class EmbeddedControllerTest {
         "typ" to "io.airbyte.embedded.v1",
         "act" to
           mapOf(
-            "sub" to "bob",
+            "sub" to externalId,
           ),
-        "io.airbyte.auth.workspace_scope" to TokenScopeClaim(workspaceId = requestedWorkspaceId.toString()),
+        "io.airbyte.auth.workspace_scope" to TokenScopeClaim(workspaceId = workspaceId.value.toString()),
         "roles" to listOf(AuthRoleConstants.EMBEDDED_END_USER),
         "exp" to
           ctrl.clock
@@ -113,7 +118,7 @@ class EmbeddedControllerTest {
         // which is currently difficult to do in our test suite. But, the token claims
         // are verified above by capturing the call to jwtTokenGenerator.generateToken().
         "token" to "mock-token",
-        "widgetUrl" to "http://my.airbyte.com/embedded-widget?workspaceId=$requestedWorkspaceId&allowedOrigin=http%3A%2F%2Fmy.operator.com%2F",
+        "widgetUrl" to "http://my.airbyte.com/embedded-widget?workspaceId=${workspaceId.value}&allowedOrigin=http%3A%2F%2Fmy.operator.com%2F",
       ),
       data,
     )

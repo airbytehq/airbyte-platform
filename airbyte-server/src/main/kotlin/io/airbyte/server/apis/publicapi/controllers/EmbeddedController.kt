@@ -12,9 +12,10 @@ import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
 import io.airbyte.server.auth.TokenScopeClaim
@@ -45,7 +46,7 @@ class EmbeddedController(
   val apiAuthorizationHelper: ApiAuthorizationHelper,
   val tokenExpirationConfig: TokenExpirationConfig,
   val currentUserService: CurrentUserService,
-  val workspaceHelper: WorkspaceHelper,
+  val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
   val licenseEntitlementChecker: LicenseEntitlementChecker,
   @Named("airbyteUrl") val airbyteUrl: String,
   @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
@@ -54,35 +55,41 @@ class EmbeddedController(
 
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
-    val organizationId = workspaceHelper.getOrganizationForWorkspace(req.workspaceId)
+    val organizationId = OrganizationId(req.organizationId)
 
     licenseEntitlementChecker.ensureEntitled(
-      organizationId,
+      organizationId.value,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
     )
 
     // Ensure the user is admin of the org that owns the requested workspace.
     apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
       Scope.ORGANIZATION,
-      listOf(organizationId.toString()),
+      listOf(organizationId.value.toString()),
       setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
     )
 
     val currentUser = currentUserService.getCurrentUser()
     val externalUserId = req.externalUserId ?: UUID.randomUUID().toString()
 
+    val workspaceId =
+      embeddedWorkspacesHandler.getOrCreate(
+        organizationId,
+        req.externalUserId,
+      )
+
     val widgetUrl =
       airbyteUrl
         .toHttpUrlOrNull()!!
         .newBuilder()
         .encodedPath("/embedded-widget")
-        .addQueryParameter("workspaceId", req.workspaceId.toString())
+        .addQueryParameter("workspaceId", workspaceId.value.toString())
         .addQueryParameter("allowedOrigin", req.allowedOrigin)
         .toString()
 
     val data =
       mapOf(
-        "token" to generateToken(req.workspaceId.toString(), currentUser.authUserId, externalUserId),
+        "token" to generateToken(workspaceId.value.toString(), currentUser.authUserId, externalUserId),
         "widgetUrl" to widgetUrl,
       )
     val json = Jsons.serialize(data)

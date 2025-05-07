@@ -6382,7 +6382,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfigTemplateListResponse"
-          description: List all Applications a User has permission to view.
+          description: List all config templates a User has permission to view.
         "403":
           description: Not allowed
       operationId: publicListConfigTemplate
@@ -19088,16 +19088,17 @@ components:
     EmbeddedWidgetRequest:
       type: object
       required:
-        - workspaceId
         - allowedOrigin
+        - externalUserId
+        - organizationId
       properties:
-        workspaceId:
-          type: string
-          format: uuid
         allowedOrigin:
           type: string
         externalUserId:
           type: string
+        organizationId:
+          type: string
+          format: uuid
       x-sdk-component: true
     EmbeddedWidgetResponse:
       type: object
