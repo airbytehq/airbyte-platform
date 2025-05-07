@@ -15,12 +15,11 @@ import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertDoesNotThrow
-import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Duration
 import java.util.UUID
-import java.util.concurrent.CompletableFuture
 
 internal class DestinationTimeoutMonitorTest {
   private val metricClient: MetricClient = mockk()
@@ -50,23 +49,12 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        pollInterval = Duration.ofMinutes(5),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
     destinationTimeoutMonitor.startNotifyEndOfInputTimer()
-
-    assertDoesNotThrow({
-      destinationTimeoutMonitor.runWithTimeoutThread(
-        CompletableFuture.runAsync({
-          try {
-            Thread.sleep(2000)
-          } catch (e: InterruptedException) {
-            throw RuntimeException(e)
-          }
-        }),
-      )
-    })
+    Thread.sleep(10)
+    assertFalse(destinationTimeoutMonitor.hasTimedOut())
 
     verify(exactly = 0) {
       metricClient.count(metric = OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, value = any(), attributes = anyVararg<MetricAttribute>())
@@ -95,7 +83,7 @@ internal class DestinationTimeoutMonitorTest {
 
     val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader =
       mockk {
-        every { read(DestinationTimeoutSeconds) } returns Duration.ofSeconds(1).toSeconds().toInt()
+        every { read(DestinationTimeoutSeconds) } returns Duration.ofMillis(1).toSeconds().toInt()
         every { read(ShouldFailSyncOnDestinationTimeout) } returns true
       }
 
@@ -106,25 +94,11 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
-
-    assertThrows(
-      DestinationTimeoutMonitor.TimeoutException::class.java,
-      {
-        destinationTimeoutMonitor.runWithTimeoutThread(
-          CompletableFuture.runAsync({
-            try {
-              Thread.sleep(Long.Companion.MAX_VALUE)
-            } catch (e: InterruptedException) {
-              throw RuntimeException(e)
-            }
-          }),
-        )
-      },
-    )
+    Thread.sleep(10)
+    assertTrue(destinationTimeoutMonitor.hasTimedOut())
 
     verify(exactly = 1) {
       metricClient.count(metric = OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, value = any(), attributes = anyVararg<MetricAttribute>())
@@ -153,7 +127,7 @@ internal class DestinationTimeoutMonitorTest {
 
     val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader =
       mockk {
-        every { read(DestinationTimeoutSeconds) } returns Duration.ofSeconds(1).toSeconds().toInt()
+        every { read(DestinationTimeoutSeconds) } returns Duration.ofMillis(1).toSeconds().toInt()
         every { read(ShouldFailSyncOnDestinationTimeout) } returns true
       }
     val replicationInput = ReplicationInput().withWorkspaceId(UUID.randomUUID()).withConnectionId(UUID.randomUUID())
@@ -163,25 +137,11 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startNotifyEndOfInputTimer()
-
-    assertThrows<DestinationTimeoutMonitor.TimeoutException?>(
-      DestinationTimeoutMonitor.TimeoutException::class.java,
-      {
-        destinationTimeoutMonitor.runWithTimeoutThread(
-          CompletableFuture.runAsync({
-            try {
-              Thread.sleep(Long.Companion.MAX_VALUE)
-            } catch (e: InterruptedException) {
-              throw RuntimeException(e)
-            }
-          }),
-        )
-      },
-    )
+    Thread.sleep(10)
+    assertTrue(destinationTimeoutMonitor.hasTimedOut())
 
     verify(exactly = 0) {
       metricClient.count(metric = OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, value = any(), attributes = anyVararg<MetricAttribute>())
@@ -210,7 +170,7 @@ internal class DestinationTimeoutMonitorTest {
 
     val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader =
       mockk {
-        every { read(DestinationTimeoutSeconds) } returns Duration.ofSeconds(1).toSeconds().toInt()
+        every { read(DestinationTimeoutSeconds) } returns Duration.ofMillis(5).toSeconds().toInt()
         every { read(ShouldFailSyncOnDestinationTimeout) } returns false
       }
     val replicationInput = ReplicationInput().withWorkspaceId(UUID.randomUUID()).withConnectionId(UUID.randomUUID())
@@ -220,26 +180,13 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
+    Thread.sleep(10)
+    assertFalse(destinationTimeoutMonitor.hasTimedOut())
 
-    assertDoesNotThrow(
-      {
-        destinationTimeoutMonitor.runWithTimeoutThread(
-          CompletableFuture.runAsync({
-            try {
-              Thread.sleep(Long.Companion.MAX_VALUE)
-            } catch (e: InterruptedException) {
-              throw RuntimeException(e)
-            }
-          }),
-        )
-      },
-    )
-
-    verify(exactly = 1) {
+    verify(exactly = 0) {
       metricClient.count(metric = OssMetricsRegistry.WORKER_DESTINATION_ACCEPT_TIMEOUT, value = any(), attributes = anyVararg<MetricAttribute>())
     }
     verify(exactly = 0) {

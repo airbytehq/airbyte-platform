@@ -17,15 +17,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.lang.AutoCloseable
 import java.time.Duration
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 private val logger = KotlinLogging.logger {}
-private val POLL_INTERVAL: Duration = Duration.ofMinutes(1)
 
 /**
  * Tracks timeouts on [io.airbyte.workers.internal.AirbyteDestination.accept] and
@@ -48,73 +42,15 @@ class DestinationTimeoutMonitor(
   private val replicationInput: ReplicationInput,
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val metricClient: MetricClient,
-  private val pollInterval: Duration = POLL_INTERVAL,
 ) : AutoCloseable {
   private val currentAcceptCallStartTime = AtomicLong(-1)
   private val currentNotifyEndOfInputCallStartTime = AtomicLong(-1)
+  private val timeOutEnabled = replicationInputFeatureFlagReader.read(ShouldFailSyncOnDestinationTimeout)
   val timeSinceLastAction: AtomicLong = AtomicLong(-1)
-  private var lazyExecutorService: ExecutorService? = null
   val timeoutThresholdSec: Duration =
     Duration.ofSeconds(
       replicationInputFeatureFlagReader.read(DestinationTimeoutSeconds).toLong(),
     )
-
-  /**
-   * Keeps track of two tasks:
-   *
-   * 1. The given runnableFuture
-   *
-   * 2. A timeoutMonitorFuture that is created within this method
-   *
-   * This method completes when either of the above completes.
-   *
-   * The timeoutMonitorFuture checks if there has been a timeout on either an
-   * [io.airbyte.workers.internal.AirbyteDestination.accept] call or a
-   * [io.airbyte.workers.internal.AirbyteDestination.notifyEndOfInput] call. If runnableFuture completes before the
-   * timeoutMonitorFuture, then the timeoutMonitorFuture will be canceled. If there's a timeout before
-   * the runnableFuture completes, then the runnableFuture will be canceled and this method will throw
-   * a [TimeoutException] (assuming the [io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout] feature flag
-   * returned true, otherwise this method will complete without throwing an exception, the runnable
-   * won't be canceled and the timeoutMonitorFuture will be canceled).
-   *
-   * notifyEndOfInput/accept calls timeouts are tracked by calling
-   * [.startNotifyEndOfInputTimer], [.resetNotifyEndOfInputTimer],
-   * [.startAcceptTimer] and [.resetAcceptTimer].
-   *
-   * Note that there are three tasks involved in this method:
-   *
-   * 1. The given runnableFuture
-   *
-   * 2. A timeoutMonitorFuture that is created within this method
-   *
-   * 3. The task that waits for the above two tasks to complete
-   *
-   */
-  @Throws(ExecutionException::class)
-  fun runWithTimeoutThread(runnableFuture: CompletableFuture<Void?>) {
-    val timeoutMonitorFuture = CompletableFuture.runAsync({ this.pollForTimeout() }, getLazyExecutorService())
-
-    try {
-      CompletableFuture.anyOf(runnableFuture, timeoutMonitorFuture).get()
-    } catch (e: InterruptedException) {
-      logger.error(e) { "Timeout thread was interrupted." }
-      return
-    } catch (e: ExecutionException) {
-      if (e.cause is RuntimeException) {
-        throw e.cause as RuntimeException
-      } else {
-        throw e
-      }
-    }
-
-    logger.info { "thread status... timeout thread: ${timeoutMonitorFuture.isDone} , replication thread: ${runnableFuture.isDone}" }
-
-    if (timeoutMonitorFuture.isDone && !runnableFuture.isDone) {
-      onTimeout(runnableFuture, timeoutThresholdSec.toMillis(), timeSinceLastAction.get())
-    }
-
-    timeoutMonitorFuture.cancel(true)
-  }
 
   /**
    * Use to start a timeout timer on a call to
@@ -167,38 +103,10 @@ class DestinationTimeoutMonitor(
     currentNotifyEndOfInputCallStartTime.set(-1)
   }
 
-  private fun onTimeout(
-    runnableFuture: CompletableFuture<Void?>,
-    threshold: Long,
-    timeSinceLastAction: Long,
-  ) {
-    if (replicationInputFeatureFlagReader.read(ShouldFailSyncOnDestinationTimeout)) {
-      runnableFuture.cancel(true)
-
-      throw TimeoutException(threshold, timeSinceLastAction)
-    } else {
-      logger.info {
-        "Destination has timed out but exception is not thrown due to feature flag being disabled for workspace ${replicationInput.workspaceId} and connection ${replicationInput.connectionId}."
-      }
-    }
-  }
-
-  private fun pollForTimeout() {
-    while (true) {
-      try {
-        Thread.sleep(pollInterval.toMillis())
-      } catch (e: InterruptedException) {
-        logger.info(e) { "Stopping timeout monitor" }
-        return
-      }
-
-      if (hasTimedOut()) {
-        return
-      }
-    }
-  }
-
   fun hasTimedOut(): Boolean {
+    if (!timeOutEnabled) {
+      return false
+    }
     if (hasTimedOutOnAccept()) {
       return true
     }
@@ -250,14 +158,6 @@ class DestinationTimeoutMonitor(
 
   @Throws(Exception::class)
   override fun close() {
-    lazyExecutorService?.let { service ->
-      service.shutdownNow()
-      try {
-        service.awaitTermination(10, TimeUnit.SECONDS)
-      } catch (_: InterruptedException) {
-        Thread.currentThread().interrupt()
-      }
-    }
   }
 
   class TimeoutException(
@@ -272,16 +172,5 @@ class DestinationTimeoutMonitor(
     ) {
     val humanReadableThreshold: String = formatMilli(thresholdMs)
     val humanReadableTimeSinceLastAction: String = formatMilli(timeSinceLastActionMs)
-  }
-
-  /**
-   * Return an executor service which is initialized in a lazy way.
-   */
-  private fun getLazyExecutorService(): ExecutorService {
-    if (lazyExecutorService == null) {
-      lazyExecutorService = Executors.newFixedThreadPool(1)
-    }
-
-    return lazyExecutorService!!
   }
 }

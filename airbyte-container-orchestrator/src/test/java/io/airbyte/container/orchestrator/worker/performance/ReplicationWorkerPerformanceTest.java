@@ -176,8 +176,7 @@ public abstract class ReplicationWorkerPerformanceTest {
     final DestinationTimeoutMonitor destinationTimeoutMonitor = new DestinationTimeoutMonitor(
         replicationInput,
         replicationInputFeatureFlagReader,
-        metricClient,
-        Duration.ofMinutes(120));
+        metricClient);
     final ReplicationAirbyteMessageEventPublishingHelper replicationAirbyteMessageEventPublishingHelper =
         mock(ReplicationAirbyteMessageEventPublishingHelper.class);
     doAnswer((e) -> {
