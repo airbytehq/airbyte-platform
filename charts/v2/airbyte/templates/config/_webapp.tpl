@@ -47,7 +47,6 @@ Renders the set of all webapp environment variables
 {{- define "airbyte.webapp.envs" }}
 {{- include "airbyte.webapp.api.url.env" . }}
 {{- include "airbyte.webapp.connectorBuilderServer.host.env" . }}
-{{- include "airbyte.webapp.connectorBuilderServer.url.env" . }}
 {{- end }}
 
 {{/*
