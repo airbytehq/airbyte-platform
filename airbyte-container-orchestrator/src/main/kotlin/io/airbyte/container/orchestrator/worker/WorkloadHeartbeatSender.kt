@@ -56,7 +56,7 @@ class WorkloadHeartbeatSender(
                 lastSuccessfulHeartbeat,
                 heartbeatTimeoutDuration,
                 DestinationTimeoutMonitor.TimeoutException(
-                  destinationTimeoutMonitor.timeout.toMillis(),
+                  destinationTimeoutMonitor.timeoutThresholdSec.toMillis(),
                   destinationTimeoutMonitor.timeSinceLastAction.get(),
                 ),
               )

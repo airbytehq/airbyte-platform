@@ -50,7 +50,7 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        timeout = Duration.ofMinutes(5),
+        pollInterval = Duration.ofMinutes(5),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
@@ -106,7 +106,7 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        timeout = Duration.ofSeconds(1),
+        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
@@ -163,7 +163,7 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        timeout = Duration.ofSeconds(1),
+        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startNotifyEndOfInputTimer()
@@ -220,7 +220,7 @@ internal class DestinationTimeoutMonitorTest {
         replicationInput = replicationInput,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         metricClient = metricClient,
-        timeout = Duration.ofSeconds(1),
+        pollInterval = Duration.ofSeconds(1),
       )
 
     destinationTimeoutMonitor.startAcceptTimer()
