@@ -14,6 +14,7 @@ import { jsonSchemaToFormBlock } from "core/form/schemaToFormBlock";
 import { buildYupFormForJsonSchema } from "core/form/schemaToYup";
 import { FormBlock, FormGroupItem, GroupDetails } from "core/form/types";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 
 import { ConnectorFormValues } from "./types";
 import { authPredicateMatchesPath } from "./utils";
@@ -90,7 +91,7 @@ export function useBuildForm(
   const isDraft =
     selectedConnectorDefinitionSpecification &&
     isSourceDefinitionSpecificationDraft(selectedConnectorDefinitionSpecification);
-
+  const isEmbeddedContext = useIsAirbyteEmbeddedContext();
   try {
     const jsonSchema: AirbyteJSONSchema = useMemo(() => {
       if (!selectedConnectorDefinitionSpecification) {
@@ -110,14 +111,18 @@ export function useBuildForm(
         return schema;
       }
       schema.properties = {
-        name: {
-          type: "string",
-          title: formatMessage({ id: `form.${formType}Name` }),
-          description: formatMessage({ id: `form.${formType}Name.message` }),
-          // setting order and group to ensure that the name input comes first on the form in a separate group
-          order: Number.MIN_SAFE_INTEGER,
-          group: NAME_GROUP_ID,
-        },
+        ...(isEmbeddedContext
+          ? {}
+          : {
+              name: {
+                type: "string",
+                title: formatMessage({ id: `form.${formType}Name` }),
+                description: formatMessage({ id: `form.${formType}Name.message` }),
+                // setting order and group to ensure that the name input comes first on the form in a separate group
+                order: Number.MIN_SAFE_INTEGER,
+                group: NAME_GROUP_ID,
+              },
+            }),
         ...(supportsResourceAllocation
           ? {
               resourceAllocation: {
@@ -174,7 +179,14 @@ export function useBuildForm(
       };
       schema.required = ["name", "connectionConfiguration"];
       return schema;
-    }, [formType, formatMessage, isDraft, selectedConnectorDefinitionSpecification, supportsResourceAllocation]);
+    }, [
+      formType,
+      formatMessage,
+      isDraft,
+      isEmbeddedContext,
+      selectedConnectorDefinitionSpecification,
+      supportsResourceAllocation,
+    ]);
 
     const formBlock = useMemo<FormBlock>(() => jsonSchemaToFormBlock(jsonSchema), [jsonSchema]);
 

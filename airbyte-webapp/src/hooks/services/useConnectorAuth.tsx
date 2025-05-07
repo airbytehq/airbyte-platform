@@ -76,7 +76,7 @@ export function useConnectorAuth(): {
     consentUrl: string;
   }>;
   completeOauthRequest: (
-    params: SourceOauthConsentRequest | EmbeddedSourceOauthConsentRequest | DestinationOauthConsentRequest,
+    params: SourceOauthConsentRequest | DestinationOauthConsentRequest,
     queryParams: Record<string, unknown>
   ) => Promise<CompleteOAuthResponse>;
 } {
@@ -283,6 +283,10 @@ export function useRunOauthFlow({
       if (!oauthStartedPayload) {
         // unexpected call, no oauth flow was started
         return false;
+      }
+
+      if (isAirbyteEmbedded) {
+        oauthStartedPayload.oAuthInputConfiguration = {};
       }
 
       let completeOauthResponse: CompleteOAuthResponse;
