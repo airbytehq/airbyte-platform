@@ -4,13 +4,13 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.exception.SourceException
 import io.mockk.coVerify
 import io.mockk.every
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 
-class SourceReaderTest {
+internal class SourceReaderTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
   private lateinit var mockStreamStatusCompletionTracker: StreamStatusCompletionTracker
@@ -41,7 +41,7 @@ class SourceReaderTest {
     // By default, we do not abort.
     every { mockReplicationWorkerState.shouldAbort } returns false
     // By default, isFinished = false. We'll override in specific tests as needed.
-    every { mockSource.isFinished() } returns false
+    every { mockSource.isFinished } returns false
     // By default, queue is not closed for sending
     every { mockMessagesFromSourceQueue.isClosedForSending() } returns false
     // By default, exitValue = 0
@@ -72,7 +72,7 @@ class SourceReaderTest {
         )
 
       // We’ll simulate that after these reads, the source is finished
-      every { mockSource.isFinished() } returnsMany listOf(false, false, false, true)
+      every { mockSource.isFinished } returnsMany listOf(false, false, false, true)
 
       val sourceReader =
         SourceReader(
@@ -107,7 +107,7 @@ class SourceReaderTest {
       // We want to see that the loop doesn't break if we get empty messages.
       // The test here just ensures we keep running until isFinished() is true.
       every { mockSource.attemptRead() } returns Optional.empty()
-      every { mockSource.isFinished() } returnsMany listOf(false, true)
+      every { mockSource.isFinished } returnsMany listOf(false, true)
 
       val sourceReader =
         SourceReader(
@@ -131,7 +131,7 @@ class SourceReaderTest {
   @Test
   fun `test source exitValue non-zero throws RuntimeException`() =
     runTest {
-      every { mockSource.isFinished() } returns true
+      every { mockSource.isFinished } returns true
       // Non-zero exit code
       every { mockSource.exitValue } returns 1
 
@@ -166,7 +166,7 @@ class SourceReaderTest {
       every { mockReplicationWorkerState.shouldAbort } returnsMany listOf(false, true)
 
       // We'll say the source never finishes on its own
-      every { mockSource.isFinished() } returns false
+      every { mockSource.isFinished } returns false
 
       val sourceReader =
         SourceReader(
@@ -195,7 +195,7 @@ class SourceReaderTest {
       // Suppose the queue is closed for sending from the start
       every { mockMessagesFromSourceQueue.isClosedForSending() } returns true
       // Source is not finished
-      every { mockSource.isFinished() } returns false
+      every { mockSource.isFinished } returns false
 
       val sourceReader =
         SourceReader(
@@ -221,7 +221,7 @@ class SourceReaderTest {
   fun `test SourceException in the try block is wrapped in RuntimeException`() =
     runTest {
       // Suppose the isFinished() method or attemptRead() method throws SourceException for some reason
-      every { mockSource.isFinished() } throws SourceException("Simulated SourceException")
+      every { mockSource.isFinished } throws SourceException("Simulated SourceException")
 
       val sourceReader =
         SourceReader(

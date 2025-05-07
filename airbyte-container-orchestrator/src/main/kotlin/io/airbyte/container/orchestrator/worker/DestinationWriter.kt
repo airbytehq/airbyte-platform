@@ -4,10 +4,10 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.exception.DestinationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException

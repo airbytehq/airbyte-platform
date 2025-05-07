@@ -4,7 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
-import io.airbyte.workers.internal.AirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.workers.internal.exception.DestinationException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CancellationException
@@ -54,5 +54,5 @@ class DestinationReader(
     }
   }
 
-  private fun isDestinationFinished(): Boolean = destination.isFinished()
+  private fun isDestinationFinished(): Boolean = destination.isFinished
 }

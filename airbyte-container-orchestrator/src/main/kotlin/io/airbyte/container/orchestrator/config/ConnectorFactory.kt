@@ -10,10 +10,13 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteMessageBufferedWriterFactory
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.dest
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.source
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
+import io.airbyte.container.orchestrator.worker.io.EmptyAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
 import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteSource
@@ -25,10 +28,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.GsonPksExtractor
-import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.EmptyAirbyteSource
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory

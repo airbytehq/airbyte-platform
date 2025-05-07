@@ -4,10 +4,10 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.exception.DestinationException
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class DestinationWriterTest {
+internal class DestinationWriterTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState

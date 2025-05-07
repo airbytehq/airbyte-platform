@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.container.orchestrator.worker
+package io.airbyte.container.orchestrator.worker.fixtures
 
 import io.airbyte.config.WorkerSourceConfig
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteSource
 import java.nio.file.Path
 import java.util.Arrays
 import java.util.LinkedList
@@ -17,7 +17,7 @@ import java.util.UUID
 /**
  * Simple in-memory implementation of an AirbyteSource for testing purpose.
  */
-class SimpleAirbyteSource : AirbyteSource {
+internal class SimpleAirbyteSource : AirbyteSource {
   private val messages: Queue<AirbyteMessage> = LinkedList()
   private val infiniteMessages: MutableList<AirbyteMessage?> = mutableListOf()
 
@@ -42,14 +42,16 @@ class SimpleAirbyteSource : AirbyteSource {
   @Throws(Exception::class)
   override fun start(
     sourceConfig: WorkerSourceConfig,
-    jobRoot: Path,
+    jobRoot: Path?,
     connectionId: UUID?,
   ) {
   }
 
-  override fun isFinished(): Boolean = messages.isEmpty() && infiniteMessages.isEmpty()
+  override val isFinished: Boolean
+    get() = messages.isEmpty() && infiniteMessages.isEmpty()
 
-  override fun getExitValue(): Int = 0
+  override val exitValue: Int
+    get() = 0
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     if (messages.isEmpty() && !infiniteMessages.isEmpty()) {

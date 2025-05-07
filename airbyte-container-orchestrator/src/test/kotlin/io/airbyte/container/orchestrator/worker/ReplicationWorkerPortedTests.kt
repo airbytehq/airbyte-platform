@@ -12,6 +12,10 @@ import io.airbyte.commons.logging.LogSource
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestination
+import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -31,9 +35,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.general.BufferConfiguration
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
-import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
@@ -161,7 +163,7 @@ class ReplicationWorkerPortedTests {
         replicationInput.connectionId,
         replicationInput.sourceId,
         replicationInput.destinationId,
-        JOB_ID.toLong(),
+        JOB_ID,
         JOB_ATTEMPT,
         replicationInput.workspaceId,
         SOURCE_IMAGE,
@@ -305,7 +307,7 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `destination config update publishes event`() {
     every { destination.attemptRead() } returnsMany listOf(Optional.of(STATE_MESSAGE), Optional.of(CONFIG_MESSAGE))
-    every { destination.isFinished() } returnsMany listOf(false, false, true)
+    every { destination.isFinished } returnsMany listOf(false, false, true)
     val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
     verify { replicationAirbyteMessageEventPublishingHelper.publishEvent(any<ReplicationAirbyteMessageEvent>()) }
@@ -313,7 +315,7 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `destination config persist error fails`() {
     every { destination.attemptRead() } returnsMany listOf(Optional.of(CONFIG_MESSAGE))
-    every { destination.isFinished() } returnsMany listOf(false, true)
+    every { destination.isFinished } returnsMany listOf(false, true)
     every { replicationAirbyteMessageEventPublishingHelper.publishEvent(any()) } throws RuntimeException("persist dest fail")
     val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
@@ -485,7 +487,7 @@ class ReplicationWorkerPortedTests {
   }
 
   @Test fun `destination notify end-of-input failure`() {
-    every { destination.isFinished() } returns false
+    every { destination.isFinished } returns false
     every { destination.notifyEndOfInput() } throws RuntimeException("notify fail")
     val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)

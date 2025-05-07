@@ -8,7 +8,6 @@ import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
-import io.airbyte.workers.internal.AirbyteSource
 import org.joda.time.Instant
 import java.nio.file.Path
 import java.util.Optional
@@ -33,15 +32,17 @@ class InMemoryDummyAirbyteSource : AirbyteSource {
   }
 
   override fun start(
-    sourceConfig: WorkerSourceConfig?,
+    sourceConfig: WorkerSourceConfig,
     jobRoot: Path?,
     connectionId: UUID?,
   ) {
   }
 
-  override fun isFinished(): Boolean = counter.get() > MAX_RECORDS
+  override val isFinished: Boolean
+    get() = counter.get() > MAX_RECORDS
 
-  override fun getExitValue(): Int = 0
+  override val exitValue: Int
+    get() = 0
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     while (counter.getAndIncrement() <= MAX_RECORDS) {

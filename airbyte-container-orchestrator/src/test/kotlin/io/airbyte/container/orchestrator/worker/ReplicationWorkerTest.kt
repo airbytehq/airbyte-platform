@@ -6,13 +6,13 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
+import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.general.BufferConfiguration
 import io.airbyte.workers.helper.StreamStatusCompletionTracker
-import io.airbyte.workers.internal.AirbyteDestination
-import io.airbyte.workers.internal.AirbyteSource
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.mockk.clearAllMocks
 import io.mockk.coVerify
@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 
-class ReplicationWorkerTest {
+internal class ReplicationWorkerTest {
   private lateinit var mockSource: AirbyteSource
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockSyncPersistence: SyncPersistence
@@ -180,7 +180,7 @@ class ReplicationWorkerTest {
   @Test
   fun `test run - subcomponent fails after start`() =
     runTest {
-      every { mockDestination.isFinished() } throws RuntimeException("Simulated sub-job failure")
+      every { mockDestination.isFinished } throws RuntimeException("Simulated sub-job failure")
 
       val worker =
         ReplicationWorker(

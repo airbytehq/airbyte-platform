@@ -4,8 +4,8 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.exception.DestinationException
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 
-class DestinationReaderTest {
+internal class DestinationReaderTest {
   private lateinit var mockDestination: AirbyteDestination
   private lateinit var mockReplicationWorkerState: ReplicationWorkerState
   private lateinit var mockReplicationWorkerHelper: ReplicationWorkerHelper
@@ -34,7 +34,7 @@ class DestinationReaderTest {
     // By default, not aborted
     every { mockReplicationWorkerState.shouldAbort } returns false
     // By default, not finished
-    every { mockDestination.isFinished() } returns false
+    every { mockDestination.isFinished } returns false
     // By default, exit value == 0
     every { mockDestination.exitValue } returns 0
   }
@@ -59,7 +59,7 @@ class DestinationReaderTest {
         )
 
       // We'll have the destination become finished after some calls
-      every { mockDestination.isFinished() } returnsMany
+      every { mockDestination.isFinished } returnsMany
         listOf(
           false,
           false,
@@ -94,7 +94,7 @@ class DestinationReaderTest {
     runTest {
       // attemptRead always returns empty. We rely on isFinished = true eventually to break out
       every { mockDestination.attemptRead() } returns Optional.empty()
-      every { mockDestination.isFinished() } returnsMany listOf(false, true)
+      every { mockDestination.isFinished } returnsMany listOf(false, true)
 
       val reader =
         DestinationReader(
@@ -141,7 +141,7 @@ class DestinationReaderTest {
   @Test
   fun `test exitValue non-zero throws DestinationException`() =
     runTest {
-      every { mockDestination.isFinished() } returns true
+      every { mockDestination.isFinished } returns true
       every { mockDestination.exitValue } returns 1 // non-zero
 
       val reader =
@@ -169,7 +169,7 @@ class DestinationReaderTest {
       every { mockReplicationWorkerState.shouldAbort } returnsMany listOf(false, true)
 
       // We'll say the destination never finishes on its own
-      every { mockDestination.isFinished() } returns false
+      every { mockDestination.isFinished } returns false
 
       val reader =
         DestinationReader(

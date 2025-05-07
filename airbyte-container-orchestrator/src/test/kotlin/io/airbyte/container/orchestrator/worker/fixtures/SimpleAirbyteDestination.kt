@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.container.orchestrator.worker
+package io.airbyte.container.orchestrator.worker.fixtures
 
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteDestination
 import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.BlockingQueue
@@ -16,11 +16,11 @@ import kotlin.concurrent.Volatile
 /**
  * Simple in-memory implementation of an AirbyteDestination for testing purpose.
  */
-class SimpleAirbyteDestination : AirbyteDestination {
+internal class SimpleAirbyteDestination : AirbyteDestination {
   private val messages: BlockingQueue<AirbyteMessage> = LinkedBlockingQueue()
 
   @Volatile
-  private var isFinished = false
+  private var finished = false
 
   @Throws(Exception::class)
   override fun start(
@@ -31,19 +31,21 @@ class SimpleAirbyteDestination : AirbyteDestination {
 
   @Throws(Exception::class)
   override fun accept(message: AirbyteMessage) {
-    if (message.getType() == AirbyteMessage.Type.STATE) {
+    if (message.type == AirbyteMessage.Type.STATE) {
       messages.put(message)
     }
   }
 
   @Throws(Exception::class)
   override fun notifyEndOfInput() {
-    isFinished = true
+    finished = true
   }
 
-  override fun isFinished(): Boolean = isFinished && messages.isEmpty()
+  override val isFinished: Boolean
+    get() = finished && messages.isEmpty()
 
-  override fun getExitValue(): Int = 0
+  override val exitValue: Int
+    get() = 0
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     if (messages.isEmpty() && isFinished) {

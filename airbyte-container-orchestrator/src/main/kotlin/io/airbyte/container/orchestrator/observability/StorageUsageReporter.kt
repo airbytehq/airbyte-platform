@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.containerOrchestrator.observability
+package io.airbyte.container.orchestrator.observability
 
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient

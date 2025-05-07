@@ -14,7 +14,6 @@ import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.AirbyteDestination
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -111,15 +110,15 @@ class LocalContainerAirbyteDestination(
     destinationTimeoutMonitor.resetNotifyEndOfInputTimer()
   }
 
-  override fun isFinished(): Boolean {
+  override val isFinished: Boolean
     /*
      * As this check is done on every message read, it is important for this operation to be efficient.
      * Short circuit early to avoid checking the underlying process. Note: hasNext is blocking.
      */
-    return !messageIterator.hasNext() && containerIOHandle.exitCodeExists()
-  }
+    get() = !messageIterator.hasNext() && containerIOHandle.exitCodeExists()
 
-  override fun getExitValue(): Int = containerIOHandle.getExitCode()
+  override val exitValue: Int
+    get() = containerIOHandle.getExitCode()
 
   override fun attemptRead(): Optional<AirbyteMessage> {
     val m = if (messageIterator.hasNext()) messageIterator.next() else null

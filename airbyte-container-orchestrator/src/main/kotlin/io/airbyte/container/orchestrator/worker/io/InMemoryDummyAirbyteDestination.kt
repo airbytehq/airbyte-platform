@@ -7,7 +7,6 @@ package io.airbyte.container.orchestrator.worker.io
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.AirbyteDestination
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Optional
@@ -24,12 +23,12 @@ class InMemoryDummyAirbyteDestination : AirbyteDestination {
   }
 
   override fun start(
-    destinationConfig: WorkerDestinationConfig?,
-    jobRoot: Path?,
+    destinationConfig: WorkerDestinationConfig,
+    jobRoot: Path,
   ) {
   }
 
-  override fun accept(message: AirbyteMessage?) {
+  override fun accept(message: AirbyteMessage) {
     counter.incrementAndGet()
     val serialize = Jsons.serialize(message)
     size += serialize.length
@@ -38,9 +37,11 @@ class InMemoryDummyAirbyteDestination : AirbyteDestination {
   override fun notifyEndOfInput() {
   }
 
-  override fun isFinished(): Boolean = counter.get() > MAX_RECORDS
+  override val isFinished: Boolean
+    get() = counter.get() > MAX_RECORDS
 
-  override fun getExitValue(): Int = 0
+  override val exitValue: Int
+    get() = 0
 
   override fun attemptRead(): Optional<AirbyteMessage> = Optional.empty()
 
