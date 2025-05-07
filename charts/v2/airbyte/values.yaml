@@ -632,9 +632,6 @@ webapp:
     # -- The webapp API url
     url: /api/v1/
 
-  connectorBuilderServer:
-    url: /connector-builder-api
-
   fullstory:
     # -- Whether or not to enable fullstory
     enabled: false

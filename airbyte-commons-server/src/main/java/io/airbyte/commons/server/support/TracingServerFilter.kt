@@ -4,12 +4,14 @@
 
 package io.airbyte.commons.server.support
 
+import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.Timer
+import io.micronaut.context.annotation.Requires
 import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
@@ -32,8 +34,13 @@ private const val TRACE_ATTR = "io.airbyte.trace"
  *    - http details (e.g. method, route, status)
  *    - referenced Airbyte IDs (e.g. workspace ID, org ID, source ID, etc)
  *    - error details
+ *
+ *  Note: This filter will only be available if the [UserPersistence] bean is also available.  The reason for this dependency
+ *  is that both implementations of the [CurrentUserService] have a dependency on [UserPersistence] but not every `/api/` endpoint
+ *  (i.e. connector-builder) has access to the database, which [UserPersistence] requires. A better solution should be sought here.
  */
 @ServerFilter("/api/**")
+@Requires(beans = [UserPersistence::class])
 class TracingServerFilter(
   val currentUserService: CurrentUserService,
   val authenticationHeaderResolver: AuthenticationHeaderResolver,
@@ -129,9 +136,9 @@ class TracingServerFilter(
 
       trace.http["status"] = resp.code().toString()
 
-      ApmTraceUtils.addTagsToTrace(trace.user as Map<String, Any>, "user")
-      ApmTraceUtils.addTagsToTrace(trace.http as Map<String, Any>, "http")
-      ApmTraceUtils.addTagsToTrace(trace.refs as Map<String, Any>, "refs")
+      ApmTraceUtils.addTagsToTrace(trace.user.toMap(), "user")
+      ApmTraceUtils.addTagsToTrace(trace.http.toMap(), "http")
+      ApmTraceUtils.addTagsToTrace(trace.refs.toMap(), "refs")
 
       val metricAttrs = mutableListOf<MetricAttribute>()
 

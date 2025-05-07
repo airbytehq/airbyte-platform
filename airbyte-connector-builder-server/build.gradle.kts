@@ -13,6 +13,7 @@ dependencies {
   // Micronaut dependencies
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  annotationProcessor(libs.micronaut.jaxrs.processor)
 
   ksp(platform(libs.micronaut.platform))
   ksp(libs.bundles.micronaut.annotation.processor)
@@ -64,6 +65,14 @@ dependencies {
   runtimeOnly(libs.bundles.logback)
 
   testRuntimeOnly(libs.junit.jupiter.engine)
+
+  testAnnotationProcessor(platform(libs.micronaut.platform))
+  testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
+
+  kspTest(platform(libs.micronaut.platform))
+  kspTest(libs.bundles.micronaut.test.annotation.processor)
+
+  testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
@@ -72,7 +81,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.connector_builder.MicronautConnectorBuilderServerRunner"
+    mainClass = "io.airbyte.connectorbuilder.MicronautConnectorBuilderServerRunner"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
@@ -99,14 +108,15 @@ val generateOpenApiServer =
   tasks.register<GenerateTask>("generateOpenApiServer") {
     val specFile = "$projectDir/src/main/openapi/openapi.yaml"
     inputs.file(specFile).withPathSensitivity(PathSensitivity.RELATIVE)
-    outputDir = "${project.layout.buildDirectory.get()}/generated/api/server"
-
     inputSpec.set(specFile)
 
+    outputDir = "${project.layout.buildDirectory.get()}/generated/api/server"
+
     generatorName = "jaxrs-spec"
-    apiPackage = "io.airbyte.connector_builder.api.generated"
-    invokerPackage = "io.airbyte.connector_builder.api.invoker.generated"
-    modelPackage = "io.airbyte.connector_builder.api.model.generated"
+    packageName = "io.airbyte.connectorbuilder.api.generated"
+    apiPackage = "io.airbyte.connectorbuilder.api.generated"
+    invokerPackage = "io.airbyte.connectorbuilder.api.invoker.generated"
+    modelPackage = "io.airbyte.connectorbuilder.api.model.generated"
 
     schemaMappings.putAll(
       mapOf(

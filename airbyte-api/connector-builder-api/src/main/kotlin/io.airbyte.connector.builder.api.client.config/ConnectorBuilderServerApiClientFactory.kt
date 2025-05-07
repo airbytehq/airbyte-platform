@@ -13,8 +13,8 @@ import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
 import okhttp3.Response
-import java.time.Duration
-import java.util.Optional
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toJavaDuration
 
 @Factory
 class ConnectorBuilderServerApiClientFactory {
@@ -24,17 +24,17 @@ class ConnectorBuilderServerApiClientFactory {
     @Value("\${airbyte.connector-builder-server-api.connect-timeout-seconds}") connectTimeoutSeconds: Long,
     @Value("\${airbyte.connector-builder-server-api.read-timeout-seconds}") readTimeoutSeconds: Long,
     authenticationInterceptor: InternalApiAuthenticationInterceptor,
-    keycloakAccessTokenInterceptor: Optional<KeycloakAccessTokenInterceptor>,
+    keycloakAccessTokenInterceptor: KeycloakAccessTokenInterceptor?,
   ): ConnectorBuilderServerApi {
     val builder: OkHttpClient.Builder =
       OkHttpClient.Builder().apply {
         addInterceptor(authenticationInterceptor)
-        readTimeout(Duration.ofSeconds(readTimeoutSeconds))
-        connectTimeout(Duration.ofSeconds(connectTimeoutSeconds))
+        readTimeout(readTimeoutSeconds.seconds.toJavaDuration())
+        connectTimeout(connectTimeoutSeconds.seconds.toJavaDuration())
 
         // Add Keycloak access token interceptor if present
         // This will always be present in cloud once we've fully deprecated ESP auth
-        keycloakAccessTokenInterceptor.ifPresent {
+        keycloakAccessTokenInterceptor?.let {
           addInterceptor(it)
         }
       }

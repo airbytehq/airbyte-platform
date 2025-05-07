@@ -1204,10 +1204,6 @@ webapp:
       key: connectorBuilderServer.host
       valueExp: (printf "%s-airbyte-connector-builder-server-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.connectorBuilderServer.service.port))
 
-    - env: CONNECTOR_BUILDER_API_URL
-      key: connectorBuilderServer.url
-      defaultValue: /connector-builder-api
-
 worker:
   config:
     - env: ACTIVITY_MAX_ATTEMPT

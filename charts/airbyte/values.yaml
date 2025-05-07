@@ -342,11 +342,8 @@ webapp:
     # -- The webapp API url
     url: /api/v1/
 
-  connector-builder-server:
-    url: /connector-builder-api
-
   fullstory:
-    # -- Whether or not to enable fullstory
+    # -- Whether to enable fullstory
     enabled: false
 
   ## Examples (when using `webapp.containerSecurityContext.readOnlyRootFilesystem=true`):
