@@ -63,6 +63,8 @@ describe("SearchAndFilterControls", () => {
   const defaultProps = {
     filtering: "",
     setFiltering: jest.fn(),
+    filteringDepth: 100,
+    setFilteringDepth: jest.fn(),
     isAllStreamRowsExpanded: false,
     toggleAllStreamRowsExpanded: jest.fn(),
     columnFilters: [],

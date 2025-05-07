@@ -68,31 +68,67 @@ exports[`ConnectionReplicationPage should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          <label
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
-                            <div
+                            <label
                               class="<removed-for-snapshot-test>"
                             >
                               <div
                                 class="<removed-for-snapshot-test>"
-                                data-icon="lens"
-                                data-testid="mocksvg"
-                              />
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="input-container"
-                            >
-                              <input
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="lens"
+                                  data-testid="mocksvg"
+                                />
+                              </div>
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-testid="sync-catalog-search"
-                                placeholder="Search stream or field name"
-                                type="search"
-                                value=""
+                                data-testid="input-container"
+                              >
+                                <input
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="sync-catalog-search"
+                                  placeholder="Search stream or field name"
+                                  type="search"
+                                  value=""
+                                />
+                              </div>
+                            </label>
+                            <div
+                              data-testid="sync-catalog-filter-depth"
+                            >
+                              <button
+                                aria-expanded="false"
+                                aria-haspopup="listbox"
+                                class="<removed-for-snapshot-test>"
+                                data-headlessui-state=""
+                                data-testid="sync-catalog-filter-depth-listbox-button"
+                                id="headlessui-listbox-button-:r2:"
+                                type="button"
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    Streams and fields
+                                  </span>
+                                </span>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="chevron-down"
+                                  data-testid="mocksvg"
+                                />
+                              </button>
+                              <div
+                                style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                               />
                             </div>
-                          </label>
+                          </div>
                           <div
                             class="<removed-for-snapshot-test>"
                           >
@@ -504,7 +540,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:rk:"
+                                      id="headlessui-listbox-button-:rn:"
                                       type="button"
                                     >
                                       <span
@@ -631,7 +667,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:rn:"
+                                      id="headlessui-listbox-button-:rq:"
                                       type="button"
                                     >
                                       <span
@@ -849,31 +885,67 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          <label
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
-                            <div
+                            <label
                               class="<removed-for-snapshot-test>"
                             >
                               <div
                                 class="<removed-for-snapshot-test>"
-                                data-icon="lens"
-                                data-testid="mocksvg"
-                              />
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="input-container"
-                            >
-                              <input
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="lens"
+                                  data-testid="mocksvg"
+                                />
+                              </div>
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-testid="sync-catalog-search"
-                                placeholder="Search stream or field name"
-                                type="search"
-                                value=""
+                                data-testid="input-container"
+                              >
+                                <input
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="sync-catalog-search"
+                                  placeholder="Search stream or field name"
+                                  type="search"
+                                  value=""
+                                />
+                              </div>
+                            </label>
+                            <div
+                              data-testid="sync-catalog-filter-depth"
+                            >
+                              <button
+                                aria-expanded="false"
+                                aria-haspopup="listbox"
+                                class="<removed-for-snapshot-test>"
+                                data-headlessui-state=""
+                                data-testid="sync-catalog-filter-depth-listbox-button"
+                                id="headlessui-listbox-button-:rt:"
+                                type="button"
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    Streams and fields
+                                  </span>
+                                </span>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="chevron-down"
+                                  data-testid="mocksvg"
+                                />
+                              </button>
+                              <div
+                                style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                               />
                             </div>
-                          </label>
+                          </div>
                           <div
                             class="<removed-for-snapshot-test>"
                           >
@@ -1285,7 +1357,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r1c:"
+                                      id="headlessui-listbox-button-:r1i:"
                                       type="button"
                                     >
                                       <span
@@ -1412,7 +1484,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r1f:"
+                                      id="headlessui-listbox-button-:r1l:"
                                       type="button"
                                     >
                                       <span

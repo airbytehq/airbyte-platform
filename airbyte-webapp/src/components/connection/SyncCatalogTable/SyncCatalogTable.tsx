@@ -1,13 +1,4 @@
-import {
-  ColumnFiltersState,
-  createColumnHelper,
-  ExpandedState,
-  getCoreRowModel,
-  getGroupedRowModel,
-  getSortedRowModel,
-  Row,
-  useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef, ColumnFiltersState, createColumnHelper, ExpandedState, Row } from "@tanstack/react-table";
 import set from "lodash/set";
 import React, { FC, useCallback, useMemo, useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
@@ -35,13 +26,12 @@ import {
   StreamCursorCell,
 } from "./components/cells";
 import { FieldHashMapping } from "./components/FieldHashMapping";
-import { SearchAndFilterControls } from "./components/SearchAndFilterControls";
+import { SearchAndFilterControls, STREAMS_AND_FIELDS } from "./components/SearchAndFilterControls";
 import { FilterTabId } from "./components/StreamsFilterTabs";
 import { SyncCatalogVirtuosoTable } from "./components/SyncCatalogVirtuosoTable";
 import { SyncModeCell } from "./components/SyncModeCell";
-import { getExpandedRowModel } from "./getExpandedRowModel";
-import { getFilteredRowModel } from "./getFilteredRowModel";
 import { useInitialRowIndex } from "./hooks/useInitialRowIndex";
+import { useSyncCatalogReactTable } from "./hooks/useSyncCatalogReactTable";
 import styles from "./SyncCatalogTable.module.scss";
 import { findRow, getNamespaceRowId, getSyncCatalogRows, isNamespaceRow, isStreamRow } from "./utils";
 import { FormConnectionFormValues, SyncStreamFieldWithId, useInitialFormValues } from "../ConnectionForm/formConfig";
@@ -111,6 +101,7 @@ export const SyncCatalogTable: FC = () => {
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [filtering, setFiltering] = useState("");
+  const [filteringDepth, setFilteringDepth] = useState<number>(STREAMS_AND_FIELDS);
   const deferredFilteringValue = filtering;
 
   // Update stream
@@ -309,33 +300,16 @@ export const SyncCatalogTable: FC = () => {
   );
   const [expanded, setExpanded] = React.useState<ExpandedState>(initialExpandedState);
 
-  const { getHeaderGroups, getRowModel, toggleAllRowsExpanded, getState } = useReactTable<SyncCatalogUIModel>({
-    columns,
+  const { getHeaderGroups, getRowModel, toggleAllRowsExpanded, getState } = useSyncCatalogReactTable({
+    columns: columns as Array<ColumnDef<SyncCatalogUIModel>>,
     data: preparedData,
-    getSubRows: (row) => row.subRows,
-    state: {
-      expanded,
-      globalFilter: deferredFilteringValue,
-      columnFilters,
-      columnVisibility: {
-        "stream.selected": false,
-        hashing: showHashing,
-      },
-    },
-    initialState: {
-      sorting: [{ id: "stream.name", desc: false }],
-    },
-    getExpandedRowModel: getExpandedRowModel(),
-    getGroupedRowModel: getGroupedRowModel(),
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    autoResetExpanded: false,
-    filterFromLeafRows: true,
-    enableGlobalFilter: true,
-    onExpandedChange: setExpanded,
-    onColumnFiltersChange: setColumnFilters,
-    getRowCanExpand: (row) => !!row.subRows.length,
+    expanded,
+    setExpanded,
+    globalFilter: deferredFilteringValue,
+    globalFilterMaxDepth: filteringDepth,
+    columnFilters,
+    setColumnFilters,
+    showHashing,
   });
 
   const rows = getRowModel().rows;
@@ -408,6 +382,8 @@ export const SyncCatalogTable: FC = () => {
       <SearchAndFilterControls
         filtering={filtering}
         setFiltering={setFiltering}
+        filteringDepth={filteringDepth}
+        setFilteringDepth={setFilteringDepth}
         isAllStreamRowsExpanded={isAllStreamRowsExpanded}
         toggleAllStreamRowsExpanded={toggleAllStreamRowsExpanded}
         columnFilters={columnFilters}

@@ -192,6 +192,8 @@
   "form.prefix.placeholder": "prefix",
   "form.nameSearch": "Search stream name",
   "form.streamOrFieldSearch": "Search stream or field name",
+  "form.filteringDepth.all": "Streams and fields",
+  "form.filteringDepth.streams": "Streams only",
   "form.hideDisabledStreams": "Hide disabled streams",
   "form.streams.all": "All",
   "form.streams.enabledStreams": "Enabled streams",
