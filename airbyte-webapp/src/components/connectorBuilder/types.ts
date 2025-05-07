@@ -823,7 +823,7 @@ export function builderAuthenticatorToManifest(
     return {
       ...omit(authenticator, "declarative", "type", "grant_type"),
       type: OAUTH_AUTHENTICATOR,
-      grant_type: isRefreshTokenFlowEnabled && !usesRefreshToken ? "client_credentials" : authenticator.grant_type,
+      grant_type: usesRefreshToken ? authenticator.grant_type : "client_credentials",
       refresh_token:
         authenticator.grant_type === "client_credentials" || !usesRefreshToken
           ? undefined

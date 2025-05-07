@@ -1640,7 +1640,7 @@ export function manifestAuthenticatorToBuilder(
         type: isDeclarativeOAuth ? DeclarativeOAuthAuthenticatorType : OAUTH_AUTHENTICATOR,
         // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
         refresh_request_body: Object.entries(oauth.refresh_request_body ?? {}),
-        grant_type: oauth.grant_type ?? "refresh_token",
+        grant_type: oauth.grant_type ?? oauth.refresh_token_updater ? "refresh_token" : "client_credentials",
         refresh_token_updater: undefined,
         client_id: interpolateConfigKey(extractAndValidateAuthKey(["client_id"], oauth, spec)),
         client_secret: interpolateConfigKey(extractAndValidateAuthKey(["client_secret"], oauth, spec)),
