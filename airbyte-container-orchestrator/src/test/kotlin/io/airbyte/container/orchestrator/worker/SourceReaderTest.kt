@@ -4,13 +4,13 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
-import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.exception.SourceException
 import io.mockk.coVerify
 import io.mockk.every

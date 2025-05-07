@@ -19,6 +19,7 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
@@ -39,7 +40,6 @@ import io.airbyte.workers.WorkerUtils
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
-import io.airbyte.workers.helper.StreamStatusCompletionTracker
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.AnalyticsMessageTracker
 import io.airbyte.workers.internal.FieldSelector

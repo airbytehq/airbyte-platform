@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.helper
+package io.airbyte.container.orchestrator.tracker
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
@@ -14,16 +14,14 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.internal.AirbyteMapper
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import java.time.Clock
-import java.util.UUID
 
 internal class StreamStatusCompletionTrackerTest {
   private val clock: Clock = mockk()
@@ -36,7 +34,11 @@ internal class StreamStatusCompletionTrackerTest {
       .withStreams(
         listOf(
           ConfiguredAirbyteStream(
-            AirbyteStream(name = "name1", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+            AirbyteStream(
+              name = "name1",
+              jsonSchema = Jsons.emptyObject(),
+              supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+            ),
             SyncMode.INCREMENTAL,
             DestinationSyncMode.APPEND,
           ),
@@ -53,26 +55,6 @@ internal class StreamStatusCompletionTrackerTest {
         ),
       )
 
-  private val connectionId = UUID.randomUUID()
-  private val workspaceId = UUID.randomUUID()
-  private val sourceDefinitionId = UUID.randomUUID()
-  private val destinationDefinitionId = UUID.randomUUID()
-
-  private val replicationContext =
-    ReplicationContext(
-      false,
-      connectionId,
-      UUID.randomUUID(),
-      UUID.randomUUID(),
-      0,
-      0,
-      workspaceId,
-      "",
-      "",
-      sourceDefinitionId,
-      destinationDefinitionId,
-    )
-
   @BeforeEach
   fun init() {
     every { clock.millis() } returns 1
@@ -84,7 +66,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.startTracking(catalog, true)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
-    assertEquals(
+    Assertions.assertEquals(
       listOf(
         getStreamStatusCompletedMessage("name1"),
         getStreamStatusCompletedMessage("name2", "namespace2"),
@@ -99,7 +81,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
-    assertEquals(
+    Assertions.assertEquals(
       listOf(
         getStreamStatusCompletedMessage("name1"),
         getStreamStatusCompletedMessage("name2", "namespace2"),
@@ -115,7 +97,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
-    assertEquals(
+    Assertions.assertEquals(
       listOf(
         getStreamStatusCompletedMessage("name1"),
         getStreamStatusCompletedMessage("name2", "namespace2"),
@@ -129,7 +111,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.startTracking(catalog, true)
     val result = streamStatusCompletionTracker.finalize(1, mapper)
 
-    assertEquals(listOf<AirbyteMessage>(), result)
+    Assertions.assertEquals(listOf<AirbyteMessage>(), result)
   }
 
   @Test
@@ -138,7 +120,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(1, mapper)
 
-    assertEquals(listOf<AirbyteMessage>(), result)
+    Assertions.assertEquals(listOf<AirbyteMessage>(), result)
   }
 
   @Test
@@ -147,7 +129,7 @@ internal class StreamStatusCompletionTrackerTest {
     streamStatusCompletionTracker.track(getStreamStatusCompletedMessage("name1").trace.streamStatus)
     val result = streamStatusCompletionTracker.finalize(0, mapper)
 
-    assertEquals(listOf<AirbyteMessage>(), result)
+    Assertions.assertEquals(listOf<AirbyteMessage>(), result)
   }
 
   @Test
@@ -157,7 +139,12 @@ internal class StreamStatusCompletionTrackerTest {
         .withStreams(
           listOf(
             ConfiguredAirbyteStream(
-              AirbyteStream(name = "name1", namespace = "", jsonSchema = Jsons.emptyObject(), supportedSyncModes = listOf(SyncMode.INCREMENTAL)),
+              AirbyteStream(
+                name = "name1",
+                namespace = "",
+                jsonSchema = Jsons.emptyObject(),
+                supportedSyncModes = listOf(SyncMode.INCREMENTAL),
+              ),
               SyncMode.INCREMENTAL,
               DestinationSyncMode.APPEND,
             ),
