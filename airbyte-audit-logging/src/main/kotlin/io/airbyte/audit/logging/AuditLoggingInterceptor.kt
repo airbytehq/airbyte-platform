@@ -15,6 +15,10 @@ import io.airbyte.commons.storage.AUDIT_LOGGING
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
+import io.airbyte.featureflag.ANONYMOUS
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.StoreAuditLogs
+import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.aop.InterceptorBean
 import io.micronaut.aop.MethodInterceptor
@@ -40,9 +44,18 @@ class AuditLoggingInterceptor(
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
   private val storageClientFactory: StorageClientFactory,
+  private val featureFlagClient: FeatureFlagClient,
 ) : MethodInterceptor<Any, Any> {
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any {
-    if (!auditLoggingEnabled) {
+    val canStoreAuditLogs = featureFlagClient.boolVariation(StoreAuditLogs, Workspace(ANONYMOUS))
+
+    // We can proceed with storing the audit log if:
+    // 1. the AUDIT_LOGGING_ENABLED env var is set to true, or
+    // 2. the StoreAuditLogs feature flag is enabled.
+    // In cloud, the AUDIT_LOGGING_ENABLED var should never be set, thus we fall back to the flag. In enterprise
+    // deployments, the feature flag is not present (and will default to false), so the env var must be
+    // present in order to proceed.
+    if (!auditLoggingEnabled && !canStoreAuditLogs) {
       logger.debug { "Proceeding with the request without audit logging because it is disabled." }
       return context.proceed() ?: Unit
     }

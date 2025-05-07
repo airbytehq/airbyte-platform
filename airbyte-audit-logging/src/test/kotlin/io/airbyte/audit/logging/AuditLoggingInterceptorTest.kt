@@ -13,6 +13,8 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.StoreAuditLogs
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.annotation.AnnotationValue
@@ -41,6 +43,7 @@ class AuditLoggingInterceptorTest {
   private lateinit var applicationContext: ApplicationContext
   private lateinit var auditLoggingHelper: AuditLoggingHelper
   private lateinit var storageClientFactory: StorageClientFactory
+  private lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun setUp() {
@@ -48,6 +51,7 @@ class AuditLoggingInterceptorTest {
     applicationContext = mockk()
     auditLoggingHelper = mockk()
     storageClientFactory = mockk()
+    featureFlagClient = mockk()
   }
 
   @AfterEach
@@ -57,12 +61,19 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should only proceed the request without logging the result if it is not enabled`() {
-    interceptor = AuditLoggingInterceptor(false, null, applicationContext, auditLoggingHelper, storageClientFactory)
+    interceptor =
+      AuditLoggingInterceptor(
+        false,
+        null,
+        applicationContext,
+        auditLoggingHelper,
+        storageClientFactory,
+        featureFlagClient,
+      )
 
     every { context.methodName } returns "createPermission"
-
     every { storageClientFactory.create(DocumentType.AUDIT_LOGS) } returns mockk()
-
+    every { featureFlagClient.boolVariation(StoreAuditLogs, any()) } returns false
     every { context.proceed() } returns
       PermissionRead()
         .userId(UUID.randomUUID())
@@ -85,6 +96,7 @@ class AuditLoggingInterceptorTest {
           applicationContext,
           auditLoggingHelper,
           storageClientFactory,
+          featureFlagClient,
         ),
       )
     val request = mockk<NettyHttpRequest<Any>>()
@@ -100,6 +112,7 @@ class AuditLoggingInterceptorTest {
     val storageClient = mockk<StorageClient>()
     every { storageClient.write(any(), any()) } just Runs
     every { storageClientFactory.create(DocumentType.AUDIT_LOGS) } returns storageClient
+    every { featureFlagClient.boolVariation(StoreAuditLogs, any()) } returns true
 
     val parameterValue = mockk<MutableArgumentValue<Any>>()
     val permissionUpdate =
