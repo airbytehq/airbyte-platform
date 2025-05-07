@@ -5,9 +5,11 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.NullNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigTemplateWithActorDetails
@@ -68,18 +70,23 @@ open class ConfigTemplateServiceDataImpl(
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,
     partialDefaultConfig: JsonNode,
-    userConfigSpec: JsonNode,
+    userConfigSpec: JsonNode?,
   ): ConfigTemplateWithActorDetails {
-    val convertedSpec = Jsons.deserialize(userConfigSpec.toString(), ConnectorSpecification::class.java)
+    val actorDefinitionSpec = getConnectorSpecification(actorDefinitionId)
 
-    validateSource(actorDefinitionId, partialDefaultConfig, convertedSpec)
+    val userSpec =
+      userConfigSpec ?: inferPartialUserSpec(actorDefinitionSpec, partialDefaultConfig)
+
+    val convertedSpec = Jsons.deserialize(userSpec.toString(), ConnectorSpecification::class.java)
+
+    validateSource(actorDefinitionSpec, partialDefaultConfig, convertedSpec)
 
     val entity =
       EntityConfigTemplate(
         organizationId = organizationId.value,
         actorDefinitionId = actorDefinitionId.value,
         partialDefaultConfig = partialDefaultConfig,
-        userConfigSpec = userConfigSpec,
+        userConfigSpec = userSpec,
       )
 
     val configTemplate =
@@ -88,13 +95,51 @@ open class ConfigTemplateServiceDataImpl(
           entity,
         ).toConfigModel()
 
-    val actorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
+    val standardActorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
 
     return ConfigTemplateWithActorDetails(
       configTemplate = configTemplate,
-      actorName = actorDefinition.name,
-      actorIcon = actorDefinition.iconUrl,
+      actorName = standardActorDefinition.name,
+      actorIcon = standardActorDefinition.iconUrl,
     )
+  }
+
+  private fun getConnectorSpecification(actorDefinitionId: ActorDefinitionId): ConnectorSpecification {
+    val actorDefinition =
+      actorDefinitionService
+        .getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId.value)
+        .orElseThrow { throw RuntimeException("ActorDefinition not found") }
+    val actorDefinitionSpec = actorDefinition.spec
+    return actorDefinitionSpec
+  }
+
+  private fun inferPartialUserSpec(
+    actorDefinitionSpec: ConnectorSpecification,
+    partialDefaultConfig: JsonNode,
+  ): ObjectNode {
+    val inferredSpec: JsonNode = actorDefinitionSpec.connectionSpecification.deepCopy()
+    val required = inferredSpec.get("required") as ArrayNode
+    required.removeAll { partialDefaultConfig.has(it.asText()) }
+    val properties = inferredSpec.get("properties") as ObjectNode
+    val requiredProperties = required.map { it.asText() }
+    val allFields: Set<String> = properties.fieldNames().asSequence().toSet()
+    for (f in allFields) {
+      if (!requiredProperties.contains(f)) {
+        properties.remove(f)
+      }
+    }
+
+    val connectionSpec = JsonNodeFactory.instance.objectNode()
+    connectionSpec.put("connectionSpecification", inferredSpec)
+    connectionSpec.put("type", "object")
+
+    if (actorDefinitionSpec.advancedAuth != null) {
+      val advancedAuthNode: JsonNode = ObjectMapper().valueToTree(actorDefinitionSpec.advancedAuth)
+      connectionSpec.put("advancedAuth", advancedAuthNode)
+    }
+
+    (inferredSpec as ObjectNode).put("type", "object")
+    return connectionSpec
   }
 
   override fun updateTemplate(
@@ -111,7 +156,7 @@ open class ConfigTemplateServiceDataImpl(
 
     val updatedConfigTemplate =
       if (partialDefaultConfig != null || userConfigSpec != null) {
-        val finalPartialDefaultConfig = partialDefaultConfig ?: configTemplate.partialDefaultConfig
+        val finalPartialDefaultConfig = partialDefaultConfig ?: (configTemplate.partialDefaultConfig)
         val finalUserConfigSpec =
           if (userConfigSpec != null) {
             val configSpecJsonString = Jsons.serialize(userConfigSpec)
@@ -121,7 +166,7 @@ open class ConfigTemplateServiceDataImpl(
             Jsons.deserialize(configSpecJsonString, ConnectorSpecification::class.java)
           }
 
-        validateSource(ActorDefinitionId(configTemplate.actorDefinitionId), finalPartialDefaultConfig, finalUserConfigSpec)
+        validateSource(getConnectorSpecification(ActorDefinitionId(configTemplate.actorDefinitionId)), finalPartialDefaultConfig, finalUserConfigSpec)
 
         val entity =
           EntityConfigTemplate(
@@ -149,23 +194,17 @@ open class ConfigTemplateServiceDataImpl(
   }
 
   private fun validateSource(
-    actorDefinitionId: ActorDefinitionId,
+    connectorSpecification: ConnectorSpecification,
     partialDefaultConfig: JsonNode,
     userConfigSpec: ConnectorSpecification,
   ) {
-    val actorDefinition =
-      actorDefinitionService
-        .getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId.value)
-        .orElseThrow { throw RuntimeException("ActorDefinition not found") }
-
-    val spec = actorDefinition.spec
     val combinationOfDefaultConfigAndPartialUserConfigSpec =
       mergeDefaultConfigAndPartialUserConfigSpec(
         partialDefaultConfig,
         userConfigSpec,
       )
 
-    validateCombinationOfDefaultConfigAndPartialUserConfigSpec(spec, combinationOfDefaultConfigAndPartialUserConfigSpec)
+    validateCombinationOfDefaultConfigAndPartialUserConfigSpec(connectorSpecification, combinationOfDefaultConfigAndPartialUserConfigSpec)
   }
 
   private fun validateCombinationOfDefaultConfigAndPartialUserConfigSpec(

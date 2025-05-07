@@ -22,7 +22,7 @@ interface ConfigTemplateService {
     organizationId: OrganizationId,
     actorDefinitionId: ActorDefinitionId,
     partialDefaultConfig: JsonNode,
-    userConfigSpec: JsonNode,
+    userConfigSpec: JsonNode? = null,
   ): ConfigTemplateWithActorDetails
 
   fun updateTemplate(

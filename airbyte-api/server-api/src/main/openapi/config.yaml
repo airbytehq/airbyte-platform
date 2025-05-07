@@ -18926,7 +18926,6 @@ components:
       required:
         - actorDefinitionId
         - partialDefaultConfig
-        - partialUserConfigSpec
         - organizationId
       properties:
         organizationId:

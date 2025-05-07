@@ -28,7 +28,6 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -187,14 +186,6 @@ class ConfigTemplateServiceDataImplTest {
         service.getConfigTemplate(configTemplateId)
       }
     }
-
-    @Nested
-    inner class CreateTemplateTest {
-      @Test
-      fun `test createConfigTemplate`() {
-        assertTrue(true)
-      }
-    }
   }
 
   private fun createPartialUserConfigSpecAsObject(fields: Map<String, String>): ObjectNode {
@@ -265,6 +256,50 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
       assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
       assertEquals(userConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
+    }
+
+    @Test
+    fun `test createConfigTemplate without a user spec`() {
+      actorDefinitionVersion.spec = connectorSpecificationWithRequiredFields
+
+      val partialDefaultConfigJsonString =
+        """
+        {
+          "an_integer_field": 42
+        }
+        """.trimIndent()
+      val partialDefaultConfig = objectMapper.readTree(partialDefaultConfigJsonString)
+
+      val expectedUserConfigSpec = createPartialUserConfigSpecAsObject(mapOf("a_config_field" to "string"))
+
+      val id = UUID.randomUUID()
+
+      val entity =
+        EntityConfigTemplate(
+          id = id,
+          organizationId = organizationId,
+          actorDefinitionId = actorDefinitionId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = expectedUserConfigSpec,
+        )
+
+      every {
+        repository.save(
+          any(),
+        )
+      } returns entity
+
+      val configTemplate =
+        service.createTemplate(
+          OrganizationId(organizationId),
+          ActorDefinitionId(actorDefinitionId),
+          partialDefaultConfig,
+        )
+
+      assertEquals(configTemplate.configTemplate.organizationId, organizationId)
+      assertEquals(configTemplate.configTemplate.actorDefinitionId, actorDefinitionId)
+      assertEquals(configTemplate.configTemplate.partialDefaultConfig, partialDefaultConfig)
+      assertEquals(expectedUserConfigSpec, objectMapper.valueToTree(configTemplate.configTemplate.userConfigSpec))
     }
 
     @Test
