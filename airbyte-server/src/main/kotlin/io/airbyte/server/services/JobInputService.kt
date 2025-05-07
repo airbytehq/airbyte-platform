@@ -5,8 +5,12 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.google.common.base.Charsets
+import com.google.common.hash.Hashing
 import io.airbyte.commons.converters.ConfigReplacer
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
@@ -18,6 +22,7 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDestinationDefinition
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
@@ -58,6 +63,18 @@ interface JobInputService {
     workspaceId: UUID,
     configuration: JsonNode,
   ): CheckConnectionInput
+
+  fun getDiscoveryInput(
+    actorId: UUID,
+    workspaceId: UUID,
+  ): DiscoverCommandInput.DiscoverCatalogInput
+
+  fun getDiscoveryInputWithJobId(
+    actorId: UUID,
+    workspaceId: UUID,
+    jobId: String,
+    attemptId: Long,
+  ): DiscoverCommandInput.DiscoverCatalogInput
 }
 
 @Singleton
@@ -73,6 +90,10 @@ class JobInputServiceImpl(
   private val contextBuilder: ContextBuilder,
   private val scopedConfigurationService: ScopedConfigurationService,
 ) : JobInputService {
+  companion object {
+    private val HASH_FUNCTION = Hashing.md5()
+  }
+
   override fun getCheckInput(
     actorId: UUID,
     jobId: String?,
@@ -101,6 +122,36 @@ class JobInputServiceImpl(
       ActorType.source -> getCheckInputBySourceDefinitionId(actorDefinitionId, workspaceId, configuration)
       ActorType.destination -> getCheckInputByDestinationDefinitionId(actorDefinitionId, workspaceId, configuration)
       else -> throw IllegalStateException("Actor type ${actorDefinition.actorType} not supported")
+    }
+  }
+
+  override fun getDiscoveryInput(
+    actorId: UUID,
+    workspaceId: UUID,
+  ): DiscoverCommandInput.DiscoverCatalogInput {
+    val actor =
+      actorRepository.findByActorId(actorId)
+        ?: throw NotFoundException() // Better exception?
+    return when (actor.actorType) {
+      ActorType.source -> getDiscoverInputBySourceId(sourceId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L)
+      ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
+      else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
+    }
+  }
+
+  override fun getDiscoveryInputWithJobId(
+    actorId: UUID,
+    workspaceId: UUID,
+    jobId: String,
+    attemptId: Long,
+  ): DiscoverCommandInput.DiscoverCatalogInput {
+    val actor =
+      actorRepository.findByActorId(actorId)
+        ?: throw NotFoundException() // Better exception?
+    return when (actor.actorType) {
+      ActorType.source -> getDiscoverInputBySourceId(actorId, jobId, attemptId)
+      ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
+      else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
     }
   }
 
@@ -302,6 +353,108 @@ class JobInputServiceImpl(
           .withResourceRequirements(resourceRequirements)
           .withActorContext(actorContext)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId)),
+    )
+  }
+
+  private fun buildJobDiscoverConfig(
+    actorType: io.airbyte.config.ActorType,
+    definitionId: UUID,
+    actorId: UUID?,
+    workspaceId: UUID,
+    configuration: JsonNode,
+    dockerImage: String,
+    dockerTag: String,
+    protocolVersion: Version,
+    isCustomConnector: Boolean,
+    resourceRequirements: ResourceRequirements?,
+    allowedHosts: AllowedHosts,
+    actorContext: ActorContext?,
+    jobId: String,
+    attemptId: Long,
+    isManual: Boolean,
+  ): DiscoverCommandInput.DiscoverCatalogInput {
+    val injectedConfig: JsonNode = configInjector.injectConfig(configuration, definitionId)
+
+    val inlinedConfigWithSecretRefs = InlinedConfigWithSecretRefs(injectedConfig)
+
+    val configWithSecrets: ConfigWithSecretReferences =
+      if (actorId == null) {
+        inlinedConfigWithSecretRefs.toConfigWithRefs()
+      } else {
+        secretReferenceService.getConfigWithSecretReferences(
+          ActorId(actorId),
+          injectedConfig,
+          WorkspaceId(workspaceId),
+        )
+      }
+
+    val configReplacer = ConfigReplacer()
+
+    return DiscoverCommandInput.DiscoverCatalogInput(
+      jobRunConfig =
+        JobRunConfig()
+          .withJobId(jobId)
+          .withAttemptId(attemptId),
+      integrationLauncherConfig =
+        IntegrationLauncherConfig()
+          .withJobId(jobId)
+          .withWorkspaceId(workspaceId)
+          .withDockerImage(dockerImage)
+          .withProtocolVersion(protocolVersion)
+          .withIsCustomConnector(isCustomConnector)
+          .withAttemptId(attemptId)
+          .withAllowedHosts(configReplacer.getAllowedHosts(allowedHosts, configuration)),
+      discoverCatalogInput =
+        StandardDiscoverCatalogInput()
+          .withSourceId(actorId.toString())
+          .withConnectorVersion(dockerTag)
+          .withConnectionConfiguration(configWithSecrets.config)
+          .withConfigHash(
+            HASH_FUNCTION
+              .hashBytes(
+                Jsons.serialize(configWithSecrets.config).toByteArray(
+                  Charsets.UTF_8,
+                ),
+              ).toString(),
+          ).withManual(isManual)
+          .withResourceRequirements(resourceRequirements)
+          .withActorContext(actorContext)
+          .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId)),
+    )
+  }
+
+  private fun getDiscoverInputBySourceId(
+    sourceId: UUID,
+    jobId: String,
+    attemptId: Long,
+  ): DiscoverCommandInput.DiscoverCatalogInput {
+    val (source, sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformation(sourceId)
+
+    val dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion)
+    val configWithOauthParams: JsonNode =
+      oAuthConfigSupplier.injectSourceOAuthParameters(
+        sourceDefinition.sourceDefinitionId,
+        source!!.sourceId,
+        source!!.workspaceId,
+        source!!.configuration,
+      )
+
+    return buildJobDiscoverConfig(
+      actorType = io.airbyte.config.ActorType.SOURCE,
+      definitionId = source.sourceDefinitionId,
+      actorId = source.sourceId,
+      workspaceId = source.workspaceId,
+      configuration = configWithOauthParams,
+      dockerImage = dockerImage,
+      dockerTag = sourceDefinitionVersion.dockerImageTag,
+      protocolVersion = Version(sourceDefinitionVersion.protocolVersion),
+      isCustomConnector = sourceDefinition.custom,
+      resourceRequirements = resourceRequirements,
+      allowedHosts = sourceDefinitionVersion.allowedHosts,
+      actorContext = contextBuilder.fromSource(source),
+      jobId = jobId,
+      attemptId = attemptId,
+      isManual = true,
     )
   }
 

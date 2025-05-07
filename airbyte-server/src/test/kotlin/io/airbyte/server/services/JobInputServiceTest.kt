@@ -372,4 +372,113 @@ class JobInputServiceTest {
     assertEquals(expected.launcherConfig.protocolVersion, actual.launcherConfig.protocolVersion)
     assertEquals(expected.launcherConfig.isCustomConnector, actual.launcherConfig.isCustomConnector)
   }
+
+  @Test
+  fun `getDiscoveryInput for Source by actorId returns DiscoverCatalogInput`() {
+    val mockActor =
+      mockk<io.airbyte.data.repositories.entities.Actor> {
+        every { actorType } returns ActorType.source
+      }
+
+    val mockSource = mockk<SourceConnection>()
+    every { mockSource.sourceId } returns sourceId
+    every { mockSource.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSource.workspaceId } returns workspaceId
+    every { mockSource.configuration } returns configuration
+
+    val mockSourceDefinition = mockk<StandardSourceDefinition>()
+    every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSourceDefinition.custom } returns false
+    every { mockSourceDefinition.resourceRequirements } returns null
+
+    val mockActorDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockActorDefinitionVersion.dockerImageTag } returns dockerImageTag
+    every { mockActorDefinitionVersion.dockerRepository } returns dockerRepository
+    every { mockActorDefinitionVersion.protocolVersion } returns "0.1.0"
+    every { mockActorDefinitionVersion.allowedHosts } returns emptyAllowedHosts
+    every { mockActorDefinitionVersion.spec } returns ConnectorSpecification()
+
+    every { actorRepository.findByActorId(sourceId) } returns mockActor
+    every { sourceService.getSourceConnection(sourceId) } returns mockSource
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
+    every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
+    every { configInjector.injectConfig(any(), any()) } returns configuration
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { contextBuilder.fromSource(any()) } returns mockk()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
+
+    val actual = jobInputService.getDiscoveryInput(sourceId, workspaceId)
+
+    assertEquals(0L, actual.jobRunConfig.attemptId)
+
+    assertEquals(sourceId.toString(), actual.discoverCatalogInput.sourceId)
+    assertEquals(dockerImageTag, actual.discoverCatalogInput.connectorVersion)
+    assertEquals(configuration, actual.discoverCatalogInput.connectionConfiguration)
+    assertEquals(null, actual.discoverCatalogInput.resourceRequirements)
+    assertEquals(true, actual.discoverCatalogInput.manual)
+
+    assertEquals(workspaceId, actual.integrationLauncherConfig.workspaceId)
+    assertEquals(testDockerImage, actual.integrationLauncherConfig.dockerImage)
+    assertEquals(Version("0.1.0"), actual.integrationLauncherConfig.protocolVersion)
+    assertEquals(false, actual.integrationLauncherConfig.isCustomConnector)
+    assertEquals(0L, actual.integrationLauncherConfig.attemptId)
+  }
+
+  @Test
+  fun `getDiscoveryInputWithJobId for Source by actorId returns DiscoverCatalogInput`() {
+    val mockActor =
+      mockk<io.airbyte.data.repositories.entities.Actor> {
+        every { actorType } returns ActorType.source
+      }
+
+    val mockSource = mockk<SourceConnection>()
+    every { mockSource.sourceId } returns sourceId
+    every { mockSource.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSource.workspaceId } returns workspaceId
+    every { mockSource.configuration } returns configuration
+
+    val mockSourceDefinition = mockk<StandardSourceDefinition>()
+    every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSourceDefinition.custom } returns false
+    every { mockSourceDefinition.resourceRequirements } returns null
+
+    val mockActorDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockActorDefinitionVersion.dockerImageTag } returns dockerImageTag
+    every { mockActorDefinitionVersion.dockerRepository } returns dockerRepository
+    every { mockActorDefinitionVersion.protocolVersion } returns "0.1.0"
+    every { mockActorDefinitionVersion.allowedHosts } returns emptyAllowedHosts
+    every { mockActorDefinitionVersion.spec } returns ConnectorSpecification()
+
+    every { actorRepository.findByActorId(sourceId) } returns mockActor
+    every { sourceService.getSourceConnection(sourceId) } returns mockSource
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
+    every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
+    every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
+    every { configInjector.injectConfig(any(), any()) } returns configuration
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { contextBuilder.fromSource(any()) } returns mockk()
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
+
+    val jobId = "job-id"
+    val attemptId = 1337L
+
+    val actual = jobInputService.getDiscoveryInputWithJobId(sourceId, workspaceId, jobId, attemptId)
+
+    assertEquals(jobId, actual.jobRunConfig.jobId)
+    assertEquals(attemptId, actual.jobRunConfig.attemptId)
+
+    assertEquals(sourceId.toString(), actual.discoverCatalogInput.sourceId)
+    assertEquals(dockerImageTag, actual.discoverCatalogInput.connectorVersion)
+    assertEquals(configuration, actual.discoverCatalogInput.connectionConfiguration)
+    assertEquals(null, actual.discoverCatalogInput.resourceRequirements)
+    assertEquals(true, actual.discoverCatalogInput.manual)
+
+    assertEquals(workspaceId, actual.integrationLauncherConfig.workspaceId)
+    assertEquals(testDockerImage, actual.integrationLauncherConfig.dockerImage)
+    assertEquals(Version("0.1.0"), actual.integrationLauncherConfig.protocolVersion)
+    assertEquals(false, actual.integrationLauncherConfig.isCustomConnector)
+    assertEquals(attemptId, actual.integrationLauncherConfig.attemptId)
+    assertEquals(jobId, actual.integrationLauncherConfig.jobId)
+  }
 }
