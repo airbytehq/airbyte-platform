@@ -55,6 +55,7 @@ private const val RUN_IMMEDIATELY: Long = 0
 private const val FLUSH_TERMINATION_TIMEOUT_IN_SECONDS: Long = 60
 
 @Singleton
+@Named("syncPersistence")
 class SyncPersistenceImpl(
   private val airbyteApiClient: AirbyteApiClient,
   private val stateAggregatorFactory: StateAggregatorFactory,

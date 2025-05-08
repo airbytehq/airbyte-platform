@@ -2,21 +2,25 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal.bookkeeping
+package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
 import io.airbyte.workers.internal.stateaggregator.StateAggregator
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.util.ArrayList
+import jakarta.inject.Named
+import jakarta.inject.Singleton
 
 private val logger = KotlinLogging.logger {}
 
@@ -26,15 +30,17 @@ private val logger = KotlinLogging.logger {}
  * It is not intended to perform meaningful operations - transforming, mutating, triggering
  * downstream actions etc. - on specific messages.
  */
+@Singleton
 class AirbyteMessageTracker(
-  val syncStatsTracker: SyncStatsTracker,
+  @Named("parallelStreamStatsTracker") val syncStatsTracker: SyncStatsTracker,
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
-  private val sourceDockerImage: String,
-  private val destinationDockerImage: String,
+  replicationInput: ReplicationInput,
 ) {
-  private val dstErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
-  private val srcErrorTraceMsgs = ArrayList<AirbyteTraceMessage>()
+  private val dstErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
+  private val srcErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val stateAggregator: StateAggregator = DefaultStateAggregator()
+  private val sourceDockerImage = replicationInput.sourceLauncherConfig.dockerImage
+  private val destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage
 
   /**
    * Accepts an AirbyteMessage emitted from a source and tracks any metadata about it that is required

@@ -19,6 +19,7 @@ import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
@@ -44,7 +45,6 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
-import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.workers.internal.bookkeeping.getPerStreamStats
@@ -53,6 +53,7 @@ import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.util.Optional
@@ -64,7 +65,7 @@ class ReplicationWorkerHelper(
   private val fieldSelector: FieldSelector,
   private val mapper: AirbyteMapper,
   private val messageTracker: AirbyteMessageTracker,
-  private val syncPersistence: SyncPersistence,
+  @Named("syncPersistence") private val syncPersistence: SyncPersistence,
   private val eventPublisher: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val analyticsTracker: AnalyticsMessageTracker,

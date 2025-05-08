@@ -19,6 +19,7 @@ import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExecutorCoroutineDispatcher
@@ -36,7 +37,7 @@ private val logger = KotlinLogging.logger {}
 class ReplicationWorker(
   private val source: AirbyteSource,
   private val destination: AirbyteDestination,
-  private val syncPersistence: SyncPersistence,
+  @Named("syncPersistence") private val syncPersistence: SyncPersistence,
   private val onReplicationRunning: VoidCallable,
   private val workloadHeartbeatSender: WorkloadHeartbeatSender,
   private val recordSchemaValidator: RecordSchemaValidator,

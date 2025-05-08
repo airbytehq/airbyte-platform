@@ -10,31 +10,12 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.WorkerUtils
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
-import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory
-import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Singleton
 
 @Factory
 class TrackerFactory {
-  @Singleton
-  fun airbyteMessageTracker(
-    replicationInput: ReplicationInput,
-    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
-    syncPersistence: SyncPersistence,
-  ): AirbyteMessageTracker {
-    syncPersistence.setReplicationFeatureFlagReader(replicationInputFeatureFlagReader)
-
-    return AirbyteMessageTracker(
-      syncStatsTracker = syncPersistence,
-      replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
-      sourceDockerImage = replicationInput.sourceLauncherConfig.dockerImage,
-      destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage,
-    )
-  }
-
   @Singleton
   fun metricReporter(
     metricClient: MetricClient,
