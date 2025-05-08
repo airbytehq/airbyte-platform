@@ -237,6 +237,12 @@ micronaut-test-core = { module = "io.micronaut.test:micronaut-test-core", versio
 micronaut-test-junit5 = { module = "io.micronaut.test:micronaut-test-junit5", version.ref = "micronaut-test" }
 micronaut-validation = { module = "io.micronaut.validation:micronaut-validation", version = "4.9.0" }
 
+# Transitive security patches direct dependency does not have a fix
+json-smart = { module = "net.minidev:json-smart", version = "2.5.2" } # Comes from com.jayway.jsonpath:json-path:2.9.0 (latest version). Force upgrade from 2.5.1 to 2.5.2 to deal with CVE-2024-57699
+netty-handler = { module = "io.netty:netty-handler", version = "4.1.118.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.1.118.Final to deal with CVE-2025-24970
+netty-common = { module = "io.netty:netty-common", version = "4.1.118.Final" } # Comes from micronout. Force upgrade from 4.1.116.Final to 4.1.118.Final to deal with CVE-2025-24970
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5", version = "5.4.3" } # Comes from micronout. Force upgrade from 5.4.1 to 5.4.3 to deal with CVE-2025-27820
+
 [bundles]
 bouncycastle = ["bouncycastle-bcprov", "bouncycastle-bcpkix"]
 datadog = ["datadog-trace-api", "datadog-trace-ot"]
@@ -247,7 +253,7 @@ keycloak-client = ["keycloak-admin-client", "keycloak-client-registration-api"]
 kotest = ["kotest-assertions"]
 kubernetes-client = ["kubernetes-client-api", "kubernetes-client", "kubernetes-httpclient-okhttp"]
 logback = ["logback-classic", "logback-core"]
-micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind"]
+micronaut = ["jakarta-annotation-api", "jakarta-transaction-api", "micronaut-http-server-netty", "micronaut-http-client", "micronaut-inject", "micronaut-validation", "micronaut-runtime", "micronaut-management", "micronaut-flyway", "micronaut-jdbc-hikari", "micronaut-jooq", "micronaut-jackson-databind", "netty-handler", "netty-common", "httpclient5"]
 micronaut-light = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-runtime"]
 micronaut-annotation = ["jakarta-annotation-api", "micronaut-inject-java", "micronaut-inject-kotlin"]
 micronaut-annotation-processor = ["micronaut-inject-java", "micronaut-inject-kotlin", "micronaut-management", "micronaut-validation", "micronaut-data-processor", "micronaut-jaxrs-processor", "micronaut-http-validation"]

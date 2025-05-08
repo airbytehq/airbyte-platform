@@ -71,6 +71,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.mockk)
   testImplementation(libs.json.path)
+  testImplementation(libs.json.smart)
   testImplementation(libs.bundles.mockito.inline)
   testImplementation(libs.mockk)
   testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
