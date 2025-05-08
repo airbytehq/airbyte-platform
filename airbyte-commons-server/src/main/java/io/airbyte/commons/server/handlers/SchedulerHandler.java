@@ -12,9 +12,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.api.model.generated.AttemptInfoReadLogs;
-import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.CheckConnectionRead;
 import io.airbyte.api.model.generated.CheckConnectionRead.StatusEnum;
 import io.airbyte.api.model.generated.ConnectionIdRequestBody;
@@ -42,7 +40,6 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
 import io.airbyte.commons.server.converters.JobConverter;
 import io.airbyte.commons.server.errors.ValueConflictKnownException;
-import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.handlers.helpers.JobCreationAndStatusUpdateHelper;
@@ -94,7 +91,6 @@ import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Singleton;
-import jakarta.validation.constraints.NotNull;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
@@ -120,7 +116,6 @@ public class SchedulerHandler {
       ImmutableSet.of(ErrorCode.WORKFLOW_DELETED, ErrorCode.WORKFLOW_RUNNING);
 
   private final ConnectionsHandler connectionsHandler;
-  private final ActorDefinitionService actorDefinitionService;
   private final CatalogService catalogService;
   private final ConnectionService connectionService;
   private final SynchronousSchedulerClient synchronousSchedulerClient;
@@ -129,7 +124,6 @@ public class SchedulerHandler {
   private final JobPersistence jobPersistence;
   private final JobConverter jobConverter;
   private final EventRunner eventRunner;
-  private final WebUrlHelper webUrlHelper;
   private final ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private final FeatureFlagClient featureFlagClient;
   private final StreamResetPersistence streamResetPersistence;
@@ -137,7 +131,6 @@ public class SchedulerHandler {
   private final JobCreator jobCreator;
   private final SyncJobFactory jobFactory;
   private final JobCreationAndStatusUpdateHelper jobCreationAndStatusUpdateHelper;
-  private final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
   private final WorkspaceService workspaceService;
   private final StreamRefreshesHandler streamRefreshesHandler;
   private final ConnectionTimelineEventHelper connectionTimelineEventHelper;
@@ -145,7 +138,6 @@ public class SchedulerHandler {
   private final DestinationService destinationService;
 
   private final CatalogConverter catalogConverter;
-  private final ApplySchemaChangeHelper applySchemaChangeHelper;
   private final MetricClient metricClient;
   private final SecretSanitizer secretSanitizer;
 
@@ -160,7 +152,6 @@ public class SchedulerHandler {
                           final EventRunner eventRunner,
                           final JobConverter jobConverter,
                           final ConnectionsHandler connectionsHandler,
-                          final WebUrlHelper webUrlHelper,
                           final ActorDefinitionVersionHelper actorDefinitionVersionHelper,
                           final FeatureFlagClient featureFlagClient,
                           final StreamResetPersistence streamResetPersistence,
@@ -169,17 +160,14 @@ public class SchedulerHandler {
                           final SyncJobFactory jobFactory,
                           final JobNotifier jobNotifier,
                           final JobTracker jobTracker,
-                          final ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler,
                           final WorkspaceService workspaceService,
                           final StreamRefreshesHandler streamRefreshesHandler,
                           final ConnectionTimelineEventHelper connectionTimelineEventHelper,
                           final SourceService sourceService,
                           final DestinationService destinationService,
                           final CatalogConverter catalogConverter,
-                          final ApplySchemaChangeHelper applySchemaChangeHelper,
                           final MetricClient metricClient,
                           final SecretSanitizer secretSanitizer) {
-    this.actorDefinitionService = actorDefinitionService;
     this.catalogService = catalogService;
     this.connectionService = connectionService;
     this.synchronousSchedulerClient = synchronousSchedulerClient;
@@ -189,14 +177,12 @@ public class SchedulerHandler {
     this.eventRunner = eventRunner;
     this.jobConverter = jobConverter;
     this.connectionsHandler = connectionsHandler;
-    this.webUrlHelper = webUrlHelper;
     this.actorDefinitionVersionHelper = actorDefinitionVersionHelper;
     this.featureFlagClient = featureFlagClient;
     this.streamResetPersistence = streamResetPersistence;
     this.oAuthConfigSupplier = oAuthConfigSupplier;
     this.jobCreator = jobCreator;
     this.jobFactory = jobFactory;
-    this.connectorDefinitionSpecificationHandler = connectorDefinitionSpecificationHandler;
     this.workspaceService = workspaceService;
     this.sourceService = sourceService;
     this.destinationService = destinationService;
@@ -211,7 +197,6 @@ public class SchedulerHandler {
     this.streamRefreshesHandler = streamRefreshesHandler;
     this.connectionTimelineEventHelper = connectionTimelineEventHelper;
     this.catalogConverter = catalogConverter;
-    this.applySchemaChangeHelper = applySchemaChangeHelper;
     this.metricClient = metricClient;
     this.secretSanitizer = secretSanitizer;
   }
@@ -360,62 +345,6 @@ public class SchedulerHandler {
     final SourceConnection source = sourceService.getSourceConnection(req.getSourceId());
 
     return discover(req, source);
-  }
-
-  /**
-   * Runs discover schema and performs conditional disabling of all connections.
-   */
-  public SourceDiscoverSchemaRead discoverAndGloballyDisable(final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody,
-                                                             final SourceConnection source)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final UUID sourceId = discoverSchemaRequestBody.getSourceId();
-    final StandardSourceDefinition sourceDef = sourceService.getStandardSourceDefinition(source.getSourceDefinitionId());
-    final ActorDefinitionVersion sourceVersion = actorDefinitionVersionHelper.getSourceVersion(sourceDef, source.getWorkspaceId(), sourceId);
-    final boolean isCustomConnector = sourceDef.getCustom();
-    // ResourceRequirements are read from actor definition and can be null; but if it's not null it will
-    // have higher priority and overwrite
-    // the default settings in WorkerConfig.
-    final ResourceRequirements resourceRequirements =
-        getResourceRequirementsForJobType(sourceDef.getResourceRequirements(), JobType.DISCOVER_SCHEMA);
-
-    final String configHash = HASH_FUNCTION.hashBytes(Jsons.serialize(source.getConfiguration()).getBytes(
-        Charsets.UTF_8)).toString();
-    final String connectorVersion = sourceVersion.getDockerImageTag();
-    final Optional<ActorCatalog> currentCatalog =
-        catalogService.getActorCatalog(discoverSchemaRequestBody.getSourceId(), connectorVersion, configHash);
-    final boolean bustActorCatalogCache = discoverSchemaRequestBody.getDisableCache() != null && discoverSchemaRequestBody.getDisableCache();
-    if (currentCatalog.isEmpty() || bustActorCatalogCache) {
-      final SynchronousResponse<UUID> persistedCatalogId =
-          synchronousSchedulerClient.createDiscoverSchemaJob(
-              source,
-              sourceVersion,
-              isCustomConnector,
-              resourceRequirements,
-              discoverSchemaRequestBody.getPriority() == null ? WorkloadPriority.HIGH
-                  : WorkloadPriority.fromValue(discoverSchemaRequestBody.getPriority().toString()));
-      final SourceDiscoverSchemaRead discoveredSchema = retrieveDiscoveredSchema(persistedCatalogId, sourceVersion);
-
-      if (persistedCatalogId.isSuccess() && discoverSchemaRequestBody.getConnectionId() != null) {
-        // modify discoveredSchema object to add CatalogDiff, containsBreakingChange, and connectionStatus
-        generateCatalogDiffsAndDisableConnectionsIfNeeded(discoveredSchema, discoverSchemaRequestBody);
-      }
-
-      return discoveredSchema;
-    }
-    final AirbyteCatalog airbyteCatalog = Jsons.object(currentCatalog.get().getCatalog(), AirbyteCatalog.class);
-    final SynchronousJobRead emptyJob = new SynchronousJobRead()
-        .configId("NoConfiguration")
-        .configType(JobConfigType.DISCOVER_SCHEMA)
-        .id(UUID.randomUUID())
-        .createdAt(0L)
-        .endedAt(0L)
-        .logType(LogFormatType.FORMATTED)
-        .logs(new AttemptInfoReadLogs().logLines(List.of()))
-        .succeeded(true);
-    return new SourceDiscoverSchemaRead()
-        .catalog(catalogConverter.toApi(airbyteCatalog, sourceVersion))
-        .jobInfo(emptyJob)
-        .catalogId(currentCatalog.get().getId());
   }
 
   /**
@@ -654,32 +583,6 @@ public class SchedulerHandler {
   public JobInfoRead cancelJob(final JobIdRequestBody jobIdRequestBody) throws IOException {
     log.info("Canceling job {}", jobIdRequestBody.getId());
     return submitCancellationToWorker(jobIdRequestBody.getId());
-  }
-
-  // Find all connections that use the source from the SourceDiscoverSchemaRequestBody. For each one,
-  // determine whether 1. the source schema change resulted in a broken connection or 2. the user
-  // wants the connection disabled when non-breaking changes are detected. If so, disable that
-  // connection. Modify the current discoveredSchema object to add a CatalogDiff,
-  // containsBreakingChange parameter, and connectionStatus parameter.
-  private void generateCatalogDiffsAndDisableConnectionsIfNeeded(final SourceDiscoverSchemaRead discoveredSchema,
-                                                                 final SourceDiscoverSchemaRequestBody discoverSchemaRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-    final ConnectionReadList connectionsForSource = connectionsHandler.listConnectionsForSource(discoverSchemaRequestBody.getSourceId(), false);
-    for (final ConnectionRead connectionRead : connectionsForSource.getConnections()) {
-      final Optional<io.airbyte.api.model.generated.AirbyteCatalog> catalogUsedToMakeConfiguredCatalog = connectionsHandler
-          .getConnectionAirbyteCatalog(connectionRead.getConnectionId());
-      final io.airbyte.api.model.generated.@NotNull AirbyteCatalog currentAirbyteCatalog =
-          connectionRead.getSyncCatalog();
-      final CatalogDiff diff =
-          connectionsHandler.getDiff(catalogUsedToMakeConfiguredCatalog.orElse(currentAirbyteCatalog), discoveredSchema.getCatalog(),
-              catalogConverter.toConfiguredInternal(currentAirbyteCatalog), connectionRead.getConnectionId());
-      final boolean containsBreakingChange = applySchemaChangeHelper.containsBreakingChange(diff);
-      final ConnectionRead updatedConnection =
-          connectionsHandler.disableConnectionIfNeeded(connectionRead, containsBreakingChange, diff);
-      if (connectionRead.getConnectionId().equals(discoverSchemaRequestBody.getConnectionId())) {
-        discoveredSchema.catalogDiff(diff).breakingChange(containsBreakingChange).connectionStatus(updatedConnection.getStatus());
-      }
-    }
   }
 
   private CheckConnectionRead reportConnectionStatus(final SynchronousResponse<StandardCheckConnectionOutput> response) {
