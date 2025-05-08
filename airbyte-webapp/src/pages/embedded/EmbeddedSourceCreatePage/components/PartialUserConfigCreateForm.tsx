@@ -17,10 +17,18 @@ export const PartialUserConfigCreateForm: React.FC = () => {
   };
 
   const onSubmit = (values: ConnectorFormValues) => {
-    createPartialUserConfig({
-      workspaceId,
-      configTemplateId: selectedTemplateId ?? "",
-      connectionConfiguration: values.connectionConfiguration,
+    return new Promise<void>((resolve, reject) => {
+      createPartialUserConfig(
+        {
+          workspaceId,
+          configTemplateId: selectedTemplateId ?? "",
+          connectionConfiguration: values.connectionConfiguration,
+        },
+        {
+          onSuccess: () => resolve(),
+          onError: (error) => reject(error),
+        }
+      );
     });
   };
 

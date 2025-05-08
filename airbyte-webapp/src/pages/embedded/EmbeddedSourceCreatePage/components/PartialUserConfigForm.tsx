@@ -67,7 +67,11 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
             selectedConnectorDefinition={sourceDefinition}
             selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
             onSubmit={async (values: ConnectorFormValues) => {
-              onSubmit(values);
+              try {
+                await Promise.resolve(onSubmit(values));
+              } catch (error) {
+                console.error(error);
+              }
             }}
             canEdit
             renderFooter={({ dirty, isSubmitting }) => (

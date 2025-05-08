@@ -20,7 +20,7 @@ export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormContro
 
   return (
     <FlexContainer justifyContent="flex-end">
-      <Button full type="submit" disabled={!dirty || isSubmitting} isLoading={isSubmitting}>
+      <Button full type="submit" disabled={isSubmitting || !dirty} isLoading={isSubmitting}>
         {isEditMode ? (
           <FormattedMessage id="form.saveChanges" />
         ) : (

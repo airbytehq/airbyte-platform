@@ -20,10 +20,18 @@ export const PartialUserConfigEditForm: React.FC = () => {
   };
 
   const onSubmit = (values: ConnectorFormValues) => {
-    updatePartialUserConfig({
-      partialUserConfigId: selectedPartialConfigId ?? "",
-      connectionConfiguration: values.connectionConfiguration,
-      workspaceId,
+    return new Promise<void>((resolve, reject) => {
+      updatePartialUserConfig(
+        {
+          partialUserConfigId: selectedPartialConfigId ?? "",
+          connectionConfiguration: values.connectionConfiguration,
+          workspaceId,
+        },
+        {
+          onSuccess: () => resolve(),
+          onError: (error) => reject(error),
+        }
+      );
     });
   };
 
