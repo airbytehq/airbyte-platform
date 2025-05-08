@@ -77,7 +77,7 @@ open class WebBackendApiController(
   @Post("/connections/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendCreateConnection(
     @Body webBackendConnectionCreate: WebBackendConnectionCreate,
   ): WebBackendConnectionRead? =
@@ -147,7 +147,7 @@ open class WebBackendApiController(
   @Post("/connections/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendUpdateConnection(
     @Body webBackendConnectionUpdate: WebBackendConnectionUpdate,
   ): WebBackendConnectionRead? =

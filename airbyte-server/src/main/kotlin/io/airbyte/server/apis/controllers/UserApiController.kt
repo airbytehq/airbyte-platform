@@ -60,7 +60,7 @@ open class UserApiController(
 
   @Post("/delete")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
-  @AuditLogging(AuditLoggingProvider.EMPTY)
+  @AuditLogging(AuditLoggingProvider.ONLY_ACTOR)
   override fun deleteUser(
     @Body userIdRequestBody: UserIdRequestBody?,
   ) {
@@ -72,7 +72,7 @@ open class UserApiController(
 
   @Post("/update")
   @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.SELF)
-  @AuditLogging(AuditLoggingProvider.EMPTY)
+  @AuditLogging(AuditLoggingProvider.ONLY_ACTOR)
   override fun updateUser(
     @Body userUpdate: UserUpdate,
   ): UserRead? = execute { userHandler.updateUser(userUpdate) }
