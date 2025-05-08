@@ -6493,7 +6493,7 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
-  /public/v1/config_templates:
+  /public/v1/config_templates/sources:
     get:
       description: List all config templates available to a workspace. This endpoint is only available when Airbyte Embedded is enabled.
       tags:
@@ -6572,7 +6572,7 @@ paths:
       summary: Create connection template
       x-sdk-alias: createConnectionTemplate
       x-sdk-group: ConnectionTemplates
-  /public/v1/config_templates/{configTemplateId}:
+  /public/v1/config_templates/sources/{configTemplateId}:
     patch:
       description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
       requestBody:
