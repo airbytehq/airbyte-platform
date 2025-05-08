@@ -16,7 +16,6 @@ import io.airbyte.api.model.generated.UserUpdate
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList
-import io.airbyte.api.model.generated.WorkspaceUserReadList
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
@@ -83,13 +82,6 @@ open class UserApiController(
   override fun listUsersInOrganization(
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): OrganizationUserReadList? = execute { userHandler.listUsersInOrganization(organizationIdRequestBody) }
-
-  @Post("/list_by_workspace_id")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listUsersInWorkspace(
-    @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
-  ): WorkspaceUserReadList? = execute { userHandler.listUsersInWorkspace(workspaceIdRequestBody) }
 
   @Post("/list_access_info_by_workspace_id")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)

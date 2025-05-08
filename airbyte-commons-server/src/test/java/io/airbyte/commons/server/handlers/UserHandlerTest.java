@@ -32,8 +32,6 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
-import io.airbyte.api.model.generated.WorkspaceUserRead;
-import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.api.problems.throwable.generated.SSORequiredProblem;
 import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem;
 import io.airbyte.commons.auth.config.InitialUserConfig;
@@ -169,36 +167,6 @@ class UserHandlerTest {
         .permissionType(io.airbyte.api.model.generated.PermissionType.ORGANIZATION_ADMIN)));
 
     final var result = userHandler.listUsersInOrganization(new OrganizationIdRequestBody().organizationId(organizationId));
-    assertEquals(expectedListResult, result);
-  }
-
-  @Test
-  void testListUsersInWorkspace() throws IOException {
-    final UUID workspaceId = UUID.randomUUID();
-    final UUID userID = UUID.randomUUID();
-
-    // expecting the default user to be excluded from the response
-    final UserPermission defaultUserPermission = new UserPermission()
-        .withUser(new User().withName("default").withUserId(DEFAULT_USER_ID).withEmail("default@airbyte.io"))
-        .withPermission(new Permission().withPermissionId(UUID.randomUUID()).withPermissionType(PermissionType.WORKSPACE_ADMIN));
-
-    final UserPermission realUserPermission = new UserPermission()
-        .withUser(new User().withName(USER_NAME).withUserId(userID).withEmail(USER_EMAIL).withDefaultWorkspaceId(workspaceId))
-        .withPermission(new Permission().withPermissionId(PERMISSION1_ID).withPermissionType(PermissionType.WORKSPACE_ADMIN));
-
-    when(permissionHandler.listUsersInWorkspace(workspaceId)).thenReturn(List.of(defaultUserPermission, realUserPermission));
-
-    // no default user present
-    final var expectedListResult = new WorkspaceUserReadList().users(List.of(new WorkspaceUserRead()
-        .userId(userID)
-        .name(USER_NAME)
-        .isDefaultWorkspace(true)
-        .email(USER_EMAIL)
-        .workspaceId(workspaceId)
-        .permissionId(PERMISSION1_ID)
-        .permissionType(io.airbyte.api.model.generated.PermissionType.WORKSPACE_ADMIN)));
-
-    final var result = userHandler.listUsersInWorkspace(new WorkspaceIdRequestBody().workspaceId(workspaceId));
     assertEquals(expectedListResult, result);
   }
 
