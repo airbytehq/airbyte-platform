@@ -242,11 +242,12 @@ create table "public"."connection_template" (
   "schedule_type" "public"."schedule_type" not null,
   "schedule_data" jsonb,
   "resource_requirements" jsonb,
-  "non_breaking_change_preference" non_breaking_change_preference_type not null,
-  "dataplace_group_id" uuid not null,
+  "non_breaking_changes_preference" non_breaking_change_preference_type not null,
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  "default_geography" varchar(2147483647),
+  "sync_on_create" boolean not null default true,
   constraint "connection_template_pkey" primary key ("id")
 );
 create table "public"."connection_timeline_event" (
