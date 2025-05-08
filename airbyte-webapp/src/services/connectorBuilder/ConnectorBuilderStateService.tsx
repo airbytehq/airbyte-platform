@@ -147,6 +147,10 @@ interface TestReadLimits {
   sliceLimit: number;
 }
 
+interface GeneratedStreamLimits {
+  streamLimit: number;
+}
+
 export interface TestReadContext {
   streamRead: UseQueryResult<StreamReadTransformedSlices, unknown>;
   testReadLimits: {
@@ -168,6 +172,11 @@ export interface TestReadContext {
   queueStreamRead: () => void;
   cancelStreamRead: () => void;
   testStreamRequestType: "sync" | "async";
+  generatedStreamsLimits: {
+    streamLimit: number;
+    setStreamLimit: (newStreamLimit: number) => void;
+    defaultGeneratedLimits: GeneratedStreamLimits;
+  };
   generateStreams: UseQueryResult<ConnectorBuilderProjectFullResolveResponse, unknown>;
 }
 
@@ -884,10 +893,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;
   const DEFAULT_RECORD_LIMIT = 1000;
+  const DEFAULT_STREAM_LIMIT = 100;
 
   const [pageLimit, setPageLimit] = useState(DEFAULT_PAGE_LIMIT);
   const [sliceLimit, setSliceLimit] = useState(DEFAULT_SLICE_LIMIT);
   const [recordLimit, setRecordLimit] = useState(DEFAULT_RECORD_LIMIT);
+  const [streamLimit, setStreamLimit] = useState(DEFAULT_STREAM_LIMIT);
   const [testState, setTestState] = useState("");
 
   const testReadLimits = {
@@ -904,6 +915,14 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     },
   };
 
+  const generatedStreamsLimits = {
+    streamLimit,
+    setStreamLimit,
+    defaultGeneratedLimits: {
+      streamLimit: DEFAULT_STREAM_LIMIT,
+    },
+  };
+
   const testStateParsed = testState ? JSON.parse(testState) : undefined;
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
@@ -917,8 +936,9 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       manifest: jsonManifest,
       builderProjectId: projectId,
       workspaceId,
+      streamLimit,
     }),
-    [jsonManifest, projectId, workspaceId]
+    [jsonManifest, projectId, workspaceId, streamLimit]
   );
 
   const fullResolveManifest = useBuilderProjectFullResolveManifest(resolvedManifestInput);
@@ -1091,6 +1111,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       testStream?.retriever?.type === AsyncRetrieverType.AsyncRetriever
         ? ("async" as const)
         : ("sync" as const),
+    generatedStreamsLimits,
     generateStreams: { ...fullResolveManifest, refetch: doGenerateStreams } as UseQueryResult<
       ConnectorBuilderProjectFullResolveResponse,
       unknown

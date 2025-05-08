@@ -253,6 +253,8 @@ public class AirbyteCdkRequesterImpl implements AirbyteCdkRequester {
       commandConfig.put(streamLimitKey, userProvidedStreamLimit);
     }
 
+    ((ObjectNode) adaptedConfig).set(commandConfigKey, commandConfig);
+
     return OBJECT_WRITER.writeValueAsString(adaptedConfig);
   }
 

@@ -1696,6 +1696,7 @@
   "connectorBuilder.testReadSettings.pageLimit": "Maximum number of pages",
   "connectorBuilder.testReadSettings.sliceLimit": "Maximum number of partitions",
   "connectorBuilder.testReadSettings.testState": "Input state",
+  "connectorBuilder.generateStreamsSettings.streamLimit": "Maximum number of streams to generate",
   "connectorBuilder.recordsTab": "Records",
   "connectorBuilder.requestTab": "Request",
   "connectorBuilder.responseTab": "Response",
