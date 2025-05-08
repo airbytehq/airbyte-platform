@@ -69,6 +69,8 @@ export const enum Action {
   STREAM_COPY = "StreamCopy",
   STREAM_DELETE = "StreamDelete",
   DYNAMIC_STREAM_DELETE = "DynamicStreamDelete",
+  DYNAMIC_STREAM_GENERATE = "DynamicStreamGenerate",
+  DYNAMIC_STREAM_PREVIEW_ENDPOINT = "DynamicStreamPreviewEndpoint",
   STREAM_TEST = "StreamTest",
   STREAM_TEST_SUCCESS = "StreamTestSuccess",
   STREAM_TEST_FAILURE = "StreamTestFailure",

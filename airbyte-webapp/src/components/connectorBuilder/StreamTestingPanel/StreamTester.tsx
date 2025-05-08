@@ -175,10 +175,19 @@ export const StreamTester: React.FC<{
       variant={streamIsDynamic ? "secondary" : undefined}
       queueStreamRead={() => {
         queueStreamRead();
-        analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
-          actionDescription: "Stream test initiated",
-          stream_name: streamName,
-        });
+        if (streamIsDynamic) {
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_PREVIEW_ENDPOINT, {
+            actionDescription: "Dynamic stream endpoint previewed",
+            dynamic_stream_name: streamName,
+          });
+        } else {
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_TEST, {
+            actionDescription: "Stream test initiated",
+            stream_name: streamName,
+            stream_type: testStreamId.type,
+            dynamic_stream_name: testStreamId.type === "generated_stream" ? testStreamId.dynamicStreamName : undefined,
+          });
+        }
       }}
       cancelStreamRead={cancelStreamRead}
       hasTestingValuesErrors={hasTestingValuesErrors}
@@ -226,7 +235,13 @@ export const StreamTester: React.FC<{
           <Button
             className={hasGeneratedStreams ? undefined : styles.pulsate}
             isLoading={isGeneratingStreams}
-            onClick={() => generateStreams()}
+            onClick={() => {
+              generateStreams();
+              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_GENERATE, {
+                actionDescription: "Dynamic streams generated",
+                dynamic_stream_name: streamName,
+              });
+            }}
           >
             <FormattedMessage id="connectorBuilder.generateStreams" />
           </Button>
