@@ -50,7 +50,7 @@ class AuditLoggingInterceptorTest {
     context = mockk()
     applicationContext = mockk()
     auditLoggingHelper = mockk()
-    storageClientFactory = mockk()
+    storageClientFactory = mockk(relaxed = true)
     featureFlagClient = mockk()
   }
 
@@ -67,8 +67,8 @@ class AuditLoggingInterceptorTest {
         null,
         applicationContext,
         auditLoggingHelper,
-        storageClientFactory,
         featureFlagClient,
+        storageClientFactory,
       )
 
     every { context.methodName } returns "createPermission"
@@ -95,8 +95,8 @@ class AuditLoggingInterceptorTest {
           "test-audit-log-bucket",
           applicationContext,
           auditLoggingHelper,
-          storageClientFactory,
           featureFlagClient,
+          storageClientFactory,
         ),
       )
     val request = mockk<NettyHttpRequest<Any>>()
@@ -161,7 +161,6 @@ class AuditLoggingInterceptorTest {
         response = "{\"result\": \"summary\"}",
         success = true,
         error = null,
-        storageClient,
       )
     }
   }

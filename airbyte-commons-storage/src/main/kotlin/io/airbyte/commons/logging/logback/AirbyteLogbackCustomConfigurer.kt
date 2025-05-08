@@ -27,6 +27,7 @@ import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
+import io.airbyte.commons.storage.CloudStorageBulkUploaderExecutor
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
 
@@ -278,7 +279,7 @@ class AirbyteLogbackCustomConfigurer :
     val shutdownHook = DefaultShutdownHook().apply { context = loggerContext }
     Runtime.getRuntime().addShutdownHook(
       Thread {
-        AirbyteCloudStorageAppenderExecutorServiceHelper.stopAirbyteCloudStorageAppenderExecutorService()
+        CloudStorageBulkUploaderExecutor.stopAirbyteCloudStorageAppenderExecutorService()
         shutdownHook.run()
       },
     )

@@ -10,10 +10,9 @@ import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.logging.logback.createFileId
 import io.airbyte.commons.storage.AUDIT_LOGGING
+import io.airbyte.commons.storage.AirbyteCloudStorageBulkUploader
 import io.airbyte.commons.storage.DocumentType
-import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.FeatureFlagClient
@@ -25,9 +24,12 @@ import io.micronaut.aop.MethodInterceptor
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.context.annotation.Value
+import io.micronaut.context.event.ShutdownEvent
+import io.micronaut.context.event.StartupEvent
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.http.server.netty.NettyHttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
+import io.micronaut.runtime.event.annotation.EventListener
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -43,9 +45,25 @@ class AuditLoggingInterceptor(
   @Value("\${airbyte.cloud.storage.bucket.audit-logging:}") private val auditLoggingBucket: String?,
   private val applicationContext: ApplicationContext,
   private val auditLoggingHelper: AuditLoggingHelper,
-  private val storageClientFactory: StorageClientFactory,
   private val featureFlagClient: FeatureFlagClient,
+  storageClientFactory: StorageClientFactory,
 ) : MethodInterceptor<Any, Any> {
+  private val appender =
+    AirbyteCloudStorageBulkUploader<AuditLogEntry>(
+      AUDIT_LOGGING,
+      storageClientFactory.create(DocumentType.AUDIT_LOGS),
+    )
+
+  @EventListener
+  fun onStartupEvent(event: StartupEvent) {
+    appender.start()
+  }
+
+  @EventListener
+  fun onShutdownEvent(event: ShutdownEvent) {
+    appender.stop()
+  }
+
   override fun intercept(context: MethodInvocationContext<Any, Any>): Any {
     val canStoreAuditLogs = featureFlagClient.boolVariation(StoreAuditLogs, Workspace(ANONYMOUS))
 
@@ -94,7 +112,6 @@ class AuditLoggingInterceptor(
 
     // Generate the summary from the request, before proceeding the request
     val requestSummary = provider.get().generateSummaryFromRequest(requestBody)
-    val storageClient = storageClientFactory.create(DocumentType.AUDIT_LOGS)
 
     // Proceed the request and log the result/error
     val result =
@@ -108,7 +125,6 @@ class AuditLoggingInterceptor(
           response = null,
           success = false,
           error = exception.message,
-          storageClient,
         )
         throw exception
       }
@@ -122,7 +138,6 @@ class AuditLoggingInterceptor(
       response = resultSummary,
       success = true,
       error = null,
-      storageClient,
     )
 
     return result ?: Unit
@@ -136,7 +151,6 @@ class AuditLoggingInterceptor(
     response: Any?,
     success: Boolean,
     error: String? = null,
-    storageClient: StorageClient,
   ) {
     val auditLogEntry =
       AuditLogEntry(
@@ -156,12 +170,6 @@ class AuditLoggingInterceptor(
       return
     }
 
-    // We override the default uniqueIdentifier behaviour here to include the
-    // operationName in the log filename.
-    val uniqueIdentifier = operationName + "_" + UUID.randomUUID().toString()
-    val fileId = createFileId(baseId = "", uniqueIdentifier = uniqueIdentifier)
-
-    // TODO: use a batch uploader / appender to optimize these write calls
-    storageClient.write(fileId, serializedAuditLogEntry)
+    appender.append(auditLogEntry)
   }
 }

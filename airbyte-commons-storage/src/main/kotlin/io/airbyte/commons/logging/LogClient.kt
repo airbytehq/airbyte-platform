@@ -7,8 +7,8 @@ package io.airbyte.commons.logging
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.readValue
-import io.airbyte.commons.logging.logback.STRUCTURED_LOG_FILE_EXTENSION
 import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.STRUCTURED_LOG_FILE_EXTENSION
 import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
