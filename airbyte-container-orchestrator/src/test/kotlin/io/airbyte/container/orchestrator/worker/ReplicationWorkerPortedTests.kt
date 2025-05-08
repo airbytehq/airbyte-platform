@@ -12,10 +12,14 @@ import io.airbyte.commons.logging.LogSource
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
+import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
+import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEvent
+import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
+import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTrackerFactory
+import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
-import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestination
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
@@ -41,11 +45,6 @@ import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
-import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTrackerFactory
-import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.airbyte.workers.testutils.TestConfigHelpers
 import io.mockk.MockKAnnotations

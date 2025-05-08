@@ -16,7 +16,6 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.FailureHelper.destinationFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
-import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.mockk.Called
 import io.mockk.every

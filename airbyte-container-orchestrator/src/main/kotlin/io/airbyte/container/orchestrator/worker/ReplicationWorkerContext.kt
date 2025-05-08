@@ -5,7 +5,6 @@
 package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
-import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton

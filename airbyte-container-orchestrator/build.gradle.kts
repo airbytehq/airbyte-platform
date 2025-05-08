@@ -62,6 +62,7 @@ dependencies {
   implementation(project(":oss:airbyte-mappers"))
   implementation(libs.airbyte.protocol)
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
+  implementation(project(":oss:airbyte-persistence:job-persistence"))
   implementation(project(":oss:airbyte-worker-models"))
   implementation(libs.kotlin.coroutines)
 
@@ -71,6 +72,7 @@ dependencies {
   testAnnotationProcessor(platform(libs.micronaut.platform))
   testAnnotationProcessor(libs.bundles.micronaut.test.annotation.processor)
 
+  testImplementation(libs.bundles.junit)
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.bundles.mockito.inline)
   testImplementation(libs.bundles.bouncycastle)
@@ -79,6 +81,7 @@ dependencies {
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlin.coroutines.test)
+  testImplementation(libs.assertj.core)
 
   airbyteProtocol(libs.airbyte.protocol) {
     isTransitive = false

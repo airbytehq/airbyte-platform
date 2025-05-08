@@ -11,7 +11,12 @@ import io.airbyte.config.MapperConfig
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
+import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
+import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
+import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
+import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
+import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
@@ -28,11 +33,6 @@ import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ANALYTICS
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
-import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
-import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
-import io.airbyte.workers.internal.bookkeeping.streamstatus.StreamStatusTracker
-import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.mockk.MockKAnnotations
 import io.mockk.Runs
 import io.mockk.every

@@ -8,6 +8,7 @@ import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.AsyncUtils
@@ -17,7 +18,6 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
-import io.airbyte.workers.internal.syncpersistence.SyncPersistence
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
