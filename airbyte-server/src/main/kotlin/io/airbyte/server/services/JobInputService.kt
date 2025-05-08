@@ -51,34 +51,8 @@ import java.util.UUID
 
 val log = KotlinLogging.logger { }
 
-interface JobInputService {
-  fun getCheckInput(
-    actorId: UUID,
-    jobId: String?,
-    attemptId: Long?,
-  ): CheckConnectionInput
-
-  fun getCheckInput(
-    actorDefinitionId: UUID,
-    workspaceId: UUID,
-    configuration: JsonNode,
-  ): CheckConnectionInput
-
-  fun getDiscoveryInput(
-    actorId: UUID,
-    workspaceId: UUID,
-  ): DiscoverCommandInput.DiscoverCatalogInput
-
-  fun getDiscoveryInputWithJobId(
-    actorId: UUID,
-    workspaceId: UUID,
-    jobId: String,
-    attemptId: Long,
-  ): DiscoverCommandInput.DiscoverCatalogInput
-}
-
 @Singleton
-class JobInputServiceImpl(
+class JobInputService(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val actorDefinitionVersionHelper: ActorDefinitionVersionHelper,
@@ -89,12 +63,12 @@ class JobInputServiceImpl(
   private val secretReferenceService: SecretReferenceService,
   private val contextBuilder: ContextBuilder,
   private val scopedConfigurationService: ScopedConfigurationService,
-) : JobInputService {
+) {
   companion object {
     private val HASH_FUNCTION = Hashing.md5()
   }
 
-  override fun getCheckInput(
+  fun getCheckInput(
     actorId: UUID,
     jobId: String?,
     attemptId: Long?,
@@ -109,7 +83,7 @@ class JobInputServiceImpl(
     }
   }
 
-  override fun getCheckInput(
+  fun getCheckInput(
     actorDefinitionId: UUID,
     workspaceId: UUID,
     configuration: JsonNode,
@@ -125,7 +99,7 @@ class JobInputServiceImpl(
     }
   }
 
-  override fun getDiscoveryInput(
+  fun getDiscoveryInput(
     actorId: UUID,
     workspaceId: UUID,
   ): DiscoverCommandInput.DiscoverCatalogInput {
@@ -139,7 +113,7 @@ class JobInputServiceImpl(
     }
   }
 
-  override fun getDiscoveryInputWithJobId(
+  fun getDiscoveryInputWithJobId(
     actorId: UUID,
     workspaceId: UUID,
     jobId: String,

@@ -50,7 +50,7 @@ class JobInputServiceTest {
   private lateinit var secretReferenceService: SecretReferenceService
   private lateinit var contextBuilder: ContextBuilder
   private lateinit var scopedConfigurationService: ScopedConfigurationService
-  private lateinit var jobInputService: JobInputServiceImpl
+  private lateinit var jobInputService: JobInputService
 
   private val workspaceId = UUID.randomUUID()
   private val sourceDefinitionId = UUID.randomUUID()
@@ -77,7 +77,7 @@ class JobInputServiceTest {
     scopedConfigurationService = mockk()
 
     jobInputService =
-      JobInputServiceImpl(
+      JobInputService(
         sourceService,
         destinationService,
         actorDefinitionVersionHelper,
