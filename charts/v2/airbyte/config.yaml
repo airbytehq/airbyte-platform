@@ -1341,8 +1341,8 @@ workloadLauncher.dataPlane:
     - env: DATAPLANE_CLIENT_ID
       key: clientId
       sensitive: true
-      #secretRef: airbyte.auth.bootstrap.managedSecretName
-
+      secretRefExp: (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))
+              
     - env: DATAPLANE_CLIENT_ID_SECRET_NAME
       key: clientIdSecretName
       defaultValueExp: (include "airbyte.auth.bootstrap.managedSecretName" .)
@@ -1354,7 +1354,7 @@ workloadLauncher.dataPlane:
     - env: DATAPLANE_CLIENT_SECRET
       key: clientSecret
       sensitive: true
-      #secretRef: airbyte.auth.bootstrap.managedSecretName
+      secretRefExp: (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid"))
 
     - env: DATAPLANE_CLIENT_SECRET_SECRET_NAME
       key: clientSecretSecretName

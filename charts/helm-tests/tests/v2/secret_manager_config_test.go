@@ -35,6 +35,7 @@ func TestDefaultSecretManagerConfig(t *testing.T) {
 func TestVaultSecretManagerConfig(t *testing.T) {
 	opts := helmtests.BaseHelmOptions()
 	opts.SetValues["global.secretsManager.type"] = "VAULT"
+	opts.SetJsonValues["global.secretsManager.vault"] = "{}"
 	chartYaml, err := helmtests.RenderHelmChart(t, opts, chartPath, "airbyte", nil)
 	assert.NoError(t, err)
 

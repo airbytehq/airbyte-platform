@@ -113,7 +113,7 @@ Renders the workloadLauncher.dataPlane.clientId environment variable
 - name: DATAPLANE_CLIENT_ID
   valueFrom:
     secretKeyRef:
-      name: {{ include "airbyte.workloadLauncher.dataPlane.secretName" . }}
+      name: {{ (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")) }}
       key: {{ include "airbyte.workloadLauncher.dataPlane.clientId.secretKey" . }}
 {{- end }}
 
@@ -174,7 +174,7 @@ Renders the workloadLauncher.dataPlane.clientSecret environment variable
 - name: DATAPLANE_CLIENT_SECRET
   valueFrom:
     secretKeyRef:
-      name: {{ include "airbyte.workloadLauncher.dataPlane.secretName" . }}
+      name: {{ (ternary (include "airbyte.auth.bootstrap.managedSecretName" .) (include "airbyte.workloadLauncher.dataPlane.secretName" .) (eq (include "airbyte.common.cluster.type" .) "hybrid")) }}
       key: {{ include "airbyte.workloadLauncher.dataPlane.clientSecret.secretKey" . }}
 {{- end }}
 
