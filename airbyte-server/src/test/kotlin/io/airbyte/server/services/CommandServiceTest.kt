@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
@@ -40,7 +41,19 @@ class CommandServiceTest {
 
     workloadService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
-    service = CommandService(commandsRepository, workloadService, workloadOutputReader)
+    service =
+      CommandService(
+        actorRepository = mockk(),
+        commandsRepository = commandsRepository,
+        jobInputService = mockk(),
+        logClientManager = mockk(),
+        organizationService = mockk(),
+        workloadService = workloadService,
+        workloadQueueService = mockk(),
+        workloadOutputReader = workloadOutputReader,
+        workspaceService = mockk(),
+        workspaceRoot = Path.of("/test-root"),
+      )
   }
 
   @Test

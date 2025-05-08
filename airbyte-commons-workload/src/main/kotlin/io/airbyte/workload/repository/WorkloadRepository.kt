@@ -17,7 +17,7 @@ import io.micronaut.data.repository.PageableRepository
 import java.time.OffsetDateTime
 import java.util.Optional
 
-@JdbcRepository(dialect = Dialect.POSTGRES)
+@JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface WorkloadRepository : PageableRepository<Workload, String> {
   @Join(value = "workloadLabels", type = Join.Type.LEFT_FETCH)
   override fun findById(

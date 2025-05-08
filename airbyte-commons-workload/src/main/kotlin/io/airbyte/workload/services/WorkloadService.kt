@@ -4,13 +4,15 @@
 
 package io.airbyte.workload.services
 
+import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
+import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
-import io.airbyte.workload.repository.domain.WorkloadType
 import io.airbyte.workload.signal.SignalSender
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -40,6 +42,7 @@ class WorkloadService(
   private val workloadRepository: WorkloadRepository,
   private val workloadQueueRepository: WorkloadQueueRepository,
   private val signalSender: SignalSender,
+  private val defaultDeadlineValues: DefaultDeadlineValues,
 ) {
   fun createWorkload(
     workloadId: String,
@@ -49,7 +52,7 @@ class WorkloadService(
     mutexKey: String?,
     type: WorkloadType,
     autoId: UUID,
-    deadline: OffsetDateTime,
+    deadline: OffsetDateTime?,
     signalInput: String?,
     dataplaneGroup: String?,
     priority: WorkloadPriority?,
@@ -71,9 +74,9 @@ class WorkloadService(
           inputPayload = input,
           logPath = logPath,
           mutexKey = mutexKey,
-          type = type,
+          type = type.convertTo(),
           autoId = autoId,
-          deadline = deadline,
+          deadline = deadline ?: defaultDeadlineValues.createStepDeadline(),
           signalInput = signalInput,
           dataplaneGroup = dataplaneGroup,
           priority = priority?.toInt() ?: 0,

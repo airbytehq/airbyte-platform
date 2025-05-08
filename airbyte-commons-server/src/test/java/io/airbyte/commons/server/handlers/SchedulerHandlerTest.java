@@ -75,6 +75,7 @@ import io.airbyte.commons.server.handlers.helpers.ApplySchemaChangeHelper;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionTimelineEventHelper;
 import io.airbyte.commons.server.helpers.DestinationHelpers;
+import io.airbyte.commons.server.helpers.SecretSanitizer;
 import io.airbyte.commons.server.helpers.SourceHelpers;
 import io.airbyte.commons.server.scheduler.EventRunner;
 import io.airbyte.commons.server.scheduler.SynchronousJobMetadata;
@@ -288,6 +289,7 @@ class SchedulerHandlerTest {
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private MetricClient metricClient;
   private SecretStorageService secretStorageService;
+  private SecretSanitizer secretSanitizer;
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
@@ -349,11 +351,18 @@ class SchedulerHandlerTest {
     when(streamRefreshesHandler.getRefreshesForConnection(any())).thenReturn(new ArrayList<>());
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
 
+    secretSanitizer = new SecretSanitizer(
+        actorDefinitionVersionHelper,
+        destinationService,
+        sourceService,
+        secretPersistenceService,
+        secretsRepositoryWriter,
+        secretStorageService);
+
     schedulerHandler = new SchedulerHandler(
         actorDefinitionService,
         catalogService,
         connectionService,
-        secretsRepositoryWriter,
         synchronousSchedulerClient,
         configurationUpdate,
         jsonSchemaValidator,
@@ -372,7 +381,6 @@ class SchedulerHandlerTest {
         jobTracker,
         connectorDefinitionSpecificationHandler,
         workspaceService,
-        secretPersistenceService,
         streamRefreshesHandler,
         connectionTimelineEventHelper,
         sourceService,
@@ -380,7 +388,7 @@ class SchedulerHandlerTest {
         catalogConverter,
         applySchemaChangeHelper,
         metricClient,
-        secretStorageService);
+        secretSanitizer);
   }
 
   @ParameterizedTest
@@ -1058,7 +1066,8 @@ class SchedulerHandlerTest {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     final SourceConnection source = new SourceConnection()
         .withSourceDefinitionId(SOURCE.getSourceDefinitionId())
-        .withConfiguration(SOURCE.getConfiguration());
+        .withConfiguration(SOURCE.getConfiguration())
+        .withWorkspaceId(SOURCE.getWorkspaceId());
 
     final SourceCoreConfig sourceCoreConfig = new SourceCoreConfig()
         .sourceDefinitionId(source.getSourceDefinitionId())

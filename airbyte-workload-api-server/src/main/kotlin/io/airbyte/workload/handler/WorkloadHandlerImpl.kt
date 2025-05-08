@@ -89,7 +89,7 @@ class WorkloadHandlerImpl(
         logPath = logPath,
         input = input,
         mutexKey = mutexKey,
-        type = type.toDomain(),
+        type = type,
         autoId = autoId,
         deadline = deadline,
         signalInput = signalInput,

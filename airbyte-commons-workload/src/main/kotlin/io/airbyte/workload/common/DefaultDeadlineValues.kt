@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workload.handler
+package io.airbyte.workload.common
 
 import jakarta.inject.Singleton
 import java.time.Duration

@@ -14,6 +14,9 @@ import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectU
 import io.airbyte.commons.server.limits.ProductLimitsProvider
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.scheduler.TemporalEventRunner
+import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.Configs
@@ -224,4 +227,8 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.server.limits.workspaces}") maxWorkspaces: Long,
     @Value("\${airbyte.server.limits.users}") maxUsers: Long,
   ): ProductLimitsProvider.OrganizationLimits = ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers)
+
+  @Singleton
+  @Named("outputDocumentStore")
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 }

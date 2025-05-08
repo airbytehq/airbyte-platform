@@ -346,12 +346,12 @@ class WorkloadQueueTableTests {
           PropertySource.of(
             "test",
             mapOf(
-              "datasources.default.driverClassName" to "org.postgresql.Driver",
-              "datasources.default.db-type" to "postgres",
-              "datasources.default.dialect" to "POSTGRES",
-              "datasources.default.url" to container.jdbcUrl,
-              "datasources.default.username" to container.username,
-              "datasources.default.password" to container.password,
+              "datasources.config.driverClassName" to "org.postgresql.Driver",
+              "datasources.config.db-type" to "postgres",
+              "datasources.config.dialect" to "POSTGRES",
+              "datasources.config.url" to container.jdbcUrl,
+              "datasources.config.username" to container.username,
+              "datasources.config.password" to container.password,
             ),
           ),
         )

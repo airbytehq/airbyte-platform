@@ -16,6 +16,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
@@ -816,6 +817,7 @@ class WorkloadHandlerImplTest {
           workloadRepository = workloadRepository,
           workloadQueueRepository = workloadQueueRepository,
           signalSender = signalSender,
+          defaultDeadlineValues = DefaultDeadlineValues(),
         ),
       )
     const val WORKLOAD_ID = "test"

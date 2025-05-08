@@ -5959,6 +5959,153 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/commands/run/check:
+    post:
+      summary: Run a Check command for a Connector
+      description: >
+        Expected input is an id and either an actor_id to run a check for an existing actor or
+        an actor_definition_id, a workspace_id and a config to validate a config for a given actor definition.
+      tags: [command]
+      operationId: runCheckCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunCheckCommandRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                workspace_id:
+                  type: string
+                  format: UUID
+                actor_id:
+                  type: string
+                  format: UUID
+                actor_definition_id:
+                  type: string
+                  format: UUID
+                config:
+                  type: object
+                jobId:
+                  type: string
+                  description: internal usage
+                attemptNumber:
+                  type: number
+                  description: internal usage
+                priority:
+                  type: string
+                  description: internal usage
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunCheckCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/output/check:
+    post:
+      summary: Get the status of a check command
+      tags: [command]
+      operationId: getCheckCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CheckCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CheckCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/status:
+    post:
+      summary: Get the status of command
+      tags: [command]
+      operationId: getCommandStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CommandStatusRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CommandStatusResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, running, completed, cancelled]
+
+  /v1/commands/cancel:
+    post:
+      summary: Get the status of command
+      tags: [command]
+      operationId: cancelCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CancelCommandRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CancelCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
   /v1/dataplane_group/create:
     post:
       summary: Create a dataplane group

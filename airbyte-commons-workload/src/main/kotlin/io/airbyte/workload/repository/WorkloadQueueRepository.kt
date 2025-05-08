@@ -15,7 +15,7 @@ import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
 import java.util.UUID
 
-@JdbcRepository(dialect = Dialect.POSTGRES)
+@JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface WorkloadQueueRepository : PageableRepository<WorkloadQueueItem, UUID> {
   /**
    * This query explained:
