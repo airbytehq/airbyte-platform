@@ -6,20 +6,22 @@ export KC_DB=postgres
 export KC_DB_URL=$KEYCLOAK_DATABASE_URL
 export KC_DB_USERNAME=$KEYCLOAK_DATABASE_USERNAME
 export KC_DB_PASSWORD=$KEYCLOAK_DATABASE_PASSWORD
+export KC_HTTP_ENABLED=true
 export KC_HTTP_PORT=$KEYCLOAK_PORT
 
 LOG_LEVEL=${LOG_LEVEL:-INFO}
 
 # Build the command dynamically
 CMD="bin/kc.sh start \
-  --proxy edge \
+  --proxy-headers xforwarded \
   --log-level=$LOG_LEVEL \
   --cache=ispn \
   --cache-stack=kubernetes \
   --health-enabled=true \
   --http-relative-path /auth \
   --cache-config-file=cache-ispn-override.xml \
-  --legacy-observability-interface=true"
+  --legacy-observability-interface=true \
+  --http-enabled=true"
   # --spi-theme-static-max-age=-1 \
   # --spi-theme-cache-themes=false \
   # --spi-theme-cache-templates=false
