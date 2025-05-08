@@ -124,10 +124,10 @@ export const StreamTester: React.FC<{
         {
           info: 0,
           warning: streamTestWarnings.length,
-          error: 0,
+          error: errorMessage ? 1 : 0,
         }
       ),
-    [cleanedLogs, streamTestWarnings.length]
+    [cleanedLogs, streamTestWarnings.length, errorMessage]
   );
 
   const hasGeneratedStreams = generatedStreams?.[streamName]?.length > 0;

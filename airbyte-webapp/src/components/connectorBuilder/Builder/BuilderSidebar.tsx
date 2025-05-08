@@ -11,6 +11,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -304,7 +305,16 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
                 />
               </Text>
               <InfoTooltip placement="top">
-                <FormattedMessage id="connectorBuilder.dynamicStreamTooltip" />
+                <FormattedMessage
+                  id="connectorBuilder.dynamicStreamTooltip"
+                  values={{
+                    a: (node: React.ReactNode) => (
+                      <a href={links.connectorBuilderStreamTemplates} target="_blank" rel="noreferrer">
+                        {node}
+                      </a>
+                    ),
+                  }}
+                />
               </InfoTooltip>
             </FlexContainer>
 
