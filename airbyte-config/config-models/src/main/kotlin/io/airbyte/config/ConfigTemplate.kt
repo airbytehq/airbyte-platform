@@ -11,8 +11,9 @@ import java.util.UUID
 
 data class ConfigTemplate(
   val id: UUID,
-  val organizationId: UUID,
+  val organizationId: UUID? = null,
   val actorDefinitionId: UUID,
+  val partialDefaultConfig: JsonNode,
   /**
    * JSON string containing configuration specification (as JSON spec) with fields:
    * - advancedAuth (optional)
@@ -21,7 +22,6 @@ data class ConfigTemplate(
    * - documentationUrl (optional)
    */
   val userConfigSpec: ConnectorSpecification,
-  val partialDefaultConfig: JsonNode,
   val createdAt: OffsetDateTime? = null,
   val updatedAt: OffsetDateTime? = null,
 )

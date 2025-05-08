@@ -74,150 +74,18 @@ class ConfigTemplateServiceDataImplTest {
     actorDefinitionService = mockk<ActorDefinitionService>()
     repository = mockk<ConfigTemplateRepository>()
     sourceService = mockk<SourceService>()
-
     validator = JsonSchemaValidator()
 
     service = ConfigTemplateServiceDataImpl(repository, actorDefinitionService, sourceService, validator)
 
     every { sourceService.getStandardSourceDefinition(actorDefinitionId, false) } returns sourceDefinition
-
+    every { sourceService.listStandardSourceDefinitions(false) } returns listOf(sourceDefinition)
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
       Optional.of(
         actorDefinitionVersion,
       )
 
     actorDefinitionVersion.spec = connectorSpecificationWithoutRequiredFields
-  }
-
-  @Nested
-  inner class ListConfigTemplateTest {
-    @Test
-    fun `test listConfigTemplates`() {
-      val entityConfigTemplates =
-        listOf(
-          EntityConfigTemplate(
-            id = UUID.randomUUID(),
-            organizationId = UUID.randomUUID(),
-            actorDefinitionId = actorDefinitionId,
-            partialDefaultConfig = partialDefaultConfig,
-            userConfigSpec = userConfigSpecObject,
-          ),
-          EntityConfigTemplate(
-            id = UUID.randomUUID(),
-            organizationId = UUID.randomUUID(),
-            actorDefinitionId = actorDefinitionId,
-            partialDefaultConfig = partialDefaultConfig,
-            userConfigSpec = userConfigSpecObject,
-          ),
-        )
-
-      val expectedConfigTemplates =
-        listOf(
-          ConfigTemplateWithActorDetails(
-            configTemplate =
-              ConfigTemplate(
-                id = entityConfigTemplates[0].id!!,
-                organizationId = entityConfigTemplates[0].organizationId,
-                actorDefinitionId = entityConfigTemplates[0].actorDefinitionId,
-                partialDefaultConfig = ObjectMapper().readTree("{}"),
-                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
-              ),
-            actorIcon = sourceDefinition.iconUrl,
-            actorName = sourceDefinition.name,
-          ),
-          ConfigTemplateWithActorDetails(
-            configTemplate =
-              ConfigTemplate(
-                id = entityConfigTemplates[1].id!!,
-                organizationId = entityConfigTemplates[1].organizationId,
-                actorDefinitionId = entityConfigTemplates[1].actorDefinitionId,
-                partialDefaultConfig = ObjectMapper().readTree("{}"),
-                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
-              ),
-            actorIcon = sourceDefinition.iconUrl,
-            actorName = sourceDefinition.name,
-          ),
-        )
-
-      every { repository.findByOrganizationId(organizationId) } returns entityConfigTemplates
-
-      val configTemplates = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
-
-      assertEquals(expectedConfigTemplates, configTemplates)
-    }
-
-    @Test
-    fun `test getConfigTemplate`() {
-      val configTemplateId = UUID.randomUUID()
-      val entityConfigTemplate =
-        EntityConfigTemplate(
-          id = UUID.randomUUID(),
-          organizationId = UUID.randomUUID(),
-          actorDefinitionId = actorDefinitionId,
-          partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = userConfigSpecObject,
-        )
-
-      val expectedConfigTemplate =
-        ConfigTemplate(
-          id = entityConfigTemplate.id!!,
-          organizationId = entityConfigTemplate.organizationId,
-          actorDefinitionId = entityConfigTemplate.actorDefinitionId,
-          partialDefaultConfig = partialDefaultConfig,
-          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
-        )
-
-      every { repository.findById(configTemplateId) } returns Optional.of(entityConfigTemplate)
-
-      val configTemplate = service.getConfigTemplate(configTemplateId)
-
-      assertEquals(configTemplate.configTemplate, expectedConfigTemplate)
-      assertEquals(configTemplate.actorIcon, sourceDefinition.iconUrl)
-      assertEquals(configTemplate.actorName, sourceDefinition.name)
-    }
-
-    @Test
-    fun `test getConfigTemplate raises an exception if no matching config template`() {
-      val configTemplateId = UUID.randomUUID()
-
-      every { repository.findById(configTemplateId) } returns Optional.empty()
-
-      assertThrows(RuntimeException::class.java) {
-        service.getConfigTemplate(configTemplateId)
-      }
-    }
-  }
-
-  private fun createPartialUserConfigSpecAsObject(fields: Map<String, String>): ObjectNode {
-    val connectionSpecification = objectMapper.createObjectNode()
-    val specRequired = objectMapper.createArrayNode()
-    connectionSpecification.put("type", "object")
-    connectionSpecification.put("required", specRequired)
-    connectionSpecification.put("properties", objectMapper.createObjectNode())
-    val specProperties = connectionSpecification["properties"] as ObjectNode
-    for (f in fields) {
-      specRequired.add(f.key)
-      specProperties.set<ObjectNode>(f.key, objectMapper.createObjectNode().put("type", f.value))
-    }
-
-    val spec = ConnectorSpecification().withConnectionSpecification(connectionSpecification)
-
-    return objectMapper.valueToTree(spec)
-  }
-
-  private fun createConnectorSpecification(requiredFields: List<String>): ConnectorSpecification {
-    val connectionSpecification = objectMapper.createObjectNode().set<ObjectNode>("properties", objectMapper.createObjectNode())
-    connectionSpecification.set<ArrayNode>("required", objectMapper.createArrayNode())
-    val specProperties = connectionSpecification["properties"] as ObjectNode
-    specProperties.set<ObjectNode>("a_config_field", objectMapper.createObjectNode().put("type", "string"))
-    specProperties.set<ObjectNode>("an_integer_field", objectMapper.createObjectNode().put("type", "integer"))
-
-    val requiredArray = connectionSpecification["required"] as ArrayNode
-    for (field in requiredFields) {
-      requiredArray.add(field)
-    }
-
-    return ConnectorSpecification().withConnectionSpecification(connectionSpecification)
   }
 
   @Nested
@@ -961,18 +829,254 @@ class ConfigTemplateServiceDataImplTest {
   @Nested
   inner class ListTemplatesTest {
     @Test
-    fun testListConfigTemplatesForOrganization() {
-      val configTemplate = createConfigTemplate()
-      every { repository.findByOrganizationId(organizationId) } returns listOf(configTemplate)
+    fun testListConfigTemplatesOnlyForRelevantOrg() {
+      val entityConfigTemplates =
+        listOf(
+          // instance default
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            actorDefinitionId = UUID.randomUUID(),
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+          // relevant custom
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            organizationId = organizationId,
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+          // irrelevant custom
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            organizationId = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+        )
+
+      // Use the same objectMapper instance for both cases
+      val expectedConfigTemplates =
+        listOf(
+          ConfigTemplateWithActorDetails(
+            configTemplate =
+              ConfigTemplate(
+                id = entityConfigTemplates[1].id!!,
+                organizationId = entityConfigTemplates[1].organizationId,
+                actorDefinitionId = entityConfigTemplates[1].actorDefinitionId,
+                partialDefaultConfig = objectMapper.readTree("{}"),
+                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+              ),
+            actorIcon = "icon2",
+            actorName = "Source2",
+          ),
+          ConfigTemplateWithActorDetails(
+            configTemplate =
+              ConfigTemplate(
+                id = entityConfigTemplates[0].id!!,
+                actorDefinitionId = entityConfigTemplates[0].actorDefinitionId,
+                partialDefaultConfig = objectMapper.readTree("{}"),
+                userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+              ),
+            actorIcon = "icon1",
+            actorName = "Source1",
+          ),
+        )
+
+      every {
+        repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(
+          any(),
+          any(),
+        )
+      } returns listOf(entityConfigTemplates[1])
+
+      every {
+        repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(
+          any(),
+        )
+      } returns listOf(entityConfigTemplates[0])
+
+      every {
+        sourceService.listStandardSourceDefinitions(false)
+      } returns
+        listOf(
+          StandardSourceDefinition().apply {
+            sourceDefinitionId = entityConfigTemplates[0].actorDefinitionId
+            name = "Source1"
+            iconUrl = "icon1"
+          },
+          StandardSourceDefinition().apply {
+            sourceDefinitionId = entityConfigTemplates[1].actorDefinitionId
+            name = "Source2"
+            iconUrl = "icon2"
+          },
+        )
+
+      val configTemplates = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
+      assertEquals(2, configTemplates.size)
+
+      val sortedExpected = expectedConfigTemplates.sortedBy { it.configTemplate.id.toString() }
+      val sortedActual = configTemplates.sortedBy { it.configTemplate.id.toString() }
+      assertEquals(sortedExpected, sortedActual)
+    }
+
+    @Test
+    fun testListConfigTemplatesForOrganizationWithNoCustomTemplates() {
+      val entityConfigTemplates =
+        listOf(
+          // default template
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+        )
+
+      every { repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(organizationId, any()) } returns entityConfigTemplates
+
+      every { repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(any()) } returns entityConfigTemplates
 
       val result = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
 
       assertEquals(1, result.size)
-      assertEquals(configTemplateId, result[0].configTemplate.id)
-      assertEquals("test-source", result[0].actorName)
-      assertEquals("test-icon", result[0].actorIcon)
+    }
 
-      verify { repository.findByOrganizationId(organizationId) }
+    @Test
+    fun testListConfigTemplatesForOrganizationWithNoInstanceDefaults() {
+      val entityConfigTemplates =
+        listOf(
+          // custom template
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            organizationId = organizationId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+        )
+
+      every { repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(any()) } returns listOf()
+      every { repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(any(), any()) } returns entityConfigTemplates
+
+      val result = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
+
+      assertEquals(1, result.size)
+    }
+
+    @Test
+    fun testCombinesDefaultsAndCustomConfigTemplatesAcrossActors() {
+      val secondActorDefinitionId = UUID.randomUUID()
+
+      val sourceDefinitions =
+        listOf(
+          StandardSourceDefinition().apply {
+            sourceDefinitionId = actorDefinitionId
+            name = "test-source"
+            iconUrl = "test-icon"
+          },
+          StandardSourceDefinition().apply {
+            sourceDefinitionId = secondActorDefinitionId
+            name = "second-source"
+            iconUrl = "second-icon"
+          },
+        )
+
+      val customTemplate =
+        EntityConfigTemplate(
+          id = UUID.randomUUID(),
+          actorDefinitionId = actorDefinitionId,
+          organizationId = organizationId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = userConfigSpecObject,
+        )
+
+      val defaultTemplate =
+        EntityConfigTemplate(
+          id = UUID.randomUUID(),
+          actorDefinitionId = secondActorDefinitionId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = userConfigSpecObject,
+        )
+
+      every { sourceService.listStandardSourceDefinitions(false) } returns sourceDefinitions
+
+      every {
+        repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(organizationId, listOf(actorDefinitionId, secondActorDefinitionId))
+      } returns listOf(customTemplate)
+
+      every {
+        repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(any())
+      } returns listOf(defaultTemplate)
+
+      val result = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
+      // Verify we get both templates (one custom, one default)
+      assertEquals(2, result.size)
+
+      assertEquals(1, result.count { it.configTemplate.actorDefinitionId == actorDefinitionId })
+      assertEquals(1, result.count { it.configTemplate.actorDefinitionId == secondActorDefinitionId })
+
+      val actorNames = result.map { it.actorName }.toSet()
+      assertEquals(setOf("test-source", "second-source"), actorNames)
+    }
+
+    @Test
+    fun testListConfigTemplatesCustomOverridesDefault() {
+      // Create two actor definitions
+      val sourceDefinitions =
+        listOf(
+          StandardSourceDefinition().apply {
+            sourceDefinitionId = actorDefinitionId
+            name = "test-source"
+            iconUrl = "test-icon"
+          },
+        )
+
+      // Create a default template and a custom template for the same actor definition
+      val entityConfigTemplates =
+        listOf(
+          // Default template for actorDefinition
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+          // Custom template for the same actorDefinition, using its versionId
+          EntityConfigTemplate(
+            id = UUID.randomUUID(),
+            actorDefinitionId = actorDefinitionId,
+            organizationId = organizationId,
+            partialDefaultConfig = partialDefaultConfig,
+            userConfigSpec = userConfigSpecObject,
+          ),
+        )
+
+      // Mock source service to return our test source definitions
+      every { sourceService.listStandardSourceDefinitions(false) } returns sourceDefinitions
+
+      every {
+        repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(listOf(actorDefinitionId))
+      } returns listOf(entityConfigTemplates[1])
+
+      // Mock custom templates - return the custom template for actorDefinitionId
+      every {
+        repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(organizationId, listOf(actorDefinitionId))
+      } returns listOf(entityConfigTemplates[1])
+
+      val result = service.listConfigTemplatesForOrganization(OrganizationId(organizationId))
+
+      // Verify we only get one template (the custom one)
+      assertEquals(1, result.size)
+
+      // Verify the template is the custom one
+      val returnedTemplate = result[0].configTemplate
+
+      // Ensure actorDefinitionId is present (custom template) and not actorDefinitionVersionId (default template)
+      assertNotNull(returnedTemplate.actorDefinitionId)
+      assertEquals(actorDefinitionId, returnedTemplate.actorDefinitionId)
     }
   }
 
@@ -992,6 +1096,47 @@ class ConfigTemplateServiceDataImplTest {
       assertEquals(userConfigSpecObject, objectMapper.valueToTree(result.configTemplate.userConfigSpec))
 
       verify { repository.findById(configTemplateId) }
+    }
+
+    @Test
+    fun `test getConfigTemplate`() {
+      val configTemplateId = UUID.randomUUID()
+      val entityConfigTemplate =
+        EntityConfigTemplate(
+          id = UUID.randomUUID(),
+          organizationId = UUID.randomUUID(),
+          actorDefinitionId = actorDefinitionId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = userConfigSpecObject,
+        )
+
+      val expectedConfigTemplate =
+        ConfigTemplate(
+          id = entityConfigTemplate.id!!,
+          organizationId = entityConfigTemplate.organizationId,
+          actorDefinitionId = entityConfigTemplate.actorDefinitionId,
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+        )
+
+      every { repository.findById(configTemplateId) } returns Optional.of(entityConfigTemplate)
+
+      val configTemplate = service.getConfigTemplate(configTemplateId)
+
+      assertEquals(configTemplate.configTemplate, expectedConfigTemplate)
+      assertEquals(configTemplate.actorIcon, sourceDefinition.iconUrl)
+      assertEquals(configTemplate.actorName, sourceDefinition.name)
+    }
+
+    @Test
+    fun `test getConfigTemplate raises an exception if no matching config template`() {
+      val configTemplateId = UUID.randomUUID()
+
+      every { repository.findById(configTemplateId) } returns Optional.empty()
+
+      assertThrows(RuntimeException::class.java) {
+        service.getConfigTemplate(configTemplateId)
+      }
     }
   }
 
@@ -1118,4 +1263,36 @@ class ConfigTemplateServiceDataImplTest {
       partialDefaultConfig = defaultConfig,
       userConfigSpec = configSpec,
     )
+
+  private fun createPartialUserConfigSpecAsObject(fields: Map<String, String>): ObjectNode {
+    val connectionSpecification = objectMapper.createObjectNode()
+    val specRequired = objectMapper.createArrayNode()
+    connectionSpecification.put("type", "object")
+    connectionSpecification.put("required", specRequired)
+    connectionSpecification.put("properties", objectMapper.createObjectNode())
+    val specProperties = connectionSpecification["properties"] as ObjectNode
+    for (f in fields) {
+      specRequired.add(f.key)
+      specProperties.set<ObjectNode>(f.key, objectMapper.createObjectNode().put("type", f.value))
+    }
+
+    val spec = ConnectorSpecification().withConnectionSpecification(connectionSpecification)
+
+    return objectMapper.valueToTree(spec)
+  }
+
+  private fun createConnectorSpecification(requiredFields: List<String>): ConnectorSpecification {
+    val connectionSpecification = objectMapper.createObjectNode().set<ObjectNode>("properties", objectMapper.createObjectNode())
+    connectionSpecification.set<ArrayNode>("required", objectMapper.createArrayNode())
+    val specProperties = connectionSpecification["properties"] as ObjectNode
+    specProperties.set<ObjectNode>("a_config_field", objectMapper.createObjectNode().put("type", "string"))
+    specProperties.set<ObjectNode>("an_integer_field", objectMapper.createObjectNode().put("type", "integer"))
+
+    val requiredArray = connectionSpecification["required"] as ArrayNode
+    for (field in requiredFields) {
+      requiredArray.add(field)
+    }
+
+    return ConnectorSpecification().withConnectionSpecification(connectionSpecification)
+  }
 }

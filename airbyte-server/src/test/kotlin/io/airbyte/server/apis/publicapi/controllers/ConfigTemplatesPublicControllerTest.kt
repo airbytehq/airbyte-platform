@@ -30,7 +30,7 @@ import java.util.UUID
 
 @MicronautTest(environments = ["test"])
 class ConfigTemplatesPublicControllerTest {
-  val organizationId = UUID.randomUUID()
+  val organizationId: UUID = UUID.randomUUID()
 
   private val objectMapper: ObjectMapper = ObjectMapper()
 

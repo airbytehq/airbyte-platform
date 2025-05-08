@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.repositories.ConfigTemplateRepository
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
@@ -50,20 +51,58 @@ open class ConfigTemplateServiceDataImpl(
   }
 
   override fun listConfigTemplatesForOrganization(organizationId: OrganizationId): List<ConfigTemplateWithActorDetails> {
-    val configTemplates = repository.findByOrganizationId(organizationId.value).map { it.toConfigModel() }
+    // Get source definitions
+    val actorDefinitions = sourceService.listStandardSourceDefinitions(false)
+    if (actorDefinitions.isEmpty()) {
+      return emptyList()
+    }
 
-    val configTemplateListItems: List<ConfigTemplateWithActorDetails> =
-      configTemplates.map { it ->
-        val actorDefinition = sourceService.getStandardSourceDefinition(it.actorDefinitionId, false)
+    val actorDefinitionIds = actorDefinitions.map { it.sourceDefinitionId }
+    val actorDefinitionsById = actorDefinitions.associateBy { it.sourceDefinitionId }
 
-        ConfigTemplateWithActorDetails(
-          configTemplate = it,
-          actorName = actorDefinition.name,
-          actorIcon = actorDefinition.iconUrl,
-        )
+    // Get all templates (both custom and default)
+    val defaultTemplates =
+      repository.findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(actorDefinitionIds).groupBy {
+        it.actorDefinitionId
       }
+    val customTemplates = repository.findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(organizationId.value, actorDefinitionIds)
 
-    return configTemplateListItems
+    // Group templates by actor definition ID
+
+    val selectedTemplates = mutableListOf<EntityConfigTemplate>()
+
+// Add all custom templates
+    selectedTemplates.addAll(customTemplates)
+
+// Add default templates that don't have a custom template for the same actor definition
+    actorDefinitionIds.forEach { actorDefinitionId ->
+      val hasCustomTemplate = customTemplates.any { it.actorDefinitionId == actorDefinitionId }
+
+      // If there's no custom template for this actor definition, add the default one
+      if (!hasCustomTemplate) {
+        defaultTemplates[actorDefinitionId]?.find { it.organizationId == null }?.let {
+          selectedTemplates.add(it)
+        }
+      }
+    }
+
+    // Create and return template results
+    return createTemplateResults(selectedTemplates, actorDefinitionsById)
+  }
+
+  private fun createTemplateResults(
+    templates: List<EntityConfigTemplate>,
+    actorDefinitionsById: Map<UUID, StandardSourceDefinition>,
+  ): List<ConfigTemplateWithActorDetails> {
+    return templates.mapNotNull { template ->
+      val actorDef = actorDefinitionsById[template.actorDefinitionId] ?: return@mapNotNull null
+
+      ConfigTemplateWithActorDetails(
+        configTemplate = template.toConfigModel(),
+        actorName = actorDef.name,
+        actorIcon = actorDef.iconUrl,
+      )
+    }
   }
 
   override fun createTemplate(
@@ -176,7 +215,7 @@ open class ConfigTemplateServiceDataImpl(
             partialDefaultConfig = finalPartialDefaultConfig,
             userConfigSpec =
               finalUserConfigSpec.let {
-                objectMapper.valueToTree<JsonNode>(it)
+                objectMapper.valueToTree(it)
               },
           )
         repository.update(entity).toConfigModel()
