@@ -25,7 +25,12 @@ export const SelectableList = <T extends ListItem>({ items, onSelect, emptyState
     <ul className={styles.list}>
       {items.map((item) => (
         <li key={item.id}>
-          <ListItemButton label={item.name} onClick={() => onSelect(item.id)} icon={item.icon} configured />
+          <ListItemButton
+            label={item.name}
+            onClick={() => onSelect(item.id)}
+            icon={item.icon}
+            configured={item.configured}
+          />
         </li>
       ))}
     </ul>
