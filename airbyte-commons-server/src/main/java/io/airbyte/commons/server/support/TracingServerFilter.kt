@@ -66,7 +66,11 @@ class TracingServerFilter(
           trace.user["companyName"] = it.companyName
         }
       } catch (e: Exception) {
-        logger.debug(e) { "failed to get current user" }
+        // This leads to super noisy logs currently,
+        // because some endpoints (such as health) never have a user.
+        // The CurrentUserService should probably return an Optional (or kotlin nullable)
+        // instead of throwing an exception to distinguish between expected + no user vs unexpected error.
+        // logger.debug(e) { "failed to get current user" }
       }
 
       // trace http details
