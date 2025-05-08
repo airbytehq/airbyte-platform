@@ -13,7 +13,6 @@ import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRef
 import { useReplicationConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/connectionSchema";
 import { SyncCatalogTable } from "components/connection/SyncCatalogTable";
 import { Form } from "components/forms";
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
@@ -282,10 +281,8 @@ export const ConnectionReplicationPage: React.FC = () => {
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
               <SchemaRefreshing>
-                <Card noPadding title={formatMessage({ id: "connection.schema" })}>
-                  <Box mb="xl">
-                    <SyncCatalogTable />
-                  </Box>
+                <Card title={formatMessage({ id: "connection.schema" })} noPadding className={styles.syncCatalogCard}>
+                  <SyncCatalogTable />
                 </Card>
               </SchemaRefreshing>
             </SchemaChangeBackdrop>
