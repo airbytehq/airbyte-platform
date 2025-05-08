@@ -1774,7 +1774,6 @@ export const DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE: DeclarativeStream = {
     },
     requester: {
       type: "HttpRequester",
-      url_base: "https://api.com",
       http_method: "GET",
     },
   },

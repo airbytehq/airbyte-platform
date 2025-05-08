@@ -424,6 +424,11 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
             confirmDiscard(resolveErrorMessage ?? "");
             return;
           }
+          if (isSchemaFormEnabled) {
+            setValue("manifest", resolvedManifest);
+            setValue("mode", "ui");
+            return;
+          }
           const convertedFormValues = convertToBuilderFormValuesSync(resolvedManifest);
           const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
           // set jsonManifest first so that a save isn't triggered
@@ -459,6 +464,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
       closeConfirmationModal,
       analyticsService,
       isResolveError,
+      isSchemaFormEnabled,
       resolvedManifest,
       currentProject.name,
       customComponentsCode,

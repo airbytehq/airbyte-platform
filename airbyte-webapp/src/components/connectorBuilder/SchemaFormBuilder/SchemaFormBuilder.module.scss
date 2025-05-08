@@ -53,3 +53,23 @@ $buttonWidth: 26px;
   z-index: 3;
   position: relative;
 }
+
+.card {
+  & > div {
+    padding-bottom: 0;
+  }
+}
+
+.streamNameInput {
+  & input {
+    font-weight: bold;
+    font-size: 15px;
+
+    &::placeholder {
+      font-weight: normal;
+      font-size: 13px;
+    }
+  }
+
+  width: auto;
+}

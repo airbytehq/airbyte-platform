@@ -25,6 +25,7 @@ export const ObjectControl = ({
 }: BaseControlComponentProps) => {
   const { errorAtPath } = useSchemaForm();
   const { errors } = useFormState();
+  const value = useWatch({ name: baseProps.name });
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
 
   if (!fieldSchema.properties) {
@@ -54,54 +55,66 @@ export const ObjectControl = ({
   const nonAdvancedElements: JSX.Element[] = [];
   const advancedElements: JSX.Element[] = [];
   let hasErrorInAdvanced = false;
+  let hasAdvancedValue = false;
 
-  Object.entries(fieldSchema.properties).forEach(([propertyName, property]) => {
-    const isAdvanced = !nonAdvancedFields
-      ? false
-      : !nonAdvancedFields.some((field) => field === propertyName || field.startsWith(`${propertyName}.`));
+  Object.entries(fieldSchema.properties)
+    .filter(([propertyName]) => propertyName !== "$parameters")
+    .forEach(([propertyName, property]) => {
+      const isAdvanced = !nonAdvancedFields
+        ? false
+        : !nonAdvancedFields.some((field) => field === propertyName || field.startsWith(`${propertyName}.`));
 
-    const nonAdvancedSubfields = isAdvanced
-      ? []
-      : !nonAdvancedFields
-      ? []
-      : nonAdvancedFields
-          .filter((field) => field.startsWith(`${propertyName}.`))
-          .map((field) => field.slice(propertyName.length + 1));
+      const nonAdvancedSubfields = isAdvanced
+        ? []
+        : !nonAdvancedFields
+        ? []
+        : nonAdvancedFields
+            .filter((field) => field.startsWith(`${propertyName}.`))
+            .map((field) => field.slice(propertyName.length + 1));
 
-    const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
+      const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
 
-    // ~ declarative_component_schema type handling ~
-    if (getDeclarativeSchemaTypeValue(propertyName, property)) {
-      return;
-    }
-
-    const element = (
-      <SchemaFormControl
-        key={fullPath}
-        path={fullPath}
-        overrideByPath={overrideByPath}
-        skipRenderedPathRegistration={skipRenderedPathRegistration}
-        fieldSchema={property as AirbyteJsonSchema}
-        isRequired={fieldSchema.required?.includes(propertyName) ?? false}
-        nonAdvancedFields={nonAdvancedSubfields.length > 0 ? nonAdvancedSubfields : undefined}
-      />
-    );
-
-    if (isAdvanced) {
-      advancedElements.push(element);
-      if (get(errors, fullPath)) {
-        hasErrorInAdvanced = true;
+      // ~ declarative_component_schema type handling ~
+      if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+        return;
       }
-    } else {
-      nonAdvancedElements.push(element);
-    }
-  });
+
+      const element = (
+        <SchemaFormControl
+          key={fullPath}
+          path={fullPath}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+          fieldSchema={property as AirbyteJsonSchema}
+          isRequired={fieldSchema.required?.includes(propertyName) ?? false}
+          nonAdvancedFields={nonAdvancedSubfields.length > 0 ? nonAdvancedSubfields : undefined}
+        />
+      );
+
+      if (isAdvanced) {
+        advancedElements.push(element);
+        if (get(errors, fullPath)) {
+          hasErrorInAdvanced = true;
+        }
+        const advancedPropertyValue = get(value, propertyName);
+        if (advancedPropertyValue && !isBoolean(property) && advancedPropertyValue !== property.default) {
+          hasAdvancedValue = true;
+        }
+      } else {
+        nonAdvancedElements.push(element);
+      }
+    });
 
   const contents = (
     <>
       {nonAdvancedElements.length > 0 && nonAdvancedElements}
       {advancedElements.length > 0 && (
-        <Collapsible className={styles.advancedCollapsible} label="Advanced" showErrorIndicator={hasErrorInAdvanced}>
+        <Collapsible
+          className={styles.advancedCollapsible}
+          label="Advanced"
+          showErrorIndicator={hasErrorInAdvanced}
+          initiallyOpen={hasAdvancedValue}
+        >
           {advancedElements}
         </Collapsible>
       )}
