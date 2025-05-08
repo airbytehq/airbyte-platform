@@ -7,20 +7,44 @@ package io.airbyte.server.handlers
 import com.cronutils.utils.VisibleForTesting
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.model.generated.ConnectionCreate
+import io.airbyte.api.model.generated.ConnectionScheduleData
+import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
+import io.airbyte.api.model.generated.ConnectionScheduleDataCron
+import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.model.generated.ConnectionStatus
+import io.airbyte.api.model.generated.DestinationSyncMode
+import io.airbyte.api.model.generated.NamespaceDefinitionType
+import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
+import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.SourceCreate
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.api.model.generated.WorkspaceIdRequestBody
+import io.airbyte.commons.server.handlers.ConnectionsHandler
+import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithFullDetails
+import io.airbyte.config.ScheduleData
+import io.airbyte.config.StandardSync
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
+import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.server.apis.publicapi.helpers.DataResidencyHelper
+import io.airbyte.server.apis.publicapi.services.JobService
+import io.airbyte.server.apis.publicapi.services.SourceService
 import io.airbyte.validation.json.JsonMergingHelper
+import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -31,8 +55,16 @@ class PartialUserConfigHandler(
   private val configTemplateService: ConfigTemplateService,
   private val sourceHandler: SourceHandler,
   @Named("jsonSecretsProcessorWithCopy") val secretsProcessor: JsonSecretsProcessor,
+  private val connectionTemplateRepository: ConnectionTemplateRepository,
+  private val workspaceHelper: WorkspaceHelper,
+  private val connectionsHandler: ConnectionsHandler,
+  private val destinationHandler: DestinationHandler,
+  private val sourceService: SourceService,
+  private val dataResidencyHelper: DataResidencyHelper,
+  private val jobService: JobService,
 ) {
   private val jsonMergingHelper = JsonMergingHelper()
+  private val logger = KotlinLogging.logger {}
 
   /**
    * Creates a partial user config and its associated source.
@@ -68,7 +100,99 @@ class PartialUserConfigHandler(
 
     partialUserConfigService.createPartialUserConfig(partialUserConfigToPersist)
 
+    // Create connection
+    val destinations = destinationHandler.listDestinationsForWorkspace(WorkspaceIdRequestBody().workspaceId(partialUserConfigCreate.workspaceId))
+    val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigCreate.workspaceId)
+    for (connectionTemplateEntity in connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId)) {
+      val connectionTemplate = connectionTemplateEntity.toConfigModel()
+
+      val matchingDestinations = destinations.destinations.filter { it.name == connectionTemplate.destinationName }
+      if (matchingDestinations.size > 1) {
+        throw IllegalStateException("Found multiple destinations with the same name: ${connectionTemplate.destinationName}. This is unexpected!")
+      }
+      val destination =
+        matchingDestinations.firstOrNull()
+          ?: throw IllegalStateException("No destination found with name: ${connectionTemplate.destinationName}. This is unexpected!")
+
+      val schemaResponse: SourceDiscoverSchemaRead = sourceService.getSourceSchema(sourceRead.sourceId, false)
+
+      val configuredSchema = schemaResponse.catalog
+
+      for (stream in configuredSchema.streams) {
+        if (stream.config.syncMode == SyncMode.INCREMENTAL) {
+          // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
+          // We can make this configurable in the future as needed
+          stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+        }
+      }
+
+      val createConnection =
+        ConnectionCreate()
+          .sourceId(sourceRead.sourceId)
+          .destinationId(destination.destinationId)
+          .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
+          .name("${sourceRead.name} -> ${destination.name}")
+          .namespaceFormat(connectionTemplate.namespaceFormat)
+          .status(ConnectionStatus.ACTIVE)
+          .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
+          .prefix(connectionTemplate.prefix)
+          .syncCatalog(schemaResponse.catalog)
+          .scheduleType(
+            when (connectionTemplate.scheduleType) {
+              StandardSync.ScheduleType.MANUAL -> ConnectionScheduleType.MANUAL
+              StandardSync.ScheduleType.BASIC_SCHEDULE -> ConnectionScheduleType.BASIC
+              StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
+            },
+          ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
+          .geography(dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionTemplate.defaultGeography))
+      // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
+      if (connectionTemplate.resourceRequirements != null) {
+        createConnection.resourceRequirements(
+          io.airbyte.api.model.generated
+            .ResourceRequirements()
+            .cpuLimit(connectionTemplate.resourceRequirements!!.cpuLimit)
+            .cpuRequest(connectionTemplate.resourceRequirements!!.cpuRequest)
+            .memoryLimit(connectionTemplate.resourceRequirements!!.memoryLimit)
+            .memoryRequest(connectionTemplate.resourceRequirements!!.memoryRequest)
+            .ephemeralStorageLimit(connectionTemplate.resourceRequirements!!.ephemeralStorageLimit)
+            .ephemeralStorageRequest(connectionTemplate.resourceRequirements!!.ephemeralStorageRequest),
+        )
+      }
+      val connection =
+        connectionsHandler.createConnection(
+          createConnection,
+        )
+
+      if (connectionTemplate.syncOnCreate) {
+        val syncId = jobService.sync(connection.connectionId)
+        logger.info(
+          "Created connection: ${connection.connectionId} and started sync with id $syncId",
+        )
+      } else {
+        logger.info("Created connection: ${connection.connectionId} but did not start sync")
+      }
+    }
+
     return sourceRead
+  }
+
+  private fun convertScheduleData(scheduleData: ScheduleData?): ConnectionScheduleData {
+    val connectionScheduleData = ConnectionScheduleData()
+    if (scheduleData == null) {
+      return connectionScheduleData
+    }
+    if (scheduleData.basicSchedule != null) {
+      connectionScheduleData.basicSchedule =
+        ConnectionScheduleDataBasicSchedule()
+          .timeUnit(
+            ConnectionScheduleDataBasicSchedule.TimeUnitEnum.fromValue(scheduleData.basicSchedule.timeUnit.value()),
+          ).units(scheduleData.basicSchedule.units)
+    }
+    if (scheduleData.cron != null) {
+      connectionScheduleData.cron =
+        ConnectionScheduleDataCron().cronExpression(scheduleData.cron.cronExpression).cronTimeZone(scheduleData.cron.cronTimeZone)
+    }
+    return connectionScheduleData
   }
 
   fun combineDefaultAndUserConfig(

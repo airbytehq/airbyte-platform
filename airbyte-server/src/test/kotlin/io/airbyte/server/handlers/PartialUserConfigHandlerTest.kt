@@ -6,21 +6,50 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration
+import io.airbyte.api.model.generated.ConnectionRead
+import io.airbyte.api.model.generated.ConnectionScheduleData
+import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.model.generated.ConnectionStatus
+import io.airbyte.api.model.generated.DestinationRead
+import io.airbyte.api.model.generated.DestinationReadList
+import io.airbyte.api.model.generated.DestinationSyncMode
+import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.handlers.ConnectionsHandler
+import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.repositories.ConnectionTemplateRepository
+import io.airbyte.data.repositories.entities.ConnectionTemplate
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
+import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
+import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.server.apis.publicapi.helpers.DataResidencyHelper
+import io.airbyte.server.apis.publicapi.services.JobService
+import io.airbyte.server.apis.publicapi.services.SourceService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -37,12 +66,23 @@ class PartialUserConfigHandlerTest {
   private lateinit var secretsProcessor: JsonSecretsProcessor
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
+  private lateinit var connectionTemplateRepository: ConnectionTemplateRepository
+  private lateinit var workspaceHelper: WorkspaceHelper
+  private lateinit var connectionsHandler: ConnectionsHandler
+  private lateinit var destinationHandler: DestinationHandler
+  private lateinit var sourceService: SourceService
+  private lateinit var dataResidencyHelper: DataResidencyHelper
+  private lateinit var jobService: JobService
 
+  private val organizationId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
   private val sourceId = UUID.randomUUID()
   private val partialUserConfigId = UUID.randomUUID()
   private val actorDefinitionId = UUID.randomUUID()
+  private val destinationName = "test-destination"
+  private val sourceName = "test-source"
+  private val connectionId = UUID.randomUUID()
 
   @BeforeEach
   fun setup() {
@@ -50,8 +90,33 @@ class PartialUserConfigHandlerTest {
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
     secretsProcessor = mockk<JsonSecretsProcessor>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
+    connectionTemplateRepository = mockk<ConnectionTemplateRepository>()
+    workspaceHelper = mockk<WorkspaceHelper>()
+    connectionsHandler = mockk<ConnectionsHandler>()
+    destinationHandler = mockk<DestinationHandler>()
+    sourceService = mockk<SourceService>()
+    dataResidencyHelper = mockk<DataResidencyHelper>()
+    jobService = mockk<JobService>()
+
+    handler =
+      PartialUserConfigHandler(
+        partialUserConfigService,
+        configTemplateService,
+        sourceHandler,
+        secretsProcessor,
+        connectionTemplateRepository,
+        workspaceHelper,
+        connectionsHandler,
+        destinationHandler,
+        sourceService,
+        dataResidencyHelper,
+        jobService,
+      )
     objectMapper = ObjectMapper()
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList()
+    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns emptyList()
   }
 
   @Test
@@ -59,7 +124,7 @@ class PartialUserConfigHandlerTest {
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
     val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
     val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
-    val savedSource = createMockSourceRead(sourceId)
+    val savedSource = createMockSourceRead(sourceId, sourceName)
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
@@ -68,6 +133,121 @@ class PartialUserConfigHandlerTest {
 
     val sourceCreateSlot = slot<SourceCreate>()
     every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+
+    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(sourceId, result.sourceId)
+
+    verify { partialUserConfigService.createPartialUserConfig(any()) }
+    verify { sourceHandler.createSource(any()) }
+  }
+
+  @Test
+  fun `test createPartialUserConfig with connection template`() {
+    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
+    val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
+    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
+    val savedSource = createMockSourceRead(sourceId, sourceName)
+
+    val destinationId = UUID.randomUUID()
+    val streamAndConfig = AirbyteStreamAndConfiguration()
+    streamAndConfig.config(
+      AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
+    )
+    val airbyteCatalog =
+      AirbyteCatalog().streams(
+        listOf(
+          streamAndConfig,
+        ),
+      )
+
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns
+      DestinationReadList()
+        .destinations(
+          listOf(
+            DestinationRead()
+              .destinationId(destinationId)
+              .name(destinationName)
+              .workspaceId(workspaceId),
+          ),
+        )
+
+    val schemaResponse =
+      SourceDiscoverSchemaRead()
+        .catalog(airbyteCatalog)
+
+    val expectedAirbyteStreamAndConfig = AirbyteStreamAndConfiguration()
+    expectedAirbyteStreamAndConfig.config(AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND))
+
+    val connectionRead = ConnectionRead().connectionId(connectionId)
+    every {
+      connectionsHandler.createConnection(
+        match {
+          it.name == "$sourceName -> $destinationName" &&
+            it.namespaceDefinition == io.airbyte.api.model.generated.NamespaceDefinitionType.DESTINATION &&
+            it.sourceId == sourceId &&
+            it.destinationId == destinationId &&
+            it.syncCatalog == AirbyteCatalog().streams(listOf(expectedAirbyteStreamAndConfig)) &&
+            it.scheduleType == ConnectionScheduleType.MANUAL &&
+            it.scheduleData == ConnectionScheduleData() &&
+            it.status == ConnectionStatus.ACTIVE &&
+            it.geography == GEOGRAPHY_AUTO &&
+            it.nonBreakingChangesPreference == NonBreakingChangesPreference.IGNORE
+        },
+      )
+    } returns connectionRead
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
+
+    val connectionTemplate =
+      ConnectionTemplate(
+        id = UUID.randomUUID(),
+        organizationId = organizationId,
+        destinationName = destinationName,
+        destinationDefinitionId = UUID.randomUUID(),
+        destinationConfig = objectMapper.createObjectNode(),
+        namespaceDefinition = NamespaceDefinitionType.destination,
+        namespaceFormat = null,
+        prefix = null,
+        scheduleType = ScheduleType.manual,
+        scheduleData = null,
+        nonBreakingChangesPreference = NonBreakingChangePreferenceType.ignore,
+        resourceRequirements =
+          Jsons.jsonNode(
+            ResourceRequirements()
+              .withCpuLimit(
+                "1",
+              ).withMemoryLimit("1g")
+              .withCpuRequest("0.5")
+              .withMemoryRequest("0.5g")
+              .withEphemeralStorageLimit("1g")
+              .withEphemeralStorageRequest("0.5g"),
+          ),
+        defaultGeography = GEOGRAPHY_AUTO,
+      )
+    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns listOf(connectionTemplate)
+
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
+    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
+      configTemplate.configTemplate.partialDefaultConfig
+
+    val sourceCreateSlot = slot<SourceCreate>()
+    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+
+    every {
+      dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(any())
+    } returns GEOGRAPHY_AUTO
+
+    every { jobService.sync(connectionId) } returns
+      JobResponse(
+        jobId = 2L,
+        status = JobStatusEnum.PENDING,
+        jobType = JobTypeEnum.SYNC,
+        startTime = "",
+        connectionId = connectionId.toString(),
+      )
 
     val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
 
@@ -108,7 +288,10 @@ class PartialUserConfigHandlerTest {
       )
     val userConfig = Jsons.deserialize("""{"credentials":{"refresh_token":"some-refresh-token"}}""")
     every {
-      secretsProcessor.prepareSecretsForOutput(storedConfigWithSecrets, configTemplate.configTemplate.userConfigSpec.connectionSpecification)
+      secretsProcessor.prepareSecretsForOutput(
+        storedConfigWithSecrets,
+        configTemplate.configTemplate.userConfigSpec.connectionSpecification,
+      )
     } returns configWithObfuscatedSecrets
 
     val result = handler.combineDefaultAndUserConfig(configTemplate.configTemplate, userConfig)
@@ -169,7 +352,7 @@ class PartialUserConfigHandlerTest {
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
 
     val sourceUpdateSlot = slot<PartialSourceUpdate>()
-    every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId)
+    every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId, sourceName)
 
     val result = handler.updateSourceFromPartialConfig(partialUserConfigRequest, updateConnectionConfig)
 
@@ -262,10 +445,13 @@ class PartialUserConfigHandlerTest {
       actorIcon = "test-icon",
     )
 
-  private fun createMockSourceRead(id: UUID): SourceRead =
+  private fun createMockSourceRead(
+    id: UUID,
+    sourceName: String,
+  ): SourceRead =
     SourceRead().apply {
       sourceId = id
-      name = "test-source"
+      name = sourceName
       icon = "test-icon"
       sourceDefinitionId = UUID.randomUUID()
       connectionConfiguration = objectMapper.createObjectNode()

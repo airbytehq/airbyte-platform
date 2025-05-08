@@ -6546,6 +6546,32 @@ paths:
       summary: Create config template
       x-sdk-alias: createConfigTemplate
       x-sdk-group: ConfigTemplates
+  /public/v1/config_templates/connections:
+    post:
+      description: Create a connection template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_connection_templates
+        - public
+        - ConnectionTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTemplateCreateResponse"
+          description: Created a connection template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConnectionTemplate
+      summary: Create connection template
+      x-sdk-alias: createConnectionTemplate
+      x-sdk-group: ConnectionTemplates
   /public/v1/config_templates/{configTemplateId}:
     patch:
       description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
@@ -19230,6 +19256,53 @@ components:
       properties:
         token:
           type: string
+      x-sdk-component: true
+
+    ConnectionTemplateCreateRequestBody:
+      type: object
+      required:
+        - destinationConfiguration
+        - organizationId
+        - destinationName
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        destinationName:
+          type: string
+        destinationType:
+          type: string
+        destinationConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        destinationActorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        namespaceDefinitionType:
+          $ref: "#/components/schemas/NamespaceDefinitionType"
+        namespaceFormat:
+          type: string
+          default: null
+        prefix:
+          type: string
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+        nonBreakingChangesPreference:
+          $ref: "#/components/schemas/NonBreakingChangesPreference"
+        defaultGeography:
+          type: string
+        syncOnCreate:
+          type: boolean
+          default: true
+      x-sdk-component: true
+    ConnectionTemplateCreateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
       x-sdk-component: true
 
   responses:
