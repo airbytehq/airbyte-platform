@@ -19278,6 +19278,7 @@ components:
           $ref: "#/components/schemas/ActorDefinitionId"
         namespaceDefinitionType:
           $ref: "#/components/schemas/NamespaceDefinitionType"
+          description: The namespace definition type for the connection. This is used to determine how the namespace is defined for the connection. If none is provided, the namespace will be set to ${WORKSPACE_NAME}.
         namespaceFormat:
           type: string
           default: null
@@ -19285,6 +19286,7 @@ components:
           type: string
         schedule:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          description: The schedule for connections. If none is provided, syncs will run every hour.
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         nonBreakingChangesPreference:

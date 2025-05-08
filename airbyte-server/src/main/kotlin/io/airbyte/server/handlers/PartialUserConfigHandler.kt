@@ -17,7 +17,6 @@ import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
-import io.airbyte.api.model.generated.ResourceRequirements
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
@@ -29,12 +28,14 @@ import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.repositories.ConnectionTemplateRepository
+import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
@@ -57,6 +58,7 @@ class PartialUserConfigHandler(
   @Named("jsonSecretsProcessorWithCopy") val secretsProcessor: JsonSecretsProcessor,
   private val connectionTemplateRepository: ConnectionTemplateRepository,
   private val workspaceHelper: WorkspaceHelper,
+  private val workspaceRepository: WorkspaceRepository,
   private val connectionsHandler: ConnectionsHandler,
   private val destinationHandler: DestinationHandler,
   private val sourceService: SourceService,
@@ -126,13 +128,22 @@ class PartialUserConfigHandler(
         }
       }
 
+      val namespaceFormat =
+        if (connectionTemplate.namespaceDefinitionType == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT &&
+          connectionTemplate.namespaceFormat == null
+        ) {
+          workspaceRepository.findById(partialUserConfigToPersist.workspaceId).get().name
+        } else {
+          connectionTemplate.namespaceFormat
+        }
+
       val createConnection =
         ConnectionCreate()
           .sourceId(sourceRead.sourceId)
           .destinationId(destination.destinationId)
           .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
           .name("${sourceRead.name} -> ${destination.name}")
-          .namespaceFormat(connectionTemplate.namespaceFormat)
+          .namespaceFormat(namespaceFormat)
           .status(ConnectionStatus.ACTIVE)
           .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
           .prefix(connectionTemplate.prefix)

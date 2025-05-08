@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.commons.constants.GEOGRAPHY_AUTO

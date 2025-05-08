@@ -49,6 +49,10 @@ open class ConnectionTemplatesController(
 ) : PublicConnectionTemplatesApi {
   private val logger = KotlinLogging.logger {}
 
+  companion object {
+    val DEFAULT_CRON_SCHEDULE = ScheduleData().withCron(Cron().withCronExpression("0 0 * * * ?").withCronTimeZone("UTC"))
+  }
+
   override fun publicCreateConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): Response =
     wrap {
       createConnectionTemplate(connectionTemplateCreateRequestBody).ok()
@@ -83,14 +87,14 @@ open class ConnectionTemplatesController(
       }
 
     // FIXME this endpoint should check for entitlements on the destination type https://github.com/airbytehq/airbyte-internal-issues/issues/12814
-
+    val namespaceDefinitionType = convertNamespaceDefinitionType(connectionTemplateCreateRequestBody.namespaceDefinitionType)
     val connectionTemplate =
       connectionTemplateService.createTemplate(
         organizationId,
         connectionTemplateCreateRequestBody.destinationName,
         destinationIdOrType,
         connectionTemplateCreateRequestBody.destinationConfiguration,
-        convertNamespaceDefinitionType(connectionTemplateCreateRequestBody.namespaceDefinitionType),
+        namespaceDefinitionType,
         connectionTemplateCreateRequestBody.namespaceFormat,
         connectionTemplateCreateRequestBody.prefix,
         convertScheduleData(connectionTemplateCreateRequestBody.schedule),
@@ -134,7 +138,9 @@ open class ConnectionTemplatesController(
   }
 
   private fun convertScheduleData(scheduleData: AirbyteApiConnectionSchedule?): ScheduleData? =
-    if (scheduleData == null || scheduleData.scheduleType == ScheduleTypeEnum.MANUAL) {
+    if (scheduleData == null) {
+      DEFAULT_CRON_SCHEDULE
+    } else if (scheduleData.scheduleType == ScheduleTypeEnum.MANUAL) {
       null
     } else {
       validateCronConfiguration(scheduleData)
@@ -148,7 +154,7 @@ open class ConnectionTemplatesController(
       NamespaceDefinitionType.SOURCE -> io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.SOURCE
       NamespaceDefinitionType.DESTINATION -> io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.DESTINATION
       NamespaceDefinitionType.CUSTOMFORMAT -> io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
-      null -> io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.DESTINATION
+      null -> io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT
     }
 
   // wrap controller endpoints in common functionality: segment tracking, error conversion, etc.

@@ -36,6 +36,7 @@ import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.repositories.ConnectionTemplateRepository
+import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.repositories.entities.ConnectionTemplate
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
@@ -68,6 +69,7 @@ class PartialUserConfigHandlerTest {
   private lateinit var objectMapper: ObjectMapper
   private lateinit var connectionTemplateRepository: ConnectionTemplateRepository
   private lateinit var workspaceHelper: WorkspaceHelper
+  private lateinit var workspaceRepository: WorkspaceRepository
   private lateinit var connectionsHandler: ConnectionsHandler
   private lateinit var destinationHandler: DestinationHandler
   private lateinit var sourceService: SourceService
@@ -92,6 +94,7 @@ class PartialUserConfigHandlerTest {
     secretsProcessor = mockk<JsonSecretsProcessor>()
     connectionTemplateRepository = mockk<ConnectionTemplateRepository>()
     workspaceHelper = mockk<WorkspaceHelper>()
+    workspaceRepository = mockk<WorkspaceRepository>()
     connectionsHandler = mockk<ConnectionsHandler>()
     destinationHandler = mockk<DestinationHandler>()
     sourceService = mockk<SourceService>()
@@ -106,6 +109,7 @@ class PartialUserConfigHandlerTest {
         secretsProcessor,
         connectionTemplateRepository,
         workspaceHelper,
+        workspaceRepository,
         connectionsHandler,
         destinationHandler,
         sourceService,

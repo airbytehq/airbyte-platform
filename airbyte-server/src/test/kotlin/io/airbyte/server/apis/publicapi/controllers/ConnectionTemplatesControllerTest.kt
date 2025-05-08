@@ -24,6 +24,7 @@ import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionTemplateCreateRequestBody
 import io.airbyte.publicApi.server.generated.models.ScheduleTypeEnum
 import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
+import io.airbyte.server.apis.publicapi.controllers.ConnectionTemplatesController.Companion.DEFAULT_CRON_SCHEDULE
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
@@ -50,9 +51,10 @@ class ConnectionTemplatesControllerTest {
   val destinationConfig = objectMapper.readTree("{}")
   val organizationId = OrganizationId(UUID.randomUUID())
   val namespaceDefinitionType = NamespaceDefinitionType.DESTINATION
+  val defaultNamespaceDefinitionType = NamespaceDefinitionType.CUSTOMFORMAT
   val namespaceFormat = "format"
   val prefix = "prefix_"
-  val cronExpression = "0 0 * * * ?"
+  val cronExpression = "0 1 * * * ?"
   val cronScheduleData = ScheduleData().withCron(Cron().withCronExpression(cronExpression).withCronTimeZone("UTC"))
   val resourceRequirements = null
   val ignoreNonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE
@@ -75,11 +77,11 @@ class ConnectionTemplatesControllerTest {
         organizationId = organizationId,
         destinationActorDefinitionId = actorDefinitionId.value,
         destinationConfiguration = destinationConfig,
-        namespaceDefinitionType = namespaceDefinitionType,
-        namespaceFormat = namespaceFormat,
+        namespaceDefinitionType = NamespaceDefinitionType.CUSTOMFORMAT,
+        namespaceFormat = null,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
         defaultGeography = defaultGeography,
@@ -92,10 +94,10 @@ class ConnectionTemplatesControllerTest {
         eq(destinationName),
         eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
         eq(destinationConfig),
-        namespaceDefinitionType,
-        namespaceFormat,
-        prefix,
+        eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
+        prefix,
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
         isNull(),
@@ -110,7 +112,6 @@ class ConnectionTemplatesControllerTest {
         destinationConfig,
         null,
         actorDefinitionId.value,
-        namespaceFormat = namespaceFormat,
         prefix = prefix,
       )
 
@@ -131,8 +132,8 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType = namespaceDefinitionType,
         namespaceFormat = namespaceFormat,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
         defaultGeography = defaultGeography,
@@ -148,7 +149,7 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType,
         namespaceFormat,
         prefix,
-        isNull(),
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
         defaultGeography,
@@ -206,8 +207,8 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType = NamespaceDefinitionType.SOURCE,
         namespaceFormat = namespaceFormat,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_COLUMNS,
         defaultGeography = defaultGeography,
@@ -223,7 +224,7 @@ class ConnectionTemplatesControllerTest {
         NamespaceDefinitionType.SOURCE,
         namespaceFormat,
         prefix,
-        isNull(),
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_COLUMNS,
         isNull(),
@@ -262,8 +263,8 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType = NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat = namespaceFormat,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_FULLY,
         defaultGeography = defaultGeography,
@@ -279,7 +280,7 @@ class ConnectionTemplatesControllerTest {
         NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat,
         prefix,
-        isNull(),
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_FULLY,
         isNull(),
@@ -317,8 +318,8 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType = namespaceDefinitionType,
         namespaceFormat = namespaceFormat,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
         defaultGeography = defaultGeography,
@@ -334,7 +335,7 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType,
         namespaceFormat,
         prefix,
-        isNull(),
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
         isNull(),
@@ -372,8 +373,8 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType = namespaceDefinitionType,
         namespaceFormat = namespaceFormat,
         prefix = prefix,
-        scheduleType = ScheduleType.MANUAL,
-        scheduleData = null,
+        scheduleType = ScheduleType.CRON,
+        scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
         defaultGeography = defaultGeography,
@@ -389,7 +390,7 @@ class ConnectionTemplatesControllerTest {
         namespaceDefinitionType,
         namespaceFormat,
         prefix,
-        isNull(),
+        DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.DISABLE,
         isNull(),
@@ -424,9 +425,9 @@ class ConnectionTemplatesControllerTest {
         organizationId = organizationId,
         destinationActorDefinitionId = actorDefinitionId.value,
         destinationConfiguration = destinationConfig,
-        namespaceDefinitionType = namespaceDefinitionType,
-        namespaceFormat = namespaceFormat,
-        prefix = prefix,
+        namespaceDefinitionType = defaultNamespaceDefinitionType,
+        namespaceFormat = null,
+        prefix = null,
         scheduleType = ScheduleType.CRON,
         scheduleData = cronScheduleData,
         resourceRequirements = resourceRequirements,
@@ -441,9 +442,9 @@ class ConnectionTemplatesControllerTest {
         eq(destinationName),
         eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
         eq(destinationConfig),
-        eq(namespaceDefinitionType),
-        eq(namespaceFormat),
-        eq(prefix),
+        eq(NamespaceDefinitionType.CUSTOMFORMAT),
+        isNull(),
+        isNull(),
         eq(cronScheduleData),
         isNull(),
         eq(ignoreNonBreakingChangesPreference),
@@ -459,10 +460,59 @@ class ConnectionTemplatesControllerTest {
         destinationConfig,
         null,
         actorDefinitionId.value,
-        io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
-        namespaceFormat,
-        prefix,
         schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.CRON, cronExpression),
+      )
+
+    val response = controller.createConnectionTemplate(requestBody)
+
+    assertEquals(response.id, connectionTemplate.id)
+  }
+
+  @Test
+  fun `test create endpoint with manual schedule`() {
+    val connectionTemplate =
+      ConnectionTemplate(
+        id = UUID.randomUUID(),
+        destinationName = destinationName,
+        organizationId = organizationId,
+        destinationActorDefinitionId = actorDefinitionId.value,
+        destinationConfiguration = destinationConfig,
+        namespaceDefinitionType = defaultNamespaceDefinitionType,
+        namespaceFormat = null,
+        prefix = null,
+        scheduleType = ScheduleType.MANUAL,
+        scheduleData = null,
+        resourceRequirements = resourceRequirements,
+        nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
+        defaultGeography = defaultGeography,
+        syncOnCreate = true,
+      )
+
+    every {
+      connectionTemplateService.createTemplate(
+        any(),
+        eq(destinationName),
+        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        eq(destinationConfig),
+        eq(NamespaceDefinitionType.CUSTOMFORMAT),
+        isNull(),
+        isNull(),
+        isNull(),
+        isNull(),
+        eq(ignoreNonBreakingChangesPreference),
+        isNull(),
+        eq(true),
+      )
+    } returns connectionTemplate
+
+    val requestBody =
+      ConnectionTemplateCreateRequestBody(
+        organizationId.value,
+        destinationName,
+        destinationConfig,
+        null,
+        actorDefinitionId.value,
+        schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.MANUAL),
       )
 
     val response = controller.createConnectionTemplate(requestBody)
