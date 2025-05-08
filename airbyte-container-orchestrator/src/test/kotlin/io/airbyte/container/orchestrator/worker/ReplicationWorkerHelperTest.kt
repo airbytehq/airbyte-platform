@@ -14,6 +14,7 @@ import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -26,7 +27,6 @@ import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage.Type.ANALYTICS
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker

@@ -15,10 +15,13 @@ import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.BufferConfiguration
+import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestination
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.featureflag.FieldSelectionEnabled
+import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -37,7 +40,6 @@ import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.internal.FieldSelector
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker
 import io.airbyte.workers.internal.bookkeeping.SyncStatsTracker
 import io.airbyte.workers.internal.bookkeeping.events.ReplicationAirbyteMessageEvent
@@ -142,7 +144,11 @@ class ReplicationWorkerPortedTests {
     recordSchemaValidator = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     workerMetricReporter = WorkerMetricReporter(metricClient, "docker_image:v1.0.0")
-    replicationInputFeatureFlagReader = mockk(relaxed = true)
+    replicationInputFeatureFlagReader =
+      mockk {
+        every { read(FieldSelectionEnabled) } returns false
+        every { read(RemoveValidationLimit) } returns false
+      }
     replicationAirbyteMessageEventPublishingHelper = mockk(relaxed = true)
     analyticsMessageTracker = mockk(relaxed = true)
     streamStatusCompletionTracker = mockk(relaxed = true)
@@ -176,7 +182,7 @@ class ReplicationWorkerPortedTests {
     replicationWorkerHelper =
       spyk(
         ReplicationWorkerHelper(
-          FieldSelector(recordSchemaValidator, workerMetricReporter, false, false),
+          FieldSelector(recordSchemaValidator, workerMetricReporter, replicationInput, replicationInputFeatureFlagReader),
           mapper,
           messageTracker,
           syncPersistence,
@@ -363,6 +369,8 @@ class ReplicationWorkerPortedTests {
 
   @Test
   fun `field selection enabled filters extra fields`() {
+    every { replicationInputFeatureFlagReader.read(FieldSelectionEnabled) } returns true
+
     val recordWithExtraFields =
       Jsons.clone(RECORD_MESSAGE1).apply {
         (this.record.data as ObjectNode).put("AnUnexpectedField", "SomeValue")
@@ -377,7 +385,7 @@ class ReplicationWorkerPortedTests {
         ),
       )
 
-    val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, true, false)
+    val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, replicationInput, replicationInputFeatureFlagReader)
     val helperEnabled =
       ReplicationWorkerHelper(
         fieldSelector,
@@ -436,7 +444,7 @@ class ReplicationWorkerPortedTests {
         ),
       )
 
-    val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, false, false)
+    val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, replicationInput, replicationInputFeatureFlagReader)
     val helperDisabled =
       ReplicationWorkerHelper(
         fieldSelector,

@@ -26,6 +26,7 @@ import io.airbyte.container.orchestrator.worker.ReplicationContextProvider;
 import io.airbyte.container.orchestrator.worker.ReplicationWorker;
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerHelper;
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerState;
+import io.airbyte.container.orchestrator.worker.filter.FieldSelector;
 import io.airbyte.container.orchestrator.worker.fixtures.EmptyAirbyteDestination;
 import io.airbyte.container.orchestrator.worker.fixtures.LimitedFatRecordSourceProcess;
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination;
@@ -36,6 +37,7 @@ import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
+import io.airbyte.featureflag.FieldSelectionEnabled;
 import io.airbyte.featureflag.LogConnectorMessages;
 import io.airbyte.featureflag.LogStateMsgs;
 import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure;
@@ -55,7 +57,6 @@ import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteMapper;
-import io.airbyte.workers.internal.FieldSelector;
 import io.airbyte.workers.internal.NamespacingMapper;
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory;
 import io.airbyte.workers.internal.bookkeeping.AirbyteMessageTracker;
@@ -161,6 +162,8 @@ public abstract class ReplicationWorkerPerformanceTest {
         .thenReturn(7200);
     when(replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure.INSTANCE))
         .thenReturn(false);
+    when(replicationInputFeatureFlagReader.read(FieldSelectionEnabled.INSTANCE))
+        .thenReturn(false);
 
     final var msgMigrator = new AirbyteMessageMigrator(List.of());
     msgMigrator.initialize();
@@ -185,8 +188,7 @@ public abstract class ReplicationWorkerPerformanceTest {
       return null;
     }).when(replicationAirbyteMessageEventPublishingHelper).publishEvent(any(ReplicationAirbyteMessageEvent.class));
 
-    final boolean fieldSelectionEnabled = false;
-    final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, fieldSelectionEnabled, false);
+    final FieldSelector fieldSelector = new FieldSelector(validator, metricReporter, replicationInput, replicationInputFeatureFlagReader);
     final WorkloadApiClient workloadApiClient = mock(WorkloadApiClient.class);
     when(workloadApiClient.getWorkloadApi()).thenReturn(mock(WorkloadApi.class));
     final AirbyteApiClient airbyteApiClient = mock(AirbyteApiClient.class);

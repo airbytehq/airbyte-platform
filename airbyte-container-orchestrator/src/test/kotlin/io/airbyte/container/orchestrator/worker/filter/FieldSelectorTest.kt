@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal
+package io.airbyte.container.orchestrator.worker.filter
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteStream
@@ -10,15 +10,21 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
+import io.airbyte.featureflag.FieldSelectionEnabled
+import io.airbyte.featureflag.RemoveValidationLimit
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.WorkerUtils
+import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
+import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.util.UUID
 
 internal class FieldSelectorTest {
   companion object {
@@ -130,14 +136,19 @@ internal class FieldSelectorTest {
             ),
           ),
         )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
 
-    val fieldSelector = createFieldSelector(configuredCatalog, fieldSelectionEnabled = fieldSelectionEnabled)
+    val fieldSelector =
+      createFieldSelector(configuredCatalog = configuredCatalog, fieldSelectionEnabled = fieldSelectionEnabled, replicationInput = replicationInput)
 
     val message = createRecord(RECORD_WITH_EXTRA)
     fieldSelector.filterSelectedFields(message)
 
     val expectedMessage = if (fieldSelectionEnabled) createRecord(RECORD_WITHOUT_EXTRA) else createRecord(RECORD_WITH_EXTRA)
-    assertEquals(expectedMessage, message)
+    Assertions.assertEquals(expectedMessage, message)
   }
 
   @Test
@@ -158,14 +169,18 @@ internal class FieldSelectorTest {
             ),
           ),
         )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
 
-    val fieldSelector = createFieldSelector(configuredCatalog, fieldSelectionEnabled = true)
+    val fieldSelector = createFieldSelector(configuredCatalog = configuredCatalog, fieldSelectionEnabled = true, replicationInput = replicationInput)
 
     val message = createRecord(RECORD_WITH_EXTRA)
     fieldSelector.filterSelectedFields(message)
 
     val expectedMessage = createRecord(RECORD_WITH_ID_WITHOUT_EXTRA)
-    assertEquals(expectedMessage, message)
+    Assertions.assertEquals(expectedMessage, message)
   }
 
   @Test
@@ -186,27 +201,37 @@ internal class FieldSelectorTest {
             ),
           ),
         )
+    val replicationInput =
+      mockk<ReplicationInput> {
+        every { workspaceId } returns UUID.randomUUID()
+      }
 
-    val fieldSelector = createFieldSelector(configuredCatalog, fieldSelectionEnabled = true)
+    val fieldSelector = createFieldSelector(configuredCatalog = configuredCatalog, fieldSelectionEnabled = true, replicationInput = replicationInput)
 
     val message = createRecord(RECORD_WITH_DOLLAR_SIGNS)
     fieldSelector.filterSelectedFields(message)
 
     val expectedMessage = createRecord(RECORD_WITH_DOLLAR_SIGNS_WITHOUT_EXTRA)
-    assertEquals(expectedMessage, message)
+    Assertions.assertEquals(expectedMessage, message)
   }
 
   private fun createFieldSelector(
     configuredCatalog: ConfiguredAirbyteCatalog,
+    replicationInput: ReplicationInput,
     fieldSelectionEnabled: Boolean,
   ): FieldSelector {
+    val replicationInputFeatureFlagReader =
+      mockk<ReplicationInputFeatureFlagReader> {
+        every { read(FieldSelectionEnabled) } returns fieldSelectionEnabled
+        every { read(RemoveValidationLimit) } returns false
+      }
     val schemaValidator = RecordSchemaValidator(WorkerUtils.mapStreamNamesToSchemas(configuredCatalog))
     val fieldSelector =
       FieldSelector(
-        schemaValidator,
-        mockk(),
-        fieldSelectionEnabled,
-        false,
+        recordSchemaValidator = schemaValidator,
+        metricReporter = mockk(),
+        replicationInput = replicationInput,
+        replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
       )
     fieldSelector.populateFields(configuredCatalog)
     return fieldSelector
