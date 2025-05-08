@@ -31,6 +31,7 @@ class DataplaneInitializer(
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
   @Property(name = "airbyte.auth.dataplane-credentials.client-id-secret-key") private val clientIdSecretKey: String,
   @Property(name = "airbyte.auth.dataplane-credentials.client-secret-secret-key") private val clientSecretSecretKey: String,
+  @Property(name = "airbyte.worker.job.kube.namespace") private val jobsNamespace: String,
 ) {
   /**
    * Creates a dataplane if the following conditions are met
@@ -66,7 +67,12 @@ class DataplaneInitializer(
     // the dataplane credentials to the jobs namespace.
     if (edition == AirbyteEdition.CLOUD) {
       log.info { "Copying secret $secretName to jobs namespace" }
-      K8sSecretHelper.copySecretToNamespace(k8sClient, secretName, k8sClient.namespace, "jobs")
+      K8sSecretHelper.copySecretToNamespace(
+        k8sClient,
+        secretName,
+        k8sClient.namespace,
+        jobsNamespace,
+      )
     }
   }
 

@@ -62,6 +62,7 @@ private val dp =
 private const val SECRET_NAME = "secret name"
 private const val CLIENT_ID_SECRET_KEY = "client-id-key"
 private const val CLIENT_SECRET_SECRET_KEY = "client-secret-key"
+private const val JOBS_NAMESPACE = "jobs"
 
 class DataplaneInitializerTest {
   private val service = mockk<DataplaneService>()
@@ -100,6 +101,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -133,6 +135,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -163,6 +166,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -182,7 +186,7 @@ class DataplaneInitializerTest {
         k8sClient,
         SECRET_NAME,
         "ab",
-        "jobs",
+        JOBS_NAMESPACE,
       )
     }
   }
@@ -201,6 +205,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     shouldThrow<IllegalStateException> { initializer.createDataplaneIfNotExists() }
@@ -226,6 +231,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
