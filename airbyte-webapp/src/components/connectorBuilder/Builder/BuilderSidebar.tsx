@@ -2,6 +2,7 @@ import classNames from "classnames";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
+import { useUpdateEffect } from "react-use";
 
 import Indicator from "components/Indicator";
 import { FlexContainer } from "components/ui/Flex";
@@ -77,6 +78,14 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
   );
 
   const [isOpen, setIsOpen] = useState(false);
+
+  const testStreamId = useBuilderWatch("testStreamId");
+  // If the number of generated streams for the current dynamic stream changes, expand its generated streams list
+  useUpdateEffect(() => {
+    if (testStreamId.type === "dynamic_stream" && testStreamId.index === num && generatedStreams?.length) {
+      setIsOpen(true);
+    }
+  }, [generatedStreams?.length]);
 
   const viewId: StreamId = { type: "dynamic_stream", index: num };
 
