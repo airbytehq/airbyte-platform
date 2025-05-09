@@ -424,10 +424,6 @@ public class PermissionHandler {
     return permissionPersistence.listUsersInOrganization(organizationId);
   }
 
-  public List<UserPermission> listUsersInWorkspace(final UUID workspaceId) throws IOException {
-    return permissionPersistence.listUsersInWorkspace(workspaceId);
-  }
-
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
     return permissionPersistence.listInstanceAdminUsers();
   }
