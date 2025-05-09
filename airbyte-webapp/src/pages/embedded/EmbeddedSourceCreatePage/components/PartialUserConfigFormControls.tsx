@@ -12,15 +12,10 @@ interface PartialUserConfigFormControlsProps {
 export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormControlsProps> = ({
   isEditMode,
   isSubmitting,
-  dirty,
 }) => {
-  console.log("isEditMode", isEditMode);
-  console.log("dirty", dirty);
-  console.log("isSubmitting", isSubmitting);
-
   return (
     <FlexContainer justifyContent="flex-end">
-      <Button full type="submit" disabled={isSubmitting || !dirty} isLoading={isSubmitting}>
+      <Button full type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
         {isEditMode ? (
           <FormattedMessage id="form.saveChanges" />
         ) : (
