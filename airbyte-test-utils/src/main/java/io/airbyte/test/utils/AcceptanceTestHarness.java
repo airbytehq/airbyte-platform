@@ -555,7 +555,7 @@ public class AcceptanceTestHarness {
   public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) throws IOException {
     return Failsafe.with(retryPolicy).get(() -> {
       final var result =
-          apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null));
+          apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null));
       if (result.getCatalog() == null) {
         throw new RuntimeException("no catalog returned, retrying...");
       }
@@ -570,7 +570,7 @@ public class AcceptanceTestHarness {
 
   public AirbyteCatalog discoverSourceSchemaWithoutCache(final UUID sourceId) throws IOException {
     return apiClient.getSourceApi().discoverSchemaForSource(
-        new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null)).getCatalog();
+        new SourceDiscoverSchemaRequestBody(sourceId, null, true, null)).getCatalog();
   }
 
   public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId)

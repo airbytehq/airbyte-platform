@@ -11392,8 +11392,6 @@ components:
           format: uuid
         disable_cache:
           type: boolean
-        notifySchemaChange:
-          type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
     PostprocessDiscoveredCatalogRequestBody:
