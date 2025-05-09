@@ -12,7 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
-import { ErrorWithJobInfo, useCreateConfigTemplate, useCurrentWorkspace } from "core/api";
+import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -136,6 +136,41 @@ const prepareOauthFieldsForTemplate = (
   }
 };
 
+/**
+ * Prepares the configuration for creating a source config template
+ */
+const prepareSourceConfigTemplate = (
+  values: ConnectorFormValues,
+  definitionId: string,
+  advancedAuth: ConnectorDefinitionSpecificationRead["advancedAuth"],
+  organizationId: string
+) => {
+  const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
+  prepareOauthFieldsForTemplate(partialDefaultConfig, advancedAuth);
+
+  return {
+    organizationId,
+    actorDefinitionId: definitionId,
+    partialDefaultConfig,
+  };
+};
+
+/**
+ * Prepares the configuration for creating a destination config template
+ */
+const prepareDestinationConfigTemplate = (
+  values: ConnectorFormValues,
+  definitionId: string,
+  organizationId: string
+) => {
+  return {
+    organizationId,
+    destinationName: values.name,
+    destinationConfiguration: values.connectionConfiguration,
+    destinationActorDefinitionId: definitionId,
+  };
+};
+
 export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
   onSubmit,
   onDeleteClick,
@@ -152,9 +187,10 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const { formatMessage } = useIntl();
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { mutate: createConfigTemplate } = useCreateConfigTemplate();
+  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
   const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
-  const canCreateConfigTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
-  const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateConfigTemplate;
+  const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
+  const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -355,22 +391,25 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               }}
               onCreateConfigTemplate={
                 showCreateTemplateButton
-                  ? () => {
-                      const values = getValues();
-                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
-                      // we do not want to include the credentials property in the default values we send to the template create call.
-                      // We want to use the API default behavior, which is to enable oauth where possible, and otherwise allow whatever
-                      // the connector allows
-                      const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
-
-                      prepareOauthFieldsForTemplate(partialDefaultConfig, advancedAuth);
-
-                      createConfigTemplate({
-                        organizationId,
-                        actorDefinitionId: definitionId,
-                        partialDefaultConfig,
-                      });
-                    }
+                  ? props.formType === "source"
+                    ? () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConfigTemplate(
+                          prepareSourceConfigTemplate(values, definitionId, advancedAuth, organizationId)
+                        );
+                      }
+                    : () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConnectionTemplate(
+                          prepareDestinationConfigTemplate(values, definitionId, organizationId)
+                        );
+                      }
                   : undefined
               }
             />

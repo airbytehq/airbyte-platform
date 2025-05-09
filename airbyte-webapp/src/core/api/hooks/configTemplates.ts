@@ -2,9 +2,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useNotificationService } from "hooks/services/Notification";
 
-import { listConfigTemplates, getConfigTemplate, publicCreateConfigTemplate } from "../generated/AirbyteClient";
+import {
+  listConfigTemplates,
+  getConfigTemplate,
+  publicCreateConfigTemplate,
+  publicCreateConnectionTemplate,
+} from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { ConfigTemplateCreateRequestBody, ConfigTemplateList } from "../types/AirbyteClient";
+import {
+  ConfigTemplateCreateRequestBody,
+  ConfigTemplateList,
+  ConnectionTemplateCreateRequestBody,
+} from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -52,6 +61,35 @@ export const useCreateConfigTemplate = () => {
         registerNotification({
           id: "config-template-created",
           text: "Failed to create config template",
+          type: "error",
+        });
+      },
+    }
+  );
+};
+
+export const useCreateConnectionTemplate = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(
+    (connectionTemplate: ConnectionTemplateCreateRequestBody) => {
+      return publicCreateConnectionTemplate(connectionTemplate, requestOptions);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(configTemplates.lists());
+        registerNotification({
+          id: "config-template-created",
+          text: "Connection template created",
+          type: "success",
+        });
+      },
+      onError: () => {
+        registerNotification({
+          id: "config-template-created",
+          text: "Failed to create connection template",
           type: "error",
         });
       },
