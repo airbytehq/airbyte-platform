@@ -11,11 +11,16 @@ import io.airbyte.api.model.generated.CheckCommandOutputRequest
 import io.airbyte.api.model.generated.CheckCommandOutputResponse
 import io.airbyte.api.model.generated.CommandStatusRequest
 import io.airbyte.api.model.generated.CommandStatusResponse
+import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
+import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
 import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.model.generated.RunCheckCommandResponse
+import io.airbyte.api.model.generated.RunDiscoverCommandRequest
+import io.airbyte.api.model.generated.RunDiscoverCommandResponse
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.FailureReason
@@ -36,6 +41,7 @@ import io.airbyte.api.model.generated.FailureReason as ApiFailureReason
 @Context
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class CommandApiController(
+  private val catalogConverter: CatalogConverter,
   private val commandService: CommandService,
   private val secretSanitizer: SecretSanitizer,
 ) : CommandApi {
@@ -60,6 +66,30 @@ class CommandApiController(
       id(checkCommandOutputRequest.id)
       output?.let {
         status(it.checkConnection.status.toApi())
+        failureReason(it.failureReason.toApi())
+      }
+    }
+  }
+
+  @Post("/output/discover")
+  @Secured(AuthRoleConstants.WORKSPACE_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getDiscoverCommandOutput(
+    @Body discoverCommandOutputRequest: DiscoverCommandOutputRequest,
+  ): DiscoverCommandOutputResponse {
+    val output = commandService.getDiscoverJobOutput(discoverCommandOutputRequest.id)
+    // TODO the domain catalog to api catalog should be simpler however, the existing converter does all this...
+    val apiCatalog =
+      output?.catalog?.let {
+        val protocolCatalog = Jsons.`object`(it.catalog, io.airbyte.protocol.models.v0.AirbyteCatalog::class.java)
+        catalogConverter.toApi(protocolCatalog, null)
+      }
+    return DiscoverCommandOutputResponse().apply {
+      id(discoverCommandOutputRequest.id)
+      output?.let {
+        status(if (it.failureReason == null) DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED else DiscoverCommandOutputResponse.StatusEnum.FAILED)
+        catalogId(output.catalogId)
+        catalog(apiCatalog)
         failureReason(it.failureReason.toApi())
       }
     }
@@ -104,7 +134,7 @@ class CommandApiController(
   override fun runCheckCommand(
     @Body runCheckCommandRequest: RunCheckCommandRequest,
   ): RunCheckCommandResponse {
-    val priority: WorkloadPriority = runCheckCommandRequest.priority?.uppercase()?.toEnum<WorkloadPriority>() ?: WorkloadPriority.DEFAULT
+    val priority: WorkloadPriority = runCheckCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
     if (runCheckCommandRequest.actorId != null) {
       commandService.createCheckCommand(
         commandId = runCheckCommandRequest.id,
@@ -113,7 +143,7 @@ class CommandApiController(
         attemptNumber = runCheckCommandRequest.attemptNumber?.toLong(),
         workloadPriority = priority,
         signalInput = runCheckCommandRequest.signalInput,
-        commandInput = runCheckCommandRequest,
+        commandInput = Jsons.jsonNode(runCheckCommandRequest),
       )
     } else {
       val sanitizedConfig =
@@ -130,9 +160,28 @@ class CommandApiController(
         configuration = sanitizedConfig,
         workloadPriority = priority,
         signalInput = runCheckCommandRequest.signalInput,
-        commandInput = runCheckCommandRequest,
+        commandInput = Jsons.jsonNode(runCheckCommandRequest),
       )
     }
     return RunCheckCommandResponse().id(runCheckCommandRequest.id)
   }
+
+  @Post("/run/discover")
+  @Secured(AuthRoleConstants.WORKSPACE_RUNNER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun runDiscoverCommand(runDiscoverCommandRequest: RunDiscoverCommandRequest): RunDiscoverCommandResponse {
+    val priority: WorkloadPriority = runDiscoverCommandRequest.priority?.toWorkloadPriority() ?: WorkloadPriority.DEFAULT
+    commandService.createDiscoverCommand(
+      commandId = runDiscoverCommandRequest.id,
+      actorId = runDiscoverCommandRequest.actorId,
+      jobId = runDiscoverCommandRequest.jobId,
+      attemptNumber = runDiscoverCommandRequest.attemptNumber?.toLong(),
+      workloadPriority = priority,
+      signalInput = runDiscoverCommandRequest.signalInput,
+      commandInput = Jsons.jsonNode(runDiscoverCommandRequest),
+    )
+    return RunDiscoverCommandResponse().id(runDiscoverCommandRequest.id)
+  }
+
+  private fun String.toWorkloadPriority(): WorkloadPriority? = uppercase().toEnum<WorkloadPriority>()
 }

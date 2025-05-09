@@ -11,16 +11,22 @@ import io.airbyte.api.model.generated.CheckCommandOutputRequest
 import io.airbyte.api.model.generated.CheckCommandOutputResponse
 import io.airbyte.api.model.generated.CommandStatusRequest
 import io.airbyte.api.model.generated.CommandStatusResponse
+import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
+import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
 import io.airbyte.api.model.generated.FailureOrigin
 import io.airbyte.api.model.generated.FailureType
 import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.model.generated.RunCheckCommandResponse
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
+import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.protocol.models.v0.AirbyteCatalog
+import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.server.services.CommandService
 import io.airbyte.server.services.CommandStatus
 import io.mockk.every
@@ -33,6 +39,7 @@ import java.util.UUID
 
 class CommandApiControllerTest {
   private lateinit var controller: CommandApiController
+  private lateinit var catalogConverter: CatalogConverter
   private lateinit var commandService: CommandService
   private lateinit var secretSanitizer: SecretSanitizer
 
@@ -49,9 +56,10 @@ class CommandApiControllerTest {
 
   @BeforeEach
   fun setup() {
+    catalogConverter = mockk(relaxed = true)
     commandService = mockk(relaxed = true)
     secretSanitizer = mockk(relaxed = true)
-    controller = CommandApiController(commandService, secretSanitizer)
+    controller = CommandApiController(catalogConverter, commandService, secretSanitizer)
   }
 
   @Test
@@ -127,6 +135,82 @@ class CommandApiControllerTest {
   }
 
   @Test
+  fun `getDiscoverCommandOutput can return a successful response`() {
+    val catalogId = UUID.randomUUID()
+    val protocolCatalog = AirbyteCatalog().withStreams(listOf(AirbyteStream().withName("streamname")))
+    val domainCatalog = ActorCatalog().withCatalog(Jsons.jsonNode(protocolCatalog))
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) } returns
+      CommandService.DiscoverJobOutput(
+        catalogId = catalogId,
+        catalog = domainCatalog,
+        failureReason = null,
+      )
+
+    val apiCatalog =
+      io.airbyte.api.model.generated.AirbyteCatalog().streams(
+        listOf(
+          io.airbyte.api.model.generated
+            .AirbyteStreamAndConfiguration()
+            .stream(
+              io.airbyte.api.model.generated
+                .AirbyteStream()
+                .name("streamname"),
+            ),
+        ),
+      )
+    every { catalogConverter.toApi(protocolCatalog, any()) } returns apiCatalog
+
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(
+      DiscoverCommandOutputResponse()
+        .id(TEST_COMMAND_ID)
+        .catalogId(catalogId)
+        .catalog(apiCatalog)
+        .status(DiscoverCommandOutputResponse.StatusEnum.SUCCEEDED),
+      output,
+    )
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) }
+  }
+
+  @Test
+  fun `getDiscoverCommandOutput can return a failure response`() {
+    every { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) } returns
+      CommandService.DiscoverJobOutput(
+        catalogId = null,
+        catalog = null,
+        failureReason =
+          FailureReason()
+            .withFailureOrigin(FailureReason.FailureOrigin.SOURCE)
+            .withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+            .withExternalMessage("external discover facing message")
+            .withInternalMessage("internal discover facing message")
+            .withStacktrace("my discover stacktrace")
+            .withTimestamp(2)
+            .withRetryable(false),
+      )
+
+    val output = controller.getDiscoverCommandOutput(DiscoverCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(
+      DiscoverCommandOutputResponse()
+        .id(TEST_COMMAND_ID)
+        .status(DiscoverCommandOutputResponse.StatusEnum.FAILED)
+        .failureReason(
+          io.airbyte.api.model.generated
+            .FailureReason()
+            .failureOrigin(FailureOrigin.SOURCE)
+            .failureType(FailureType.CONFIG_ERROR)
+            .externalMessage("external discover facing message")
+            .internalMessage("internal discover facing message")
+            .stacktrace("my discover stacktrace")
+            .timestamp(2)
+            .retryable(false),
+        ),
+      output,
+    )
+    verify { commandService.getDiscoverJobOutput(TEST_COMMAND_ID) }
+  }
+
+  @Test
   fun `run check with an actor id`() {
     val request =
       RunCheckCommandRequest()
@@ -167,7 +251,7 @@ class CommandApiControllerTest {
         TEST_ATTEMPT_NUMBER,
         WorkloadPriority.HIGH,
         TEST_SIGNAL_INPUT,
-        request,
+        Jsons.jsonNode(request),
       )
     }
   }
@@ -199,7 +283,7 @@ class CommandApiControllerTest {
         sanitizedConfig,
         WorkloadPriority.DEFAULT,
         null,
-        expectedCommandInput,
+        Jsons.jsonNode(expectedCommandInput),
       )
     }
   }
@@ -235,7 +319,7 @@ class CommandApiControllerTest {
         sanitizedConfig,
         WorkloadPriority.HIGH,
         TEST_SIGNAL_INPUT,
-        expectedCommandInput,
+        Jsons.jsonNode(expectedCommandInput),
       )
     }
   }

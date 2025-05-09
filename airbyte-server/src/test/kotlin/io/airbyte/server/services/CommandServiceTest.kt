@@ -4,9 +4,15 @@
 
 package io.airbyte.server.services
 
+import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
+import io.airbyte.config.FailureReason
+import io.airbyte.data.services.CatalogService
 import io.airbyte.protocol.models.Jsons
+import io.airbyte.protocol.models.v0.AirbyteCatalog
+import io.airbyte.protocol.models.v0.AirbyteStream
+import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
@@ -26,6 +32,7 @@ import java.util.Optional
 import java.util.UUID
 
 class CommandServiceTest {
+  private lateinit var catalogService: CatalogService
   private lateinit var commandsRepository: CommandsRepository
   private lateinit var workloadService: WorkloadService
   private lateinit var workloadOutputReader: WorkloadOutputDocStoreReader
@@ -37,13 +44,16 @@ class CommandServiceTest {
       mockk {
         every { findById(COMMAND_ID) } returns Optional.of(defaultCheckCommand)
         every { findById(UNKNOWN_COMMAND_ID) } returns Optional.empty()
+        every { findById(DISCOVER_COMMAND_ID) } returns Optional.of(defaultDiscoverCommand)
       }
 
+    catalogService = mockk()
     workloadService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
     service =
       CommandService(
         actorRepository = mockk(),
+        catalogService = catalogService,
         commandsRepository = commandsRepository,
         jobInputService = mockk(),
         logClientManager = mockk(),
@@ -53,6 +63,8 @@ class CommandServiceTest {
         workloadOutputReader = workloadOutputReader,
         workspaceService = mockk(),
         workspaceRoot = Path.of("/test-root"),
+        workloadIdGenerator = WorkloadIdGenerator(),
+        discoverAutoRefreshWindowMinutes = 0,
       )
   }
 
@@ -85,6 +97,45 @@ class CommandServiceTest {
   }
 
   @Test
+  fun `getDiscoverJobOutput looks up the catalog if there is a catalogId`() {
+    val discoverCatalogId = UUID.randomUUID()
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withDiscoverCatalogId(discoverCatalogId)
+    every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
+    val discoverCatalog =
+      ActorCatalog().withCatalog(
+        Jsons.jsonNode(
+          AirbyteCatalog().withStreams(
+            listOf(AirbyteStream().withName("streamname")),
+          ),
+        ),
+      )
+    every { catalogService.getActorCatalogById(discoverCatalogId) } returns discoverCatalog
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID)
+    val expectedOutput =
+      CommandService.DiscoverJobOutput(
+        catalogId = discoverCatalogId,
+        catalog = discoverCatalog,
+        failureReason = null,
+      )
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun `getDiscoverJobOutput returns failure without crashing`() {
+    val failure = FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withFailureType(FailureReason.FailureType.CONFIG_ERROR)
+    val workloadOutput = ConnectorJobOutput().withOutputType(OutputType.DISCOVER_CATALOG_ID).withFailureReason(failure)
+    every { workloadOutputReader.readConnectorOutput(DISCOVER_WORKLOAD_ID) } returns workloadOutput
+    val output = service.getDiscoverJobOutput(DISCOVER_COMMAND_ID)
+    val expectedOutput =
+      CommandService.DiscoverJobOutput(
+        catalogId = null,
+        catalog = null,
+        failureReason = failure,
+      )
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
   fun `getStatus returns the correct CommandStatus`() {
     val workload: Workload = mockk { every { status } returns WorkloadStatus.SUCCESS }
     every { workloadService.getWorkload(WORKLOAD_ID) } returns workload
@@ -109,8 +160,22 @@ class CommandServiceTest {
       Command(
         id = COMMAND_ID,
         workloadId = WORKLOAD_ID,
-        commandType = "Check",
+        commandType = CommandType.CHECK.name,
         commandInput = Jsons.deserialize("""{"yo":"lo"}"""),
+        workspaceId = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        createdAt = OffsetDateTime.now(),
+        updatedAt = OffsetDateTime.now(),
+      )
+
+    const val DISCOVER_COMMAND_ID = "discover-123"
+    const val DISCOVER_WORKLOAD_ID = "workload-13-321"
+    val defaultDiscoverCommand =
+      Command(
+        id = DISCOVER_COMMAND_ID,
+        workloadId = DISCOVER_WORKLOAD_ID,
+        commandType = CommandType.DISCOVER.name,
+        commandInput = Jsons.deserialize("""{"discover":"payload"}"""),
         workspaceId = UUID.randomUUID(),
         organizationId = UUID.randomUUID(),
         createdAt = OffsetDateTime.now(),

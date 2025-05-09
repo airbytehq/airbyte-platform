@@ -207,6 +207,8 @@ airbyte:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
+    discover:
+      auto-refresh-window: ${DISCOVER_REFRESH_WINDOW_MINUTES:1440}
     kube-job-config-variant-override: ${JOB_RESOURCE_VARIANT_OVERRIDE:}
     kube-job-configs:
       default:

@@ -8,12 +8,18 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.temporal.TemporalUtils
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
+import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
+import io.airbyte.config.FailureReason
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.services.CatalogService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
 import io.airbyte.workers.models.CheckConnectionInput
@@ -24,11 +30,14 @@ import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
+import io.micronaut.context.annotation.Property
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.time.OffsetDateTime
 import java.util.UUID
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 enum class CommandStatus {
   PENDING,
@@ -57,6 +66,7 @@ private data class WorkloadCreatePayload(
 @Singleton
 class CommandService(
   private val actorRepository: ActorRepository,
+  private val catalogService: CatalogService,
   private val commandsRepository: CommandsRepository,
   private val jobInputService: JobInputService,
   private val logClientManager: LogClientManager,
@@ -64,9 +74,14 @@ class CommandService(
   private val workloadService: WorkloadService,
   private val workloadQueueService: WorkloadQueueService,
   private val workloadOutputReader: WorkloadOutputDocStoreReader,
+  private val workloadIdGenerator: WorkloadIdGenerator,
   private val workspaceService: WorkspaceService,
   @Named("workspaceRoot") private val workspaceRoot: Path,
+  @Property(name = "airbyte.worker.discover.auto-refresh-window") discoverAutoRefreshWindowMinutes: Int,
 ) {
+  private val discoverAutoRefreshWindow: Duration =
+    if (discoverAutoRefreshWindowMinutes > 0) discoverAutoRefreshWindowMinutes.minutes else Duration.INFINITE
+
   fun createCheckCommand(
     commandId: String,
     actorDefinitionId: UUID,
@@ -74,14 +89,22 @@ class CommandService(
     configuration: JsonNode,
     workloadPriority: WorkloadPriority,
     signalInput: String?,
-    commandInput: Any,
+    commandInput: JsonNode,
   ) {
     val checkInput = jobInputService.getCheckInput(actorDefinitionId, workspaceId, configuration)
-    val workloadPayload = createCheckCreateWorkloadRequest(actorDefinitionId, workspaceId, checkInput, workloadPriority, signalInput)
+    val workloadPayload =
+      createCheckCreateWorkloadRequest(
+        actorId = null,
+        actorDefinitionId = actorDefinitionId,
+        workspaceId = workspaceId,
+        checkInput = checkInput,
+        workloadPriority = workloadPriority,
+        signalInput = signalInput,
+      )
     createCommand(
       commandId = commandId,
       commandType = CommandType.CHECK.name,
-      commandInput = Jsons.jsonNode(commandInput),
+      commandInput = commandInput,
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
     )
@@ -94,13 +117,14 @@ class CommandService(
     attemptNumber: Long?,
     workloadPriority: WorkloadPriority,
     signalInput: String?,
-    commandInput: Any,
+    commandInput: JsonNode,
   ) {
     val checkInput = jobInputService.getCheckInput(actorId, jobId, attemptNumber)
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
     val workloadPayload =
       createCheckCreateWorkloadRequest(
+        actorId = actorId,
         actorDefinitionId = actor.actorDefinitionId,
         workspaceId = workspaceId,
         checkInput = checkInput,
@@ -110,13 +134,14 @@ class CommandService(
     createCommand(
       commandId = commandId,
       commandType = CommandType.CHECK.name,
-      commandInput = Jsons.jsonNode(commandInput),
+      commandInput = commandInput,
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
     )
   }
 
   private fun createCheckCreateWorkloadRequest(
+    actorId: UUID?,
     actorDefinitionId: UUID,
     workspaceId: UUID,
     checkInput: CheckConnectionInput,
@@ -126,8 +151,13 @@ class CommandService(
     val jobId = checkInput.jobRunConfig.jobId
     val attemptNumber = checkInput.jobRunConfig.attemptId // because this is the only place where it's attemptId
 
-    // TODO this should come from WorkloadIdGenerator
-    val workloadId = "${actorDefinitionId}_${jobId}_${attemptNumber}_check"
+    val workloadId =
+      workloadIdGenerator.generateCheckWorkloadId(
+        actorId = actorId,
+        actorDefinitionId = actorDefinitionId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+      )
     val labels =
       listOfNotNull(
         WorkloadLabel(key = WorkloadLabels.JOB_LABEL_KEY, value = jobId),
@@ -144,6 +174,86 @@ class CommandService(
       workloadInput = Jsons.serialize(checkInput),
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
       type = WorkloadType.CHECK,
+      priority = workloadPriority,
+      dataplaneGroupId = dataplaneGroupId,
+      signalInput = signalInput,
+    )
+  }
+
+  fun createDiscoverCommand(
+    commandId: String,
+    actorId: UUID,
+    jobId: String?,
+    attemptNumber: Long?,
+    workloadPriority: WorkloadPriority,
+    signalInput: String?,
+    commandInput: JsonNode,
+  ) {
+    val actualJobId = jobId ?: UUID.randomUUID().toString()
+    val actualAttemptNumber = attemptNumber ?: 0L
+    val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
+    val workspaceId = actor.workspaceId
+    val discoverInput = jobInputService.getDiscoveryInputWithJobId(actorId, workspaceId, actualJobId, actualAttemptNumber)
+    val workloadPayload =
+      createDiscoverCreateWorkloadRequest(
+        actorId = actorId,
+        workspaceId = workspaceId,
+        discoverInput = discoverInput,
+        workloadPriority = workloadPriority,
+        signalInput = signalInput,
+      )
+    createCommand(
+      commandId = commandId,
+      commandType = CommandType.DISCOVER.name,
+      commandInput = commandInput,
+      workspaceId = workspaceId,
+      workloadPayload = workloadPayload,
+    )
+  }
+
+  private fun createDiscoverCreateWorkloadRequest(
+    actorId: UUID,
+    workspaceId: UUID,
+    discoverInput: DiscoverCommandInput.DiscoverCatalogInput,
+    workloadPriority: WorkloadPriority,
+    signalInput: String?,
+  ): WorkloadCreatePayload {
+    val jobId = discoverInput.jobRunConfig.jobId
+    val attemptNumber = discoverInput.jobRunConfig.attemptId // because this is the only place where it's attemptId
+
+    val workloadId =
+      workloadIdGenerator.generateDiscoverWorkloadId(
+        actorId = actorId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+        isManual = discoverInput.discoverCatalogInput.manual,
+        discoverAutoRefreshWindow = discoverAutoRefreshWindow,
+      )
+    val labels =
+      listOfNotNull(
+        WorkloadLabel(key = WorkloadLabels.JOB_LABEL_KEY, value = jobId),
+        WorkloadLabel(key = WorkloadLabels.ATTEMPT_LABEL_KEY, value = attemptNumber.toString()),
+        WorkloadLabel(key = WorkloadLabels.WORKSPACE_LABEL_KEY, value = workspaceId.toString()),
+        WorkloadLabel(key = WorkloadLabels.ACTOR_TYPE, value = ActorType.SOURCE.toString()),
+      )
+
+    val dataplaneGroupId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).dataplaneGroupId
+
+    return WorkloadCreatePayload(
+      workloadId = workloadId,
+      labels = labels,
+      workloadInput =
+        Jsons.serialize(
+          // TODO This is because the current object we serialize is in a dependency that we do not want to pull in the server
+          // TODO This should be changed once we decommissioned the old flow from the worker
+          object {
+            val jobRunConfig = discoverInput.jobRunConfig
+            val launcherConfig = discoverInput.integrationLauncherConfig
+            val discoverCatalogInput = discoverInput.discoverCatalogInput
+          },
+        ),
+      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber)),
+      type = WorkloadType.DISCOVER,
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
@@ -236,4 +346,20 @@ class CommandService(
       .map { command ->
         workloadOutputReader.readConnectorOutput(command.workloadId)
       }.orElse(null)
+
+  data class DiscoverJobOutput(
+    val catalogId: UUID?,
+    val catalog: ActorCatalog?,
+    val failureReason: FailureReason?,
+  )
+
+  fun getDiscoverJobOutput(commandId: String): DiscoverJobOutput? =
+    getConnectorJobOutput(commandId)?.let { jobOutput ->
+      val catalog = jobOutput.discoverCatalogId?.let { catalogService.getActorCatalogById(it) }
+      return DiscoverJobOutput(
+        catalogId = jobOutput.discoverCatalogId,
+        catalog = catalog,
+        failureReason = jobOutput.failureReason,
+      )
+    }
 }

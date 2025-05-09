@@ -6006,6 +6006,50 @@ paths:
                   id:
                     type: string
 
+  /v1/commands/run/discover:
+    post:
+      summary: Run a Discover command for a Connector
+      tags: [command]
+      operationId: runDiscoverCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunDiscoverCommandRequest
+              required: [id, actor_id]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                actor_id:
+                  type: string
+                  format: uuid
+                jobId:
+                  type: string
+                  description: internal usage
+                attemptNumber:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                priority:
+                  type: string
+                  description: internal usage
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunDiscoverCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
   /v1/commands/output/check:
     post:
       summary: Get the status of a check command
@@ -6036,6 +6080,47 @@ paths:
                   status:
                     type: string
                     enum: [succeeded, failed]
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/discover:
+    post:
+      summary: Get the status of a discover command
+      tags: [command]
+      operationId: getDiscoverCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: DiscoverCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: DiscoverCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
+                  catalogId:
+                    type: string
+                    format: uuid
+                  catalogDiff:
+                    $ref: "#/components/schemas/CatalogDiff"
+
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
 
