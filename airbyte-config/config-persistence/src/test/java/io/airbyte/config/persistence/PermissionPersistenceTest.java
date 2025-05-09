@@ -126,6 +126,12 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
+  void listUsersInWorkspaceTest() throws IOException {
+    final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(MockData.WORKSPACE_ID_1);
+    Assertions.assertEquals(2, userPermissions.size());
+  }
+
+  @Test
   void listInstanceUsersTest() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listInstanceAdminUsers();
     Assertions.assertEquals(1, userPermissions.size());

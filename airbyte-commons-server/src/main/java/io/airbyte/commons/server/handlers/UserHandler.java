@@ -30,6 +30,8 @@ import io.airbyte.api.model.generated.WorkspaceRead;
 import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoRead;
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList;
+import io.airbyte.api.model.generated.WorkspaceUserRead;
+import io.airbyte.api.model.generated.WorkspaceUserReadList;
 import io.airbyte.api.problems.model.generated.ProblemEmailData;
 import io.airbyte.api.problems.throwable.generated.SSORequiredProblem;
 import io.airbyte.api.problems.throwable.generated.UserAlreadyExistsProblem;
@@ -292,6 +294,12 @@ public class UserHandler {
     final UUID organizationId = organizationIdRequestBody.getOrganizationId();
     final List<UserPermission> userPermissions = permissionHandler.listUsersInOrganization(organizationId);
     return buildOrganizationUserReadList(userPermissions, organizationId);
+  }
+
+  public WorkspaceUserReadList listUsersInWorkspace(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
+    final UUID workspaceId = workspaceIdRequestBody.getWorkspaceId();
+    final List<UserPermission> userPermissions = permissionHandler.listUsersInWorkspace(workspaceId);
+    return buildWorkspaceUserReadList(userPermissions, workspaceId);
   }
 
   public WorkspaceUserAccessInfoReadList listAccessInfoByWorkspaceId(final WorkspaceIdRequestBody workspaceIdRequestBody) throws IOException {
@@ -659,6 +667,24 @@ public class UserHandler {
     } catch (final PermissionRedundantException e) {
       throw new ConflictException(e.getMessage(), e);
     }
+  }
+
+  private WorkspaceUserReadList buildWorkspaceUserReadList(final List<UserPermission> userPermissions, final UUID workspaceId) {
+    // we exclude the default user from this list because we don't want to expose it in the UI
+    return new WorkspaceUserReadList().users(userPermissions
+        .stream()
+        .filter(userPermission -> !userPermission.getUser().getUserId().equals(DEFAULT_USER_ID))
+        .map(userPermission -> new WorkspaceUserRead()
+            .userId(userPermission.getUser().getUserId())
+            .email(userPermission.getUser().getEmail())
+            .name(userPermission.getUser().getName())
+            .isDefaultWorkspace(workspaceId.equals(userPermission.getUser().getDefaultWorkspaceId()))
+            .workspaceId(workspaceId)
+            .permissionId(userPermission.getPermission().getPermissionId())
+            .permissionType(
+                Enums.toEnum(userPermission.getPermission().getPermissionType().value(), io.airbyte.api.model.generated.PermissionType.class)
+                    .get()))
+        .collect(Collectors.toList()));
   }
 
   private OrganizationUserReadList buildOrganizationUserReadList(final List<UserPermission> userPermissions, final UUID organizationId) {
