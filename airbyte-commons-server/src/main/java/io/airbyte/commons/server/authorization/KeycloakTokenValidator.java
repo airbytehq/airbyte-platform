@@ -10,12 +10,12 @@ import static io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRI
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -123,7 +123,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
             new MetricAttribute(MetricTags.USER_TYPE, INTERNAL_SERVICE_ACCOUNT),
             new MetricAttribute(MetricTags.CLIENT_ID, clientName),
             new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));
-        return Authentication.build(clientName, RbacRoleHelper.getInstanceAdminRoles(), userAttributeMap);
+        return Authentication.build(clientName, AuthRole.getInstanceAdminRoles(), userAttributeMap);
       }
 
       final String authUserId = jwtPayload.get("sub").asText();

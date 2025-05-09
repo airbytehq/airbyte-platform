@@ -7,17 +7,17 @@ package io.airbyte.commons.converters
 import com.fasterxml.jackson.core.JsonToken
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.AllowedHosts
+import io.github.oshai.kotlinlogging.KotlinLogging
 import org.apache.commons.text.StringSubstitutor
-import org.slf4j.Logger
 import java.net.URI
 
 /**
  * This class takes values from a connector's configuration and uses it to fill in template-string values.
  * It substitutes strings with ${} access, e.g. "The ${animal} jumped over the ${target}" with {animal: fox, target: fence}
  */
-class ConfigReplacer(
-  private val log: Logger,
-) {
+class ConfigReplacer {
+  val log = KotlinLogging.logger {}
+
   fun getAllowedHosts(
     allowedHosts: AllowedHosts?,
     config: JsonNode,
@@ -67,7 +67,7 @@ class ConfigReplacer(
     }
 
     if (resolvedHosts.isEmpty() && hosts.isNotEmpty()) {
-      log.error("All allowedHosts values are un-replaced.  Check this connector's configuration or actor definition - ${allowedHosts.hosts}")
+      log.error { "All allowedHosts values are un-replaced.  Check this connector's configuration or actor definition - ${allowedHosts.hosts}" }
     }
 
     resolvedHosts.addAll(AlwaysAllowedHosts.hosts)

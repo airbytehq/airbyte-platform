@@ -7,8 +7,8 @@ package io.airbyte.server.handlers
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.Sets
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
-import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.ScopeType
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
@@ -21,9 +21,9 @@ import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.InvitationStatus
+import io.airbyte.config.Permission
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
-import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.InvitationDuplicateException
@@ -34,7 +34,6 @@ import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.notification.CustomerIoEmailConfig
 import io.airbyte.notification.CustomerIoEmailNotificationSender
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.server.handlers.apidomainmapping.UserInvitationMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
@@ -52,7 +51,6 @@ class UserInvitationHandler(
   val workspaceService: WorkspaceService,
   val organizationService: OrganizationService,
   val userPersistence: UserPersistence,
-  val permissionPersistence: PermissionPersistence,
   val permissionHandler: PermissionHandler,
   val trackingClient: TrackingClient,
 ) {
@@ -221,7 +219,7 @@ class UserInvitationHandler(
     log.info { "userIdsWithEmail: $userIdsWithEmail" }
 
     val existingOrgUserIds =
-      permissionPersistence
+      permissionHandler
         .listUsersInOrganization(orgId)
         .map { it.user.userId }
         .toSet()
@@ -246,9 +244,9 @@ class UserInvitationHandler(
     existingUserId: UUID,
   ) {
     val permissionCreate =
-      PermissionCreate()
-        .userId(existingUserId)
-        .permissionType(req.permissionType)
+      Permission()
+        .withUserId(existingUserId)
+        .withPermissionType(Permission.PermissionType.valueOf(req.permissionType.name))
 
     when (req.scopeType) {
       ScopeType.ORGANIZATION -> permissionCreate.organizationId = req.scopeId

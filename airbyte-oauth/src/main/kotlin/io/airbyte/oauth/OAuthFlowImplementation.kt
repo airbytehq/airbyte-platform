@@ -17,7 +17,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class, JsonValidationException::class)
   fun getSourceConsentUrl(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
     oauthConfigSpecification: OAuthConfigSpecification?,
@@ -27,7 +27,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class, JsonValidationException::class)
   fun getDestinationConsentUrl(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
     oauthConfigSpecification: OAuthConfigSpecification?,
@@ -38,7 +38,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class)
   fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,
@@ -47,7 +47,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class, JsonValidationException::class)
   fun completeSourceOAuth(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
@@ -59,7 +59,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class)
   fun completeDestinationOAuth(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     oauthParamConfig: JsonNode,
@@ -68,7 +68,7 @@ interface OAuthFlowImplementation {
   @Throws(IOException::class, JsonValidationException::class)
   fun completeDestinationOAuth(
     workspaceId: UUID,
-    destinationDefinitionId: UUID,
+    destinationDefinitionId: UUID?,
     queryParams: Map<String, Any>,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,

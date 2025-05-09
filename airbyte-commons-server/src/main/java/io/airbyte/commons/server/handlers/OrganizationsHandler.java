@@ -10,17 +10,15 @@ import io.airbyte.api.model.generated.OrganizationIdRequestBody;
 import io.airbyte.api.model.generated.OrganizationRead;
 import io.airbyte.api.model.generated.OrganizationReadList;
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
-import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Organization;
 import io.airbyte.config.Permission;
-import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.data.services.OrganizationPaymentConfigService;
 import io.airbyte.data.services.PermissionRedundantException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
+import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -40,7 +38,7 @@ import org.jooq.tools.StringUtils;
 @Singleton
 public class OrganizationsHandler {
 
-  private final PermissionService permissionService;
+  private final PermissionHandler permissionHandler;
   private final OrganizationPersistence organizationPersistence;
 
   private final Supplier<UUID> uuidGenerator;
@@ -48,11 +46,11 @@ public class OrganizationsHandler {
 
   @Inject
   public OrganizationsHandler(final OrganizationPersistence organizationPersistence,
-                              final PermissionService permissionService,
+                              final PermissionHandler permissionHandler,
                               @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
                               final OrganizationPaymentConfigService organizationPaymentConfigService) {
     this.organizationPersistence = organizationPersistence;
-    this.permissionService = permissionService;
+    this.permissionHandler = permissionHandler;
     this.uuidGenerator = uuidGenerator;
     this.organizationPaymentConfigService = organizationPaymentConfigService;
   }
@@ -66,7 +64,7 @@ public class OrganizationsHandler {
   }
 
   public OrganizationRead createOrganization(final OrganizationCreateRequestBody organizationCreateRequestBody)
-      throws IOException {
+      throws IOException, JsonValidationException, PermissionRedundantException {
     final String organizationName = organizationCreateRequestBody.getOrganizationName();
     final String email = organizationCreateRequestBody.getEmail();
     final UUID userId = organizationCreateRequestBody.getUserId();
@@ -78,16 +76,12 @@ public class OrganizationsHandler {
         .withUserId(userId);
     organizationPersistence.createOrganization(organization);
 
-    try {
-      // Also create an OrgAdmin permission.
-      permissionService.createPermission(new Permission()
-          .withPermissionId(uuidGenerator.get())
-          .withUserId(userId)
-          .withOrganizationId(orgId)
-          .withPermissionType(PermissionType.ORGANIZATION_ADMIN));
-    } catch (final PermissionRedundantException e) {
-      throw new ConflictException(e.getMessage(), e);
-    }
+    // Also create an OrgAdmin permission.
+    permissionHandler.createPermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withOrganizationId(orgId)
+        .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN));
 
     organizationPaymentConfigService.saveDefaultPaymentConfig(organization.getOrganizationId());
     return buildOrganizationRead(organization);

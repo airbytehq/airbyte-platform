@@ -7,10 +7,8 @@ import { TestWrapper } from "test-utils/testutils";
 import { SyncCatalogVirtuosoTable } from "./SyncCatalogVirtuosoTable";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
 
-// Mock the ConnectionFormService
-jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
-  ...jest.requireActual("hooks/services/ConnectionForm/ConnectionFormService"),
-  useConnectionFormService: jest.fn().mockReturnValue({
+jest.mock("core/services/ui/FormModeContext", () => ({
+  useFormMode: () => ({
     mode: "create",
   }),
 }));

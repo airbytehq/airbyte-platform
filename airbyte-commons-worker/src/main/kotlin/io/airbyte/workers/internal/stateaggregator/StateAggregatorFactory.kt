@@ -4,7 +4,10 @@
 
 package io.airbyte.workers.internal.stateaggregator
 
+import jakarta.inject.Singleton
+
 /** Factory to build StageAggregator. */
+@Singleton
 class StateAggregatorFactory {
   fun create(): StateAggregator = DefaultStateAggregator()
 }

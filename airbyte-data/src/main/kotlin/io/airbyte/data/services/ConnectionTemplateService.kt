@@ -1,0 +1,41 @@
+/*
+ * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
+ */
+
+package io.airbyte.data.services
+
+import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.config.ConnectionTemplate
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
+import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.ScheduleData
+import io.airbyte.config.StandardSync.NonBreakingChangesPreference
+import io.airbyte.domain.models.ActorDefinitionId
+import io.airbyte.domain.models.OrganizationId
+
+sealed class ActorDefinitionIdOrType {
+  data class DefinitionId(
+    val id: ActorDefinitionId,
+  ) : ActorDefinitionIdOrType()
+
+  data class Type(
+    val type: String,
+  ) : ActorDefinitionIdOrType()
+}
+
+interface ConnectionTemplateService {
+  fun createTemplate(
+    organizationId: OrganizationId,
+    destinationName: String,
+    destinationActorDefinitionIdOrDestinationType: ActorDefinitionIdOrType,
+    destinationConfig: JsonNode,
+    namespaceDefinitionType: NamespaceDefinitionType,
+    namespaceFormat: String?,
+    prefix: String?,
+    scheduleData: ScheduleData?,
+    resourceRequirements: ResourceRequirements?,
+    nonBreakingChangesPreference: NonBreakingChangesPreference,
+    defaultGeography: String?,
+    syncOnCreate: Boolean,
+  ): ConnectionTemplate
+}

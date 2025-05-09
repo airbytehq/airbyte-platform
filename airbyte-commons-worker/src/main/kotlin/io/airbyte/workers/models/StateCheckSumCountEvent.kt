@@ -17,7 +17,7 @@ data class StateCheckSumCountEvent
     @JsonProperty("deployment_mode") val deploymentMode: String?,
     @JsonProperty("email") val email: String?,
     @JsonProperty("id") val id: String,
-    @JsonProperty("job_id") val jobId: String,
+    @JsonProperty("job_id") val jobId: Long,
     @JsonProperty("record_count") val recordCount: Long,
     @JsonProperty("state_hash") val stateHash: String,
     @JsonProperty("state_id") val stateId: String,

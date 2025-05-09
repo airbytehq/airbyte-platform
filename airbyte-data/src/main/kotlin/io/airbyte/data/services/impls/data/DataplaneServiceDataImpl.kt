@@ -57,4 +57,9 @@ class DataplaneServiceDataImpl(
           unit.toConfigModel()
         }
     }
+
+  override fun listDataplanes(withTombstone: Boolean): List<Dataplane> =
+    repository.findAllByTombstone(withTombstone).map { unit ->
+      unit.toConfigModel()
+    }
 }

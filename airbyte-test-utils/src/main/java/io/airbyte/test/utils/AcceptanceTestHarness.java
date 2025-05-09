@@ -313,6 +313,7 @@ public class AcceptanceTestHarness {
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.OVERWRITE,
         List.of(),
+        null,
         List.of(),
         STREAM_NAME.replace(".", "_"),
         true,
@@ -1102,8 +1103,9 @@ public class AcceptanceTestHarness {
     apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
-            null,
             dockerImageTag,
+            defaultWorkspaceId,
+            null,
             null));
   }
 
@@ -1112,6 +1114,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            defaultWorkspaceId,
             null,
             null));
   }
@@ -1422,6 +1425,7 @@ public class AcceptanceTestHarness {
             SyncMode.INCREMENTAL,
             DestinationSyncMode.APPEND,
             cursorField,
+            null,
             stream.getConfig().getPrimaryKey(),
             stream.getConfig().getAliasName(),
             stream.getConfig().getSelected(),

@@ -11,8 +11,8 @@ import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.AuthRoleConstants;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.persistence.PermissionPersistence;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashSet;
@@ -43,13 +43,13 @@ class RbacRoleHelperTest {
   @Mock
   private AuthenticationHeaderResolver mHeaderResolver;
   @Mock
-  private PermissionPersistence mPermissionPersistence;
+  private PermissionHandler permissionHandler;
 
   private RbacRoleHelper rbacRoleHelper;
 
   @BeforeEach
   void setUp() {
-    rbacRoleHelper = new RbacRoleHelper(mHeaderResolver, mPermissionPersistence);
+    rbacRoleHelper = new RbacRoleHelper(mHeaderResolver, permissionHandler);
   }
 
   @ParameterizedTest
@@ -64,7 +64,7 @@ class RbacRoleHelperTest {
 
     if (hasWorkspacePermission) {
       when(mHeaderResolver.resolveWorkspace(any())).thenReturn(List.of(WORKSPACE_ID));
-      when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(WORKSPACE_ID, AUTH_USER_ID))
+      when(permissionHandler.findPermissionTypeForUserAndWorkspace(WORKSPACE_ID, AUTH_USER_ID))
           .thenReturn(PermissionType.WORKSPACE_ADMIN);
 
       // expect all workspace roles that are admin and below
@@ -72,7 +72,7 @@ class RbacRoleHelperTest {
     }
     if (hasOrganizationPermission) {
       when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(ORGANIZATION_ID));
-      when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, AUTH_USER_ID))
+      when(permissionHandler.findPermissionTypeForUserAndOrganization(ORGANIZATION_ID, AUTH_USER_ID))
           .thenReturn(PermissionType.ORGANIZATION_EDITOR);
 
       // expect all org roles that are editor and below
@@ -92,12 +92,10 @@ class RbacRoleHelperTest {
       when(mHeaderResolver.resolveAuthUserIds(any())).thenReturn(Set.of(UUID.randomUUID().toString(), UUID.randomUUID().toString()));
     }
     if (isInstanceAdmin) {
-      when(mPermissionPersistence.isAuthUserInstanceAdmin(AUTH_USER_ID)).thenReturn(true);
+      when(permissionHandler.isAuthUserInstanceAdmin(AUTH_USER_ID)).thenReturn(true);
 
       // expect all roles that are admin and below
-      expectedRoles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-      expectedRoles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
-      expectedRoles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
+      expectedRoles.addAll(AuthRole.getInstanceAdminRoles());
     }
 
     final Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -114,11 +112,11 @@ class RbacRoleHelperTest {
     final UUID workspaceId3 = UUID.randomUUID();
 
     when(mHeaderResolver.resolveWorkspace(any())).thenReturn(List.of(workspaceId1, workspaceId2, workspaceId3));
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_ADMIN);
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_EDITOR);
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_READER);
 
     Collection<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -127,7 +125,7 @@ class RbacRoleHelperTest {
     Assertions.assertEquals(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_READER), actualRoles);
 
     // change reader to admin, now expect editor as minimum role set.
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_ADMIN);
 
     actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -139,9 +137,9 @@ class RbacRoleHelperTest {
     final UUID organizationId2 = UUID.randomUUID();
 
     when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId1, organizationId2));
-    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_EDITOR);
-    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_MEMBER);
 
     actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -177,11 +175,11 @@ class RbacRoleHelperTest {
     final UUID workspaceId3 = UUID.randomUUID();
 
     when(mHeaderResolver.resolveWorkspace(any())).thenReturn(List.of(workspaceId1, workspaceId2, workspaceId3));
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId1, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_ADMIN);
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId2, AUTH_USER_ID))
         .thenReturn(PermissionType.WORKSPACE_EDITOR);
-    when(mPermissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId3, AUTH_USER_ID))
         .thenReturn(null); // should cause overall role to be NONE
 
     Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -194,9 +192,9 @@ class RbacRoleHelperTest {
     final UUID organizationId2 = UUID.randomUUID();
 
     when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId1, organizationId2));
-    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(organizationId1, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_EDITOR);
-    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(organizationId2, AUTH_USER_ID))
         .thenReturn(null);
 
     actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));
@@ -220,7 +218,7 @@ class RbacRoleHelperTest {
         OrganizationAuthRole.ORGANIZATION_READER.getLabel(),
         OrganizationAuthRole.ORGANIZATION_MEMBER.getLabel());
 
-    final Set<String> actualRoles = RbacRoleHelper.getInstanceAdminRoles();
+    final Set<String> actualRoles = AuthRole.getInstanceAdminRoles();
 
     Assertions.assertEquals(expectedRoles, actualRoles);
   }
@@ -232,7 +230,7 @@ class RbacRoleHelperTest {
     final UUID organizationId = UUID.randomUUID();
 
     when(mHeaderResolver.resolveOrganization(any())).thenReturn(List.of(organizationId));
-    when(mPermissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, AUTH_USER_ID))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(organizationId, AUTH_USER_ID))
         .thenReturn(PermissionType.ORGANIZATION_ADMIN);
 
     final Set<String> actualRoles = new HashSet<>(rbacRoleHelper.getRbacRoles(AUTH_USER_ID, Map.of()));

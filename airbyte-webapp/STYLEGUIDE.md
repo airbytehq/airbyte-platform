@@ -14,7 +14,7 @@ This serves as a living document regarding conventions we have agreed upon as a 
 
 The following recommendations are all in service to two broader principles:
 
-- compoonents should be reusable in as many different contexts as possible without changing their "internal" CSS
+- components should be reusable in as many different contexts as possible without changing their "internal" CSS
 - the impact on layout and spacing of adding any component to an existing page should be predictable
 
 If naively following the recommendations ever undermines those principles, by all means

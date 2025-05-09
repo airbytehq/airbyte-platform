@@ -17,6 +17,9 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
 
+// TODO This has been duplicated in airbyte-server/src/main/kotlin/io.airbyte.workload.output.WorkloadOutputDocStore
+// TODO Delete this once we transitioned to using commands
+@Deprecated("Once transitioned to commands, we should use the API version instead of direct DocStore access")
 @Singleton
 class JobOutputDocStore(
   @Named("outputDocumentStore") val storageClient: StorageClient,

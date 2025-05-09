@@ -112,6 +112,7 @@ class CatalogClientConvertersTest {
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
         io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
         listOf(ID_FIELD_NAME),
+        null,
         listOf(),
         Names.toAlphanumericAndUnderscore(STREAM_NAME),
         true,

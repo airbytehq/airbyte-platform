@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
@@ -11,6 +12,7 @@ import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import * as EmbeddedContext from "core/services/embedded";
 import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
@@ -1024,6 +1026,7 @@ describe("Connector form", () => {
           });
         },
       });
+      jest.spyOn(EmbeddedContext, "useIsAirbyteEmbeddedContext").mockReturnValue(false);
       const container = await renderNewOAuthForm();
 
       await executeOAuthFlow(container);

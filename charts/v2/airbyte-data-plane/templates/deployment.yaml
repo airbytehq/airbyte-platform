@@ -42,7 +42,7 @@ spec:
               value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadLauncher.debug.remoteDebugPort }},server=y,suspend=n"
             {{- end}}
 
-            {{- if (or (eq .Values.edition "community") (eq .Values.edition "pro") (eq .Values.edition "enterprise")) }}
+            {{- if (or (eq .Values.edition "community") (eq .Values.edition "enterprise")) }}
             - name: AIRBYTE_API_AUTH_HEADER_VALUE
               value: "Internal worker"
             {{- end }}
@@ -76,8 +76,8 @@ spec:
             {{- include "airbyte-data-plane.temporal.cloud.envs" . | nindent 12 }}
             {{- end }}
 
-            {{- if .Values.workloadLauncher.env }}
-            {{- toYaml .Values.workloadLauncher.env | nindent 12 }}
+            {{- if .Values.workloadLauncher.extraEnv }}
+            {{- toYaml .Values.workloadLauncher.extraEnv | nindent 12 }}
             {{- end }}
           ports:
             - name: heartbeat

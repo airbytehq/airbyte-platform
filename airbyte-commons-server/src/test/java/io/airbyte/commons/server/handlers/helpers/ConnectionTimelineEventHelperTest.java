@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -33,8 +34,6 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.Organization;
-import io.airbyte.config.Permission;
-import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.SyncMode;
 import io.airbyte.config.SyncStats;
@@ -42,7 +41,6 @@ import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent.Type;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
@@ -65,7 +63,7 @@ class ConnectionTimelineEventHelperTest {
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private CurrentUserService currentUserService;
   private OrganizationPersistence organizationPersistence;
-  private PermissionService permissionService;
+  private PermissionHandler permissionHandler;
   private UserPersistence userPersistence;
   private ConnectionTimelineEventService connectionTimelineEventService;
   private static final UUID CONNECTION_ID = UUID.randomUUID();
@@ -74,7 +72,7 @@ class ConnectionTimelineEventHelperTest {
   void setup() {
     currentUserService = mock(CurrentUserService.class);
     organizationPersistence = mock(OrganizationPersistence.class);
-    permissionService = mock(PermissionService.class);
+    permissionHandler = mock(PermissionHandler.class);
     userPersistence = mock(UserPersistence.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
   }
@@ -83,7 +81,7 @@ class ConnectionTimelineEventHelperTest {
   void testGetLoadedStats() {
 
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
 
     final String userStreamName = "user";
     final SyncMode userStreamMode = SyncMode.FULL_REFRESH;
@@ -168,12 +166,9 @@ class ConnectionTimelineEventHelperTest {
     void notApplicableInOSS() throws IOException {
       // No support email domains. Should show real name as always.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(ossAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
-      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
-          new Permission()
-              .withPermissionType(PermissionType.WORKSPACE_ADMIN)
-              .withUserId(userId)));
+      when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(false);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
           Optional.of(new Organization().withEmail(userEmail)));
       final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, any());
@@ -185,12 +180,9 @@ class ConnectionTimelineEventHelperTest {
     void airbyteSupportInAirbytersInternalWorkspace() throws IOException {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
-      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
-          new Permission()
-              .withPermissionType(PermissionType.INSTANCE_ADMIN)
-              .withUserId(airbyteUserId)));
+      when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
           Optional.of(new Organization().withEmail(airbyteUserEmail)));
       final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, any());
@@ -201,12 +193,9 @@ class ConnectionTimelineEventHelperTest {
     void airbyteSupportInCustomersExternalWorkspace() throws IOException {
       // Should hide real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
-      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
-          new Permission()
-              .withPermissionType(PermissionType.INSTANCE_ADMIN)
-              .withUserId(airbyteUserId)));
+      when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
           Optional.of(new Organization().withEmail(userEmail)));
       final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(airbyteUserId, any());
@@ -217,12 +206,9 @@ class ConnectionTimelineEventHelperTest {
     void detectNonAirbyteSupportUserInCloud() throws IOException {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
-      when(permissionService.getPermissionsForUser(any())).thenReturn(List.of(
-          new Permission()
-              .withPermissionType(PermissionType.INSTANCE_ADMIN)
-              .withUserId(userId)));
+      when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
           Optional.of(new Organization().withEmail(userEmail)));
       final UserReadInConnectionEvent userRead = connectionTimelineEventHelper.getUserReadInConnectionEvent(userId, any());
@@ -235,7 +221,7 @@ class ConnectionTimelineEventHelperTest {
   @Test
   void testLogConnectionSettingsChangedEvent() {
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
     final UUID connectionId = UUID.randomUUID();
     final ConnectionRead originalConnectionRead = new ConnectionRead()
         .connectionId(connectionId)
@@ -269,7 +255,7 @@ class ConnectionTimelineEventHelperTest {
   @Test
   void testLogSchemaChangeAutoPropagationEvent() {
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionService, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
     final UUID connectionId = UUID.randomUUID();
     final CatalogDiff diff = new CatalogDiff().addTransformsItem(new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM));
 

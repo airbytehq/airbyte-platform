@@ -25,7 +25,6 @@ import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
-import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.net.URI;
@@ -106,13 +105,15 @@ public class ActorDefinitionHandlerHelper {
    * @param currentVersion - the current default version
    * @param newDockerImageTag - the new docker image tag
    * @param isCustomConnector - whether the connector is a custom connector
+   * @param workspaceId - context in which the job will run
    * @return - a new actor definition version
    * @throws IOException - if there is an error fetching the spec
    */
   public ActorDefinitionVersion defaultDefinitionVersionFromUpdate(final ActorDefinitionVersion currentVersion,
                                                                    final ActorType actorType,
                                                                    final String newDockerImageTag,
-                                                                   final boolean isCustomConnector)
+                                                                   final boolean isCustomConnector,
+                                                                   final UUID workspaceId)
       throws IOException {
 
     final Optional<ActorDefinitionVersion> newVersionFromDbOrRemote = actorDefinitionVersionResolver.resolveVersionForTag(
@@ -127,7 +128,7 @@ public class ActorDefinitionHandlerHelper {
       if (isDev) {
         // re-fetch spec for dev images to allow for easier iteration
         final ConnectorSpecification refreshedSpec =
-            getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
+            getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, workspaceId);
         newVersion.setSpec(refreshedSpec);
         newVersion.setProtocolVersion(getAndValidateProtocolVersionFromSpec(refreshedSpec));
       }
@@ -136,7 +137,7 @@ public class ActorDefinitionHandlerHelper {
     }
 
     // We've never seen this version
-    final ConnectorSpecification spec = getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, null);
+    final ConnectorSpecification spec = getSpecForImage(currentVersion.getDockerRepository(), newDockerImageTag, isCustomConnector, workspaceId);
     final String protocolVersion = getAndValidateProtocolVersionFromSpec(spec);
 
     return new ActorDefinitionVersion()
@@ -160,7 +161,7 @@ public class ActorDefinitionHandlerHelper {
   private ConnectorSpecification getSpecForImage(final String dockerRepository,
                                                  final String imageTag,
                                                  final boolean isCustomConnector,
-                                                 final @Nullable UUID workspaceId)
+                                                 final UUID workspaceId)
       throws IOException {
     final String imageName = dockerRepository + ":" + imageTag;
     final SynchronousResponse<ConnectorSpecification> getSpecResponse =

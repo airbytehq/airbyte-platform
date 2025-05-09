@@ -12,7 +12,11 @@ import { FilterTabId } from "./StreamsFilterTabs";
 jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
   useConnectionFormService: jest.fn(),
 }));
-
+jest.mock("core/services/ui/FormModeContext", () => ({
+  useFormMode: () => ({
+    mode: "edit",
+  }),
+}));
 // Mock the components that use react-hook-form
 jest.mock("./RefreshSchemaControl", () => ({
   RefreshSchemaControl: () => <button data-testid="refresh-schema-button">Refresh Schema</button>,
@@ -63,6 +67,8 @@ describe("SearchAndFilterControls", () => {
   const defaultProps = {
     filtering: "",
     setFiltering: jest.fn(),
+    filteringDepth: 100,
+    setFilteringDepth: jest.fn(),
     isAllStreamRowsExpanded: false,
     toggleAllStreamRowsExpanded: jest.fn(),
     columnFilters: [],

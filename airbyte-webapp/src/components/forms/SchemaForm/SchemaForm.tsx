@@ -42,14 +42,21 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   return <RootSchemaForm {...props} />;
 };
 
-interface RootSchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues> {
+interface BaseSchemaFormProps<JsonSchema extends AirbyteJsonSchema> {
   schema: JsonSchema;
+  refTargetPath?: string;
+  onlyShowErrorIfTouched?: boolean;
+}
+
+type RootSchemaFormProps<
+  JsonSchema extends AirbyteJsonSchema,
+  TsSchema extends FieldValues,
+> = BaseSchemaFormProps<JsonSchema> & {
   onSubmit?: FormSubmissionHandler<TsSchema>;
   onSuccess?: (values: TsSchema) => void;
   onError?: (e: Error, values: TsSchema) => void;
   initialValues?: DefaultValues<TsSchema>;
-  refTargetPath?: string;
-}
+};
 
 const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends FieldValues>({
   children,
@@ -59,6 +66,7 @@ const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends F
   onError,
   initialValues,
   refTargetPath,
+  onlyShowErrorIfTouched,
 }: React.PropsWithChildren<RootSchemaFormProps<JsonSchema, TsSchema>>) => {
   const rawStartingValues = useMemo(
     () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(schema, schema),
@@ -99,7 +107,7 @@ const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends F
 
   return (
     <FormProvider {...methods}>
-      <SchemaFormProvider schema={schema}>
+      <SchemaFormProvider schema={schema} onlyShowErrorIfTouched={onlyShowErrorIfTouched}>
         <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
           <form onSubmit={methods.handleSubmit(processSubmission)}>{children}</form>
         </RefsHandlerProvider>
@@ -108,23 +116,26 @@ const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends F
   );
 };
 
-interface NestedSchemaFormProps<JsonSchema extends AirbyteJsonSchema> {
-  schema: JsonSchema;
+type NestedSchemaFormProps<JsonSchema extends AirbyteJsonSchema> = BaseSchemaFormProps<JsonSchema> & {
   nestedUnderPath: string;
-  refTargetPath?: string;
-}
+};
 
 const NestedSchemaForm = <JsonSchema extends AirbyteJsonSchema>({
   children,
   schema,
   nestedUnderPath,
   refTargetPath,
+  onlyShowErrorIfTouched,
 }: React.PropsWithChildren<NestedSchemaFormProps<JsonSchema>>) => {
   const { getValues } = useFormContext();
   const rawStartingValues = useMemo(() => getValues(nestedUnderPath), [getValues, nestedUnderPath]);
 
   return (
-    <SchemaFormProvider schema={schema} nestedUnderPath={nestedUnderPath}>
+    <SchemaFormProvider
+      schema={schema}
+      nestedUnderPath={nestedUnderPath}
+      onlyShowErrorIfTouched={onlyShowErrorIfTouched}
+    >
       <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
         {children}
       </RefsHandlerProvider>
@@ -134,6 +145,7 @@ const NestedSchemaForm = <JsonSchema extends AirbyteJsonSchema>({
 
 interface SchemaFormContextValue {
   schema: AirbyteJsonSchema;
+  onlyShowErrorIfTouched?: boolean;
   nestedUnderPath?: string;
   errorAtPath: (path: string) => FieldError | undefined;
   extractDefaultValuesFromSchema: <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => DefaultValues<T>;
@@ -147,7 +159,7 @@ interface SchemaFormContextValue {
     optionSchemas: ReadonlyArray<ExtendedJSONSchema<AirbyteJsonSchemaExtention>>,
     value: unknown
   ) => AirbyteJsonSchema | undefined;
-  getSchemaAtPath: (path: string, data: FieldValues) => AirbyteJsonSchema;
+  getSchemaAtPath: (path: string, resolveMultiOptionSchema?: boolean) => AirbyteJsonSchema;
   convertJsonSchemaToZodSchema: (schema: AirbyteJsonSchema, isRequired: boolean) => z.ZodTypeAny;
   renderedPathsRef: React.MutableRefObject<Set<string>>;
   registerRenderedPath: (path: string) => void;
@@ -164,23 +176,26 @@ export const useSchemaForm = () => {
 
 interface SchemaFormProviderProps {
   schema: AirbyteJsonSchema;
+  onlyShowErrorIfTouched?: boolean;
   nestedUnderPath?: string;
 }
 const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({
   children,
   schema,
+  onlyShowErrorIfTouched,
   nestedUnderPath,
 }) => {
   const { formatMessage } = useIntl();
-  const { errors } = useFormState();
-
+  const { errors, touchedFields } = useFormState();
+  const { getValues } = useFormContext();
   // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
   const renderedPathsRef = useRef<Set<string>>(new Set<string>());
 
   // Setup validation functions
   const errorAtPath = (path: string): FieldError | undefined => {
     const error: FieldError | undefined = get(errors, path);
-    if (!error?.message) {
+    const touched = get(touchedFields, path);
+    if ((onlyShowErrorIfTouched && !touched) || !error?.message) {
       return undefined;
     }
     return {
@@ -202,15 +217,6 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   const isPathRendered = useCallback((path: string): boolean => {
     if (renderedPathsRef.current.has(path)) {
       return true;
-    }
-
-    // Check if any parent path has been rendered
-    const pathParts = path.split(".");
-    for (let i = 1; i < pathParts.length; i++) {
-      const ancestorPath = pathParts.slice(0, i).join(".");
-      if (renderedPathsRef.current.has(ancestorPath)) {
-        return true;
-      }
     }
 
     return false;
@@ -241,8 +247,15 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   );
 
   const getSchemaAtPathCallback = useCallback(
-    (path: string, data: FieldValues) => getSchemaAtPath(path, schema, data, nestedUnderPath),
-    [schema, nestedUnderPath]
+    (path: string, resolveMultiOptionSchema?: boolean) =>
+      getSchemaAtPath(
+        path,
+        schema,
+        nestedUnderPath ? getValues(nestedUnderPath) : getValues(),
+        nestedUnderPath,
+        resolveMultiOptionSchema
+      ),
+    [schema, getValues, nestedUnderPath]
   );
 
   const convertJsonSchemaToZodSchemaCallback = useCallback(
@@ -255,6 +268,7 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
     <SchemaFormContext.Provider
       value={{
         schema,
+        onlyShowErrorIfTouched,
         nestedUnderPath,
         errorAtPath,
         extractDefaultValuesFromSchema: extractDefaultValuesFromSchemaCallback,
@@ -386,9 +400,11 @@ export const getSelectedOptionSchema = (
     return undefined;
   }
 
-  return optionSchemas.find((optionSchema) => {
-    return valueIsCompatibleWithSchema(value, optionSchema, rootSchema);
-  }) as AirbyteJsonSchema | undefined;
+  return optionSchemas
+    .map((optionSchema) => resolveTopLevelRef(rootSchema, optionSchema as AirbyteJsonSchema))
+    .find((optionSchema) => {
+      return valueIsCompatibleWithSchema(value, optionSchema, rootSchema);
+    });
 };
 
 const valueIsCompatibleWithSchema = (
@@ -396,66 +412,65 @@ const valueIsCompatibleWithSchema = (
   schema: ExtendedJSONSchema<AirbyteJsonSchemaExtention>,
   rootSchema: AirbyteJsonSchema
 ): boolean => {
-  const resolvedSchema = resolveTopLevelRef(rootSchema, schema as AirbyteJsonSchema);
-  if (isBoolean(resolvedSchema)) {
+  if (isBoolean(schema)) {
     return false;
   }
 
-  if (resolvedSchema.oneOf || resolvedSchema.anyOf) {
-    return !!getSelectedOptionSchema((resolvedSchema.oneOf ?? resolvedSchema.anyOf)!, value, rootSchema);
+  if (schema.oneOf || schema.anyOf) {
+    return !!getSelectedOptionSchema((schema.oneOf ?? schema.anyOf)!, value, rootSchema);
   }
 
   if (value === null) {
     // treat null as empty value for number and integer types
-    if (resolvedSchema.type === "number" || resolvedSchema.type === "integer") {
+    if (schema.type === "number" || schema.type === "integer") {
       return true;
     }
-    return resolvedSchema.type === "null";
+    return schema.type === "null";
   }
 
   if (value === "") {
-    if (resolvedSchema.type === "string") {
+    if (schema.type === "string") {
       return true;
     }
     return false;
   }
 
   if (Array.isArray(value)) {
-    if (resolvedSchema.type !== "array") {
+    if (schema.type !== "array") {
       return false;
     }
     if (value.length > 0) {
-      const itemSchema = verifyArrayItems(resolvedSchema.items, rootSchema);
+      const itemSchema = verifyArrayItems(schema.items, rootSchema);
       return valueIsCompatibleWithSchema(value[0], itemSchema, rootSchema);
     }
-    return resolvedSchema.type === "array";
+    return schema.type === "array";
   }
 
   if (typeof value === "object" && !("type" in value)) {
-    return resolvedSchema.type === "object";
+    return schema.type === "object";
   }
 
   if (typeof value !== "object") {
-    if (typeof value === "number" && (resolvedSchema.type === "integer" || resolvedSchema.type === "number")) {
+    if (typeof value === "number" && (schema.type === "integer" || schema.type === "number")) {
       return true;
     }
-    if (resolvedSchema.type === typeof value) {
+    if (schema.type === typeof value) {
       return true;
     }
     return false;
   }
 
-  if (!resolvedSchema.properties) {
-    if (resolvedSchema.additionalProperties) {
+  if (!schema.properties) {
+    if (schema.additionalProperties) {
       return true;
     }
     return false;
   }
 
   // ~ declarative_component_schema type handling ~
-  const discriminatorSchema = resolvedSchema.properties.type;
+  const discriminatorSchema = schema.properties.type;
 
-  if (!discriminatorSchema || isBoolean(discriminatorSchema) || discriminatorSchema.type !== "string") {
+  if (!discriminatorSchema || isBoolean(discriminatorSchema)) {
     return false;
   }
   if (!discriminatorSchema.enum || !Array.isArray(discriminatorSchema.enum) || discriminatorSchema.enum.length !== 1) {
@@ -473,7 +488,8 @@ export const getSchemaAtPath = (
   path: string,
   rootSchema: AirbyteJsonSchema,
   data: FieldValues,
-  nestedUnderPath?: string
+  nestedUnderPath?: string,
+  resolveMultiOptionSchema?: boolean
 ): AirbyteJsonSchema => {
   const targetPath = unnestPath(path, nestedUnderPath);
   if (!targetPath) {
@@ -546,6 +562,18 @@ export const getSchemaAtPath = (
     }
     // Always add the part to the currentPath - whether it's an array index or a property name
     currentPath = `${currentPath ? `${currentPath}.` : ""}${part}`;
+  }
+
+  if ((currentProperty.oneOf || currentProperty.anyOf) && resolveMultiOptionSchema) {
+    const selectedOptionSchema = getSelectedOptionSchema(
+      currentProperty.oneOf ?? currentProperty.anyOf ?? [],
+      get(data, currentPath),
+      rootSchema
+    );
+    if (!selectedOptionSchema) {
+      return currentProperty;
+    }
+    return selectedOptionSchema;
   }
 
   return currentProperty;

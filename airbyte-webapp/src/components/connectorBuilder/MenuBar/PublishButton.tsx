@@ -39,6 +39,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const analyticsService = useAnalyticsService();
   const [openModal, setOpenModal] = useState<PublishType | false>(false);
   const mode = useBuilderWatch("mode");
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
 
   let buttonDisabled = permission === "readOnly";
   let tooltipContent = undefined;
@@ -63,21 +64,31 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
   }
 
-  if (resolvedManifest.streams?.length === 0) {
+  if (resolvedManifest.streams?.length === 0 && resolvedManifest.dynamic_streams?.length === 0) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.noStreamsPublish" />;
   }
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
   const streamsWithWarnings = useMemo(() => {
-    return streamNames.filter((streamName) => getStreamTestWarnings(streamName).length > 0);
+    return streamNames
+      .filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0)
+      .map((streamName) => streamName);
   }, [getStreamTestWarnings, streamNames]);
+  const dynamicStreamsWithWarnings = useMemo(() => {
+    return dynamicStreams
+      .filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
+      .map(({ dynamicStreamName }) => dynamicStreamName);
+  }, [getStreamTestWarnings, dynamicStreams]);
+  const namesWithWarnings = useMemo(() => {
+    return [...dynamicStreamsWithWarnings, ...streamsWithWarnings];
+  }, [streamsWithWarnings, dynamicStreamsWithWarnings]);
 
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
 
   const openPublishModal = useCallback(
     (publishType: PublishType) => {
-      if (streamsWithWarnings.length > 0) {
+      if (namesWithWarnings.length > 0) {
         openConfirmationModal({
           title: "connectorBuilder.ignoreWarningsModal.title",
           text: "connectorBuilder.ignoreWarningsModal.text",
@@ -86,7 +97,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
           additionalContent: (
             <>
               <ul>
-                {streamsWithWarnings.map((streamName) => (
+                {namesWithWarnings.map((streamName) => (
                   <li key={streamName}>{streamName}</li>
                 ))}
               </ul>
@@ -102,7 +113,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
         setOpenModal(publishType);
       }
     },
-    [closeConfirmationModal, openConfirmationModal, streamsWithWarnings]
+    [closeConfirmationModal, openConfirmationModal, namesWithWarnings]
   );
 
   const handleClick = () => {
@@ -121,7 +132,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     type: "button",
   };
   const { formatMessage } = useIntl();
-  const isMarketplaceContributionActionDisabled = streamsWithWarnings.length > 0;
+  const isMarketplaceContributionActionDisabled = namesWithWarnings.length > 0;
   const publishButton = (
     <DropdownButton
       {...buttonProps}

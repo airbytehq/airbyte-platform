@@ -14,6 +14,7 @@ import { Text } from "components/ui/Text";
 import { JobType, ScopedResourceRequirements } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
+import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 import { FeatureItem, useFeature } from "core/services/features";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 import { PropertyError } from "views/Connector/ConnectorForm/components/Property/PropertyError";
@@ -57,11 +58,11 @@ export const DB_RESOURCE_DEFAULTS = {
   },
 };
 
-export const getResourceOptions = (selectedConnectorDefinition?: ConnectorDefinition) => {
+export const getResourceOptions = (selectedConnectorDefinition: ConnectorDefinition) => {
   const connectorType = getConnectorType(selectedConnectorDefinition);
   const hardcodedValues = connectorType === "api" ? API_RESOURCE_DEFAULTS : DB_RESOURCE_DEFAULTS;
 
-  const definitionResources = selectedConnectorDefinition?.resourceRequirements;
+  const definitionResources = selectedConnectorDefinition.resourceRequirements;
   const valuesToUse = {
     ...hardcodedValues,
     default: {
@@ -95,29 +96,25 @@ export const getResourceOptions = (selectedConnectorDefinition?: ConnectorDefini
   });
 };
 
-export const getConnectorType = (selectedConnectorDefinition?: ConnectorDefinition) => {
-  if (!selectedConnectorDefinition) {
-    return undefined;
-  }
-
-  return isSourceDefinition(selectedConnectorDefinition)
+export const getConnectorType = (selectedConnectorDefinition: ConnectorDefinition) =>
+  isSourceDefinition(selectedConnectorDefinition)
     ? selectedConnectorDefinition.sourceType === "file"
       ? "database"
       : selectedConnectorDefinition.sourceType === "custom"
       ? "api"
       : selectedConnectorDefinition.sourceType
     : "database";
-};
 
 export const useConnectorResourceAllocation = () => {
   const supportsResourceAllocation = useFeature(FeatureItem.ConnectorResourceAllocation);
+  const isEmbedded = useIsAirbyteEmbeddedContext();
 
   const isHiddenResourceAllocationField = useCallback(
     (fieldPath: string) => {
       // we want to hide the resourceAllocation sub-fields
-      return supportsResourceAllocation && fieldPath.startsWith("resourceAllocation.");
+      return supportsResourceAllocation && !isEmbedded && fieldPath.startsWith("resourceAllocation.");
     },
-    [supportsResourceAllocation]
+    [supportsResourceAllocation, isEmbedded]
   );
   return { isHiddenResourceAllocationField };
 };

@@ -111,6 +111,7 @@ export const useCreateSourceDefinition = () => {
 export const useUpdateSourceDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<
     SourceDefinitionRead,
@@ -119,7 +120,7 @@ export const useUpdateSourceDefinition = () => {
       sourceDefinitionId: string;
       dockerImageTag: string;
     }
-  >((sourceDefinition) => updateSourceDefinition(sourceDefinition, requestOptions), {
+  >((sourceDefinition) => updateSourceDefinition({ ...sourceDefinition, workspaceId }, requestOptions), {
     onSuccess: (data) => {
       queryClient.setQueryData(sourceDefinitionKeys.detail(data.sourceDefinitionId), data);
 

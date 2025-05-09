@@ -73,6 +73,7 @@ import io.airbyte.workers.models.RefreshSchemaActivityOutput;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,6 +112,7 @@ class ReplicationInputHydratorTest {
           new AirbyteStreamConfiguration(
               SyncMode.INCREMENTAL,
               DestinationSyncMode.APPEND,
+              null,
               null,
               null,
               null,
@@ -273,6 +275,9 @@ class ReplicationInputHydratorTest {
         null,
         List.of(),
         false,
+        false,
+        Map.of(),
+        null,
         false);
   }
 
@@ -471,6 +476,7 @@ class ReplicationInputHydratorTest {
         "dockerRepo",
         "dockerTag",
         true,
+        false,
         false));
   }
 
@@ -483,6 +489,7 @@ class ReplicationInputHydratorTest {
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
+        false,
         false,
         false));
   }

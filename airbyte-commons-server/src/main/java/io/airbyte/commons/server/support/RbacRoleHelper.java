@@ -9,14 +9,13 @@ import io.airbyte.commons.auth.AuthRoleConstants;
 import io.airbyte.commons.auth.OrganizationAuthRole;
 import io.airbyte.commons.auth.WorkspaceAuthRole;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission;
 import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.helpers.PermissionHelper;
-import io.airbyte.config.persistence.PermissionPersistence;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -34,14 +33,14 @@ public class RbacRoleHelper {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   private final AuthenticationHeaderResolver headerResolver;
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
 
-  public RbacRoleHelper(final AuthenticationHeaderResolver headerResolver, final PermissionPersistence permissionPersistence) {
+  public RbacRoleHelper(final AuthenticationHeaderResolver headerResolver, final PermissionHandler permissionHandler) {
     this.headerResolver = headerResolver;
-    this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
   }
 
-  public Collection<String> getRbacRoles(final String authUserId, final Map<String, String> headerMap) {
+  public Set<String> getRbacRoles(final String authUserId, final Map<String, String> headerMap) {
     final List<UUID> workspaceIds = headerResolver.resolveWorkspace(headerMap);
     final List<UUID> organizationIds = headerResolver.resolveOrganization(headerMap);
     final Set<String> targetAuthUserIds = headerResolver.resolveAuthUserIds(headerMap);
@@ -67,26 +66,14 @@ public class RbacRoleHelper {
       allRoles.add(AuthRoleConstants.SELF);
     }
     try {
-      if (permissionPersistence.isAuthUserInstanceAdmin(authUserId)) {
-        allRoles.addAll(getInstanceAdminRoles());
+      if (permissionHandler.isAuthUserInstanceAdmin(authUserId)) {
+        allRoles.addAll(AuthRole.getInstanceAdminRoles());
       }
     } catch (final IOException ex) {
       log.error("Failed to get instance admin roles for user {}", authUserId, ex);
       throw new RuntimeException(ex);
     }
     return allRoles;
-  }
-
-  public static Set<String> getInstanceAdminRoles() {
-    final Set<String> roles = new HashSet<>();
-    roles.addAll(AuthRole.buildAuthRolesSet(AuthRole.ADMIN));
-    roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
-    roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
-    // For now, SELF is intentionally excluded from instance admin roles. If a user-centric endpoint
-    // should be
-    // callable by an instance admin, then the endpoint should be annotated with ADMIN in addition to
-    // SELF.
-    return roles;
   }
 
   private Set<String> getWorkspaceAuthRoles(final String authUserId, final List<UUID> workspaceIds) {
@@ -110,7 +97,7 @@ public class RbacRoleHelper {
 
   private Permission.PermissionType fetchWorkspacePermission(final String authUserId, final UUID workspaceId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
+      return permissionHandler.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
     } catch (final IOException ex) {
       log.error("Failed to get permission for user {} and workspaces {}", authUserId, workspaceId, ex);
       throw new RuntimeException(ex);
@@ -142,7 +129,7 @@ public class RbacRoleHelper {
 
   private Permission.PermissionType fetchOrganizationPermission(final String authUserId, final UUID orgId) {
     try {
-      return permissionPersistence.findPermissionTypeForUserAndOrganization(orgId, authUserId);
+      return permissionHandler.findPermissionTypeForUserAndOrganization(orgId, authUserId);
     } catch (final IOException ex) {
       log.error("Failed to get permission for user {} and organization {}", authUserId, orgId, ex);
       throw new RuntimeException(ex);

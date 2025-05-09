@@ -56,6 +56,7 @@ dependencies {
   implementation(project(":oss:airbyte-config:specs"))
   implementation(project(":oss:airbyte-connector-rollout-client"))
   implementation(project(":oss:airbyte-connector-rollout-shared"))
+  implementation(project(":oss:airbyte-db:jooq"))
   implementation(project(":oss:airbyte-domain:services"))
   implementation(project(":oss:airbyte-domain:models"))
   implementation(project(":oss:airbyte-data"))

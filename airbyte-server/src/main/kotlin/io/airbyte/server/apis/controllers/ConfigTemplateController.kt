@@ -26,7 +26,7 @@ import io.micronaut.http.annotation.Controller
 open class ConfigTemplateController(
   private val configTemplateService: ConfigTemplateService,
   val workspaceHelper: WorkspaceHelper,
-  val licenseEntitlementChecker: LicenseEntitlementChecker,
+  private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) : ConfigTemplateApi {
   @RequiresIntent(Intent.ViewConfigTemplates)
   override fun getConfigTemplate(req: ConfigTemplateRequestBody): ConfigTemplateRead {
@@ -54,8 +54,11 @@ open class ConfigTemplateController(
     return ConfigTemplateList()
       .configTemplates(
         configTemplateService
-          .listConfigTemplatesForOrganization(OrganizationId(organizationId))
-          .map { it.toListItem() },
+          .listConfigTemplatesForOrganization(
+            OrganizationId(
+              organizationId,
+            ),
+          ).map { it.toListItem() },
       )
   }
 }

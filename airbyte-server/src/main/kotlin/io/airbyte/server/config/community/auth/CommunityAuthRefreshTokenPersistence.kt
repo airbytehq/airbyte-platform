@@ -7,7 +7,7 @@ package io.airbyte.server.config.community.auth
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
-import io.airbyte.commons.server.support.RbacRoleHelper
+import io.airbyte.commons.auth.AuthRole
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.AuthRefreshTokenService
 import io.micronaut.security.authentication.Authentication
@@ -55,7 +55,7 @@ class CommunityAuthRefreshTokenPersistence(
           .next(
             Authentication.build(
               UserPersistence.DEFAULT_USER_ID.toString(),
-              RbacRoleHelper.getInstanceAdminRoles(),
+              AuthRole.getInstanceAdminRoles(),
               mapOf(SESSION_ID to token.sessionId),
             ),
           ).complete()

@@ -5,7 +5,6 @@
 package io.airbyte.connector.rollout.worker
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.api.problems.model.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorEnumRolloutStrategy
 import io.airbyte.config.ConnectorRolloutFinalState
@@ -54,8 +53,7 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
         RetryOptions
           .newBuilder()
           .setMaximumInterval(Duration.ofSeconds(600))
-          .setMaximumAttempts(1)
-          .setDoNotRetry("org.openapitools.client.infrastructure.ClientException")
+          .setMaximumAttempts(6)
           .build(),
       ).build()
 
@@ -189,10 +187,10 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
     val rollout = getRollout(ConnectorRolloutActivityInputGet(input.dockerRepository, input.dockerImageTag, input.actorDefinitionId, input.rolloutId))
 
     var nextRolloutStageAt = getCurrentTimeMilli()
-    val expirationTime = nextRolloutStageAt.plusSeconds(input.rolloutExpirationSeconds.toLong())
+    val expirationTime = nextRolloutStageAt.plusSeconds((input.rolloutExpirationSeconds ?: Constants.DEFAULT_ROLLOUT_EXPIRATION_SECONDS).toLong())
 
-    val waitBetweenRolloutsSeconds = input.waitBetweenRolloutSeconds
-    val waitBetweenResultPollsSeconds = input.waitBetweenSyncResultsQueriesSeconds
+    val waitBetweenRolloutsSeconds = (input.waitBetweenRolloutSeconds ?: Constants.DEFAULT_WAIT_BETWEEN_ROLLOUTS_SECONDS)
+    val waitBetweenResultPollsSeconds = (input.waitBetweenSyncResultsQueriesSeconds ?: Constants.DEFAULT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS)
     val stepSizePercentage = rollout.initialRolloutPct ?: Constants.DEFAULT_INITIAL_ROLLOUT_PERCENTAGE
 
     // Continuously manage the rollout until we reach a terminal state, the workflow is paused, or the rollout expires.
@@ -233,21 +231,19 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
             )
         } catch (e: Exception) {
           logger.error { "Failed to advance the rollout. workflowId=$workflowId e=${e.message} e.cause=${e.cause} e=$e" }
-          if (!rolloutPercentageReached(e)) {
-            connectorRollout =
-              pauseRollout(
-                ConnectorRolloutActivityInputPause(
-                  input.dockerRepository,
-                  input.dockerImageTag,
-                  input.actorDefinitionId,
-                  input.rolloutId,
-                  "Paused due to an exception while pinning connections: $e",
-                  null,
-                  ConnectorEnumRolloutStrategy.AUTOMATED,
-                ),
-              )
-            break
-          }
+          connectorRollout =
+            pauseRollout(
+              ConnectorRolloutActivityInputPause(
+                input.dockerRepository,
+                input.dockerImageTag,
+                input.actorDefinitionId,
+                input.rolloutId,
+                "Paused due to an exception while pinning connections: $e",
+                null,
+                ConnectorEnumRolloutStrategy.AUTOMATED,
+              ),
+            )
+          break
         }
       }
 
@@ -284,14 +280,24 @@ class ConnectorRolloutWorkflowImpl : ConnectorRolloutWorkflow {
       }
     }
 
+    if (!rolloutStateIsTerminal() && !isPaused && Workflow.currentTimeMillis() >= expirationTime.toEpochMilli()) {
+      logger.info { "Rollout expiration time reached. Pausing rollout. workflowId=$workflowId" }
+      connectorRollout =
+        pauseRollout(
+          ConnectorRolloutActivityInputPause(
+            dockerRepository = input.dockerRepository,
+            dockerImageTag = input.dockerImageTag,
+            actorDefinitionId = input.actorDefinitionId,
+            rolloutId = input.rolloutId,
+            pausedReason = "Rollout expired without reaching a terminal state.",
+            rolloutStrategy = ConnectorEnumRolloutStrategy.AUTOMATED,
+          ),
+        )
+    }
+
     // We've timed out waiting for results or the rollout is paused. At this point we require a dev to manually finalize the rollout.
     Workflow.await { rolloutStateIsTerminal() }
     return getRolloutState()
-  }
-
-  private fun rolloutPercentageReached(e: Exception): Boolean {
-    logger.info { "e.cause.message = ${e.cause?.message}" }
-    return e.cause?.message?.contains(ConnectorRolloutMaximumRolloutPercentageReachedProblemResponse().type) ?: false
   }
 
   private fun getCurrentTimeMilli(): Instant = Instant.ofEpochMilli(Workflow.currentTimeMillis())

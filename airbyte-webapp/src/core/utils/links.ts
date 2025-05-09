@@ -46,6 +46,7 @@ export const links = {
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   connectorBuilderCustomComponents: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/custom-components`,
+  connectorBuilderStreamTemplates: `${BASE_DOCS_LINK}/platform/next/connector-development/connector-builder-ui/stream-templates`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,

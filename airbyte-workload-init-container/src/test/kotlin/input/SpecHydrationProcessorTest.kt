@@ -4,6 +4,7 @@
 
 package io.airbyte.initContainer.input
 
+import io.airbyte.initContainer.InputFetcherTest
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -84,13 +85,12 @@ class SpecHydrationProcessorTest {
 
     val workload =
       Workload(
-        WORKLOAD_ID,
-        listOf(),
-        "inputPayload",
-        "logPath",
-        "geography",
-        WorkloadType.SPEC,
-        UUID.randomUUID(),
+        id = InputFetcherTest.Fixtures.WORKLOAD_ID,
+        labels = listOf(),
+        inputPayload = "inputPayload",
+        logPath = "logPath",
+        type = WorkloadType.SPEC,
+        autoId = UUID.randomUUID(),
       )
   }
 }

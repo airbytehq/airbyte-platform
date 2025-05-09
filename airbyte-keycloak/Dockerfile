@@ -4,7 +4,7 @@
 # This also lets us take advantage of our pull-through cache.
 # Thus, when upgrading this image, be sure to also upgrade the mirrored image on dockerhub.
 # See README.md for instructions.
-FROM airbyte/mirrored-keycloak:25.0.2
+FROM airbyte/mirrored-keycloak:26.2
 
 WORKDIR /opt/keycloak
 
@@ -16,7 +16,7 @@ COPY bin/themes themes
 
 # Doing this instead of creating a separate file and copying it to ensure that we get any keycloak updates to this conf file.
 RUN cp conf/cache-ispn.xml conf/cache-ispn-override.xml && \
-sed -i conf/cache-ispn-override.xml -e 's/<distributed-cache name=\"sessions\" owners=\"2\">/<distributed-cache name=\"sessions\" owners=\"3\">/g' && \
+sed -i conf/cache-ispn-override.xml -e 's/<distributed-cache name=\"sessions\" owners=\"1\">/<distributed-cache name=\"sessions\" owners=\"3\">/g' && \
 sed -i conf/cache-ispn-override.xml -e 's/<distributed-cache name=\"authenticationSessions\" owners=\"2\">/<distributed-cache name=\"authenticationSessions\" owners=\"3\">/g' && \
 # Make sure that the two lines we wanted to be there are actually there
 # i.e. keycloak didn't change its config file

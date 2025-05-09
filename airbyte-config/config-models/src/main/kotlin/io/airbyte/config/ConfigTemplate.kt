@@ -11,7 +11,7 @@ import java.util.UUID
 
 data class ConfigTemplate(
   val id: UUID,
-  val organizationId: UUID,
+  val organizationId: UUID? = null,
   val actorDefinitionId: UUID,
   val partialDefaultConfig: JsonNode,
   /**

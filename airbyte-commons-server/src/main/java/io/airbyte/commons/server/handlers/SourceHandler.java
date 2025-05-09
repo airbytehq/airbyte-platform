@@ -599,7 +599,7 @@ public class SourceHandler {
           sourceId,
           workspaceId,
           secretStorageId.get(),
-          currentUserService.getCurrentUser().getUserId());
+          currentUserService.getCurrentUserIdIfExists().orElse(null));
     }
 
     newSourceConnection.setConfiguration(updatedConfig);

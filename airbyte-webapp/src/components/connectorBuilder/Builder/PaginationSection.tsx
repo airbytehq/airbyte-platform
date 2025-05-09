@@ -21,17 +21,19 @@ import {
   DownloadRequesterPathFn,
   OFFSET_INCREMENT,
   PAGE_INCREMENT,
-  StreamPathFn,
+  AnyDeclarativeStreamPathFn,
   builderPaginatorToManifest,
+  StreamId,
 } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { StreamFieldPath } from "../utils";
 
 interface PaginationSectionProps {
-  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
-  currentStreamIndex: number;
+  streamFieldPath: AnyDeclarativeStreamPathFn | DownloadRequesterPathFn;
+  streamId: StreamId;
 }
 
-export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFieldPath, streamId }) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const pageSize = useBuilderWatch(streamFieldPath("paginator.strategy.page_size"));
@@ -43,7 +45,7 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
       docLink={links.connectorBuilderPagination}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.pagination.tooltip" })}
-      labelAction={<AssistButton assistKey="paginator" streamNum={currentStreamIndex} />}
+      labelAction={<AssistButton assistKey="paginator" streamId={streamId} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("paginator"),
@@ -67,11 +69,15 @@ export const PaginationSection: React.FC<PaginationSectionProps> = ({ streamFiel
           manifestToBuilder: manifestPaginatorToBuilder,
         },
       }}
-      copyConfig={{
-        path: streamFieldPath("paginator"),
-        currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        streamId.type === "stream"
+          ? {
+              path: streamFieldPath("paginator") as StreamFieldPath,
+              currentStreamIndex: streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       <BuilderOneOf<BuilderPaginator["strategy"]>
         path={streamFieldPath("paginator.strategy")}

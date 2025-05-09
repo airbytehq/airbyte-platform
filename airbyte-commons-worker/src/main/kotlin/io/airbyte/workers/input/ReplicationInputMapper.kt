@@ -4,6 +4,7 @@
 
 package io.airbyte.workers.input
 
+import io.airbyte.persistence.job.models.HeartbeatConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.ReplicationActivityInput
 import jakarta.inject.Singleton
@@ -35,4 +36,7 @@ class ReplicationInputMapper {
       .withUseFileTransfer(replicationActivityInput.includesFiles == true)
       .withOmitFileTransferEnvVar(replicationActivityInput.omitFileTransferEnvVar == true)
       .withNetworkSecurityTokens(replicationActivityInput.networkSecurityTokens)
+      .withFeatureFlags(replicationActivityInput.featureFlags)
+      .withHeartbeatConfig(HeartbeatConfig().withMaxSecondsBetweenMessages(replicationActivityInput.heartbeatMaxSecondsBetweenMessages))
+      .withSupportsRefreshes(replicationActivityInput.supportsRefreshes)
 }

@@ -67,3 +67,7 @@ properties:
     description: an optional flag indicating whether a destination connector supports file transfer.
     type: boolean
     default: false
+  supportsDataActivation:
+    description: an optional flag indicating whether a destination connector supports data activation.
+    type: boolean
+    default: false

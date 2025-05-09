@@ -30,6 +30,41 @@ paths:
       operationId: "listOrganizationsForUser"
       x-speakeasy-alias: "listOrganizationsForUser"
       x-speakeasy-group: "Organizations"
+  /organizations/{organizationId}/oauthCredentials:
+    put:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationOAuthCredentialsRequest"
+        required: true
+      tags:
+        - "public_organizations"
+        - "public"
+        - "Organizations"
+      responses:
+        "200":
+          description: "OAuth credential override was successful."
+        "400":
+          description: "A field in the body has not been set appropriately."
+        "403":
+          description: "API key is invalid."
+      operationId: "createOrUpdateOrganizationOAuthCredentials"
+      x-speakeasy-alias: "createOrUpdateOrganizationOAuthCredentials"
+      x-speakeasy-group: "Organizations"
+      summary: "Create OAuth override credentials for an organization and source type."
+      description:
+        "Create/update a set of OAuth credentials to override the Airbyte-provided\
+        \ OAuth credentials used for source/destination OAuth.\nIn order to determine\
+        \ what the credential configuration needs to be, please see the connector\
+        \ specification of the relevant source/destination."
+    parameters:
+      - name: "organizationId"
+        schema:
+          format: "UUID"
+          type: "string"
+        in: "path"
+        required: true
 components:
   responses:
     InitiateOauthResponse:
@@ -54,6 +89,15 @@ components:
       x-speakeasy-component: true
       type: "integer"
       format: "int64"
+    SourceDefinitionSpecification:
+      description:
+        "The specification for what values are required to configure the\
+        \ sourceDefinition."
+      type: "object"
+      example:
+        user:
+          type: "string"
+      x-speakeasy-component: true
     TagId:
       type: "string"
       format: "uuid"
@@ -382,6 +426,11 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionId:
+      description: "A unique identifier for an actor definition."
+      type: "string"
+      format: "uuid"
+      x-speakeasy-component: true
     JobTypeResourceLimit:
       x-speakeasy-component: true
       description:
@@ -817,6 +866,23 @@ components:
         color:
           type: "string"
       x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
+    OrganizationOAuthCredentialsRequest:
+      title: "Root Type for OrganizationOAuthCredentials"
+      description: "POST body for creating/updating organization level OAuth credentials"
+      required:
+        - "actorType"
+        - "name"
+        - "configuration"
+      type: "object"
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: "string"
+          description: "The name of the source i.e. google-ads"
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
       x-speakeasy-component: true
     ConnectionResponse:
       title: "Root Type for ConnectionResponse"
@@ -1678,6 +1744,9 @@ components:
       properties:
         name:
           type: "string"
+        namespace:
+          type: "string"
+          description: "Namespace of the stream."
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -1742,6 +1811,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: "string"
         defaultCursorField:
           type: "array"
           items:
@@ -1780,7 +1851,6 @@ components:
       required:
         - "name"
         - "organizationId"
-        - "enabled"
       properties:
         name:
           type: "string"
@@ -1842,9 +1912,12 @@ components:
     DataplaneCreateRequest:
       type: "object"
       required:
+        - "regionId"
         - "name"
-        - "enabled"
       properties:
+        regionId:
+          type: "string"
+          format: "uuid"
         name:
           type: "string"
         enabled:
@@ -1899,14 +1972,221 @@ components:
           items:
             $ref: "#/components/schemas/DataplaneResponse"
       x-speakeasy-component: true
+    ConfigTemplateListResponse:
+      type: "object"
+      required:
+        - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+      x-speakeasy-component: true
+    ConfigTemplateListItem:
+      type: "object"
+      required:
+        - "id"
+        - "name"
+        - "icon"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        icon:
+          type: "string"
+      x-speakeasy-component: true
+    ConfigTemplatePublicRead:
+      type: "object"
+      required:
+        - "id"
+        - "name"
+        - "icon"
+        - "sourceDefinitionId"
+        - "configTemplateSpec"
+        - "partialDefaultConfig"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          description: "Name of the associated actor definition"
+        icon:
+          type: "string"
+          description: "url to icon in connector asset (svg) registry"
+        sourceDefinitionId:
+          type: "string"
+          format: "uuid"
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        partialDefaultConfig:
+          type: "object"
+      x-speakeasy-component: true
+    ConfigTemplateCreateRequestBody:
+      type: "object"
+      required:
+        - "actorDefinitionId"
+        - "partialDefaultConfig"
+        - "partialUserConfigSpec"
+        - "organizationId"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-speakeasy-component: true
+    ConfigTemplateCreateResponse:
+      type: "object"
+      required:
+        - "id"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    ConfigTemplateUpdateRequestBody:
+      type: "object"
+      required:
+        - "organizationId"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-speakeasy-component: true
+    ConfigTemplateUpdateResponse:
+      type: "object"
+      required:
+        - "id"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedWidgetRequest:
+      type: "object"
+      required:
+        - "workspaceId"
+        - "allowedOrigin"
+      properties:
+        workspaceId:
+          type: "string"
+          format: "uuid"
+        allowedOrigin:
+          type: "string"
+        externalUserId:
+          type: "string"
+      x-speakeasy-component: true
 
     SourceConfiguration:
       description: The values required to configure the source.
       example: { user: "charles" }
 
+    OAuthCredentialsConfiguration:
+      description: The values required to configure the source.
+      example: { user: "charles" }
+      oneOf:
+
     DestinationConfiguration:
       description: The values required to configure the destination.
       example: { user: "charles" }
+
+    InitiateOauthRequest:
+      title: Root Type for initiate-oauth-post-body
+      description: POST body for initiating OAuth via the public API
+      required:
+        - redirectUrl
+        - workspaceId
+        - sourceType
+      type: object
+      example:
+        redirectUrl: "https://cloud.airbyte.io/v1/api/oauth/callback"
+        workspaceId: 871d9b60-11d1-44cb-8c92-c246d53bf87e
+        destinationId: 3d93b16c-ff5f-421c-8908-5a3c82088f14
+      properties:
+        redirectUrl:
+          description: >-
+            The URL to redirect the user to with the OAuth secret stored in the secret_id query
+            string parameter after authentication is complete.
+          type: string
+        workspaceId:
+          format: uuid
+          description: The workspace to create the secret and eventually the full source.
+          type: string
+        oAuthInputConfiguration:
+          $ref: "#/components/schemas/OAuthInputConfiguration"
+          description: Input configuration for OAuth required by some sources.
+        sourceType:
+          $ref: "#/components/schemas/OAuthActorNames"
+    WorkspaceOAuthCredentialsRequest:
+      title: "Root Type for WorkspaceOAuthCredentials"
+      description: "POST body for creating/updating workspace level OAuth credentials"
+      required:
+        - "actorType"
+        - "name"
+        - "configuration"
+      type: "object"
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          $ref: "#/components/schemas/OAuthActorNames"
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
+    OAuthActorNames:
+      enum:
+        - airtable
+        - amazon-ads
+        - amazon-seller-partner
+        - asana
+        - azure-blob-storage
+        - bing-ads
+        - drift
+        - facebook-marketing
+        - facebook-pages
+        - gcs
+        - github
+        - gitlab
+        - google-ads
+        - google-analytics-data-api
+        - google-drive
+        - google-search-console
+        - google-sheets
+        - hubspot
+        - instagram
+        - lever-hiring
+        - linkedin-ads
+        - mailchimp
+        - microsoft-onedrive
+        - microsoft-sharepoint
+        - microsoft-teams
+        - monday
+        - notion
+        - pinterest
+        - rd-station-marketing
+        - salesforce
+        - sharepoint-enterprise
+        - slack
+        - smartsheets
+        - snapchat-marketing
+        - snowflake
+        - surveymonkey
+        - tiktok-marketing
+        - trello
+        - typeform
+        - youtube-analytics
+        - zendesk-support
+        - zendesk-talk
   securitySchemes:
     bearerAuth:
       type: http

@@ -412,7 +412,7 @@ public class JobInputHandler {
                                                                        @Nullable final ActorDefinitionVersion sourceVersion,
                                                                        final JsonNode sourceConfiguration)
       throws IOException {
-    final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
+    final ConfigReplacer configReplacer = new ConfigReplacer();
 
     final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
@@ -438,7 +438,7 @@ public class JobInputHandler {
                                                                             final JsonNode destinationConfiguration,
                                                                             final Map<String, String> additionalEnviornmentVariables)
       throws IOException {
-    final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
+    final ConfigReplacer configReplacer = new ConfigReplacer();
 
     return new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))

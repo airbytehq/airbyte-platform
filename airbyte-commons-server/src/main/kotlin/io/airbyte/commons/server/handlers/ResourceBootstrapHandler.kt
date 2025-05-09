@@ -20,21 +20,16 @@ import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
-import io.airbyte.config.Permission.PermissionType
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
-import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.WorkspaceService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.UUID
 import java.util.function.Supplier
-
-val DEFAULT_WORKSPACE_PERMISSION_TYPE = PermissionType.WORKSPACE_ADMIN
-val DEFAULT_ORGANIZATION_PERMISSION_TYPE = PermissionType.ORGANIZATION_ADMIN
 
 val logger = KotlinLogging.logger { }
 
@@ -43,7 +38,7 @@ open class ResourceBootstrapHandler(
   @Named("uuidGenerator") private val uuidSupplier: Supplier<UUID>,
   private val workspaceService: WorkspaceService,
   private val organizationService: OrganizationService,
-  private val permissionService: PermissionService,
+  private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
@@ -79,17 +74,24 @@ open class ResourceBootstrapHandler(
     validateWorkspace(standardWorkspace, airbyteEdition)
     workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(standardWorkspace, airbyteEdition))
 
-    val workspacePermission = buildDefaultWorkspacePermission(user.userId, standardWorkspace.workspaceId)
-
-    kotlin.runCatching { permissionService.createPermission(workspacePermission) }.onFailure { e ->
-      when (e) {
-        is PermissionRedundantException ->
-          logger.info {
-            "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}"
-          }
-        else -> throw e
+    kotlin
+      .runCatching {
+        permissionHandler.createPermission(
+          Permission()
+            .withUserId(user.userId)
+            .withWorkspaceId(standardWorkspace.workspaceId)
+            .withPermissionType(Permission.PermissionType.WORKSPACE_ADMIN)
+            .withPermissionId(uuidSupplier.get()),
+        )
+      }.onFailure { e ->
+        when (e) {
+          is PermissionRedundantException ->
+            logger.info {
+              "Skipped redundant workspace permission creation for workspace ${standardWorkspace.workspaceId}"
+            }
+          else -> throw e
+        }
       }
-    }
 
     return WorkspaceConverter.domainToApiModel(standardWorkspace)
   }
@@ -107,8 +109,13 @@ open class ResourceBootstrapHandler(
 
     organizationPaymentConfigService.saveDefaultPaymentConfig(organization.organizationId)
 
-    val organizationPermission = buildDefaultOrganizationPermission(user.userId, organization.organizationId)
-    permissionService.createPermission(organizationPermission)
+    permissionHandler.createPermission(
+      Permission()
+        .withUserId(user.userId)
+        .withOrganizationId(organization.organizationId)
+        .withPermissionType(Permission.PermissionType.ORGANIZATION_ADMIN)
+        .withPermissionId(uuidSupplier.get()),
+    )
     return organization
   }
 
@@ -116,7 +123,7 @@ open class ResourceBootstrapHandler(
    * Tries to find an existing organization for the user. Permission checks will happen elsewhere.
    */
   open fun findExistingOrganization(user: AuthenticatedUser): Organization? {
-    val organizationPermissionList = permissionService.getPermissionsForUser(user.userId).filter { it.organizationId != null }
+    val organizationPermissionList = permissionHandler.listPermissionsForUser(user.userId).filter { it.organizationId != null }
 
     val hasSingleOrganization = organizationPermissionList.size == 1
     val hasNoOrganization = organizationPermissionList.isEmpty()
@@ -140,28 +147,6 @@ open class ResourceBootstrapHandler(
 
     return organizationId?.let { organizationService.getOrganization(it).orElse(null) }
   }
-
-  private fun buildDefaultWorkspacePermission(
-    userId: UUID,
-    workspaceId: UUID,
-  ): Permission =
-    Permission().apply {
-      this.userId = userId
-      this.workspaceId = workspaceId
-      this.permissionType = DEFAULT_WORKSPACE_PERMISSION_TYPE
-      this.permissionId = uuidSupplier.get()
-    }
-
-  private fun buildDefaultOrganizationPermission(
-    userId: UUID,
-    organizationId: UUID,
-  ): Permission =
-    Permission().apply {
-      this.userId = userId
-      this.organizationId = organizationId
-      this.permissionType = DEFAULT_ORGANIZATION_PERMISSION_TYPE
-      this.permissionId = uuidSupplier.get()
-    }
 
   private fun getDefaultOrganizationName(user: AuthenticatedUser): String =
     when {

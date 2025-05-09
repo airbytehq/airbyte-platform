@@ -25,6 +25,7 @@ export const mockDestinationDefinitionVersion: ActorDefinitionVersionRead = {
   supportState: SupportState.supported,
   supportLevel: "certified",
   supportsFileTransfer: false,
+  supportsDataActivation: false,
 };
 
 export const mockDestinationDefinitionSpecification: DestinationDefinitionSpecificationRead = {

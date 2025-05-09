@@ -6,9 +6,9 @@ package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
-import io.airbyte.commons.server.support.RbacRoleHelper
 import io.airbyte.config.persistence.OrganizationPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.config.InstanceAdminConfig
@@ -47,7 +47,7 @@ class CommunityAuthProvider<B>(
       val authenticationResponse =
         AuthenticationResponse.success(
           UserPersistence.DEFAULT_USER_ID.toString(),
-          RbacRoleHelper.getInstanceAdminRoles(),
+          AuthRole.getInstanceAdminRoles(),
           mapOf(SESSION_ID to sessionId.toString()),
         )
       return authenticationResponse

@@ -204,8 +204,8 @@ open class RepositoryTestSetup {
           .withWorkspaceId(workspaceId),
       )
 
-      val connectionRepo = StandardSyncPersistence(database, dataplaneGroupService)
-      connectionRepo.writeStandardSync(
+      val connectionRepo = RepositoryTestSyncHelper(database, dataplaneGroupService)
+      connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
           .withGeography(GEOGRAPHY_US)
@@ -215,7 +215,7 @@ open class RepositoryTestSetup {
           .withBreakingChange(true),
       )
 
-      connectionRepo.writeStandardSync(
+      connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
           .withGeography(GEOGRAPHY_US)

@@ -18,7 +18,7 @@ dependencies {
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.datadog)
   implementation(libs.guava)
-  implementation("org.springframework.security:spring-security-crypto:6.3.5")
+  implementation("org.springframework.security:spring-security-crypto:6.3.8")
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-auth"))

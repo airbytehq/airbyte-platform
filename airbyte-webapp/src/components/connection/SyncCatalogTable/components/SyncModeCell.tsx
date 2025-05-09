@@ -4,6 +4,7 @@ import React from "react";
 import { useGetDestinationDefinitionSpecification } from "core/api";
 import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useExperiment } from "hooks/services/Experiment";
 
@@ -25,7 +26,8 @@ interface SyncModeCellProps {
 export const SyncModeCell: React.FC<SyncModeCellProps> = ({ row, updateStreamField }) => {
   const analyticsService = useAnalyticsService();
   const allowToSupportAllSyncModes = useExperiment("connection.allowToSupportAllSyncModes");
-  const { connection, mode } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { supportedDestinationSyncModes } = useGetDestinationDefinitionSpecification(
     connection.destination.destinationId
   );

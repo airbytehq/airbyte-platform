@@ -116,13 +116,12 @@ class InputFetcherTest {
 
     val workload =
       Workload(
-        WORKLOAD_ID,
-        listOf(),
-        "inputPayload",
-        "logPath",
-        "geography",
-        WorkloadType.SYNC,
-        UUID.randomUUID(),
+        id = WORKLOAD_ID,
+        labels = listOf(),
+        inputPayload = "inputPayload",
+        logPath = "logPath",
+        type = WorkloadType.SYNC,
+        autoId = UUID.randomUUID(),
       )
   }
 }

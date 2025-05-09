@@ -26,14 +26,12 @@ import io.airbyte.commons.version.AirbyteVersion;
 import io.airbyte.config.AuthenticatedUser;
 import io.airbyte.config.Configs.AirbyteEdition;
 import io.airbyte.config.Organization;
-import io.airbyte.config.Permission;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.validation.json.JsonValidationException;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeList;
@@ -45,9 +43,7 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.time.Clock;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,11 +54,6 @@ import org.slf4j.LoggerFactory;
 @Singleton
 public class InstanceConfigurationHandler {
 
-  public static final Set<Permission.PermissionType> EDITOR_ROLES =
-      Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
-          Permission.PermissionType.ORGANIZATION_RUNNER,
-          Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
-          Permission.PermissionType.WORKSPACE_RUNNER);
   private final Optional<String> airbyteUrl;
   private final AirbyteEdition airbyteEdition;
   private final AirbyteVersion airbyteVersion;
@@ -73,7 +64,7 @@ public class InstanceConfigurationHandler {
   private final OrganizationPersistence organizationPersistence;
   private final String trackingStrategy;
   private final AuthConfigs authConfigs;
-  private final PermissionService permissionService;
+  private final PermissionHandler permissionHandler;
   private final Clock clock;
   private final Optional<GenericOidcConfig> oidcEndpointConfig;
   private final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper;
@@ -88,7 +79,7 @@ public class InstanceConfigurationHandler {
                                       final UserPersistence userPersistence,
                                       final OrganizationPersistence organizationPersistence,
                                       final AuthConfigs authConfigs,
-                                      final PermissionService permissionService,
+                                      final PermissionHandler permissionHandler,
                                       final Optional<Clock> clock,
                                       final Optional<GenericOidcConfig> oidcEndpointConfig,
                                       final Optional<KubernetesClientPermissionHelper> kubernetesClientPermissionHelper) {
@@ -102,7 +93,7 @@ public class InstanceConfigurationHandler {
     this.userPersistence = userPersistence;
     this.organizationPersistence = organizationPersistence;
     this.authConfigs = authConfigs;
-    this.permissionService = permissionService;
+    this.permissionHandler = permissionHandler;
     this.clock = clock.orElse(Clock.systemUTC());
     this.oidcEndpointConfig = oidcEndpointConfig;
     this.kubernetesClientPermissionHelper = kubernetesClientPermissionHelper;
@@ -260,11 +251,7 @@ public class InstanceConfigurationHandler {
   }
 
   private Integer editorsUsage() {
-
-    final var editors = permissionService.listPermissions().stream()
-        .filter(p -> EDITOR_ROLES.contains(p.getPermissionType()))
-        .map(Permission::getUserId).collect(Collectors.toSet());
-    return editors.size();
+    return permissionHandler.countInstanceEditors();
   }
 
   @VisibleForTesting

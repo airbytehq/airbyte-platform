@@ -7,9 +7,20 @@ import { useBuilderWatch } from "./useBuilderWatch";
 export const useAutoImportSchema = (streamId: StreamId) => {
   const { displayedVersion } = useConnectorBuilderFormState();
   const streams = useBuilderWatch("formValues.streams");
+  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
 
-  if (streamId.type === "dynamic_stream") {
+  if (displayedVersion !== undefined) {
     return false;
   }
-  return streams[streamId.index]?.autoImportSchema && displayedVersion === undefined;
+
+  if (streamId.type === "generated_stream") {
+    return dynamicStreams[dynamicStreams.findIndex((stream) => stream.dynamicStreamName === streamId.dynamicStreamName)]
+      ?.streamTemplate.autoImportSchema;
+  }
+
+  if (streamId.type === "dynamic_stream") {
+    return dynamicStreams[streamId.index]?.streamTemplate.autoImportSchema;
+  }
+
+  return streams[streamId.index]?.autoImportSchema;
 };

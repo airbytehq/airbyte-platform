@@ -47,8 +47,8 @@ jest.mock("core/api", () => ({
   useCurrentWorkspace: () => ({}),
 }));
 
-jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
-  useConnectionFormService: () => ({
+jest.mock("core/services/ui/FormModeContext", () => ({
+  useFormMode: () => ({
     mode: "edit",
   }),
 }));

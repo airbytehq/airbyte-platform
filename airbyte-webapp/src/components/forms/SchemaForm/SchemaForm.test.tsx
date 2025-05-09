@@ -839,9 +839,8 @@ describe("SchemaForm", () => {
       );
 
       // Check that only remaining fields are rendered (email and isActive)
-      // Note: Age will have no "Optional" tag since we render it directly
       expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-      expect(screen.getByRole("spinbutton", { name: "Age" })).toBeInTheDocument();
+      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
     });
@@ -872,9 +871,6 @@ describe("SchemaForm", () => {
           {/* Render name explicitly */}
           <SchemaFormControl path="name" />
 
-          {/* Render address object (this might auto-render all address fields) */}
-          <SchemaFormControl path="address" />
-
           {/* Within address, render street explicitly */}
           <SchemaFormControl path="address.street" />
 
@@ -886,16 +882,15 @@ describe("SchemaForm", () => {
       );
 
       // Check that all fields are rendered
-      expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Name Optional" })).toBeInTheDocument();
 
-      // The address fields are already rendered when we render the address object
+      // Street was rendered explicitly
       expect(screen.getByRole("textbox", { name: "Street Optional" })).toBeInTheDocument();
+
+      // The rest of the address fields were rendered via remaining fields
       expect(screen.getByRole("textbox", { name: "City Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Zip Code Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Country Optional" })).toBeInTheDocument();
-
-      // We also have a duplicate street field from our explicit path specification
-      expect(screen.getByRole("textbox", { name: "Street" })).toBeInTheDocument();
     });
 
     it("works with custom overrides for remaining fields", async () => {

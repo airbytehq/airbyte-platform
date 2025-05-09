@@ -314,7 +314,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         return null;
       }
 
-      const parentSchema = getSchemaAtPath(parentPath, getValues(parentPath));
+      const parentSchema = getSchemaAtPath(parentPath);
 
       // ~ declarative_component_schema type handling ~
       if (
@@ -332,7 +332,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       // This has a higher chance of causing collisions, but it's the best we can do for now.
       return `${refTargetPath}.${fieldName}`;
     },
-    [refTargetPath, nestedUnderPath, getSchemaAtPath, getValues]
+    [refTargetPath, nestedUnderPath, getSchemaAtPath]
   );
 
   const handleLinkAction = useCallback(

@@ -32,7 +32,6 @@ import io.micronaut.test.annotation.MockBean
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
-import io.temporal.client.WorkflowClient
 import jakarta.inject.Inject
 import jakarta.validation.ConstraintViolationException
 import org.junit.jupiter.api.Assertions
@@ -62,9 +61,6 @@ internal class ConnectionApiControllerTest {
 
   @MockBean(SchedulerHandler::class)
   fun schedulerHandler(): SchedulerHandler = mockk()
-
-  @MockBean(WorkflowClient::class)
-  fun workflowClient(): WorkflowClient = mockk()
 
   @MockBean(ConnectionsHandler::class)
   fun connectionHandler(): ConnectionsHandler = mockk()

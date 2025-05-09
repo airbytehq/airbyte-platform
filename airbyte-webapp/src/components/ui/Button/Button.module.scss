@@ -26,12 +26,6 @@
     pointer-events: none;
   }
 
-  &:focus-visible,
-  &:hover,
-  &:not(.typeLight) {
-    box-shadow: 0 3px 4px -2px rgba(26, 25, 77, 21%);
-  }
-
   &:focus-visible {
     outline: 3px solid colors.$blue-50;
   }
@@ -73,8 +67,7 @@
     }
 
     &.typeSecondary,
-    &.typeClear,
-    &.typeLight {
+    &.typeClear {
       color: colors.$grey-300;
     }
 
@@ -87,16 +80,6 @@
 
         &:active {
           color: colors.$grey-400;
-        }
-      }
-
-      &.typeLight {
-        &:hover {
-          color: colors.$grey-500;
-        }
-
-        &:active {
-          color: colors.$grey-500;
         }
       }
     }
@@ -197,21 +180,6 @@
 
     &:active {
       background-color: colors.$red-600;
-    }
-  }
-
-  &.typeLight {
-    background-color: colors.$grey-50;
-    color: colors.$grey-300;
-
-    &:hover {
-      background-color: colors.$grey-100;
-      color: colors.$grey-500;
-    }
-
-    &:active {
-      background-color: colors.$grey-200;
-      color: colors.$grey-500;
     }
   }
 

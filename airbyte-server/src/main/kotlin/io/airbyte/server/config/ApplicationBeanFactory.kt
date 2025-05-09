@@ -5,6 +5,7 @@
 package io.airbyte.server.config
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater
@@ -13,6 +14,9 @@ import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectU
 import io.airbyte.commons.server.limits.ProductLimitsProvider
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.scheduler.TemporalEventRunner
+import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.Configs
@@ -32,7 +36,6 @@ import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.DefaultJobCreator
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.DefaultSyncJobFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
@@ -150,11 +153,6 @@ class ApplicationBeanFactory {
     )
 
   @Singleton
-  fun webUrlHelper(
-    @Value("\${airbyte.web-app.url}") webAppUrl: String?,
-  ): WebUrlHelper = WebUrlHelper(webAppUrl)
-
-  @Singleton
   @Named("workspaceRoot")
   fun workspaceRoot(
     @Value("\${airbyte.workspace.root}") workspaceRoot: String,
@@ -229,4 +227,8 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.server.limits.workspaces}") maxWorkspaces: Long,
     @Value("\${airbyte.server.limits.users}") maxUsers: Long,
   ): ProductLimitsProvider.OrganizationLimits = ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers)
+
+  @Singleton
+  @Named("outputDocumentStore")
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 }

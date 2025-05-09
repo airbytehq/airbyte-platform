@@ -78,6 +78,24 @@ Renders the worker.configRoot environment variable
 {{- end }}
 
 {{/*
+Renders the worker.maxCheckWorkers value
+*/}}
+{{- define "airbyte.worker.maxCheckWorkers" }}
+    {{- .Values.worker.maxCheckWorkers | default 30 }}
+{{- end }}
+
+{{/*
+Renders the worker.maxCheckWorkers environment variable
+*/}}
+{{- define "airbyte.worker.maxCheckWorkers.env" }}
+- name: MAX_CHECK_WORKERS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: MAX_CHECK_WORKERS
+{{- end }}
+
+{{/*
 Renders the worker.maxNotifyWorkers value
 */}}
 {{- define "airbyte.worker.maxNotifyWorkers" }}
@@ -165,6 +183,28 @@ Renders the worker.syncJobInitRetryTimeoutMinutes environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES
+{{- end }}
+
+{{/*
+Renders the worker.useCustomNodeSelector value
+*/}}
+{{- define "airbyte.worker.useCustomNodeSelector" }}
+	{{- if eq .Values.worker.useCustomNodeSelector nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.worker.useCustomNodeSelector }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the worker.useCustomNodeSelector environment variable
+*/}}
+{{- define "airbyte.worker.useCustomNodeSelector.env" }}
+- name: USE_CUSTOM_NODE_SELECTOR
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: USE_CUSTOM_NODE_SELECTOR
 {{- end }}
 
 {{/*
@@ -269,11 +309,13 @@ Renders the set of all worker environment variables
 {{- include "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds.env" . }}
 {{- include "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds.env" . }}
 {{- include "airbyte.worker.configRoot.env" . }}
+{{- include "airbyte.worker.maxCheckWorkers.env" . }}
 {{- include "airbyte.worker.maxNotifyWorkers.env" . }}
 {{- include "airbyte.worker.maxSyncWorkers.env" . }}
 {{- include "airbyte.worker.syncJobMaxAttempts.env" . }}
 {{- include "airbyte.worker.syncJobMaxTimeoutDays.env" . }}
 {{- include "airbyte.worker.syncJobInitRetryTimeoutMinutes.env" . }}
+{{- include "airbyte.worker.useCustomNodeSelector.env" . }}
 {{- include "airbyte.worker.useStreamCapableState.env" . }}
 {{- include "airbyte.worker.workflowFailureRestartDelaySeconds.env" . }}
 {{- include "airbyte.worker.workspaceDockerMount.env" . }}
@@ -289,11 +331,13 @@ ACTIVITY_MAX_ATTEMPT: {{ include "airbyte.worker.activityMaxAttempt" . | quote }
 ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds" . | quote }}
 ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds" . | quote }}
 CONFIG_ROOT: {{ include "airbyte.worker.configRoot" . | quote }}
+MAX_CHECK_WORKERS: {{ include "airbyte.worker.maxCheckWorkers" . | quote }}
 MAX_NOTIFY_WORKERS: {{ include "airbyte.worker.maxNotifyWorkers" . | quote }}
 MAX_SYNC_WORKERS: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}
 SYNC_JOB_MAX_ATTEMPTS: {{ include "airbyte.worker.syncJobMaxAttempts" . | quote }}
 SYNC_JOB_MAX_TIMEOUT_DAYS: {{ include "airbyte.worker.syncJobMaxTimeoutDays" . | quote }}
 SYNC_JOB_INIT_RETRY_TIMEOUT_MINUTES: {{ include "airbyte.worker.syncJobInitRetryTimeoutMinutes" . | quote }}
+USE_CUSTOM_NODE_SELECTOR: {{ include "airbyte.worker.useCustomNodeSelector" . | quote }}
 USE_STREAM_CAPABLE_STATE: {{ include "airbyte.worker.useStreamCapableState" . | quote }}
 WORKFLOW_FAILURE_RESTART_DELAY_SECONDS: {{ include "airbyte.worker.workflowFailureRestartDelaySeconds" . | quote }}
 WORKSPACE_DOCKER_MOUNT: {{ include "airbyte.worker.workspaceDockerMount" . | quote }}

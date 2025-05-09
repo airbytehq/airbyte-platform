@@ -424,7 +424,6 @@ components:
     Workload:
       required:
       - autoId
-      - geography
       - id
       - inputPayload
       - labels
@@ -448,8 +447,6 @@ components:
         inputPayload:
           type: string
         logPath:
-          type: string
-        geography:
           type: string
         mutexKey:
           type: string

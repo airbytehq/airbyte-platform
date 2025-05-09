@@ -16,7 +16,6 @@ import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
 
-import { DeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useExperiment } from "hooks/services/Experiment";
 import {
   ConnectorBuilderLocalStorageProvider,
@@ -64,7 +63,11 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     : { type: "stream" as const, index: 0 };
 
   const values: BuilderState = {
-    mode: failedInitialFormValueConversion ? "yaml" : getStoredMode(projectId),
+    mode: failedInitialFormValueConversion
+      ? isSchemaFormEnabled && resolvedManifest !== null
+        ? getStoredMode(projectId)
+        : "yaml"
+      : getStoredMode(projectId),
     formValues: initialFormValues,
     yaml: initialYaml,
     customComponentsCode: componentsFileContent,
@@ -73,7 +76,6 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     streamTab: "requester" as const,
     testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
-    generatedStreams: {} as Record<string, DeclarativeStream[]>,
     manifest: resolvedManifest,
   };
   const initialValues = useRef(values);

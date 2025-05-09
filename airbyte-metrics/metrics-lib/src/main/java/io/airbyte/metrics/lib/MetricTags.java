@@ -34,6 +34,7 @@ public class MetricTags {
   public static final String DESTINATION_ID = "destination_id";
   public static final String DESTINATION_IMAGE = "destination_image";
   public static final String DESTINATION_IMAGE_IS_DEFAULT = "destination_image_is_default";
+  public static final String ERROR = "error";
   public static final String EXPIRE_SECRET = "expire_secret";
   public static final String FAILURE = "failure";
   public static final String FAILURE_CAUSE = "failure_cause";

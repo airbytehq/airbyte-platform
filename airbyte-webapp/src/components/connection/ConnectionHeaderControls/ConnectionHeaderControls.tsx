@@ -11,10 +11,10 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useCurrentConnection, useCurrentWorkspace } from "core/api";
 import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { ConnectionRoutePaths } from "pages/routePaths";
 
 import styles from "./ConnectionHeaderControls.module.scss";
@@ -24,7 +24,7 @@ import { useConnectionSyncContext } from "../ConnectionSync/ConnectionSyncContex
 import { FreeHistoricalSyncIndicator } from "../EnabledControl/FreeHistoricalSyncIndicator";
 
 export const ConnectionHeaderControls: React.FC = () => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const connection = useCurrentConnection();
   const { updateConnectionStatus, connectionUpdating, schemaRefreshing } = useConnectionEditService();
   const { hasBreakingSchemaChange } = useSchemaChanges(connection.schemaChange);

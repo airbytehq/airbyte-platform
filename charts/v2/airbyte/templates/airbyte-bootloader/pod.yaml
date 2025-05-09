@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ .Release.Name }}-airbyte-bootloader
+  name: {{ .Release.Name }}-bootloader
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
     {{- if .Values.airbyteBootloader.extraLabels }}
@@ -45,12 +45,11 @@ spec:
       image: {{ include "imageUrl" (list .Values.airbyteBootloader.image $) }}
       imagePullPolicy: "{{ .Values.airbyteBootloader.image.pullPolicy }}"
       env:
-        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
-        {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- end }}
 
-        {{- include "airbyte.cluster.controlPlane.bootstrap.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.bootstrap.envs" . | nindent 8 }}
         {{- include "airbyte.common.version.env" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
@@ -59,9 +58,14 @@ spec:
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
 
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE 
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
 
         {{- if (eq .Values.global.edition "cloud") }}
-        {{- include "airbyte.cloudDatabase.envs" . | nindent 8 }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
         {{- end }}
 

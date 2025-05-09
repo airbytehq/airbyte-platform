@@ -555,7 +555,8 @@ public class DbConverter {
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
         .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
-        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER));
+        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER))
+        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

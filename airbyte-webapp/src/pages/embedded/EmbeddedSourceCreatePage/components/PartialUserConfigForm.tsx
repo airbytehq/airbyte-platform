@@ -6,12 +6,14 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { SvgIcon } from "area/connector/utils";
+import { SourceDefinitionRead } from "core/api/types/AirbyteClient";
 import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
 import { ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import styles from "./PartialUserConfigForm.module.scss";
 import { PartialUserConfigFormControls } from "./PartialUserConfigFormControls";
 import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
+
 interface PartialUserConfigFormProps {
   connectorName: string;
   icon: string;
@@ -23,8 +25,8 @@ interface PartialUserConfigFormProps {
 }
 
 export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
-  icon,
   connectorName,
+  icon,
   onSubmit,
   initialValues,
   sourceDefinitionSpecification,
@@ -32,6 +34,15 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
   showSuccessView,
 }) => {
   const { clearSelectedConfig, clearSelectedTemplate } = useEmbeddedSourceParams();
+
+  // The ConnectorForm needs a connector definition to get the connector name. We construct a dummy one here, since
+  // Embedded users do not have access to APIs that return actual SourceDefinitionRead objects
+  const sourceDefinition: SourceDefinitionRead = {
+    sourceDefinitionId: "not-set-for-embedded",
+    name: connectorName,
+    dockerRepository: "not-set-for-embedded",
+    dockerImageTag: "not-set-for-embedded",
+  };
 
   const onClick = () => {
     clearSelectedConfig();
@@ -50,21 +61,21 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
 
           <ConnectorForm
             trackDirtyChanges
+            isEditMode={isEditMode}
             formType="source"
             formValues={initialValues}
+            selectedConnectorDefinition={sourceDefinition}
             selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
             onSubmit={async (values: ConnectorFormValues) => {
-              onSubmit(values);
+              try {
+                await Promise.resolve(onSubmit(values));
+              } catch (error) {
+                console.error(error);
+              }
             }}
             canEdit
-            renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm }) => (
-              <PartialUserConfigFormControls
-                isEditMode={isEditMode}
-                isSubmitting={isSubmitting}
-                isValid={isValid}
-                dirty={dirty}
-                onCancel={resetConnectorForm}
-              />
+            renderFooter={({ dirty, isSubmitting }) => (
+              <PartialUserConfigFormControls isEditMode={isEditMode} isSubmitting={isSubmitting} dirty={dirty} />
             )}
           />
         </FlexContainer>

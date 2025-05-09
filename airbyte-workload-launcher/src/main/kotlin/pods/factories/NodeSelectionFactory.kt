@@ -62,7 +62,8 @@ data class NodeSelectionFactory(
     allLabels["connection_id"]?.let { connectionId -> context.add(Connection(connectionId)) }
     allLabels["workspace_id"]?.let { workspaceId -> context.add(Workspace(workspaceId)) }
     allLabels["attempt_id"]?.let { attemptNumber -> context.add(Attempt(attemptNumber)) }
-    return Multi(context)
+
+    return Multi.orEmpty(context)
   }
 
   private fun buildSpotInstanceAffinity(): Affinity =

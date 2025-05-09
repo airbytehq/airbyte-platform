@@ -87,11 +87,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: API_URL
-        - name: CONNECTOR_BUILDER_API_URL
-          valueFrom:
-            configMapKeyRef:
-              name: {{ .Release.Name }}-airbyte-env
-              key: CONNECTOR_BUILDER_API_URL
         {{- end }}
         # Values from secret
         {{- if .Values.secrets }}

@@ -17,6 +17,7 @@ import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.util.UUID;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
  * Intended to be used by the server to build context objects so that temporal workflows/activities
  * have access to relevant IDs.
  */
+@Singleton
 public class ContextBuilder {
 
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());

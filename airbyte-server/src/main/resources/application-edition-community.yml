@@ -43,9 +43,9 @@ micronaut:
 
 airbyte:
   auth:
-    identity-provider:
-      type: simple
     instanceAdmin:
       password: ${AB_INSTANCE_ADMIN_PASSWORD:}
       clientId: ${AB_INSTANCE_ADMIN_CLIENT_ID:}
       clientSecret: ${AB_INSTANCE_ADMIN_CLIENT_SECRET:}
+    identity-provider:
+      type: ${IDENTITY_PROVIDER_TYPE:}

@@ -16,7 +16,7 @@ import { storeConnectorChatBuilderFromQuery } from "core/utils/connectorChatBuil
 import { isCorporateEmail } from "core/utils/freeEmailProviders";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { storeUtmFromQuery } from "core/utils/utmStorage";
-import { useExperimentContext } from "hooks/services/Experiment";
+import { useExperiment, useExperimentContext } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
 import ConnectorBuilderRoutes from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -26,6 +26,7 @@ import {
   SourcesPage as SettingsSourcesPage,
   DestinationsPage as SettingsDestinationsPage,
 } from "pages/SettingsPage/pages/ConnectorsPage";
+import { EmbeddedSettingsPage } from "pages/SettingsPage/pages/EmbbededSettingsPage/EmbeddedSettingsPage";
 import { NotificationPage } from "pages/SettingsPage/pages/NotificationPage";
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
@@ -75,6 +76,8 @@ const MainRoutes: React.FC = () => {
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId: workspace.organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
+  const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
+  const canManageEmbedded = useGeneratedIntent(Intent.ViewConfigTemplates);
 
   useExperimentContext("organization", workspace.organizationId);
 
@@ -119,7 +122,10 @@ const MainRoutes: React.FC = () => {
           <Route path={CloudSettingsRoutePaths.WorkspaceMembers} element={<WorkspaceMembersPage />} />
           <Route path={CloudSettingsRoutePaths.Source} element={<SettingsSourcesPage />} />
           <Route path={CloudSettingsRoutePaths.Destination} element={<SettingsDestinationsPage />} />
-          <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />
+          <Route path={CloudSettingsRoutePaths.Notifications} element={<NotificationPage />} />{" "}
+          {allowConfigTemplateEndpoints && canManageEmbedded && (
+            <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedSettingsPage />} />
+          )}
           {supportsCloudDbtIntegration && (
             <Route path={CloudSettingsRoutePaths.DbtCloud} element={<DbtCloudSettingsView />} />
           )}

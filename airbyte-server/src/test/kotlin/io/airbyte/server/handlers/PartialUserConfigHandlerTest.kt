@@ -6,19 +6,51 @@ package io.airbyte.server.handlers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.node.ObjectNode
+import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
+import io.airbyte.api.model.generated.AirbyteStreamConfiguration
+import io.airbyte.api.model.generated.ConnectionRead
+import io.airbyte.api.model.generated.ConnectionScheduleData
+import io.airbyte.api.model.generated.ConnectionScheduleType
+import io.airbyte.api.model.generated.ConnectionStatus
+import io.airbyte.api.model.generated.DestinationRead
+import io.airbyte.api.model.generated.DestinationReadList
+import io.airbyte.api.model.generated.DestinationSyncMode
+import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
+import io.airbyte.api.model.generated.SourceCreate
+import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceRead
+import io.airbyte.api.model.generated.SyncMode
+import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
+import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.handlers.ConnectionsHandler
+import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
 import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.secrets.JsonSecretsProcessor
+import io.airbyte.data.repositories.ConnectionTemplateRepository
+import io.airbyte.data.repositories.WorkspaceRepository
+import io.airbyte.data.repositories.entities.ConnectionTemplate
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
+import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
+import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
+import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
+import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.publicApi.server.generated.models.JobResponse
+import io.airbyte.publicApi.server.generated.models.JobStatusEnum
+import io.airbyte.publicApi.server.generated.models.JobTypeEnum
+import io.airbyte.server.apis.publicapi.helpers.DataResidencyHelper
+import io.airbyte.server.apis.publicapi.services.JobService
+import io.airbyte.server.apis.publicapi.services.SourceService
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -26,22 +58,33 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.util.UUID
 
 class PartialUserConfigHandlerTest {
   private lateinit var partialUserConfigService: PartialUserConfigService
   private lateinit var configTemplateService: ConfigTemplateService
   private lateinit var sourceHandler: SourceHandler
+  private lateinit var secretsProcessor: JsonSecretsProcessor
   private lateinit var handler: PartialUserConfigHandler
   private lateinit var objectMapper: ObjectMapper
-  private lateinit var secretsProcessor: JsonSecretsProcessor
+  private lateinit var connectionTemplateRepository: ConnectionTemplateRepository
+  private lateinit var workspaceHelper: WorkspaceHelper
+  private lateinit var workspaceRepository: WorkspaceRepository
+  private lateinit var connectionsHandler: ConnectionsHandler
+  private lateinit var destinationHandler: DestinationHandler
+  private lateinit var sourceService: SourceService
+  private lateinit var dataResidencyHelper: DataResidencyHelper
+  private lateinit var jobService: JobService
 
+  private val organizationId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
   private val sourceId = UUID.randomUUID()
   private val partialUserConfigId = UUID.randomUUID()
   private val actorDefinitionId = UUID.randomUUID()
+  private val destinationName = "test-destination"
+  private val sourceName = "test-source"
+  private val connectionId = UUID.randomUUID()
 
   @BeforeEach
   fun setup() {
@@ -49,8 +92,35 @@ class PartialUserConfigHandlerTest {
     configTemplateService = mockk<ConfigTemplateService>()
     sourceHandler = mockk<SourceHandler>()
     secretsProcessor = mockk<JsonSecretsProcessor>()
-    handler = PartialUserConfigHandler(partialUserConfigService, configTemplateService, sourceHandler, secretsProcessor)
+    connectionTemplateRepository = mockk<ConnectionTemplateRepository>()
+    workspaceHelper = mockk<WorkspaceHelper>()
+    workspaceRepository = mockk<WorkspaceRepository>()
+    connectionsHandler = mockk<ConnectionsHandler>()
+    destinationHandler = mockk<DestinationHandler>()
+    sourceService = mockk<SourceService>()
+    dataResidencyHelper = mockk<DataResidencyHelper>()
+    jobService = mockk<JobService>()
+
+    handler =
+      PartialUserConfigHandler(
+        partialUserConfigService,
+        configTemplateService,
+        sourceHandler,
+        secretsProcessor,
+        connectionTemplateRepository,
+        workspaceHelper,
+        workspaceRepository,
+        connectionsHandler,
+        destinationHandler,
+        sourceService,
+        dataResidencyHelper,
+        jobService,
+      )
     objectMapper = ObjectMapper()
+
+    every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList()
+    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns emptyList()
   }
 
   @Test
@@ -58,55 +128,209 @@ class PartialUserConfigHandlerTest {
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
     val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
     val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
-    val savedSource = createMockSourceRead(sourceId)
+    val savedSource = createMockSourceRead(sourceId, sourceName)
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
     every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
-    every { sourceHandler.createSource(any()) } returns savedSource
-    every { sourceHandler.persistConfigRawSecretValues(any(), any(), any(), any(), any()) } returns
-      partialUserConfigCreate.connectionConfiguration
+    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
+      configTemplate.configTemplate.partialDefaultConfig
 
-    val result = handler.createPartialUserConfig(partialUserConfigCreate)
+    val sourceCreateSlot = slot<SourceCreate>()
+    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+
+    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
 
     Assertions.assertNotNull(result)
-    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
+    Assertions.assertEquals(sourceId, result.sourceId)
 
     verify { partialUserConfigService.createPartialUserConfig(any()) }
     verify { sourceHandler.createSource(any()) }
   }
 
   @Test
-  fun `test createPartialUserConfig does not create config if creating source fails`() {
-    // Arrange
+  fun `test createPartialUserConfig with connection template`() {
     val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
     val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
+    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
+    val savedSource = createMockSourceRead(sourceId, sourceName)
+
+    val destinationId = UUID.randomUUID()
+    val streamAndConfig = AirbyteStreamAndConfiguration()
+    streamAndConfig.config(
+      AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
+    )
+    val airbyteCatalog =
+      AirbyteCatalog().streams(
+        listOf(
+          streamAndConfig,
+        ),
+      )
+
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns
+      DestinationReadList()
+        .destinations(
+          listOf(
+            DestinationRead()
+              .destinationId(destinationId)
+              .name(destinationName)
+              .workspaceId(workspaceId),
+          ),
+        )
+
+    val schemaResponse =
+      SourceDiscoverSchemaRead()
+        .catalog(airbyteCatalog)
+
+    val expectedAirbyteStreamAndConfig = AirbyteStreamAndConfiguration()
+    expectedAirbyteStreamAndConfig.config(AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND))
+
+    val connectionRead = ConnectionRead().connectionId(connectionId)
+    every {
+      connectionsHandler.createConnection(
+        match {
+          it.name == "$sourceName -> $destinationName" &&
+            it.namespaceDefinition == io.airbyte.api.model.generated.NamespaceDefinitionType.DESTINATION &&
+            it.sourceId == sourceId &&
+            it.destinationId == destinationId &&
+            it.syncCatalog == AirbyteCatalog().streams(listOf(expectedAirbyteStreamAndConfig)) &&
+            it.scheduleType == ConnectionScheduleType.MANUAL &&
+            it.scheduleData == ConnectionScheduleData() &&
+            it.status == ConnectionStatus.ACTIVE &&
+            it.geography == GEOGRAPHY_AUTO &&
+            it.nonBreakingChangesPreference == NonBreakingChangesPreference.IGNORE
+        },
+      )
+    } returns connectionRead
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
+
+    val connectionTemplate =
+      ConnectionTemplate(
+        id = UUID.randomUUID(),
+        organizationId = organizationId,
+        destinationName = destinationName,
+        destinationDefinitionId = UUID.randomUUID(),
+        destinationConfig = objectMapper.createObjectNode(),
+        namespaceDefinition = NamespaceDefinitionType.destination,
+        namespaceFormat = null,
+        prefix = null,
+        scheduleType = ScheduleType.manual,
+        scheduleData = null,
+        nonBreakingChangesPreference = NonBreakingChangePreferenceType.ignore,
+        resourceRequirements =
+          Jsons.jsonNode(
+            ResourceRequirements()
+              .withCpuLimit(
+                "1",
+              ).withMemoryLimit("1g")
+              .withCpuRequest("0.5")
+              .withMemoryRequest("0.5g")
+              .withEphemeralStorageLimit("1g")
+              .withEphemeralStorageRequest("0.5g"),
+          ),
+        defaultGeography = GEOGRAPHY_AUTO,
+      )
+    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns listOf(connectionTemplate)
 
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
+    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
+      configTemplate.configTemplate.partialDefaultConfig
 
-    every { sourceHandler.createSource(any()) } throws RuntimeException("Source creation failed")
+    val sourceCreateSlot = slot<SourceCreate>()
+    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
 
-    assertThrows<RuntimeException> {
-      handler.createPartialUserConfig(partialUserConfigCreate)
-    }
+    every {
+      dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(any())
+    } returns GEOGRAPHY_AUTO
 
-    // Verify that the partial user config service was never called to write the config
-    verify(exactly = 0) { partialUserConfigService.createPartialUserConfig(any()) }
+    every { jobService.sync(connectionId) } returns
+      JobResponse(
+        jobId = 2L,
+        status = JobStatusEnum.PENDING,
+        jobType = JobTypeEnum.SYNC,
+        startTime = "",
+        connectionId = connectionId.toString(),
+      )
+
+    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(sourceId, result.sourceId)
+
+    verify { partialUserConfigService.createPartialUserConfig(any()) }
+    verify { sourceHandler.createSource(any()) }
+  }
+
+  @Test
+  fun `test combineDefaultAndUserConfig with secrets`() {
+    val storedConfigJsonString =
+      """
+      {
+        "credentials": {
+          "client_id": { "_secret": "some-client-id-secret-reference" },
+          "client_secret": { "_secret": "some-client-secret-secret-reference" }
+        }
+      }
+      """.trimIndent()
+    val storedConfigWithSecrets = Jsons.deserialize(storedConfigJsonString)
+    val configWithObfuscatedSecretsJsonString =
+      """
+      {
+        "credentials": {
+          "client_id": "$SECRETS_MASK",
+          "client_secret": "$SECRETS_MASK"
+        }
+      }
+      """.trimIndent()
+    val configWithObfuscatedSecrets = Jsons.deserialize(configWithObfuscatedSecretsJsonString)
+    val configTemplate =
+      createMockConfigTemplate(
+        configTemplateId,
+        actorDefinitionId,
+        storedConfigWithSecrets,
+      )
+    val userConfig = Jsons.deserialize("""{"credentials":{"refresh_token":"some-refresh-token"}}""")
+    every {
+      secretsProcessor.prepareSecretsForOutput(
+        storedConfigWithSecrets,
+        configTemplate.configTemplate.userConfigSpec.connectionSpecification,
+      )
+    } returns configWithObfuscatedSecrets
+
+    val result = handler.combineDefaultAndUserConfig(configTemplate.configTemplate, userConfig)
+
+    Assertions.assertEquals(
+      "some-refresh-token",
+      result
+        .get("credentials")
+        .get("refresh_token")
+        .asText(),
+    )
+    Assertions.assertEquals(
+      SECRETS_MASK,
+      result
+        .get("credentials")
+        .get("client_id")
+        .asText(),
+    )
+    Assertions.assertEquals(
+      SECRETS_MASK,
+      result
+        .get("credentials")
+        .get("client_secret")
+        .asText(),
+    )
   }
 
   @Test
   fun `test updatePartialUserConfig with valid inputs`() {
-    val initialConnectionConfig = objectMapper.createObjectNode().put("testKey", "initialValue")
-
-    val initialProperties = initialConnectionConfig
-
     val partialUserConfig =
       createMockPartialUserConfig(
         partialUserConfigId,
         workspaceId,
         configTemplateId,
         sourceId,
-        initialProperties,
       )
     val partialUserConfigWithTemplate =
       createMockPartialUserConfigWithTemplate(
@@ -114,7 +338,6 @@ class PartialUserConfigHandlerTest {
         workspaceId = workspaceId,
         configTemplateId = configTemplateId,
         sourceId = sourceId,
-        properties = initialProperties,
       )
 
     val updateConnectionConfig = objectMapper.createObjectNode().put("testKey", "updatedValue")
@@ -127,207 +350,24 @@ class PartialUserConfigHandlerTest {
         workspaceId = partialUserConfig.partialUserConfig.workspaceId,
         configTemplateId = partialUserConfig.partialUserConfig.configTemplateId,
         actorId = partialUserConfig.partialUserConfig.actorId,
-        connectionConfiguration = updateConnectionConfig,
       )
-
-    every {
-      sourceHandler.persistConfigRawSecretValues(
-        any(),
-        any(),
-        any(),
-        any<ConnectorSpecification>(),
-        any(),
-      )
-    } returns updateConnectionConfig
-
-    val configSlot = slot<PartialUserConfig>()
-    every { partialUserConfigService.updatePartialUserConfig(capture(configSlot)) } returns partialUserConfig
 
     every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfigWithTemplate
     every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
 
     val sourceUpdateSlot = slot<PartialSourceUpdate>()
-    every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId)
+    every { sourceHandler.partialUpdateSource(capture(sourceUpdateSlot)) } returns createMockSourceRead(sourceId, sourceName)
 
-    val result = handler.updatePartialUserConfig(partialUserConfigRequest)
+    val result = handler.updateSourceFromPartialConfig(partialUserConfigRequest, updateConnectionConfig)
 
-    Assertions.assertEquals(partialUserConfigId, result.partialUserConfig.id)
-    Assertions.assertEquals(sourceId, result.partialUserConfig.actorId)
-    verify { partialUserConfigService.updatePartialUserConfig(any()) }
+    Assertions.assertEquals(sourceId, result.sourceId)
     verify { sourceHandler.partialUpdateSource(any()) }
 
     val capturedConnectionConfig = sourceUpdateSlot.captured.connectionConfiguration
-    val capturedUserConfig = configSlot.captured.connectionConfiguration
 
     Assertions.assertNotNull(capturedConnectionConfig)
     Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
-    Assertions.assertEquals("updatedValue", capturedUserConfig.get("testKey").asText())
-  }
-
-  @Test
-  fun `test combineProperties merges flat configurations correctly`() {
-    // Create the template config (just the configuration content)
-    val templateConfig = objectMapper.createObjectNode()
-    templateConfig.put("host", "template-host")
-    templateConfig.put("port", 5432)
-    templateConfig.put("database", "template-db")
-
-    // Create the user config (just the configuration content)
-    val userConfig = objectMapper.createObjectNode()
-    userConfig.put("host", "user-host")
-    userConfig.put("username", "user")
-    userConfig.put("password", "secret")
-
-    // Combine the configs
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    // Assert the results
-    Assertions.assertNotNull(result, "result should not be null")
-    Assertions.assertEquals("user-host", result.get("host").asText())
-    Assertions.assertEquals(5432, result.get("port").asInt())
-    Assertions.assertEquals("template-db", result.get("database").asText())
-    Assertions.assertEquals("user", result.get("username").asText())
-    Assertions.assertEquals("secret", result.get("password").asText())
-  }
-
-  @Test
-  fun `test combineProperties merges nested configurations correctly`() {
-    // Create the template config with nested properties
-    val templateConfig = objectMapper.createObjectNode()
-    templateConfig.put("simple", "template-value")
-    val templateNestedObj = templateConfig.putObject("nested")
-    templateNestedObj.put("prop1", "template-prop1")
-    templateNestedObj.put("prop2", "template-prop2")
-    val templateDeepNested = templateNestedObj.putObject("deeper")
-    templateDeepNested.put("deepProp", "template-deep")
-
-    // Create the user config with nested properties
-    val userConfig = objectMapper.createObjectNode()
-    userConfig.put("simple", "user-value")
-    val userNestedObj = userConfig.putObject("nested")
-    userNestedObj.put("prop1", "user-prop1")
-    userNestedObj.putArray("newArray").add("item1").add("item2")
-    val userDeepNested = userNestedObj.putObject("deeper")
-    userDeepNested.put("deepProp", "user-deep")
-    userDeepNested.put("newDeepProp", "new-value")
-
-    // Combine the configs
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    // Assert the results
-    Assertions.assertNotNull(result, "result should not be null")
-    Assertions.assertEquals("user-value", result.get("simple").asText())
-
-    val resultNested = result.get("nested")
-    Assertions.assertNotNull(resultNested)
-    Assertions.assertTrue(resultNested.isObject)
-    Assertions.assertEquals("user-prop1", resultNested.get("prop1").asText())
-    Assertions.assertEquals("template-prop2", resultNested.get("prop2").asText())
-
-    val resultArray = resultNested.get("newArray")
-    Assertions.assertNotNull(resultArray)
-    Assertions.assertTrue(resultArray.isArray)
-    Assertions.assertEquals(2, resultArray.size())
-
-    val resultDeeper = resultNested.get("deeper")
-    Assertions.assertNotNull(resultDeeper)
-    Assertions.assertEquals("user-deep", resultDeeper.get("deepProp").asText())
-    Assertions.assertEquals("new-value", resultDeeper.get("newDeepProp").asText())
-  }
-
-  @Test
-  fun `test combineProperties handles empty configurations`() {
-    // Create empty objects for both configs
-    val templateConfig = objectMapper.createObjectNode()
-    val userConfig = objectMapper.createObjectNode()
-
-    // Combine the configs
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    // Assert the result is an empty object
-    Assertions.assertNotNull(result, "result should not be null")
-    Assertions.assertTrue(result.isObject)
-    Assertions.assertEquals(0, result.size())
-  }
-
-  @Test
-  fun `test combineProperties handles null configurations`() {
-    // Test with null template config
-    val userConfig = objectMapper.createObjectNode()
-    userConfig.put("key", "value")
-
-    val resultWithNullTemplate = handler.combineProperties(null, userConfig)
-    Assertions.assertNotNull(resultWithNullTemplate)
-    Assertions.assertEquals("value", resultWithNullTemplate.get("key").asText())
-
-    // Test with null user config
-    val templateConfig = objectMapper.createObjectNode()
-    templateConfig.put("key", "template-value")
-
-    val resultWithNullUser = handler.combineProperties(templateConfig, null)
-    Assertions.assertNotNull(resultWithNullUser)
-    Assertions.assertEquals("template-value", resultWithNullUser.get("key").asText())
-  }
-
-  @Test
-  fun `test combineProperties preserves non-overlapping nested objects`() {
-    // Template config with a nested object
-    val templateConfig = objectMapper.createObjectNode()
-    val templateNestedObj = templateConfig.putObject("templateOnly")
-    templateNestedObj.put("prop1", "value1")
-    templateNestedObj.put("prop2", "value2")
-
-    // User config with a different nested object
-    val userConfig = objectMapper.createObjectNode()
-    val userNestedObj = userConfig.putObject("userOnly")
-    userNestedObj.put("prop3", "value3")
-    userNestedObj.put("prop4", "value4")
-
-    // Combine the configs
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    // Assert both nested objects are preserved
-    Assertions.assertTrue(result.has("templateOnly"))
-    Assertions.assertTrue(result.has("userOnly"))
-
-    val templateOnlyResult = result.get("templateOnly")
-    Assertions.assertEquals("value1", templateOnlyResult.get("prop1").asText())
-    Assertions.assertEquals("value2", templateOnlyResult.get("prop2").asText())
-
-    val userOnlyResult = result.get("userOnly")
-    Assertions.assertEquals("value3", userOnlyResult.get("prop3").asText())
-    Assertions.assertEquals("value4", userOnlyResult.get("prop4").asText())
-  }
-
-  @Test
-  fun `test combineProperties gives precedence to user config for conflicting keys`() {
-    // Template config with some values
-    val templateConfig = objectMapper.createObjectNode()
-    templateConfig.put("string", "template-string")
-    templateConfig.put("number", 100)
-    templateConfig.put("boolean", false)
-    val templateNestedObj = templateConfig.putObject("nested")
-    templateNestedObj.put("sharedProp", "template-value")
-
-    // User config with overlapping values
-    val userConfig = objectMapper.createObjectNode()
-    userConfig.put("string", "user-string")
-    userConfig.put("number", 200)
-    userConfig.put("boolean", true)
-    val userNestedObj = userConfig.putObject("nested")
-    userNestedObj.put("sharedProp", "user-value")
-
-    // Combine the configs
-    val result = handler.combineProperties(templateConfig, userConfig)
-
-    // Assert user values take precedence
-    Assertions.assertEquals("user-string", result.get("string").asText())
-    Assertions.assertEquals(200, result.get("number").asInt())
-    Assertions.assertEquals(true, result.get("boolean").asBoolean())
-
-    val nestedResult = result.get("nested")
-    Assertions.assertEquals("user-value", nestedResult.get("sharedProp").asText())
   }
 
   /**
@@ -337,6 +377,7 @@ class PartialUserConfigHandlerTest {
     id: UUID,
     actorDefinitionId: UUID = UUID.randomUUID(),
     partialDefaultConfig: JsonNode = objectMapper.createObjectNode(),
+    userConfigSpec: ConnectorSpecification = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
   ): ConfigTemplateWithActorDetails =
     ConfigTemplateWithActorDetails(
       ConfigTemplate(
@@ -344,7 +385,7 @@ class PartialUserConfigHandlerTest {
         actorDefinitionId = actorDefinitionId,
         partialDefaultConfig = partialDefaultConfig,
         organizationId = UUID.randomUUID(),
-        userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+        userConfigSpec = userConfigSpec,
         createdAt = null,
         updatedAt = null,
       ),
@@ -355,12 +396,10 @@ class PartialUserConfigHandlerTest {
   private fun createMockPartialUserConfigCreate(
     workspaceId: UUID,
     configTemplateId: UUID,
-    userConfig: JsonNode = objectMapper.createObjectNode().set<ObjectNode>("connectionConfiguration", objectMapper.createObjectNode()),
   ): PartialUserConfig =
     PartialUserConfig(
       workspaceId = workspaceId,
       configTemplateId = configTemplateId,
-      connectionConfiguration = userConfig,
       id = UUID.randomUUID(),
     )
 
@@ -369,7 +408,6 @@ class PartialUserConfigHandlerTest {
     workspaceId: UUID,
     configTemplateId: UUID,
     sourceId: UUID? = null,
-    properties: JsonNode = objectMapper.createObjectNode(),
   ): PartialUserConfigWithActorDetails =
     PartialUserConfigWithActorDetails(
       partialUserConfig =
@@ -377,11 +415,11 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       actorName = "test-source",
       actorIcon = "test-icon",
+      configTemplateId = configTemplateId,
     )
 
   private fun createMockPartialUserConfigWithTemplate(
@@ -389,7 +427,6 @@ class PartialUserConfigHandlerTest {
     workspaceId: UUID,
     configTemplateId: UUID,
     sourceId: UUID? = null,
-    properties: JsonNode = objectMapper.createObjectNode(),
     configTemplate: ConfigTemplate =
       ConfigTemplate(
         id = configTemplateId,
@@ -405,7 +442,6 @@ class PartialUserConfigHandlerTest {
           id = id,
           workspaceId = workspaceId,
           configTemplateId = configTemplateId,
-          connectionConfiguration = properties,
           actorId = sourceId,
         ),
       configTemplate = configTemplate,
@@ -413,10 +449,14 @@ class PartialUserConfigHandlerTest {
       actorIcon = "test-icon",
     )
 
-  private fun createMockSourceRead(id: UUID): SourceRead =
+  private fun createMockSourceRead(
+    id: UUID,
+    sourceName: String,
+  ): SourceRead =
     SourceRead().apply {
       sourceId = id
-      name = "test-source"
+      name = sourceName
+      icon = "test-icon"
       sourceDefinitionId = UUID.randomUUID()
       connectionConfiguration = objectMapper.createObjectNode()
     }

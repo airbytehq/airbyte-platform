@@ -112,7 +112,7 @@ export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest,
     try {
       return (await resolveManifestQuery(manifest, projectId)).manifest as DeclarativeComponentSchema;
     } catch {
-      return undefined;
+      return null;
     }
   });
 };

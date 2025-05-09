@@ -34,7 +34,7 @@ object SecretConfigMapper {
       externalCoordinate = this.externalCoordinate,
       tombstone = false,
       airbyteManaged = this.airbyteManaged,
-      createdBy = this.createdBy.value,
-      updatedBy = this.createdBy.value,
+      createdBy = this.createdBy?.value,
+      updatedBy = this.createdBy?.value,
     )
 }

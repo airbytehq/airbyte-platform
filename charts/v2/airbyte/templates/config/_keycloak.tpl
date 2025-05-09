@@ -24,6 +24,24 @@ Renders the keycloak.url environment variable
 {{- end }}
 
 {{/*
+Renders the keycloak.host value
+*/}}
+{{- define "airbyte.keycloak.host" }}
+    {{- (get (urlParse .Values.global.airbyteUrl) "host") }}
+{{- end }}
+
+{{/*
+Renders the keycloak.host environment variable
+*/}}
+{{- define "airbyte.keycloak.host.env" }}
+- name: KEYCLOAK_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_HOST
+{{- end }}
+
+{{/*
 Renders the keycloak.service.port value
 */}}
 {{- define "airbyte.keycloak.service.port" }}
@@ -39,6 +57,24 @@ Renders the keycloak.service.port environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: KEYCLOAK_PORT
+{{- end }}
+
+{{/*
+Renders the keycloak.protocol value
+*/}}
+{{- define "airbyte.keycloak.protocol" }}
+    {{- .Values.keycloak.protocol | default "https" }}
+{{- end }}
+
+{{/*
+Renders the keycloak.protocol environment variable
+*/}}
+{{- define "airbyte.keycloak.protocol.env" }}
+- name: KEYCLOAK_PROTOCOL
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: KEYCLOAK_PROTOCOL
 {{- end }}
 
 {{/*
@@ -64,7 +100,9 @@ Renders the set of all keycloak environment variables
 */}}
 {{- define "airbyte.keycloak.envs" }}
 {{- include "airbyte.keycloak.url.env" . }}
+{{- include "airbyte.keycloak.host.env" . }}
 {{- include "airbyte.keycloak.service.port.env" . }}
+{{- include "airbyte.keycloak.protocol.env" . }}
 {{- include "airbyte.keycloak.javaOpts.env" . }}
 {{- end }}
 
@@ -73,7 +111,9 @@ Renders the set of all keycloak config map variables
 */}}
 {{- define "airbyte.keycloak.configVars" }}
 KEYCLOAK_HOSTNAME_URL: {{ include "airbyte.keycloak.url" . | quote }}
+KEYCLOAK_HOST: {{ include "airbyte.keycloak.host" . | quote }}
 KEYCLOAK_PORT: {{ include "airbyte.keycloak.service.port" . | quote }}
+KEYCLOAK_PROTOCOL: {{ include "airbyte.keycloak.protocol" . | quote }}
 JAVA_OPTS_APPEND: {{ include "airbyte.keycloak.javaOpts" . | quote }}
 {{- end }}
 
@@ -99,7 +139,7 @@ Renders the keycloak.admin.client.auth.adminRealm environment variable
 Renders the keycloak.auth.adminCliClientId value
 */}}
 {{- define "airbyte.keycloak.admin.client.auth.adminCliClientId" }}
-    {{- .Values.keycloak.auth.adminCliClientId }}
+    {{- .Values.keycloak.auth.adminCliClientId | default "admin-cli" }}
 {{- end }}
 
 {{/*
@@ -153,7 +193,7 @@ Renders the keycloak.admin.client.internalBasePath environment variable
 Renders the keycloak.internalHost value
 */}}
 {{- define "airbyte.keycloak.admin.client.internalHost" }}
-    {{- ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community")) }}
+    {{- .Values.keycloak.internalHost | default (ternary (printf "%s-airbyte-keycloak-svc.%s:%d" .Release.Name .Release.Namespace (int .Values.keycloak.service.port)) "localhost" (or (eq .Values.global.edition "enterprise") (ne .Values.global.edition "community"))) }}
 {{- end }}
 
 {{/*
@@ -310,7 +350,7 @@ KEYCLOAK_ADMIN_PASSWORD: {{ include "airbyte.keycloak.admin.user.auth.adminPassw
 Renders the keycloak.realmIssuer value
 */}}
 {{- define "airbyte.keycloak.client.realmIssuer" }}
-    {{- ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane") }}
+    {{- .Values.keycloak.realmIssuer | default (ternary (printf "%s/auth/realms/%s" .Values.global.airbyteUrl (include "airbyte.keycloak.admin.client.internalRealm" .)) (printf "%s-airbyte-keycloak-svc.%s:%d/auth/realms/%s" .Release.Name .Release.Namespace (int (include "airbyte.keycloak.service.port" .)) (include "airbyte.keycloak.admin.client.internalRealm" .)) (eq (include "airbyte.common.cluster.type" .) "data-plane")) }}
 {{- end }}
 
 {{/*

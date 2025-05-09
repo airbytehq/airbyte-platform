@@ -412,31 +412,67 @@ exports[`CreateConnectionForm should render 1`] = `
                         <div
                           class="<removed-for-snapshot-test>"
                         >
-                          <label
+                          <div
                             class="<removed-for-snapshot-test>"
                           >
-                            <div
+                            <label
                               class="<removed-for-snapshot-test>"
                             >
                               <div
                                 class="<removed-for-snapshot-test>"
-                                data-icon="lens"
-                                data-testid="mocksvg"
-                              />
-                            </div>
-                            <div
-                              class="<removed-for-snapshot-test>"
-                              data-testid="input-container"
-                            >
-                              <input
+                              >
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="lens"
+                                  data-testid="mocksvg"
+                                />
+                              </div>
+                              <div
                                 class="<removed-for-snapshot-test>"
-                                data-testid="sync-catalog-search"
-                                placeholder="Search stream or field name"
-                                type="search"
-                                value=""
+                                data-testid="input-container"
+                              >
+                                <input
+                                  class="<removed-for-snapshot-test>"
+                                  data-testid="sync-catalog-search"
+                                  placeholder="Search stream or field name"
+                                  type="search"
+                                  value=""
+                                />
+                              </div>
+                            </label>
+                            <div
+                              data-testid="sync-catalog-filter-depth"
+                            >
+                              <button
+                                aria-expanded="false"
+                                aria-haspopup="listbox"
+                                class="<removed-for-snapshot-test>"
+                                data-headlessui-state=""
+                                data-testid="sync-catalog-filter-depth-listbox-button"
+                                id="headlessui-listbox-button-:r2:"
+                                type="button"
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    Streams and fields
+                                  </span>
+                                </span>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="chevron-down"
+                                  data-testid="mocksvg"
+                                />
+                              </button>
+                              <div
+                                style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                               />
                             </div>
-                          </label>
+                          </div>
                           <div
                             class="<removed-for-snapshot-test>"
                           >
@@ -844,7 +880,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r16:"
+                                      id="headlessui-listbox-button-:r19:"
                                       type="button"
                                     >
                                       <span
@@ -879,7 +915,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       aria-haspopup="listbox"
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
-                                      id="headlessui-combobox-button-:r19:"
+                                      id="headlessui-combobox-button-:r1c:"
                                       tabindex="-1"
                                       type="button"
                                     >
@@ -995,7 +1031,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
                                       data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r1c:"
+                                      id="headlessui-listbox-button-:r1f:"
                                       type="button"
                                     >
                                       <span
@@ -1030,7 +1066,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                       aria-haspopup="listbox"
                                       class="<removed-for-snapshot-test>"
                                       data-headlessui-state=""
-                                      id="headlessui-combobox-button-:r1f:"
+                                      id="headlessui-combobox-button-:r1i:"
                                       tabindex="-1"
                                       type="button"
                                     >

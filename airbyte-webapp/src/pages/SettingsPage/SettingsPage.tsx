@@ -26,6 +26,7 @@ export const SettingsPage: React.FC = () => {
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewWorkspaceSettings = useIntent("ViewWorkspaceSettings", { workspaceId });
   const canViewOrganizationSettings = useIntent("ViewOrganizationSettings", { organizationId });
+
   const showLicenseUi = licenseUi && canViewLicenseSettings;
 
   return (

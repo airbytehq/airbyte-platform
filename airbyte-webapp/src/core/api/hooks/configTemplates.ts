@@ -1,6 +1,10 @@
-import { listConfigTemplates, getConfigTemplate } from "../generated/AirbyteClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useNotificationService } from "hooks/services/Notification";
+
+import { listConfigTemplates, getConfigTemplate, publicCreateConfigTemplate } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
-import { ConfigTemplateList } from "../types/AirbyteClient";
+import { ConfigTemplateCreateRequestBody, ConfigTemplateList } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
@@ -24,4 +28,33 @@ export const useGetConfigTemplate = (configTemplateId: string, workspaceId: stri
   return useSuspenseQuery(configTemplates.detail(configTemplateId), () => {
     return getConfigTemplate({ configTemplateId, workspaceId }, requestOptions);
   });
+};
+
+export const useCreateConfigTemplate = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+  const { registerNotification } = useNotificationService();
+
+  return useMutation(
+    (configTemplate: ConfigTemplateCreateRequestBody) => {
+      return publicCreateConfigTemplate(configTemplate, requestOptions);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(configTemplates.lists());
+        registerNotification({
+          id: "config-template-created",
+          text: "Config template created",
+          type: "success",
+        });
+      },
+      onError: () => {
+        registerNotification({
+          id: "config-template-created",
+          text: "Failed to create config template",
+          type: "error",
+        });
+      },
+    }
+  );
 };

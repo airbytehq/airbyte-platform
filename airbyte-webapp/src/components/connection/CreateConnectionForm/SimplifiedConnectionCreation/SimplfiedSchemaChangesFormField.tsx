@@ -14,6 +14,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { NonBreakingChangesPreference } from "core/api/types/AirbyteClient";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
@@ -24,7 +25,8 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
   disabled,
 }) => {
   const { formatMessage } = useIntl();
-  const { connection, mode } = useConnectionFormService();
+  const { connection } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
 
   const watchedNonBreakingChangesPreference = useWatch<FormConnectionFormValues>({
