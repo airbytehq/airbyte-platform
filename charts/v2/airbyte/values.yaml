@@ -159,6 +159,7 @@ global:
 
     bucket: 
       log: airbyte-bucket
+      auditLogging: airbyte-bucket
       state: airbyte-bucket
       workloadOutput: airbyte-bucket
       activityPayload: airbyte-bucket
