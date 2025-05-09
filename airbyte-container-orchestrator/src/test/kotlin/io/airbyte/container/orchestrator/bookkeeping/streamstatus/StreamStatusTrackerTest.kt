@@ -5,8 +5,8 @@
 package io.airbyte.container.orchestrator.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.container.orchestrator.bookkeeping.events.StreamStatusUpdateEvent
+import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
@@ -39,16 +39,21 @@ class StreamStatusTrackerTest {
   private lateinit var dataExtractor: AirbyteMessageDataExtractor
   private lateinit var store: StreamStatusStateStore
   private lateinit var eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>
-  private lateinit var apiCache: MutableMap<StreamStatusKey, StreamStatusRead>
 
   @BeforeEach
   fun setup() {
     dataExtractor = mockk()
     store = mockk()
     eventPublisher = mockk()
-    apiCache = HashMap()
 
-    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, Fixtures.ctx, apiCache)
+    val context =
+      ReplicationContextProvider.Context(
+        configuredCatalog = mockk(),
+        replicationContext = Fixtures.ctx,
+        supportRefreshes = false,
+        replicationInput = mockk(),
+      )
+    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, context)
 
     every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor1
     every { store.get(any()) } returns null
@@ -166,7 +171,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key1,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -178,7 +183,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key2,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -190,7 +195,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key3,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -204,7 +209,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key4,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -371,7 +376,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key1,
             runState = updatedRunState,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -453,8 +458,6 @@ class StreamStatusTrackerTest {
 
     fun completeValue() = StreamStatusValue(ApiEnum.COMPLETE, 124, sourceComplete = true, streamEmpty = false)
 
-    fun incompleteValue() = StreamStatusValue(ApiEnum.INCOMPLETE, 246, sourceComplete = false, streamEmpty = false)
-
     fun traceMsg(
       type: AirbyteTraceMessage.Type = AirbyteTraceMessage.Type.STREAM_STATUS,
       status: ProtocolEnum = ProtocolEnum.RUNNING,
@@ -508,7 +511,7 @@ class StreamStatusTrackerTest {
             .withEmittedAt(1.0)
             .withStreamStatus(
               AirbyteStreamStatusTraceMessage()
-                .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
+                .withStatus(ProtocolEnum.RUNNING)
                 .withStreamDescriptor(
                   streamDescriptor1,
                 ).withReasons(

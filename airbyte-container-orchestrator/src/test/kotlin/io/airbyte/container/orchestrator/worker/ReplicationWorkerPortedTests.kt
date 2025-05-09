@@ -15,7 +15,7 @@ import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEvent
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
-import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTrackerFactory
+import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
 import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
@@ -109,7 +109,7 @@ class ReplicationWorkerPortedTests {
   private lateinit var replicationAirbyteMessageEventPublishingHelper: ReplicationAirbyteMessageEventPublishingHelper
   private lateinit var analyticsMessageTracker: AnalyticsMessageTracker
   private lateinit var streamStatusCompletionTracker: StreamStatusCompletionTracker
-  private lateinit var streamStatusTrackerFactory: StreamStatusTrackerFactory
+  private lateinit var streamStatusTracker: StreamStatusTracker
   private lateinit var recordMapper: RecordMapper
   private lateinit var destinationCatalogGenerator: DestinationCatalogGenerator
 
@@ -141,6 +141,7 @@ class ReplicationWorkerPortedTests {
     every { messageTracker.syncStatsTracker } returns syncStatsTracker
     syncPersistence = mockk(relaxed = true)
     recordSchemaValidator = mockk(relaxed = true)
+    streamStatusTracker = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     workerMetricReporter = WorkerMetricReporter(metricClient, "docker_image:v1.0.0")
     replicationInputFeatureFlagReader =
@@ -151,7 +152,6 @@ class ReplicationWorkerPortedTests {
     replicationAirbyteMessageEventPublishingHelper = mockk(relaxed = true)
     analyticsMessageTracker = mockk(relaxed = true)
     streamStatusCompletionTracker = mockk(relaxed = true)
-    streamStatusTrackerFactory = mockk(relaxed = true)
     recordMapper = mockk(relaxed = true)
     destinationCatalogGenerator = mockk(relaxed = true)
 
@@ -189,7 +189,7 @@ class ReplicationWorkerPortedTests {
           ThreadedTimeTracker(),
           analyticsMessageTracker,
           streamStatusCompletionTracker,
-          streamStatusTrackerFactory.create(replicationContext),
+          streamStatusTracker,
           recordMapper,
           replicationWorkerState,
           ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),
@@ -395,7 +395,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
-        streamStatusTrackerFactory.create(replicationContext),
+        streamStatusTracker,
         recordMapper,
         replicationWorkerState,
         ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),
@@ -454,7 +454,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
-        streamStatusTrackerFactory.create(replicationContext),
+        streamStatusTracker,
         recordMapper,
         replicationWorkerState,
         ReplicationContextProvider.Context(replicationContext, replicationInput.catalog, false, replicationInput),

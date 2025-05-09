@@ -9,6 +9,7 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState.COMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.INCOMPLETE
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RATE_LIMITED
 import io.airbyte.api.client.model.generated.StreamStatusRunState.RUNNING
+import jakarta.inject.Singleton
 import java.util.concurrent.ConcurrentHashMap
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
@@ -19,6 +20,7 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
  *
  * State layer.
  */
+@Singleton
 class StreamStatusStateStore {
   private val store: MutableMap<StreamStatusKey, StreamStatusValue> = ConcurrentHashMap()
 
