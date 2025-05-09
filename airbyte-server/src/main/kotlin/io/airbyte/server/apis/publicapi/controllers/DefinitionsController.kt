@@ -107,7 +107,7 @@ class DefinitionsController(
 
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
-    // The "manfiest" field contains the "spec", but it has a snake_case connection_specification
+    // The "manifest" field contains the "spec", but it has a snake_case connection_specification
     // and the platform code needs camelCase connectionSpecification.
     val spec = Jsons.clone(manifest.get("spec")) as ObjectNode
     spec.replace("connectionSpecification", spec.get("connection_specification"))
@@ -133,7 +133,7 @@ class DefinitionsController(
             .manifest(manifest)
             .spec(spec)
             .description("")
-            .version(request.version ?: 1),
+            .version(1),
         ),
     )
 
@@ -358,6 +358,13 @@ class DefinitionsController(
 
     ensureUserCanWrite(workspaceId)
 
+    val maxVersion =
+      connectorBuilderService
+        .getDeclarativeManifestsByActorDefinitionId(definitionId)
+        .toList()
+        .maxOf { it.version }
+    val nextVersion = maxVersion + 1
+
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
     // The "manifest" field contains the "spec", but it has a snake_case connection_specification
@@ -375,7 +382,7 @@ class DefinitionsController(
             .manifest(manifest)
             .spec(spec)
             .description("")
-            .version(request.version),
+            .version(nextVersion),
         ),
     )
 
@@ -384,7 +391,7 @@ class DefinitionsController(
         ConnectorBuilderProjectIdWithWorkspaceId()
           .workspaceId(workspaceId)
           .builderProjectId(projId)
-          .version(request.version),
+          .version(nextVersion),
       ).toPublicApi()
       .ok()
   }

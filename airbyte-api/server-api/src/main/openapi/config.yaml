@@ -8344,7 +8344,7 @@ paths:
       x-sdk-alias: listConnections
       x-sdk-group: Connections
       summary: List connections
-      x-sdk-entity-operation: Connection#list
+      x-sdk-entity-operation: Connections#read
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to list connections for. Empty list will retrieve all allowed workspaces.
@@ -10477,7 +10477,12 @@ components:
       format: uuid
     DeclarativeManifest:
       x-sdk-component: true
-      x-speakeasy-type-override: any
+      x-speakeasy-type-override: "any"
+      x-speakeasy-terraform-custom-type:
+        imports:
+          - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes
+        schemaType: "jsontypes.NormalizedType{}"
+        valueType: jsontypes.Normalized
       description: Low code CDK manifest JSON object
       type: object
     DeclarativeManifestBaseImageRead:
@@ -18283,8 +18288,6 @@ components:
       properties:
         name:
           type: string
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18292,11 +18295,8 @@ components:
       type: object
       x-sdk-component: true
       required:
-        - name
         - manifest
       properties:
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18334,6 +18334,7 @@ components:
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
         version:
+          x-speakeasy-terraform-ignore: true
           $ref: "#/components/schemas/ManifestVersion"
 
     CreateDefinitionRequest:
