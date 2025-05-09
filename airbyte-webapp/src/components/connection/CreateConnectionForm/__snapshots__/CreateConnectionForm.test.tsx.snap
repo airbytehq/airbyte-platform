@@ -910,26 +910,28 @@ exports[`CreateConnectionForm should render 1`] = `
                                   <div
                                     data-testid="primary-key-cell"
                                   >
-                                    <button
-                                      aria-expanded="false"
-                                      aria-haspopup="listbox"
-                                      class="<removed-for-snapshot-test>"
-                                      data-headlessui-state=""
-                                      id="headlessui-combobox-button-:r1c:"
-                                      tabindex="-1"
-                                      type="button"
-                                    >
-                                      <div
+                                    <div>
+                                      <button
+                                        aria-expanded="false"
+                                        aria-haspopup="listbox"
                                         class="<removed-for-snapshot-test>"
-                                        data-icon="key-circle"
-                                        data-testid="mocksvg"
-                                      />
-                                      <span
-                                        class="<removed-for-snapshot-test>"
+                                        data-headlessui-state=""
+                                        id="headlessui-combobox-button-:r1c:"
+                                        tabindex="-1"
+                                        type="button"
                                       >
-                                        Primary key missing
-                                      </span>
-                                    </button>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-icon="key-circle"
+                                          data-testid="mocksvg"
+                                        />
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          Primary key missing
+                                        </span>
+                                      </button>
+                                    </div>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />
@@ -1061,26 +1063,28 @@ exports[`CreateConnectionForm should render 1`] = `
                                   <div
                                     data-testid="primary-key-cell"
                                   >
-                                    <button
-                                      aria-expanded="false"
-                                      aria-haspopup="listbox"
-                                      class="<removed-for-snapshot-test>"
-                                      data-headlessui-state=""
-                                      id="headlessui-combobox-button-:r1i:"
-                                      tabindex="-1"
-                                      type="button"
-                                    >
-                                      <div
+                                    <div>
+                                      <button
+                                        aria-expanded="false"
+                                        aria-haspopup="listbox"
                                         class="<removed-for-snapshot-test>"
-                                        data-icon="key-circle"
-                                        data-testid="mocksvg"
-                                      />
-                                      <span
-                                        class="<removed-for-snapshot-test>"
+                                        data-headlessui-state=""
+                                        id="headlessui-combobox-button-:r1i:"
+                                        tabindex="-1"
+                                        type="button"
                                       >
-                                        Primary key missing
-                                      </span>
-                                    </button>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-icon="key-circle"
+                                          data-testid="mocksvg"
+                                        />
+                                        <span
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          Primary key missing
+                                        </span>
+                                      </button>
+                                    </div>
                                     <div
                                       style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
                                     />

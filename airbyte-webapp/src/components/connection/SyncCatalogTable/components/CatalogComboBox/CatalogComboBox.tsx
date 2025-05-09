@@ -65,7 +65,7 @@ type ControlButtonProps = Omit<BaseProps, "options"> & {
   setFilterQuery: (value: string) => void;
   maxSelectedLabels?: number;
 };
-const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((props, ref) => {
+const ControlButton = React.forwardRef<HTMLDivElement, ControlButtonProps>((props, ref) => {
   const { formatMessage } = useIntl();
   const {
     open,
@@ -121,7 +121,6 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
 
   const comboboxButton = (
     <ComboboxButton
-      ref={ref}
       as={Button}
       type="button"
       variant="clear"
@@ -138,7 +137,7 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
   );
 
   return (
-    <>
+    <div ref={ref}>
       {open ? (
         <ComboboxInput
           as={Input}
@@ -158,7 +157,7 @@ const ControlButton = React.forwardRef<HTMLButtonElement, ControlButtonProps>((p
       ) : (
         comboboxButton
       )}
-    </>
+    </div>
   );
 });
 ControlButton.displayName = "ControlButton";
