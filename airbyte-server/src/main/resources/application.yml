@@ -93,17 +93,6 @@ micronaut:
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
-  http:
-    client:
-      read-timeout: ${READ_TIMEOUT:10m}
-      max-content-length: 52428800 # 50MB
-      event-loop-group: http-client-event-loop
-  netty:
-    event-loops:
-      http-client-event-loop:
-        num-threads: 10
-        prefer-native-transport: true
-
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
@@ -356,6 +345,17 @@ airbyte:
   temporal:
   web-app:
     url: ${WEBAPP_URL:}
+    datadog_application_id: ${WEBAPP_DATADOG_APPLICATION_ID:}
+    datadog_client_token: ${WEBAPP_DATADOG_CLIENT_TOKEN:}
+    datadog_env: ${WEBAPP_DATADOG_ENV:}
+    datadog_service: ${WEBAPP_DATADOG_SERVICE:}
+    datadog_site: ${WEBAPP_DATADOG_SITE:}
+    hockeystack_api_key: ${WEBAPP_HOCKEYSTACK_API_KEY:}
+    launchdarkly_key: ${WEBAPP_LAUNCHDARKLY_KEY:}
+    osano_key: ${WEBAPP_OSANO_KEY:}
+    segment_token: ${WEBAPP_SEGMENT_TOKEN:}
+    zendesk_key: ${WEBAPP_ZENDESK_KEY:}
+
   workspace:
     root: ${WORKSPACE_ROOT}
   protocol:

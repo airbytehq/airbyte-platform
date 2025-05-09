@@ -3535,6 +3535,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebBackendGeographiesListResult"
+  /v1/web_backend/config:
+    get:
+      summary: Fetch webapp configuration
+      tags:
+        - web_backend
+      operationId: getWebappConfig
+      responses:
+        "200":
+          description: Successfully returned webapp configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebappConfigResponse"
+        "401":
+          description: Webapp configuration failed.
   /v1/jobs/create:
     post:
       tags:
@@ -16573,6 +16588,36 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         metadata:
           $ref: "#/components/schemas/StreamStatusRateLimitedMetadata"
+    WebappConfigResponse:
+      type: object
+      required:
+        - airbyteVersion
+        - edition
+      properties:
+        edition:
+          type: string
+        datadogApplicationId:
+          type: string
+        datadogClientToken:
+          type: string
+        datadogSite:
+          type: string
+        datadogService:
+          type: string
+        datadogEnv:
+          type: string
+        hockeystackApiKey:
+          type: string
+        keycloakBaseUrl:
+          type: string
+        launchdarklyKey:
+          type: string
+        osanoKey:
+          type: string
+        segmentToken:
+          type: string
+        zendeskKey:
+          type: string
     StreamStatusReadList:
       type: object
       properties:
