@@ -35,7 +35,7 @@ const ConnectorCard = ({ icon }: { icon?: string }) => {
 };
 
 const EmptyCard = () => {
-  return <Card inset className={classNames(styles.card, styles.empty)} />;
+  return <Card className={classNames(styles.card, styles.empty)} />;
 };
 export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProps> = ({
   icon,
