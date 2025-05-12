@@ -4342,6 +4342,67 @@ paths:
           description: Successful operation
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/create:
+    post:
+      tags:
+        - secret_storage
+      summary: Create secret storage
+      operationId: createSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/list:
+    post:
+      tags:
+        - secret_storage
+      summary: List all secret storages for a given scope
+      operationId: listSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/delete:
+    post:
+      tags:
+        - secret_storage
+      summary: Delete secret storage by its id
+      operationId: deleteSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/secret_storage/get:
     post:
       tags:
@@ -17083,6 +17144,35 @@ components:
       properties:
         value:
           type: boolean
+    SecretStorageCreateRequestBody:
+      description: Object representing a secret storage create request
+      required:
+        - descriptor
+        - secretStorageType
+        - config
+        - scope
+        - scopeId
+      properties:
+        descriptor:
+          type: string
+        secretStorageType:
+          $ref: "#/components/schemas/SecretStorageType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        config:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
+    SecretStorageListRequestBody:
+      description: Request body for listing secret storage
+      required:
+        - scopeType
+        - scopeId
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
     CreateOrUpdateSecretsPersistenceConfigRequestBody:
       description: Object representing a secret persistence configuration create/update request
       required:
@@ -17171,6 +17261,15 @@ components:
         - vault
         - aws_secrets_manager
         - azure_key_vault
+    SecretStorageReadList:
+      description: Object representing a list of secret storages
+      required:
+        - secretStorages
+      properties:
+        secretStorages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecretStorageRead"
     SecretStorageRead:
       description: Object representing a secret storage
       required:

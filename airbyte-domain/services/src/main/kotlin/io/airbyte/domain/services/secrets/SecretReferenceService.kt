@@ -140,7 +140,7 @@ class SecretReferenceService(
     externalCoordinate: String,
     airbyteManaged: Boolean,
     currentUserId: UserId?,
-    hydrationPath: String,
+    hydrationPath: String?,
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): SecretReferenceId {
