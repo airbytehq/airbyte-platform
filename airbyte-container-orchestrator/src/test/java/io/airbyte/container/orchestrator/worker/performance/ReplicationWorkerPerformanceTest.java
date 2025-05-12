@@ -42,6 +42,7 @@ import io.airbyte.container.orchestrator.worker.io.AirbyteSource;
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor;
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor;
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource;
+import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter;
 import io.airbyte.featureflag.DestinationTimeoutEnabled;
 import io.airbyte.featureflag.DestinationTimeoutSeconds;
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum;
@@ -55,12 +56,12 @@ import io.airbyte.mappers.application.RecordMapper;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.HeartbeatConfig;
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
 import io.airbyte.validation.json.JsonSchemaValidator;
-import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.AirbyteMessageDataExtractor;
 import io.airbyte.workers.internal.AirbyteMapper;
@@ -132,13 +133,18 @@ public abstract class ReplicationWorkerPerformanceTest {
   // @Measurement(iterations = 2)
   public void executeOneSync() throws InterruptedException {
     log.warn("availableProcessors {}", Runtime.getRuntime().availableProcessors());
+    final var replicationInput = mock(ReplicationInput.class);
+    final var heartbeatConfig = new HeartbeatConfig().withMaxSecondsBetweenMessages(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD.getSeconds());
+    final var sourceLauncherConfig = new IntegrationLauncherConfig().withDockerImage("test-image:0.01");
+    when(replicationInput.getHeartbeatConfig()).thenReturn(heartbeatConfig);
+    when(replicationInput.getSourceLauncherConfig()).thenReturn(sourceLauncherConfig);
     final var perDestination = new EmptyAirbyteDestination();
     final var metricClient = mock(MetricClient.class);
     final var messageTracker = mock(AirbyteMessageTracker.class);
     final var analyticsMessageTracker = mock(AnalyticsMessageTracker.class);
     final var syncPersistence = mock(SyncPersistence.class);
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
-    final var metricReporter = new WorkerMetricReporter(metricClient, "test-image:0.01");
+    final var metricReporter = new ReplicationMetricReporter(metricClient, replicationInput);
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
     final var validator = new RecordSchemaValidator(
         new JsonSchemaValidator(),
@@ -147,9 +153,6 @@ public abstract class ReplicationWorkerPerformanceTest {
             CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
-    final var replicationInput = mock(ReplicationInput.class);
-    final var heartbeatConfig = new HeartbeatConfig().withMaxSecondsBetweenMessages(DEFAULT_HEARTBEAT_FRESHNESS_THRESHOLD.getSeconds());
-    when(replicationInput.getHeartbeatConfig()).thenReturn(heartbeatConfig);
     when(replicationInputFeatureFlagReader.read(DestinationTimeoutEnabled.INSTANCE))
         .thenReturn(true);
     when(replicationInputFeatureFlagReader.read(WorkloadHeartbeatRate.INSTANCE))

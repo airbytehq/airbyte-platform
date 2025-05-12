@@ -9,13 +9,13 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.WorkerMetricReporter
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -52,7 +52,7 @@ private fun getUnexpectedFieldNames(
 @Singleton
 class FieldSelector(
   private val recordSchemaValidator: RecordSchemaValidator,
-  private val metricReporter: WorkerMetricReporter,
+  private val metricReporter: ReplicationMetricReporter,
   replicationInput: ReplicationInput,
   replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
 ) {
@@ -134,13 +134,13 @@ class FieldSelector(
       logger.info { "Schema validation was performed without limit." }
       uncountedValidationErrors.forEach { stream, errors ->
         logger.warn { "Schema validation errors found for stream $stream. Error messages: $errors" }
-        metricReporter.trackSchemaValidationErrors(stream, errors)
+        metricReporter.trackSchemaValidationErrors(stream, errors.toMutableSet())
       }
     } else {
       logger.info { "Schema validation was performed to a max of 10 records with errors per stream." }
       validationErrors.forEach { stream, errorPair ->
         logger.warn { "Schema validation errors found for stream $stream. Error messages: ${errorPair?.first}" }
-        metricReporter.trackSchemaValidationErrors(stream, errorPair?.first)
+        metricReporter.trackSchemaValidationErrors(stream, errorPair?.first?.toMutableSet())
       }
     }
     unexpectedFields.forEach { stream, unexpectedFieldNames ->
