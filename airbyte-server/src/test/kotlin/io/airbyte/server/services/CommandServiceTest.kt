@@ -8,6 +8,7 @@ import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
 import io.airbyte.config.FailureReason
+import io.airbyte.config.WorkloadPriority
 import io.airbyte.data.services.CatalogService
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
@@ -15,6 +16,7 @@ import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.workload.output.DocStoreAccessException
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
@@ -23,6 +25,8 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -81,17 +85,65 @@ class CommandServiceTest {
   }
 
   @Test
+  fun `createCheck for actorDef returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorDefinitionId = UUID.randomUUID(),
+        workspaceId = UUID.randomUUID(),
+        configuration = Jsons.emptyObject(),
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
+  fun `createCheck for actorId returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createCheckCommand(
+        commandId = COMMAND_ID,
+        actorId = UUID.randomUUID(),
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
+  fun `createDiscover returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createDiscoverCommand(
+        commandId = COMMAND_ID,
+        actorId = UUID.randomUUID(),
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
   fun `getConnectorJobOutput returns the output`() {
     val expectedOutput = ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns expectedOutput
 
-    val output = service.getConnectorJobOutput(COMMAND_ID)
+    val output = service.getCheckJobOutput(COMMAND_ID)
     assertEquals(expectedOutput, output)
   }
 
   @Test
   fun `getConnectorJobOutput does nothing for unknown command ids`() {
-    val output = service.getConnectorJobOutput(UNKNOWN_COMMAND_ID)
+    val output = service.getCheckJobOutput(UNKNOWN_COMMAND_ID)
     verify(exactly = 0) { workloadOutputReader.readConnectorOutput(any()) }
     assertNull(output)
   }
@@ -149,6 +201,20 @@ class CommandServiceTest {
     val status = service.getStatus(UNKNOWN_COMMAND_ID)
     verify(exactly = 0) { workloadService.getWorkload(any()) }
     assertNull(status)
+  }
+
+  @Test
+  fun `verify we return failure reason when we fail to read from the doc store`() {
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } throws DocStoreAccessException("boom", Exception("boom"))
+    val output = service.getCheckJobOutput(COMMAND_ID)
+    assertNotNull(output?.failureReason)
+  }
+
+  @Test
+  fun `verify we return failure reason when we read an empty response from the doc store`() {
+    every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns null
+    val output = service.getCheckJobOutput(COMMAND_ID)
+    assertNotNull(output?.failureReason)
   }
 
   companion object {

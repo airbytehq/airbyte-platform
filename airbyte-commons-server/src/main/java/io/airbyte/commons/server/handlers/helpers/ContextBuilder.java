@@ -137,4 +137,18 @@ public class ContextBuilder {
         .withActorType(ActorType.DESTINATION);
   }
 
+  public ActorContext fromActorDefinitionId(final UUID actorDefinitionId, final ActorType actorType, final UUID workspaceId) {
+    UUID organizationId = null;
+    try {
+      organizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).getOrganizationId();
+    } catch (final ConfigNotFoundException | IOException | JsonValidationException e) {
+      log.error("Failed to get organization id for workspace id: {}", workspaceId, e);
+    }
+    return new ActorContext()
+        .withActorDefinitionId(actorDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withActorType(actorType);
+  }
+
 }

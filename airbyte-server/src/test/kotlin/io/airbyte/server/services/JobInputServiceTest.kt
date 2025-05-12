@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.version.Version
+import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.DestinationConnection
@@ -271,6 +272,9 @@ class JobInputServiceTest {
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
+    val actorContext: ActorContext = mockk()
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns actorContext
+
     val jobId = UUID.randomUUID().toString()
 
     val expected =
@@ -291,7 +295,7 @@ class JobInputServiceTest {
             .withActorId(null)
             .withConnectionConfiguration(configuration)
             .withResourceRequirements(null)
-            .withActorContext(null)
+            .withActorContext(actorContext)
             .withNetworkSecurityTokens(emptyList()),
       )
 
@@ -335,6 +339,7 @@ class JobInputServiceTest {
     every { oAuthConfigSupplier.maskDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val jobId = UUID.randomUUID().toString()

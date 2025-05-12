@@ -61,11 +61,12 @@ class CommandApiController(
   override fun getCheckCommandOutput(
     @Body checkCommandOutputRequest: CheckCommandOutputRequest,
   ): CheckCommandOutputResponse {
-    val output = commandService.getConnectorJobOutput(checkCommandOutputRequest.id)
+    val output = commandService.getCheckJobOutput(checkCommandOutputRequest.id)
     return CheckCommandOutputResponse().apply {
       id(checkCommandOutputRequest.id)
       output?.let {
-        status(it.checkConnection.status.toApi())
+        status(it.checkConnection?.status?.toApi())
+        message(it.checkConnection?.message)
         failureReason(it.failureReason.toApi())
       }
     }
@@ -100,13 +101,13 @@ class CommandApiController(
       null -> null
       else ->
         ApiFailureReason()
-          .failureOrigin(this.failureOrigin.convertTo())
-          .failureType(this.failureType.convertTo())
+          .failureOrigin(this.failureOrigin?.convertTo())
+          .failureType(this.failureType?.convertTo())
           .externalMessage(this.externalMessage)
           .internalMessage(this.internalMessage)
           .stacktrace(this.stacktrace)
           .timestamp(this.timestamp)
-          .retryable(if (this.retryable != null) this.retryable else true)
+          .retryable(this.retryable)
     }
 
   private fun StandardCheckConnectionOutput.Status.toApi(): CheckCommandOutputResponse.StatusEnum =

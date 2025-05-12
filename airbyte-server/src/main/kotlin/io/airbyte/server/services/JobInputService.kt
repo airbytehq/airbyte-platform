@@ -180,9 +180,10 @@ class JobInputService(
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L
+    val actorType = io.airbyte.config.ActorType.SOURCE
 
     return buildJobCheckConnectionConfig(
-      actorType = io.airbyte.config.ActorType.SOURCE,
+      actorType = actorType,
       definitionId = sourceDefinition.sourceDefinitionId,
       actorId = null,
       workspaceId = workspaceId,
@@ -192,7 +193,7 @@ class JobInputService(
       isCustomConnector = sourceDefinition.custom,
       resourceRequirements = resourceRequirements,
       allowedHosts = sourceDefinitionVersion.allowedHosts,
-      actorContext = null,
+      actorContext = contextBuilder.fromActorDefinitionId(sourceDefinition.sourceDefinitionId, actorType, workspaceId),
       jobId = jobId,
       attemptId = attemptId,
     )
@@ -217,9 +218,10 @@ class JobInputService(
 
     val jobId = UUID.randomUUID().toString()
     val attemptId = 0L
+    val actorType = io.airbyte.config.ActorType.DESTINATION
 
     return buildJobCheckConnectionConfig(
-      actorType = io.airbyte.config.ActorType.DESTINATION,
+      actorType = actorType,
       definitionId = destinationDefinition.destinationDefinitionId,
       actorId = null,
       workspaceId = workspaceId,
@@ -229,7 +231,7 @@ class JobInputService(
       isCustomConnector = destinationInformation.destinationDefinition.custom,
       resourceRequirements = destinationInformation.resourceRequirements,
       allowedHosts = destinationInformation.destinationDefinitionVersion.allowedHosts,
-      actorContext = null,
+      actorContext = contextBuilder.fromActorDefinitionId(destinationDefinition.destinationDefinitionId, actorType, workspaceId),
       jobId = jobId,
       attemptId = attemptId,
     )
@@ -281,7 +283,7 @@ class JobInputService(
     isCustomConnector: Boolean,
     resourceRequirements: ResourceRequirements?,
     allowedHosts: AllowedHosts?,
-    actorContext: ActorContext?,
+    actorContext: ActorContext,
     jobId: String?,
     attemptId: Long?,
   ): CheckConnectionInput {

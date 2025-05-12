@@ -6080,6 +6080,8 @@ paths:
                   status:
                     type: string
                     enum: [succeeded, failed]
+                  message:
+                    type: string
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
 

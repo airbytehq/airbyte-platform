@@ -13,6 +13,7 @@ import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorType
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.repositories.ActorRepository
@@ -26,6 +27,7 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workload.common.WorkloadLabels
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
+import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.services.NotFoundException
@@ -82,6 +84,10 @@ class CommandService(
   private val discoverAutoRefreshWindow: Duration =
     if (discoverAutoRefreshWindowMinutes > 0) discoverAutoRefreshWindowMinutes.minutes else Duration.INFINITE
 
+  /** Create a Check command for an actorDefinitionId and a configuration
+   *
+   * returns true if a command has been created, false if it already existed.
+   */
   fun createCheckCommand(
     commandId: String,
     actorDefinitionId: UUID,
@@ -90,7 +96,11 @@ class CommandService(
     workloadPriority: WorkloadPriority,
     signalInput: String?,
     commandInput: JsonNode,
-  ) {
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
     val checkInput = jobInputService.getCheckInput(actorDefinitionId, workspaceId, configuration)
     val workloadPayload =
       createCheckCreateWorkloadRequest(
@@ -108,8 +118,13 @@ class CommandService(
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
     )
+    return true
   }
 
+  /** Create a Check command for an actorId
+   *
+   * returns true if a command has been created, false if it already existed.
+   */
   fun createCheckCommand(
     commandId: String,
     actorId: UUID,
@@ -118,7 +133,11 @@ class CommandService(
     workloadPriority: WorkloadPriority,
     signalInput: String?,
     commandInput: JsonNode,
-  ) {
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
     val checkInput = jobInputService.getCheckInput(actorId, jobId, attemptNumber)
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
@@ -138,6 +157,7 @@ class CommandService(
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
     )
+    return true
   }
 
   private fun createCheckCreateWorkloadRequest(
@@ -188,7 +208,11 @@ class CommandService(
     workloadPriority: WorkloadPriority,
     signalInput: String?,
     commandInput: JsonNode,
-  ) {
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
     val actualJobId = jobId ?: UUID.randomUUID().toString()
     val actualAttemptNumber = attemptNumber ?: 0L
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
@@ -209,6 +233,7 @@ class CommandService(
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
     )
+    return true
   }
 
   private fun createDiscoverCreateWorkloadRequest(
@@ -340,12 +365,16 @@ class CommandService(
         }
       }.orElse(null)
 
-  fun getConnectorJobOutput(commandId: String): ConnectorJobOutput? =
-    commandsRepository
-      .findById(commandId)
-      .map { command ->
-        workloadOutputReader.readConnectorOutput(command.workloadId)
-      }.orElse(null)
+  fun getCheckJobOutput(commandId: String): ConnectorJobOutput? =
+    getConnectorJobOutput(commandId) { failureReason ->
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
+        .withCheckConnection(
+          StandardCheckConnectionOutput()
+            .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+            .withMessage(failureReason.externalMessage),
+        ).withFailureReason(failureReason)
+    }
 
   data class DiscoverJobOutput(
     val catalogId: UUID?,
@@ -354,12 +383,71 @@ class CommandService(
   )
 
   fun getDiscoverJobOutput(commandId: String): DiscoverJobOutput? =
-    getConnectorJobOutput(commandId)?.let { jobOutput ->
+    getConnectorJobOutput(commandId) { failureReason ->
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+        .withDiscoverCatalogId(null)
+        .withFailureReason(failureReason)
+    }?.let { jobOutput ->
       val catalog = jobOutput.discoverCatalogId?.let { catalogService.getActorCatalogById(it) }
       return DiscoverJobOutput(
         catalogId = jobOutput.discoverCatalogId,
         catalog = catalog,
         failureReason = jobOutput.failureReason,
       )
+    }
+
+  private fun getConnectorJobOutput(
+    commandId: String,
+    onFailure: (FailureReason) -> ConnectorJobOutput,
+  ): ConnectorJobOutput? =
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        try {
+          workloadOutputReader.readConnectorOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
+        } catch (e: Exception) {
+          val workload = workloadService.getWorkload(command.workloadId)
+          val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
+          onFailure(failureReason)
+        }
+      }.orElse(null)
+
+  private fun getFailureReasonForMissingConnectorJobOutput(
+    commandId: String,
+    workload: Workload,
+    e: Exception?,
+  ): FailureReason =
+    when (workload.status) {
+      // This is pretty bad, the workload succeeded, but we failed to read the output
+      WorkloadStatus.SUCCESS ->
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+          .withExternalMessage("Failed to read the output")
+          .withInternalMessage("Failed to read the output of a successful workload $commandId")
+          .withStacktrace(e?.stackTraceToString())
+
+      // do some classification from workload.terminationSource
+      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE ->
+        FailureReason()
+          .withFailureOrigin(
+            when (workload.terminationSource) {
+              "source" -> FailureReason.FailureOrigin.SOURCE
+              "destination" -> FailureReason.FailureOrigin.DESTINATION
+              else -> FailureReason.FailureOrigin.AIRBYTE_PLATFORM
+            },
+          ).withExternalMessage(
+            "Workload ${if (workload.status == WorkloadStatus.CANCELLED) "cancelled by" else "failed, source:"} ${workload.terminationSource}",
+          ).withInternalMessage(workload.terminationReason)
+
+      // We should never be in this situation, workload is still running not having an output is expected,
+      // we should not be trying to read the output of a non-terminal workload.
+      else ->
+        FailureReason()
+          .withFailureOrigin(FailureReason.FailureOrigin.AIRBYTE_PLATFORM)
+          .withFailureType(FailureReason.FailureType.SYSTEM_ERROR)
+          .withExternalMessage("$commandId is still running, try again later.")
+          .withInternalMessage("$commandId isn't in a terminal state, no output available")
     }
 }

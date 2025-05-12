@@ -81,7 +81,7 @@ class CommandApiControllerTest {
 
   @Test
   fun `getCheckCommandOutput can return a successful response`() {
-    every { commandService.getConnectorJobOutput(TEST_COMMAND_ID) } returns
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
         .withCheckConnection(
@@ -91,12 +91,35 @@ class CommandApiControllerTest {
 
     val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
     assertEquals(CheckCommandOutputResponse().id(TEST_COMMAND_ID).status(CheckCommandOutputResponse.StatusEnum.SUCCEEDED), output)
-    verify { commandService.getConnectorJobOutput(TEST_COMMAND_ID) }
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
+  }
+
+  @Test
+  fun `getCheckCommandOutput can return a failure message`() {
+    val message = "why things failed"
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
+      ConnectorJobOutput()
+        .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
+        .withCheckConnection(
+          StandardCheckConnectionOutput()
+            .withStatus(StandardCheckConnectionOutput.Status.FAILED)
+            .withMessage(message),
+        )
+
+    val output = controller.getCheckCommandOutput(CheckCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(
+      CheckCommandOutputResponse()
+        .id(TEST_COMMAND_ID)
+        .status(CheckCommandOutputResponse.StatusEnum.FAILED)
+        .message(message),
+      output,
+    )
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
   }
 
   @Test
   fun `getCheckCommandOutput can return a failure response`() {
-    every { commandService.getConnectorJobOutput(TEST_COMMAND_ID) } returns
+    every { commandService.getCheckJobOutput(TEST_COMMAND_ID) } returns
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
         .withCheckConnection(
@@ -131,7 +154,7 @@ class CommandApiControllerTest {
         ),
       output,
     )
-    verify { commandService.getConnectorJobOutput(TEST_COMMAND_ID) }
+    verify { commandService.getCheckJobOutput(TEST_COMMAND_ID) }
   }
 
   @Test
@@ -212,6 +235,27 @@ class CommandApiControllerTest {
 
   @Test
   fun `run check with an actor id`() {
+    val request =
+      RunCheckCommandRequest()
+        .id(TEST_COMMAND_ID)
+        .actorId(TEST_ACTOR_ID)
+    val output = controller.runCheckCommand(request)
+    assertEquals(RunCheckCommandResponse().id(TEST_COMMAND_ID), output)
+    verify {
+      commandService.createCheckCommand(
+        TEST_COMMAND_ID,
+        TEST_ACTOR_ID,
+        null,
+        null,
+        WorkloadPriority.DEFAULT,
+        null,
+        any(),
+      )
+    }
+  }
+
+  @Test
+  fun `run check with an actor id returns 200 if the command already existed`() {
     val request =
       RunCheckCommandRequest()
         .id(TEST_COMMAND_ID)
