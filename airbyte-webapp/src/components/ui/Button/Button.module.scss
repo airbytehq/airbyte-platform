@@ -105,7 +105,7 @@ $clear-dark-text-color-active: colors.$grey-600;
     height: variables.$button-height-xs;
     font-size: variables.$font-size-sm;
     line-height: 15px;
-    padding: 10px;
+    padding: 6px 10px;
 
     .button__icon {
       font-size: variables.$font-size-lg;
@@ -116,7 +116,7 @@ $clear-dark-text-color-active: colors.$grey-600;
     height: variables.$button-height-sm;
     font-size: variables.$font-size-sm;
     line-height: 1.2;
-    padding: 10px 14px;
+    padding: 8px 10px;
 
     .button__icon {
       font-size: 15px;
@@ -277,7 +277,6 @@ $clear-dark-text-color-active: colors.$grey-600;
   }
 
   &--link {
-    font: inherit;
     padding: 0;
     background: none;
     background-color: transparent;
