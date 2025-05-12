@@ -130,7 +130,7 @@ const ControlButton = React.forwardRef<HTMLDivElement, ControlButtonProps>((prop
       iconSize="sm"
       onMouseEnter={() => onButtonHover(true)}
       onMouseLeave={() => onButtonHover(false)}
-      className={classnames(styles.buttonClear, { [styles.error]: error }, controlClassName)}
+      className={classnames(styles.buttonClear, { [styles["buttonClear--error"]]: error }, controlClassName)}
     >
       {getButtonText()}
     </ComboboxButton>

@@ -2,7 +2,7 @@ import React from "react";
 
 import { IconProps } from "../Icon";
 
-type ButtonSize = "xs" | "sm" | "lg";
+type ButtonSize = "xs" | "sm";
 export type ButtonVariant =
   | "primary"
   | "secondary"

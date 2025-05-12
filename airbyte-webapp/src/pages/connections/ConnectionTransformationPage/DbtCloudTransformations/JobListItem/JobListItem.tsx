@@ -62,7 +62,7 @@ export const JobListItem: React.FC<JobListItemProps> = ({
           </Text>
         </FlexItem>
         <Button
-          size="lg"
+          size="sm"
           type="button"
           variant="clear"
           onClick={removeJob}

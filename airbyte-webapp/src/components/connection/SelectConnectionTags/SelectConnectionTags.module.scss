@@ -11,22 +11,10 @@
   box-shadow: variables.$box-shadow-raised;
   overflow: auto;
 
-  // We should use a <Button> variant instead of this class, but the current component is not flexible enough
-  // https://github.com/airbytehq/airbyte-internal-issues/issues/11481
   &__trigger {
-    cursor: pointer;
     padding: 0;
-    font-size: variables.$font-size-xs;
     height: variables.$tag-height;
     width: variables.$tag-height;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background-color: transparent;
-    color: colors.$grey-400;
-    border: variables.$border-thin solid colors.$grey-200;
-    box-shadow: none;
-    border-radius: variables.$border-radius-sm;
   }
 
   ul,

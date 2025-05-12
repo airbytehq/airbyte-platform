@@ -18,11 +18,11 @@ exports[`SchemaChangesBackdrop renders with breaking changes and prevents backgr
         Please review the schema updates before making changes to the connection
       </p>
       <button
-        class="button sizeXS typePrimaryDark"
+        class="button button--size-xs button--primary-dark"
         type="button"
       >
         <span
-          class="childrenContainer"
+          class="button__children"
         >
           Review changes
         </span>

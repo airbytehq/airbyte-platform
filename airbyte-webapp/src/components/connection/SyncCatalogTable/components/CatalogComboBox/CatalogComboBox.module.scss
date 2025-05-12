@@ -14,15 +14,19 @@ $control-height: variables.$button-height-xs;
   overflow: auto;
 }
 
-.buttonClear.buttonClear {
+.buttonClear {
   height: $control-height;
   border: variables.$border-thin solid transparent;
   color: colors.$grey-400;
   justify-content: start;
   padding: 0;
 
-  &.error {
-    color: colors.$red-300;
+  &--error {
+    color: var(--color-red-300);
+
+    &:hover {
+      color: var(--color-red-300);
+    }
   }
 }
 

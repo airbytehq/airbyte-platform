@@ -108,7 +108,7 @@ export const ConnectorEmptyStateContent: React.FC<ConnectorEmptyStateContentProp
           )}
         </Text>
       </FlexContainer>
-      <Button size="lg" onClick={onButtonClick} data-testid="create-connection">
+      <Button size="sm" onClick={onButtonClick} data-testid="create-connection">
         <Text inverseColor bold size="lg">
           <FormattedMessage id="connector.connections.empty.button" />
         </Text>
