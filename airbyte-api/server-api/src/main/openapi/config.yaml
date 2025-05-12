@@ -6185,6 +6185,30 @@ paths:
                   id:
                     type: string
 
+  /v1/workload_output/write:
+    post:
+      summary: Write the output of a workload
+      tags:
+        - workload_output
+      operationId: writeWorkloadOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: WorkloadOutputWriteRequest
+              required:
+                - workloadId
+                - output
+              properties:
+                workloadId:
+                  type: string
+                output:
+                  type: string
+      responses:
+        "204":
+          description: Successfully wrote output
+
   /v1/dataplane_group/create:
     post:
       summary: Create a dataplane group
