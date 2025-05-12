@@ -11,33 +11,49 @@ import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
+import io.airbyte.config.Attempt
+import io.airbyte.config.AttemptSyncConfig
+import io.airbyte.config.ConfiguredAirbyteCatalog
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.Job
+import io.airbyte.config.JobConfig
+import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
+import io.airbyte.config.StandardSync
+import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
 import io.airbyte.data.repositories.ActorDefinitionRepository
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.entities.ActorDefinition
+import io.airbyte.data.services.AttemptService
+import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.services.secrets.SecretReferenceService
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 
 class JobInputServiceTest {
@@ -51,6 +67,11 @@ class JobInputServiceTest {
   private lateinit var secretReferenceService: SecretReferenceService
   private lateinit var contextBuilder: ContextBuilder
   private lateinit var scopedConfigurationService: ScopedConfigurationService
+  private lateinit var connectionService: ConnectionService
+  private lateinit var jobService: JobService
+  private lateinit var replicationFeatureFlags: ReplicationFeatureFlags
+  private lateinit var featureFlagClient: FeatureFlagClient
+  private lateinit var attemptService: AttemptService
   private lateinit var jobInputService: JobInputService
 
   private val workspaceId = UUID.randomUUID()
@@ -63,6 +84,15 @@ class JobInputServiceTest {
   private val dockerRepository = "airbyte/docker"
   private val dockerImageTag = "1.0.0"
   private val testDockerImage = "$dockerRepository:$dockerImageTag"
+  private val connectionId = UUID.randomUUID()
+  private val sourceConfiguration: JsonNode = Jsons.jsonNode(mapOf("source" to "configuration"))
+  private val destinationConfiguration: JsonNode = Jsons.jsonNode(mapOf("destination" to "configuration"))
+  private val protocolVersion = "1.2.3"
+  private val jobId = 321L
+  private val attemptNumber = 3
+  private val signalInput = "signalInput"
+  private val destinationImage = "destination/image"
+  private val destinationImageTag = "2.0"
 
   @BeforeEach
   fun setup() {
@@ -76,6 +106,11 @@ class JobInputServiceTest {
     secretReferenceService = mockk()
     contextBuilder = mockk()
     scopedConfigurationService = mockk()
+    connectionService = mockk()
+    jobService = mockk()
+    replicationFeatureFlags = mockk()
+    featureFlagClient = mockk()
+    attemptService = mockk()
 
     jobInputService =
       JobInputService(
@@ -89,6 +124,11 @@ class JobInputServiceTest {
         secretReferenceService,
         contextBuilder,
         scopedConfigurationService,
+        connectionService,
+        jobService,
+        replicationFeatureFlags,
+        featureFlagClient,
+        attemptService,
       )
   }
 
@@ -485,5 +525,146 @@ class JobInputServiceTest {
     assertEquals(false, actual.integrationLauncherConfig.isCustomConnector)
     assertEquals(attemptId, actual.integrationLauncherConfig.attemptId)
     assertEquals(jobId, actual.integrationLauncherConfig.jobId)
+  }
+
+  @Test
+  fun `getReplicationInput returns correct ReplicationActivityInput`() {
+    val mockConnection = mockk<StandardSync>()
+    every { mockConnection.connectionId } returns connectionId
+    every { mockConnection.sourceId } returns sourceId
+    every { mockConnection.destinationId } returns destinationId
+
+    val mockSource = mockk<SourceConnection>()
+    every { mockSource.sourceId } returns sourceId
+    every { mockSource.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSource.workspaceId } returns workspaceId
+    every { mockSource.configuration } returns sourceConfiguration
+
+    val mockSourceDefinition = mockk<StandardSourceDefinition>()
+    every { mockSourceDefinition.sourceDefinitionId } returns sourceDefinitionId
+    every { mockSourceDefinition.custom } returns false
+    every { mockSourceDefinition.sourceType } returns StandardSourceDefinition.SourceType.DATABASE
+
+    val mockSourceDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockSourceDefinitionVersion.dockerRepository } returns dockerRepository
+    every { mockSourceDefinitionVersion.dockerImageTag } returns dockerImageTag
+    every { mockSourceDefinitionVersion.protocolVersion } returns protocolVersion
+    every { mockSourceDefinitionVersion.allowedHosts } returns AllowedHosts()
+    every { mockSourceDefinitionVersion.supportsRefreshes } returns false
+
+    val mockDestination = mockk<DestinationConnection>()
+    every { mockDestination.destinationId } returns destinationId
+    every { mockDestination.destinationDefinitionId } returns destinationDefinitionId
+    every { mockDestination.workspaceId } returns workspaceId
+    every { mockDestination.configuration } returns destinationConfiguration
+
+    val mockDestinationDefinition = mockk<StandardDestinationDefinition>()
+    every { mockDestinationDefinition.destinationDefinitionId } returns destinationDefinitionId
+    every { mockDestinationDefinition.custom } returns true
+
+    val mockDestinationDefinitionVersion = mockk<ActorDefinitionVersion>()
+    every { mockDestinationDefinitionVersion.dockerImageTag } returns destinationImageTag
+    every { mockDestinationDefinitionVersion.dockerRepository } returns destinationImage
+    every { mockDestinationDefinitionVersion.protocolVersion } returns protocolVersion
+    every { mockDestinationDefinitionVersion.allowedHosts } returns AllowedHosts()
+
+    val attemptSyncConfig = mockk<AttemptSyncConfig>()
+    every { attemptSyncConfig.sourceConfiguration } returns null
+
+    val mockAttempt = mockk<Attempt>()
+    every { mockAttempt.attemptNumber } returns attemptNumber
+    every { mockAttempt.processingTaskQueue } returns "test_queue"
+    every { mockAttempt.syncConfig } returns Optional.of(attemptSyncConfig)
+
+    val jobSyncConfig = mockk<JobSyncConfig>()
+    every { jobSyncConfig.namespaceDefinition } returns null
+    every { jobSyncConfig.namespaceFormat } returns null
+    every { jobSyncConfig.syncResourceRequirements } returns SyncResourceRequirements()
+    every { jobSyncConfig.configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
+
+    val jobConfig = mockk<JobConfig>()
+    every { jobConfig.configType } returns JobConfig.ConfigType.SYNC
+    every { jobConfig.sync } returns jobSyncConfig
+
+    val mockJob = mockk<Job>()
+    every { mockJob.id } returns jobId
+    every { mockJob.status } returns io.airbyte.config.JobStatus.SUCCEEDED
+    every { mockJob.config } returns jobConfig
+
+    every { connectionService.getStandardSync(connectionId) } returns mockConnection
+    every { sourceService.getSourceConnection(sourceId) } returns mockSource
+    every { sourceService.getStandardSourceDefinition(sourceDefinitionId) } returns mockSourceDefinition
+    every {
+      actorDefinitionVersionHelper.getSourceVersion(
+        mockSourceDefinition,
+        workspaceId,
+        sourceId,
+      )
+    } returns mockSourceDefinitionVersion
+    every { destinationService.getDestinationConnection(destinationId) } returns mockDestination
+    every {
+      destinationService.getStandardDestinationDefinition(
+        destinationDefinitionId,
+      )
+    } returns mockDestinationDefinition
+    every {
+      actorDefinitionVersionHelper.getDestinationVersion(
+        mockDestinationDefinition,
+        workspaceId,
+        destinationId,
+      )
+    } returns mockDestinationDefinitionVersion
+    every { jobService.findById(jobId) } returns mockJob
+    every { attemptService.getAttempt(jobId, attemptNumber.toLong()) } returns mockAttempt
+    val connectionContext = mockk<ConnectionContext>()
+    every { contextBuilder.fromConnectionId(connectionId) } returns connectionContext
+    every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
+    every { replicationFeatureFlags.featureFlags } returns emptyList() // or mock with relevant flags
+    every { mockSourceDefinition.maxSecondsBetweenMessages } returns 3600L
+
+    val expected =
+      ReplicationActivityInput(
+        sourceId = sourceId,
+        destinationId = destinationId,
+        sourceConfiguration = sourceConfiguration,
+        destinationConfiguration = destinationConfiguration,
+        jobRunConfig = JobRunConfig().withJobId(jobId.toString()).withAttemptId(attemptNumber.toLong()),
+        sourceLauncherConfig =
+          IntegrationLauncherConfig()
+            .withJobId(jobId.toString())
+            .withWorkspaceId(workspaceId)
+            .withDockerImage("$dockerRepository:$dockerImageTag")
+            .withProtocolVersion(
+              Version(protocolVersion),
+            ).withIsCustomConnector(false)
+            .withAttemptId(attemptNumber.toLong())
+            .withAllowedHosts(AllowedHosts()),
+        destinationLauncherConfig =
+          IntegrationLauncherConfig()
+            .withJobId(jobId.toString())
+            .withWorkspaceId(workspaceId)
+            .withDockerImage("$destinationImage:$destinationImageTag")
+            .withProtocolVersion(
+              Version(protocolVersion),
+            ).withIsCustomConnector(true)
+            .withAttemptId(attemptNumber.toLong())
+            .withAllowedHosts(AllowedHosts()),
+        syncResourceRequirements = SyncResourceRequirements(),
+        workspaceId = workspaceId,
+        connectionId = connectionId,
+        taskQueue = "test_queue",
+        isReset = false,
+        connectionContext = connectionContext,
+        signalInput = signalInput,
+        networkSecurityTokens = emptyList(),
+        includesFiles = false,
+        omitFileTransferEnvVar = false,
+        featureFlags = emptyMap(),
+        heartbeatMaxSecondsBetweenMessages = 3600L,
+        supportsRefreshes = false,
+      )
+
+    val actual = jobInputService.getReplicationInput(connectionId, signalInput, jobId, attemptNumber.toLong())
+    assertEquals(expected, actual)
   }
 }

@@ -11,6 +11,11 @@ import java.time.OffsetDateTime
 
 interface JobService {
   /**
+   * Find latest job by jobId
+   */
+  fun findById(id: Long): Job?
+
+  /**
    * List jobs with the given filters.
    */
   fun listJobs(

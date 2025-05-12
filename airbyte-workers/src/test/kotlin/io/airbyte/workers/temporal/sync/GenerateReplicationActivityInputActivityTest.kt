@@ -21,6 +21,7 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals

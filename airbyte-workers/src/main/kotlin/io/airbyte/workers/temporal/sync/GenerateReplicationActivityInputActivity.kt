@@ -14,7 +14,6 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Destination
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Source
 import io.airbyte.featureflag.SourceType
@@ -23,6 +22,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.airbyte.workers.temporal.sync.GenerateReplicationActivityInputActivity.Companion.toReplicationActivityInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.ActivityInterface
@@ -194,7 +194,3 @@ class GenerateReplicationActivityInputActivityImpl(
     return Multi(contexts)
   }
 }
-
-data class ReplicationFeatureFlags(
-  val featureFlags: List<Flag<*>>,
-)

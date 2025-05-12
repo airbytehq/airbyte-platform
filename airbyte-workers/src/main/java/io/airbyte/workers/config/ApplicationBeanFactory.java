@@ -18,7 +18,7 @@ import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.SingleContainerTest;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
-import io.airbyte.workers.temporal.sync.ReplicationFeatureFlags;
+import io.airbyte.workers.models.ReplicationFeatureFlags;
 import io.micronaut.context.annotation.Factory;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;

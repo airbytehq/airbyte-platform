@@ -15,15 +15,23 @@ import io.airbyte.commons.version.Version
 import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
+import io.airbyte.config.Attempt
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.DestinationConnection
+import io.airbyte.config.Job
+import io.airbyte.config.JobConfig
+import io.airbyte.config.JobStatus.NON_TERMINAL_STATUSES
+import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
+import io.airbyte.config.SourceActorConfig
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.StandardSourceDefinition
+import io.airbyte.config.StandardSync
+import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
@@ -32,7 +40,10 @@ import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.toConfigWithRefs
 import io.airbyte.data.repositories.ActorDefinitionRepository
 import io.airbyte.data.repositories.ActorRepository
+import io.airbyte.data.services.AttemptService
+import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
+import io.airbyte.data.services.JobService
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.shared.NetworkSecurityTokenKey
@@ -40,14 +51,25 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType
 import io.airbyte.domain.models.ActorId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.domain.services.secrets.SecretReferenceService
+import io.airbyte.featureflag.Connection
+import io.airbyte.featureflag.Context
+import io.airbyte.featureflag.Destination
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.Multi
+import io.airbyte.featureflag.Source
+import io.airbyte.featureflag.SourceType
+import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.server.exceptions.NotFoundException
 import jakarta.inject.Singleton
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 
 val log = KotlinLogging.logger { }
 
@@ -63,6 +85,11 @@ class JobInputService(
   private val secretReferenceService: SecretReferenceService,
   private val contextBuilder: ContextBuilder,
   private val scopedConfigurationService: ScopedConfigurationService,
+  private val connectionService: ConnectionService,
+  private val jobService: JobService,
+  private val replicationFeatureFlags: ReplicationFeatureFlags,
+  private val featureFlagClient: FeatureFlagClient,
+  private val attemptService: AttemptService,
 ) {
   companion object {
     private val HASH_FUNCTION = Hashing.md5()
@@ -97,6 +124,257 @@ class JobInputService(
       ActorType.destination -> getCheckInputByDestinationDefinitionId(actorDefinitionId, workspaceId, configuration)
       else -> throw IllegalStateException("Actor type ${actorDefinition.actorType} not supported")
     }
+  }
+
+  fun getReplicationInput(
+    connectionId: UUID,
+    signalInput: String,
+    jobId: Long,
+    attemptNumber: Long,
+  ): ReplicationActivityInput {
+    val (
+      connection: StandardSync,
+      source: SourceConnection,
+      sourceDefinition: StandardSourceDefinition,
+      sourceDefinitionVersion: ActorDefinitionVersion,
+      destination: DestinationConnection,
+      destinationDefinition: StandardDestinationDefinition,
+      destinationDefinitionVersion: ActorDefinitionVersion,
+    ) = getConnectionAndActors(connectionId)
+
+    val (currentJob: Job, currentAttempt: Attempt) = getCurrentJobAndAttempt(jobId, attemptNumber)
+
+    val sourceIntegrationLauncherConfig =
+      getIntegrationLauncherConfig(
+        jobId = currentJob.id.toString(),
+        workspaceId = source.workspaceId,
+        dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceDefinitionVersion),
+        protocolVersion = Version(sourceDefinitionVersion.protocolVersion),
+        isCustomConnector = sourceDefinition.custom,
+        attemptId = attemptNumber,
+        allowedHosts = sourceDefinitionVersion.allowedHosts,
+      )
+
+    val destinationIntegrationLauncherConfig =
+      getIntegrationLauncherConfig(
+        jobId = currentJob.id.toString(),
+        workspaceId = destination.workspaceId,
+        dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationDefinitionVersion),
+        protocolVersion = Version(destinationDefinitionVersion.protocolVersion),
+        isCustomConnector = destinationDefinition.custom,
+        attemptId = attemptNumber,
+        allowedHosts = destinationDefinitionVersion.allowedHosts,
+      )
+
+    val jobConfigData = getJobConfig(currentJob, currentAttempt)
+
+    val featureFlags =
+      resolveFeatureFlags(
+        workspaceId = source.workspaceId,
+        connectionId = connectionId,
+        sourceId = source.sourceId,
+        destinationId = destination.destinationId,
+        sourceType = sourceDefinition.sourceType,
+      )
+
+    return ReplicationActivityInput(
+      sourceId = connection.sourceId,
+      destinationId = connection.destinationId,
+      sourceConfiguration = source.configuration,
+      destinationConfiguration = destination.configuration,
+      jobRunConfig =
+        JobRunConfig()
+          .withJobId(currentJob.id.toString())
+          .withAttemptId(attemptNumber),
+      sourceLauncherConfig =
+      sourceIntegrationLauncherConfig,
+      destinationLauncherConfig = destinationIntegrationLauncherConfig,
+      syncResourceRequirements = jobConfigData.syncResourceRequirements,
+      workspaceId = source.workspaceId,
+      connectionId = connectionId,
+      taskQueue = currentAttempt.processingTaskQueue,
+      isReset = currentJob.config.configType == JobConfig.ConfigType.RESET_CONNECTION || currentJob.config.configType == JobConfig.ConfigType.CLEAR,
+      namespaceDefinition = jobConfigData.namespaceDefinition,
+      namespaceFormat = jobConfigData.namespaceFormat,
+      connectionContext = contextBuilder.fromConnectionId(connectionId),
+      signalInput = signalInput,
+      networkSecurityTokens = getNetworkSecurityTokens(workspaceId = source.workspaceId),
+      includesFiles = jobConfigData.includeFiles,
+      omitFileTransferEnvVar = jobConfigData.omitFileTransferEnvVar,
+      featureFlags = featureFlags,
+      heartbeatMaxSecondsBetweenMessages = sourceDefinition.maxSecondsBetweenMessages,
+      supportsRefreshes = sourceDefinitionVersion.supportsRefreshes,
+    )
+  }
+
+  private data class JobConfigData(
+    val syncResourceRequirements: SyncResourceRequirements,
+    val namespaceDefinition: JobSyncConfig.NamespaceDefinitionType?,
+    val namespaceFormat: String?,
+    val includeFiles: Boolean,
+    val omitFileTransferEnvVar: Boolean,
+  )
+
+  private fun getJobConfig(
+    currentJob: Job,
+    currentAttempt: Attempt,
+  ): JobConfigData {
+    val isDeprecatedFileTransfer = isDeprecatedFileTransfer(currentAttempt.syncConfig.map { it.sourceConfiguration }.getOrNull())
+    return when (currentJob.config.configType) {
+      JobConfig.ConfigType.SYNC -> {
+        val includeFiles =
+          currentJob.config.sync.configuredAirbyteCatalog
+            ?.streams
+            ?.any { it.includeFiles } ?: false
+
+        JobConfigData(
+          syncResourceRequirements = currentJob.config.sync.syncResourceRequirements,
+          namespaceDefinition = currentJob.config.sync.namespaceDefinition,
+          namespaceFormat = currentJob.config.sync.namespaceFormat,
+          includeFiles = includeFiles || isDeprecatedFileTransfer,
+          omitFileTransferEnvVar = includeFiles,
+        )
+      }
+
+      JobConfig.ConfigType.REFRESH -> {
+        val includeFile =
+          currentJob.config.refresh.configuredAirbyteCatalog
+            ?.streams
+            ?.any { it.includeFiles } ?: false
+        JobConfigData(
+          syncResourceRequirements = currentJob.config.refresh.syncResourceRequirements,
+          namespaceDefinition = currentJob.config.refresh.namespaceDefinition,
+          namespaceFormat = currentJob.config.refresh.namespaceFormat,
+          includeFiles = includeFile || isDeprecatedFileTransfer,
+          omitFileTransferEnvVar = includeFile,
+        )
+      }
+
+      JobConfig.ConfigType.CLEAR, JobConfig.ConfigType.RESET_CONNECTION -> {
+        val includeFile =
+          currentJob.config.resetConnection.configuredAirbyteCatalog
+            ?.streams
+            ?.any { it.includeFiles } ?: false
+        JobConfigData(
+          syncResourceRequirements = currentJob.config.resetConnection.syncResourceRequirements,
+          namespaceDefinition = currentJob.config.resetConnection.namespaceDefinition,
+          namespaceFormat = currentJob.config.refresh.namespaceFormat,
+          includeFiles = includeFile || isDeprecatedFileTransfer,
+          omitFileTransferEnvVar = includeFile,
+        )
+      }
+      else -> throw UnsupportedOperationException()
+    }
+  }
+
+  private fun isDeprecatedFileTransfer(sourceConfig: JsonNode?): Boolean {
+    if (sourceConfig == null) {
+      return false
+    }
+
+    val typedSourceConfig = Jsons.`object`(sourceConfig, SourceActorConfig::class.java)
+    return (
+      typedSourceConfig.useFileTransfer ||
+        (typedSourceConfig.deliveryMethod != null && "use_file_transfer" == typedSourceConfig.deliveryMethod.deliveryType)
+    )
+  }
+
+  private fun getFeatureFlagContext(
+    workspaceId: UUID,
+    connectionId: UUID,
+    sourceId: UUID,
+    destinationId: UUID,
+    sourceType: StandardSourceDefinition.SourceType?,
+  ): Context {
+    val contexts: MutableList<Context> = mutableListOf()
+    if (workspaceId != null) {
+      contexts.add(Workspace(workspaceId))
+    }
+    if (connectionId != null) {
+      contexts.add(Connection(connectionId))
+    }
+    if (sourceId != null) {
+      contexts.add(Source(sourceId))
+    }
+    if (destinationId != null) {
+      contexts.add(Destination(destinationId))
+    }
+    if (sourceType != null) {
+      contexts.add(SourceType(sourceType.value()))
+    }
+    return Multi(contexts)
+  }
+
+  private fun resolveFeatureFlags(
+    workspaceId: UUID,
+    connectionId: UUID,
+    sourceId: UUID,
+    destinationId: UUID,
+    sourceType: StandardSourceDefinition.SourceType?,
+  ): Map<String, Any> {
+    val context =
+      getFeatureFlagContext(
+        workspaceId = workspaceId,
+        connectionId = connectionId,
+        sourceId = sourceId,
+        destinationId = destinationId,
+        sourceType = sourceType,
+      )
+    return replicationFeatureFlags.featureFlags.associate { flag -> flag.key to featureFlagClient.variation(flag, context)!! }
+  }
+
+  private data class JobAndAttempt(
+    val latestJob: Job,
+    val latestAttempt: Attempt,
+  )
+
+  private fun getCurrentJobAndAttempt(
+    jobId: Long,
+    attemptNumber: Long,
+  ): JobAndAttempt {
+    val job =
+      jobService.findById(jobId)
+        ?: throw NotFoundException()
+
+    if (NON_TERMINAL_STATUSES.contains(job.status)) {
+      throw IllegalStateException("Cannot create replication input for a non-terminal job")
+    }
+
+    val attempt = attemptService.getAttempt(jobId, attemptNumber)
+
+    return JobAndAttempt(job, attempt)
+  }
+
+  private data class ConnectionAndActors(
+    val connection: StandardSync,
+    val source: SourceConnection,
+    val sourceDefinition: StandardSourceDefinition,
+    val sourceDefinitionVersion: ActorDefinitionVersion,
+    val destination: DestinationConnection,
+    val destinationDefinition: StandardDestinationDefinition,
+    val destinationDefinitionVersion: ActorDefinitionVersion,
+  )
+
+  private fun getConnectionAndActors(connectionId: UUID): ConnectionAndActors {
+    val connection = connectionService.getStandardSync(connectionId) ?: throw NotFoundException()
+    val source = sourceService.getSourceConnection(connection.sourceId) ?: throw NotFoundException()
+    val sourceDefinition = sourceService.getStandardSourceDefinition(source.sourceDefinitionId) ?: throw NotFoundException()
+    val sourceDefinitionVersion =
+      actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, source.workspaceId, source.sourceId) ?: throw NotFoundException()
+    val destination = destinationService.getDestinationConnection(connection.destinationId) ?: throw NotFoundException()
+    val destinationDefinition = destinationService.getStandardDestinationDefinition(destination.destinationDefinitionId) ?: throw NotFoundException()
+    val destinationDefinitionVersion =
+      actorDefinitionVersionHelper.getDestinationVersion(destinationDefinition, destination.workspaceId, destination.destinationId)
+        ?: throw NotFoundException()
+    return ConnectionAndActors(
+      connection,
+      source,
+      sourceDefinition,
+      sourceDefinitionVersion,
+      destination,
+      destinationDefinition,
+      destinationDefinitionVersion,
+    )
   }
 
   fun getDiscoveryInput(
@@ -305,22 +583,21 @@ class JobInputService(
     val jobId = jobId ?: UUID.randomUUID().toString()
     val attemptId = attemptId ?: 0L
 
-    val configReplacer = ConfigReplacer()
-
     return CheckConnectionInput(
       jobRunConfig =
         JobRunConfig()
           .withJobId(jobId)
           .withAttemptId(attemptId),
       launcherConfig =
-        IntegrationLauncherConfig()
-          .withJobId(jobId)
-          .withWorkspaceId(workspaceId)
-          .withDockerImage(dockerImage)
-          .withProtocolVersion(protocolVersion)
-          .withIsCustomConnector(isCustomConnector)
-          .withAttemptId(attemptId)
-          .withAllowedHosts(configReplacer.getAllowedHosts(allowedHosts, configuration)),
+        getIntegrationLauncherConfig(
+          jobId = jobId,
+          workspaceId = workspaceId,
+          dockerImage = dockerImage,
+          protocolVersion = protocolVersion,
+          isCustomConnector = isCustomConnector,
+          attemptId = attemptId,
+          allowedHosts = allowedHosts,
+        ),
       checkConnectionInput =
         StandardCheckConnectionInput()
           .withActorType(actorType)
@@ -331,6 +608,24 @@ class JobInputService(
           .withNetworkSecurityTokens(getNetworkSecurityTokens(workspaceId)),
     )
   }
+
+  private fun getIntegrationLauncherConfig(
+    jobId: String,
+    workspaceId: UUID,
+    dockerImage: String,
+    protocolVersion: Version,
+    isCustomConnector: Boolean,
+    attemptId: Long,
+    allowedHosts: AllowedHosts?,
+  ): IntegrationLauncherConfig =
+    IntegrationLauncherConfig()
+      .withJobId(jobId)
+      .withWorkspaceId(workspaceId)
+      .withDockerImage(dockerImage)
+      .withProtocolVersion(protocolVersion)
+      .withIsCustomConnector(isCustomConnector)
+      .withAttemptId(attemptId)
+      .withAllowedHosts(allowedHosts)
 
   private fun buildJobDiscoverConfig(
     actorType: io.airbyte.config.ActorType,
@@ -445,7 +740,7 @@ class JobInputService(
       emptyList()
     }
 
-  data class SourceInformation(
+  private data class SourceInformation(
     val source: SourceConnection?,
     val sourceDefinition: StandardSourceDefinition,
     val sourceDefinitionVersion: ActorDefinitionVersion,
@@ -490,7 +785,7 @@ class JobInputService(
     )
   }
 
-  data class DestinationInformation(
+  private data class DestinationInformation(
     val destination: DestinationConnection?,
     val destinationDefinition: StandardDestinationDefinition,
     val destinationDefinitionVersion: ActorDefinitionVersion,

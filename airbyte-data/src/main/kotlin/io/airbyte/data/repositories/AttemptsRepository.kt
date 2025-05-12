@@ -14,5 +14,5 @@ interface AttemptsRepository : PageableRepository<Attempt, Long> {
   fun findByJobIdAndAttemptNumber(
     jobId: Long,
     attemptNumber: Long,
-  ): Attempt
+  ): Attempt?
 }
