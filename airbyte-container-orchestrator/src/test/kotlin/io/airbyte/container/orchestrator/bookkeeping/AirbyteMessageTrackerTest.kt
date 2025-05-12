@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.config.FailureReason
+import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
@@ -25,20 +26,20 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 internal class AirbyteMessageTrackerTest {
   private lateinit var messageTracker: AirbyteMessageTracker
-
+  private lateinit var syncPersistence: SyncPersistence
   private lateinit var syncStatsTracker: SyncStatsTracker
-
   private lateinit var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader
-
   private lateinit var replicationInput: ReplicationInput
 
   @BeforeEach
   fun setup() {
     replicationInput =
       ReplicationInput()
+        .withConnectionId(UUID.randomUUID())
         .withDestinationLauncherConfig(IntegrationLauncherConfig().withDockerImage("airbyte/destination-image"))
         .withSourceLauncherConfig(IntegrationLauncherConfig().withDockerImage("airbyte/source-image"))
     replicationInputFeatureFlagReader =
@@ -46,6 +47,7 @@ internal class AirbyteMessageTrackerTest {
         every { read(LogConnectorMessages) } returns false
         every { read(LogStateMsgs) } returns false
       }
+    syncPersistence = mockk(relaxed = true)
     syncStatsTracker = mockk(relaxed = true)
 
     this.messageTracker =
@@ -53,6 +55,7 @@ internal class AirbyteMessageTrackerTest {
         syncStatsTracker = syncStatsTracker,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         replicationInput = replicationInput,
+        syncPersistence = syncPersistence,
       )
   }
 
@@ -111,6 +114,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(state)
 
+    verify(exactly = 0) { syncPersistence.accept(replicationInput.connectionId, state.state) }
     verify(exactly = 1) { syncStatsTracker.updateSourceStatesStats(state.state) }
   }
 
@@ -199,6 +203,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(state)
 
+    verify(exactly = 1) { syncPersistence.accept(replicationInput.connectionId, state.state) }
     verify(exactly = 1) { syncStatsTracker.updateDestinationStateStats(state.state) }
   }
 

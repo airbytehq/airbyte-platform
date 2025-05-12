@@ -30,13 +30,16 @@ import io.airbyte.api.client.model.generated.StreamState;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.container.orchestrator.bookkeeping.ParallelStreamStatsTracker;
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker;
+import io.airbyte.container.orchestrator.bookkeeping.state.DefaultStateAggregator;
+import io.airbyte.container.orchestrator.bookkeeping.state.SingleStateAggregator;
+import io.airbyte.container.orchestrator.bookkeeping.state.StateAggregator;
+import io.airbyte.container.orchestrator.bookkeeping.state.StreamStateAggregator;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage;
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import io.airbyte.protocol.models.v0.AirbyteStateMessage;
 import io.airbyte.protocol.models.v0.AirbyteStreamState;
 import io.airbyte.protocol.models.v0.StreamDescriptor;
-import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
@@ -59,6 +62,7 @@ class SyncPersistenceImplTest {
   private AttemptApi attemptApi;
   private ScheduledExecutorService executorService;
   private ArgumentCaptor<Runnable> actualFlushMethod;
+  private StateAggregator stateAggregator;
 
   private UUID connectionId;
   private Long jobId;
@@ -73,6 +77,8 @@ class SyncPersistenceImplTest {
     attemptNumber = (int) (Math.random() * Integer.MAX_VALUE);
     airbyteApiClient = mock(AirbyteApiClient.class);
     metricClient = mock(MetricClient.class);
+
+    stateAggregator = new DefaultStateAggregator(new StreamStateAggregator(), new SingleStateAggregator());
 
     // Setting up an ArgumentCaptor to be able to manually trigger the actual flush method rather than
     // relying on the ScheduledExecutorService and having to deal with Thread.sleep in the tests.
@@ -91,7 +97,7 @@ class SyncPersistenceImplTest {
     when(airbyteApiClient.getAttemptApi()).thenReturn(attemptApi);
     when(airbyteApiClient.getStateApi()).thenReturn(stateApi);
 
-    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), executorService,
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, stateAggregator, executorService,
         flushPeriod, metricClient, syncStatsTracker, connectionId, jobId, attemptNumber);
   }
 
@@ -427,7 +433,7 @@ class SyncPersistenceImplTest {
   @Test
   void testSyncStatsTrackerWrapping() {
     syncStatsTracker = mock();
-    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, new StateAggregatorFactory(), executorService,
+    syncPersistence = new SyncPersistenceImpl(airbyteApiClient, stateAggregator, executorService,
         flushPeriod, metricClient, syncStatsTracker, connectionId, jobId, attemptNumber);
 
     syncPersistence.updateStats(new AirbyteRecordMessage());

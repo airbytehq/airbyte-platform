@@ -26,7 +26,6 @@ import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMe
 import io.airbyte.container.orchestrator.bookkeeping.getPerStreamStats
 import io.airbyte.container.orchestrator.bookkeeping.getTotalStats
 import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
-import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
@@ -53,7 +52,6 @@ import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.internal.AirbyteMapper
 import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.util.Optional
@@ -65,7 +63,6 @@ class ReplicationWorkerHelper(
   private val fieldSelector: FieldSelector,
   private val mapper: AirbyteMapper,
   private val messageTracker: AirbyteMessageTracker,
-  @Named("syncPersistence") private val syncPersistence: SyncPersistence,
   private val eventPublisher: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val analyticsTracker: AnalyticsMessageTracker,
@@ -313,7 +310,6 @@ class ReplicationWorkerHelper(
       analyticsTracker.addMessage(destinationRawMessage, AirbyteMessageOrigin.DESTINATION)
     }
     if (destinationRawMessage.type == STATE) {
-      syncPersistence.accept(context.replicationContext.connectionId, destinationRawMessage.state)
       metricClient.count(metric = OssMetricsRegistry.STATE_PROCESSED_FROM_DESTINATION, attributes = metricAttrs.toTypedArray())
     }
     handleControlMessage(destinationRawMessage, AirbyteMessageOrigin.DESTINATION)

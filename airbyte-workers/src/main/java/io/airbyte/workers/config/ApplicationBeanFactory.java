@@ -18,18 +18,14 @@ import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout;
 import io.airbyte.featureflag.SingleContainerTest;
 import io.airbyte.featureflag.WorkloadHeartbeatRate;
 import io.airbyte.featureflag.WorkloadHeartbeatTimeout;
-import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory;
 import io.airbyte.workers.temporal.sync.ReplicationFeatureFlags;
 import io.micronaut.context.annotation.Factory;
-import io.micronaut.context.annotation.Prototype;
 import io.micronaut.context.annotation.Value;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Supplier;
 
 /**
@@ -49,17 +45,6 @@ public class ApplicationBeanFactory {
   @Named("currentSecondsSupplier")
   public Supplier<Long> currentSecondsSupplier() {
     return () -> Instant.now().getEpochSecond();
-  }
-
-  @Prototype
-  @Named("syncPersistenceExecutorService")
-  public ScheduledExecutorService syncPersistenceExecutorService() {
-    return Executors.newSingleThreadScheduledExecutor();
-  }
-
-  @Singleton
-  public StateAggregatorFactory stateAggregatorFactory() {
-    return new StateAggregatorFactory();
   }
 
   @Singleton

@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal.stateaggregator
+package io.airbyte.container.orchestrator.bookkeeping.state
 
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
@@ -11,6 +11,8 @@ import io.airbyte.metrics.lib.ApmTraceConstants.WORKER_OPERATION_NAME
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import jakarta.inject.Named
+import jakarta.inject.Singleton
 
 interface StateAggregator {
   fun ingest(stateMessage: AirbyteStateMessage)
@@ -20,15 +22,20 @@ interface StateAggregator {
   fun getAggregated(): State
 
   fun isEmpty(): Boolean
+
+  fun clear()
 }
 
 /**
  * Default state aggregator that detects which type of state is being used and aggregates appropriately.
  */
-class DefaultStateAggregator : StateAggregator {
+@Singleton
+@Named("stateAggregator")
+class DefaultStateAggregator(
+  @Named("streamStateAggregator") private val streamStateAggregator: StreamStateAggregator,
+  @Named("singleStateAggregator") private val singleStateAggregator: SingleStateAggregator,
+) : StateAggregator {
   private var stateType: AirbyteStateType? = null
-  private val streamStateAggregator = StreamStateAggregator()
-  private val singleStateAggregator = SingleStateAggregator()
 
   override fun ingest(stateMessage: AirbyteStateMessage) {
     checkTypeOrSet(stateMessage.type)
@@ -65,6 +72,10 @@ class DefaultStateAggregator : StateAggregator {
 
   override fun isEmpty(): Boolean = stateType == null || getStateAggregator().isEmpty()
 
+  override fun clear() {
+    getStateAggregator().clear()
+  }
+
   /** Return the state aggregator that match the state type. */
   private fun getStateAggregator(): StateAggregator =
     when (stateType) {
@@ -88,6 +99,8 @@ class DefaultStateAggregator : StateAggregator {
   }
 }
 
+@Singleton
+@Named("singleStateAggregator")
 class SingleStateAggregator : StateAggregator {
   private var state: AirbyteStateMessage? = null
 
@@ -124,8 +137,14 @@ class SingleStateAggregator : StateAggregator {
   }
 
   override fun isEmpty(): Boolean = state == null
+
+  override fun clear() {
+    state = null
+  }
 }
 
+@Singleton
+@Named("streamStateAggregator")
 class StreamStateAggregator : StateAggregator {
   private val aggregatedState = mutableMapOf<StreamDescriptor, AirbyteStateMessage>()
 
@@ -151,4 +170,8 @@ class StreamStateAggregator : StateAggregator {
   override fun getAggregated(): State = State().withState(Jsons.jsonNode(aggregatedState.values))
 
   override fun isEmpty(): Boolean = aggregatedState.isEmpty()
+
+  override fun clear() {
+    aggregatedState.clear()
+  }
 }

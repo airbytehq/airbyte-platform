@@ -16,7 +16,6 @@ import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
-import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
@@ -61,9 +60,6 @@ class ReplicationWorkerHelperTest {
 
   @MockK(relaxed = true)
   lateinit var messageTracker: AirbyteMessageTracker
-
-  @MockK(relaxed = true)
-  lateinit var syncPersistence: SyncPersistence
 
   @MockK(relaxed = true)
   lateinit var eventPublisher: ReplicationAirbyteMessageEventPublishingHelper
@@ -249,7 +245,6 @@ class ReplicationWorkerHelperTest {
           fieldSelector,
           mapper,
           messageTracker,
-          syncPersistence,
           eventPublisher,
           timeTracker,
           analyticsTracker,

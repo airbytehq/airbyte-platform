@@ -6,7 +6,7 @@ package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
-import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
@@ -15,8 +15,6 @@ import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
-import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
-import io.airbyte.workers.internal.stateaggregator.StateAggregator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
@@ -33,11 +31,11 @@ private val logger = KotlinLogging.logger {}
 class AirbyteMessageTracker(
   @Named("parallelStreamStatsTracker") val syncStatsTracker: SyncStatsTracker,
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
-  replicationInput: ReplicationInput,
+  private val replicationInput: ReplicationInput,
+  @Named("syncPersistence") private val syncPersistence: SyncPersistence,
 ) {
   private val dstErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
-  private val stateAggregator: StateAggregator = DefaultStateAggregator()
   private val sourceDockerImage = replicationInput.sourceLauncherConfig.dockerImage
   private val destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage
 
@@ -72,7 +70,7 @@ class AirbyteMessageTracker(
       AirbyteMessage.Type.TRACE -> handleEmittedTrace(msg.trace, AirbyteMessageOrigin.DESTINATION)
       AirbyteMessage.Type.STATE ->
         msg.state?.let {
-          stateAggregator.ingest(it)
+          syncPersistence.accept(replicationInput.connectionId, stateMessage = it)
           syncStatsTracker.updateDestinationStateStats(it)
         }
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }

@@ -214,7 +214,6 @@ public abstract class ReplicationWorkerPerformanceTest {
             fieldSelector,
             dstNamespaceMapper,
             messageTracker,
-            syncPersistence,
             replicationAirbyteMessageEventPublishingHelper,
             new ThreadedTimeTracker(),
             analyticsMessageTracker,

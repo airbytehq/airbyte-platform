@@ -16,6 +16,7 @@ import io.airbyte.config.helpers.StateMessageHelper
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.getPerStreamStats
 import io.airbyte.container.orchestrator.bookkeeping.getTotalStats
+import io.airbyte.container.orchestrator.bookkeeping.state.StateAggregator
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -23,8 +24,6 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
-import io.airbyte.workers.internal.stateaggregator.StateAggregator
-import io.airbyte.workers.internal.stateaggregator.StateAggregatorFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -58,7 +57,7 @@ private const val FLUSH_TERMINATION_TIMEOUT_IN_SECONDS: Long = 60
 @Named("syncPersistence")
 class SyncPersistenceImpl(
   private val airbyteApiClient: AirbyteApiClient,
-  private val stateAggregatorFactory: StateAggregatorFactory,
+  @Named("stateAggregator") private val stateBuffer: StateAggregator,
   @Named("syncPersistenceExecutorService") private val stateFlushExecutorService: ScheduledExecutorService,
   @Value("\${airbyte.worker.replication.persistence-flush-period-sec}") private val stateFlushPeriodInSeconds: Long,
   private val metricClient: MetricClient,
@@ -68,7 +67,6 @@ class SyncPersistenceImpl(
   @Named("attemptId") private val attemptNumber: Int,
 ) : SyncPersistence,
   SyncStatsTracker by syncStatsTracker {
-  private var stateBuffer = stateAggregatorFactory.create()
   private var stateFlushFuture: ScheduledFuture<*>? = null
   private var isReceivingStats = false
   private var stateToFlush: StateAggregator? = null
@@ -212,7 +210,6 @@ class SyncPersistenceImpl(
 
   private fun prepareDataForFlush() {
     val stateBufferToFlush = stateBuffer
-    stateBuffer = stateAggregatorFactory.create()
     if (stateToFlush == null) {
       // Happy path, previous flush was successful
       stateToFlush = stateBufferToFlush
@@ -250,7 +247,8 @@ class SyncPersistenceImpl(
       throw e
     }
 
-    // Only reset stateToFlush if the API call was successful
+    // Only clear and reset stateToFlush if the API call was successful
+    stateToFlush?.clear()
     stateToFlush = null
     metricClient.count(metric = OssMetricsRegistry.STATE_COMMIT_ATTEMPT_SUCCESSFUL)
   }

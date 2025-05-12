@@ -2,11 +2,15 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.internal.stateaggregator;
+package io.airbyte.container.orchestrator.bookkeeping.state;
 
 import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.GLOBAL;
 import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.LEGACY;
 import static io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType.STREAM;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.common.collect.Lists;
 import io.airbyte.commons.json.Jsons;
@@ -22,8 +26,6 @@ import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.assertj.core.api.Assertions;
-import org.assertj.core.api.CollectionAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,7 +38,9 @@ class StateAggregatorTest {
 
   @BeforeEach
   void init() {
-    stateAggregator = new DefaultStateAggregator();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
   }
 
   @ParameterizedTest
@@ -47,7 +51,8 @@ class StateAggregatorTest {
     stateAggregator.ingest(getEmptyMessage(stateType));
 
     final List<AirbyteStateType> differentTypes = allTypes.filter(type -> type != stateType).toList();
-    differentTypes.forEach(differentType -> Assertions.assertThatThrownBy(() -> stateAggregator.ingest(getEmptyMessage(differentType))));
+    differentTypes
+        .forEach(differentType -> assertThrows(IllegalArgumentException.class, () -> stateAggregator.ingest(getEmptyMessage(differentType))));
   }
 
   @Test
@@ -56,7 +61,8 @@ class StateAggregatorTest {
 
     stateAggregator.ingest(getEmptyMessage(null));
 
-    allIncompatibleTypes.forEach(differentType -> Assertions.assertThatThrownBy(() -> stateAggregator.ingest(getEmptyMessage(differentType))));
+    allIncompatibleTypes
+        .forEach(differentType -> assertThrows(IllegalArgumentException.class, () -> stateAggregator.ingest(getEmptyMessage(differentType))));
 
     stateAggregator.ingest(getEmptyMessage(LEGACY));
   }
@@ -67,12 +73,10 @@ class StateAggregatorTest {
     final AirbyteStateMessage state2 = getNullMessage(2);
 
     stateAggregator.ingest(state1);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(state1.getData()));
+    assertEquals(new State().withState(state1.getData()), stateAggregator.getAggregated());
 
     stateAggregator.ingest(state2);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(state2.getData()));
+    assertEquals(new State().withState(state2.getData()), stateAggregator.getAggregated());
   }
 
   @Test
@@ -81,12 +85,10 @@ class StateAggregatorTest {
     final AirbyteStateMessage state2 = getLegacyMessage(2);
 
     stateAggregator.ingest(state1);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(state1.getData()));
+    assertEquals(new State().withState(state1.getData()), stateAggregator.getAggregated());
 
     stateAggregator.ingest(state2);
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(state2.getData()));
+    assertEquals(new State().withState(state2.getData()), stateAggregator.getAggregated());
   }
 
   @Test
@@ -98,12 +100,12 @@ class StateAggregatorTest {
     final AirbyteStateMessage state2NoData = getGlobalMessage(2).withData(null);
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state1), AirbyteStateMessage.class));
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state1NoData))));
+    assertEquals(new State()
+        .withState(Jsons.jsonNode(List.of(state1NoData))), stateAggregator.getAggregated());
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state2), AirbyteStateMessage.class));
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state2NoData))));
+    assertEquals(new State()
+        .withState(Jsons.jsonNode(List.of(state2NoData))), stateAggregator.getAggregated());
   }
 
   @Test
@@ -116,19 +118,21 @@ class StateAggregatorTest {
     final AirbyteStateMessage state2NoData = getStreamMessage("b", 2).withData(null);
     final AirbyteStateMessage state3NoData = getStreamMessage("b", 3).withData(null);
 
-    stateAggregator = new DefaultStateAggregator();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state1), AirbyteStateMessage.class));
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state1NoData))));
+    assertEquals(new State()
+        .withState(Jsons.jsonNode(List.of(state1NoData))), stateAggregator.getAggregated());
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state2), AirbyteStateMessage.class));
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state1NoData, state2NoData))));
+    assertEquals(new State()
+        .withState(Jsons.jsonNode(List.of(state1NoData, state2NoData))), stateAggregator.getAggregated());
 
     stateAggregator.ingest(Jsons.object(Jsons.jsonNode(state3), AirbyteStateMessage.class));
-    Assertions.assertThat(stateAggregator.getAggregated()).isEqualTo(new State()
-        .withState(Jsons.jsonNode(List.of(state1NoData, state3NoData))));
+    assertEquals(new State()
+        .withState(Jsons.jsonNode(List.of(state1NoData, state3NoData))), stateAggregator.getAggregated());
   }
 
   @Test
@@ -137,17 +141,20 @@ class StateAggregatorTest {
     stateAggregator.ingest(stateG1);
 
     final AirbyteStateMessage stateG2 = getGlobalMessage(2);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     otherStateAggregator.ingest(stateG2);
 
     stateAggregator.ingest(otherStateAggregator);
-    CollectionAssert.assertThatCollection(getStateMessages(stateAggregator.getAggregated()))
-        .containsExactlyInAnyOrder(stateG2);
+    assertEquals(List.of(stateG2), getStateMessages(stateAggregator.getAggregated()));
   }
 
   @Test
   void testIngestFromAnotherStateAggregatorStreamStates() {
-    stateAggregator = new DefaultStateAggregator();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     final AirbyteStateMessage stateA1 = getStreamMessage("a", 1);
     final AirbyteStateMessage stateB2 = getStreamMessage("b", 2);
     stateAggregator.ingest(stateA1);
@@ -155,78 +162,90 @@ class StateAggregatorTest {
 
     final AirbyteStateMessage stateA2 = getStreamMessage("a", 3);
     final AirbyteStateMessage stateC1 = getStreamMessage("c", 1);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     otherStateAggregator.ingest(stateA2);
     otherStateAggregator.ingest(stateC1);
 
     stateAggregator.ingest(otherStateAggregator);
-    CollectionAssert.assertThatCollection(getStateMessages(stateAggregator.getAggregated()))
-        .containsExactlyInAnyOrder(stateA2, stateB2, stateC1);
+    assertEquals(List.of(stateA2, stateB2, stateC1), getStateMessages(stateAggregator.getAggregated()));
   }
 
   @Test
   void testIngestFromAnotherStateAggregatorChecksStateType() {
-    stateAggregator = new DefaultStateAggregator();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     final AirbyteStateMessage stateG1 = getGlobalMessage(1);
     stateAggregator.ingest(stateG1);
 
     final AirbyteStateMessage stateA2 = getStreamMessage("a", 3);
-    final StateAggregator otherStateAggregator = new DefaultStateAggregator();
+    final StateAggregator otherStateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     otherStateAggregator.ingest(stateA2);
 
-    Assertions.assertThatThrownBy(() -> {
-      stateAggregator.ingest(otherStateAggregator);
-    });
-
-    Assertions.assertThatThrownBy(() -> {
-      otherStateAggregator.ingest(stateAggregator);
-    });
+    assertThrows(IllegalArgumentException.class, () -> stateAggregator.ingest(otherStateAggregator));
+    assertThrows(IllegalArgumentException.class, () -> otherStateAggregator.ingest(stateAggregator));
   }
 
   @Test
   void testIsEmptyForSingleStates() {
-    stateAggregator = new DefaultStateAggregator();
-    Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
+    assertTrue(stateAggregator.isEmpty());
 
     final AirbyteStateMessage globalState = getGlobalMessage(1);
     stateAggregator.ingest(globalState);
-    Assertions.assertThat(stateAggregator.isEmpty()).isFalse();
+    assertFalse(stateAggregator.isEmpty());
   }
 
   @Test
   void testIsEmptyForStreamStates() {
-    stateAggregator = new DefaultStateAggregator();
-    Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
+    assertTrue(stateAggregator.isEmpty());
 
     final AirbyteStateMessage streamState = getStreamMessage("woot", 1);
     stateAggregator.ingest(streamState);
-    Assertions.assertThat(stateAggregator.isEmpty()).isFalse();
+    assertFalse(stateAggregator.isEmpty());
   }
 
   @Test
   void testIsEmptyWhenIngestFromAggregatorSingle() {
-    stateAggregator = new DefaultStateAggregator();
-    Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
+    assertTrue(stateAggregator.isEmpty());
 
     final AirbyteStateMessage globalState = getGlobalMessage(1);
-    final StateAggregator otherAggregator = new DefaultStateAggregator();
+    final StateAggregator otherAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     otherAggregator.ingest(globalState);
 
     stateAggregator.ingest(otherAggregator);
-    Assertions.assertThat(stateAggregator.isEmpty()).isFalse();
+    assertFalse(stateAggregator.isEmpty());
   }
 
   @Test
   void testIsEmptyWhenIngestFromAggregatorStream() {
-    stateAggregator = new DefaultStateAggregator();
-    Assertions.assertThat(stateAggregator.isEmpty()).isTrue();
+    stateAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
+    assertTrue(stateAggregator.isEmpty());
 
     final AirbyteStateMessage streamState = getStreamMessage("woot", 1);
-    final StateAggregator otherAggregator = new DefaultStateAggregator();
+    final StateAggregator otherAggregator = new DefaultStateAggregator(
+        new StreamStateAggregator(),
+        new SingleStateAggregator());
     otherAggregator.ingest(streamState);
 
     stateAggregator.ingest(otherAggregator);
-    Assertions.assertThat(stateAggregator.isEmpty()).isFalse();
+    assertFalse(stateAggregator.isEmpty());
   }
 
   private AirbyteStateMessage getNullMessage(final int stateValue) {
