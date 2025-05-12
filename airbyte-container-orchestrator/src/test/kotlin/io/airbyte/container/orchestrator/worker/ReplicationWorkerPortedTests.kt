@@ -38,7 +38,7 @@ import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.RecordSchemaValidator
+import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
@@ -70,6 +70,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Optional
 import java.util.UUID
+import java.util.concurrent.Executors
 
 class ReplicationWorkerPortedTests {
   companion object {
@@ -379,9 +380,9 @@ class ReplicationWorkerPortedTests {
     val stream = replicationInput.catalog.streams[0].stream
     recordSchemaValidator =
       RecordSchemaValidator(
-        mapOf(
-          AirbyteStreamNameNamespacePair(stream.name, stream.namespace) to stream.jsonSchema,
-        ),
+        jsonSchemaValidator = JsonSchemaValidator(),
+        schemaValidationExecutorService = Executors.newSingleThreadExecutor(),
+        streamNamesToSchemas = mutableMapOf(AirbyteStreamNameNamespacePair(stream.name, stream.namespace) to stream.jsonSchema),
       )
 
     val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, replicationInput, replicationInputFeatureFlagReader)
@@ -438,9 +439,9 @@ class ReplicationWorkerPortedTests {
     val stream = replicationInput.catalog.streams[0].stream
     recordSchemaValidator =
       RecordSchemaValidator(
-        mapOf(
-          AirbyteStreamNameNamespacePair(stream.name, stream.namespace) to stream.jsonSchema,
-        ),
+        jsonSchemaValidator = JsonSchemaValidator(),
+        schemaValidationExecutorService = Executors.newSingleThreadExecutor(),
+        streamNamesToSchemas = mutableMapOf(AirbyteStreamNameNamespacePair(stream.name, stream.namespace) to stream.jsonSchema),
       )
 
     val fieldSelector = FieldSelector(recordSchemaValidator, workerMetricReporter, replicationInput, replicationInputFeatureFlagReader)

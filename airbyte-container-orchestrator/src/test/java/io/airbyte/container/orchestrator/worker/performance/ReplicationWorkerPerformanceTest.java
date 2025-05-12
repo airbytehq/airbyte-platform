@@ -28,6 +28,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence;
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker;
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker;
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker;
+import io.airbyte.container.orchestrator.worker.RecordSchemaValidator;
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider;
 import io.airbyte.container.orchestrator.worker.ReplicationWorker;
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerHelper;
@@ -57,7 +58,7 @@ import io.airbyte.persistence.job.models.ReplicationInput;
 import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair;
-import io.airbyte.workers.RecordSchemaValidator;
+import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.workers.WorkerMetricReporter;
 import io.airbyte.workers.context.ReplicationInputFeatureFlagReader;
 import io.airbyte.workers.exception.WorkerException;
@@ -74,6 +75,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -138,9 +140,11 @@ public abstract class ReplicationWorkerPerformanceTest {
     final var connectorConfigUpdater = mock(ConnectorConfigUpdater.class);
     final var metricReporter = new WorkerMetricReporter(metricClient, "test-image:0.01");
     final var dstNamespaceMapper = new NamespacingMapper(NamespaceDefinitionType.DESTINATION, "", "");
-    final var validator = new RecordSchemaValidator(Map.of(
-        new AirbyteStreamNameNamespacePair("s1", null),
-        CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
+    final var validator = new RecordSchemaValidator(
+        new JsonSchemaValidator(),
+        Executors.newSingleThreadExecutor(),
+        Map.of(new AirbyteStreamNameNamespacePair("s1", null),
+            CatalogHelpers.fieldsToJsonSchema(io.airbyte.protocol.models.Field.of("data", JsonSchemaType.STRING))));
     final var airbyteMessageDataExtractor = new AirbyteMessageDataExtractor();
     final var replicationInputFeatureFlagReader = mock(ReplicationInputFeatureFlagReader.class);
     final var replicationInput = mock(ReplicationInput.class);

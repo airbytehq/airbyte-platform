@@ -16,7 +16,6 @@ import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named

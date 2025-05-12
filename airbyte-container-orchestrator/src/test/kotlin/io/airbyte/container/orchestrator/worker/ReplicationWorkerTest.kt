@@ -11,7 +11,6 @@ import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.mockk.clearAllMocks
 import io.mockk.coVerify

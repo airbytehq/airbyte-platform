@@ -41,7 +41,6 @@ import io.airbyte.persistence.job.factory.DefaultSyncJobFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.factory.SyncJobFactory
 import io.airbyte.persistence.job.tracker.JobTracker
-import io.airbyte.validation.json.JsonSchemaValidator
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
@@ -183,9 +182,6 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("jsonSecretsProcessorWithCopy")
   fun jsonSecretsProcessorWithCopy(): JsonSecretsProcessor = JsonSecretsProcessor(true)
-
-  @Singleton
-  fun jsonSchemaValidator(): JsonSchemaValidator = JsonSchemaValidator()
 
   @Singleton
   @Named("oauthHttpClient")
