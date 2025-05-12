@@ -83,7 +83,7 @@ class RecordSchemaValidator(
     airbyteStream: AirbyteStreamNameNamespacePair,
     validationErrors: ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<MutableSet<String>, Int>?>,
   ) {
-    validationErrors.compute(airbyteStream) { k: AirbyteStreamNameNamespacePair, v: Pair<MutableSet<String>, Int>? ->
+    validationErrors.compute(airbyteStream) { _: AirbyteStreamNameNamespacePair, v: Pair<MutableSet<String>, Int>? ->
       if (v == null) {
         return@compute Pair(errorMessages, 1)
       } else {

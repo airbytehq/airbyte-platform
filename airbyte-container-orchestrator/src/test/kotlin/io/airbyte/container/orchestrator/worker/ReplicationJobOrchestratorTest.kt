@@ -2,15 +2,12 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.container.orchestrator
+package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary
-import io.airbyte.container.orchestrator.worker.ReplicationWorker
-import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator
-import io.airbyte.container_orchestrator.orchestrator.ReplicationJobOrchestrator.BYTES_TO_GB
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -28,13 +25,14 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 import java.util.UUID
 import java.util.function.ToDoubleFunction
+import kotlin.text.toLong
 
 internal class ReplicationJobOrchestratorTest {
   @Test
@@ -389,7 +387,7 @@ internal class ReplicationJobOrchestratorTest {
       assertThrows<RuntimeException> {
         replicationJobOrchestrator.runJob()
       }
-    assertEquals(WorkerException::class.java, e.cause?.javaClass)
+    Assertions.assertEquals(WorkerException::class.java, e.cause?.javaClass)
 
     verify(exactly = 0) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadFailure(any()) }

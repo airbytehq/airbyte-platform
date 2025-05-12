@@ -90,7 +90,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.container_orchestrator.Application"
+    mainClass = "io.airbyte.container.orchestrator.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {
