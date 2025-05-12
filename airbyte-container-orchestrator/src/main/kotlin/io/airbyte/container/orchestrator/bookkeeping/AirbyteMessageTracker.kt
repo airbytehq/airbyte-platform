@@ -7,13 +7,13 @@ package io.airbyte.container.orchestrator.bookkeeping
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.stateaggregator.DefaultStateAggregator
 import io.airbyte.workers.internal.stateaggregator.StateAggregator

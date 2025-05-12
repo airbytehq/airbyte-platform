@@ -2,13 +2,13 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.context
+package io.airbyte.container.orchestrator.worker.context
 
 import io.airbyte.featureflag.DestinationTimeoutEnabled
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.mockk.every
 import io.mockk.mockk
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
 internal class ReplicationInputFeatureFlagReaderTest {
@@ -20,7 +20,7 @@ internal class ReplicationInputFeatureFlagReaderTest {
         every { featureFlags } returns featureFlagMap
       }
     val reader = ReplicationInputFeatureFlagReader(replicationInput)
-    assertEquals(true, reader.read(DestinationTimeoutEnabled))
+    Assertions.assertEquals(true, reader.read(DestinationTimeoutEnabled))
   }
 
   @Test
@@ -31,6 +31,6 @@ internal class ReplicationInputFeatureFlagReaderTest {
         every { featureFlags } returns featureFlagMap
       }
     val reader = ReplicationInputFeatureFlagReader(replicationInput)
-    assertEquals(DestinationTimeoutEnabled.default, reader.read(DestinationTimeoutEnabled))
+    Assertions.assertEquals(DestinationTimeoutEnabled.default, reader.read(DestinationTimeoutEnabled))
   }
 }

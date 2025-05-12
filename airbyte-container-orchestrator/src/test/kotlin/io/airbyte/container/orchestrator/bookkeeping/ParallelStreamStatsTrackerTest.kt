@@ -11,6 +11,7 @@ import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
@@ -27,7 +28,6 @@ import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.InvalidChecksumException
 import io.airbyte.workers.models.StateWithId
 import io.airbyte.workers.testutils.AirbyteMessageUtils

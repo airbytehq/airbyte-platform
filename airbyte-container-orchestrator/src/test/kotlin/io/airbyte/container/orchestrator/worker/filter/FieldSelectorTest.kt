@@ -11,6 +11,7 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
 import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.persistence.job.models.ReplicationInput
@@ -18,7 +19,6 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.WorkerUtils
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions

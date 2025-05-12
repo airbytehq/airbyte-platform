@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.config.FailureReason
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.LogConnectorMessages
 import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -13,7 +14,6 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.helper.FailureHelper.destinationFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
 import io.airbyte.workers.testutils.AirbyteMessageUtils

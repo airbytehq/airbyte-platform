@@ -4,11 +4,11 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 
 /**
  * Track stats during a sync.

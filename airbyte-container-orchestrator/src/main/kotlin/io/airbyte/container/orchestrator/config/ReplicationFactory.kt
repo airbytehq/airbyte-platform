@@ -7,11 +7,11 @@ package io.airbyte.container.orchestrator.config
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.withBufferSize
 import io.airbyte.container.orchestrator.worker.withDefaultConfiguration
 import io.airbyte.featureflag.ReplicationBufferOverride
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.internal.NamespacingMapper
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named

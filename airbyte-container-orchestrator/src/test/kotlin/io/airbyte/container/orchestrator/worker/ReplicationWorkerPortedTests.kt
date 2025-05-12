@@ -20,6 +20,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestination
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
@@ -41,7 +42,6 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.WorkerMetricReporter
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.FailureHelper
 import io.airbyte.workers.internal.AirbyteMapper
