@@ -7,6 +7,7 @@ package io.airbyte.container.orchestrator.bookkeeping.streamstatus
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.container.orchestrator.bookkeeping.events.StreamStatusUpdateEvent
 import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
+import io.airbyte.container.orchestrator.worker.util.AirbyteMessageDataExtractor
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
@@ -17,7 +18,6 @@ import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.every
 import io.mockk.mockk
