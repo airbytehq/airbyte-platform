@@ -9985,8 +9985,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -10022,8 +10023,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -10254,8 +10256,6 @@ components:
           type: boolean
         feedbackDone:
           type: boolean
-        defaultGeography:
-          type: string
         dataplaneGroupId:
           type: string
           format: uuid
@@ -10392,8 +10392,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         notificationsConfig:
           $ref: "#/components/schemas/NotificationsConfig"
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -12334,8 +12335,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12395,8 +12397,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         nonBreakingChangesPreference:
@@ -12458,8 +12461,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12530,8 +12534,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12593,8 +12598,6 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
-          type: string
         breakingChange:
           type: boolean
         notifySchemaChanges:
@@ -16178,8 +16181,9 @@ components:
           format: uuid
         catalogDiff:
           $ref: "#/components/schemas/CatalogDiff"
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
@@ -19422,8 +19426,6 @@ components:
           $ref: "#/components/schemas/ResourceRequirements"
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
-        defaultGeography:
-          type: string
         syncOnCreate:
           type: boolean
           default: true

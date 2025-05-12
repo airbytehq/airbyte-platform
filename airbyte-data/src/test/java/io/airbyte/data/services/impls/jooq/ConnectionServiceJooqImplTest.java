@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
@@ -44,8 +43,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
   public ConnectionServiceJooqImplTest() {
-    final DataplaneGroupServiceTestJooqImpl dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
+    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
   }
 
   private static Stream<Arguments> actorSyncsStreamTestProvider() {
@@ -117,7 +115,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(UUID.randomUUID())
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());

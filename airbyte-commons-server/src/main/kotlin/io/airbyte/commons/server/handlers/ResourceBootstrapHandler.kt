@@ -12,7 +12,6 @@ import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
-import io.airbyte.commons.server.handlers.helpers.getWorkspaceWithFixedGeography
 import io.airbyte.commons.server.handlers.helpers.validateWorkspace
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
@@ -21,6 +20,7 @@ import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.OrganizationPaymentConfigService
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.PermissionRedundantException
@@ -43,6 +43,7 @@ open class ResourceBootstrapHandler(
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val airbyteEdition: AirbyteEdition,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) : ResourceBootstrapHandlerInterface {
   /**
    * This is for bootstrapping a workspace and all the necessary links (organization) and permissions (workspace & organization).
@@ -69,10 +70,17 @@ open class ResourceBootstrapHandler(
       setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
     )
 
-    val standardWorkspace = buildStandardWorkspace(workspaceCreateWithId, organization, uuidSupplier)
+    val standardWorkspace =
+      buildStandardWorkspace(
+        workspaceCreateWithId,
+        organization,
+        uuidSupplier,
+        dataplaneGroupService,
+        airbyteEdition,
+      )
 
     validateWorkspace(standardWorkspace, airbyteEdition)
-    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(standardWorkspace, airbyteEdition))
+    workspaceService.writeWorkspaceWithSecrets(standardWorkspace)
 
     kotlin
       .runCatching {

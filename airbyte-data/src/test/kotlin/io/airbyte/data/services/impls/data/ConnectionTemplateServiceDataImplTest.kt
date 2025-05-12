@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConnectionTemplate
 import io.airbyte.config.Cron
@@ -40,7 +39,6 @@ class ConnectionTemplateServiceDataImplTest {
   private val namespaceDefinitionType = NamespaceDefinitionType.DESTINATION
   private val ignoreNonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE
   private val connectionTemplateId = UUID.randomUUID()
-  private val defaultGeography = GEOGRAPHY_AUTO
   private val cronScheduleData = ScheduleData().withCron(Cron().withCronExpression("0 0 * * *").withCronTimeZone("UTC"))
   private val syncOnCreate = true
 
@@ -67,7 +65,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -87,7 +84,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -105,7 +101,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = null,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = syncOnCreate,
       )
 
@@ -132,7 +127,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -152,7 +146,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -170,7 +163,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = null,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = syncOnCreate,
       )
 
@@ -197,7 +189,6 @@ class ConnectionTemplateServiceDataImplTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -217,7 +208,6 @@ class ConnectionTemplateServiceDataImplTest {
         cronScheduleData,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         false,
       )
 
@@ -235,7 +225,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = false,
       )
 

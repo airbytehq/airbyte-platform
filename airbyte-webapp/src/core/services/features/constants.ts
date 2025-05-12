@@ -10,7 +10,7 @@ export const defaultOssFeatures = [
 export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
-  FeatureItem.AllowChangeDataGeographies,
+  FeatureItem.AllowChangeDataplanes,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorResourceAllocation,
   FeatureItem.DiagnosticsExport,
@@ -26,7 +26,7 @@ export const defaultEnterpriseFeatures = [
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowChangeDataGeographies,
+  FeatureItem.AllowChangeDataplanes,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,

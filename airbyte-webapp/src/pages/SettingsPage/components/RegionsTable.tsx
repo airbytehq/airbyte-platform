@@ -4,11 +4,12 @@ import { FormLabel } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { Table } from "components/ui/Table";
 
-import { useCurrentWorkspace, useListWorkspacesInOrganization } from "core/api";
+import { useCurrentWorkspace, useGetDataplaneGroup, useListWorkspacesInOrganization } from "core/api";
 
 export const RegionsTable = () => {
   const { organizationId } = useCurrentWorkspace();
   const { workspaces } = useListWorkspacesInOrganization({ organizationId });
+  const { getDataplaneGroup } = useGetDataplaneGroup();
   const { formatMessage } = useIntl();
 
   return (
@@ -22,15 +23,12 @@ export const RegionsTable = () => {
           },
           {
             header: formatMessage({ id: "settings.organizationSettings.regions.region" }),
-            accessorKey: "defaultGeography",
+            accessorKey: "dataplaneGroupName",
           },
         ]}
-        data={workspaces.map(({ name, defaultGeography = "auto" }) => ({
+        data={workspaces.map(({ name, dataplaneGroupId }) => ({
           name,
-          defaultGeography: formatMessage({
-            id: `connection.geography.${defaultGeography}`,
-            defaultMessage: defaultGeography,
-          }),
+          dataplaneGroupName: getDataplaneGroup(dataplaneGroupId)?.name,
         }))}
         sorting={false}
         showTableToggle

@@ -5,7 +5,6 @@
 package io.airbyte.data.repositories.entities
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
 import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
 import io.airbyte.db.instance.configs.jooq.generated.enums.ScheduleType
@@ -40,7 +39,6 @@ data class ConnectionTemplate(
   var resourceRequirements: JsonNode?,
   @field:TypeDef(type = DataType.OBJECT)
   var nonBreakingChangesPreference: NonBreakingChangePreferenceType,
-  var defaultGeography: String = GEOGRAPHY_AUTO,
   var syncOnCreate: Boolean = true,
   var tombstone: Boolean = false,
   @DateCreated

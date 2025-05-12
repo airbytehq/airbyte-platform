@@ -4,20 +4,16 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION_OPERATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.NOTIFICATION_CONFIGURATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.commons.constants.OrganizationConstantsKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.db.instance.configs.jooq.generated.enums.AutoPropagationStatus;
@@ -25,30 +21,22 @@ import io.airbyte.db.instance.configs.jooq.generated.enums.NotificationType;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.NotificationConfigurationRecord;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.SchemaManagementRecord;
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Query helpers that support {@link RepositoryTestSetup}.
  */
 public class RepositoryTestSyncHelper {
 
-  private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
-
   private final ExceptionWrappingDatabase database;
-  private final DataplaneGroupService dataplaneGroupService;
 
-  public RepositoryTestSyncHelper(final Database database, final DataplaneGroupService dataplaneGroupService) {
+  public RepositoryTestSyncHelper(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
-    this.dataplaneGroupService = dataplaneGroupService;
   }
 
   /**
@@ -96,7 +84,7 @@ public class RepositoryTestSyncHelper {
         .set(CONNECTION.RESOURCE_REQUIREMENTS,
             JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
         .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
-        .set(CONNECTION.DATAPLANE_GROUP_ID, getDataplaneGroupIdFromGeography(standardSync, standardSync.getGeography()))
+        .set(CONNECTION.DATAPLANE_GROUP_ID, standardSync.getDataplaneGroupId())
         .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
         .set(CONNECTION.CREATED_AT, timestamp)
         .set(CONNECTION.UPDATED_AT, timestamp)
@@ -213,31 +201,6 @@ public class RepositoryTestSyncHelper {
         return standardSync.getNotifySchemaChangesByEmail() != null && standardSync.getNotifySchemaChangesByEmail();
       default:
         throw new IllegalStateException("Notification type unsupported");
-    }
-  }
-
-  @VisibleForTesting
-  UUID getDataplaneGroupIdFromGeography(StandardSync connection, String geography) {
-    UUID organizationId;
-    try {
-      organizationId = database.query(ctx -> ctx.select(WORKSPACE.ORGANIZATION_ID)
-          .from(ACTOR)
-          .join(WORKSPACE)
-          .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
-          .where(ACTOR.ID.eq(connection.getSourceId()))
-          .fetchOneInto(UUID.class));
-    } catch (IOException e) {
-      throw new IllegalStateException("No organization found for actor " + connection.getSourceId(), e);
-    }
-    try {
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(organizationId, geography).getId();
-    } catch (IllegalArgumentException | NullPointerException | NoSuchElementException e) {
-      log.error(
-          String.format("Invalid or missing dataplane group for organization=%s geography=%s. Falling back to default organization geography.",
-              organizationId, geography),
-          e);
-      return dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(OrganizationConstantsKt.getDEFAULT_ORGANIZATION_ID(), geography)
-          .getId();
     }
   }
 

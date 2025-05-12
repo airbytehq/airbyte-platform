@@ -9,7 +9,7 @@ export enum FeatureItem {
   AllowUploadCustomImage = "ALLOW_UPLOAD_CUSTOM_IMAGE",
   AllowDBTCloudIntegration = "ALLOW_DBT_CLOUD_INTEGRATION",
   AllowUpdateConnectors = "ALLOW_UPDATE_CONNECTORS",
-  AllowChangeDataGeographies = "ALLOW_CHANGE_DATA_GEOGRAPHIES",
+  AllowChangeDataplanes = "ALLOW_CHANGE_DATAPLANES",
   CloudForTeamsBranding = "CLOUD_FOR_TEAMS_BRANDING",
   CloudForTeamsUpsell = "CLOUD_FOR_TEAMS_UPSELLING",
   ConnectionHistoryGraphs = "CONNECTION_HISTORY_GRAPHS",

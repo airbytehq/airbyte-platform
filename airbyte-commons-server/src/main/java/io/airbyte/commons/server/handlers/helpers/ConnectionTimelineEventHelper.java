@@ -328,7 +328,7 @@ public class ConnectionTimelineEventHelper {
       addPatchIfFieldIsChanged(patches, "namespaceFormat", originalConnectionRead.getNamespaceFormat(), patch.getNamespaceFormat());
       addPatchIfFieldIsChanged(patches, "prefix", originalConnectionRead.getPrefix(), patch.getPrefix());
       addPatchIfFieldIsChanged(patches, "resourceRequirements", originalConnectionRead.getResourceRequirements(), patch.getResourceRequirements());
-      addPatchIfFieldIsChanged(patches, "geography", originalConnectionRead.getGeography(), patch.getGeography());
+      addPatchIfFieldIsChanged(patches, "dataplaneGroupId", originalConnectionRead.getDataplaneGroupId(), patch.getDataplaneGroupId());
       addPatchIfFieldIsChanged(patches, "notifySchemaChanges", originalConnectionRead.getNotifySchemaChanges(), patch.getNotifySchemaChanges());
       addPatchIfFieldIsChanged(patches, "notifySchemaChangesByEmail", originalConnectionRead.getNotifySchemaChangesByEmail(),
           patch.getNotifySchemaChangesByEmail());

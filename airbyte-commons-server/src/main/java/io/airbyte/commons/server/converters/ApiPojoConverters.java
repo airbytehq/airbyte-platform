@@ -163,7 +163,7 @@ public class ApiPojoConverters {
         .syncCatalog(this.catalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()))
         .sourceCatalogId(standardSync.getSourceCatalogId())
         .breakingChange(standardSync.getBreakingChange())
-        .geography(standardSync.getGeography())
+        .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
         .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))

@@ -23,6 +23,5 @@ data class ConnectionTemplate(
   val scheduleData: ScheduleData?,
   val resourceRequirements: ResourceRequirements?,
   val nonBreakingChangesPreference: NonBreakingChangesPreference,
-  val defaultGeography: String,
   val syncOnCreate: Boolean,
 )

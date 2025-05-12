@@ -14,7 +14,7 @@ import { useNotificationService } from "hooks/services/Notification";
 
 const ValidationSchema = z.object({
   name: z.string().trim().nonempty("form.empty.error"),
-  defaultGeography: z.string().optional(),
+  dataplaneGroupId: z.string().optional(),
 });
 
 type WorkspaceFormValues = z.infer<typeof ValidationSchema>;
@@ -23,16 +23,16 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
   const { formatMessage } = useIntl();
   const { mutateAsync: updateWorkspace } = useUpdateWorkspace();
   const { registerNotification } = useNotificationService();
-  const { workspaceId, organizationId, name, email, defaultGeography } = useCurrentWorkspace();
+  const { workspaceId, organizationId, name, email, dataplaneGroupId } = useCurrentWorkspace();
   const invalidateWorkspace = useInvalidateWorkspace(workspaceId);
   const canUpdateWorkspace = useIntent("UpdateWorkspace", { workspaceId, organizationId });
-  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const supportsDataResidency = useFeature(FeatureItem.AllowChangeDataplanes);
 
-  const onSubmit = async ({ name, defaultGeography }: WorkspaceFormValues) => {
+  const onSubmit = async ({ name, dataplaneGroupId }: WorkspaceFormValues) => {
     await updateWorkspace({
       workspaceId,
       name,
-      defaultGeography,
+      dataplaneGroupId,
     });
 
     await invalidateWorkspace();
@@ -60,7 +60,7 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
     <Form<WorkspaceFormValues>
       defaultValues={{
         name,
-        defaultGeography,
+        dataplaneGroupId,
       }}
       zodSchema={ValidationSchema}
       onSubmit={onSubmit}
@@ -76,7 +76,9 @@ export const UpdateWorkspaceSettingsForm: React.FC = () => {
           id: "settings.workspaceSettings.updateWorkspaceNameForm.name.placeholder",
         })}
       />
-      {supportsDataResidency && <DataResidencyDropdown labelId="settings.region" name="defaultGeography" />}
+      {supportsDataResidency && dataplaneGroupId && (
+        <DataResidencyDropdown labelId="settings.region" name="dataplaneGroupId" />
+      )}
       {canUpdateWorkspace && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );

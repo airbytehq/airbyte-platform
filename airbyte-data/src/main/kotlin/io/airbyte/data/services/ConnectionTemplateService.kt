@@ -35,7 +35,6 @@ interface ConnectionTemplateService {
     scheduleData: ScheduleData?,
     resourceRequirements: ResourceRequirements?,
     nonBreakingChangesPreference: NonBreakingChangesPreference,
-    defaultGeography: String?,
     syncOnCreate: Boolean,
   ): ConnectionTemplate
 }

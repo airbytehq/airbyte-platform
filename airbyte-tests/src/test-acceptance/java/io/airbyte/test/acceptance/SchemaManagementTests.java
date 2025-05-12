@@ -104,7 +104,8 @@ class SchemaManagementTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId()).build());
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId()).build());
     LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.
@@ -112,7 +113,8 @@ class SchemaManagementTests {
         createdConnection.getSourceId(),
         createdConnection.getDestinationId(),
         createdConnection.getSyncCatalog(),
-        createdConnection.getSourceCatalogId())
+        createdConnection.getSourceCatalogId(),
+        createdConnection.getDataplaneGroupId())
             .setAdditionalOperationIds(createdConnection.getOperationIds())
             .setSchedule(createdConnection.getScheduleType(), createdConnection.getScheduleData())
             .setNameSuffix("-same-source")

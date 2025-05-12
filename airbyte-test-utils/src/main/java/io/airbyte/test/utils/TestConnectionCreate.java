@@ -7,7 +7,6 @@ package io.airbyte.test.utils;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.ConnectionScheduleData;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -27,7 +26,7 @@ public class TestConnectionCreate {
   private final ConnectionScheduleType scheduleType;
   private final ConnectionScheduleData scheduleData;
   private final List<UUID> operationIds;
-  private final String geography;
+  private final UUID dataplaneGroupId;
   private final String nameSuffix;
 
   /**
@@ -41,7 +40,7 @@ public class TestConnectionCreate {
    * @param scheduleType - schedule type
    * @param scheduleData - schedule data
    * @param operationIds - operation ids (including normalization)
-   * @param geography - geography
+   * @param dataplaneGroupId - dataplaneGroupId
    * @param nameSuffix - optional suffix that will get appended to the connection name.
    */
   private TestConnectionCreate(UUID srcId,
@@ -51,7 +50,7 @@ public class TestConnectionCreate {
                                ConnectionScheduleType scheduleType,
                                ConnectionScheduleData scheduleData,
                                List<UUID> operationIds,
-                               String geography,
+                               UUID dataplaneGroupId,
                                String nameSuffix) {
     this.srcId = srcId;
     this.dstId = dstId;
@@ -60,7 +59,7 @@ public class TestConnectionCreate {
     this.scheduleType = scheduleType;
     this.scheduleData = scheduleData;
     this.operationIds = operationIds;
-    this.geography = geography;
+    this.dataplaneGroupId = dataplaneGroupId;
     this.nameSuffix = nameSuffix;
   }
 
@@ -92,8 +91,8 @@ public class TestConnectionCreate {
     return operationIds;
   }
 
-  public String getGeography() {
-    return geography;
+  public UUID getDataplaneGroupId() {
+    return dataplaneGroupId;
   }
 
   public String getNameSuffix() {
@@ -116,7 +115,7 @@ public class TestConnectionCreate {
     private ConnectionScheduleType scheduleType;
     private ConnectionScheduleData scheduleData;
 
-    private String geography;
+    private UUID dataplaneGroupId;
     private String nameSuffix;
 
     /**
@@ -128,14 +127,14 @@ public class TestConnectionCreate {
      * @param configuredCatalog - configured catalog
      * @param catalogId - discovered catalog id
      */
-    public Builder(UUID srcId, UUID dstId, AirbyteCatalog configuredCatalog, UUID catalogId) {
+    public Builder(UUID srcId, UUID dstId, AirbyteCatalog configuredCatalog, UUID catalogId, UUID dataplaneGroupId) {
       this.srcId = srcId;
       this.dstId = dstId;
       this.configuredCatalog = configuredCatalog;
       this.catalogId = catalogId;
+      this.dataplaneGroupId = dataplaneGroupId;
       additionalOperationIds = Collections.emptyList();
       scheduleType = ConnectionScheduleType.MANUAL;
-      geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
     }
 
     /**
@@ -177,13 +176,13 @@ public class TestConnectionCreate {
     }
 
     /**
-     * Set the geography for a connection. Defaults to AUTO.
+     * Set the dataplaneGroupId for a connection.
      *
-     * @param geography - geography
+     * @param dataplaneGroupId - dataplaneGroupId
      * @return the builder
      */
-    public Builder setGeography(String geography) {
-      this.geography = geography;
+    public Builder setDataplaneGroupId(UUID dataplaneGroupId) {
+      this.dataplaneGroupId = dataplaneGroupId;
       return this;
     }
 
@@ -218,7 +217,7 @@ public class TestConnectionCreate {
           scheduleType,
           scheduleData,
           operationIds,
-          geography,
+          dataplaneGroupId,
           nameSuffix);
     }
 

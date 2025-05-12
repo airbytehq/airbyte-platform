@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -44,7 +44,7 @@ class DataplaneInitializer(
         AirbyteEdition.CLOUD ->
           groupService.getDataplaneGroupByOrganizationIdAndName(
             DEFAULT_ORGANIZATION_ID,
-            GEOGRAPHY_US,
+            US_DATAPLANE_GROUP,
           )
         else -> {
           val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)

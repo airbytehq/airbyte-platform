@@ -23,7 +23,6 @@ import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -113,7 +112,6 @@ class PartialUserConfigHandlerTest {
         connectionsHandler,
         destinationHandler,
         sourceService,
-        dataResidencyHelper,
         jobService,
       )
     objectMapper = ObjectMapper()
@@ -196,7 +194,6 @@ class PartialUserConfigHandlerTest {
             it.scheduleType == ConnectionScheduleType.MANUAL &&
             it.scheduleData == ConnectionScheduleData() &&
             it.status == ConnectionStatus.ACTIVE &&
-            it.geography == GEOGRAPHY_AUTO &&
             it.nonBreakingChangesPreference == NonBreakingChangesPreference.IGNORE
         },
       )
@@ -228,7 +225,6 @@ class PartialUserConfigHandlerTest {
               .withEphemeralStorageLimit("1g")
               .withEphemeralStorageRequest("0.5g"),
           ),
-        defaultGeography = GEOGRAPHY_AUTO,
       )
     every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns listOf(connectionTemplate)
 
@@ -239,10 +235,6 @@ class PartialUserConfigHandlerTest {
 
     val sourceCreateSlot = slot<SourceCreate>()
     every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
-
-    every {
-      dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(any())
-    } returns GEOGRAPHY_AUTO
 
     every { jobService.sync(connectionId) } returns
       JobResponse(

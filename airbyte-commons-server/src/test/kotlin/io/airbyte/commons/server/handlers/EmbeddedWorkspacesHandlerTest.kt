@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.repositories.entities.ConnectionTemplate
@@ -76,7 +75,6 @@ class EmbeddedWorkspacesHandlerTest {
       null,
       null,
       NonBreakingChangePreferenceType.disable,
-      GEOGRAPHY_AUTO,
     )
 
   private val destinationRead =

@@ -7,7 +7,6 @@ package io.airbyte.analytics
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.client.model.generated.WorkspaceRead
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.config.Organization
 import io.airbyte.config.ScopeType
 import io.airbyte.data.services.OrganizationService
@@ -141,7 +140,7 @@ class TrackingIdentityFetcherTest {
         anonymousDataCollection = false,
         news = true,
         securityUpdates = true,
-        defaultGeography = GEOGRAPHY_AUTO,
+        dataplaneGroupId = UUID.randomUUID(),
         name = "",
         slug = "",
         initialSetupComplete = true,
@@ -175,7 +174,7 @@ class TrackingIdentityFetcherTest {
         anonymousDataCollection = true,
         news = true,
         securityUpdates = true,
-        defaultGeography = GEOGRAPHY_AUTO,
+        dataplaneGroupId = UUID.randomUUID(),
         name = "",
         slug = "",
         initialSetupComplete = true,

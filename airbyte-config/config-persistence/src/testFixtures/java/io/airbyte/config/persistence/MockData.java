@@ -130,8 +130,6 @@ public class MockData {
   public static final UUID DATAPLANE_GROUP_ID_ORG_1 = UUID.randomUUID();
   public static final UUID DATAPLANE_GROUP_ID_ORG_2 = UUID.randomUUID();
   public static final UUID DATAPLANE_GROUP_ID_ORG_3 = UUID.randomUUID();
-  public static final String GEOGRAPHY_AUTO = "AUTO";
-  public static final String GEOGRAPHY_US = "US";
   // User
   static final UUID CREATOR_USER_ID_1 = UUID.randomUUID();
   static final UUID CREATOR_USER_ID_2 = UUID.randomUUID();
@@ -361,7 +359,7 @@ public class MockData {
         .withNotifications(Collections.singletonList(notification))
         .withFirstCompletedSync(true)
         .withFeedbackDone(true)
-        .withDefaultGeography(GEOGRAPHY_US)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withWebhookOperationConfigs(Jsons.jsonNode(
             new WebhookOperationConfigs().withWebhookConfigs(List.of(new WebhookConfig().withId(WEBHOOK_CONFIG_ID).withName("name")))))
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
@@ -372,7 +370,7 @@ public class MockData {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     final StandardWorkspace workspace3 = new StandardWorkspace()
@@ -381,7 +379,7 @@ public class MockData {
         .withSlug("tombstoned")
         .withInitialSetupComplete(true)
         .withTombstone(true)
-        .withDefaultGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
 
     return Arrays.asList(workspace1, workspace2, workspace3);
@@ -698,7 +696,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -719,7 +717,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -740,7 +738,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -761,7 +759,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.DEPRECATED)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -782,7 +780,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -803,7 +801,7 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.DEPRECATED)
         .withSchedule(schedule)
-        .withGeography(GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)

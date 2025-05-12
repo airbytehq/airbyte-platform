@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConnectionTemplate
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
@@ -38,7 +37,6 @@ open class ConnectionTemplateServiceDataImpl(
     scheduleData: ScheduleData?,
     resourceRequirements: ResourceRequirements?,
     nonBreakingChangesPreference: NonBreakingChangesPreference,
-    defaultGeography: String?,
     syncOnCreate: Boolean,
   ): ConnectionTemplate {
     // FIXME: there should be a check preventing from creating a template with the same name https://github.com/airbytehq/airbyte-internal-issues/issues/12818
@@ -69,7 +67,6 @@ open class ConnectionTemplateServiceDataImpl(
         scheduleData = Jsons.jsonNode(scheduleData),
         resourceRequirements = Jsons.jsonNode(resourceRequirements),
         nonBreakingChangesPreference = NonBreakingChangePreferenceType.valueOf(nonBreakingChangesPreference.value()),
-        defaultGeography = defaultGeography ?: GEOGRAPHY_AUTO,
         syncOnCreate = syncOnCreate,
       )
 

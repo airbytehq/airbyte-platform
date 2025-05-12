@@ -264,7 +264,8 @@ class ApiAcceptanceTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId())
                 .build())
             .getConnectionId();
 
@@ -292,7 +293,8 @@ class ApiAcceptanceTests {
               sourceId,
               destinationId,
               catalog,
-              discoverResult.getCatalogId())
+              discoverResult.getCatalogId(),
+              testHarness.getDataplaneGroupId())
                   .build())
               .getConnectionId();
 

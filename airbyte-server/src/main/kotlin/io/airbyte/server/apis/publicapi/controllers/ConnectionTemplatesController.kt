@@ -100,7 +100,6 @@ open class ConnectionTemplatesController(
         convertScheduleData(connectionTemplateCreateRequestBody.schedule),
         convertResourceRequirements(connectionTemplateCreateRequestBody.resourceRequirements),
         convertNonBreakingChangesPreference(connectionTemplateCreateRequestBody.nonBreakingChangesPreference),
-        connectionTemplateCreateRequestBody.defaultGeography,
         connectionTemplateCreateRequestBody.syncOnCreate ?: true,
       )
 

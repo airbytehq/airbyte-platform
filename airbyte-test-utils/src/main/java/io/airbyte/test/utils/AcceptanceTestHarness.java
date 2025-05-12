@@ -38,6 +38,7 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.ConnectionUpdate;
 import io.airbyte.api.client.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.CustomSourceDefinitionCreate;
+import io.airbyte.api.client.model.generated.DataplaneGroupListRequestBody;
 import io.airbyte.api.client.model.generated.DestinationCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -234,6 +235,7 @@ public class AcceptanceTestHarness {
   private final AirbyteApiClient apiClient;
   private final TestFlagsSetter testFlagsSetter;
   private final UUID defaultWorkspaceId;
+  private final UUID dataplaneGroupId;
   private final String postgresSqlInitFile;
 
   private final List<UUID> sourceIds = Lists.newArrayList();
@@ -335,6 +337,9 @@ public class AcceptanceTestHarness {
         .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS), Duration.ofSeconds(FINAL_INTERVAL_SECS))
         .withMaxRetries(MAX_TRIES)
         .build();
+
+    dataplaneGroupId = apiClient.getDataplaneGroupApi().listDataplaneGroups(new DataplaneGroupListRequestBody(DEFAULT_ORGANIZATION_ID))
+        .getDataplaneGroups().getFirst().getDataplaneGroupId();
 
     LOGGER.info("Using external deployment of airbyte.");
   }
@@ -598,6 +603,10 @@ public class AcceptanceTestHarness {
     return new Database(Databases.createDslContext(dataSource, SQLDialect.POSTGRES));
   }
 
+  public UUID getDataplaneGroupId() {
+    return dataplaneGroupId;
+  }
+
   /**
    * Assert that the normalized destination matches the input records, only expecting a single id
    * column.
@@ -667,7 +676,7 @@ public class AcceptanceTestHarness {
         create.getScheduleData(),
         null,
         create.getCatalogId(),
-        create.getGeography(),
+        create.getDataplaneGroupId(),
         null,
         null,
         null,
@@ -703,7 +712,7 @@ public class AcceptanceTestHarness {
             create.getScheduleData(),
             null,
             create.getCatalogId(),
-            create.getGeography(),
+            create.getDataplaneGroupId(),
             null,
             null,
             null,
@@ -1099,14 +1108,15 @@ public class AcceptanceTestHarness {
         .orElseThrow());
   }
 
-  public void updateDestinationDefinitionVersion(final UUID destinationDefinitionId, final String dockerImageTag) throws IOException {
-    apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
+  public void updateDestinationDefinitionVersion(final UUID destinationDefinitionId, final String dockerImageTag)
+      throws IOException {
+    Failsafe.with(retryPolicy).run(() -> apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
             dockerImageTag,
             defaultWorkspaceId,
             null,
-            null));
+            null)));
   }
 
   public void updateSourceDefinitionVersion(final UUID sourceDefinitionId, final String dockerImageTag) throws IOException {

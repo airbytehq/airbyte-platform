@@ -21,7 +21,6 @@ import io.airbyte.api.model.generated.ConnectionUpdate;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.support.CurrentUserService;
@@ -223,18 +222,19 @@ class ConnectionTimelineEventHelperTest {
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
         currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
     final UUID connectionId = UUID.randomUUID();
+    final UUID dataplaneGroupId = UUID.randomUUID();
     final ConnectionRead originalConnectionRead = new ConnectionRead()
         .connectionId(connectionId)
         .name("old name")
         .prefix("old prefix")
         .notifySchemaChanges(false)
-        .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .dataplaneGroupId(dataplaneGroupId)
         .notifySchemaChangesByEmail(false);
     final ConnectionUpdate patch = new ConnectionUpdate()
         .connectionId(connectionId)
         .name("new name")
         .prefix("new prefix")
-        .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .dataplaneGroupId(dataplaneGroupId)
         .notifySchemaChanges(true);
     final Map<String, Map<String, Object>> expectedPatches = new HashMap<>();
     expectedPatches.put("name", Map.of("from", "old name", "to", "new name"));

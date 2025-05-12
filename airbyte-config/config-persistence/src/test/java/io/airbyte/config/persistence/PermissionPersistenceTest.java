@@ -59,8 +59,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
-        mock(MetricClient.class),
-        dataplaneGroupService);
+        mock(MetricClient.class));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace);

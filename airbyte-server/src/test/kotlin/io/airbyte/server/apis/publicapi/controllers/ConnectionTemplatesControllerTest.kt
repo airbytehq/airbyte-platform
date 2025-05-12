@@ -5,7 +5,6 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
@@ -58,7 +57,6 @@ class ConnectionTemplatesControllerTest {
   val cronScheduleData = ScheduleData().withCron(Cron().withCronExpression(cronExpression).withCronTimeZone("UTC"))
   val resourceRequirements = null
   val ignoreNonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE
-  val defaultGeography = GEOGRAPHY_AUTO
 
   @BeforeEach
   fun setup() {
@@ -84,7 +82,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -100,7 +97,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -136,7 +132,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = false,
       )
 
@@ -152,7 +147,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         false,
       )
     } returns connectionTemplate
@@ -167,7 +161,6 @@ class ConnectionTemplatesControllerTest {
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
         namespaceFormat,
         prefix,
-        defaultGeography = defaultGeography,
         syncOnCreate = false,
       )
 
@@ -211,7 +204,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -227,7 +219,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -267,7 +258,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_FULLY,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -283,7 +273,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_FULLY,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -322,7 +311,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -338,7 +326,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -377,7 +364,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -393,7 +379,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.DISABLE,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -432,7 +417,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = cronScheduleData,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -448,7 +432,6 @@ class ConnectionTemplatesControllerTest {
         eq(cronScheduleData),
         isNull(),
         eq(ignoreNonBreakingChangesPreference),
-        isNull(),
         eq(true),
       )
     } returns connectionTemplate
@@ -484,7 +467,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = null,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -500,7 +482,6 @@ class ConnectionTemplatesControllerTest {
         isNull(),
         isNull(),
         eq(ignoreNonBreakingChangesPreference),
-        isNull(),
         eq(true),
       )
     } returns connectionTemplate

@@ -30,6 +30,7 @@ object ConnectionCreateMapper {
     connectionCreateRequest: ConnectionCreateRequest,
     catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
+    dataplaneGroupId: UUID?,
   ): ConnectionCreate {
     val connectionCreateOss = ConnectionCreate()
     connectionCreateOss.sourceId = connectionCreateRequest.sourceId
@@ -47,8 +48,7 @@ object ConnectionCreateMapper {
       connectionCreateOss.prefix = connectionCreateRequest.prefix
     }
 
-    // set geography
-    connectionCreateOss.geography = connectionCreateRequest.dataResidency
+    connectionCreateOss.dataplaneGroupId = dataplaneGroupId
 
     // set schedule
     if (connectionCreateRequest.schedule != null) {

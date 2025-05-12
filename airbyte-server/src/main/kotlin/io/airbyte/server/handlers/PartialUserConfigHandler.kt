@@ -41,7 +41,6 @@ import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.persistence.job.WorkspaceHelper
-import io.airbyte.server.apis.publicapi.helpers.DataResidencyHelper
 import io.airbyte.server.apis.publicapi.services.JobService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.airbyte.validation.json.JsonMergingHelper
@@ -62,7 +61,6 @@ class PartialUserConfigHandler(
   private val connectionsHandler: ConnectionsHandler,
   private val destinationHandler: DestinationHandler,
   private val sourceService: SourceService,
-  private val dataResidencyHelper: DataResidencyHelper,
   private val jobService: JobService,
 ) {
   private val jsonMergingHelper = JsonMergingHelper()
@@ -155,7 +153,6 @@ class PartialUserConfigHandler(
               StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
             },
           ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
-          .geography(dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionTemplate.defaultGeography))
       // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
       if (connectionTemplate.resourceRequirements != null) {
         createConnection.resourceRequirements(

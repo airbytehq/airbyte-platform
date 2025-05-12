@@ -4,8 +4,6 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
@@ -137,7 +135,7 @@ internal class BootloaderTest {
     val secretPersistenceConfigService: SecretPersistenceConfigService = mockk()
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
 
-    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
@@ -174,7 +172,6 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
-        dataplaneGroupService,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -286,7 +283,7 @@ internal class BootloaderTest {
 
     val workspaces = workspaceService.listStandardWorkspaces(false)
     Assertions.assertEquals(workspaces.size, 1)
-    Assertions.assertEquals(workspaces[0].defaultGeography, if (airbyteEdition == AirbyteEdition.CLOUD) GEOGRAPHY_US else GEOGRAPHY_AUTO)
+    Assertions.assertEquals(workspaces[0].dataplaneGroupId, dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
 
     Assertions.assertEquals(VERSION_0330_ALPHA, jobsPersistence.version.get())
     Assertions.assertEquals(Version(PROTOCOL_VERSION_001), jobsPersistence.airbyteProtocolVersionMin.get())
@@ -324,7 +321,7 @@ internal class BootloaderTest {
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
@@ -361,7 +358,6 @@ internal class BootloaderTest {
         mockk(),
         mockk(),
         metricClient,
-        dataplaneGroupService,
       )
     val configsDatabaseInitializationTimeoutMs = TimeUnit.SECONDS.toMillis(60L)
     val configDatabaseInitializer =
@@ -633,7 +629,7 @@ internal class BootloaderTest {
     val configDatabase = ConfigsDatabaseTestProvider(configsDslContext, configsFlyway).create(false)
     val jobDatabase = JobsDatabaseTestProvider(jobsDslContext, jobsFlyway).create(false)
     val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(configDatabase)
-    val connectionService = ConnectionServiceJooqImpl(configDatabase, dataplaneGroupService)
+    val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
     val scopedConfigurationService: ScopedConfigurationService = mockk()
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
@@ -656,7 +652,6 @@ internal class BootloaderTest {
         secretsRepositoryWriter,
         secretPersistenceConfigService,
         metricClient,
-        dataplaneGroupService,
       )
     val sourceService =
       SourceServiceJooqImpl(

@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -39,7 +39,7 @@ private val dpg =
 private val dpgUS =
   DataplaneGroup().apply {
     id = UUID.randomUUID()
-    name = GEOGRAPHY_US
+    name = US_DATAPLANE_GROUP
     organizationId = DEFAULT_ORGANIZATION_ID
     enabled = true
   }
@@ -149,7 +149,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
+    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }

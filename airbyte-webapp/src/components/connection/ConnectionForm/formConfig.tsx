@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { FieldArrayWithId } from "react-hook-form";
 
-import { useCurrentWorkspace, useGetDestinationDefinitionSpecification } from "core/api";
+import { useCurrentWorkspace, useGetDataplaneGroup, useGetDestinationDefinitionSpecification } from "core/api";
 import {
   AirbyteCatalog,
   DestinationSyncMode,
@@ -117,8 +117,10 @@ export const useInitialFormValues = (
   }
 
   const defaultNonBreakingChangesPreference = NonBreakingChangesPreference.propagate_columns;
+  const { getDataplaneGroup } = useGetDataplaneGroup();
 
   return useMemo(() => {
+    const dataplaneGroupId = connection.dataplaneGroupId || workspace.dataplaneGroupId;
     const initialValues: FormConnectionFormValues = {
       name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
       scheduleType: connection.scheduleType ?? ConnectionScheduleType.basic,
@@ -141,7 +143,7 @@ export const useInitialFormValues = (
         prefix: connection.prefix ?? "",
       },
       nonBreakingChangesPreference: connection.nonBreakingChangesPreference ?? defaultNonBreakingChangesPreference,
-      geography: connection.geography || workspace.defaultGeography || "auto",
+      geography: getDataplaneGroup(dataplaneGroupId)?.name ?? "auto",
       syncCatalog: analyzeSyncCatalogBreakingChanges(syncCatalog, catalogDiff, schemaChange),
       notifySchemaChanges:
         connection.notifySchemaChanges ??
@@ -163,15 +165,16 @@ export const useInitialFormValues = (
     connection.namespaceFormat,
     connection.prefix,
     connection.nonBreakingChangesPreference,
-    connection.geography,
+    connection.dataplaneGroupId,
     connection.notifySchemaChanges,
     connection.backfillPreference,
     connection.tags,
     defaultNonBreakingChangesPreference,
-    workspace.defaultGeography,
+    workspace.dataplaneGroupId,
     syncCatalog,
     catalogDiff,
     schemaChange,
     notificationSettings?.sendOnConnectionUpdate,
+    getDataplaneGroup,
   ]);
 };
