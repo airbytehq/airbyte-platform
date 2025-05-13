@@ -12,6 +12,7 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.workers.WorkerUtils
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.time.Instant
@@ -40,6 +41,12 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("outputDocumentStore")
   fun outputDocumentStoreClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
+
+  @Singleton
+  @Named("replicationWorkerDispatcher")
+  fun replicationWorkerDispatcher(
+    @Value("\${airbyte.replication.dispatcher.n-threads:4}") nThreads: Int,
+  ) = Executors.newFixedThreadPool(nThreads)
 
   @Singleton
   @Named("syncPersistenceExecutorService")

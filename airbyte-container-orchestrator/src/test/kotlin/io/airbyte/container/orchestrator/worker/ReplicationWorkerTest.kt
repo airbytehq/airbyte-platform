@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
+import java.util.concurrent.Executors
 
 internal class ReplicationWorkerTest {
   private lateinit var mockSource: AirbyteSource
@@ -101,6 +102,7 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
         )
 
       // When
@@ -152,6 +154,7 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
         )
 
       // Because we have a top-level try-catch that rethrows as WorkerException, we expect that
@@ -189,6 +192,7 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
         )
 
       worker.run(mockReplicationInput, mockPath)
@@ -224,6 +228,7 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
         )
 
       val result = worker.run(mockReplicationInput, mockPath)
@@ -260,6 +265,7 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
         )
 
       val result = worker.run(mockReplicationInput, mockPath)

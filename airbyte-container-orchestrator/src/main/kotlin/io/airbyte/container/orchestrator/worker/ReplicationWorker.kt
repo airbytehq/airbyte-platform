@@ -28,7 +28,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import org.slf4j.MDC
 import java.nio.file.Path
-import java.util.concurrent.Executors
+import java.util.concurrent.ExecutorService
 
 private val logger = KotlinLogging.logger {}
 
@@ -41,13 +41,13 @@ class ReplicationWorker(
   private val workloadHeartbeatSender: WorkloadHeartbeatSender,
   private val recordSchemaValidator: RecordSchemaValidator,
   private val context: ReplicationWorkerContext,
+  @Named("replicationWorkerDispatcher") private val replicationWorkerDispatcher: ExecutorService,
 ) {
   private val messagesFromSourceQueue =
     ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.sourceMaxBufferSize)
   private val messagesForDestinationQueue =
     ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.destinationMaxBufferSize)
-  private val dedicatedDispatcher =
-    Executors.newFixedThreadPool(4).asCoroutineDispatcher()
+  private val dedicatedDispatcher = replicationWorkerDispatcher.asCoroutineDispatcher()
 
   /**
    * Helper function to track failures.

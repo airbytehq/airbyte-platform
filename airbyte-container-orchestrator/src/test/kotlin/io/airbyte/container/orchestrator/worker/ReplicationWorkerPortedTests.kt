@@ -219,7 +219,16 @@ class ReplicationWorkerPortedTests {
   }
 
   private fun getWorker() =
-    ReplicationWorker(source, destination, syncPersistence, onReplicationRunning, mockk(relaxed = true), recordSchemaValidator, ctx)
+    ReplicationWorker(
+      source = source,
+      destination = destination,
+      syncPersistence = syncPersistence,
+      onReplicationRunning = onReplicationRunning,
+      workloadHeartbeatSender = mockk(relaxed = true),
+      recordSchemaValidator = recordSchemaValidator,
+      context = ctx,
+      replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+    )
 
   private fun setUpInfiniteSource() = sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1)
 
@@ -412,13 +421,14 @@ class ReplicationWorkerPortedTests {
       )
     val workerEnabled =
       ReplicationWorker(
-        source,
-        destination,
-        syncPersistence,
-        onReplicationRunning,
-        mockk(relaxed = true),
-        recordSchemaValidator,
-        ctxEnabled,
+        source = source,
+        destination = destination,
+        syncPersistence = syncPersistence,
+        onReplicationRunning = onReplicationRunning,
+        workloadHeartbeatSender = mockk(relaxed = true),
+        recordSchemaValidator = recordSchemaValidator,
+        context = ctxEnabled,
+        replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
       )
 
     runBlocking { workerEnabled.run(replicationInput, jobRoot) }
@@ -470,13 +480,14 @@ class ReplicationWorkerPortedTests {
       )
     val workerDisabled =
       ReplicationWorker(
-        source,
-        destination,
-        syncPersistence,
-        onReplicationRunning,
-        mockk(relaxed = true),
-        recordSchemaValidator,
-        ctxDisabled,
+        source = source,
+        destination = destination,
+        syncPersistence = syncPersistence,
+        onReplicationRunning = onReplicationRunning,
+        workloadHeartbeatSender = mockk(relaxed = true),
+        recordSchemaValidator = recordSchemaValidator,
+        context = ctxDisabled,
+        replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
       )
 
     runBlocking { workerDisabled.run(replicationInput, jobRoot) }
