@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.sync
+package io.airbyte.workload.launcher.constants
 
 import io.airbyte.analytics.SEGMENT_WRITE_KEY_ENV_VAR
 import io.airbyte.analytics.TRACKING_STRATEGY_ENV_VAR
