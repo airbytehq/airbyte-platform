@@ -12,10 +12,7 @@ import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.AsyncUtils
-import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
@@ -41,12 +38,10 @@ class ReplicationWorker(
   private val workloadHeartbeatSender: WorkloadHeartbeatSender,
   private val recordSchemaValidator: RecordSchemaValidator,
   private val context: ReplicationWorkerContext,
+  @Named("startReplicationJobs") private val startReplicationJobs: List<ReplicationTask>,
+  @Named("syncReplicationJobs") private val syncReplicationJobs: List<ReplicationTask>,
   @Named("replicationWorkerDispatcher") private val replicationWorkerDispatcher: ExecutorService,
 ) {
-  private val messagesFromSourceQueue =
-    ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.sourceMaxBufferSize)
-  private val messagesForDestinationQueue =
-    ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.destinationMaxBufferSize)
   private val dedicatedDispatcher = replicationWorkerDispatcher.asCoroutineDispatcher()
 
   /**
@@ -71,19 +66,13 @@ class ReplicationWorker(
   }
 
   @Throws(WorkerException::class)
-  fun runReplicationBlocking(
-    input: ReplicationInput,
-    jobRoot: Path,
-  ): ReplicationOutput =
+  fun runReplicationBlocking(jobRoot: Path): ReplicationOutput =
     runBlocking {
-      run(input, jobRoot)
+      run(jobRoot)
     }
 
   @Throws(WorkerException::class)
-  internal suspend fun run(
-    replicationInput: ReplicationInput,
-    jobRoot: Path,
-  ): ReplicationOutput {
+  internal suspend fun run(jobRoot: Path): ReplicationOutput {
     try {
       coroutineScope {
         val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
@@ -93,14 +82,10 @@ class ReplicationWorker(
         context.replicationWorkerHelper.initialize(jobRoot)
 
         val startJobs =
-          listOf(
-            AsyncUtils.runAsync(Dispatchers.Default, this, mdc) {
-              context.replicationWorkerHelper.startDestination(destination, jobRoot)
-            },
-            AsyncUtils.runAsync(Dispatchers.Default, this, mdc) {
-              context.replicationWorkerHelper.startSource(source, replicationInput, jobRoot)
-            },
-          )
+          startReplicationJobs.map { job ->
+            AsyncUtils.runAsync(Dispatchers.Default, this, mdc) { job.run() }
+          }
+
         startJobs.awaitAll()
 
         context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
@@ -111,7 +96,7 @@ class ReplicationWorker(
           }
 
         try {
-          runJobs(dedicatedDispatcher, mdc, source, destination)
+          runJobs(dedicatedDispatcher, mdc)
         } catch (e: Exception) {
           logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
           trackFailure(e)
@@ -142,46 +127,12 @@ class ReplicationWorker(
   private suspend fun runJobs(
     dispatcher: ExecutorCoroutineDispatcher,
     mdc: Map<String, String>,
-    source: AirbyteSource,
-    destination: AirbyteDestination,
   ) {
     coroutineScope {
       val tasks =
-        listOf(
-          AsyncUtils.runAsync(dispatcher, this, mdc) {
-            SourceReader(
-              source,
-              context.replicationWorkerState,
-              context.streamStatusCompletionTracker,
-              context.replicationWorkerHelper,
-              messagesFromSourceQueue,
-            ).run()
-          },
-          AsyncUtils.runAsync(dispatcher, this, mdc) {
-            MessageProcessor(
-              context.replicationWorkerState,
-              context.replicationWorkerHelper,
-              messagesFromSourceQueue,
-              messagesForDestinationQueue,
-            ).run()
-          },
-          AsyncUtils.runAsync(dispatcher, this, mdc) {
-            DestinationWriter(
-              source,
-              destination,
-              context.replicationWorkerState,
-              context.replicationWorkerHelper,
-              messagesForDestinationQueue,
-            ).run()
-          },
-          AsyncUtils.runAsync(dispatcher, this, mdc) {
-            DestinationReader(
-              destination,
-              context.replicationWorkerState,
-              context.replicationWorkerHelper,
-            ).run()
-          },
-        )
+        syncReplicationJobs.map { job ->
+          AsyncUtils.runAsync(dispatcher, this, mdc) { job.run() }
+        }
 
       tasks.awaitAll()
     }

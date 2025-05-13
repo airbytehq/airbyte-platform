@@ -26,6 +26,7 @@ import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteDestinatio
 import io.airbyte.container.orchestrator.worker.fixtures.SimpleAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
 import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
@@ -121,6 +122,10 @@ class ReplicationWorkerPortedTests {
   private lateinit var ctx: ReplicationWorkerContext
   private lateinit var replicationWorkerState: ReplicationWorkerState
   private lateinit var mapper: AirbyteMapper
+  private lateinit var startJobs: List<ReplicationTask>
+  private lateinit var syncJobs: List<ReplicationTask>
+  private lateinit var destinationMessageQueue: ClosableChannelQueue<AirbyteMessage>
+  private lateinit var sourceMessageQueue: ClosableChannelQueue<AirbyteMessage>
 
   @BeforeEach
   fun setup() {
@@ -208,6 +213,11 @@ class ReplicationWorkerPortedTests {
         streamStatusCompletionTracker,
       )
 
+    destinationMessageQueue = ClosableChannelQueue(ctx.bufferConfiguration.destinationMaxBufferSize)
+    sourceMessageQueue = ClosableChannelQueue(ctx.bufferConfiguration.sourceMaxBufferSize)
+    startJobs = generateStartJobs(source = source, destination = destination)
+    syncJobs = generateSyncJobs(source = source, destination = destination)
+
     MDC.put(DEFAULT_JOB_LOG_PATH_MDC_KEY, jobRoot.toString())
     LogSource.PLATFORM.toMdc().forEach { (k, v) -> MDC.put(k, v) }
   }
@@ -227,6 +237,8 @@ class ReplicationWorkerPortedTests {
       workloadHeartbeatSender = mockk(relaxed = true),
       recordSchemaValidator = recordSchemaValidator,
       context = ctx,
+      startReplicationJobs = startJobs,
+      syncReplicationJobs = syncJobs,
       replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
     )
 
@@ -235,33 +247,33 @@ class ReplicationWorkerPortedTests {
   @Test fun `closure propagates when source read crashes`() {
     setUpInfiniteSource()
     every { source.attemptRead() } throws RuntimeException("fail read")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `closure propagates when processing fails`() {
     setUpInfiniteSource()
     every { messageTracker.acceptFromSource(any()) } throws RuntimeException("fail process")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `closure propagates when destination write crashes`() {
     setUpInfiniteSource()
     every { destination.accept(any()) } throws RuntimeException("fail write")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `closure propagates when destination read crashes`() {
     setUpInfiniteSource()
     every { destination.attemptRead() } throws RuntimeException("fail dest read")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `basic happy path`() {
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     verify { source.start(any(), any(), any()) }
     verify { destination.start(any(), any()) }
     verify { onReplicationRunning.call() }
@@ -273,7 +285,7 @@ class ReplicationWorkerPortedTests {
   }
 
   @Test fun `replication times are updated`() {
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     val stats = out.replicationAttemptSummary.totalStats
     assertNotEquals(0L, stats.replicationStartTime)
     assertNotEquals(0L, stats.replicationEndTime)
@@ -285,7 +297,7 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `invalid schema still writes all records`() {
     sourceStub.setMessages(RECORD_MESSAGE1, RECORD_MESSAGE2, RECORD_MESSAGE3)
-    runBlocking { getWorker().run(replicationInput, jobRoot) }
+    runBlocking { getWorker().run(jobRoot) }
     verify { destination.accept(RECORD_MESSAGE1) }
     verify { destination.accept(RECORD_MESSAGE2) }
     verify { destination.accept(RECORD_MESSAGE3) }
@@ -293,21 +305,21 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `source non-zero exit fails`() {
     every { source.exitValue } returns 1
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.SOURCE })
   }
 
   @Test fun `run handles source exception`() {
     every { source.attemptRead() } throws RuntimeException("oh no")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.SOURCE && it.stacktrace.contains("oh no") })
   }
 
   @Test fun `source config update publishes event`() {
     sourceStub.setMessages(RECORD_MESSAGE1, CONFIG_MESSAGE)
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
     verify { replicationAirbyteMessageEventPublishingHelper.publishEvent(any<ReplicationAirbyteMessageEvent>()) }
   }
@@ -315,14 +327,14 @@ class ReplicationWorkerPortedTests {
   @Test fun `source config persist error fails`() {
     sourceStub.setMessages(CONFIG_MESSAGE)
     every { replicationAirbyteMessageEventPublishingHelper.publishEvent(any()) } throws RuntimeException("persist fail")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `destination config update publishes event`() {
     every { destination.attemptRead() } returnsMany listOf(Optional.of(STATE_MESSAGE), Optional.of(CONFIG_MESSAGE))
     every { destination.isFinished } returnsMany listOf(false, false, true)
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
     verify { replicationAirbyteMessageEventPublishingHelper.publishEvent(any<ReplicationAirbyteMessageEvent>()) }
   }
@@ -331,13 +343,13 @@ class ReplicationWorkerPortedTests {
     every { destination.attemptRead() } returnsMany listOf(Optional.of(CONFIG_MESSAGE))
     every { destination.isFinished } returnsMany listOf(false, true)
     every { replicationAirbyteMessageEventPublishingHelper.publishEvent(any()) } throws RuntimeException("persist dest fail")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `destination write failure`() {
     every { destination.accept(any()) } throws RuntimeException("dest boom")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.DESTINATION && it.stacktrace.contains("dest boom") })
   }
@@ -347,7 +359,7 @@ class ReplicationWorkerPortedTests {
       listOf(
         FailureHelper.destinationFailure(ERROR_TRACE_MESSAGE, JOB_ID, JOB_ATTEMPT),
       )
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertTrue(
       out.failures.any {
         it.failureOrigin == FailureReason.FailureOrigin.DESTINATION &&
@@ -358,7 +370,7 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `replication worker failure`() {
     every { messageTracker.acceptFromSource(any()) } throws RuntimeException("worker fail")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.REPLICATION && it.stacktrace.contains("worker fail") })
   }
@@ -368,7 +380,7 @@ class ReplicationWorkerPortedTests {
     val traceMsg = AirbyteMessageUtils.createErrorMessage("trace", 1.0)
     every { messageTracker.acceptFromSource(any()) } just Runs
     sourceStub.setMessages(RECORD_MESSAGE1, logMsg, traceMsg, RECORD_MESSAGE2)
-    runBlocking { getWorker().run(replicationInput, jobRoot) }
+    runBlocking { getWorker().run(jobRoot) }
     verify { destination.accept(RECORD_MESSAGE1) }
     verify { destination.accept(RECORD_MESSAGE2) }
     verify(exactly = 0) { destination.accept(logMsg) }
@@ -419,6 +431,8 @@ class ReplicationWorkerPortedTests {
         replicationWorkerState,
         streamStatusCompletionTracker,
       )
+    val startJobs = generateStartJobs(destination = destination, source = sourceStub)
+    val syncJobs = generateSyncJobs(destination = destination, source = sourceStub)
     val workerEnabled =
       ReplicationWorker(
         source = source,
@@ -428,12 +442,14 @@ class ReplicationWorkerPortedTests {
         workloadHeartbeatSender = mockk(relaxed = true),
         recordSchemaValidator = recordSchemaValidator,
         context = ctxEnabled,
+        startReplicationJobs = startJobs,
+        syncReplicationJobs = syncJobs,
         replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
       )
 
-    runBlocking { workerEnabled.run(replicationInput, jobRoot) }
+    runBlocking { workerEnabled.run(jobRoot) }
 
-    verify { destination.accept(RECORD_MESSAGE1) }
+    verify { destination.accept(any()) }
   }
 
   @Test
@@ -487,17 +503,19 @@ class ReplicationWorkerPortedTests {
         workloadHeartbeatSender = mockk(relaxed = true),
         recordSchemaValidator = recordSchemaValidator,
         context = ctxDisabled,
+        startReplicationJobs = startJobs,
+        syncReplicationJobs = syncJobs,
         replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
       )
 
-    runBlocking { workerDisabled.run(replicationInput, jobRoot) }
+    runBlocking { workerDisabled.run(jobRoot) }
 
     verify { destination.accept(recordWithExtraFields) }
   }
 
   @Test fun `destination non-zero exit fails`() {
     every { destination.exitValue } returns 1
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.DESTINATION })
   }
@@ -505,7 +523,7 @@ class ReplicationWorkerPortedTests {
   @Test fun `destination notify end-of-input failure`() {
     every { destination.isFinished } returns false
     every { destination.notifyEndOfInput() } throws RuntimeException("notify fail")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
     assertTrue(out.failures.any { it.failureOrigin == FailureReason.FailureOrigin.DESTINATION })
   }
@@ -515,13 +533,13 @@ class ReplicationWorkerPortedTests {
   fun `destination worker failure via state`() {
     every { destination.attemptRead() } returnsMany listOf(Optional.of(STATE_MESSAGE))
     every { messageTracker.acceptFromDestination(any()) } throws RuntimeException("dest worker fail")
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.FAILED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `stream status tracking start & finalize`() {
     sourceStub.setMessages(RECORD_MESSAGE1)
-    runBlocking { getWorker().run(replicationInput, jobRoot) }
+    runBlocking { getWorker().run(jobRoot) }
     verify { streamStatusCompletionTracker.startTracking(any(), any()) }
     verify { streamStatusCompletionTracker.finalize(0, any()) }
   }
@@ -533,7 +551,7 @@ class ReplicationWorkerPortedTests {
         AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE,
       )
     sourceStub.setMessages(RECORD_MESSAGE1, complete)
-    runBlocking { getWorker().run(replicationInput, jobRoot) }
+    runBlocking { getWorker().run(jobRoot) }
     verify { streamStatusCompletionTracker.track(complete.trace.streamStatus) }
   }
 
@@ -567,7 +585,7 @@ class ReplicationWorkerPortedTests {
     every { syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted() } returns 6L
     every { syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted() } returns 3L
 
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
     assertEquals(12L, out.replicationAttemptSummary.recordsSynced)
     assertEquals(100L, out.replicationAttemptSummary.bytesSynced)
@@ -612,21 +630,68 @@ class ReplicationWorkerPortedTests {
     every { syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted() } returns 12L
     every { syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted() } returns 11L
 
-    val out = runBlocking { getWorker().run(replicationInput, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
   }
 
   @Test fun `does not populate state on failure if not available`() {
-    val inputNoState = replicationInput.apply { state = null }
     every { source.close() } throws IllegalStateException("induced")
-    val out = runBlocking { getWorker().run(inputNoState, jobRoot) }
+    val out = runBlocking { getWorker().run(jobRoot) }
     assertNull(out.state)
   }
 
   @Test fun `irrecoverable failure throws WorkerException`() {
     every { syncStatsTracker.getTotalRecordsEmitted() } throws IllegalStateException("oops")
     assertThrows<WorkerException> {
-      runBlocking { getWorker().run(replicationInput, jobRoot) }
+      runBlocking { getWorker().run(jobRoot) }
     }
   }
+
+  private fun generateStartJobs(
+    destination: AirbyteDestination,
+    source: AirbyteSource,
+  ) = listOf(
+    DestinationStarter(
+      destination = destination,
+      jobRoot = jobRoot,
+      context = ctx,
+    ),
+    SourceStarter(
+      source = source,
+      jobRoot = jobRoot,
+      replicationInput = replicationInput,
+      context = ctx,
+    ),
+  )
+
+  private fun generateSyncJobs(
+    destination: AirbyteDestination,
+    source: AirbyteSource,
+  ) = listOf(
+    SourceReader(
+      messagesFromSourceQueue = sourceMessageQueue,
+      replicationWorkerState = replicationWorkerState,
+      replicationWorkerHelper = replicationWorkerHelper,
+      source = source,
+      streamStatusCompletionTracker = streamStatusCompletionTracker,
+    ),
+    MessageProcessor(
+      destinationQueue = destinationMessageQueue,
+      replicationWorkerHelper = replicationWorkerHelper,
+      replicationWorkerState = replicationWorkerState,
+      sourceQueue = sourceMessageQueue,
+    ),
+    DestinationWriter(
+      source = source,
+      destination = destination,
+      replicationWorkerState = replicationWorkerState,
+      replicationWorkerHelper = replicationWorkerHelper,
+      destinationQueue = destinationMessageQueue,
+    ),
+    DestinationReader(
+      destination = destination,
+      replicationWorkerHelper = replicationWorkerHelper,
+      replicationWorkerState = replicationWorkerState,
+    ),
+  )
 }

@@ -66,7 +66,7 @@ internal class ReplicationJobOrchestratorTest {
         every { workspaceId } returns workspaceUUID
       }
     val workloadId = "workload-id"
-    val workspacePath = Path.of("${System.getProperty("java.io.tmpdir")}/workspace")
+    val jobPath = Path.of("${System.getProperty("java.io.tmpdir")}/workspace/$workspaceUUID/$jobId/$attemptNumber")
     val jobRunConfig =
       mockk<JobRunConfig> {
         every { attemptId } returns attemptNumber.toLong()
@@ -95,7 +95,7 @@ internal class ReplicationJobOrchestratorTest {
       }
     val replicationWorker =
       mockk<ReplicationWorker> {
-        coEvery { runReplicationBlocking(replicationInput, any()) } returns replicationOutput
+        coEvery { runReplicationBlocking(any()) } returns replicationOutput
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -125,7 +125,7 @@ internal class ReplicationJobOrchestratorTest {
       ReplicationJobOrchestrator(
         replicationInput,
         workloadId,
-        workspacePath,
+        jobPath,
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
@@ -188,7 +188,7 @@ internal class ReplicationJobOrchestratorTest {
         every { workspaceId } returns workspaceUUID
       }
     val workloadId = "workload-id"
-    val workspacePath = Path.of("${System.getProperty("java.io.tmpdir")}/workspace")
+    val jobPath = Path.of("${System.getProperty("java.io.tmpdir")}/workspace/$workspaceUUID/$jobId/$attemptNumber")
     val jobRunConfig =
       mockk<JobRunConfig> {
         every { attemptId } returns attemptNumber.toLong()
@@ -218,7 +218,7 @@ internal class ReplicationJobOrchestratorTest {
     val replicationWorker =
       mockk<ReplicationWorker> {
         coEvery {
-          runReplicationBlocking(replicationInput, any())
+          runReplicationBlocking(any())
         } throws DestinationException("destination")
       }
     val workloadapi =
@@ -250,7 +250,7 @@ internal class ReplicationJobOrchestratorTest {
       ReplicationJobOrchestrator(
         replicationInput,
         workloadId,
-        workspacePath,
+        jobPath,
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
@@ -343,7 +343,7 @@ internal class ReplicationJobOrchestratorTest {
       }
     val replicationWorker =
       mockk<ReplicationWorker> {
-        coEvery { runReplicationBlocking(replicationInput, any()) } throws WorkerException("platform")
+        coEvery { runReplicationBlocking(any()) } throws WorkerException("platform")
       }
     val workloadapi =
       mockk<WorkloadApi> {
@@ -469,7 +469,7 @@ internal class ReplicationJobOrchestratorTest {
       }
     val replicationWorker =
       mockk<ReplicationWorker> {
-        coEvery { runReplicationBlocking(replicationInput, any()) } throws SourceException("source")
+        coEvery { runReplicationBlocking(any()) } throws SourceException("source")
       }
     val workloadapi =
       mockk<WorkloadApi> {

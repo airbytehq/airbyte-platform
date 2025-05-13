@@ -5,8 +5,6 @@
 package io.airbyte.container.orchestrator
 
 import io.airbyte.commons.logging.LogClientManager
-import io.airbyte.commons.temporal.TemporalUtils
-import io.airbyte.persistence.job.models.JobRunConfig
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.runtime.event.annotation.EventListener
 import io.micronaut.runtime.server.event.ServerStartupEvent
@@ -21,8 +19,7 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class EventListeners(
-  @Named("workspaceRoot") private val workspaceRoot: Path,
-  private val jobRunConfig: JobRunConfig,
+  @Named("jobRoot") private val jobRoot: Path,
   private val logClientManager: LogClientManager,
 ) {
   /**
@@ -33,6 +30,6 @@ class EventListeners(
   @EventListener
   fun setLogging(unused: ServerStartupEvent?) {
     logger.debug { "started logging" }
-    logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.getJobId(), jobRunConfig.getAttemptId()))
+    logClientManager.setJobMdc(jobRoot)
   }
 }

@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.config
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.pod.FileConstants
@@ -58,7 +59,19 @@ class ConfigFactory {
   fun jobRunConfig(
     @Value("\${airbyte.job-id}") @Nullable jobId: String,
     @Value("\${airbyte.attempt-id}") @Nullable attemptId: Long,
-  ): JobRunConfig? = JobRunConfig().withJobId(jobId).withAttemptId(attemptId)
+  ): JobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptId)
+
+  @Singleton
+  @Named("jobRoot")
+  fun jobRoot(
+    jobRunConfig: JobRunConfig,
+    @Named("workspaceRoot") workspaceRoot: Path,
+  ): Path =
+    TemporalUtils.getJobRoot(
+      workspaceRoot,
+      jobRunConfig.jobId,
+      jobRunConfig.attemptId,
+    )
 
   @Singleton
   @Named("workspaceRoot")

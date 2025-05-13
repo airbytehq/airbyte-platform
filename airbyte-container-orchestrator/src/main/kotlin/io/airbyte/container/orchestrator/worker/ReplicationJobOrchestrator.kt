@@ -7,7 +7,6 @@ package io.airbyte.container.orchestrator.worker
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
@@ -68,7 +67,7 @@ private val DURATION_GAUGE_FUNCTION =
 class ReplicationJobOrchestrator(
   private val replicationInput: ReplicationInput,
   @Named("workloadId") private val workloadId: String,
-  @Named("workspaceRoot") private val workspaceRoot: Path,
+  @Named("jobRoot") private val jobRoot: Path,
   private val jobRunConfig: JobRunConfig,
   private val replicationWorker: ReplicationWorker,
   private val workloadApiClient: WorkloadApiClient,
@@ -90,12 +89,6 @@ class ReplicationJobOrchestrator(
     )
 
     logger.info { "Running replication worker..." }
-    val jobRoot =
-      TemporalUtils.getJobRoot(
-        workspaceRoot,
-        jobRunConfig.jobId,
-        jobRunConfig.attemptId,
-      )
 
     val replicationOutput =
       run(replicationWorker, replicationInput, jobRoot, workloadId)
@@ -136,7 +129,7 @@ class ReplicationJobOrchestrator(
     val attemptNumber = Math.toIntExact(jobRunConfig.attemptId)
     val attributes = buildMetricAttributes(replicationInput, jobId, attemptNumber)
     try {
-      return replicationWorker.runReplicationBlocking(replicationInput, jobRoot)
+      return replicationWorker.runReplicationBlocking(jobRoot)
     } catch (e: DestinationException) {
       failWorkload(workloadId = workloadId, failureReason = destinationFailure(e, jobId, attemptNumber), originalException = e)
       attributes.add(MetricAttribute(STATUS_ATTRIBUTE, FAILED_STATUS))
