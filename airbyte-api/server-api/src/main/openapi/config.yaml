@@ -11885,6 +11885,9 @@ components:
         language:
           description: The language the connector is written in
           type: string
+        supportsDataActivation:
+          description: Whether the connector supports data activation
+          type: boolean
     DestinationDefinitionReadList:
       type: object
       required:
