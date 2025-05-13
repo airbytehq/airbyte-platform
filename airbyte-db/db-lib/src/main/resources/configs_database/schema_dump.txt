@@ -246,7 +246,6 @@ create table "public"."connection_template" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "default_geography" varchar(2147483647),
   "sync_on_create" boolean not null default true,
   constraint "connection_template_pkey" primary key ("id")
 );
