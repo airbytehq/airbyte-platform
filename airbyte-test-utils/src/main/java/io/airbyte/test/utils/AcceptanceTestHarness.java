@@ -168,7 +168,7 @@ public class AcceptanceTestHarness {
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
       .asCompatibleSubstituteFor("postgres");
 
-  private static final String TEMPORAL_HOST = "temporal.airbyte.dev:80";
+  private static final String TEMPORAL_HOST = java.util.Optional.ofNullable(System.getenv("TEMPORAL_HOST")).orElse("temporal.airbyte.dev:80");
 
   private static final String SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2";
   private static final String DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1";
@@ -218,6 +218,7 @@ public class AcceptanceTestHarness {
   private static boolean isKube;
   private static boolean isMinikube;
   private static boolean isGke;
+  private static boolean isCI;
   private static boolean isMac;
   private static boolean ensureCleanSlate;
   private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
@@ -510,6 +511,7 @@ public class AcceptanceTestHarness {
     isKube = System.getenv().containsKey("KUBE");
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
     isGke = System.getenv().containsKey("IS_GKE");
+    isCI = System.getenv().containsKey("CI");
     isMac = System.getProperty("os.name").startsWith("Mac");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
@@ -946,7 +948,11 @@ public class AcceptanceTestHarness {
                                           final boolean hiddenPassword,
                                           final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
-    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
+    if (isCI && !isGke) {
+      dbConfig.put(JdbcUtils.HOST_KEY, psql.getHost());
+    } else {
+      dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
+    }
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
