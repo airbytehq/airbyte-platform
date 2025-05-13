@@ -20,7 +20,7 @@ common:
 
     - env: AIRBYTE_API_HOST
       key: api.host
-      valueExp: ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community")
+      defaultValueExp: ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community")
 
     - env: AIRBYTE_API_AUTH_HEADER_NAME
       key: api.authHeaderName
