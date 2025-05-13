@@ -66,7 +66,7 @@ data class ConnectorPodFactory(
         containerInfo = kubePodInfo.mainContainerInfo!!,
         runtimeEnvVars = runtimeEnvVars,
       )
-    val sidecar: Container = buildSidecarContainer(volumeMounts = volumeMountPairs.sidecarMounts)
+    val sidecar: Container = buildSidecarContainer(volumeMounts = volumeMountPairs.sidecarMounts, runtimeEnvVars = runtimeEnvVars)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -121,7 +121,10 @@ data class ConnectorPodFactory(
       .build()
   }
 
-  private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
+  private fun buildSidecarContainer(
+    volumeMounts: List<VolumeMount>,
+    runtimeEnvVars: List<EnvVar>,
+  ): Container {
     val mainCommand = ContainerCommandFactory.sidecar()
     val sidecarReqs = resourceRequirementsFactory.sidecar()
 
@@ -131,7 +134,7 @@ data class ConnectorPodFactory(
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
       .withWorkingDir(FileConstants.CONFIG_DIR)
-      .withEnv(sideCarEnvVars)
+      .withEnv(sideCarEnvVars + runtimeEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(ResourceConversionUtils.domainToApi(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())

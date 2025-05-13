@@ -34,6 +34,7 @@ import io.airbyte.api.client.generated.StateApi
 import io.airbyte.api.client.generated.StreamStatusesApi
 import io.airbyte.api.client.generated.UserApi
 import io.airbyte.api.client.generated.WebBackendApi
+import io.airbyte.api.client.generated.WorkloadOutputApi
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -103,5 +104,6 @@ open class AirbyteApiClient(
   val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
   val userApi = UserApi(basePath = basePath, client = httpClient, policy = policy)
   val webBackendApi = WebBackendApi(basePath = basePath, client = httpClient, policy = policy)
+  val workloadOutputApi = WorkloadOutputApi(basePath = basePath, client = httpClient, policy = policy)
   val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
 }

@@ -203,3 +203,5 @@ object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-work
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
 
 object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)
+
+object ProxyObjectStorage : Temporary<Boolean>("platform.proxy-object-storage", default = false)
