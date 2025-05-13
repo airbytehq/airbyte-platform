@@ -44,4 +44,10 @@ class WorkloadIdGenerator {
       return "${actorId}_${snapped}_discover"
     }
   }
+
+  fun generateReplicateWorkloadId(
+    connectionId: UUID,
+    jobId: Long,
+    attemptNumber: Long,
+  ): String = "${connectionId}_${jobId}_${attemptNumber}_sync"
 }

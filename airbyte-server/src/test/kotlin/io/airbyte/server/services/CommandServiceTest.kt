@@ -8,6 +8,8 @@ import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ReplicationAttemptSummary
+import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.data.services.CatalogService
 import io.airbyte.protocol.models.Jsons
@@ -133,6 +135,21 @@ class CommandServiceTest {
   }
 
   @Test
+  fun `createReplicate returns false if command exists`() {
+    every { commandsRepository.existsById(COMMAND_ID) } returns true
+    val output =
+      service.createReplicateCommand(
+        commandId = COMMAND_ID,
+        connectionId = UUID.randomUUID(),
+        jobId = "123",
+        attemptNumber = 0,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertFalse(output)
+  }
+
+  @Test
   fun `getConnectorJobOutput returns the output`() {
     val expectedOutput = ConnectorJobOutput().withOutputType(OutputType.CHECK_CONNECTION)
     every { workloadOutputReader.readConnectorOutput(WORKLOAD_ID) } returns expectedOutput
@@ -184,6 +201,21 @@ class CommandServiceTest {
         catalog = null,
         failureReason = failure,
       )
+    assertEquals(expectedOutput, output)
+  }
+
+  @Test
+  fun `getReplicationOutput returns an output`() {
+    val expectedOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(ReplicationAttemptSummary())
+        .withFailures(
+          listOf(
+            FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withExternalMessage("Something to validate"),
+          ),
+        )
+    every { workloadOutputReader.readSyncOutput(WORKLOAD_ID) } returns expectedOutput
+    val output = service.getReplicationOutput(COMMAND_ID)
     assertEquals(expectedOutput, output)
   }
 

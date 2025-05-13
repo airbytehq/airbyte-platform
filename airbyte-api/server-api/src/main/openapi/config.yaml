@@ -6018,7 +6018,7 @@ paths:
       description: >
         Expected input is an id and either an actor_id to run a check for an existing actor or
         an actor_definition_id, a workspace_id and a config to validate a config for a given actor definition.
-      tags: [command]
+      tags: [command, internal]
       operationId: runCheckCommand
       requestBody:
         content:
@@ -6069,7 +6069,7 @@ paths:
   /v1/commands/run/discover:
     post:
       summary: Run a Discover command for a Connector
-      tags: [command]
+      tags: [command, internal]
       operationId: runDiscoverCommand
       requestBody:
         content:
@@ -6105,6 +6105,47 @@ paths:
               schema:
                 type: object
                 title: RunDiscoverCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/run/replicate:
+    post:
+      summary: Run a Replicate command for a Connection
+      tags: [command, internal]
+      operationId: runReplicateCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunReplicateCommandRequest
+              required: [id, connection_id, job_id, attempt_number]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                connection_id:
+                  type: string
+                  format: uuid
+                job_id:
+                  type: string
+                  description: internal usage
+                attempt_number:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunReplicateCommandResponse
                 required: [id]
                 properties:
                   id:
@@ -6182,9 +6223,42 @@ paths:
                     format: uuid
                   catalogDiff:
                     $ref: "#/components/schemas/CatalogDiff"
-
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/replicate:
+    post:
+      summary: Get the status of a replicate command
+      tags: [command]
+      operationId: getReplicateCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ReplicateCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ReplicateCommandOutputResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                  attempt_summary:
+                    type: object
+                  failures:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FailureReason"
 
   /v1/commands/status:
     post:

@@ -13,10 +13,14 @@ import io.airbyte.api.model.generated.CommandStatusRequest
 import io.airbyte.api.model.generated.CommandStatusResponse
 import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
 import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
+import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
+import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.model.generated.RunCheckCommandResponse
 import io.airbyte.api.model.generated.RunDiscoverCommandRequest
 import io.airbyte.api.model.generated.RunDiscoverCommandResponse
+import io.airbyte.api.model.generated.RunReplicateCommandRequest
+import io.airbyte.api.model.generated.RunReplicateCommandResponse
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
@@ -93,6 +97,20 @@ class CommandApiController(
         catalog(apiCatalog)
         failureReason(it.failureReason.toApi())
       }
+    }
+  }
+
+  @Post("/output/replicate")
+  @Secured(AuthRoleConstants.WORKSPACE_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getReplicateCommandOutput(
+    @Body replicateCommandOutputRequest: ReplicateCommandOutputRequest,
+  ): ReplicateCommandOutputResponse {
+    val output = commandService.getReplicationOutput(replicateCommandOutputRequest.id)
+    return ReplicateCommandOutputResponse().apply {
+      id(replicateCommandOutputRequest.id)
+      attemptSummary(output?.replicationAttemptSummary)
+      failures(output?.failures?.map { it.toApi() })
     }
   }
 
@@ -182,6 +200,21 @@ class CommandApiController(
       commandInput = Jsons.jsonNode(runDiscoverCommandRequest),
     )
     return RunDiscoverCommandResponse().id(runDiscoverCommandRequest.id)
+  }
+
+  @Post("/run/replicate")
+  @Secured(AuthRoleConstants.WORKSPACE_RUNNER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun runReplicateCommand(runReplicateCommandRequest: RunReplicateCommandRequest): RunReplicateCommandResponse {
+    commandService.createReplicateCommand(
+      commandId = runReplicateCommandRequest.id,
+      connectionId = runReplicateCommandRequest.connectionId,
+      jobId = runReplicateCommandRequest.jobId,
+      attemptNumber = runReplicateCommandRequest.attemptNumber.toLong(),
+      signalInput = runReplicateCommandRequest.signalInput,
+      commandInput = Jsons.jsonNode(runReplicateCommandRequest),
+    )
+    return RunReplicateCommandResponse().id(runReplicateCommandRequest.id)
   }
 
   private fun String.toWorkloadPriority(): WorkloadPriority? = uppercase().toEnum<WorkloadPriority>()

@@ -128,7 +128,7 @@ class JobInputService(
 
   fun getReplicationInput(
     connectionId: UUID,
-    signalInput: String,
+    signalInput: String?,
     jobId: Long,
     attemptNumber: Long,
   ): ReplicationActivityInput {
