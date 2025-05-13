@@ -201,3 +201,5 @@ object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-defau
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 
 object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
+
+object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)

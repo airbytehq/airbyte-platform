@@ -6033,21 +6033,20 @@ paths:
                   description: a command id which acts as an idempotency key.
                 workspace_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 actor_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 actor_definition_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 config:
                   type: object
-                jobId:
+                job_id:
                   type: string
                   description: internal usage
-                attemptNumber:
-                  type: number
-                  description: internal usage
+                attempt_number:
+                  $ref: "#/components/schemas/AttemptNumber"
                 priority:
                   type: string
                   description: internal usage

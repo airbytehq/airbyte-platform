@@ -8,7 +8,9 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.UseCommandCheck;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -60,7 +62,9 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
     // No feature flags are currently in use.
     // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    return new FeatureFlagFetchOutput(Map.of());
+    final boolean useCommandCheck = featureFlagClient.boolVariation(UseCommandCheck.INSTANCE, new Connection(input.getConnectionId()));
+
+    return new FeatureFlagFetchOutput(Map.of(UseCommandCheck.INSTANCE.getKey(), useCommandCheck));
   }
 
 }

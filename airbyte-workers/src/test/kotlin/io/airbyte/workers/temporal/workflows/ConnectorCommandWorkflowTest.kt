@@ -14,6 +14,7 @@ import io.airbyte.micronaut.temporal.TemporalProxyHelper
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.commands.CheckCommand
+import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.SpecCommand
 import io.micronaut.context.BeanRegistration
@@ -38,6 +39,7 @@ class ConnectorCommandWorkflowTest {
     const val QUEUE_NAME = "connector_command_queue"
 
     lateinit var checkCommand: CheckCommand
+    lateinit var checkCommandThroughApi: CheckCommandThroughApi
     lateinit var discoverCommand: DiscoverCommand
     lateinit var specCommand: SpecCommand
     lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
@@ -75,12 +77,14 @@ class ConnectorCommandWorkflowTest {
       client = testEnv.workflowClient
 
       checkCommand = mockk()
+      checkCommandThroughApi = mockk()
       discoverCommand = mockk()
       specCommand = mockk()
       activityExecutionContextProvider = ActivityExecutionContextProvider()
       connectorCommandActivity =
         ConnectorCommandActivityImpl(
           checkCommand,
+          checkCommandThroughApi,
           discoverCommand,
           specCommand,
           activityExecutionContextProvider,

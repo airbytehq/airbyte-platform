@@ -282,7 +282,7 @@ class CommandApiControllerTest {
         .id(TEST_COMMAND_ID)
         .actorId(TEST_ACTOR_ID)
         .jobId(TEST_JOB_ID)
-        .attemptNumber(TEST_ATTEMPT_NUMBER.toBigDecimal())
+        .attemptNumber(TEST_ATTEMPT_NUMBER.toInt())
         .priority("high")
         .signalInput(TEST_SIGNAL_INPUT)
     val output = controller.runCheckCommand(request)

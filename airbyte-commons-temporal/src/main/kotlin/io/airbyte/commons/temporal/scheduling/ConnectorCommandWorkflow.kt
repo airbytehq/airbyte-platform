@@ -15,6 +15,7 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.temporal.workflow.SignalMethod
 import io.temporal.workflow.WorkflowInterface
 import io.temporal.workflow.WorkflowMethod
+import java.util.UUID
 
 @JsonTypeInfo(
   use = JsonTypeInfo.Id.NAME,
@@ -23,12 +24,14 @@ import io.temporal.workflow.WorkflowMethod
 )
 @JsonSubTypes(
   JsonSubTypes.Type(value = CheckCommandInput::class, name = ConnectorCommandInput.CHECK),
+  JsonSubTypes.Type(value = CheckCommandApiInput::class, name = ConnectorCommandInput.CHECK_COMMAND),
   JsonSubTypes.Type(value = DiscoverCommandInput::class, name = ConnectorCommandInput.DISCOVER),
   JsonSubTypes.Type(value = SpecCommandInput::class, name = ConnectorCommandInput.SPEC),
 )
 sealed interface ConnectorCommandInput {
   companion object {
     const val CHECK = "check"
+    const val CHECK_COMMAND = "check_command"
     const val DISCOVER = "discover"
     const val SPEC = "spec"
   }
@@ -82,6 +85,52 @@ data class CheckCommandInput(
       fun input(input: CheckConnectionInput) = apply { this.input = input }
 
       fun build() = CheckCommandInput(input = input ?: throw IllegalArgumentException("input must be specified"))
+    }
+}
+
+@JsonDeserialize(builder = CheckCommandApiInput.Builder::class)
+data class CheckCommandApiInput(
+  val input: CheckConnectionApiInput,
+) : ConnectorCommandInput {
+  override val type: String = ConnectorCommandInput.CHECK_COMMAND
+
+  // This is duplicated of io.airbyte.workers.model.CheckConnectionInput to avoid dependency hell
+  @JsonDeserialize(builder = CheckConnectionApiInput.Builder::class)
+  data class CheckConnectionApiInput(
+    val actorId: UUID,
+    val jobId: String,
+    val attemptId: Long,
+  ) {
+    class Builder
+      @JvmOverloads
+      constructor(
+        var actorId: UUID? = null,
+        var jobId: String? = null,
+        var attemptId: Long? = null,
+      ) {
+        fun actorId(actorId: UUID) = apply { this.actorId = actorId }
+
+        fun jobId(jobId: String) = apply { this.jobId = jobId }
+
+        fun attemptId(attemptId: Long) = apply { this.attemptId = attemptId }
+
+        fun build() =
+          CheckConnectionApiInput(
+            actorId = actorId ?: throw IllegalArgumentException("actorId must be specified"),
+            jobId = jobId ?: throw IllegalArgumentException("jobId must be specified"),
+            attemptId = attemptId ?: throw IllegalArgumentException("attemptId must be specified"),
+          )
+      }
+  }
+
+  class Builder
+    @JvmOverloads
+    constructor(
+      var input: CheckConnectionApiInput? = null,
+    ) {
+      fun input(input: CheckConnectionApiInput) = apply { this.input = input }
+
+      fun build() = CheckCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
     }
 }
 

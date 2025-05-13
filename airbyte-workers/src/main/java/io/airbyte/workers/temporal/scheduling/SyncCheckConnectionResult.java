@@ -45,6 +45,11 @@ public class SyncCheckConnectionResult {
     this.attemptId = attemptId;
   }
 
+  public SyncCheckConnectionResult(final Long jobId, final Integer attemptId) {
+    this.jobId = jobId;
+    this.attemptId = attemptId;
+  }
+
   public boolean isFailed() {
     return this.origin != null && this.failureOutput != null;
   }

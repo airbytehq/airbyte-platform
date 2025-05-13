@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.temporal.annotations.TemporalActivityStub
+import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
@@ -24,9 +25,11 @@ import io.airbyte.metrics.lib.ApmTraceConstants.Tags
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.commands.CheckCommand
+import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.ConnectorCommand
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.SpecCommand
+import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
@@ -99,6 +102,7 @@ class ActivityExecutionContextProvider {
 @Singleton
 class ConnectorCommandActivityImpl(
   private val checkCommand: CheckCommand,
+  private val checkCommandApi: CheckCommandThroughApi,
   private val discoverCommand: DiscoverCommand,
   private val specCommand: SpecCommand,
   private val activityExecutionContextProvider: ActivityExecutionContextProvider,
@@ -107,6 +111,8 @@ class ConnectorCommandActivityImpl(
   companion object {
     fun CheckCommandInput.CheckConnectionInput.toWorkerModels(): CheckConnectionInput =
       CheckConnectionInput(jobRunConfig, integrationLauncherConfig, checkConnectionInput)
+
+    fun CheckCommandApiInput.CheckConnectionApiInput.toWorkerModels(): CheckConnectionApiInput = CheckConnectionApiInput(actorId, jobId, attemptId)
 
     fun DiscoverCommandInput.DiscoverCatalogInput.toWorkerModels(): DiscoverCatalogInput =
       DiscoverCatalogInput(jobRunConfig, integrationLauncherConfig, discoverCatalogInput)
@@ -123,6 +129,7 @@ class ConnectorCommandActivityImpl(
         is CheckCommandInput -> checkCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is DiscoverCommandInput -> discoverCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is SpecCommandInput -> specCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
+        is CheckCommandApiInput -> checkCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
       }
     }
 
@@ -205,6 +212,7 @@ class ConnectorCommandActivityImpl(
       is CheckCommandInput -> checkCommand
       is DiscoverCommandInput -> discoverCommand
       is SpecCommandInput -> specCommand
+      is CheckCommandApiInput -> checkCommandApi
     }
 }
 

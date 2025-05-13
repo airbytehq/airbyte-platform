@@ -7,6 +7,7 @@ package io.airbyte.workers.temporal.workflows
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.workers.commands.CheckCommand
+import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.WorkloadIdGenerator
@@ -46,6 +47,9 @@ class ConnectorCommandWorkflowMicronautTest {
 
   @Inject
   lateinit var checkCommand: CheckCommand
+
+  @Inject
+  lateinit var checkCommandThroughApi: CheckCommandThroughApi
 
   @Inject
   lateinit var discoverCommand: DiscoverCommand
