@@ -99,7 +99,7 @@ Renders the common.airbyteUrl environment variable
 Renders the global.api.host value
 */}}
 {{- define "airbyte.common.api.host" }}
-    {{- .Values.global.api.host | default ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community") }}
+    {{- .Values.global.api.host | default (ternary (printf "http://localhost:%d/api/public" (int .Values.server.service.port)) (printf "%s/api/public" .Values.global.airbyteUrl) (eq .Values.global.edition "community")) }}
 {{- end }}
 
 {{/*
