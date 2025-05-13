@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.48.6
+airbyte-cdk==6.48.12
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.15.0
     # via airbyte-cdk
@@ -40,20 +40,20 @@ certifi==2025.4.26
     #   requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.1
+charset-normalizer==3.4.2
     # via requests
-click==8.1.8
+click==8.2.0
     # via
     #   airbyte-cdk
     #   nltk
     #   rich-click
-cryptography==44.0.2
+cryptography==44.0.3
     # via airbyte-cdk
 dpath==2.2.0
     # via airbyte-cdk
-dunamai==1.23.1
+dunamai==1.24.1
     # via airbyte-cdk
-exceptiongroup==1.2.2
+exceptiongroup==1.3.0
     # via
     #   anyio
     #   cattrs
@@ -61,7 +61,7 @@ genson==1.3.0
     # via airbyte-cdk
 google-api-core[grpc]==2.24.2
     # via google-cloud-secret-manager
-google-auth==2.39.0
+google-auth==2.40.1
     # via
     #   google-api-core
     #   google-cloud-secret-manager
@@ -98,7 +98,7 @@ isodate==0.6.1
     # via airbyte-cdk
 jinja2==3.1.6
     # via airbyte-cdk
-joblib==1.4.2
+joblib==1.5.0
     # via nltk
 jsonpatch==1.33
     # via langchain-core
@@ -135,7 +135,7 @@ packaging==23.2
     #   langchain-core
 pandas==2.2.2
     # via airbyte-cdk
-platformdirs==4.3.7
+platformdirs==4.3.8
     # via requests-cache
 proto-plus==1.26.1
     # via
@@ -228,6 +228,7 @@ typing-extensions==4.13.2
     #   airbyte-cdk
     #   anyio
     #   cattrs
+    #   exceptiongroup
     #   pydantic
     #   pydantic-core
     #   rich

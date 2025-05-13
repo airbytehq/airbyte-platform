@@ -479,7 +479,7 @@ const manifestSyncStreamToBuilder = (
         streamName,
       }
     ),
-    schema: manifestSchemaLoaderToBuilderSchema(schema_loader),
+    schema: manifestSchemaLoaderToBuilderSchema(schema_loader, streamName),
     errorHandler: convertOrDumpAsString(error_handler, manifestErrorHandlerToBuilder, {
       name: "errorHandler",
       streamName,
@@ -576,7 +576,7 @@ const manifestAsyncStreamToBuilder = (
     requestType: "async" as const,
     id: streamId,
     name: streamName,
-    schema: manifestSchemaLoaderToBuilderSchema(schema_loader),
+    schema: manifestSchemaLoaderToBuilderSchema(schema_loader, streamName),
     autoImportSchema: metadata?.autoImportSchema?.[streamName] === true,
     unknownFields: dumpUnknownFields(unknownStreamFields, unknownRetrieverFields, {}),
     testResults: metadata?.testedStreams?.[streamName],
@@ -1431,20 +1431,19 @@ export function manifestPaginatorToBuilder(
 }
 
 function manifestSchemaLoaderToBuilderSchema(
-  manifestSchemaLoader: DeclarativeStreamSchemaLoader | undefined
+  manifestSchemaLoader: DeclarativeStreamSchemaLoader | undefined,
+  streamName: string
 ): BuilderStream["schema"] {
   if (manifestSchemaLoader === undefined) {
     return undefined;
   }
 
-  if (manifestSchemaLoader.type === "InlineSchemaLoader") {
-    const inlineSchemaLoader = manifestSchemaLoader;
-    return inlineSchemaLoader.schema ? formatJson(inlineSchemaLoader.schema, true) : undefined;
+  if (Array.isArray(manifestSchemaLoader) || manifestSchemaLoader.type !== "InlineSchemaLoader") {
+    throw new ManifestCompatibilityError(streamName, "schema_loader must be a single InlineSchemaLoader");
   }
 
-  // Return undefined if schema loader is not inline.
-  // In this case, users can copy-paste the schema into the Builder, or they can re-infer it
-  return undefined;
+  const inlineSchemaLoader = manifestSchemaLoader;
+  return inlineSchemaLoader.schema ? formatJson(inlineSchemaLoader.schema, true) : undefined;
 }
 
 function removeLeadingSlashes(path: string) {
