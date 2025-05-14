@@ -152,5 +152,6 @@ export const useCurrentOrganization = (): OrganizationRead => {
   const { organizations } = useListOrganizationsByUser({ userId });
 
   // NOTE: How do we handle users with multiple orgs?
-  return organizations[0];
+  // NOTE: Turns out some users don't have any orgs. We should probably handle this better.
+  return organizations[0] || {};
 };
