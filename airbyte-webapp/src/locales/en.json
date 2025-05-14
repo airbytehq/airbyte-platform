@@ -49,6 +49,7 @@
   "role.organization.userDescription": "<b>{name}</b> is an <b>Organization {role}.</b>",
   "role.guest": "Guest",
 
+  "sidebar.billing": "Billing",
   "sidebar.homepage": "Homepage",
   "sidebar.sources": "Sources",
   "sidebar.destinations": "Destinations",
@@ -74,6 +75,8 @@
   "sidebar.beta": "Beta",
   "sidebar.defaultUsername": "User",
   "sidebar.workspaceAndOrg": "{workspace} | {organization}",
+  "sidebar.workspaceSettings": "Workspace settings",
+  "sidebar.myWorkspace": "My Workspace",
 
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",
@@ -85,6 +88,7 @@
   "form.error.cursor.edit": "Edit cursor",
   "form.error.missing": "missing",
   "form.yourEmail": "Your email",
+  "form.contactEmail": "Contact email",
   "form.email.placeholder": "you@company.com",
   "form.organizationName": "Organization name",
   "form.organizationName.placeholder": "ACME Corp",
@@ -1204,7 +1208,8 @@
 
   "settings.userSettings": "Account",
   "settings.workspaceSettings": "Workspace",
-  "settings.organizationSettings": "Organization",
+  "settings.organization": "Organization",
+  "settings.organizationSettings": "Organization settings",
   "settings.instanceSettings": "Instance",
   "settings.workspace.general.title": "General workspace settings",
   "settings.workspace.usage.title": "Workspace usage",
@@ -2413,8 +2418,6 @@
 
   "inviteUsersHint.message": "Need help from a teammate to set up the {connector}?",
   "inviteUsersHint.cta": "Invite users",
-
-  "sidebar.billing": "Billing",
 
   "workspace.adminWorkspaceWarning": "Admin",
   "workspace.adminWorkspaceWarningTooltip": "You are not a member of this workspace. Be careful when making changes!",

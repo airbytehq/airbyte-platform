@@ -1,0 +1,61 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.menuItem {
+  background-color: transparent;
+  display: block;
+  width: 100%;
+  padding: variables.$spacing-md variables.$spacing-md variables.$spacing-md variables.$spacing-md;
+  appearance: none;
+  border: none;
+  cursor: pointer;
+  color: colors.$grey-300;
+  border-radius: variables.$border-radius-xs;
+  text-decoration: none;
+  position: relative;
+  transition: all variables.$transition-out;
+
+  .badge {
+    transition: opacity 0.2s ease;
+    opacity: 0;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: colors.$grey-50;
+
+    .badge {
+      opacity: 1;
+    }
+  }
+
+  &.active {
+    background: colors.$grey-50;
+    color: colors.$dark-blue-900;
+
+    .badge {
+      opacity: 1;
+    }
+
+    &:hover,
+    &:focus-visible {
+      color: colors.$dark-blue-900;
+      background: colors.$blue-30;
+    }
+  }
+
+  &.disabled {
+    pointer-events: none;
+    opacity: 0.4;
+  }
+}
+
+.icon {
+  flex: 0 0 auto;
+}
+
+.label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

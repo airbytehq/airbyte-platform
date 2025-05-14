@@ -10,6 +10,7 @@ export enum RoutePaths {
   ConnectorBuilder = "connector-builder",
   EmbeddedWidget = "embedded-widget",
   EmbeddedOnboarding = "embedded",
+  Organization = "organization",
 }
 
 export enum DestinationPaths {

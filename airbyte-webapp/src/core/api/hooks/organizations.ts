@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentUser } from "core/services/auth";
 
 import { useGetWorkspace } from "./workspaces";
 import {
@@ -11,11 +12,14 @@ import {
   getOrganizationTrialStatus,
   getOrganizationUsage,
   listWorkspacesInOrganization,
+  listOrganizationsByUser,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
+  ListOrganizationsByUserRequestBody,
+  OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
@@ -35,6 +39,8 @@ export const organizationKeys = {
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
   workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
+  listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
+    [...organizationKeys.all, "byUser", requestBody] as const,
 };
 
 /**
@@ -131,4 +137,20 @@ export const useListWorkspacesInOrganization = ({ organizationId }: { organizati
   const queryKey = organizationKeys.workspaces(organizationId);
 
   return useSuspenseQuery(queryKey, () => listWorkspacesInOrganization({ organizationId }, requestOptions));
+};
+
+export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.listByUser(requestBody), () =>
+    listOrganizationsByUser(requestBody, requestOptions)
+  );
+};
+
+// Maybe better called useFirstOrg
+export const useCurrentOrganization = (): OrganizationRead => {
+  const { userId } = useCurrentUser();
+  const { organizations } = useListOrganizationsByUser({ userId });
+
+  // NOTE: How do we handle users with multiple orgs?
+  return organizations[0];
 };

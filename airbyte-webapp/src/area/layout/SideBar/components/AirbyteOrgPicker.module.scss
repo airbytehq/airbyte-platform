@@ -69,13 +69,14 @@
   }
 }
 
-.orgPicker__dropdownMenu {
+.orgPicker__dropdownMenuItem {
   width: 240px;
-  min-height: 32px;
+  min-height: 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-direction: row;
+  padding: 0 variables.$spacing-md;
 
   .dropdownMenu__orgName {
     flex: 1;
@@ -89,11 +90,7 @@
     padding-left: variables.$spacing-md;
   }
 
-  .dropdownMenu__button {
-    padding: 0;
-    margin: 0;
-    border: none;
-    background: none;
-    padding-right: variables.$spacing-md;
+  .orgPicker__gearIcon {
+    color: colors.$grey-400;
   }
 }

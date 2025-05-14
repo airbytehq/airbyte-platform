@@ -2,32 +2,33 @@ import React from "react";
 import { useIntl } from "react-intl";
 
 import AirbyteLogoIcon from "components/illustrations/airbyte-logo-icon.svg?react";
-import { Button } from "components/ui/Button";
 import { DropdownMenu, DropdownMenuOptions } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo, useCurrentWorkspace } from "core/api";
+import { useCurrentOrganization, useCurrentWorkspaceOrUndefined } from "core/api";
+import { isCloudApp } from "core/utils/app";
+import { RoutePaths } from "pages/routePaths";
 
 import styles from "./AirbyteOrgPicker.module.scss";
+
 export const AirbyteOrgPicker: React.FC = () => {
   const { formatMessage } = useIntl();
-  const workspace = useCurrentWorkspace();
-  const organization = useCurrentOrganizationInfo();
+  const workspace = useCurrentWorkspaceOrUndefined();
+  const organization = useCurrentOrganization();
+  const isCloud = isCloudApp();
+  const workspaceName = isCloud ? workspace?.name : workspace && formatMessage({ id: "sidebar.myWorkspace" });
 
   const menuOptions: DropdownMenuOptions = [
     {
-      as: "div",
-      className: styles.orgPicker__dropdownMenu,
-      children: (
-        <>
-          <Text size="sm" color="darkBlue" className={styles.dropdownMenu__orgName}>
-            {organization.organizationName}
-          </Text>
-          <Button className={styles.dropdownMenu__button} variant="secondary" size="sm" icon="gear" />
-        </>
-      ),
+      as: "a",
+      className: styles.orgPicker__dropdownMenuItem,
+      icon: <Icon type="gear" className={styles.orgPicker__gearIcon} aria-hidden="true" />,
+      iconPosition: "right",
+      displayName: organization.organizationName,
+      href: `${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Workspaces}`,
+      internal: true,
     },
   ];
 
@@ -37,6 +38,7 @@ export const AirbyteOrgPicker: React.FC = () => {
         options={menuOptions}
         placement="bottom-start"
         displacement={1}
+        textSize="sm"
         style={{ zIndex: 10000, borderRadius: "0 8px 8px 8px" }}
       >
         {({ open }) => (
@@ -46,17 +48,17 @@ export const AirbyteOrgPicker: React.FC = () => {
             aria-haspopup="true"
             aria-label={formatMessage(
               { id: "sidebar.workspaceAndOrg" },
-              { workspace: workspace.name, organization: organization.organizationName }
+              { workspace: workspaceName, organization: organization.organizationName }
             )}
           >
             <AirbyteLogoIcon className={styles.orgPicker__logo} aria-hidden="true" />
             <div className={styles.orgPicker__workspace}>
-              <Text size="sm" color="darkBlue" className={styles.orgPicker__workspaceName} title={workspace.name}>
-                {workspace.name}
+              <Text size="sm" color="darkBlue" className={styles.orgPicker__workspaceName} title={workspaceName}>
+                {workspaceName}
               </Text>
               <Text
                 size="sm"
-                color="grey400"
+                color={workspace ? "grey400" : "darkBlue"}
                 className={styles.orgPicker__orgName}
                 title={organization.organizationName}
               >
