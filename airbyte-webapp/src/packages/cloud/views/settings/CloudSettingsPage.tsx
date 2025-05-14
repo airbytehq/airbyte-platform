@@ -107,7 +107,7 @@ export const CloudSettingsPage: React.FC = () => {
           />
         </SettingsNavigationBlock>
         {canViewOrgSettings && (
-          <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             <SettingsLink
               iconType="gear"
               name={formatMessage({ id: "settings.general" })}
