@@ -11,6 +11,7 @@ import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorType
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationOutput
@@ -292,6 +293,7 @@ class CommandService(
     connectionId: UUID,
     jobId: String,
     attemptNumber: Long,
+    appliedCatalogDiff: CatalogDiff?,
     signalInput: String?,
     commandInput: JsonNode,
   ): Boolean {
@@ -302,6 +304,7 @@ class CommandService(
     val replicationInput =
       jobInputService.getReplicationInput(
         connectionId = connectionId,
+        appliedCatalogDiff = appliedCatalogDiff,
         jobId = jobId.toLong(),
         attemptNumber = attemptNumber,
         signalInput = signalInput,

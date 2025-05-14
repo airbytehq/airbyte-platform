@@ -13,6 +13,7 @@ import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.Attempt
 import io.airbyte.config.AttemptSyncConfig
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConnectionContext
 import io.airbyte.config.DestinationConnection
@@ -46,6 +47,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.mockk.every
@@ -622,6 +624,8 @@ class JobInputServiceTest {
     every { replicationFeatureFlags.featureFlags } returns emptyList() // or mock with relevant flags
     every { mockSourceDefinition.maxSecondsBetweenMessages } returns 3600L
 
+    val appliedCatalogDiff = CatalogDiff()
+
     val expected =
       ReplicationActivityInput(
         sourceId = sourceId,
@@ -662,9 +666,10 @@ class JobInputServiceTest {
         featureFlags = emptyMap(),
         heartbeatMaxSecondsBetweenMessages = 3600L,
         supportsRefreshes = false,
+        schemaRefreshOutput = RefreshSchemaActivityOutput(appliedCatalogDiff),
       )
 
-    val actual = jobInputService.getReplicationInput(connectionId, signalInput, jobId, attemptNumber.toLong())
+    val actual = jobInputService.getReplicationInput(connectionId, appliedCatalogDiff, signalInput, jobId, attemptNumber.toLong())
     assertEquals(expected, actual)
   }
 }

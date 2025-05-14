@@ -31,6 +31,7 @@ import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.protocol.models.Jsons
+import io.airbyte.server.helpers.CatalogDiffConverter.toDomain
 import io.airbyte.server.services.CommandService
 import io.micronaut.context.annotation.Context
 import io.micronaut.http.annotation.Body
@@ -209,6 +210,7 @@ class CommandApiController(
     commandService.createReplicateCommand(
       commandId = runReplicateCommandRequest.id,
       connectionId = runReplicateCommandRequest.connectionId,
+      appliedCatalogDiff = runReplicateCommandRequest.appliedCatalogDiff?.toDomain(),
       jobId = runReplicateCommandRequest.jobId,
       attemptNumber = runReplicateCommandRequest.attemptNumber.toLong(),
       signalInput = runReplicateCommandRequest.signalInput,

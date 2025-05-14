@@ -6135,6 +6135,9 @@ paths:
                 attempt_number:
                   description: internal usage
                   $ref: "#/components/schemas/AttemptNumber"
+                applied_catalog_diff:
+                  description: internal usage
+                  $ref: "#/components/schemas/CatalogDiff"
                 signal_input:
                   type: string
                   description: internal usage

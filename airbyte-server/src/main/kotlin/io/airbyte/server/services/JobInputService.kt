@@ -16,6 +16,7 @@ import io.airbyte.config.ActorContext
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.AllowedHosts
 import io.airbyte.config.Attempt
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.Job
@@ -63,6 +64,7 @@ import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -128,6 +130,7 @@ class JobInputService(
 
   fun getReplicationInput(
     connectionId: UUID,
+    appliedCatalogDiff: CatalogDiff?,
     signalInput: String?,
     jobId: Long,
     attemptNumber: Long,
@@ -204,6 +207,7 @@ class JobInputService(
       featureFlags = featureFlags,
       heartbeatMaxSecondsBetweenMessages = sourceDefinition.maxSecondsBetweenMessages,
       supportsRefreshes = sourceDefinitionVersion.supportsRefreshes,
+      schemaRefreshOutput = appliedCatalogDiff?.let { RefreshSchemaActivityOutput(appliedDiff = it) },
     )
   }
 

@@ -145,6 +145,7 @@ class CommandServiceTest {
         attemptNumber = 0,
         signalInput = null,
         commandInput = Jsons.emptyObject(),
+        appliedCatalogDiff = null,
       )
     assertFalse(output)
   }
