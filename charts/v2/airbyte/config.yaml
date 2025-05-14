@@ -900,10 +900,6 @@ secretsManager:
 server:
   keybasePath: server
   config:
-    - env: AB_AIRBYTE_APPLICATIONS
-      key: applications
-      defaultValueExp: ternary "database" "" (eq (include "airbyte.auth.identityProvider.type" .) "generic-oidc")
-
     - env: WEBAPP_DATADOG_APPLICATION_ID
       key: webapp.datadogApplicationId
 

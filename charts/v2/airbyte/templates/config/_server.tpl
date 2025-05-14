@@ -6,24 +6,6 @@
 */}}
 
 {{/*
-Renders the server.applications value
-*/}}
-{{- define "airbyte.server.applications" }}
-    {{- .Values.server.applications | default ternary "database" "" (eq (include "airbyte.auth.identityProvider.type" .) "generic-oidc") }}
-{{- end }}
-
-{{/*
-Renders the server.applications environment variable
-*/}}
-{{- define "airbyte.server.applications.env" }}
-- name: AB_AIRBYTE_APPLICATIONS
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: AB_AIRBYTE_APPLICATIONS
-{{- end }}
-
-{{/*
 Renders the server.webapp.datadogApplicationId value
 */}}
 {{- define "airbyte.server.webapp.datadogApplicationId" }}
@@ -207,7 +189,6 @@ Renders the server.webapp.zendeskKey environment variable
 Renders the set of all server environment variables
 */}}
 {{- define "airbyte.server.envs" }}
-{{- include "airbyte.server.applications.env" . }}
 {{- include "airbyte.server.webapp.datadogApplicationId.env" . }}
 {{- include "airbyte.server.webapp.datadogClientToken.env" . }}
 {{- include "airbyte.server.webapp.datadogEnv.env" . }}
@@ -224,7 +205,6 @@ Renders the set of all server environment variables
 Renders the set of all server config map variables
 */}}
 {{- define "airbyte.server.configVars" }}
-AB_AIRBYTE_APPLICATIONS: {{ include "airbyte.server.applications" . | quote }}
 WEBAPP_DATADOG_APPLICATION_ID: {{ include "airbyte.server.webapp.datadogApplicationId" . | quote }}
 WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToken" . | quote }}
 WEBAPP_DATADOG_ENV: {{ include "airbyte.server.webapp.datadogEnv" . | quote }}
