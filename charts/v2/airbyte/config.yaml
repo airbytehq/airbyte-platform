@@ -904,6 +904,39 @@ server:
       key: applications
       defaultValueExp: ternary "database" "" (eq (include "airbyte.auth.identityProvider.type" .) "generic-oidc")
 
+    - env: WEBAPP_DATADOG_APPLICATION_ID
+      key: webapp.datadogApplicationId
+
+    - env: WEBAPP_DATADOG_CLIENT_TOKEN
+      key: webapp.datadogClientToken
+
+    - env: WEBAPP_DATADOG_ENV
+      key: webapp.datadogEnv
+
+    - env: WEBAPP_DATADOG_SERVICE
+      key: webapp.datadogService
+      defaultValue: airbyte-webapp
+
+    - env: WEBAPP_DATADOG_SITE
+      key: webapp.datadogSite
+      defaultValue: datadoghq.com
+
+    - env: WEBAPP_HOCKEYSTACK_API_KEY
+      key: webapp.hockeystackApiKey
+
+    - env: WEBAPP_LAUNCHDARKLY_KEY
+      key: webapp.launchdarklyKey
+
+    - env: WEBAPP_OSANO_KEY
+      key: webapp.osanoKey
+
+    - env: WEBAPP_SEGMENT_TOKEN
+      key: webapp.segmentToken
+
+    - env: WEBAPP_ZENDESK_KEY
+      key: webapp.zendeskKey
+
+
 shopify:
   keyBasePath: global.shopify
   config:

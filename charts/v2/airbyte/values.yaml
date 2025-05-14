@@ -927,6 +927,18 @@ server:
     enabled: false
     remoteDebugPort: 5005
 
+  webapp:
+    datadogApplicationId: ""
+    datadogClientToken: ""
+    datadogEnv: ""
+    datadogService: ""
+    datadogSite: ""
+    hockeystackApiKey: ""
+    launchdarklyKey: ""
+    osanoKey: ""
+    segmentToken: ""
+    zendeskKey: ""
+
 ## @section Worker Parameters
 
 worker:

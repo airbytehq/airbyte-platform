@@ -36,6 +36,7 @@ data:
   {{- include "airbyte.micronaut.configVars" . | nindent 2 }}
   {{- include "airbyte.otel.configVars" . | nindent 2 }}
   {{- include "airbyte.secretsManager.configVars" . | nindent 2 }}
+  {{- include "airbyte.server.configVars" . | nindent 2 }}
   {{- include "airbyte.storage.configVars" . | nindent 2 }}
   {{- include "airbyte.temporal.cli.configVars" . | nindent 2 }}
   {{- include "airbyte.temporal.cloud.configVars" . | nindent 2 }}
