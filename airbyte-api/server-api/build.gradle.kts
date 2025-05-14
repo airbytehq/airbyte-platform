@@ -92,6 +92,7 @@ val genApiServer =
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false
@@ -167,6 +168,7 @@ val genApiServer2 =
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
       )
   }
 
@@ -200,6 +202,7 @@ val genApiClient =
         "SecretPersistenceConfigurationJson" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false
@@ -245,6 +248,7 @@ val genApiDocs =
         "MapperConfiguration" to "com.fasterxml.jackson.databind.JsonNode",
         "ConnectorBuilderProjectTestingValues" to "com.fasterxml.jackson.databind.JsonNode",
         "BillingEvent" to "com.fasterxml.jackson.databind.JsonNode",
+        "ConnectorIPCOptions" to "com.fasterxml.jackson.databind.JsonNode",
       )
 
     generateApiDocumentation = false

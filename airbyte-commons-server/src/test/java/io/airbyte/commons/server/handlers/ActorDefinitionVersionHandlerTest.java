@@ -266,7 +266,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportRefreshes(false)
-        .supportFileTransfer(false);
+        .supportFileTransfer(false)
+        .supportDataActivation(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

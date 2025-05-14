@@ -12260,6 +12260,8 @@ components:
           type: boolean
         supportsDataActivation:
           type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -12282,6 +12284,11 @@ components:
           type: boolean
         supportDataActivation:
           type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
+    ConnectorIPCOptions:
+      description: Connector IPC Options.
+      type: object
     ActorDefinitionBreakingChange:
       type: object
       required:

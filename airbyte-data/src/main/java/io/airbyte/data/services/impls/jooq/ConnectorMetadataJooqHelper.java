@@ -89,6 +89,9 @@ public class ConnectorMetadataJooqHelper {
           .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .set(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, actorDefinitionVersion.getSupportsFileTransfer())
           .set(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION, actorDefinitionVersion.getSupportsDataActivation())
+          .set(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS,
+              actorDefinitionVersion.getConnectorIPCOptions() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getConnectorIPCOptions())))
           .where(ACTOR_DEFINITION_VERSION.ID.eq(versionId))
           .execute();
     } else {
@@ -131,6 +134,9 @@ public class ConnectorMetadataJooqHelper {
           .set(ACTOR_DEFINITION_VERSION.LANGUAGE, actorDefinitionVersion.getLanguage())
           .set(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER, actorDefinitionVersion.getSupportsFileTransfer())
           .set(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION, actorDefinitionVersion.getSupportsDataActivation())
+          .set(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS,
+              actorDefinitionVersion.getConnectorIPCOptions() == null ? null
+                  : JSONB.valueOf(Jsons.serialize(actorDefinitionVersion.getConnectorIPCOptions())))
           .execute();
     }
 

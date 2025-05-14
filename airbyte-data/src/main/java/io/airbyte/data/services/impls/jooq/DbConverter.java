@@ -550,7 +550,10 @@ public class DbConverter {
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
         .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
         .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER))
-        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION));
+        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION))
+        .withConnectorIPCOptions(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS).data()));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

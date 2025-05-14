@@ -477,7 +477,7 @@ class ReplicationInputHydratorTest {
         "dockerTag",
         true,
         false,
-        false));
+        false, null));
   }
 
   private void mockNonRefresh() throws IOException {
@@ -491,7 +491,8 @@ class ReplicationInputHydratorTest {
         "dockerTag",
         false,
         false,
-        false));
+        false,
+        null));
   }
 
 }

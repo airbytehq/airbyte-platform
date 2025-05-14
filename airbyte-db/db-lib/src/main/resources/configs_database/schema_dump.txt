@@ -106,6 +106,7 @@ create table "public"."actor_definition_version" (
   "language" varchar(256),
   "supports_file_transfer" boolean not null default false,
   "supports_data_activation" boolean not null default false,
+  "connector_ipc_options" jsonb,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
