@@ -515,6 +515,15 @@ create table "public"."secret_storage" (
   constraint "secret_storage_pkey" primary key ("id"),
   constraint "secret_storage_scope_id_scope_type_storage_type_descriptor_key" unique ("scope_id", "scope_type", "storage_type", "descriptor")
 );
+create table "public"."service_accounts" (
+  "id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "secret" varchar(2147483647) not null,
+  "managed" boolean not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "service_accounts_pkey" primary key ("id")
+);
 create table "public"."sso_config" (
   "id" uuid not null,
   "organization_id" uuid not null,

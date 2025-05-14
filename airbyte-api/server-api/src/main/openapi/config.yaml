@@ -9430,6 +9430,31 @@ paths:
         - public
         - embedded_widget
 
+  /v1/service_accounts/token:
+    post:
+      summary: Get an access token for a service account.
+      tags:
+        - service_accounts
+      operationId: getServiceAccountToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -19649,6 +19674,18 @@ components:
           format: uuid
       x-sdk-component: true
 
+    ServiceAccountTokenRequestBody:
+      required:
+        - service_account_id
+        - secret
+      type: object
+      properties:
+        service_account_id:
+          type: string
+          format: uuid
+        secret:
+          type: string
+
   responses:
     NotFoundResponse:
       description: Object with given id was not found.
@@ -19682,5 +19719,6 @@ components:
         the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
         provider to authenticate.
       x-sdk-component: true
+
 security:
   - {}
