@@ -69,7 +69,7 @@ object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.pro
 
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
 
-object SocketCount : Temporary<Int>(key = "platform.socket-test", default = -1)
+object SocketCount : Temporary<Int>(key = "platform.socket-count", default = -1)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
