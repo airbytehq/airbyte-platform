@@ -33,6 +33,7 @@ import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.PodNetworkSecurityLabeler
 import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -155,6 +156,7 @@ class PayloadKubeInputMapperTest {
     every { input.connectionId } returns mockk<UUID>()
     every { input.workspaceId } returns mockk<UUID>()
     every { input.useFileTransfer } returns false
+    val syncPayload = SyncPayload(input)
 
     val replLabels = mapOf("orchestrator" to "labels")
     val sharedLabels = mapOf("pass through" to "labels")
@@ -165,7 +167,7 @@ class PayloadKubeInputMapperTest {
         destLauncherConfig.dockerImage,
       )
     } returns replLabels
-    val result = mapper.toKubeInput(workloadId, input, sharedLabels)
+    val result = mapper.toKubeInput(workloadId, syncPayload, sharedLabels)
 
     assertEquals(podName, result.podName)
     assertEquals(replLabels + sharedLabels, result.labels)
@@ -590,6 +592,7 @@ class PayloadKubeInputMapperTest {
     every { replInput.destinationLauncherConfig } returns testConfig
     every { replInput.syncResourceRequirements } returns SyncResourceRequirements()
     every { replInput.useFileTransfer } returns false
+    val syncPayload = SyncPayload(replInput)
     val nodeSelector = KubeNodeSelector(ffClient, listOf())
 
     var mapper =
@@ -618,7 +621,7 @@ class PayloadKubeInputMapperTest {
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
-    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+    mapper.toKubeInput(workloadId, syncPayload, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
       assertEquals("custom-image-registry/test-img", it.destinationImage)
     }
@@ -649,7 +652,7 @@ class PayloadKubeInputMapperTest {
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
-    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+    mapper.toKubeInput(workloadId, syncPayload, emptyMap()).also {
       assertEquals("custom-image-registry/test-img", it.sourceImage)
       assertEquals("custom-image-registry/test-img", it.destinationImage)
     }
@@ -667,7 +670,7 @@ class PayloadKubeInputMapperTest {
     mapper.toKubeInput(workloadId, discoverInput, emptyMap()).also {
       assertEquals("my.registry.com/test-img", it.kubePodInfo.mainContainerInfo?.image)
     }
-    mapper.toKubeInput(workloadId, replInput, emptyMap()).also {
+    mapper.toKubeInput(workloadId, syncPayload, emptyMap()).also {
       assertEquals("my.registry.com/test-img", it.sourceImage)
       assertEquals("my.registry.com/test-img", it.destinationImage)
     }

@@ -9,7 +9,6 @@ import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ContainerOrchestratorDevImage
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.input.getOrganizationId
@@ -22,6 +21,7 @@ import io.airbyte.workers.pod.KubePodInfo
 import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workers.pod.PodNameGenerator
 import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -52,9 +52,10 @@ class PayloadKubeInputMapper(
 ) {
   fun toKubeInput(
     workloadId: String,
-    input: ReplicationInput,
+    payload: SyncPayload,
     sharedLabels: Map<String, String>,
   ): ReplicationKubeInput {
+    val input = payload.input
     val jobId = input.getJobId()
     val attemptId = input.getAttemptId()
 
@@ -62,7 +63,12 @@ class PayloadKubeInputMapper(
     val nodeSelectors = kubeNodeSelector.getNodeSelectors(input.usesCustomConnector(), replicationWorkerConfigs, input.connectionId)
 
     val orchImage = resolveOrchestratorImageFFOverride(input.connectionId, orchestratorKubeContainerInfo.image)
-    val orchestratorReqs = resourceRequirementsFactory.orchestrator(input)
+    val orchestratorReqs =
+      payload.architectureEnvironmentVariables
+        ?.takeIf { it.isPlatformBookkeeperMode() }
+        ?.bookkeeperResourceRequirements()
+        ?: resourceRequirementsFactory.orchestrator(input)
+
     val orchRuntimeEnvVars = runTimeEnvVarFactory.orchestratorEnvVars(input, workloadId)
 
     val sourceImage = input.sourceLauncherConfig.dockerImage.withImageRegistry()

@@ -67,9 +67,9 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
 
-object SingleContainerTest : Temporary<Boolean>(key = "platform.single-container-test", default = false)
-
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
+
+object SocketCount : Temporary<Int>(key = "platform.socket-test", default = -1)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 

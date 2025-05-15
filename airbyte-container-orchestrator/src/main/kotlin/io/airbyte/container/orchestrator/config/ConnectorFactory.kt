@@ -19,12 +19,9 @@ import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.s
 import io.airbyte.container.orchestrator.worker.io.DestinationTimeoutMonitor
 import io.airbyte.container.orchestrator.worker.io.EmptyAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.HeartbeatMonitor
-import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteDestination
-import io.airbyte.container.orchestrator.worker.io.InMemoryDummyAirbyteSource
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.LocalContainerAirbyteSource
 import io.airbyte.featureflag.PrintLongRecordPks
-import io.airbyte.featureflag.SingleContainerTest
 import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.GsonPksExtractor
@@ -70,18 +67,14 @@ class ConnectorFactory {
     replicationInput: ReplicationInput,
     replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   ): AirbyteDestination =
-    if (replicationInputFeatureFlagReader.read(SingleContainerTest)) {
-      InMemoryDummyAirbyteDestination()
-    } else {
-      LocalContainerAirbyteDestination(
-        streamFactory = destinationStreamFactory,
-        messageMetricsTracker = MessageMetricsTracker(metricClient),
-        messageWriterFactory = messageWriterFactory,
-        destinationTimeoutMonitor = airbyteDestinationMonitor,
-        containerIOHandle = dest(),
-        flushImmediately = replicationInput.useFileTransfer,
-      )
-    }
+    LocalContainerAirbyteDestination(
+      streamFactory = destinationStreamFactory,
+      messageMetricsTracker = MessageMetricsTracker(metricClient),
+      messageWriterFactory = messageWriterFactory,
+      destinationTimeoutMonitor = airbyteDestinationMonitor,
+      containerIOHandle = dest(),
+      flushImmediately = replicationInput.useFileTransfer,
+    )
 
   @Singleton
   fun airbyteSource(
@@ -91,9 +84,7 @@ class ConnectorFactory {
     replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
   ): AirbyteSource =
-    if (replicationInputFeatureFlagReader.read(SingleContainerTest)) {
-      InMemoryDummyAirbyteSource()
-    } else if (replicationInput.isReset) {
+    if (replicationInput.isReset) {
       EmptyAirbyteSource(replicationInput.namespaceDefinition == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
     } else {
       LocalContainerAirbyteSource(

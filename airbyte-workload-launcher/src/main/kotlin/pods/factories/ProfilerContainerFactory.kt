@@ -26,6 +26,7 @@ class ProfilerContainerFactory(
       "WORKLOAD_ID",
       "CONNECTION_ID",
       "JOB_ID",
+      "ATTEMPT_ID",
       "STORAGE_TYPE",
       "STORAGE_BUCKET_LOG",
       "STORAGE_BUCKET_STATE",

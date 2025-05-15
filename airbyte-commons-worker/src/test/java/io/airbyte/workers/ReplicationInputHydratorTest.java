@@ -278,7 +278,9 @@ class ReplicationInputHydratorTest {
         false,
         Map.of(),
         null,
-        false);
+        false,
+        null,
+        null);
   }
 
   @ParameterizedTest

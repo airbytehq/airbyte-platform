@@ -9,6 +9,8 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
 import io.airbyte.workers.context.WorkloadSecurityContextProvider
+import io.airbyte.workload.launcher.ArchitectureDecider
+import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference
 import io.fabric8.kubernetes.api.model.Pod
@@ -49,18 +51,17 @@ data class ReplicationPodFactory(
     isFileTransfer: Boolean,
     workspaceId: UUID,
     enableAsyncProfiler: Boolean = false,
-    singleConnectorTest: Boolean = false,
-    socketTest: Boolean = false,
+    architectureEnvironmentVariables: ArchitectureEnvironmentVariables = ArchitectureDecider.buildLegacyEnvironment(),
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler, socketTest)
+    val replicationVolumes = volumeFactory.replication(isFileTransfer, enableAsyncProfiler, architectureEnvironmentVariables)
     val initContainer =
       initContainerFactory.create(
         resourceReqs = orchResourceReqs,
         volumeMounts = replicationVolumes.orchVolumeMounts,
-        runtimeEnvVars = orchRuntimeEnvVars,
+        runtimeEnvVars = orchRuntimeEnvVars + architectureEnvironmentVariables.platformEnvironmentVariables,
         workspaceId = workspaceId,
       )
 
@@ -68,7 +69,7 @@ data class ReplicationPodFactory(
       replContainerFactory.createOrchestrator(
         resourceReqs = orchResourceReqs,
         volumeMounts = replicationVolumes.orchVolumeMounts,
-        runtimeEnvVars = orchRuntimeEnvVars,
+        runtimeEnvVars = orchRuntimeEnvVars + architectureEnvironmentVariables.platformEnvironmentVariables,
         image = orchImage,
       )
 
@@ -76,7 +77,7 @@ data class ReplicationPodFactory(
       replContainerFactory.createSource(
         resourceReqs = sourceResourceReqs,
         volumeMounts = replicationVolumes.sourceVolumeMounts,
-        runtimeEnvVars = sourceRuntimeEnvVars,
+        runtimeEnvVars = sourceRuntimeEnvVars + architectureEnvironmentVariables.sourceEnvironmentVariables,
         image = sourceImage,
       )
 
@@ -84,18 +85,13 @@ data class ReplicationPodFactory(
       replContainerFactory.createDestination(
         resourceReqs = destResourceReqs,
         volumeMounts = replicationVolumes.destVolumeMounts,
-        runtimeEnvVars = destRuntimeEnvVars,
+        runtimeEnvVars = destRuntimeEnvVars + architectureEnvironmentVariables.destinationEnvironmentVariables,
         image = destImage,
       )
 
     val nodeSelection = nodeSelectionFactory.createReplicationNodeSelection(nodeSelectors, allLabels)
 
-    val containers =
-      when {
-        singleConnectorTest -> mutableListOf(orchContainer)
-        socketTest -> mutableListOf(orchContainer, sourceContainer, destContainer)
-        else -> mutableListOf(orchContainer, sourceContainer, destContainer)
-      }
+    val containers = mutableListOf(orchContainer, sourceContainer, destContainer)
 
     if (enableAsyncProfiler) {
       containers.add(profilerContainerFactory.create(orchRuntimeEnvVars, replicationVolumes.profilerVolumeMounts))
@@ -123,7 +119,7 @@ data class ReplicationPodFactory(
       .withAffinity(nodeSelection.podAffinity)
       .withAutomountServiceAccountToken(false)
       .withSecurityContext(
-        if (enableAsyncProfiler) {
+        if (enableAsyncProfiler || architectureEnvironmentVariables.isSocketBased()) {
           workloadSecurityContextProvider.rootSecurityContext()
         } else {
           workloadSecurityContextProvider.defaultPodSecurityContext()

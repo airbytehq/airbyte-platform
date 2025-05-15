@@ -19,6 +19,7 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.serde.ObjectSerializer
@@ -73,6 +74,7 @@ class ReplicationHydrationProcessorTest {
         fileClient,
         destinationCatalogGenerator,
         metricClient,
+        ArchitectureConstants.ORCHESTRATOR,
       )
   }
 

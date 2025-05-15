@@ -39,4 +39,6 @@ class ReplicationInputMapper {
       .withFeatureFlags(replicationActivityInput.featureFlags)
       .withHeartbeatConfig(HeartbeatConfig().withMaxSecondsBetweenMessages(replicationActivityInput.heartbeatMaxSecondsBetweenMessages))
       .withSupportsRefreshes(replicationActivityInput.supportsRefreshes)
+      .withSourceIPCOptions(replicationActivityInput.sourceIPCOptions)
+      .withDestinationIPCOptions(replicationActivityInput.destinationIPCOptions)
 }

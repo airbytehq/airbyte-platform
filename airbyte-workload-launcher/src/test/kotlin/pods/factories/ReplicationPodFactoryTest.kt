@@ -247,8 +247,6 @@ class ReplicationPodFactoryTest {
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
       enableAsyncProfiler: Boolean = false,
-      singleConnectorTest: Boolean = false,
-      socketTest: Boolean = false,
     ) = factory.create(
       podName,
       allLabels,
@@ -266,8 +264,6 @@ class ReplicationPodFactoryTest {
       isFileTransfer,
       workspaceId,
       enableAsyncProfiler,
-      singleConnectorTest,
-      socketTest,
     )
 
     fun createResetWithDefaults(
