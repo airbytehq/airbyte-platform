@@ -4,12 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicJobsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
@@ -46,7 +46,7 @@ open class JobsController(
   private val jobService: JobService,
   private val connectionService: ConnectionService,
   private val trackingHelper: TrackingHelper,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicJobsApi {
   @DELETE
@@ -56,12 +56,12 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      jobId.toString(),
-      Scope.JOB,
-      userId,
-      PermissionType.WORKSPACE_RUNNER,
-    )
+
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.JOB_ID, jobId.toString())
+      .requireRole(AuthRoleConstants.WORKSPACE_RUNNER)
 
     val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
@@ -89,23 +89,18 @@ open class JobsController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateJob(jobCreateRequest: JobCreateRequest): Response {
     val userId: UUID = currentUserService.currentUser.userId
+
     // Only Editor and above should be able to run a Clear.
-    when (jobCreateRequest.jobType) {
-      JobTypeEnum.CLEAR ->
-        apiAuthorizationHelper.checkWorkspacePermission(
-          jobCreateRequest.connectionId,
-          Scope.CONNECTION,
-          userId,
-          PermissionType.WORKSPACE_EDITOR,
-        )
-      else ->
-        apiAuthorizationHelper.checkWorkspacePermission(
-          jobCreateRequest.connectionId,
-          Scope.CONNECTION,
-          userId,
-          PermissionType.WORKSPACE_RUNNER,
-        )
-    }
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.CONNECTION_ID, jobCreateRequest.connectionId)
+      .requireRole(
+        when (jobCreateRequest.jobType) {
+          JobTypeEnum.CLEAR -> AuthRoleConstants.WORKSPACE_EDITOR
+          else -> AuthRoleConstants.WORKSPACE_RUNNER
+        },
+      )
 
     val connectionResponse: ConnectionResponse =
       trackingHelper.callWithTracker(
@@ -209,12 +204,12 @@ open class JobsController(
     @PathParam("jobId") jobId: Long,
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      jobId.toString(),
-      Scope.JOB,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
+
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.JOB_ID, jobId.toString())
+      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val jobResponse: JobResponse? =
       trackingHelper.callWithTracker(
@@ -255,20 +250,19 @@ open class JobsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
-      apiAuthorizationHelper.checkWorkspacePermission(
-        connectionId,
-        Scope.CONNECTION,
-        userId,
-        PermissionType.WORKSPACE_READER,
-      )
-    } else {
-      apiAuthorizationHelper.checkWorkspacesPermission(
-        workspaceIds?.map { it.toString() } ?: emptyList(),
-        Scope.WORKSPACES,
-        userId,
-        PermissionType.WORKSPACE_READER,
-      )
+      roleResolver
+        .Request()
+        .withCurrentUser()
+        .withRef(AuthenticationId.CONNECTION_ID, connectionId)
+        .requireRole(AuthRoleConstants.WORKSPACE_READER)
+    } else if (!workspaceIds.isNullOrEmpty()) {
+      roleResolver
+        .Request()
+        .withCurrentUser()
+        .withWorkspaces(workspaceIds)
+        .requireRole(AuthRoleConstants.WORKSPACE_READER)
     }
+
     val filter =
       JobsFilter(
         createdAtStart,

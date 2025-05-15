@@ -13,9 +13,9 @@ import io.airbyte.api.model.generated.WebBackendConnectionReadList
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
-import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.server.generated.models.WebappConfigResponse
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
@@ -43,7 +43,7 @@ import java.util.UUID
 @Property(name = "AIRBYTE_EDITION", value = "community")
 internal class WebBackendApiControllerTest {
   @Inject
-  lateinit var apiAuthorizationHelper: ApiAuthorizationHelper
+  lateinit var roleResolver: RoleResolver
 
   @Inject
   lateinit var webBackendConnectionsHandler: WebBackendConnectionsHandler
@@ -58,8 +58,8 @@ internal class WebBackendApiControllerTest {
   @Client("/")
   lateinit var client: HttpClient
 
-  @MockBean(ApiAuthorizationHelper::class)
-  fun apiAuthorizationHelper(): ApiAuthorizationHelper = mockk(relaxed = true)
+  @MockBean(RoleResolver::class)
+  fun roleResolver(): RoleResolver = mockk(relaxed = true)
 
   @MockBean(WebBackendConnectionsHandler::class)
   fun webBackendConnectionsHandler(): WebBackendConnectionsHandler = mockk()
@@ -111,9 +111,10 @@ internal class WebBackendApiControllerTest {
 
     // This only impacts calls where withRefreshCatalog(true) is present
     // first two calls succeed, third call will fail
+    val editorRole = setOf(AuthRoleConstants.ADMIN)
     every {
-      apiAuthorizationHelper.checkWorkspacesPermissions(any(), any(), any(), any())
-    } returns Unit andThen Unit andThenThrows ForbiddenProblem()
+      roleResolver.resolveRoles(any(), any(), any(), any(), any())
+    } returns editorRole andThen editorRole andThen emptySet<String>()
 
     val path = "/api/v1/web_backend/connections/get"
 

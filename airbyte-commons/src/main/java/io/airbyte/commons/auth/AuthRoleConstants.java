@@ -12,6 +12,7 @@ public final class AuthRoleConstants {
   // TODO: replace "ADMIN" with "INSTANCE_ADMIN" and remove "EDITOR", "OWNER", etc
   // once all @Secured annotations are migrated to the new organization/workspace RBAC roles.
   public static final String ADMIN = "ADMIN";
+  public static final String INSTANCE_ADMIN = "INSTANCE_ADMIN";
   public static final String AUTHENTICATED_USER = "AUTHENTICATED_USER";
   public static final String EDITOR = "EDITOR";
   public static final String OWNER = "OWNER";
