@@ -16,6 +16,7 @@ jest.mock("core/api", () => ({
     workspaceId: "workspace-1",
     organizationId: "org-1",
   }),
+  useMaybeWorkspaceCurrentOrganizationId: jest.fn().mockReturnValue("org-1"),
 }));
 
 jest.mock("area/workspace/utils", () => ({

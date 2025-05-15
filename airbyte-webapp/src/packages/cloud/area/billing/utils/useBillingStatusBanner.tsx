@@ -5,7 +5,11 @@ import { useIntl } from "react-intl";
 import { ExternalLink, Link } from "components/ui/Link";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useCurrentOrganization, useOrganizationTrialStatus, useGetOrganizationPaymentConfig } from "core/api";
+import {
+  useOrganizationTrialStatus,
+  useGetOrganizationPaymentConfig,
+  useMaybeWorkspaceCurrentOrganizationId,
+} from "core/api";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
@@ -19,7 +23,7 @@ interface BillingStatusBanner {
 export const useBillingStatusBanner = (context: "top_level" | "billing_page"): BillingStatusBanner | undefined => {
   const { formatMessage } = useIntl();
   const createLink = useCurrentWorkspaceLink();
-  const { organizationId } = useCurrentOrganization();
+  const organizationId = useMaybeWorkspaceCurrentOrganizationId();
   const { data: paymentConfig } = useGetOrganizationPaymentConfig(organizationId);
   const canViewTrialStatus = useGeneratedIntent(Intent.ViewOrganizationTrialStatus, { organizationId });
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
