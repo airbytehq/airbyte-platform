@@ -305,7 +305,6 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
               data-testid={`see-more-${tabName}`}
               type="button"
               variant="secondary"
-              className={styles.selectConnector__seeMore}
               onClick={() => setSelectedTab(tabName)}
             >
               <FlexContainer alignItems="center" gap="lg">
