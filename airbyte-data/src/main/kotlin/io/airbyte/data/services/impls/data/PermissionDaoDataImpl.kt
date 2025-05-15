@@ -36,11 +36,6 @@ open class PermissionDaoDataImpl(
 
   override fun getPermissionsForUser(userId: UUID): List<Permission> = permissionRepository.findByUserId(userId).map { it.toConfigModel() }
 
-  override fun getPermissionsByAuthUserId(authUserId: String): List<Permission> =
-    permissionRepository.queryByAuthUser(authUserId).map {
-      it.toConfigModel()
-    }
-
   @Transactional("config")
   override fun deletePermission(permissionId: UUID) {
     val permissionsToDelete = permissionRepository.findByIdIn(listOf(permissionId))
