@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.48.12
+airbyte-cdk==6.48.14
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.15.0
     # via airbyte-cdk
@@ -141,7 +141,7 @@ proto-plus==1.26.1
     # via
     #   google-api-core
     #   google-cloud-secret-manager
-protobuf==6.31.0rc2
+protobuf==6.31.0
     # via
     #   google-api-core
     #   google-cloud-secret-manager
