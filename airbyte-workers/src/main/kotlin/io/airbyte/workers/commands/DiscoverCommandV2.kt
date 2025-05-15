@@ -5,37 +5,36 @@
 package io.airbyte.workers.commands
 
 import io.airbyte.api.client.AirbyteApiClient
-import io.airbyte.api.client.model.generated.CheckCommandOutputRequest
-import io.airbyte.api.client.model.generated.CheckCommandOutputResponse
-import io.airbyte.api.client.model.generated.RunCheckCommandRequest
+import io.airbyte.api.client.model.generated.DiscoverCommandOutputRequest
+import io.airbyte.api.client.model.generated.DiscoverCommandOutputResponse
+import io.airbyte.api.client.model.generated.RunDiscoverCommandRequest
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
-import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
-import io.airbyte.workers.models.CheckConnectionApiInput
+import io.airbyte.workers.models.DiscoverSourceApiInput
 import jakarta.inject.Singleton
 
 @Singleton
-class CheckCommandThroughApi(
+class DiscoverCommandV2(
   airbyteApiClient: AirbyteApiClient,
   private val metricClient: MetricClient,
   private val failureConverter: FailureConverter,
-) : ApiCommandBase<CheckConnectionApiInput>(
+) : ApiCommandBase<DiscoverSourceApiInput>(
     airbyteApiClient = airbyteApiClient,
   ) {
-  override val name: String = "check-command-api"
+  override val name: String = "discover-command-api"
 
   override fun start(
-    input: CheckConnectionApiInput,
+    input: DiscoverSourceApiInput,
     signalPayload: String?,
   ): String {
-    val commandId = "check_${input.jobId}_${input.attemptId}_${input.actorId}"
+    val commandId = "discover_${input.jobId}_${input.attemptId}_${input.actorId}"
 
-    airbyteApiClient.commandApi.runCheckCommand(
-      RunCheckCommandRequest(
+    airbyteApiClient.commandApi.runDiscoverCommand(
+      RunDiscoverCommandRequest(
         id = commandId,
         actorId = input.actorId,
         jobId = input.jobId,
@@ -48,29 +47,18 @@ class CheckCommandThroughApi(
   }
 
   override fun getOutput(id: String): ConnectorJobOutput {
-    val commandOutput: CheckCommandOutputResponse =
-      airbyteApiClient.commandApi.getCheckCommandOutput(
-        CheckCommandOutputRequest(
-          id,
-        ),
-      )
+    val commandOutput = airbyteApiClient.commandApi.getDiscoverCommandOutput(DiscoverCommandOutputRequest(id))
 
-    val output =
-      if (commandOutput.status == CheckCommandOutputResponse.Status.SUCCEEDED) {
+    val output: ConnectorJobOutput =
+      if (commandOutput.status == DiscoverCommandOutputResponse.Status.SUCCEEDED) {
         ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-          .withCheckConnection(
-            StandardCheckConnectionOutput()
-              .withStatus(StandardCheckConnectionOutput.Status.SUCCEEDED),
-          )
+          .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+          .withDiscoverCatalogId(commandOutput.catalogId)
       } else {
         ConnectorJobOutput()
-          .withOutputType(ConnectorJobOutput.OutputType.CHECK_CONNECTION)
-          .withCheckConnection(
-            StandardCheckConnectionOutput()
-              .withStatus(StandardCheckConnectionOutput.Status.FAILED)
-              .withMessage(commandOutput.message),
-          ).withFailureReason(
+          .withOutputType(ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID)
+          .withDiscoverCatalogId(null)
+          .withFailureReason(
             commandOutput.failureReason?.let {
               FailureReason()
                 .withFailureType(failureConverter.getFailureType(it.failureType))
@@ -83,12 +71,12 @@ class CheckCommandThroughApi(
       }
 
     metricClient.count(
-      metric = OssMetricsRegistry.SIDECAR_CHECK,
+      metric = OssMetricsRegistry.CATALOG_DISCOVERY,
       attributes =
         arrayOf(
           MetricAttribute(
             MetricTags.STATUS,
-            if (output.checkConnection.status == StandardCheckConnectionOutput.Status.FAILED) "failed" else "success",
+            if (output.discoverCatalogId == null) "failed" else "success",
           ),
         ),
     )

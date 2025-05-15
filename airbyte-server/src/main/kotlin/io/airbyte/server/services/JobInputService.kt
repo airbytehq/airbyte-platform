@@ -381,31 +381,25 @@ class JobInputService(
     )
   }
 
-  fun getDiscoveryInput(
+  fun getDiscoverInput(
     actorId: UUID,
-    workspaceId: UUID,
+    jobId: String? = null,
+    attemptId: Long? = null,
   ): DiscoverCommandInput.DiscoverCatalogInput {
-    val actor =
-      actorRepository.findByActorId(actorId)
-        ?: throw NotFoundException() // Better exception?
-    return when (actor.actorType) {
-      ActorType.source -> getDiscoverInputBySourceId(sourceId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L)
-      ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
-      else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
+    if ((jobId == null && attemptId != null) || (jobId != null && attemptId == null)) {
+      throw IllegalStateException("jobId and attemptId must be both null or both not null; jobId: $jobId, attemptId: $attemptId")
     }
-  }
 
-  fun getDiscoveryInputWithJobId(
-    actorId: UUID,
-    workspaceId: UUID,
-    jobId: String,
-    attemptId: Long,
-  ): DiscoverCommandInput.DiscoverCatalogInput {
     val actor =
       actorRepository.findByActorId(actorId)
         ?: throw NotFoundException() // Better exception?
     return when (actor.actorType) {
-      ActorType.source -> getDiscoverInputBySourceId(actorId, jobId, attemptId)
+      ActorType.source ->
+        if (jobId == null && attemptId == null) {
+          getDiscoverInputBySourceId(sourceId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L)
+        } else {
+          getDiscoverInputBySourceId(actorId, jobId!!, attemptId!!)
+        }
       ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
       else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
     }

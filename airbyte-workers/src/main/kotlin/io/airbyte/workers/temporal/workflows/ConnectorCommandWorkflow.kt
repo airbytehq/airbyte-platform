@@ -12,6 +12,7 @@ import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandApiInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.commons.timer.Stopwatch
@@ -28,10 +29,12 @@ import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.ConnectorCommand
 import io.airbyte.workers.commands.DiscoverCommand
+import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.SpecCommand
 import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.DiscoverSourceApiInput
 import io.airbyte.workers.models.SpecInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.Activity
@@ -104,6 +107,7 @@ class ConnectorCommandActivityImpl(
   private val checkCommand: CheckCommand,
   private val checkCommandApi: CheckCommandThroughApi,
   private val discoverCommand: DiscoverCommand,
+  private val discoverCommandApi: DiscoverCommandV2,
   private val specCommand: SpecCommand,
   private val activityExecutionContextProvider: ActivityExecutionContextProvider,
   private val metricClient: MetricClient,
@@ -116,6 +120,8 @@ class ConnectorCommandActivityImpl(
 
     fun DiscoverCommandInput.DiscoverCatalogInput.toWorkerModels(): DiscoverCatalogInput =
       DiscoverCatalogInput(jobRunConfig, integrationLauncherConfig, discoverCatalogInput)
+
+    fun DiscoverCommandApiInput.DiscoverApiInput.toWorkerModels(): DiscoverSourceApiInput = DiscoverSourceApiInput(actorId, jobId, attemptId)
 
     fun SpecCommandInput.SpecInput.toWorkerModels(): SpecInput = SpecInput(jobRunConfig, integrationLauncherConfig)
 
@@ -130,6 +136,7 @@ class ConnectorCommandActivityImpl(
         is DiscoverCommandInput -> discoverCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is SpecCommandInput -> specCommand.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
         is CheckCommandApiInput -> checkCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
+        is DiscoverCommandApiInput -> discoverCommandApi.start(activityInput.input.input.toWorkerModels(), activityInput.signalPayload)
       }
     }
 
@@ -213,6 +220,7 @@ class ConnectorCommandActivityImpl(
       is DiscoverCommandInput -> discoverCommand
       is SpecCommandInput -> specCommand
       is CheckCommandApiInput -> checkCommandApi
+      is DiscoverCommandApiInput -> discoverCommandApi
     }
 }
 

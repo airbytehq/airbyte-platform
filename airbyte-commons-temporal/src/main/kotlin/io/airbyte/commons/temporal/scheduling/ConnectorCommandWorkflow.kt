@@ -26,6 +26,7 @@ import java.util.UUID
   JsonSubTypes.Type(value = CheckCommandInput::class, name = ConnectorCommandInput.CHECK),
   JsonSubTypes.Type(value = CheckCommandApiInput::class, name = ConnectorCommandInput.CHECK_COMMAND),
   JsonSubTypes.Type(value = DiscoverCommandInput::class, name = ConnectorCommandInput.DISCOVER),
+  JsonSubTypes.Type(value = DiscoverCommandApiInput::class, name = ConnectorCommandInput.DISCOVER_COMMAND),
   JsonSubTypes.Type(value = SpecCommandInput::class, name = ConnectorCommandInput.SPEC),
 )
 sealed interface ConnectorCommandInput {
@@ -33,6 +34,7 @@ sealed interface ConnectorCommandInput {
     const val CHECK = "check"
     const val CHECK_COMMAND = "check_command"
     const val DISCOVER = "discover"
+    const val DISCOVER_COMMAND = "discover_command"
     const val SPEC = "spec"
   }
 
@@ -131,6 +133,52 @@ data class CheckCommandApiInput(
       fun input(input: CheckConnectionApiInput) = apply { this.input = input }
 
       fun build() = CheckCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
+    }
+}
+
+@JsonDeserialize(builder = DiscoverCommandApiInput.Builder::class)
+data class DiscoverCommandApiInput(
+  val input: DiscoverApiInput,
+) : ConnectorCommandInput {
+  override val type: String = ConnectorCommandInput.DISCOVER_COMMAND
+
+  // This is duplicated of io.airbyte.workers.model.CheckConnectionInput to avoid dependency hell
+  @JsonDeserialize(builder = DiscoverApiInput.Builder::class)
+  data class DiscoverApiInput(
+    val actorId: UUID,
+    val jobId: String,
+    val attemptId: Long,
+  ) {
+    class Builder
+      @JvmOverloads
+      constructor(
+        var actorId: UUID? = null,
+        var jobId: String? = null,
+        var attemptId: Long? = null,
+      ) {
+        fun actorId(actorId: UUID) = apply { this.actorId = actorId }
+
+        fun jobId(jobId: String) = apply { this.jobId = jobId }
+
+        fun attemptId(attemptId: Long) = apply { this.attemptId = attemptId }
+
+        fun build() =
+          DiscoverApiInput(
+            actorId = actorId ?: throw IllegalArgumentException("actorId must be specified"),
+            jobId = jobId ?: throw IllegalArgumentException("jobId must be specified"),
+            attemptId = attemptId ?: throw IllegalArgumentException("attemptId must be specified"),
+          )
+      }
+  }
+
+  class Builder
+    @JvmOverloads
+    constructor(
+      var input: DiscoverApiInput? = null,
+    ) {
+      fun input(input: DiscoverApiInput) = apply { this.input = input }
+
+      fun build() = DiscoverCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
     }
 }
 

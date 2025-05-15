@@ -455,7 +455,7 @@ class JobInputServiceTest {
     every { contextBuilder.fromSource(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
-    val actual = jobInputService.getDiscoveryInput(sourceId, workspaceId)
+    val actual = jobInputService.getDiscoverInput(sourceId)
 
     assertEquals(0L, actual.jobRunConfig.attemptId)
 
@@ -510,7 +510,7 @@ class JobInputServiceTest {
     val jobId = "job-id"
     val attemptId = 1337L
 
-    val actual = jobInputService.getDiscoveryInputWithJobId(sourceId, workspaceId, jobId, attemptId)
+    val actual = jobInputService.getDiscoverInput(sourceId, jobId, attemptId)
 
     assertEquals(jobId, actual.jobRunConfig.jobId)
     assertEquals(attemptId, actual.jobRunConfig.attemptId)

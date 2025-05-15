@@ -220,7 +220,7 @@ class CommandService(
     val actualAttemptNumber = attemptNumber ?: 0L
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
-    val discoverInput = jobInputService.getDiscoveryInputWithJobId(actorId, workspaceId, actualJobId, actualAttemptNumber)
+    val discoverInput = jobInputService.getDiscoverInput(actorId, actualJobId, actualAttemptNumber)
     val workloadPayload =
       createDiscoverWorkloadRequest(
         actorId = actorId,

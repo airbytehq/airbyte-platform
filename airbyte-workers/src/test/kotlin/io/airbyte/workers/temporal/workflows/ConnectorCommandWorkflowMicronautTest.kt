@@ -9,6 +9,7 @@ import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
+import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.sync.WorkloadClient
 import io.airbyte.workers.workload.WorkloadIdGenerator
 import io.micronaut.context.annotation.Bean
@@ -53,6 +54,9 @@ class ConnectorCommandWorkflowMicronautTest {
 
   @Inject
   lateinit var discoverCommand: DiscoverCommand
+
+  @Inject
+  lateinit var discoverCommandV2: DiscoverCommandV2
 
   @Inject
   private lateinit var connectorCommmandActivity: ConnectorCommandActivity

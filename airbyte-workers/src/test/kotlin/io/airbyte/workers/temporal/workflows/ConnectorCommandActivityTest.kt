@@ -8,6 +8,7 @@ import io.airbyte.commons.converters.log
 import io.airbyte.commons.temporal.scheduling.CheckCommandApiInput
 import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandApiInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.config.StandardCheckConnectionInput
@@ -20,10 +21,12 @@ import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
+import io.airbyte.workers.commands.DiscoverCommandV2
 import io.airbyte.workers.commands.SpecCommand
 import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
+import io.airbyte.workers.models.DiscoverSourceApiInput
 import io.airbyte.workers.models.SpecInput
 import io.mockk.every
 import io.mockk.mockk
@@ -39,6 +42,7 @@ class ConnectorCommandActivityTest {
   lateinit var checkCommand: CheckCommand
   lateinit var checkCommandThroughApi: CheckCommandThroughApi
   lateinit var discoverCommand: DiscoverCommand
+  lateinit var discoverCommandV2: DiscoverCommandV2
   lateinit var specCommand: SpecCommand
   lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
   lateinit var metricClient: MetricClient
@@ -49,10 +53,19 @@ class ConnectorCommandActivityTest {
     discoverCommand = mockk(relaxed = true)
     specCommand = mockk(relaxed = true)
     checkCommandThroughApi = mockk(relaxed = true)
+    discoverCommandV2 = mockk(relaxed = true)
     activityExecutionContextProvider = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
     activity =
-      ConnectorCommandActivityImpl(checkCommand, checkCommandThroughApi, discoverCommand, specCommand, activityExecutionContextProvider, metricClient)
+      ConnectorCommandActivityImpl(
+        checkCommand,
+        checkCommandThroughApi,
+        discoverCommand,
+        discoverCommandV2,
+        specCommand,
+        activityExecutionContextProvider,
+        metricClient,
+      )
   }
 
   @Test
@@ -134,6 +147,10 @@ class ConnectorCommandActivityTest {
     activity.cancelCommand(getActivityInput(input = discoverInput, id = "discover cancel test"))
     verify { discoverCommand.cancel("discover cancel test") }
 
+    val discoverApiInput = getDiscoverCommandApiInput()
+    activity.cancelCommand(getActivityInput(input = discoverApiInput, id = "discover api cancel test"))
+    verify { discoverCommandV2.cancel("discover api cancel test") }
+
     val specInput = getSpecInput()
     activity.cancelCommand(getActivityInput(input = specInput, id = "spec cancel test"))
     verify { specCommand.cancel("spec cancel test") }
@@ -153,6 +170,10 @@ class ConnectorCommandActivityTest {
     activity.getCommandOutput(getActivityInput(input = discoverInput, id = "discover getOutput test"))
     verify { discoverCommand.getOutput("discover getOutput test") }
 
+    val discoverApiInput = getDiscoverCommandApiInput()
+    activity.getCommandOutput(getActivityInput(input = discoverApiInput, id = "discover api cancel test"))
+    verify { discoverCommandV2.getOutput("discover api cancel test") }
+
     val specInput = getSpecInput()
     activity.getCommandOutput(getActivityInput(input = specInput, id = "spec getOutput test"))
     verify { specCommand.getOutput("spec getOutput test") }
@@ -171,6 +192,10 @@ class ConnectorCommandActivityTest {
     val discoverInput = getDiscoverInput()
     activity.isCommandTerminal(getActivityInput(input = discoverInput, id = "discover isTerminal test"))
     verify { discoverCommand.isTerminal("discover isTerminal test") }
+
+    val discoverApiInput = getDiscoverCommandApiInput()
+    activity.isCommandTerminal(getActivityInput(input = discoverApiInput, id = "discover api cancel test"))
+    verify { discoverCommandV2.isTerminal("discover api cancel test") }
 
     val specInput = getSpecInput()
     activity.isCommandTerminal(getActivityInput(input = specInput, id = "spec isTerminal test"))
@@ -212,6 +237,15 @@ class ConnectorCommandActivityTest {
       )
     }
 
+    val discoverApiInput = getDiscoverCommandApiInput()
+    activity.startCommand(getActivityInput(input = discoverApiInput, signalPayload = signalPayload))
+    verify {
+      discoverCommandV2.start(
+        DiscoverSourceApiInput(discoverApiInput.input.actorId, discoverApiInput.input.jobId, discoverApiInput.input.attemptId),
+        signalPayload,
+      )
+    }
+
     val specInput = getSpecInput()
     activity.startCommand(getActivityInput(input = specInput, signalPayload = signalPayload))
     verify {
@@ -249,6 +283,16 @@ class ConnectorCommandActivityTest {
           jobRunConfig = JobRunConfig(),
           integrationLauncherConfig = IntegrationLauncherConfig(),
           discoverCatalogInput = StandardDiscoverCatalogInput(),
+        ),
+    )
+
+  private fun getDiscoverCommandApiInput() =
+    DiscoverCommandApiInput(
+      input =
+        DiscoverCommandApiInput.DiscoverApiInput(
+          actorId = UUID.randomUUID(),
+          jobId = "jobId",
+          attemptId = 1337L,
         ),
     )
 
