@@ -5,9 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Cron
 import io.airbyte.config.ScheduleData
@@ -42,7 +42,6 @@ import java.util.UUID
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class ConnectionTemplatesController(
   private val currentUserService: CurrentUserService,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
   private val connectionTemplateService: ConnectionTemplateService,
@@ -53,6 +52,7 @@ open class ConnectionTemplatesController(
     val DEFAULT_CRON_SCHEDULE = ScheduleData().withCron(Cron().withCronExpression("0 0 * * * ?").withCronTimeZone("UTC"))
   }
 
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun publicCreateConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): Response =
     wrap {
       createConnectionTemplate(connectionTemplateCreateRequestBody).ok()
@@ -61,10 +61,7 @@ open class ConnectionTemplatesController(
   @VisibleForTesting
   fun createConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): ConnectionTemplateCreateResponse {
     // FIXME: we should optionally create the destinations and connections in existing workspaces https://github.com/airbytehq/airbyte-internal-issues/issues/12813
-    val userId: UUID = currentUserService.currentUser.userId
     val organizationId = OrganizationId(connectionTemplateCreateRequestBody.organizationId)
-
-    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId.value)
 
     licenseEntitlementChecker.ensureEntitled(
       organizationId.value,

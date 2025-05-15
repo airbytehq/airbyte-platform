@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.WebBackendApi
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.model.generated.WebBackendConnectionCreate
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody
@@ -28,13 +27,12 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.lang.MoreBooleans
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
 import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.metrics.lib.TracingHelper
 import io.airbyte.server.apis.execute
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
@@ -58,9 +56,8 @@ open class WebBackendApiController(
   private val webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler,
   private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler,
   private val webBackendMappersHandler: WebBackendMappersHandler,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
-  private val currentUserService: CurrentUserService,
   private val webappConfig: WebappConfig,
+  private val roleResolver: RoleResolver,
 ) : WebBackendApi {
   @Post("/state/get_type")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
@@ -101,15 +98,11 @@ open class WebBackendApiController(
       if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.withRefreshedCatalog)) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
-        apiAuthorizationHelper.checkWorkspacesPermissions(
-          webBackendConnectionRequestBody.connectionId.toString(),
-          Scope.CONNECTION,
-          currentUserService.currentUser.userId,
-          setOf(
-            PermissionType.WORKSPACE_EDITOR,
-            PermissionType.ORGANIZATION_EDITOR,
-          ),
-        )
+        roleResolver
+          .Request()
+          .withCurrentUser()
+          .withRef(AuthenticationId.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString())
+          .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
       }
       webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody)
     }

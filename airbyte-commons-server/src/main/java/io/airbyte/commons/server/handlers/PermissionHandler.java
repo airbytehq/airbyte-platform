@@ -420,6 +420,10 @@ public class PermissionHandler {
     }
   }
 
+  public List<Permission> getPermissionsByAuthUserId(final String authUserId) {
+    return permissionDao.getPermissionsByAuthUserId(authUserId);
+  }
+
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
     return permissionPersistence.listUsersInOrganization(organizationId);
   }
