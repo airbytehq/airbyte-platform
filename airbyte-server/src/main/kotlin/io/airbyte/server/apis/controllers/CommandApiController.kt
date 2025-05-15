@@ -9,6 +9,8 @@ import io.airbyte.api.model.generated.CancelCommandRequest
 import io.airbyte.api.model.generated.CancelCommandResponse
 import io.airbyte.api.model.generated.CheckCommandOutputRequest
 import io.airbyte.api.model.generated.CheckCommandOutputResponse
+import io.airbyte.api.model.generated.CommandGetRequest
+import io.airbyte.api.model.generated.CommandGetResponse
 import io.airbyte.api.model.generated.CommandStatusRequest
 import io.airbyte.api.model.generated.CommandStatusResponse
 import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
@@ -73,6 +75,27 @@ class CommandApiController(
         status(it.checkConnection?.status?.toApi())
         message(it.checkConnection?.message)
         failureReason(it.failureReason.toApi())
+      }
+    }
+  }
+
+  @Post("/get")
+  @Secured(AuthRoleConstants.WORKSPACE_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getCommand(
+    @Body commandGetRequest: CommandGetRequest,
+  ): CommandGetResponse {
+    val command = commandService.get(commandGetRequest.id)
+    return CommandGetResponse().apply {
+      id(commandGetRequest?.id)
+      command?.let {
+        commandType(it.commandType)
+        commandInput(it.commandInput)
+        workspaceId(it.workspaceId)
+        workloadId(it.workloadId)
+        organizationId(it.organizationId)
+        createdAt(it.createdAt)
+        updatedAt(it.updatedAt)
       }
     }
   }

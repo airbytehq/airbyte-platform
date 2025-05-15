@@ -428,6 +428,33 @@ class CommandService(
     }
   }
 
+  data class CommandModel(
+    val id: String,
+    val workloadId: String,
+    val commandType: String,
+    val commandInput: JsonNode,
+    val workspaceId: UUID,
+    val organizationId: UUID,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+  )
+
+  fun get(commandId: String): CommandModel? =
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        CommandModel(
+          id = command.id,
+          workloadId = command.workloadId,
+          commandType = command.commandType,
+          commandInput = command.commandInput,
+          workspaceId = command.workspaceId,
+          organizationId = command.organizationId,
+          createdAt = command.createdAt ?: OffsetDateTime.now(),
+          updatedAt = command.updatedAt ?: OffsetDateTime.now(),
+        )
+      }.orElse(null)
+
   fun getStatus(commandId: String): CommandStatus? =
     commandsRepository
       .findById(commandId)

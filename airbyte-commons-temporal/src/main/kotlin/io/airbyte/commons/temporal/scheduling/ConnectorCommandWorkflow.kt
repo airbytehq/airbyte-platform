@@ -7,6 +7,7 @@ package io.airbyte.commons.temporal.scheduling
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -28,6 +29,7 @@ import java.util.UUID
   JsonSubTypes.Type(value = DiscoverCommandInput::class, name = ConnectorCommandInput.DISCOVER),
   JsonSubTypes.Type(value = DiscoverCommandApiInput::class, name = ConnectorCommandInput.DISCOVER_COMMAND),
   JsonSubTypes.Type(value = SpecCommandInput::class, name = ConnectorCommandInput.SPEC),
+  JsonSubTypes.Type(value = ReplicationCommandApiInput::class, name = ConnectorCommandInput.REPLICATION_COMMAND),
 )
 sealed interface ConnectorCommandInput {
   companion object {
@@ -36,6 +38,7 @@ sealed interface ConnectorCommandInput {
     const val DISCOVER = "discover"
     const val DISCOVER_COMMAND = "discover_command"
     const val SPEC = "spec"
+    const val REPLICATION_COMMAND = "replication_command"
   }
 
   val type: String
@@ -278,6 +281,57 @@ data class SpecCommandInput(
         SpecCommandInput(
           input = input ?: throw IllegalArgumentException("input must be specified"),
         )
+    }
+}
+
+@JsonDeserialize(builder = ReplicationCommandApiInput.Builder::class)
+data class ReplicationCommandApiInput(
+  val input: ReplicationApiInput,
+) : ConnectorCommandInput {
+  override val type: String = ConnectorCommandInput.REPLICATION_COMMAND
+
+  // This is duplicated of io.airbyte.workers.model.CheckConnectionInput to avoid dependency hell
+  @JsonDeserialize(builder = ReplicationApiInput.Builder::class)
+  data class ReplicationApiInput(
+    val connectionId: UUID,
+    val jobId: String,
+    val attemptId: Long,
+    val appliedCatalogDiff: CatalogDiff?,
+  ) {
+    class Builder
+      @JvmOverloads
+      constructor(
+        var connectionId: UUID? = null,
+        var jobId: String? = null,
+        var attemptId: Long? = null,
+        var appliedCatalogDiff: CatalogDiff? = null,
+      ) {
+        fun actorId(connectionId: UUID) = apply { this.connectionId = connectionId }
+
+        fun jobId(jobId: String) = apply { this.jobId = jobId }
+
+        fun attemptId(attemptId: Long) = apply { this.attemptId = attemptId }
+
+        fun appliedCatalogDiff(appliedCatalogDiff: CatalogDiff) = apply { this.appliedCatalogDiff = appliedCatalogDiff }
+
+        fun build() =
+          ReplicationApiInput(
+            connectionId = connectionId ?: throw IllegalArgumentException("actorId must be specified"),
+            jobId = jobId ?: throw IllegalArgumentException("jobId must be specified"),
+            attemptId = attemptId ?: throw IllegalArgumentException("attemptId must be specified"),
+            appliedCatalogDiff = appliedCatalogDiff,
+          )
+      }
+  }
+
+  class Builder
+    @JvmOverloads
+    constructor(
+      var input: ReplicationApiInput? = null,
+    ) {
+      fun input(input: ReplicationApiInput) = apply { this.input = input }
+
+      fun build() = ReplicationCommandApiInput(input = input ?: throw IllegalArgumentException("input must be specified"))
     }
 }
 

@@ -6294,6 +6294,60 @@ paths:
                     type: string
                     enum: [pending, running, completed, cancelled]
 
+  /v1/commands/get:
+    post:
+      summary: Get the a command record
+      tags: [command, internal]
+      operationId: getCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CommandGetRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CommandGetResponse
+                required:
+                  - id
+                  - workload_id
+                  - command_input
+                  - command_type
+                  - workspace_id
+                  - organization_id
+                  - created_at
+                  - updated_at
+                properties:
+                  id:
+                    type: string
+                  workload_id:
+                    type: string
+                  command_type:
+                    type: string
+                  command_input:
+                    type: object
+                  workspace_id:
+                    type: string
+                    format: uuid
+                  organization_id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+
   /v1/commands/cancel:
     post:
       summary: Get the status of command

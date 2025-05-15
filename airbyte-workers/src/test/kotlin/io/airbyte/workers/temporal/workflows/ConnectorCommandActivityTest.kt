@@ -10,6 +10,7 @@ import io.airbyte.commons.temporal.scheduling.CheckCommandInput
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandApiInput
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
+import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
 import io.airbyte.commons.temporal.scheduling.SpecCommandInput
 import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
@@ -22,11 +23,13 @@ import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
+import io.airbyte.workers.commands.ReplicationCommand
 import io.airbyte.workers.commands.SpecCommand
 import io.airbyte.workers.models.CheckConnectionApiInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.DiscoverSourceApiInput
+import io.airbyte.workers.models.ReplicationApiInput
 import io.airbyte.workers.models.SpecInput
 import io.mockk.every
 import io.mockk.mockk
@@ -44,6 +47,7 @@ class ConnectorCommandActivityTest {
   lateinit var discoverCommand: DiscoverCommand
   lateinit var discoverCommandV2: DiscoverCommandV2
   lateinit var specCommand: SpecCommand
+  lateinit var replicationCommand: ReplicationCommand
   lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
   lateinit var metricClient: MetricClient
 
@@ -53,6 +57,7 @@ class ConnectorCommandActivityTest {
     discoverCommand = mockk(relaxed = true)
     specCommand = mockk(relaxed = true)
     checkCommandThroughApi = mockk(relaxed = true)
+    replicationCommand = mockk(relaxed = true)
     discoverCommandV2 = mockk(relaxed = true)
     activityExecutionContextProvider = mockk(relaxed = true)
     metricClient = mockk(relaxed = true)
@@ -63,6 +68,7 @@ class ConnectorCommandActivityTest {
         discoverCommand,
         discoverCommandV2,
         specCommand,
+        replicationCommand,
         activityExecutionContextProvider,
         metricClient,
       )
@@ -154,6 +160,10 @@ class ConnectorCommandActivityTest {
     val specInput = getSpecInput()
     activity.cancelCommand(getActivityInput(input = specInput, id = "spec cancel test"))
     verify { specCommand.cancel("spec cancel test") }
+
+    val replicationInput = getReplicationInput()
+    activity.cancelCommand(getActivityInput(input = replicationInput, id = "replication cancel test"))
+    verify { replicationCommand.cancel("replication cancel test") }
   }
 
   @Test
@@ -177,6 +187,10 @@ class ConnectorCommandActivityTest {
     val specInput = getSpecInput()
     activity.getCommandOutput(getActivityInput(input = specInput, id = "spec getOutput test"))
     verify { specCommand.getOutput("spec getOutput test") }
+
+    val replicationInput = getReplicationInput()
+    activity.getCommandOutput(getActivityInput(input = replicationInput, id = "replication getOutput test"))
+    verify { replicationCommand.getOutput("replication getOutput test") }
   }
 
   @Test
@@ -200,6 +214,10 @@ class ConnectorCommandActivityTest {
     val specInput = getSpecInput()
     activity.isCommandTerminal(getActivityInput(input = specInput, id = "spec isTerminal test"))
     verify { specCommand.isTerminal("spec isTerminal test") }
+
+    val replicationInput = getReplicationInput()
+    activity.isCommandTerminal(getActivityInput(input = replicationInput, id = "replication isTerminal test"))
+    verify { replicationCommand.isTerminal("replication isTerminal test") }
   }
 
   @Test
@@ -254,6 +272,20 @@ class ConnectorCommandActivityTest {
         signalPayload,
       )
     }
+
+    val replicationInput = getReplicationInput()
+    activity.startCommand(getActivityInput(input = replicationInput, signalPayload = signalPayload))
+    verify {
+      replicationCommand.start(
+        ReplicationApiInput(
+          replicationInput.input.connectionId,
+          replicationInput.input.jobId,
+          replicationInput.input.attemptId,
+          replicationInput.input.appliedCatalogDiff,
+        ),
+        signalPayload,
+      )
+    }
   }
 
   private fun getCheckInput() =
@@ -302,6 +334,17 @@ class ConnectorCommandActivityTest {
         SpecCommandInput.SpecInput(
           jobRunConfig = JobRunConfig(),
           integrationLauncherConfig = IntegrationLauncherConfig(),
+        ),
+    )
+
+  private fun getReplicationInput() =
+    ReplicationCommandApiInput(
+      input =
+        ReplicationCommandApiInput.ReplicationApiInput(
+          connectionId = UUID.randomUUID(),
+          jobId = "jobId",
+          attemptId = 1337L,
+          appliedCatalogDiff = null,
         ),
     )
 

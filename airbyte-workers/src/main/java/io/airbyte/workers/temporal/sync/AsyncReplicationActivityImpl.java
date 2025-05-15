@@ -201,7 +201,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
       final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
       final WorkloadApiWorker worker = workerAndReplicationInput.worker;
 
-      final var output = worker.getOutput(workloadId);
+      final ReplicationOutput output = worker.getOutput(workloadId);
       return finalizeOutput(replicationActivityInput, output);
     } catch (final Exception e) {
       ApmTraceUtils.addActualRootCauseToTrace(e);

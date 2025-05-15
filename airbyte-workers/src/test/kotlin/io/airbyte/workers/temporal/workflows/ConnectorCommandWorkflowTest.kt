@@ -17,6 +17,7 @@ import io.airbyte.workers.commands.CheckCommand
 import io.airbyte.workers.commands.CheckCommandThroughApi
 import io.airbyte.workers.commands.DiscoverCommand
 import io.airbyte.workers.commands.DiscoverCommandV2
+import io.airbyte.workers.commands.ReplicationCommand
 import io.airbyte.workers.commands.SpecCommand
 import io.micronaut.context.BeanRegistration
 import io.mockk.every
@@ -44,6 +45,7 @@ class ConnectorCommandWorkflowTest {
     lateinit var discoverCommand: DiscoverCommand
     lateinit var discoverCommandV2: DiscoverCommandV2
     lateinit var specCommand: SpecCommand
+    lateinit var replicationCommand: ReplicationCommand
     lateinit var activityExecutionContextProvider: ActivityExecutionContextProvider
     lateinit var connectorCommandActivity: ConnectorCommandActivity
 
@@ -83,6 +85,7 @@ class ConnectorCommandWorkflowTest {
       discoverCommand = mockk()
       discoverCommandV2 = mockk()
       specCommand = mockk()
+      replicationCommand = mockk()
       activityExecutionContextProvider = ActivityExecutionContextProvider()
       connectorCommandActivity =
         ConnectorCommandActivityImpl(
@@ -91,6 +94,7 @@ class ConnectorCommandWorkflowTest {
           discoverCommand,
           discoverCommandV2,
           specCommand,
+          replicationCommand,
           activityExecutionContextProvider,
           mockk(relaxed = true),
         )
