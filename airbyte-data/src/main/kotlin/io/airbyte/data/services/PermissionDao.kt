@@ -27,11 +27,6 @@ interface PermissionDao {
   fun getPermissionsForUser(userId: UUID): List<Permission>
 
   /**
-   * Get all permissions for a given authUserId.
-   */
-  fun getPermissionsByAuthUserId(authUserId: String): List<Permission>
-
-  /**
    * Delete a permission by its unique id.
    */
   @Throws(RemoveLastOrgAdminPermissionException::class)

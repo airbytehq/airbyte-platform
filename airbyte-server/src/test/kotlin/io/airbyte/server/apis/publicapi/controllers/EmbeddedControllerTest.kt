@@ -5,9 +5,11 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
@@ -37,6 +39,16 @@ class EmbeddedControllerTest {
         jwtTokenGenerator =
           mockk {
             every { generateToken(capture(claims)) } returns Optional.of("mock-token")
+          },
+        apiAuthorizationHelper =
+          mockk {
+            every {
+              ensureUserHasAnyRequiredRoleOrThrow(
+                Scope.ORGANIZATION,
+                listOf(organizationId.toString()),
+                setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
+              )
+            } returns Unit
           },
         tokenExpirationConfig = TokenExpirationConfig(),
         currentUserService =

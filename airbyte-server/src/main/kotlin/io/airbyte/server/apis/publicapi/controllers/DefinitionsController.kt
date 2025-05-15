@@ -25,15 +25,15 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.WorkspaceAuthRole
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
-import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Configs.AirbyteEdition
@@ -68,7 +68,7 @@ import java.util.UUID
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DefinitionsController(
-  val roleResolver: RoleResolver,
+  val apiAuthorizationHelper: ApiAuthorizationHelper,
   val currentUserService: CurrentUserService,
   val sourceDefinitionsHandler: SourceDefinitionsHandler,
   val destinationDefinitionsHandler: DestinationDefinitionsHandler,
@@ -444,11 +444,11 @@ class DefinitionsController(
   }
 
   private fun ensureUserCanRead(workspaceId: UUID) {
-    roleResolver
-      .Request()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_READER)
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.WORKSPACE,
+      listOf(workspaceId.toString()),
+      setOf(WorkspaceAuthRole.WORKSPACE_READER),
+    )
   }
 
   private fun ensureUserCanWrite(
@@ -461,11 +461,11 @@ class DefinitionsController(
       )
     }
 
-    roleResolver
-      .Request()
-      .withCurrentUser()
-      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
-      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
+      Scope.WORKSPACE,
+      listOf(workspaceId.toString()),
+      setOf(WorkspaceAuthRole.WORKSPACE_EDITOR),
+    )
   }
 }
 

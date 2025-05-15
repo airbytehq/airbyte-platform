@@ -5,9 +5,9 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ConfigTemplateWithActorDetails
@@ -40,12 +40,12 @@ import java.util.UUID
 open class ConfigTemplatesPublicController(
   private val currentUserService: CurrentUserService,
   private val configTemplateService: ConfigTemplateService,
+  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
 ) : PublicConfigTemplatesApi {
   private val logger = KotlinLogging.logger {}
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): Response =
     wrap {
@@ -54,7 +54,10 @@ open class ConfigTemplatesPublicController(
 
   @VisibleForTesting
   fun createConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): ConfigTemplateCreateResponse {
+    val userId: UUID = currentUserService.currentUser.userId
     val organizationId = configTemplateCreateRequestBody.organizationId
+
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
 
     licenseEntitlementChecker.ensureEntitled(
       organizationId,
@@ -98,7 +101,6 @@ open class ConfigTemplatesPublicController(
     )
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicUpdateConfigTemplate(
     configTemplateId: UUID,
@@ -113,7 +115,10 @@ open class ConfigTemplatesPublicController(
     configTemplateId: UUID,
     configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,
   ): ConfigTemplateUpdateResponse {
+    val userId: UUID = currentUserService.currentUser.userId
     val organizationId = configTemplateUpdateRequestBody.organizationId
+
+    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId)
 
     licenseEntitlementChecker.ensureEntitled(
       organizationId,

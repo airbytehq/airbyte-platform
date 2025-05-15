@@ -6,6 +6,7 @@ package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConnectionTemplate
@@ -36,11 +37,12 @@ class ConnectionTemplatesControllerTest {
   private val objectMapper: ObjectMapper = ObjectMapper()
 
   private val currentUserService: CurrentUserService = mockk()
+  private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val trackingHelper: TrackingHelper = mockk()
   private val licenseEntitlementChecker: LicenseEntitlementChecker = mockk()
   private val connectionTemplateService: ConnectionTemplateService = mockk()
   private val controller =
-    ConnectionTemplatesController(currentUserService, trackingHelper, licenseEntitlementChecker, connectionTemplateService)
+    ConnectionTemplatesController(currentUserService, apiAuthorizationHelper, trackingHelper, licenseEntitlementChecker, connectionTemplateService)
 
   val destinationName = "destination_name"
   val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
@@ -60,6 +62,7 @@ class ConnectionTemplatesControllerTest {
   fun setup() {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
+    every { apiAuthorizationHelper.isUserOrganizationAdminOrThrow(any(), any()) } returns Unit
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
   }
 
