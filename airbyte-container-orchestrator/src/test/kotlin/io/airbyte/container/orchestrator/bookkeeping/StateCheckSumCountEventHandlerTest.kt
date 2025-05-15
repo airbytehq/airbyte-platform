@@ -13,14 +13,14 @@ import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.json.Jsons
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.StateCheckSumCountEventHandler.Companion.DUMMY_STATE_MESSAGE
+import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
+import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.models.StateCheckSumCountEvent
-import io.airbyte.workers.models.StateWithId
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -512,7 +512,7 @@ class StateCheckSumCountEventHandlerTest {
 
   private fun airbyteStateMessageWithOutAnyCounts(): AirbyteStateMessage {
     val stateMessage =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteStateMessage()
           .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
           .withStream(

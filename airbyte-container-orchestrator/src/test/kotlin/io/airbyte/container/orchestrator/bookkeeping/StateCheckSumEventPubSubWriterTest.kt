@@ -9,7 +9,7 @@ import com.google.cloud.pubsub.v1.Publisher
 import com.google.protobuf.ByteString
 import com.google.pubsub.v1.PubsubMessage
 import io.airbyte.commons.json.Jsons
-import io.airbyte.workers.models.StateCheckSumCountEvent
+import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
 import io.micronaut.context.annotation.Property
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.Runs

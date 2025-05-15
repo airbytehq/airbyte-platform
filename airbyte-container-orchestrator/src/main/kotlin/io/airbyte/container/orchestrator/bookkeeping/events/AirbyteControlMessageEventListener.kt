@@ -6,9 +6,9 @@ package io.airbyte.container.orchestrator.bookkeeping.events
 
 import io.airbyte.commons.converters.ConnectorConfigUpdater
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.protocol.models.v0.AirbyteControlMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.context.ReplicationContext
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.event.ApplicationEventListener
 import jakarta.inject.Singleton

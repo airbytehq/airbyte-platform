@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.context
+package io.airbyte.container.orchestrator.worker.context
 
 import java.util.UUID
 

@@ -8,13 +8,13 @@ import com.google.common.hash.HashFunction
 import com.google.common.util.concurrent.AtomicDouble
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FileTransferInformations
+import io.airbyte.container.orchestrator.worker.model.getIdFromStateMessage
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
@@ -349,7 +349,7 @@ fun AirbyteStateMessage.getStateHashCode(hashFunction: HashFunction): Int =
     else -> hashFunction.hashBytes(Jsons.serialize(data).toByteArray()).hashCode()
   }
 
-fun AirbyteStateMessage.getStateIdForStatsTracking(): Int = StateWithId.getIdFromStateMessage(this)
+fun AirbyteStateMessage.getStateIdForStatsTracking(): Int = getIdFromStateMessage(this)
 
 private fun updateMean(
   previousMean: Double,

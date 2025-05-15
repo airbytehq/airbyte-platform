@@ -29,9 +29,11 @@ import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTr
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -46,11 +48,9 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type.RECORD
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.STATE
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
-import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.nio.file.Path

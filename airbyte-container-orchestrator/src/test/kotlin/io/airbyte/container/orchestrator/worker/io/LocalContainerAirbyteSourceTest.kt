@@ -5,11 +5,11 @@
 package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.config.WorkerSourceConfig
+import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.MessageMetricsTracker
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

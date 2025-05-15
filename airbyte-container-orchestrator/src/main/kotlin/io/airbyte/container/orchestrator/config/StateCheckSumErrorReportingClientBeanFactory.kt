@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.config
+package io.airbyte.container.orchestrator.config
 
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.persistence.job.errorreporter.LoggingJobErrorReportingClient

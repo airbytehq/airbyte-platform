@@ -11,10 +11,10 @@ import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
+import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Path
 import java.util.Optional

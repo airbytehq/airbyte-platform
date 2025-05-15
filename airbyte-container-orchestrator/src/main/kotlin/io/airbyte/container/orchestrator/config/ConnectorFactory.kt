@@ -10,6 +10,7 @@ import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.config.JobSyncConfig
+import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteMessageBufferedWriterFactory
@@ -26,7 +27,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.MessageMetricsTracker
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
@@ -63,13 +63,13 @@ class ConnectorFactory {
     airbyteDestinationMonitor: DestinationTimeoutMonitor,
     @Named("destinationStreamFactory") destinationStreamFactory: AirbyteStreamFactory,
     messageWriterFactory: AirbyteMessageBufferedWriterFactory,
-    metricClient: MetricClient,
+    messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
     replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   ): AirbyteDestination =
     LocalContainerAirbyteDestination(
       streamFactory = destinationStreamFactory,
-      messageMetricsTracker = MessageMetricsTracker(metricClient),
+      messageMetricsTracker = messageMetricsTracker,
       messageWriterFactory = messageWriterFactory,
       destinationTimeoutMonitor = airbyteDestinationMonitor,
       containerIOHandle = dest(),
@@ -79,7 +79,7 @@ class ConnectorFactory {
   @Singleton
   fun airbyteSource(
     heartbeatMonitor: HeartbeatMonitor,
-    metricClient: MetricClient,
+    messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
     replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
@@ -90,7 +90,7 @@ class ConnectorFactory {
       LocalContainerAirbyteSource(
         heartbeatMonitor = heartbeatMonitor,
         streamFactory = sourceStreamFactory,
-        messageMetricsTracker = MessageMetricsTracker(metricClient),
+        messageMetricsTracker = messageMetricsTracker,
         containerIOHandle = source(),
       )
     }

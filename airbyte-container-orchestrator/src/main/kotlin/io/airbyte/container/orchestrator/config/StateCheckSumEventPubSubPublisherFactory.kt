@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.config
+package io.airbyte.container.orchestrator.config
 
 import com.google.api.gax.batching.BatchingSettings
 import com.google.cloud.pubsub.v1.Publisher

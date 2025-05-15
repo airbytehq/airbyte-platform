@@ -7,11 +7,11 @@ package io.airbyte.container.orchestrator.tracker
 import io.airbyte.analytics.TrackingClient
 import io.airbyte.config.ScopeType
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteLogMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
-import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.testutils.TestConfigHelpers
 import io.mockk.every
 import io.mockk.mockk

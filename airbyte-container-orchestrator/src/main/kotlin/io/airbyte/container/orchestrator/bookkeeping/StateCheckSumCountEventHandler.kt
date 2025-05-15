@@ -16,6 +16,9 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ScopeType
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
+import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FeatureFlagClient
@@ -28,9 +31,6 @@ import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.models.StateCheckSumCountEvent
-import io.airbyte.workers.models.StateWithId
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -534,7 +534,7 @@ class StateCheckSumCountEventHandler(
 
     @JvmStatic
     val DUMMY_STATE_MESSAGE: AirbyteStateMessage =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteStateMessage()
           .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
           .withStream(

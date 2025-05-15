@@ -12,7 +12,7 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.api.client.model.generated.StreamStatusUpdateRequestBody
-import io.airbyte.workers.context.ReplicationContext
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.time.Clock
