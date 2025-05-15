@@ -6,6 +6,7 @@ package io.airbyte.api.client.auth
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.client.auth.AccessTokenHelper.Companion.decodeExpiry
+import io.airbyte.api.server.generated.models.ServiceAccountTokenRequestBody
 import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
@@ -21,29 +22,22 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.time.Instant
+import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
 
-/**
- * Interceptor to add a Dataplane access token to the request headers.
- *
- * This interceptor fetches a token from the control plane and caches it.
- * If the token is near expiry, a new token is fetched based on the 'exp' claim.
- */
 @Singleton
-@Requires(property = "airbyte.auth.dataplane-client-id", pattern = ".+")
-@Requires(property = "airbyte.auth.dataplane-client-secret", pattern = ".+")
-@Requires(property = "airbyte.auth.control-plane-token-endpoint", pattern = ".+")
+@Requires(property = "airbyte.auth.service-account-id", pattern = ".+")
+@Requires(property = "airbyte.auth.service-account-secret", pattern = ".+")
+@Requires(property = "airbyte.auth.service-account-token-endpoint", pattern = ".+")
 @Replaces(KeycloakAccessTokenInterceptor::class)
-open class DataplaneAccessTokenInterceptor(
-  @Value("\${airbyte.auth.dataplane-client-id}") private val authClientId: String,
-  @Value("\${airbyte.auth.dataplane-client-secret}") private val authClientSecret: String,
-  @Value("\${airbyte.auth.control-plane-token-endpoint}") private val authTokenEndpoint: String,
+open class ServiceAccountAccessTokenInterceptor(
+  @Value("\${airbyte.auth.service-account-id}") private val serviceAccountId: String,
+  @Value("\${airbyte.auth.service-account-secret}") private val serviceAccountSecret: String,
+  @Value("\${airbyte.auth.service-account-token-endpoint}") private val serviceAccountTokenEndpoint: String,
   @Named("airbyteApiOkHttpClientWithoutInterceptors") private val httpClient: OkHttpClient,
 ) : AirbyteApiInterceptor {
   companion object {
-    private const val CLIENT_ID_PARAM = "client_id"
-    private const val CLIENT_SECRET_PARAM = "client_secret"
     private const val APPLICATION_JSON = "application/json"
     private const val TOKEN_REFRESH_BUFFER_SECONDS = 30L
 
@@ -63,44 +57,36 @@ open class DataplaneAccessTokenInterceptor(
     val expiresAt: Instant,
   )
 
-  /**
-   * Returns a valid token, using the cached token if available and not near expiry,
-   * otherwise fetching a new token.
-   */
   @InternalForTesting
   internal open fun getCachedToken(): String =
     synchronized(this) {
       val now = Instant.now()
       val token = cachedToken
       if (token != null && token.expiresAt.isAfter(now.plusSeconds(TOKEN_REFRESH_BUFFER_SECONDS))) {
-        logger.debug { "Using cached token" }
+        logger.debug { "Using cached token for service account" }
         return@synchronized token.token
       }
 
-      // Fetch new token and update cache.
       val newToken = fetchNewToken()
       cachedToken = newToken
       return@synchronized newToken.token
     }
 
-  /**
-   * Makes an HTTP POST to the token endpoint, parses the response, and returns a new [CachedToken].
-   */
   private fun fetchNewToken(): CachedToken {
-    logger.debug { "Fetching new dataplane access token from $authTokenEndpoint..." }
+    logger.debug { "Fetching new service account access token from $serviceAccountTokenEndpoint..." }
 
     val jsonPayload =
       objectMapper.writeValueAsString(
-        mapOf(
-          CLIENT_ID_PARAM to authClientId,
-          CLIENT_SECRET_PARAM to authClientSecret,
+        ServiceAccountTokenRequestBody(
+          serviceAccountId = UUID.fromString(serviceAccountId),
+          secret = serviceAccountSecret,
         ),
       )
     val requestBody = jsonPayload.toRequestBody(APPLICATION_JSON.toMediaType())
     val request =
       Request
         .Builder()
-        .url(authTokenEndpoint)
+        .url(serviceAccountTokenEndpoint)
         .post(requestBody)
         .build()
 
@@ -114,7 +100,7 @@ open class DataplaneAccessTokenInterceptor(
     val token = tokenNode.get(ACCESS_TOKEN_RESPONSE_PARAM).asText()
 
     val expiry = decodeExpiry(token)
-    logger.debug { "Fetched token with expiry at $expiry" }
+    logger.debug { "Fetched service account token with expiry at $expiry" }
 
     return CachedToken(token, expiry)
   }
@@ -122,13 +108,14 @@ open class DataplaneAccessTokenInterceptor(
   override fun intercept(chain: Interceptor.Chain): Response {
     val originalRequest: Request = chain.request()
     val builder: Request.Builder = originalRequest.newBuilder()
+
     try {
-      logger.debug { "Fetching dataplane access token from control plane..." }
+      logger.debug { "Fetching service account access token from control plane..." }
       val accessToken = getCachedToken()
       builder.addHeader(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
-      logger.debug { "Dataplane token added successfully" }
+      logger.debug { "Service account token added successfully" }
     } catch (e: Exception) {
-      logger.error(e) { "Failed to obtain or add dataplane access token" }
+      logger.error(e) { "Failed to obtain or add service account access token" }
       return chain.proceed(originalRequest)
     }
     return chain.proceed(builder.build())
