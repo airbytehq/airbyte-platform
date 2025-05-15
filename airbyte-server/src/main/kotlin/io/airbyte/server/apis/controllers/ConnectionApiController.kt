@@ -200,7 +200,7 @@ open class ConnectionApiController(
   ): ConnectionReadList? = execute { matchSearchHandler.searchConnections(connectionSearch) }
 
   @Post(uri = "/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
@@ -246,7 +246,7 @@ open class ConnectionApiController(
     }
 
   @Post(uri = "/getForJob")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getConnectionForJob(
     @Body connectionAndJobIdRequestBody: ConnectionAndJobIdRequestBody,

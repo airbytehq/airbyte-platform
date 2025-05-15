@@ -217,6 +217,7 @@ open class PermissionDaoDataImpl(
   private fun getAuthority(permissionType: Permission.PermissionType): Int =
     when (permissionType) {
       Permission.PermissionType.INSTANCE_ADMIN -> throw IllegalArgumentException("INSTANCE_ADMIN permissions are not supported")
+      Permission.PermissionType.DATAPLANE -> throw IllegalArgumentException("DATAPLANE permissions are not supported")
       Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.authority
       Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.authority
       Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.authority

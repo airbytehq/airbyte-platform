@@ -80,6 +80,10 @@ public class PermissionHandler {
       throw new JsonValidationException("Cannot create INSTANCE_ADMIN permission record.");
     }
 
+    if (permissionCreate.getPermissionType().equals(Permission.PermissionType.DATAPLANE)) {
+      throw new JsonValidationException("Cannot create DATAPLANE_ADMIN permission record.");
+    }
+
     // Look for an existing permission.
     final List<Permission> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId());
     for (final Permission p : existingPermissions) {
@@ -100,6 +104,13 @@ public class PermissionHandler {
         .withPermissionId(uuidGenerator.get())
         .withUserId(userId)
         .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN));
+  }
+
+  public void createDataplane(final UUID userId) throws PermissionRedundantException {
+    permissionDao.createPermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.DATAPLANE));
   }
 
   public Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {

@@ -64,7 +64,7 @@ class ActorDefinitionVersionApiController(
     }
 
   @Post("/resolve")
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun resolveActorDefinitionVersionByTag(
     @Body resolveActorDefinitionVersionRequestBody: ResolveActorDefinitionVersionRequestBody,

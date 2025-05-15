@@ -606,7 +606,8 @@ class PermissionHandlerTest {
           PermissionType.ORGANIZATION_EDITOR,
           PermissionType.ORGANIZATION_RUNNER,
           PermissionType.ORGANIZATION_READER,
-          PermissionType.ORGANIZATION_MEMBER);
+          PermissionType.ORGANIZATION_MEMBER,
+          PermissionType.DATAPLANE);
 
       // If this assertion fails, it means a new PermissionType was added! Please update either the
       // `organizationLevelPermissions` or `workspaceLeveLPermissions` tests above this one to

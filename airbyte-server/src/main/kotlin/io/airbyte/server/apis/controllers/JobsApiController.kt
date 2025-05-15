@@ -112,7 +112,7 @@ open class JobsApiController(
   ): JobInfoRead? = execute { jobHistoryHandler.getJobInfoWithoutLogs(jobIdRequestBody.id) }
 
   @Post("/get_input")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getJobInput(
     @Body syncInput: SyncInput?,
@@ -126,7 +126,7 @@ open class JobsApiController(
   ): JobInfoLightRead? = execute { jobHistoryHandler.getJobInfoLight(jobIdRequestBody) }
 
   @Post("/get_last_replication_job")
-  @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getLastReplicationJob(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,

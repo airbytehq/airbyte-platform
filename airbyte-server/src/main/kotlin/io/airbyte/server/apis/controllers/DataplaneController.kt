@@ -18,6 +18,7 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
+import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
@@ -136,7 +137,7 @@ open class DataplaneController(
   }
 
   @Post("/initialize")
-  @Secured(ADMIN)
+  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
@@ -155,7 +156,7 @@ open class DataplaneController(
   }
 
   @Post("/heartbeat")
-  @Secured(ADMIN)
+  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
