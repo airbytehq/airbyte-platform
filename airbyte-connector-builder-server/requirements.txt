@@ -4,7 +4,7 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.48.14
+airbyte-cdk==6.48.15
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.15.0
     # via airbyte-cdk

@@ -369,6 +369,9 @@ export function useRunOauthFlow({
               };
 
               await completeOauth(queryParams);
+
+              // Close the /auth_flow page after completing the oauth flow
+              bc.postMessage({ type: "close" });
             }
             // OAuth flow is completed or taken over by another tab, so close the broadcast channel
             // and popup window if it is still open.

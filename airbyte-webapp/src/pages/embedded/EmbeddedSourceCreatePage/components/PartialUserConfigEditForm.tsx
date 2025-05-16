@@ -16,6 +16,7 @@ export const PartialUserConfigEditForm: React.FC = () => {
 
   const sourceDefinitionSpecification: SourceDefinitionSpecification = {
     ...partialUserConfig.configTemplate.configTemplateSpec,
+    advancedAuth: partialUserConfig.configTemplate.advancedAuth,
     sourceDefinitionId: partialUserConfig.configTemplate.sourceDefinitionId,
   };
 

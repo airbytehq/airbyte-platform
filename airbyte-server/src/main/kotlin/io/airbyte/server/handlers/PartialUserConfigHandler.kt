@@ -7,6 +7,7 @@ package io.airbyte.server.handlers
 import com.cronutils.utils.VisibleForTesting
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
@@ -36,11 +37,14 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
+import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.apis.publicapi.services.JobService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.airbyte.validation.json.JsonMergingHelper
@@ -62,6 +66,7 @@ class PartialUserConfigHandler(
   private val destinationHandler: DestinationHandler,
   private val sourceService: SourceService,
   private val jobService: JobService,
+  private val actorDefinitionService: ActorDefinitionService,
 ) {
   private val jsonMergingHelper = JsonMergingHelper()
   private val logger = KotlinLogging.logger {}
@@ -239,6 +244,11 @@ class PartialUserConfigHandler(
         configTemplate.configTemplate.userConfigSpec.connectionSpecification,
       )
 
+    val spec = getConnectorSpecification(ActorDefinitionId(configTemplate.configTemplate.actorDefinitionId))
+
+    val combinedConfigsObject = sanitizedConnectionConfiguration as ObjectNode
+    combinedConfigsObject.set<JsonNode>("advancedAuth", objectMapper.valueToTree(spec.advancedAuth))
+
     return PartialUserConfigWithFullDetails(
       partialUserConfig =
         PartialUserConfig(
@@ -275,6 +285,11 @@ class PartialUserConfigHandler(
         ObjectMapper().valueToTree(connectionConfiguration),
       )
 
+    val spec = getConnectorSpecification(ActorDefinitionId(configTemplate.configTemplate.actorDefinitionId))
+
+    val combinedConfigsObject = combinedConfigs as ObjectNode
+    combinedConfigsObject.set<JsonNode>("advancedAuth", objectMapper.valueToTree(spec.advancedAuth))
+
     // Update the source using the combined config
     // "Partial update" allows us to update the configuration without changing the name or other properties on the source
 
@@ -282,7 +297,7 @@ class PartialUserConfigHandler(
       sourceHandler.partialUpdateSource(
         PartialSourceUpdate()
           .sourceId(storedPartialUserConfig.partialUserConfig.actorId)
-          .connectionConfiguration(combinedConfigs),
+          .connectionConfiguration(combinedConfigsObject),
       )
 
     return sourceRead
@@ -433,5 +448,14 @@ class PartialUserConfigHandler(
         return node
       }
     }
+  }
+
+  private fun getConnectorSpecification(actorDefinitionId: ActorDefinitionId): ConnectorSpecification {
+    val actorDefinition =
+      actorDefinitionService
+        .getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId.value)
+        .orElseThrow { throw RuntimeException("ActorDefinition not found") }
+    val actorDefinitionSpec = actorDefinition.spec
+    return actorDefinitionSpec
   }
 }

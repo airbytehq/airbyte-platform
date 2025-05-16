@@ -26,12 +26,18 @@ if (window.opener && window.opener.location.origin === window.location.origin) {
 const bc = new BroadcastChannel<OAuthEvent>(OAUTH_BROADCAST_CHANNEL_NAME);
 bc.postMessage({ type: "completed", query });
 
-const redirectToIndex = "redirect_to_index" in query ? true : false;
-// Close popup window once we're done
-if (redirectToIndex) {
-  // Redirect to the index page to support Shopify's strange integration requirements
-  // see https://shopify.dev/docs/apps/launch/app-requirements-checklist#b-permissions for more details
+bc.onmessage = async (event) => {
+  if (event.type === "close") {
+    window.close();
+  }
+};
+
+// Wait to receive the "close" event from the original tab.
+// This is necessary because Shopify requires clicking the Open app button to open our app homepage, rather than just close out immediately.
+// To satisfy this requirement, we wait 5 seconds in this /auth_flow page to receive the "close" event, which indicates that the user initiated
+// this from the Airbyte UI rather than the Shopify app.
+// If we don't receive it, redirect to the index page to satisfy Shopify's requirements.
+// See notion page for more details: https://www.notion.so/Shopify-App-Listing-Requirements-1f51b3df260c8029b2a7de0399c8d5d2
+setTimeout(() => {
   window.location.href = "/";
-} else {
-  window.close();
-}
+}, 5000);

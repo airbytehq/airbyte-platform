@@ -208,6 +208,8 @@ class JobInputService(
       heartbeatMaxSecondsBetweenMessages = sourceDefinition.maxSecondsBetweenMessages,
       supportsRefreshes = sourceDefinitionVersion.supportsRefreshes,
       schemaRefreshOutput = appliedCatalogDiff?.let { RefreshSchemaActivityOutput(appliedDiff = it) },
+      sourceIPCOptions = sourceDefinitionVersion.connectorIPCOptions,
+      destinationIPCOptions = destinationDefinitionVersion.connectorIPCOptions,
     )
   }
 

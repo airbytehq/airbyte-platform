@@ -142,16 +142,17 @@ data class ReplicationPodFactory(
     destRuntimeEnvVars: List<EnvVar>,
     isFileTransfer: Boolean,
     workspaceId: UUID,
+    architectureEnvironmentVariables: ArchitectureEnvironmentVariables = ArchitectureDecider.buildLegacyEnvironment(),
   ): Pod {
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
 
-    val replicationVolumes = volumeFactory.replication(isFileTransfer)
+    val replicationVolumes = volumeFactory.replication(useStaging = isFileTransfer, architecture = architectureEnvironmentVariables)
     val initContainer =
       initContainerFactory.create(
         resourceReqs = orchResourceReqs,
         volumeMounts = replicationVolumes.orchVolumeMounts,
-        runtimeEnvVars = orchRuntimeEnvVars,
+        runtimeEnvVars = orchRuntimeEnvVars + architectureEnvironmentVariables.platformEnvironmentVariables,
         workspaceId = workspaceId,
       )
 
@@ -159,7 +160,7 @@ data class ReplicationPodFactory(
       replContainerFactory.createOrchestrator(
         resourceReqs = orchResourceReqs,
         volumeMounts = replicationVolumes.orchVolumeMounts,
-        runtimeEnvVars = orchRuntimeEnvVars,
+        runtimeEnvVars = orchRuntimeEnvVars + architectureEnvironmentVariables.platformEnvironmentVariables,
         image = orchImage,
       )
 
@@ -167,7 +168,7 @@ data class ReplicationPodFactory(
       replContainerFactory.createDestination(
         resourceReqs = destResourceReqs,
         volumeMounts = replicationVolumes.destVolumeMounts,
-        runtimeEnvVars = destRuntimeEnvVars,
+        runtimeEnvVars = destRuntimeEnvVars + architectureEnvironmentVariables.destinationEnvironmentVariables,
         image = destImage,
       )
 

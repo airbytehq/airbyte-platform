@@ -27,6 +27,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SourceHandler
+import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.config.PartialUserConfig
@@ -37,6 +38,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.repositories.entities.ConnectionTemplate
+import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
@@ -57,6 +59,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.Optional
 import java.util.UUID
 
 class PartialUserConfigHandlerTest {
@@ -74,6 +77,7 @@ class PartialUserConfigHandlerTest {
   private lateinit var sourceService: SourceService
   private lateinit var dataResidencyHelper: DataResidencyHelper
   private lateinit var jobService: JobService
+  private lateinit var actorDefinitionService: ActorDefinitionService
 
   private val organizationId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
@@ -99,6 +103,7 @@ class PartialUserConfigHandlerTest {
     sourceService = mockk<SourceService>()
     dataResidencyHelper = mockk<DataResidencyHelper>()
     jobService = mockk<JobService>()
+    actorDefinitionService = mockk<ActorDefinitionService>()
 
     handler =
       PartialUserConfigHandler(
@@ -113,12 +118,15 @@ class PartialUserConfigHandlerTest {
         destinationHandler,
         sourceService,
         jobService,
+        actorDefinitionService,
       )
     objectMapper = ObjectMapper()
 
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
     every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList()
     every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns emptyList()
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
+      Optional.of(ActorDefinitionVersion().withSpec(ConnectorSpecification()))
   }
 
   @Test

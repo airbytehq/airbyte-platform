@@ -547,12 +547,19 @@ class JobInputServiceTest {
     every { mockSourceDefinition.custom } returns false
     every { mockSourceDefinition.sourceType } returns StandardSourceDefinition.SourceType.DATABASE
 
+    val sourceICPOption =
+      Jsons.jsonNode(
+        mapOf(
+          "source" to "ICPOption",
+        ),
+      )
     val mockSourceDefinitionVersion = mockk<ActorDefinitionVersion>()
     every { mockSourceDefinitionVersion.dockerRepository } returns dockerRepository
     every { mockSourceDefinitionVersion.dockerImageTag } returns dockerImageTag
     every { mockSourceDefinitionVersion.protocolVersion } returns protocolVersion
     every { mockSourceDefinitionVersion.allowedHosts } returns AllowedHosts()
     every { mockSourceDefinitionVersion.supportsRefreshes } returns false
+    every { mockSourceDefinitionVersion.connectorIPCOptions } returns sourceICPOption
 
     val mockDestination = mockk<DestinationConnection>()
     every { mockDestination.destinationId } returns destinationId
@@ -560,6 +567,12 @@ class JobInputServiceTest {
     every { mockDestination.workspaceId } returns workspaceId
     every { mockDestination.configuration } returns destinationConfiguration
 
+    val destinationICPOption =
+      Jsons.jsonNode(
+        mapOf(
+          "destination" to "ICPOption",
+        ),
+      )
     val mockDestinationDefinition = mockk<StandardDestinationDefinition>()
     every { mockDestinationDefinition.destinationDefinitionId } returns destinationDefinitionId
     every { mockDestinationDefinition.custom } returns true
@@ -569,6 +582,7 @@ class JobInputServiceTest {
     every { mockDestinationDefinitionVersion.dockerRepository } returns destinationImage
     every { mockDestinationDefinitionVersion.protocolVersion } returns protocolVersion
     every { mockDestinationDefinitionVersion.allowedHosts } returns AllowedHosts()
+    every { mockDestinationDefinitionVersion.connectorIPCOptions } returns destinationICPOption
 
     val attemptSyncConfig = mockk<AttemptSyncConfig>()
     every { attemptSyncConfig.sourceConfiguration } returns null
@@ -667,6 +681,8 @@ class JobInputServiceTest {
         heartbeatMaxSecondsBetweenMessages = 3600L,
         supportsRefreshes = false,
         schemaRefreshOutput = RefreshSchemaActivityOutput(appliedCatalogDiff),
+        sourceIPCOptions = sourceICPOption,
+        destinationIPCOptions = destinationICPOption,
       )
 
     val actual = jobInputService.getReplicationInput(connectionId, appliedCatalogDiff, signalInput, jobId, attemptNumber.toLong())

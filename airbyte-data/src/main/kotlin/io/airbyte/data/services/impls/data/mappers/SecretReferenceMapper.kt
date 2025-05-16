@@ -30,12 +30,14 @@ object SecretReferenceMapper {
     when (this) {
       EntityScopeType.actor -> ModelScopeType.ACTOR
       EntityScopeType.secret_storage -> ModelScopeType.SECRET_STORAGE
+      EntityScopeType.connection_template -> ModelScopeType.CONNECTION_TEMPLATE
     }
 
   fun ModelScopeType.toEntity(): EntityScopeType =
     when (this) {
       ModelScopeType.ACTOR -> EntityScopeType.actor
       ModelScopeType.SECRET_STORAGE -> EntityScopeType.secret_storage
+      ModelScopeType.CONNECTION_TEMPLATE -> EntityScopeType.connection_template
     }
 
   fun SecretReferenceCreate.toEntity(): EntitySecretReference =

@@ -45,6 +45,12 @@ class ArchitectureDecider(
    * Decide what environment variables each container needs for the given replication.
    */
   fun computeEnvironmentVariables(input: ReplicationInput): ArchitectureEnvironmentVariables {
+    if (input.useFileTransfer ||
+      input.isReset
+    ) {
+      return buildLegacyEnvironment()
+    }
+
     if (featureFlags.boolVariation(SocketTest, Connection(input.connectionId))) {
       return buildSocketEnvironment(input, Serialization.PROTOBUF.name, Transport.SOCKET.name, BOOKKEEPER)
     }
@@ -55,8 +61,6 @@ class ArchitectureDecider(
         input.destinationIPCOptions.isNull
 
     if (ipcInfoMissing ||
-      input.useFileTransfer ||
-      input.isReset ||
       hasHashedFieldsOrMappers(airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(input.connectionId)))
     ) {
       return buildLegacyEnvironment()

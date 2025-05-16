@@ -30,7 +30,7 @@ open class PartialUserConfigServiceDataImpl(
           throw RuntimeException("PartialUserConfig not found")
         }.toConfigModel()
 
-    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId)
+    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId, partialUserConfig.workspaceId)
 
     return PartialUserConfigWithConfigTemplateAndActorDetails(
       partialUserConfig = partialUserConfig,
