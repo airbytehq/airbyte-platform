@@ -25,7 +25,7 @@ airbyte:
     base-path: https://localhost:8001/api/v1
 
 datasources:
-  workload:
+  config:
     url: jdbc:h2:mem:default
     driverClassName: org.h2.Driver
     username: sa

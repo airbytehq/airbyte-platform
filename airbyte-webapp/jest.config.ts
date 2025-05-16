@@ -10,7 +10,8 @@ const jestConfig: Config = {
   maxWorkers: isInCI ? 4 : "100%",
   snapshotSerializers: ["./src/test-utils/classname-serializer.js"],
   coveragePathIgnorePatterns: ["\\.stories\\.tsx$"],
-  modulePathIgnorePatterns: ["src/.*/__mocks__"],
+  modulePathIgnorePatterns: ["src/.*/__mocks__", "playwright/.*"],
+  testPathIgnorePatterns: ["<rootDir>/playwright/"],
   testEnvironment: "./patchJSDOMEnvironment.ts",
   moduleDirectories: ["node_modules", "src"],
   moduleNameMapper: {

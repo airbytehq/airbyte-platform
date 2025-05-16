@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import cloneDeep from "lodash/cloneDeep";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
+import { mockGetDataplaneGroup } from "test-utils/mock-data/mockDataplaneGroups";
 import { mockDestinationDefinitionSpecification } from "test-utils/mock-data/mockDestination";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
@@ -10,6 +11,7 @@ import { useInitialFormValues } from "./formConfig";
 jest.mock("core/api", () => ({
   useCurrentWorkspace: () => mockWorkspace,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useGetDataplaneGroup: () => mockGetDataplaneGroup,
 }));
 
 describe("#useInitialFormValues", () => {

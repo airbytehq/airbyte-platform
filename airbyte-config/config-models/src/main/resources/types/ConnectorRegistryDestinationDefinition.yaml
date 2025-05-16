@@ -81,3 +81,11 @@ properties:
     type: boolean
     description: flag indicating whether the file transfer mode is available for this destination.
     default: false
+  supportsDataActivation:
+    type: boolean
+    description: flag indicating whether the connection configuration should align with the data activation paradigm.
+    default: false
+  connectorIPCOptions:
+    description: config containing information about connector sync architecture
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode

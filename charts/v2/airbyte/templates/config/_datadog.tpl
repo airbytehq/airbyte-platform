@@ -64,24 +64,6 @@ Renders the datadog.env environment variable
 {{- end }}
 
 {{/*
-Renders the global.datadog.service value
-*/}}
-{{- define "airbyte.datadog.service" }}
-    {{- (printf "airbyte-%s" (include "airbyte.componentName" .)) }}
-{{- end }}
-
-{{/*
-Renders the datadog.service environment variable
-*/}}
-{{- define "airbyte.datadog.service.env" }}
-- name: DD_SERVICE
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: DD_SERVICE
-{{- end }}
-
-{{/*
 Renders the global.datadog.version value
 */}}
 {{- define "airbyte.datadog.version" }}
@@ -121,7 +103,7 @@ Renders the datadog.statsd.port environment variable
 Renders the global.datadog.traceAgentPort value
 */}}
 {{- define "airbyte.datadog.traceAgentPort" }}
-    {{- .Values.global.datadog.traceAgentPort }}
+    {{- .Values.global.datadog.traceAgentPort | default 8126 }}
 {{- end }}
 
 {{/*
@@ -286,6 +268,28 @@ Renders the datadog.integrations.httpUrlConnection.enabled environment variable
 {{- end }}
 
 {{/*
+Renders the global.datadog.integrations.kotlinCoroutineExperimental.enabled value
+*/}}
+{{- define "airbyte.datadog.integrations.kotlinCoroutineExperimental.enabled" }}
+	{{- if eq .Values.global.datadog.integrations.kotlinCoroutineExperimental.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.datadog.integrations.kotlinCoroutineExperimental.enabled }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the datadog.integrations.kotlinCoroutineExperimental.enabled environment variable
+*/}}
+{{- define "airbyte.datadog.integrations.kotlinCoroutineExperimental.enabled.env" }}
+- name: DD_INTEGRATION_KOTLIN_COROUTINE_EXPERIMENTAL_ENABLED
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DD_INTEGRATION_KOTLIN_COROUTINE_EXPERIMENTAL_ENABLED
+{{- end }}
+
+{{/*
 Renders the global.datadog.integrations.netty.enabled value
 */}}
 {{- define "airbyte.datadog.integrations.netty.enabled" }}
@@ -358,7 +362,6 @@ Renders the set of all datadog environment variables
 {{- include "airbyte.datadog.agentHost.env" . }}
 {{- include "airbyte.datadog.enabled.env" . }}
 {{- include "airbyte.datadog.env.env" . }}
-{{- include "airbyte.datadog.service.env" . }}
 {{- include "airbyte.datadog.version.env" . }}
 {{- include "airbyte.datadog.statsd.port.env" . }}
 {{- include "airbyte.datadog.traceAgentPort.env" . }}
@@ -369,6 +372,7 @@ Renders the set of all datadog environment variables
 {{- include "airbyte.datadog.integrations.grpc.clientEnabled.env" . }}
 {{- include "airbyte.datadog.integrations.grpc.serverEnabled.env" . }}
 {{- include "airbyte.datadog.integrations.httpUrlConnection.enabled.env" . }}
+{{- include "airbyte.datadog.integrations.kotlinCoroutineExperimental.enabled.env" . }}
 {{- include "airbyte.datadog.integrations.netty.enabled.env" . }}
 {{- include "airbyte.datadog.integrations.netty41.enabled.env" . }}
 {{- include "airbyte.datadog.integrations.urlConnection.enabled.env" . }}
@@ -381,7 +385,6 @@ Renders the set of all datadog config map variables
 DD_AGENT_HOST: {{ include "airbyte.datadog.agentHost" . | quote }}
 DD_ENABLED: {{ include "airbyte.datadog.enabled" . | quote }}
 DD_ENV: {{ include "airbyte.datadog.env" . | quote }}
-DD_SERVICE: {{ include "airbyte.datadog.service" . | quote }}
 DD_VERSION: {{ include "airbyte.datadog.version" . | quote }}
 DD_DOGSTATSD_PORT: {{ include "airbyte.datadog.statsd.port" . | quote }}
 DD_TRACE_AGENT_PORT: {{ include "airbyte.datadog.traceAgentPort" . | quote }}
@@ -392,6 +395,7 @@ DD_INTEGRATION_GRPC_ENABLED: {{ include "airbyte.datadog.integrations.grpc.enabl
 DD_INTEGRATION_GRPC_CLIENT_ENABLED: {{ include "airbyte.datadog.integrations.grpc.clientEnabled" . | quote }}
 DD_INTEGRATION_GRPC_SERVER_ENABLED: {{ include "airbyte.datadog.integrations.grpc.serverEnabled" . | quote }}
 DD_INTEGRATION_HTTPURLCONNECTION_ENABLED: {{ include "airbyte.datadog.integrations.httpUrlConnection.enabled" . | quote }}
+DD_INTEGRATION_KOTLIN_COROUTINE_EXPERIMENTAL_ENABLED: {{ include "airbyte.datadog.integrations.kotlinCoroutineExperimental.enabled" . | quote }}
 DD_INTEGRATION_NETTY_ENABLED: {{ include "airbyte.datadog.integrations.netty.enabled" . | quote }}
 DD_INTEGRATION_NETTY_4_1_ENABLED: {{ include "airbyte.datadog.integrations.netty41.enabled" . | quote }}
 DD_INTEGRATION_URLCONNECTION_ENABLED: {{ include "airbyte.datadog.integrations.urlConnection.enabled" . | quote }}

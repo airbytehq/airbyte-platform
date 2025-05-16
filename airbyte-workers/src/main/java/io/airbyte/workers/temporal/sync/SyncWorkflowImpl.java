@@ -100,6 +100,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     this.shouldBlock = false;
   }
 
+  @NotNull
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public StandardSyncOutput run(final JobRunConfig jobRunConfig,
@@ -263,7 +264,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return GenerateReplicationActivityInputActivity.toReplicationActivityInput(syncInput, jobRunConfig,
           sourceLauncherConfig, destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput,
-          Map.of(), TimeUnit.HOURS.toSeconds(24));
+          Map.of(), TimeUnit.HOURS.toSeconds(24), false, null, null);
     } else {
       return generateReplicationActivityInputActivity.generate(syncInput, jobRunConfig, sourceLauncherConfig,
           destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput);

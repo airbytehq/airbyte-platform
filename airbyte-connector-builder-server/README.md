@@ -96,7 +96,7 @@ You must then make two changes to your local `airbyte-platform-internal` repo:
 2. The `airbyte-webapp` also makes requests directly to the builder server (e.g. resolve_manifest), so these must be redirected to the locally-running gradle builder server by editing the `oss/airbyte-webapp/.env.development-k8s` as follows:
     ```bash
     # replace this
-    REACT_APP_CONNECTOR_BUILDER_API_URL=https://local.airbyte.dev/connector-builder-api
+    REACT_APP_CONNECTOR_BUILDER_API_URL=https://local.airbyte.dev
     
     # with this
     REACT_APP_CONNECTOR_BUILDER_API_URL=http://localhost:8080

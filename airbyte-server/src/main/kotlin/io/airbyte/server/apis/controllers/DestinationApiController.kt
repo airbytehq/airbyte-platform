@@ -64,7 +64,7 @@ open class DestinationApiController(
   @Post(uri = "/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun createDestination(
     @Body destinationCreate: DestinationCreate,
   ): DestinationRead? = execute { destinationHandler.createDestination(destinationCreate) }
@@ -75,7 +75,7 @@ open class DestinationApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun deleteDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -86,7 +86,7 @@ open class DestinationApiController(
   }
 
   @Post(uri = "/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestination(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
@@ -120,7 +120,7 @@ open class DestinationApiController(
   @Post(uri = "/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateDestination(
     @Body destinationUpdate: DestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.updateDestination(destinationUpdate) }
@@ -131,7 +131,7 @@ open class DestinationApiController(
   @Status(
     HttpStatus.NO_CONTENT,
   )
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun upgradeDestinationVersion(
     @Body destinationIdRequestBody: DestinationIdRequestBody,
   ) {
@@ -144,7 +144,7 @@ open class DestinationApiController(
   @Post(uri = "/partial_update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun partialUpdateDestination(
     @Body partialDestinationUpdate: PartialDestinationUpdate,
   ): DestinationRead? = execute { destinationHandler.partialDestinationUpdate(partialDestinationUpdate) }

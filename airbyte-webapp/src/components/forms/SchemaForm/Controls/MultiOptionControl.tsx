@@ -46,10 +46,6 @@ export const MultiOptionControl = ({
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
     [getSelectedOptionSchema, options, value]
   );
-  const displayError = useMemo(
-    () => (currentlySelectedOption?.type === "object" ? error : undefined),
-    [currentlySelectedOption, error]
-  );
 
   const getOptionLabel = useCallback(
     (option: AirbyteJsonSchema | undefined): string => {
@@ -115,11 +111,11 @@ export const MultiOptionControl = ({
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={displayError}
+      error={error}
       header={baseProps.header}
       control={
         <ListBox
-          className={classNames({ [styles.listBoxError]: !!displayError })}
+          className={classNames({ [styles.listBoxError]: !!error })}
           options={options.map((option) => ({
             label: getOptionLabel(option),
             value: getOptionLabel(option),
@@ -169,7 +165,7 @@ const renderOptionContents = (
   if (selectedOption.properties) {
     return (
       <ObjectControl
-        baseProps={baseProps}
+        baseProps={{ ...baseProps, header: undefined }}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
         hideBorder
@@ -182,7 +178,7 @@ const renderOptionContents = (
   if (selectedOption.additionalProperties && !isBoolean(selectedOption.additionalProperties)) {
     return (
       <AdditionalPropertiesControl
-        baseProps={baseProps}
+        baseProps={{ ...baseProps, header: undefined }}
         fieldSchema={selectedOption.additionalProperties}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}

@@ -30,7 +30,7 @@ import java.util.UUID
 
 @MicronautTest(environments = ["test"])
 class ConfigTemplatesPublicControllerTest {
-  val organizationId = UUID.randomUUID()
+  val organizationId: UUID = UUID.randomUUID()
 
   private val objectMapper: ObjectMapper = ObjectMapper()
 
@@ -128,6 +128,44 @@ class ConfigTemplatesPublicControllerTest {
 
   @Test
   fun `test create endpoint`() {
+    val configTemplateId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+
+    val partialDefaultConfig = objectMapper.readTree("{}")
+    val userConfigSpec = objectMapper.readTree("{}")
+    val configTemplate =
+      ConfigTemplateWithActorDetails(
+        ConfigTemplate(
+          id = configTemplateId,
+          organizationId = organizationId,
+          actorDefinitionId = UUID.randomUUID(),
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+          createdAt = OffsetDateTime.now(),
+          updatedAt = OffsetDateTime.now(),
+        ),
+        actorName = "actorName",
+        actorIcon = "actorIcon",
+      )
+    every {
+      configTemplateService.createTemplate(OrganizationId(organizationId), ActorDefinitionId(actorDefinitionId), partialDefaultConfig, userConfigSpec)
+    } returns configTemplate
+
+    val requestBody =
+      ConfigTemplateCreateRequestBody(
+        organizationId,
+        actorDefinitionId,
+        partialDefaultConfig,
+        userConfigSpec,
+      )
+
+    val response = controller.createConfigTemplate(requestBody)
+
+    assertEquals(response.id, configTemplateId)
+  }
+
+  @Test
+  fun `test create endpoint without a user spec`() {
     val configTemplateId = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
 

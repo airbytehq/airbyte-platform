@@ -50,7 +50,6 @@ public class PermissionPersistence {
    * @return the permission information if it exists in the database, Optional.empty() otherwise
    * @throws IOException in case of a db error
    */
-
   public Optional<Permission> getPermission(final UUID permissionId) throws IOException {
 
     final Result<Record> result = database.query(ctx -> ctx
@@ -126,19 +125,6 @@ public class PermissionPersistence {
         .withUserId(record.get(PERMISSION.USER_ID))
         .withWorkspaceId(record.get(PERMISSION.WORKSPACE_ID))
         .withOrganizationId(record.get(PERMISSION.ORGANIZATION_ID));
-  }
-
-  /**
-   * List all users with permissions to the workspace. Note it does not take organization info into
-   * account.
-   *
-   * @param workspaceId workspace id
-   * @return all users with their own permission type to the workspace. The list will not include org
-   *         users unless they are specifically permissioned as a workspace user.
-   * @throws IOException if there is an issue while interacting with the db.
-   */
-  public List<UserPermission> listUsersInWorkspace(final UUID workspaceId) throws IOException {
-    return this.database.query(ctx -> listPermissionsForWorkspace(ctx, workspaceId));
   }
 
   public List<UserPermission> listInstanceAdminUsers() throws IOException {
@@ -248,17 +234,6 @@ public class PermissionPersistence {
 
     final var jooqPermissionType = record.get(PERMISSION.PERMISSION_TYPE, io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType.class);
     return Enums.toEnum(jooqPermissionType.getLiteral(), PermissionType.class).get();
-  }
-
-  private List<UserPermission> listPermissionsForWorkspace(final DSLContext ctx, final UUID workspaceId) {
-    final var records = ctx.select(USER.ID, USER.NAME, USER.EMAIL, USER.DEFAULT_WORKSPACE_ID, PERMISSION.ID, PERMISSION.PERMISSION_TYPE)
-        .from(PERMISSION)
-        .join(USER)
-        .on(PERMISSION.USER_ID.eq(USER.ID))
-        .where(PERMISSION.WORKSPACE_ID.eq(workspaceId))
-        .fetch();
-
-    return records.stream().map(this::buildUserPermissionFromRecord).collect(Collectors.toList());
   }
 
   /**

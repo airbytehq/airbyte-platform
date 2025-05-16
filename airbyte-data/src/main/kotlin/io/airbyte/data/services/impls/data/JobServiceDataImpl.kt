@@ -19,6 +19,7 @@ import io.micronaut.data.model.Sort
 import io.micronaut.data.model.Sort.Order
 import jakarta.inject.Singleton
 import java.time.OffsetDateTime
+import kotlin.jvm.optionals.getOrNull
 
 const val DEFAULT_SORT_FIELD = "createdAt"
 
@@ -27,6 +28,8 @@ class JobServiceDataImpl(
   private val jobsWithAttemptsRepository: JobsWithAttemptsRepository,
   private val jobsRepository: JobsRepository,
 ) : JobService {
+  override fun findById(id: Long): Job? = jobsRepository.findById(id).getOrNull()?.toConfigModel()
+
   override fun listJobs(
     configTypes: Set<JobConfig.ConfigType>,
     scope: String?,

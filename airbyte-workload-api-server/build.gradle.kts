@@ -21,7 +21,6 @@ dependencies {
   implementation(libs.bundles.micronaut.data.jdbc)
   implementation(libs.bundles.micronaut.kotlin)
   implementation(libs.micronaut.http)
-  implementation(libs.failsafe.okhttp)
   implementation(libs.jakarta.transaction.api)
   implementation(libs.micronaut.jaxrs.server)
   implementation(libs.jakarta.ws.rs.api)
@@ -29,7 +28,6 @@ dependencies {
   implementation(libs.micronaut.security.jwt)
   implementation(libs.okhttp)
   implementation(libs.v3.swagger.annotations)
-  implementation(libs.jakarta.ws.rs.api)
   implementation(libs.reactor.core)
   implementation(libs.kotlin.logging)
   implementation(libs.bundles.micronaut.metrics)
@@ -39,6 +37,7 @@ dependencies {
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-storage"))
+  implementation(project(":oss:airbyte-commons-workload"))
   implementation(project(":oss:airbyte-config:config-models"))
   implementation(project(":oss:airbyte-featureflag"))
   implementation(project(":oss:airbyte-metrics:metrics-lib"))
@@ -95,13 +94,12 @@ tasks.named<Test>("test") {
   )
 }
 
-tasks.withType(JavaCompile::class).configureEach {
+tasks.withType<JavaCompile>().configureEach {
   options.compilerArgs = listOf("-parameters")
 }
 
-// Even though Kotlin is excluded on Spotbugs, this projects
-// still runs into SpotBugs issues. Working theory is that
-// generated code is being picked up. Disable as a short-term fix.
+// Even though Kotlin is excluded on Spotbugs, this project still runs into SpotBugs issues.
+// The working theory is that generated code is being picked up. Disable as a short-term fix.
 tasks.named("spotbugsMain") {
   enabled = false
 }

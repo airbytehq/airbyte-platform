@@ -4,10 +4,11 @@ import { FormattedMessage } from "react-intl";
 
 import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
+import { SchemaFormRemainingFields } from "components/forms/SchemaForm/SchemaFormRemainingFields";
 import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
-import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { FlexContainer } from "components/ui/Flex";
 import { Text } from "components/ui/Text";
 import { InfoTooltip } from "components/ui/Tooltip";
 
@@ -26,8 +27,6 @@ import { DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 
 export const SchemaFormBuilder = () => {
-  const view: BuilderView = useWatch({ name: "view" });
-  const viewPath = useMemo(() => convertViewToPath(view), [view]);
   const { jsonManifest } = useConnectorBuilderFormState();
   const streams = jsonManifest.streams ?? [];
 
@@ -37,17 +36,99 @@ export const SchemaFormBuilder = () => {
       <SchemaForm<AirbyteJsonSchema, DeclarativeComponentSchema>
         schema={declarativeComponentSchema}
         nestedUnderPath="manifest"
+        refTargetPath="manifest.definitions.linked"
+        onlyShowErrorIfTouched
       >
         <SyncValuesToBuilderState />
-        {streams.length > 0 && (
-          <FlexContainer direction="column" className={styles.formContainer}>
-            <FlexItem alignSelf="flex-end">
-              <DeleteStreamButton />
-            </FlexItem>
-            <Card>{viewPath ? <SchemaFormControl key={viewPath} path={viewPath} /> : null}</Card>
-          </FlexContainer>
-        )}
+        {streams.length > 0 && <StreamForm />}
       </SchemaForm>
+    </FlexContainer>
+  );
+};
+
+const StreamForm = () => {
+  const view: BuilderView = useWatch({ name: "view" });
+  const viewPath = useMemo(() => convertViewToPath(view), [view]);
+
+  if (!viewPath) {
+    return null;
+  }
+
+  return (
+    <FlexContainer direction="column" className={styles.formContainer} key={viewPath}>
+      <FlexContainer direction="row" justifyContent="space-between">
+        <SchemaFormControl
+          path={`${viewPath}.name`}
+          titleOverride={null}
+          className={styles.streamNameInput}
+          placeholder="Enter stream name"
+        />
+        <DeleteStreamButton />
+      </FlexContainer>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.retriever.requester.url`} isRequired />
+        <SchemaFormControl path={`${viewPath}.retriever.requester.http_method`} />
+        <SchemaFormControl path={`${viewPath}.retriever.decoder`} />
+        <SchemaFormControl path={`${viewPath}.retriever.record_selector`} nonAdvancedFields={["extractor"]} />
+        <SchemaFormControl path={`${viewPath}.primary_key`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl
+          path={`${viewPath}.retriever.requester.authenticator`}
+          nonAdvancedFields={[
+            "api_token",
+            "header",
+            "username",
+            "password",
+            "inject_into",
+            "client_id",
+            "client_secret",
+            "refresh_token",
+            "token_refresh_endpoint",
+            "secret_key",
+            "algorithm",
+            "jwt_headers",
+            "jwt_payload",
+            "login_requester.url",
+            "login_requester.http_method",
+            "login_requester.authenticator",
+            "login_requester.request_parameters",
+            "login_requester.request_headers",
+            "login_requester.request_body",
+            "session_token_path",
+            "expiration_duration",
+            "request_authentication",
+            "authenticator_selection_path",
+            "authenticators",
+            "class_name",
+          ]}
+        />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.retriever.requester.request_parameters`} />
+        <SchemaFormControl path={`${viewPath}.retriever.requester.request_headers`} />
+        <SchemaFormControl path={`${viewPath}.retriever.requester.request_body`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.retriever.paginator`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.incremental_sync`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.retriever.partition_router`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.retriever.requester.error_handler`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormControl path={`${viewPath}.transformations`} />
+      </Card>
+      <Card className={styles.card}>
+        <SchemaFormRemainingFields path={`${viewPath}.retriever.requester`} />
+        <SchemaFormRemainingFields path={`${viewPath}.retriever`} />
+        <SchemaFormRemainingFields path={`${viewPath}`} />
+      </Card>
     </FlexContainer>
   );
 };

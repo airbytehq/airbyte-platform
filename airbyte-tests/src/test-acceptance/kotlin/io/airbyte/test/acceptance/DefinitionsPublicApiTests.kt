@@ -194,7 +194,6 @@ class DefinitionsPublicApiTests {
         uuid,
         UpdateDeclarativeSourceDefinitionRequest(
           manifest = updatedManifest,
-          version = 2,
         ),
       )
 

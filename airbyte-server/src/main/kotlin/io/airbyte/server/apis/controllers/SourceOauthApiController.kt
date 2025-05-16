@@ -7,6 +7,7 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.SourceOauthApi
 import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.CompleteSourceOauthRequest
+import io.airbyte.api.model.generated.EmbeddedSourceOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
@@ -14,6 +15,7 @@ import io.airbyte.api.model.generated.SourceOauthConsentRequest
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
@@ -38,6 +40,25 @@ class SourceOauthApiController(
         completeSourceOauthRequest,
       )
     }
+
+  @Post("/get_embedded_consent_url")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getEmbeddedSourceOAuthConsent(
+    @Body embeddedSourceOauthConsentRequest: EmbeddedSourceOauthConsentRequest,
+  ): OAuthConsentRead {
+    val sourceOauthConsentRequest =
+      SourceOauthConsentRequest().let {
+        it.sourceDefinitionId = embeddedSourceOauthConsentRequest.sourceDefinitionId
+        it.workspaceId = embeddedSourceOauthConsentRequest.workspaceId
+        it.redirectUrl = embeddedSourceOauthConsentRequest.redirectUrl
+        it.sourceId = embeddedSourceOauthConsentRequest.sourceId
+
+        it.setoAuthInputConfiguration(Jsons.emptyObject())
+
+        it
+      }
+    return getSourceOAuthConsent(sourceOauthConsentRequest)!! // getSourceOAuthConsent returns a nullable for unknown reasons
+  }
 
   @Post("/get_consent_url")
   @ExecuteOn(AirbyteTaskExecutors.IO)

@@ -43,9 +43,9 @@ open class LaunchPodStage(
     when (val payload = input.payload!!) {
       is SyncPayload ->
         if (payload.input.isReset) {
-          launcher.launchReset(payload.input, input.msg)
+          launcher.launchReset(payload, input.msg)
         } else {
-          launcher.launchReplication(payload.input, input.msg)
+          launcher.launchReplication(payload, input.msg)
         }
       is CheckPayload -> launcher.launchCheck(payload.input, input.msg)
       is DiscoverCatalogPayload -> launcher.launchDiscover(payload.input, input.msg)

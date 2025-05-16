@@ -4,16 +4,24 @@
 
 package io.airbyte.domain.services.secrets
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.SecretCoordinate
+import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate.Companion.DEFAULT_VERSION
 import io.airbyte.config.secrets.SecretsRepositoryReader
+import io.airbyte.config.secrets.SecretsRepositoryWriter
+import io.airbyte.domain.models.PatchField.Companion.toPatch
 import io.airbyte.domain.models.SecretReference
 import io.airbyte.domain.models.SecretReferenceScopeType
 import io.airbyte.domain.models.SecretStorage
+import io.airbyte.domain.models.SecretStorage.Companion.DEFAULT_SECRET_STORAGE_ID
+import io.airbyte.domain.models.SecretStorageCreate
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageWithConfig
+import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
 import io.airbyte.featureflag.EnableDefaultSecretStorage
 import io.airbyte.featureflag.FeatureFlagClient
@@ -23,6 +31,7 @@ import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import java.util.UUID
 import io.airbyte.data.services.OrganizationService as OrganizationRepository
 import io.airbyte.data.services.SecretReferenceService as SecretReferenceRepository
 import io.airbyte.data.services.SecretStorageService as SecretStorageRepository
@@ -38,7 +47,9 @@ open class SecretStorageService(
   private val organizationRepository: OrganizationRepository,
   private val secretReferenceRepository: SecretReferenceRepository,
   private val secretsRepositoryReader: SecretsRepositoryReader,
+  private val secretsRepositoryWriter: SecretsRepositoryWriter,
   private val secretConfigService: SecretConfigService,
+  private val secretReferenceService: SecretReferenceService,
   private val featureFlagClient: FeatureFlagClient,
 ) {
   /**
@@ -50,6 +61,81 @@ open class SecretStorageService(
   fun getById(id: SecretStorageId): SecretStorage =
     secretStorageRepository.findById(id)
       ?: throw ResourceNotFoundProblem(ProblemResourceData().resourceType(SecretStorage::class.simpleName).resourceId(id.value.toString()))
+
+  /**
+   * Writes the credentials for the new secret storage to the default secret persistence.
+   * All credentials for custom secret storages are stored in the default secret persistence.
+   */
+  private fun writeStorageCredentials(
+    secretStorageCreate: SecretStorageCreate,
+    storageConfig: JsonNode?,
+    secretStorageId: SecretStorageId,
+    currentUserId: UserId?,
+  ) {
+    val secretCoordinate =
+      secretsRepositoryWriter.storeInDefaultPersistence(
+        SecretCoordinate.AirbyteManagedSecretCoordinate(
+          "storage_${secretStorageCreate.scopeType.name.lowercase()}",
+          secretStorageCreate.scopeId,
+          DEFAULT_VERSION,
+        ),
+        Jsons.serialize(storageConfig),
+      )
+
+    secretReferenceService.createSecretConfigAndReference(
+      DEFAULT_SECRET_STORAGE_ID,
+      externalCoordinate = secretCoordinate.fullCoordinate,
+      airbyteManaged = true,
+      currentUserId = currentUserId,
+      scopeType = SecretReferenceScopeType.SECRET_STORAGE,
+      scopeId = secretStorageId.value,
+      hydrationPath = null,
+    )
+  }
+
+  /**
+   * Create a new secret storage.
+   */
+  fun createSecretStorage(
+    secretStorageCreate: SecretStorageCreate,
+    storageConfig: JsonNode?,
+  ): SecretStorage {
+    val secretStorage = secretStorageRepository.create(secretStorageCreate)
+    writeStorageCredentials(secretStorageCreate, storageConfig, secretStorage.id, secretStorageCreate.createdBy)
+    return secretStorage
+  }
+
+  /**
+   * Soft-delete a secret storage by marking it as tombstoned. This will prevent it from being used for new secrets, but existing references pointing to it will continue working.
+   */
+  fun deleteSecretStorage(
+    secretStorageId: SecretStorageId,
+    currentUserId: UserId,
+  ): SecretStorage {
+    if (secretStorageId == DEFAULT_SECRET_STORAGE_ID) {
+      throw IllegalArgumentException("Cannot disable the default secret storage")
+    }
+
+    val updatedStorage =
+      secretStorageRepository.patch(
+        secretStorageId,
+        tombstone = true.toPatch(),
+        updatedBy = currentUserId,
+      )
+
+    return updatedStorage
+  }
+
+  /**
+   * List all active secret storages for a given scope type and scope ID.
+   */
+  fun listSecretStorage(
+    scopeType: SecretStorageScopeType,
+    scopeId: UUID,
+  ): List<SecretStorage> =
+    secretStorageRepository
+      .listByScopeTypeAndScopeId(scopeType, scopeId)
+      .filterNot { it.tombstone }
 
   /**
    * Get the secret storage that a workspace is configured to use for storing secrets.
@@ -67,6 +153,7 @@ open class SecretStorageService(
     val workspaceStorage =
       secretStorageRepository
         .listByScopeTypeAndScopeId(SecretStorageScopeType.WORKSPACE, workspaceId.value)
+        .filterNot { it.tombstone }
         .firstOrNull()
     if (workspaceStorage != null) {
       return workspaceStorage
@@ -79,10 +166,9 @@ open class SecretStorageService(
 
     val orgStorage =
       secretStorageRepository
-        .listByScopeTypeAndScopeId(
-          SecretStorageScopeType.ORGANIZATION,
-          orgId,
-        ).firstOrNull()
+        .listByScopeTypeAndScopeId(SecretStorageScopeType.ORGANIZATION, orgId)
+        .filterNot { it.tombstone }
+        .firstOrNull()
     if (orgStorage != null) {
       return orgStorage
     }

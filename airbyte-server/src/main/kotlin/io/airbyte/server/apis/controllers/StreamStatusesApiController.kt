@@ -32,7 +32,7 @@ class StreamStatusesApiController(
   private val handler: StreamStatusesHandler,
 ) : StreamStatusesApi {
   @Status(HttpStatus.CREATED)
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/create")
   override fun createStreamStatus(
@@ -43,7 +43,7 @@ class StreamStatusesApiController(
     return handler.createStreamStatus(req)
   }
 
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @Post(uri = "/update")
   override fun updateStreamStatus(

@@ -24,14 +24,21 @@ Renders the global.shopify.clientId value
 {{- end }}
 
 {{/*
+Renders the shopify.clientId secret key
+*/}}
+{{- define "airbyte.shopify.clientId.secretKey" }}
+	{{- .Values.global.shopify.clientIdSecretKey | default "SHOPIFY_CLIENT_ID" }}
+{{- end }}
+
+{{/*
 Renders the shopify.clientId environment variable
 */}}
 {{- define "airbyte.shopify.clientId.env" }}
 - name: SHOPIFY_CLIENT_ID
   valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-env
-      key: SHOPIFY_CLIENT_ID
+    secretKeyRef:
+      name: {{ include "airbyte.shopify.secretName" . }}
+      key: {{ include "airbyte.shopify.clientId.secretKey" . }}
 {{- end }}
 
 {{/*
@@ -68,15 +75,9 @@ Renders the set of all shopify environment variables
 {{- end }}
 
 {{/*
-Renders the set of all shopify config map variables
-*/}}
-{{- define "airbyte.shopify.configVars" }}
-SHOPIFY_CLIENT_ID: {{ include "airbyte.shopify.clientId" . | quote }}
-{{- end }}
-
-{{/*
 Renders the set of all shopify secret variables
 */}}
 {{- define "airbyte.shopify.secrets" }}
+SHOPIFY_CLIENT_ID: {{ include "airbyte.shopify.clientId" . | quote }}
 SHOPIFY_API_SECRET_KEY: {{ include "airbyte.shopify.apiSecretKey" . | quote }}
 {{- end }}

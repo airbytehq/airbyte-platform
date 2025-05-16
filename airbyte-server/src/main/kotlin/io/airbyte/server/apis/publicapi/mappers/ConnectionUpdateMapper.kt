@@ -34,6 +34,7 @@ object ConnectionUpdateMapper {
     connectionPatchRequest: ConnectionPatchRequest,
     catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
+    dataplaneGroupId: UUID?,
   ): ConnectionUpdate {
     val connectionUpdateOss = ConnectionUpdate()
     connectionUpdateOss.connectionId(connectionId)
@@ -54,9 +55,8 @@ object ConnectionUpdateMapper {
       connectionUpdateOss.prefix = connectionPatchRequest.prefix
     }
 
-    // set geography
-    if (connectionPatchRequest.dataResidency != null) {
-      connectionUpdateOss.geography = connectionPatchRequest.dataResidency
+    if (dataplaneGroupId != null) {
+      connectionUpdateOss.dataplaneGroupId = dataplaneGroupId
     }
 
     // set schedule

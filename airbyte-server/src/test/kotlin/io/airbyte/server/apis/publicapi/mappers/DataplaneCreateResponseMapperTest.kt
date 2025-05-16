@@ -14,6 +14,7 @@ class DataplaneCreateResponseMapperTest {
   fun `Should map a DataplaneCreateResponse from the DataplaneService to a DataplaneCreateResponseBody in the public API`() {
     val dataplaneCreateResponse =
       DataplaneCreateResponse().apply {
+        regionId = UUID.randomUUID()
         dataplaneId = UUID.randomUUID()
         clientId = UUID.randomUUID().toString()
         clientSecret = UUID.randomUUID().toString()
@@ -21,7 +22,8 @@ class DataplaneCreateResponseMapperTest {
 
     val mapped = DataplaneCreateResponseMapper.from(dataplaneCreateResponse)!!
 
-    assertEquals(dataplaneCreateResponse.dataplaneId.toString(), mapped.dataplaneId)
+    assertEquals(dataplaneCreateResponse.regionId, mapped.regionId)
+    assertEquals(dataplaneCreateResponse.dataplaneId, mapped.dataplaneId)
     assertEquals(dataplaneCreateResponse.clientId, mapped.clientId)
     assertEquals(dataplaneCreateResponse.clientSecret, mapped.clientSecret)
   }

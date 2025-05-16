@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -31,6 +31,7 @@ class DataplaneInitializer(
   @Property(name = "airbyte.auth.kubernetes-secret.name") private val secretName: String,
   @Property(name = "airbyte.auth.dataplane-credentials.client-id-secret-key") private val clientIdSecretKey: String,
   @Property(name = "airbyte.auth.dataplane-credentials.client-secret-secret-key") private val clientSecretSecretKey: String,
+  @Property(name = "airbyte.worker.job.kube.namespace") private val jobsNamespace: String,
 ) {
   /**
    * Creates a dataplane if the following conditions are met
@@ -43,7 +44,7 @@ class DataplaneInitializer(
         AirbyteEdition.CLOUD ->
           groupService.getDataplaneGroupByOrganizationIdAndName(
             DEFAULT_ORGANIZATION_ID,
-            GEOGRAPHY_US,
+            US_DATAPLANE_GROUP,
           )
         else -> {
           val groups = groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
@@ -66,7 +67,12 @@ class DataplaneInitializer(
     // the dataplane credentials to the jobs namespace.
     if (edition == AirbyteEdition.CLOUD) {
       log.info { "Copying secret $secretName to jobs namespace" }
-      K8sSecretHelper.copySecretToNamespace(k8sClient, secretName, k8sClient.namespace, "jobs")
+      K8sSecretHelper.copySecretToNamespace(
+        k8sClient,
+        secretName,
+        k8sClient.namespace,
+        jobsNamespace,
+      )
     }
   }
 

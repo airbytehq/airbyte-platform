@@ -64,4 +64,7 @@ data class ReplicationActivityInput(
   val omitFileTransferEnvVar: Boolean? = false,
   val featureFlags: Map<String, Any> = emptyMap(),
   val heartbeatMaxSecondsBetweenMessages: Long? = TimeUnit.HOURS.toSeconds(24),
+  val supportsRefreshes: Boolean = false,
+  val sourceIPCOptions: JsonNode? = null,
+  val destinationIPCOptions: JsonNode? = null,
 )

@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
@@ -111,7 +110,7 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
     dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
         .withId(UUID.randomUUID())
         .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-        .withName(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withName("test")
         .withEnabled(true)
         .withTombstone(false));
 
@@ -121,10 +120,10 @@ class SyncOperationPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("another-workspace")
         .withInitialSetupComplete(true)
         .withTombstone(false)
-        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(UUID.randomUUID())
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
     new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-        metricClient, dataplaneGroupService)
+        metricClient)
             .writeStandardWorkspaceNoSecrets(workspace);
   }
 

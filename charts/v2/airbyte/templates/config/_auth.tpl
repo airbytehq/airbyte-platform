@@ -774,31 +774,6 @@ Renders the auth.instanceAdmin.enterprise.lastName environment variable
 {{- end }}
 
 {{/*
-Renders the global.auth.instanceAdmin.email value
-*/}}
-{{- define "airbyte.auth.instanceAdmin.enterprise.email" }}
-    {{- .Values.global.auth.instanceAdmin.email }}
-{{- end }}
-
-{{/*
-Renders the auth.instanceAdmin.enterprise.email secret key
-*/}}
-{{- define "airbyte.auth.instanceAdmin.enterprise.email.secretKey" }}
-	{{- .Values.global.auth.instanceAdmin.emailSecretKey | default "INITIAL_USER_EMAIL" }}
-{{- end }}
-
-{{/*
-Renders the auth.instanceAdmin.enterprise.email environment variable
-*/}}
-{{- define "airbyte.auth.instanceAdmin.enterprise.email.env" }}
-- name: INITIAL_USER_EMAIL
-  valueFrom:
-    secretKeyRef:
-      name: {{ include "airbyte.auth.instanceAdmin.enterprise.secretName" . }}
-      key: {{ include "airbyte.auth.instanceAdmin.enterprise.email.secretKey" . }}
-{{- end }}
-
-{{/*
 Renders the global.auth.instanceAdmin.password value
 */}}
 {{- define "airbyte.auth.instanceAdmin.enterprise.password" }}
@@ -829,7 +804,6 @@ Renders the set of all auth.instanceAdmin.enterprise environment variables
 {{- define "airbyte.auth.instanceAdmin.enterprise.envs" }}
 {{- include "airbyte.auth.instanceAdmin.enterprise.firstName.env" . }}
 {{- include "airbyte.auth.instanceAdmin.enterprise.lastName.env" . }}
-{{- include "airbyte.auth.instanceAdmin.enterprise.email.env" . }}
 {{- include "airbyte.auth.instanceAdmin.enterprise.password.env" . }}
 {{- end }}
 
@@ -845,7 +819,6 @@ INITIAL_USER_LAST_NAME: {{ include "airbyte.auth.instanceAdmin.enterprise.lastNa
 Renders the set of all auth.instanceAdmin.enterprise secret variables
 */}}
 {{- define "airbyte.auth.instanceAdmin.enterprise.secrets" }}
-INITIAL_USER_EMAIL: {{ include "airbyte.auth.instanceAdmin.enterprise.email" . | quote }}
 INITIAL_USER_PASSWORD: {{ include "airbyte.auth.instanceAdmin.enterprise.password" . | quote }}
 {{- end }}
 

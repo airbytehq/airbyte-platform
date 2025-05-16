@@ -36,7 +36,9 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
     );
   }
 
-  const hasStreams = jsonManifest.streams && jsonManifest.streams.length > 0;
+  const hasStreams =
+    (jsonManifest.streams && jsonManifest.streams.length > 0) ||
+    (jsonManifest.dynamic_streams && jsonManifest.dynamic_streams.length > 0);
 
   return (
     <div className={styles.container}>

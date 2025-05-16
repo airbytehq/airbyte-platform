@@ -29,7 +29,7 @@ export const UpdateOrganizationSettingsForm: React.FC = () => {
 const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {
   const organization = useOrganization(organizationId);
   const { mutateAsync: updateOrganization } = useUpdateOrganization();
-  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();

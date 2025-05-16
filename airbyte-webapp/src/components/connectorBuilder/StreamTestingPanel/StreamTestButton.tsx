@@ -61,7 +61,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const isLoading = isStreamTestQueued || isStreamTestRunning;
 
   function getTooltipContent() {
-    if (testStreamId.type === "stream") {
+    if (testStreamId.type === "stream" || testStreamId.type === "generated_stream") {
       return isLoading ? (
         <FormattedMessage id="connectorBuilder.testRead.running" />
       ) : (
@@ -127,7 +127,11 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       variant={variant}
     >
       <FormattedMessage
-        id={testStreamId.type === "stream" ? "connectorBuilder.testButton" : "connectorBuilder.testButtonDynamic"}
+        id={
+          testStreamId.type === "stream" || testStreamId.type === "generated_stream"
+            ? "connectorBuilder.testButton"
+            : "connectorBuilder.testButtonDynamic"
+        }
       />
     </Button>
   );

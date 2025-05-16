@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import React from "react";
+import { Outlet } from "react-router-dom";
 
 import { LoadingPage } from "components";
 import { LicenseBanner } from "components/LicenseBanner/LicenseBanner";
@@ -12,7 +13,7 @@ import styles from "./MainView.module.scss";
 import { HelpDropdown } from "../SideBar/components/HelpDropdown";
 import { SideBar } from "../SideBar/SideBar";
 
-const MainView: React.FC<React.PropsWithChildren> = (props) => {
+const MainView: React.FC<React.PropsWithChildren> = () => {
   const { hasNewVersions } = useGetConnectorsOutOfDate();
 
   return (
@@ -22,7 +23,9 @@ const MainView: React.FC<React.PropsWithChildren> = (props) => {
         <SideBar bottomSlot={<HelpDropdown />} settingHighlight={hasNewVersions} />
         <div className={styles.content}>
           <DefaultErrorBoundary>
-            <React.Suspense fallback={<LoadingPage />}>{props.children}</React.Suspense>
+            <React.Suspense fallback={<LoadingPage />}>
+              <Outlet />
+            </React.Suspense>
           </DefaultErrorBoundary>
         </div>
       </FlexContainer>

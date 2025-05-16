@@ -10,8 +10,6 @@ import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStateTerminal
 import io.airbyte.api.model.generated.ConnectorRolloutStrategy
 import io.airbyte.api.problems.throwable.generated.ConnectorRolloutInvalidRequestProblem
-import io.airbyte.api.problems.throwable.generated.ConnectorRolloutMaximumRolloutPercentageReachedProblem
-import io.airbyte.api.problems.throwable.generated.ConnectorRolloutNotEnoughActorsProblem
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.ConnectorEnumRolloutState
@@ -20,7 +18,7 @@ import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.connector.rollout.shared.ActorSelectionInfo
-import io.airbyte.connector.rollout.shared.ActorSyncJobInfo
+import io.airbyte.connector.rollout.shared.Constants
 import io.airbyte.connector.rollout.shared.RolloutActorFinder
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
@@ -65,7 +63,6 @@ internal class ConnectorRolloutHandlerTest {
       connectorRolloutService,
       actorDefinitionService,
       actorDefinitionVersionUpdater,
-      userPersistence,
       rolloutActorFinder,
       connectorRolloutHelper,
     )
@@ -688,7 +685,7 @@ internal class ConnectorRolloutHandlerTest {
   }
 
   @Test
-  fun `test getAndRollOutConnectorRollout with too few eligible actorIds found throws`() {
+  fun `test getAndRollOutConnectorRollout with too few eligible actorIds found just runs`() {
     val rolloutId = UUID.randomUUID()
     val connectorRollout =
       createMockConnectorRollout(rolloutId).apply {
@@ -700,53 +697,61 @@ internal class ConnectorRolloutHandlerTest {
     every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
     every { rolloutActorFinder.getActorSelectionInfo(any(), any(), any()) } returns mockActorSelectionInfo
 
-    assertThrows<ConnectorRolloutNotEnoughActorsProblem> {
-      connectorRolloutHandler.getAndRollOutConnectorRollout(
-        createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, null, 50),
-      )
-    }
+    connectorRolloutHandler.getAndRollOutConnectorRollout(
+      createMockConnectorRolloutRequestBody(rolloutId, ConnectorRolloutStrategy.MANUAL, null, 50),
+    )
 
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
   }
 
-  @Test
-  fun `test validateCanPin for manual rollouts does not enforce finalTargetRolloutPct`() {
-    val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.finalTargetRolloutPct = 50
+  @ParameterizedTest
+  @MethodSource("validUpdateStates")
+  fun `validateRolloutState does not throw for valid states`(state: ConnectorEnumRolloutState) {
+    val connectorRollout = createMockConnectorRollout(UUID.randomUUID(), state = state)
+    connectorRolloutHandler.validateRolloutState(connectorRollout)
+  }
 
+  @ParameterizedTest
+  @MethodSource("invalidUpdateStates")
+  fun `validateRolloutState throws for invalid states`(state: ConnectorEnumRolloutState) {
+    val connectorRollout = createMockConnectorRollout(UUID.randomUUID(), state = state)
+    assertThrows<ConnectorRolloutInvalidRequestProblem> {
+      connectorRolloutHandler.validateRolloutState(connectorRollout)
+    }
+  }
+
+  @Test
+  fun `test getValidPercentageToPin for manual rollouts does not enforce finalTargetRolloutPct`() {
     assertEquals(
       100,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.MANUAL, 0),
+      connectorRolloutHandler.getValidPercentageToPin(UUID.randomUUID(), 50, 100, rolloutStrategy = ConnectorRolloutStrategy.MANUAL),
     )
   }
 
   @Test
-  fun `test validateCanPin for automated rollouts when current percentage is less than max`() {
-    val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.finalTargetRolloutPct = 100
-
+  fun `test getValidPercentageToPin for automated rollouts when current percentage is less than max`() {
     assertEquals(
       75,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 75, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50),
+      connectorRolloutHandler.getValidPercentageToPin(UUID.randomUUID(), 100, 75, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
     )
     assertEquals(
-      100,
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50),
+      0,
+      // uses Constants.DEFAULT_MAX_ROLLOUT_PERCENTAGE when maxRolloutPercentage is null
+      connectorRolloutHandler.getValidPercentageToPin(UUID.randomUUID(), null, 0, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
     )
   }
 
   @Test
-  fun `test validateCanPin for automated rollouts throws when current percentage equals or exceeds max`() {
-    val connectorRollout = createMockConnectorRollout(UUID.randomUUID())
-    connectorRollout.finalTargetRolloutPct = 50
-    connectorRollout.currentTargetRolloutPct = 50
-
-    assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 50, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50)
-    }
-    assertThrows<ConnectorRolloutMaximumRolloutPercentageReachedProblem> {
-      connectorRolloutHandler.getValidPercentageToPin(connectorRollout, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED, 50)
-    }
+  fun `test getValidPercentageToPin for automated rollouts returns max when target percentage exceeds max`() {
+    assertEquals(
+      50,
+      connectorRolloutHandler.getValidPercentageToPin(UUID.randomUUID(), 50, 51, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
+    )
+    assertEquals(
+      Constants.DEFAULT_MAX_ROLLOUT_PERCENTAGE,
+      // uses Constants.DEFAULT_MAX_ROLLOUT_PERCENTAGE when maxRolloutPercentage is null
+      connectorRolloutHandler.getValidPercentageToPin(UUID.randomUUID(), null, 100, rolloutStrategy = ConnectorRolloutStrategy.AUTOMATED),
+    )
   }
 
   @ParameterizedTest
@@ -847,40 +852,19 @@ internal class ConnectorRolloutHandlerTest {
     verify { connectorRolloutService.getConnectorRollout(rolloutId) }
   }
 
-  @Test
-  fun `test getActorSyncInfo`() {
-    val rolloutId = UUID.randomUUID()
-    val connectorRollout = createMockConnectorRollout(rolloutId)
-    val actorId = UUID.randomUUID()
-    val nSucceeded = 1
-    val nFailed = 2
-    val nConnections = 5
-    val actorSyncJobInfo = ActorSyncJobInfo(nSucceeded, nFailed, nConnections)
-
-    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
-    every { rolloutActorFinder.getSyncInfoForPinnedActors(connectorRollout) } returns mapOf(actorId to actorSyncJobInfo)
-
-    val result = connectorRolloutHandler.getActorSyncInfo(rolloutId)
-
-    assertEquals(1, result.size)
-    assertEquals(actorId, result.values.first().actorId)
-    assertEquals(nConnections, result.values.first().getNumConnections())
-    assertEquals(nSucceeded, result.values.first().getNumSucceeded())
-    assertEquals(nFailed, result.values.first().getNumFailed())
-  }
-
   private fun createMockConnectorRollout(
     id: UUID,
     actorDefinitionId: UUID = ACTOR_DEFINITION_ID,
     releaseCandidateVersionId: UUID = RELEASE_CANDIDATE_VERSION_ID,
     rolloutStrategy: ConnectorEnumRolloutStrategy? = ConnectorEnumRolloutStrategy.MANUAL,
+    state: ConnectorEnumRolloutState = ConnectorEnumRolloutState.INITIALIZED,
   ): ConnectorRollout =
     ConnectorRollout(
       id = id,
       actorDefinitionId = actorDefinitionId,
       releaseCandidateVersionId = releaseCandidateVersionId,
       initialVersionId = UUID.randomUUID(),
-      state = ConnectorEnumRolloutState.INITIALIZED,
+      state = state,
       initialRolloutPct = 10,
       finalTargetRolloutPct = 100,
       hasBreakingChanges = false,

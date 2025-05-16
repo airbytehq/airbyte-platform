@@ -1,20 +1,18 @@
 global:
   # -- Service Account name override
-  serviceAccountName: &service-account-name "airbyte-admin"
+  serviceAccountName: &service-account-name airbyte-admin
   # -- Edition; "community" or "enterprise"
-  edition: "community"
+  edition: community
 
   secretName: ""
 
   local: false
 
   cluster:
-    type: "hybrid" # "control-plane" | "data-plane" | "hybrid"
+    type: hybrid # "control-plane" | "data-plane" | "hybrid"
     secretName: ""
 
     controlPlane: 
-      remoteDataPlaneServiceAccounts: {}
-
       bootstrap:
         dataPlane:
           secretName: ""
@@ -22,10 +20,7 @@ global:
           clientSecretSecretKey: ""
 
     dataPlane:
-      id: "local"
       controlPlaneAuthEndpoint: ""
-      serviceAccountEmail: ""
-      serviceAccountCredentialsPath: ""
 
   enterprise:
     # -- Secret name where an Airbyte license key is stored
@@ -71,36 +66,36 @@ global:
       type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      oidc: 
-        # -- OIDC application domain
-        domain: ""
-        # -- OIDC application name
-        appName: ""
-        # -- The key within `clientIdSecretName` where the OIDC client id is stored
-        clientIdSecretKey: ""
-        # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
-        clientSecretSecretKey: ""
+      #oidc: 
+      #  # -- OIDC application domain
+      #  domain: ""
+      #  # -- OIDC application name
+      #  appName: ""
+      #  # -- The key within `clientIdSecretName` where the OIDC client id is stored
+      #  clientIdSecretKey: ""
+      #  # -- The key within `clientSecretSecretName` where the OIDC client secret is stored
+      #  clientSecretSecretKey: ""
 
       # -- Generic OIDC configuration (required if `auth.identityProvider.type` is "generic-oidc")
-      genericOidc:
-        clientId: ""
-        audience: ""
-        issuer: ""
-        endpoints:
-          authorizationServerEndpoint: ""
-          jwksEndpoint: ""
-        fields:
-          subject: "sub"
-          email: "email"
-          name: "name"
-          issuer: "iss"
+      #genericOidc:
+      #  clientId: ""
+      #  audience: ""
+      #  issuer: ""
+      #  endpoints:
+      #    authorizationServerEndpoint: ""
+      #    jwksEndpoint: ""
+      #  fields:
+      #    subject: sub
+      #    email: email
+      #    name: name
+      #    issuer: iss
 
     # -- Security configuration
     security:
       secretName: ""
 
       cookieSecureSetting: true
-      cookieSameSiteSetting: "Strict"
+      cookieSameSiteSetting: Strict
 
       jwtSignatureSecretKey: ""
 
@@ -109,11 +104,8 @@ global:
       clientSecretSecretKey: ""
 
   api:
-    authHeaderName: "X-Airbyte-Auth"
+    authHeaderName: X-Airbyte-Auth
     
-  cloudApi:
-    url: ""
-
   # -- Environment variables
   env_vars: {}
 
@@ -122,7 +114,7 @@ global:
 
   # -- Database configuration
   database:
-    type: "internal" # "external"
+    type: internal # "external"
 
     # -- Secret name where database credentials are stored
     secretName: "" # e.g. "airbyte-config-secrets"
@@ -131,7 +123,7 @@ global:
     host: ""
 
     # -- The database port
-    port: ""
+    port: 
 
     # -- The database name
     database: ""
@@ -163,10 +155,11 @@ global:
     # Minio
     minio:
       accessKeyId: minio 
-      secretAccessKey: "minio123"
+      secretAccessKey: minio123
 
     bucket: 
       log: airbyte-bucket
+      auditLogging: airbyte-bucket
       state: airbyte-bucket
       workloadOutput: airbyte-bucket
       activityPayload: airbyte-bucket
@@ -205,11 +198,11 @@ global:
     #      value: engineering
     #  kms: ## Optional - ARN for KMS Decryption.
 
-    #googleSecretManager:
+    #googleSecretManager: 
     #  projectId: <project-id>
     #  credentialsSecretKey: gcp.json
 
-    #azureKeyVault:
+    #azureKeyVault: 
     #  tenantId: ""
     #  vaultUrl: "" 
     #  clientId: ""
@@ -218,7 +211,11 @@ global:
     #  clientSecretSecretKey: ""
     #  tags: ""
 
-    #vault:
+    #vault: 
+    #  address: ""
+    #  prefix: ""
+    #  authToken: ""
+    #  authTokenSecretKey: ""
 
   logging:
     level: info
@@ -226,11 +223,16 @@ global:
     log4jConfigFile: ""
 
   connectorRegistry:
-    seedProvider: "local"
+    seedProvider: local
+
+  connectorRollout:
+    expirationSeconds: 
+    waitBetweenRolloutSeconds: 
+    waitBetweenSyncResultsQueriesSeconds:
 
   workloads:
     secretName: ""
-    namespace: "jobs"
+    namespace: jobs
 
     images:
       workloadInit: ""
@@ -278,7 +280,7 @@ global:
 
   featureFlags:  
     secretName: ""
-    client: "configfile"
+    client: configfile
 
     configfile: {}
 
@@ -289,16 +291,16 @@ global:
     opts: []
 
   metrics:
-    enabled: "false"
+    enabled: false
     step: ""
 
     otlp:
-      enabled: "false"
+      enabled: false
       # -- The open-telemetry-collector endpoint that metrics will be sent to
       collectorEndpoint: ""
 
     statsd:
-      enabled: "false"
+      enabled: false
       flavor: ""
       host: ""
       port: ""
@@ -310,10 +312,10 @@ global:
         endpoint: ""
 
       exporter:
-        name: "otlp"
-        protocol: "grpc" 
-        timeout: "30000"
-        metricExportInterval: "10000"
+        name: otlp
+        protocol: grpc
+        timeout: 30000
+        metricExportInterval: 10000
     
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
@@ -359,17 +361,35 @@ global:
       # -- image pull secret to use for job pod
       mainContainerImagePullSecret: ""
 
+      ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_POLICY
+      # -- image pull policy to use for job pod
+      mainContainerImagePullPolicy: ""
+
       localVolume:
         enabled: false
 
+      scheduling:
+        check: 
+          nodeSelectors: {}
+          runtimeClassName: ""
+        discover: 
+          nodeSelectors: {}
+          runtimeClassName: ""
+        isolated:
+          nodeSelectors: {}
+          runtimeClassName: ""
+        sourceDeclarativeManifest:
+          nodeSelectors: {}
+          runtimeClassName: ""
+
     errors:
-      reportingStrategy: "logging" 
+      reportingStrategy: logging
 
       #sentry:
       #  dsn: ""
 
   topology:
-    nodeSelectorLabel: "airbyte/node-pool"
+    nodeSelectorLabel: airbyte/node-pool
     nodeSelectors:
       mainNodePool: main
       jobsNodePool: jobs
@@ -382,24 +402,24 @@ global:
       address: ""
       namespace: ""
       tlsCert: ""
-      tlsCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
+      tlsCertSecretKey: TEMPORAL_CLOUD_CLIENT_CERT
       tlsKey: ""
-      tlsKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
+      tlsKeySecretKey: TEMPORAL_CLOUD_CLIENT_KEY
 
     cloud:
       enabled: false
       host: ""
       namespace: ""
       clientCert: ""
-      clientCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
+      clientCertSecretKey: TEMPORAL_CLOUD_CLIENT_CERT
       clientKey: ""
-      clientKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
+      clientKeySecretKey: TEMPORAL_CLOUD_CLIENT_KEY
 
     sdk:
       rpc:
-        timeout: "120s"
-        longPollTimeout: "140s"
-        queryTimeout: "20s"
+        timeout: 120s
+        longPollTimeout: 140s
+        queryTimeout: 20s
 
   datadog:
     enabled: false
@@ -412,7 +432,7 @@ global:
     integrations:
       dbm:
         enabled: false
-        propagationMode: "full"
+        propagationMode: full
 
       grpc:
         enabled: false
@@ -423,6 +443,9 @@ global:
         enabled: false
       
       httpUrlConnection:
+        enabled: false
+
+      kotlinCoroutineExperimental:
         enabled: false
 
       urlConnection:
@@ -441,7 +464,7 @@ global:
   tracking:
     enabled: true
     secretName: ""
-    strategy: "segment" # one of: logging, segment
+    strategy: segment # one of: logging, segment
 
     segment:
       writeKey: ""
@@ -451,6 +474,8 @@ global:
     environments: []
 
   extraSelectorLabels: {}
+  extraInitContainers: []
+  extraContainers: []
 
 ## @section Common Parameters
 
@@ -607,9 +632,6 @@ webapp:
   api:
     # -- The webapp API url
     url: /api/v1/
-
-  connectorBuilderServer:
-    url: /connector-builder-api
 
   fullstory:
     # -- Whether or not to enable fullstory
@@ -818,7 +840,7 @@ server:
 
   log:
     # -- The log level to log at
-    level: "INFO"
+    level: INFO
 
   ## Examples (when using `server.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
@@ -904,6 +926,18 @@ server:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  webapp:
+    datadogApplicationId: ""
+    datadogClientToken: ""
+    datadogEnv: ""
+    datadogService: ""
+    datadogSite: ""
+    hockeystackApiKey: ""
+    launchdarklyKey: ""
+    osanoKey: ""
+    segmentToken: ""
+    zendeskKey: ""
 
 ## @section Worker Parameters
 
@@ -1030,6 +1064,7 @@ worker:
   # -- Additional volumes for worker pods
   extraVolumes: []
   # -- Additional container for worker pods
+  extraInitContainers: []
   extraContainers: []
 
   hpa:
@@ -1043,7 +1078,9 @@ worker:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-  maxNotifyWorkers: 5
+  maxNotifyWorkers: ""
+  maxCheckWorkers: ""
+  maxSyncWorkers: ""
 
   workloadApi: {}
 
@@ -1165,7 +1202,7 @@ workloadLauncher:
 
   log:
     # -- The log level to log at
-    level: "INFO"
+    level: INFO
 
   ## Example:
   ##
@@ -1189,6 +1226,7 @@ workloadLauncher:
   # -- Additional volumes for workload launcher pods
   extraVolumes: []
 
+  extraInitContainers: []
   extraContainers: []
 
   hpa:
@@ -1227,8 +1265,6 @@ workloadLauncher:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-
-  maxNotifyWorkers: 5
 
   workloadApi: {}
 
@@ -1333,7 +1369,7 @@ connectorRolloutWorker:
 
   log:
     # -- The log level to log at
-    level: "INFO"
+    level: INFO
 
   ## Example:
   ##
@@ -1357,6 +1393,7 @@ connectorRolloutWorker:
   # -- Additional volumes for connector rollout worker pods
   extraVolumes: []
 
+  extraInitContainers: []
   extraContainers: []
 
   env_vars: {}
@@ -1378,8 +1415,6 @@ connectorRolloutWorker:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
-
-  maxNotifyWorkers: 5
 
 ## @section Metrics parameters
 metrics:
@@ -1474,6 +1509,7 @@ metrics:
   # -- Additional volumes for metrics-reporter pods
   extraVolumes: []
 
+  extraInitContainers: []
   extraContainers: []
 
   secrets: {}
@@ -1649,14 +1685,14 @@ temporal:
     # -- The pull policy for the temporal image
     pullPolicy: IfNotPresent
     # -- The temporal image tag to use
-    tag: "1.23.0"
+    tag: "1.27.2"
 
   secretName: ""
 
   autoSetup: true
 
   database:
-    engine: "postgresql"
+    engine: postgres12
     host: ""
     port: ""
     user: ""
@@ -1668,9 +1704,9 @@ temporal:
 
   sdk:
     rpc:
-      timeout: "120s"
-      longPollTimeout: "140s"
-      queryTimeout: "20s"
+      timeout: 120s
+      longPollTimeout: 140s
+      queryTimeout: 20s
 
   worker:
     ports: ""
@@ -1713,7 +1749,7 @@ temporal:
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
   ##   - name: config-loader
-  ##     image: temporalio/auto-setup:1.23
+  ##     image: temporalio/auto-setup:1.27.2
   ##     command:
   ##       - /bin/sh
   ##       - -c
@@ -1876,7 +1912,6 @@ temporalUi:
   ## Example:
   ##
   ## extraEnv:
-  ## - name: SAMPLE_ENV_VAR
   ##   value: "key=sample-value"
   # -- Additional env vars for temporal-ui pod(s).
   extraEnv: []
@@ -2126,7 +2161,7 @@ cron:
 
   log:
     # -- The log level to log at.
-    level: "INFO"
+    level: INFO
 
   ## Examples (when using `cron.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraVolumeMounts:
@@ -2291,7 +2326,7 @@ connectorBuilderServer:
 
   log:
     # -- The log level to log at.
-    level: "INFO"
+    level: INFO
 
   env_vars: {}
 
@@ -2310,6 +2345,9 @@ connectorBuilderServer:
   # https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
   affinity: {}
 
+  extraInitContainers: []
+  extraContainers: []
+
   debug:
     enabled: false
     remoteDebugPort: 5005
@@ -2324,8 +2362,8 @@ keycloak:
 
   url: ""
   internalHost:
-  internalProtocol: "http"
-  internalBasePath: "/auth"
+  internalProtocol: http
+  internalBasePath: /auth
 
   clientRealm: ""
   realmIssuer: ""
@@ -2449,6 +2487,9 @@ keycloak:
     failureThreshold: 60
     successThreshold: 1
 
+  extraInitContainers: []
+  extraContainers: []
+
 keycloakSetup:
   enabled: false
   env_vars: {}
@@ -2503,6 +2544,9 @@ keycloakSetup:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  extraInitContainers: []
+  extraContainers: []
 
 workloadApiServer:
   enabled: true
@@ -2591,7 +2635,7 @@ workloadApiServer:
 
   log:
     # -- The log level at which to log
-    level: "INFO"
+    level: INFO
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
@@ -2635,6 +2679,9 @@ workloadApiServer:
   debug:
     enabled: false
     remoteDebugPort: 5005
+
+  extraInitContainers: []
+  extraContainers: []
 
   workloadApi: {}
 
@@ -2722,7 +2769,7 @@ featureflagServer:
 
   log:
     # -- The log level at which to log
-    level: "INFO"
+    level: INFO
 
   # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
   nodeSelector: {}
@@ -2759,6 +2806,9 @@ featureflagServer:
     # - secretName: chart-example-tls
     #   hosts:
     #   - chart-example.local
+
+  extraInitContainers: []
+  extraContainers: []
 
   debug:
     enabled: false

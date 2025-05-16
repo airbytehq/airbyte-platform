@@ -6,8 +6,6 @@ package io.airbyte.commons.logging.logback
 
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
-import ch.qos.logback.core.status.ErrorStatus
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.storage.AzureStorageClient
 import io.airbyte.commons.storage.AzureStorageConfig
@@ -22,78 +20,7 @@ import io.airbyte.commons.storage.S3StorageClient
 import io.airbyte.commons.storage.S3StorageConfig
 import io.airbyte.commons.storage.StorageBucketConfig
 import io.airbyte.commons.storage.StorageClient
-import java.net.InetAddress
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.UUID
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-
-/**
- * Builds the ID of the uploaded file.  This is typically the path in blob storage.
- *
- * @param baseId The base path/ID of the file location
- * @param timestamp A timestamp as a string for uniqueness
- * @param hostname The hostname of the machine executing this method
- * @param uniqueIdentifier A random UUID as a string for uniqueness
- * @return The field ID.
- */
-fun createFileId(
-  baseId: String,
-  timestamp: String = LocalDateTime.now().format(DATE_FORMAT),
-  hostname: String = InetAddress.getLocalHost().hostName,
-  uniqueIdentifier: String = UUID.randomUUID().toString(),
-): String {
-  // Remove the leading/trailing "/" from the base storage ID if present to avoid duplicates in the storage ID
-  return "${baseId.trim('/')}/${timestamp}_${hostname}_${uniqueIdentifier.replace("-", "")}$STRUCTURED_LOG_FILE_EXTENSION"
-}
-
-object AirbyteCloudStorageAppenderExecutorServiceHelper {
-  /**
-   * Shared executor service used to reduce the number of threads created to handle
-   * uploading log data to remote storage.
-   */
-  private val executorService =
-    Executors.newScheduledThreadPool(
-      EnvVar.CLOUD_STORAGE_APPENDER_THREADS.fetch(default = "20")!!.toInt(),
-      ThreadFactoryBuilder().setNameFormat("airbyte-cloud-storage-appender-%d").build(),
-    )
-
-  /**
-   * Schedules a runnable task on the underlying executor service.
-   *
-   * @param runnable The task to be executed.
-   * @param initDelay The time to delay first execution.
-   * @param period The period between successive executions.
-   * @param unit The time unit of the initialDelay and period parameters
-   * @return A [ScheduledFuture] representing pending completion of the series of repeated tasks.
-   */
-  fun scheduleTask(
-    runnable: Runnable,
-    initDelay: Long,
-    period: Long,
-    unit: TimeUnit,
-  ): ScheduledFuture<*> = executorService.scheduleAtFixedRate(runnable, initDelay, period, unit)
-
-  /**
-   * Stops the shared executor service.  This method should be called from a JVM shutdown hook
-   * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
-   */
-  fun stopAirbyteCloudStorageAppenderExecutorService() {
-    executorService.shutdownNow()
-    executorService.awaitTermination(30, TimeUnit.SECONDS)
-  }
-
-  init {
-    // Enable cancellation of tasks to prevent executor queue from growing unbounded
-    if (executorService is ScheduledThreadPoolExecutor) {
-      executorService.removeOnCancelPolicy = true
-    }
-  }
-}
 
 /**
  * Custom Logback [AppenderBase] that uploads log events to remove storage.  Log data
@@ -107,50 +34,32 @@ class AirbyteCloudStorageAppender(
   val period: Long = 60L,
   val unit: TimeUnit = TimeUnit.SECONDS,
 ) : AppenderBase<ILoggingEvent>() {
-  private val buffer = LinkedBlockingQueue<ILoggingEvent>()
-  private var currentStorageId: String = createFileId(baseId = baseStorageId)
   private val encoder = AirbyteLogEventEncoder()
-  private val uploadLock = Any()
-  private lateinit var uploadTask: ScheduledFuture<*>
+
+  private val uploader =
+    AirbyteLogbackBulkUploader(
+      baseStorageId = baseStorageId,
+      storageClient = storageClient,
+      period = period,
+      unit = unit,
+      encoder = encoder,
+      addStatus = this::addStatus,
+    )
 
   override fun start() {
     super.start()
     encoder.start()
-    uploadTask = AirbyteCloudStorageAppenderExecutorServiceHelper.scheduleTask(this::upload, period, period, unit)
+    uploader.start()
   }
 
   override fun stop() {
-    try {
-      super.stop()
-      uploadTask.cancel(false)
-    } finally {
-      // Do one final upload attempt to ensure that all logs are published
-      upload()
-      encoder.stop()
-    }
+    super.stop()
+    encoder.stop()
+    uploader.stop()
   }
 
   override fun append(eventObject: ILoggingEvent) {
-    buffer.offer(eventObject)
-  }
-
-  private fun upload() {
-    try {
-      synchronized(uploadLock) {
-        val events = mutableListOf<ILoggingEvent>()
-        buffer.drainTo(events)
-
-        if (events.isNotEmpty()) {
-          val document = encoder.bulkEncode(loggingEvents = events)
-          storageClient.write(id = currentStorageId, document = document)
-
-          // Move to next file to avoid overwriting in log storage that doesn't support append mode
-          this.currentStorageId = createFileId(baseId = baseStorageId)
-        }
-      }
-    } catch (t: Throwable) {
-      addStatus(ErrorStatus("Failed to upload logs to cloud storage location $currentStorageId.", this, t))
-    }
+    uploader.append(eventObject)
   }
 }
 
@@ -212,9 +121,6 @@ internal fun buildStorageClient(
       )
   }
 }
-
-const val STRUCTURED_LOG_FILE_EXTENSION = ".json"
-private val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss")
 
 internal fun buildBucketConfig(storageConfig: Map<EnvVar, String>): StorageBucketConfig =
   StorageBucketConfig(

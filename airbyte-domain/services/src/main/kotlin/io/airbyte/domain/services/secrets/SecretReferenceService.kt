@@ -63,7 +63,7 @@ class SecretReferenceService(
     actorId: ActorId,
     workspaceId: WorkspaceId,
     secretStorageId: SecretStorageId,
-    currentUserId: UserId,
+    currentUserId: UserId?,
   ): ConfigWithSecretReferenceIdsInjected {
     // If the feature flag to persist secret configs and references is not enabled,
     // return the original config without any changes.
@@ -139,8 +139,8 @@ class SecretReferenceService(
     secretStorageId: SecretStorageId,
     externalCoordinate: String,
     airbyteManaged: Boolean,
-    currentUserId: UserId,
-    hydrationPath: String,
+    currentUserId: UserId?,
+    hydrationPath: String?,
     scopeType: SecretReferenceScopeType,
     scopeId: UUID,
   ): SecretReferenceId {
@@ -179,7 +179,6 @@ class SecretReferenceService(
   ) {
     val configReferenceIds = SecretReferenceHelpers.getSecretReferenceIdsFromConfig(config)
     for (id in configReferenceIds) {
-      // This is pretty naive since the ref ids could be in spots that don't match the reference's hydrationPath.
       if (!existingReferenceIds.contains(SecretReferenceId(id))) {
         throw IllegalArgumentException("Secret reference $id does not exist but is referenced in the config")
       }
@@ -218,8 +217,10 @@ class SecretReferenceService(
 
     val persistedSecretRefs =
       refsForScope
-        .filter { it.secretReference.hydrationPath != null }
-        .associateBy(
+        .filter {
+          it.secretReference.hydrationPath != null &&
+            SecretReferenceHelpers.getSecretReferenceIdAtPath(config, it.secretReference.hydrationPath!!) == it.secretReference.id
+        }.associateBy(
           { it.secretReference.hydrationPath!! },
           {
             SecretReferenceConfig(

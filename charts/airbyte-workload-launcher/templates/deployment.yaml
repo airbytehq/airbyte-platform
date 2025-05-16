@@ -79,6 +79,11 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: AIRBYTE_EDITION
+        - name: AIRBYTE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Values.global.configMapName | default (printf "%s-airbyte-env" .Release.Name) }}
+              key: AIRBYTE_URL
         - name: DATA_PLANE_ID
           value: "local"
         - name: PUB_SUB_ENABLED

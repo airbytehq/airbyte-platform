@@ -14,7 +14,12 @@ import { SyncCatalogUIModel } from "./SyncCatalogTable";
 export function getFilteredRowModel(): (table: Table<SyncCatalogUIModel>) => () => RowModel<SyncCatalogUIModel> {
   return (table) =>
     memo(
-      () => [table.getPreFilteredRowModel(), table.getState().columnFilters, table.getState().globalFilter],
+      () => [
+        table.getPreFilteredRowModel(),
+        table.getState().columnFilters,
+        table.getState().globalFilter,
+        table.options.maxLeafRowFilterDepth,
+      ],
       (rowModel, columnFilters, globalFilter) => {
         if (!rowModel.rows.length || (!columnFilters?.length && !globalFilter)) {
           for (let i = 0; i < rowModel.flatRows.length; i++) {

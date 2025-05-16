@@ -67,7 +67,7 @@ Renders the jobs.kube.localVolume.enabled environment variable
 Renders the global.jobs.kube.mainContainerImagePullSecret value
 */}}
 {{- define "airbyte.jobs.kube.mainContainerImagePullSecret" }}
-    {{- join "," (ternary (concat .Values.global.imagePullSecrets (list .Values.global.jobs.kube.mainContainerImagePullSecret)) .Values.global.imagePullSecrets (empty .Values.global.jobs.kube.mainContainerImagePullSecret)) }}
+    {{- (include "airbyte.imagePullSecretNames" (dict "secrets" .Values.global.imagePullSecrets "extra" (list .Values.global.jobs.kube.mainContainerImagePullSecret))) }}
 {{- end }}
 
 {{/*
@@ -247,4 +247,176 @@ JOB_ERROR_REPORTING_STRATEGY: {{ include "airbyte.jobs.errors.reportingStrategy"
 JOB_ERROR_REPORTING_SENTRY_DSN: {{ include "airbyte.jobs.errors.sentry.dsn" . | quote }}
 {{- end }}
 
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.check.nodeSelectors value
+*/}}
+{{- define "airbyte.jobs.scheduling.check.nodeSelectors" }}
+    {{- .Values.global.jobs.kube.scheduling.check.nodeSelectors | include "airbyte.flattenMap" }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.check.nodeSelectors environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.check.nodeSelectors.env" }}
+- name: CHECK_JOB_KUBE_NODE_SELECTORS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CHECK_JOB_KUBE_NODE_SELECTORS
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.check.runtimeClassName value
+*/}}
+{{- define "airbyte.jobs.scheduling.check.runtimeClassName" }}
+    {{- .Values.global.jobs.kube.scheduling.check.runtimeClassName }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.check.runtimeClassName environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.check.runtimeClassName.env" }}
+- name: CHECK_JOB_KUBE_RUNTIME_CLASS_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CHECK_JOB_KUBE_RUNTIME_CLASS_NAME
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.discover.nodeSelectors value
+*/}}
+{{- define "airbyte.jobs.scheduling.discover.nodeSelectors" }}
+    {{- .Values.global.jobs.kube.scheduling.discover.nodeSelectors | include "airbyte.flattenMap" }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.discover.nodeSelectors environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.discover.nodeSelectors.env" }}
+- name: DISCOVER_JOB_KUBE_NODE_SELECTORS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DISCOVER_JOB_KUBE_NODE_SELECTORS
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.discover.runtimeClassName value
+*/}}
+{{- define "airbyte.jobs.scheduling.discover.runtimeClassName" }}
+    {{- .Values.global.jobs.kube.scheduling.discover.runtimeClassName }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.discover.runtimeClassName environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.discover.runtimeClassName.env" }}
+- name: DISCOVER_JOB_KUBE_RUNTIME_CLASS_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DISCOVER_JOB_KUBE_RUNTIME_CLASS_NAME
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.isolated.nodeSelectors value
+*/}}
+{{- define "airbyte.jobs.scheduling.isolated.nodeSelectors" }}
+    {{- .Values.global.jobs.kube.scheduling.isolated.nodeSelectors | include "airbyte.flattenMap" }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.isolated.nodeSelectors environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.isolated.nodeSelectors.env" }}
+- name: JOB_ISOLATED_KUBE_NODE_SELECTORS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_ISOLATED_KUBE_NODE_SELECTORS
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.isolated.runtimeClassName value
+*/}}
+{{- define "airbyte.jobs.scheduling.isolated.runtimeClassName" }}
+    {{- .Values.global.jobs.kube.scheduling.isolated.runtimeClassName }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.isolated.runtimeClassName environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.isolated.runtimeClassName.env" }}
+- name: JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.sourceDeclarativeManifest.nodeSelectors value
+*/}}
+{{- define "airbyte.jobs.scheduling.sourceDeclarativeManifest.nodeSelectors" }}
+    {{- .Values.global.jobs.kube.scheduling.sourceDeclarativeManifest.nodeSelectors | include "airbyte.flattenMap" }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.sourceDeclarativeManifest.nodeSelectors environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.sourceDeclarativeManifest.nodeSelectors.env" }}
+- name: JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_NODE_SELECTORS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_NODE_SELECTORS
+{{- end }}
+
+{{/*
+Renders the global.jobs.kube.scheduling.sourceDeclarativeManifest.runtimeClassName value
+*/}}
+{{- define "airbyte.jobs.scheduling.sourceDeclarativeManifest.runtimeClassName" }}
+    {{- .Values.global.jobs.kube.scheduling.sourceDeclarativeManifest.runtimeClassName }}
+{{- end }}
+
+{{/*
+Renders the jobs.scheduling.sourceDeclarativeManifest.runtimeClassName environment variable
+*/}}
+{{- define "airbyte.jobs.scheduling.sourceDeclarativeManifest.runtimeClassName.env" }}
+- name: JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_RUNTIME_CLASS_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_RUNTIME_CLASS_NAME
+{{- end }}
+
+{{/*
+Renders the set of all jobs.scheduling environment variables
+*/}}
+{{- define "airbyte.jobs.scheduling.envs" }}
+{{- include "airbyte.jobs.scheduling.check.nodeSelectors.env" . }}
+{{- include "airbyte.jobs.scheduling.check.runtimeClassName.env" . }}
+{{- include "airbyte.jobs.scheduling.discover.nodeSelectors.env" . }}
+{{- include "airbyte.jobs.scheduling.discover.runtimeClassName.env" . }}
+{{- include "airbyte.jobs.scheduling.isolated.nodeSelectors.env" . }}
+{{- include "airbyte.jobs.scheduling.isolated.runtimeClassName.env" . }}
+{{- include "airbyte.jobs.scheduling.sourceDeclarativeManifest.nodeSelectors.env" . }}
+{{- include "airbyte.jobs.scheduling.sourceDeclarativeManifest.runtimeClassName.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all jobs.scheduling config map variables
+*/}}
+{{- define "airbyte.jobs.scheduling.configVars" }}
+CHECK_JOB_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.scheduling.check.nodeSelectors" . | quote }}
+CHECK_JOB_KUBE_RUNTIME_CLASS_NAME: {{ include "airbyte.jobs.scheduling.check.runtimeClassName" . | quote }}
+DISCOVER_JOB_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.scheduling.discover.nodeSelectors" . | quote }}
+DISCOVER_JOB_KUBE_RUNTIME_CLASS_NAME: {{ include "airbyte.jobs.scheduling.discover.runtimeClassName" . | quote }}
+JOB_ISOLATED_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.scheduling.isolated.nodeSelectors" . | quote }}
+JOB_ISOLATED_KUBE_RUNTIME_CLASS_NAME: {{ include "airbyte.jobs.scheduling.isolated.runtimeClassName" . | quote }}
+JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_NODE_SELECTORS: {{ include "airbyte.jobs.scheduling.sourceDeclarativeManifest.nodeSelectors" . | quote }}
+JOB_SOURCE_DECLARATIVE_MANIFEST_KUBE_RUNTIME_CLASS_NAME: {{ include "airbyte.jobs.scheduling.sourceDeclarativeManifest.runtimeClassName" . | quote }}
 {{- end }}

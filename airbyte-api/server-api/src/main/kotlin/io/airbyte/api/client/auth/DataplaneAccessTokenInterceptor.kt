@@ -5,6 +5,7 @@
 package io.airbyte.api.client.auth
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.client.auth.AccessTokenHelper.Companion.decodeExpiry
 import io.airbyte.commons.annotation.InternalForTesting
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Replaces
@@ -20,7 +21,6 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.time.Instant
-import java.util.Base64
 
 private val logger = KotlinLogging.logger { }
 
@@ -46,7 +46,6 @@ open class DataplaneAccessTokenInterceptor(
     private const val CLIENT_SECRET_PARAM = "client_secret"
     private const val APPLICATION_JSON = "application/json"
     private const val TOKEN_REFRESH_BUFFER_SECONDS = 30L
-    private const val EXPIRATION_CLAIM = "exp"
 
     @InternalForTesting
     internal const val ACCESS_TOKEN_RESPONSE_PARAM = "access_token"
@@ -118,25 +117,6 @@ open class DataplaneAccessTokenInterceptor(
     logger.debug { "Fetched token with expiry at $expiry" }
 
     return CachedToken(token, expiry)
-  }
-
-  /**
-   * Decodes a JWT token (in String form) and extracts the 'exp' claim as an [Instant].
-   *
-   * @throws Exception if the token is not properly formatted or the expiration cannot be extracted.
-   */
-  private fun decodeExpiry(token: String): Instant {
-    val parts = token.split(".")
-    if (parts.size < 2) {
-      throw IllegalStateException("Invalid JWT token format")
-    }
-    return try {
-      val payloadJson = String(Base64.getUrlDecoder().decode(parts[1]))
-      val exp = objectMapper.readTree(payloadJson).get(EXPIRATION_CLAIM).asLong()
-      Instant.ofEpochSecond(exp)
-    } catch (e: Exception) {
-      throw Exception("Failed to extract expiration from JWT token payload", e)
-    }
   }
 
   override fun intercept(chain: Interceptor.Chain): Response {

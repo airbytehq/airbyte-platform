@@ -8,7 +8,7 @@ import { ScrollParentContext } from "components/ui/ScrollParent";
 import { ColumnMeta } from "components/ui/Table/types";
 import { Text } from "components/ui/Text";
 
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 
 import { useNamespaceRowInView } from "../hooks/useNamespaceRowInView";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
@@ -41,7 +41,7 @@ export const SyncCatalogVirtuosoTable: FC<SyncCatalogVirtuosoTableProps> = ({
   setStickyRowIndex,
   stickyIndexes,
 }) => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const customScrollParent = useContext(ScrollParentContext);
 
   const Table: TableComponents["Table"] = ({ style, ...props }) => (

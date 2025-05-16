@@ -53,15 +53,13 @@ export type ConnectorDefinitionWithMetrics = ConnectorDefinition & {
 export function convertToConnectorDefinitionWithMetrics(
   connectorDefinition: ConnectorDefinition
 ): ConnectorDefinitionWithMetrics {
+  const allMetrics = connectorDefinition.metrics?.all as Record<string, string> | undefined;
   const connectorDefinitionWithMetrics: ConnectorDefinitionWithMetrics = {
     ...connectorDefinition,
     metrics: {
       all: {
-        sync_success_rate:
-          typeof connectorDefinition.metrics?.sync_success_rate === "string"
-            ? connectorDefinition.metrics.sync_success_rate
-            : undefined,
-        usage: typeof connectorDefinition.metrics?.usage === "string" ? connectorDefinition.metrics.usage : undefined,
+        sync_success_rate: typeof allMetrics?.sync_success_rate === "string" ? allMetrics.sync_success_rate : undefined,
+        usage: typeof allMetrics?.usage === "string" ? allMetrics.usage : undefined,
       },
     },
   };

@@ -1,4 +1,5 @@
-import { useFormContext, useWatch } from "react-hook-form";
+import { useMemo } from "react";
+import { useFormContext } from "react-hook-form";
 import { useUnmount } from "react-use";
 
 import { LabelInfo } from "components/Label";
@@ -43,9 +44,10 @@ interface SchemaFormControlProps {
    */
   nonAdvancedFields?: string[];
 
-  titleOverride?: string;
+  titleOverride?: string | null;
   isRequired?: boolean;
   className?: string;
+  placeholder?: string;
 }
 
 /**
@@ -58,14 +60,16 @@ export const SchemaFormControl = ({
   skipRenderedPathRegistration = false,
   fieldSchema,
   titleOverride,
-  isRequired = true,
+  isRequired,
   className,
   nonAdvancedFields,
+  placeholder,
 }: SchemaFormControlProps) => {
   const {
     schema: rootSchema,
     getSchemaAtPath,
     registerRenderedPath,
+    onlyShowErrorIfTouched,
     nestedUnderPath,
     verifyArrayItems,
     convertJsonSchemaToZodSchema,
@@ -74,15 +78,36 @@ export const SchemaFormControl = ({
 
   const targetPath = path ? path : nestPath(path, nestedUnderPath);
 
-  const value = useWatch({ name: targetPath });
-
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
     registerRenderedPath(path);
   }
 
   // Get the property at the specified path
-  const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path, value));
+  const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path));
+  const isOptional = useMemo(() => {
+    if (isRequired !== undefined) {
+      return !isRequired;
+    }
+
+    if (!path) {
+      return false;
+    }
+
+    const pathParts = path.split(".");
+    const fieldName = pathParts.at(-1);
+    if (!fieldName) {
+      return false;
+    }
+
+    const parentPath = pathParts.slice(0, -1).join(".");
+    const parentSchema = getSchemaAtPath(parentPath, true);
+    if (parentSchema?.required?.includes(fieldName)) {
+      return false;
+    }
+
+    return true;
+  }, [getSchemaAtPath, isRequired, path]);
 
   useUnmount(() => {
     // Remove the validation logic for this field when unmounting.
@@ -99,7 +124,7 @@ export const SchemaFormControl = ({
   // Register validation logic for this field
   register(targetPath, {
     validate: (value) => {
-      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, isRequired);
+      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, !isOptional);
       const result = zodSchema.safeParse(value);
       if (result.success === false) {
         return result.error.issues.at(-1)?.message;
@@ -124,15 +149,16 @@ export const SchemaFormControl = ({
 
   const baseProps: BaseControlProps = {
     name: targetPath,
-    label: titleOverride ?? displayName(path, targetSchema.title),
+    label: titleOverride ? titleOverride : titleOverride === null ? undefined : displayName(path, targetSchema.title),
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
-    optional: !isRequired,
+    optional: isOptional,
     header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
     containerControlClassName: className,
-    onlyShowErrorIfTouched: true,
+    onlyShowErrorIfTouched,
+    placeholder,
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {
@@ -163,17 +189,18 @@ export const SchemaFormControl = ({
     return <FormControl {...baseProps} fieldType="switch" />;
   }
 
-  if (targetSchema.type === "string") {
-    if (targetSchema.enum) {
-      const options = Array.isArray(targetSchema.enum)
-        ? targetSchema.enum.map((option: string) => ({
-            label: option,
-            value: option,
-          }))
-        : [];
+  if (targetSchema.enum && (targetSchema.type === undefined || targetSchema.type === "string")) {
+    const options = Array.isArray(targetSchema.enum)
+      ? targetSchema.enum.map((option: string) => ({
+          label: option,
+          value: option,
+        }))
+      : [];
 
-      return <FormControl {...baseProps} fieldType="dropdown" options={options} />;
-    }
+    return <FormControl {...baseProps} fieldType="dropdown" options={options} />;
+  }
+
+  if (targetSchema.type === "string") {
     if (targetSchema.multiline) {
       return <FormControl {...baseProps} fieldType="textarea" />;
     }
@@ -186,19 +213,17 @@ export const SchemaFormControl = ({
 
   if (targetSchema.type === "array") {
     const items = verifyArrayItems(targetSchema.items);
-    if (items.type === "object" || items.type === "array") {
-      return (
-        <ArrayOfObjectsControl
-          fieldSchema={targetSchema}
-          baseProps={baseProps}
-          overrideByPath={overrideByPath}
-          skipRenderedPathRegistration={skipRenderedPathRegistration}
-        />
-      );
-    }
     if (items.type === "string" || items.type === "integer" || items.type === "number") {
       return <FormControl {...baseProps} fieldType="array" itemType={items.type} />;
     }
+    return (
+      <ArrayOfObjectsControl
+        fieldSchema={targetSchema}
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   return null;

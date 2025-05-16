@@ -17,6 +17,7 @@ import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
 import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.ProxyObjectStorage
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
 import io.airbyte.featureflag.Workspace
@@ -25,6 +26,7 @@ import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.input.getAttemptId
 import io.airbyte.workers.input.getJobId
+import io.airbyte.workers.input.toFeatureFlagContext
 import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
 import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.constants.EnvVarConstants
@@ -80,6 +82,7 @@ class RuntimeEnvVarFactory(
       EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransferEnvVar.toString(), null),
       EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, javaOpts, null),
       EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
+      proxyObjectStorageEnv(replicationInput.sourceLauncherConfig),
     ) + secretPersistenceEnvVars
   }
 
@@ -109,7 +112,8 @@ class RuntimeEnvVarFactory(
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
-      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null) +
+      proxyObjectStorageEnv(launcherConfig)
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun discoverConnectorEnvVars(
@@ -121,7 +125,8 @@ class RuntimeEnvVarFactory(
       getSecretPersistenceEnvVars(organizationId) +
       getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
-      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null) +
+      proxyObjectStorageEnv(launcherConfig)
 
   // TODO: Separate env factory methods per container (init, sidecar, main, etc.)
   fun specConnectorEnvVars(
@@ -130,7 +135,8 @@ class RuntimeEnvVarFactory(
   ): List<EnvVar> =
     getDeclarativeCustomCodeSupportEnvVars(Workspace(launcherConfig.workspaceId)) +
       EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null) +
-      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null)
+      EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), workloadId, null) +
+      proxyObjectStorageEnv(launcherConfig)
 
   /**
    * Env vars to enable APM metrics for the connector if enabled.
@@ -253,6 +259,14 @@ class RuntimeEnvVarFactory(
     val externalIdVar = EnvVar(AWS_ASSUME_ROLE_EXTERNAL_ID, launcherConfig.workspaceId.toString(), null)
 
     return connectorAwsAssumedRoleSecretEnvList + externalIdVar
+  }
+
+  @InternalForTesting
+  internal fun proxyObjectStorageEnv(integrationLauncherConfig: IntegrationLauncherConfig): EnvVar {
+    val ctx = integrationLauncherConfig.toFeatureFlagContext()
+    val proxyObjectStorage = featureFlagClient.boolVariation(ProxyObjectStorage, ctx)
+
+    return EnvVar(EnvVarConstants.PROXY_OBJECT_STORAGE, proxyObjectStorage.toString(), null)
   }
 
   companion object {

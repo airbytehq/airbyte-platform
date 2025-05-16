@@ -20,7 +20,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -82,6 +81,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
 
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
+  private static final UUID DATAPLANE_GROUP_ID = UUID.randomUUID();
 
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
 
@@ -110,9 +110,9 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
     final ScopedConfigurationService scopedConfigurationService = mock(ScopedConfigurationService.class);
     final DataplaneGroupService dataplaneGroupService = mock(DataplaneGroupService.class);
     when(dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(any(), any()))
-        .thenReturn(new DataplaneGroup().withId(UUID.randomUUID()));
+        .thenReturn(new DataplaneGroup().withId(DATAPLANE_GROUP_ID));
 
-    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
+    connectionService = new ConnectionServiceJooqImpl(database);
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     actorDefinitionVersionUpdater =
         spy(new ActorDefinitionVersionUpdater(featureFlagClient, connectionService, actorDefinitionService, scopedConfigurationService,
@@ -138,8 +138,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        dataplaneGroupService);
+        metricClient);
 
     final OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
@@ -149,7 +148,7 @@ class ConnectorMetadataPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US)
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID));
   }
 

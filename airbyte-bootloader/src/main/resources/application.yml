@@ -77,6 +77,9 @@ airbyte:
         prefix: ${VAULT_PREFIX:}
         token: ${VAULT_AUTH_TOKEN:}
   worker:
+    job:
+      kube:
+        namespace: ${JOB_KUBE_NAMESPACE:jobs}
     version: ${AIRBYTE_VERSION}
   version: ${AIRBYTE_VERSION}
 

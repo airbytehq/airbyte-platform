@@ -27,19 +27,21 @@ import {
   INCREMENTAL_SYNC_USER_INPUT_DATE_FORMAT,
   LARGE_DURATION_OPTIONS,
   SMALL_DURATION_OPTIONS,
-  StreamPathFn,
+  AnyDeclarativeStreamPathFn,
   builderIncrementalSyncToManifest,
   interpolateConfigKey,
+  StreamId,
 } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { LOCKED_INPUT_BY_INCREMENTAL_FIELD_NAME, useGetUniqueKey } from "../useLockedInputs";
+import { StreamFieldPath } from "../utils";
 
 interface IncrementalSectionProps {
-  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
-  currentStreamIndex: number;
+  streamFieldPath: AnyDeclarativeStreamPathFn | CreationRequesterPathFn;
+  streamId: StreamId;
 }
 
-export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, currentStreamIndex }) => {
+export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFieldPath, streamId }) => {
   const { formatMessage } = useIntl();
   const filterMode = useBuilderWatch(streamFieldPath("incrementalSync.filter_mode"));
   const getExistingOrUniqueKey = useGetUniqueKey();
@@ -49,7 +51,7 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
       docLink={links.connectorBuilderIncrementalSync}
       label={label}
       tooltip={formatMessage({ id: "connectorBuilder.incremental.tooltip" })}
-      labelAction={<AssistButton assistKey="incremental_sync" streamNum={currentStreamIndex} />}
+      labelAction={<AssistButton assistKey="incremental_sync" streamId={streamId} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("incrementalSync"),
@@ -83,11 +85,15 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
           manifestToBuilder: manifestIncrementalSyncToBuilder,
         },
       }}
-      copyConfig={{
-        path: streamFieldPath("incrementalSync"),
-        currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        streamId.type === "stream"
+          ? {
+              path: streamFieldPath("incrementalSync") as StreamFieldPath,
+              currentStreamIndex: streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       <CursorField streamFieldPath={streamFieldPath} />
       <CursorDatetimeFormatField streamFieldPath={streamFieldPath} />
@@ -345,7 +351,11 @@ export const IncrementalSection: React.FC<IncrementalSectionProps> = ({ streamFi
 const CURSOR_PATH = "incrementalSync.cursor_field";
 const CURSOR_DATETIME_FORMATS_PATH = "incrementalSync.cursor_datetime_formats";
 
-const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn | CreationRequesterPathFn }) => {
+const CursorField = ({
+  streamFieldPath,
+}: {
+  streamFieldPath: AnyDeclarativeStreamPathFn | CreationRequesterPathFn;
+}) => {
   const {
     streamRead: { data },
   } = useConnectorBuilderTestRead();
@@ -373,7 +383,7 @@ const CursorField = ({ streamFieldPath }: { streamFieldPath: StreamPathFn | Crea
 const CursorDatetimeFormatField = ({
   streamFieldPath,
 }: {
-  streamFieldPath: StreamPathFn | CreationRequesterPathFn;
+  streamFieldPath: AnyDeclarativeStreamPathFn | CreationRequesterPathFn;
 }) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();

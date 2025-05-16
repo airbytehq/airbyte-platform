@@ -59,8 +59,7 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
         mock(SecretsRepositoryReader.class),
         mock(SecretsRepositoryWriter.class),
         mock(SecretPersistenceConfigService.class),
-        mock(MetricClient.class),
-        dataplaneGroupService);
+        mock(MetricClient.class));
     // write workspace table
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
       workspaceService.writeStandardWorkspaceNoSecrets(workspace);
@@ -123,12 +122,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   void listUsersInOrganizationTest() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(MockData.ORGANIZATION_ID_1);
     Assertions.assertEquals(1, userPermissions.size());
-  }
-
-  @Test
-  void listUsersInWorkspaceTest() throws IOException {
-    final List<UserPermission> userPermissions = permissionPersistence.listUsersInWorkspace(MockData.WORKSPACE_ID_1);
-    Assertions.assertEquals(2, userPermissions.size());
   }
 
   @Test

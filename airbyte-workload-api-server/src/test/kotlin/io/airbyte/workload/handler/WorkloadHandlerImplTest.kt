@@ -16,6 +16,7 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.WorkloadLabel
+import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.errors.ConflictException
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
@@ -30,12 +31,16 @@ import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailed
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
+import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadService
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadQueueStats
 import io.airbyte.workload.repository.domain.WorkloadStatus
 import io.airbyte.workload.repository.domain.WorkloadType
+import io.airbyte.workload.services.WorkloadService
+import io.airbyte.workload.signal.ApiSignalSender
+import io.airbyte.workload.signal.SignalSender
 import io.micrometer.core.instrument.Counter
 import io.mockk.Called
 import io.mockk.Runs
@@ -76,11 +81,11 @@ class WorkloadHandlerImplTest {
   fun `verify active statuses doesn't contain terminal statuses`() {
     assertEquals(
       setOf(WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING),
-      WorkloadHandlerImpl.ACTIVE_STATUSES.toSet(),
+      WorkloadService.ACTIVE_STATUSES.toSet(),
     )
-    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.CANCELLED))
-    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.FAILURE))
-    assertFalse(WorkloadHandlerImpl.ACTIVE_STATUSES.contains(WorkloadStatus.SUCCESS))
+    assertFalse(WorkloadService.ACTIVE_STATUSES.contains(WorkloadStatus.CANCELLED))
+    assertFalse(WorkloadService.ACTIVE_STATUSES.contains(WorkloadStatus.FAILURE))
+    assertFalse(WorkloadService.ACTIVE_STATUSES.contains(WorkloadStatus.SUCCESS))
   }
 
   @Test
@@ -117,7 +122,7 @@ class WorkloadHandlerImplTest {
     val workloadLabels = mutableListOf(workloadLabel1, workloadLabel2)
 
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
-    every { workloadRepository.searchByMutexKeyAndStatusInList("mutex-this", WorkloadHandlerImpl.ACTIVE_STATUSES) }.returns(listOf())
+    every { workloadRepository.searchByMutexKeyAndStatusInList("mutex-this", WorkloadService.ACTIVE_STATUSES) }.returns(listOf())
     every { workloadRepository.save(any()) }.returns(
       Fixtures.workload(),
     )
@@ -190,16 +195,19 @@ class WorkloadHandlerImplTest {
     val newWorkload = Fixtures.workload(WORKLOAD_ID)
     every { workloadRepository.existsById(WORKLOAD_ID) }.returns(false)
     every {
-      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any())
     }.answers {}
     every {
-      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
-    }.throws(InvalidStatusTransitionException(workloadIdWithFailedFail))
+      workloadService.failWorkload(workloadIdWithFailedFail, any(), any())
+    }.throws(
+      io.airbyte.workload.services
+        .InvalidStatusTransitionException(workloadIdWithFailedFail),
+    )
     every { workloadRepository.save(any()) }.returns(newWorkload)
     every {
       workloadRepository.searchByMutexKeyAndStatusInList(
         "mutex-this",
-        WorkloadHandlerImpl.ACTIVE_STATUSES,
+        WorkloadService.ACTIVE_STATUSES,
       )
     }.returns(duplWorkloads + listOf(newWorkload))
 
@@ -217,8 +225,8 @@ class WorkloadHandlerImplTest {
       WorkloadPriority.DEFAULT,
     )
     verify {
-      workloadHandler.failWorkload(workloadIdWithFailedFail, any(), any())
-      workloadHandler.failWorkload(workloadIdWithSuccessfulFail, any(), any())
+      workloadService.failWorkload(workloadIdWithFailedFail, any(), any())
+      workloadService.failWorkload(workloadIdWithSuccessfulFail, any(), any())
       workloadRepository.save(
         match {
           it.id == WORKLOAD_ID && it.mutexKey == "mutex-this"
@@ -742,9 +750,10 @@ class WorkloadHandlerImplTest {
   fun `offsetDateTime method should always return current time`() {
     val workloadHandlerImpl =
       WorkloadHandlerImpl(
+        mockk<WorkloadService>(),
         mockk<WorkloadRepository>(),
         mockk<WorkloadQueueRepository>(),
-        mockk<AirbyteApiClient>(),
+        mockk<SignalSender>(),
         mockk<MetricClient>(),
         mockk<FeatureFlagClient>(),
         Fixtures.redeliveryWindow.toJavaDuration(),
@@ -801,15 +810,26 @@ class WorkloadHandlerImplTest {
     private val airbyteApi: AirbyteApiClient = mockk()
     val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
     val signalApi: SignalApi = mockk()
+    val signalSender = ApiSignalSender(airbyteApi, metricClient)
+    val workloadService =
+      spyk(
+        WorkloadService(
+          workloadRepository = workloadRepository,
+          workloadQueueRepository = workloadQueueRepository,
+          signalSender = signalSender,
+          defaultDeadlineValues = DefaultDeadlineValues(),
+        ),
+      )
     const val WORKLOAD_ID = "test"
     const val DATAPLANE_ID = "dataplaneId"
     val redeliveryWindow: Duration = 30.minutes
     val workloadHandler =
       spyk(
         WorkloadHandlerImpl(
+          workloadService = workloadService,
           workloadRepository,
           workloadQueueRepository,
-          airbyteApi,
+          signalSender,
           metricClient,
           featureFlagClient,
           redeliveryWindow.toJavaDuration(),

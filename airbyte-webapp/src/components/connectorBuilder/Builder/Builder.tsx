@@ -4,6 +4,7 @@ import { Range } from "monaco-editor";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { AnyObjectSchema } from "yup";
 
+import { assertNever } from "core/utils/asserts";
 import { removeEmptyProperties } from "core/utils/form";
 import {
   useConnectorBuilderFormState,
@@ -32,11 +33,18 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
     case "components":
       return <ComponentsView />;
     case "dynamic_stream":
-      return <DynamicStreamConfigView key={selectedView.index} streamNum={selectedView.index} />;
+      return <DynamicStreamConfigView key={selectedView.index} streamId={selectedView} scrollToTop={scrollToTop} />;
     case "stream":
-      return <StreamConfigView streamNum={selectedView.index} key={selectedView.index} scrollToTop={scrollToTop} />;
     case "generated_stream":
-      return null;
+      return (
+        <StreamConfigView
+          streamId={selectedView}
+          key={`${selectedView.type}-${selectedView.index}`}
+          scrollToTop={scrollToTop}
+        />
+      );
+    default:
+      assertNever(selectedView);
   }
 }
 

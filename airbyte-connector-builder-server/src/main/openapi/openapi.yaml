@@ -16,7 +16,7 @@ externalDocs:
 servers:
   - url: "http://localhost:80/"
 paths:
-  /v1/contribute/check:
+  /api/v1/connector_builder/contribute/check:
     post:
       tags:
         - connectorBuilderServer
@@ -39,7 +39,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/contribute/generate:
+  /api/v1/connector_builder/contribute/generate:
     post:
       tags:
         - connectorBuilderServer
@@ -62,7 +62,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/stream/read:
+  /api/v1/connector_builder/stream/read:
     post:
       tags:
         - connectorBuilderServer
@@ -85,7 +85,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/manifest/resolve:
+  /api/v1/connector_builder/manifest/resolve:
     post:
       tags:
         - connectorBuilderServer
@@ -108,7 +108,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/manifest/full_resolve:
+  /api/v1/connector_builder/manifest/full_resolve:
     post:
       tags:
         - connectorBuilderServer
@@ -131,7 +131,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/assist/v1/process:
+  /api/v1/connector_builder/assist/process:
     post:
       tags:
         - connectorBuilderServer
@@ -154,7 +154,7 @@ paths:
           $ref: "#/components/responses/ExceptionResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/assist/v1/warm:
+  /api/v1/connector_builder/assist/warm:
     post:
       tags:
         - connectorBuilderServer
@@ -178,12 +178,30 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
-  /v1/health:
+  /api/v1/connector_builder/health:
     get:
       tags:
         - health
       summary: Health Check
       operationId: getHealthCheck
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthCheckRead"
+      # This route is unsecured for external monitoring.
+      security: []
+
+  # this endpoint exists for backwards compatability, specifically with our helm charts
+  # as this endpoint is used by our liveness and readiness checks
+  /v1/health:
+    get:
+      tags:
+        - health
+      summary: Health Check
+      operationId: getHealthCheckDeprecated
       responses:
         "200":
           description: Successful operation

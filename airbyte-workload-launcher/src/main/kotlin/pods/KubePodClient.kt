@@ -11,10 +11,7 @@ import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEO
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.SingleContainerTest
-import io.airbyte.featureflag.SocketTest
 import io.airbyte.metrics.lib.ApmTraceUtils
-import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workers.exception.KubeCommandType
 import io.airbyte.workers.exception.PodType
@@ -23,9 +20,11 @@ import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
 import io.airbyte.workers.pod.PodLabeler
+import io.airbyte.workload.launcher.ArchitectureDecider
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_RESET_OPERATION_NAME
 import io.airbyte.workload.launcher.pipeline.consumer.LauncherInput
+import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ReplicationPodFactory
 import io.fabric8.kubernetes.api.model.Pod
@@ -58,9 +57,10 @@ class KubePodClient(
 
   @Trace(operationName = LAUNCH_REPLICATION_OPERATION_NAME)
   fun launchReplication(
-    replicationInput: ReplicationInput,
+    payload: SyncPayload,
     launcherInput: LauncherInput,
   ) {
+    val replicationInput = payload.input
     val sharedLabels =
       labeler.getSharedLabels(
         workloadId = launcherInput.workloadId,
@@ -71,10 +71,8 @@ class KubePodClient(
         networkSecurityTokens = replicationInput.networkSecurityTokens,
       )
 
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, payload, sharedLabels)
     val enableAsyncProfiler = featureFlagClient.boolVariation(EnableAsyncProfiler, Connection(replicationInput.connectionId))
-    val singleConnectorTest = featureFlagClient.boolVariation(SingleContainerTest, Connection(replicationInput.connectionId))
-    val socketTest = featureFlagClient.boolVariation(SocketTest, Connection(replicationInput.connectionId))
     var pod =
       replicationPodFactory.create(
         podName = kubeInput.podName,
@@ -93,8 +91,7 @@ class KubePodClient(
         isFileTransfer = replicationInput.useFileTransfer,
         workspaceId = replicationInput.workspaceId,
         enableAsyncProfiler = enableAsyncProfiler,
-        singleConnectorTest = singleConnectorTest,
-        socketTest = socketTest,
+        architectureEnvironmentVariables = payload.architectureEnvironmentVariables ?: ArchitectureDecider.buildLegacyEnvironment(),
       )
 
     logger.info { "Launching replication pod: ${kubeInput.podName} (selectors = ${kubeInput.nodeSelectors}) with containers:" }
@@ -122,9 +119,10 @@ class KubePodClient(
 
   @Trace(operationName = LAUNCH_RESET_OPERATION_NAME)
   fun launchReset(
-    replicationInput: ReplicationInput,
+    payload: SyncPayload,
     launcherInput: LauncherInput,
   ) {
+    val replicationInput = payload.input
     val sharedLabels =
       labeler.getSharedLabels(
         workloadId = launcherInput.workloadId,
@@ -134,7 +132,7 @@ class KubePodClient(
         workspaceId = replicationInput.workspaceId,
         networkSecurityTokens = replicationInput.networkSecurityTokens,
       )
-    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, replicationInput, sharedLabels)
+    val kubeInput = mapper.toKubeInput(launcherInput.workloadId, payload, sharedLabels)
 
     var pod =
       replicationPodFactory.createReset(

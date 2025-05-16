@@ -16,10 +16,8 @@ import static org.mockito.Mockito.mock;
 
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.data.services.impls.jooq.OrganizationServiceJooqImpl;
 import io.airbyte.data.services.impls.jooq.WorkspaceServiceJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
@@ -63,7 +61,6 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
   private static final UUID WORKSPACE_ID_3 = UUID.randomUUID();
   private static final UUID DEFAULT_DATAPLANE_GROUP_ID = UUID.randomUUID();
   private WorkspaceService workspaceService;
-  private static DataplaneGroupService dataplaneGroupService;
 
   @BeforeAll
   static void setUpAll() throws SQLException, IOException {
@@ -135,8 +132,6 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         .execute());
 
     new OrganizationServiceJooqImpl(database).writeOrganization(MockData.defaultOrganization());
-
-    dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
   }
 
   @BeforeEach
@@ -153,8 +148,7 @@ class WorkspaceFilterTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        dataplaneGroupService);
+        metricClient);
   }
 
   @Test

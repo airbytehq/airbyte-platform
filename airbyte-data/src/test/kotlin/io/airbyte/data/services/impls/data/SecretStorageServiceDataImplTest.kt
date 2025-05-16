@@ -144,7 +144,7 @@ class SecretStorageServiceDataImplTest {
       )
     val expectedEntity = expectedDomain.toEntity()
 
-    every { secretStorageRepository.save(expectedEntity) } returns expectedEntity
+    every { secretStorageRepository.update(expectedEntity) } returns expectedEntity
 
     val result =
       service.patch(
@@ -156,7 +156,7 @@ class SecretStorageServiceDataImplTest {
     assertEquals(expectedDomain, result)
     verifySequence {
       secretStorageRepository.findById(originalDomain.id.value)
-      secretStorageRepository.save(expectedEntity)
+      secretStorageRepository.update(expectedEntity)
     }
   }
 

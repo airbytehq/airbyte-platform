@@ -114,7 +114,7 @@ open class WorkspaceServiceImpl(
         .organizationId(organizationId)
         .notificationSettings(workspaceCreateRequest.notifications?.toNotificationSettings())
     if (workspaceCreateRequest.regionId != null) {
-      workspaceCreate.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).name
+      workspaceCreate.dataplaneGroupId = dataplaneGroupService.getDataplaneGroup(workspaceCreateRequest.regionId!!).id
     }
 
     val result =
@@ -127,6 +127,7 @@ open class WorkspaceServiceImpl(
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
     return WorkspaceResponseMapper.from(
       result.getOrNull()!!,
+      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
     )
   }
 
@@ -167,7 +168,7 @@ open class WorkspaceServiceImpl(
       }
     if (workspaceUpdateRequest.regionId != null) {
       workspaceUpdate.apply {
-        this.defaultGeography = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).name
+        this.dataplaneGroupId = dataplaneGroupService.getDataplaneGroup(workspaceUpdateRequest.regionId!!).id
       }
     }
 
@@ -179,7 +180,10 @@ open class WorkspaceServiceImpl(
           ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
-    return WorkspaceResponseMapper.from(result.getOrNull()!!)
+    return WorkspaceResponseMapper.from(
+      result.getOrNull()!!,
+      dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
+    )
   }
 
   override fun controllerUpdateWorkspace(
@@ -220,7 +224,7 @@ open class WorkspaceServiceImpl(
           ConfigClientErrorHandler.handleError(it)
         }
     log.debug(HTTP_RESPONSE_BODY_DEBUG_MESSAGE + result)
-    return WorkspaceResponseMapper.from(result.getOrNull()!!)
+    return WorkspaceResponseMapper.from(result.getOrNull()!!, dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name)
   }
 
   override fun controllerGetWorkspace(workspaceId: UUID): Response {
@@ -312,6 +316,9 @@ open class WorkspaceServiceImpl(
     return io.airbyte.server.apis.publicapi.mappers.WorkspacesResponseMapper.from(
       result.getOrNull()!!,
       workspaceIds,
+      result.getOrNull()!!.workspaces.map {
+        dataplaneGroupService.getDataplaneGroup(it.dataplaneGroupId).name
+      },
       includeDeleted,
       limit,
       offset,

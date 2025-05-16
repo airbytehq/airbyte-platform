@@ -323,6 +323,7 @@ export const Preview: StoryObj<React.FC<React.ComponentProps<typeof ConnectorFor
           </div>
         )}
         onSubmit={props.onSubmit}
+        selectedConnectorDefinition={TempConnector}
         selectedConnectorDefinitionSpecification={connectorDefinitionSpecification}
       />
     );

@@ -4,15 +4,16 @@
 
 package io.airbyte.workers.temporal.sync
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.ActorType
+import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
-import io.airbyte.api.client.model.generated.SourceIdRequestBody
+import io.airbyte.commons.helper.DockerImageName
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.featureflag.Connection
-import io.airbyte.featureflag.Context
 import io.airbyte.featureflag.Destination
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.Flag
 import io.airbyte.featureflag.Multi
 import io.airbyte.featureflag.Source
 import io.airbyte.featureflag.SourceType
@@ -21,14 +22,18 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
 import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.airbyte.workers.temporal.sync.GenerateReplicationActivityInputActivity.Companion.toReplicationActivityInput
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.temporal.activity.ActivityInterface
 import io.temporal.activity.ActivityMethod
 import jakarta.inject.Singleton
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
+
+internal val DEFAULT_MAX_HEARTBEAT_SECONDS_BETWEEN_MESSAGES = TimeUnit.HOURS.toSeconds(24)
 
 @ActivityInterface
 interface GenerateReplicationActivityInputActivity {
@@ -54,7 +59,10 @@ interface GenerateReplicationActivityInputActivity {
       refreshSchemaOutput: RefreshSchemaActivityOutput,
       signalInput: String?,
       featureFlags: Map<String, Any> = emptyMap(),
-      heartbeatMaxSecondsBetweenMessages: Long? = TimeUnit.HOURS.toSeconds(24),
+      heartbeatMaxSecondsBetweenMessages: Long? = DEFAULT_MAX_HEARTBEAT_SECONDS_BETWEEN_MESSAGES,
+      supportsRefreshes: Boolean = false,
+      sourceIPCOptions: JsonNode? = null,
+      destinationIPCOptions: JsonNode? = null,
     ) = ReplicationActivityInput(
       sourceId = syncInput.sourceId,
       destinationId = syncInput.destinationId,
@@ -79,6 +87,9 @@ interface GenerateReplicationActivityInputActivity {
       omitFileTransferEnvVar = syncInput.omitFileTransferEnvVar,
       featureFlags = featureFlags,
       heartbeatMaxSecondsBetweenMessages = heartbeatMaxSecondsBetweenMessages,
+      supportsRefreshes = supportsRefreshes,
+      sourceIPCOptions = sourceIPCOptions,
+      destinationIPCOptions = destinationIPCOptions,
     )
   }
 }
@@ -97,8 +108,23 @@ class GenerateReplicationActivityInputActivityImpl(
     taskQueue: String,
     refreshSchemaOutput: RefreshSchemaActivityOutput,
     signalInput: String?,
-  ): ReplicationActivityInput =
-    toReplicationActivityInput(
+  ): ReplicationActivityInput {
+    val heartbeatSeconds = retrieveHeartbeatMaxSeconds(sourceDefinitionId = syncInput.connectionContext.sourceDefinitionId)
+
+    val sourceDef =
+      fetchActorDefinitionVersion(
+        definitionId = syncInput.connectionContext.sourceDefinitionId,
+        actorType = ActorType.SOURCE,
+        dockerImageTag = DockerImageName.extractTag(sourceLauncherConfig.dockerImage),
+      )
+    val destDef =
+      fetchActorDefinitionVersion(
+        definitionId = syncInput.connectionContext.destinationDefinitionId,
+        actorType = ActorType.DESTINATION,
+        dockerImageTag = DockerImageName.extractTag(destinationLauncherConfig.dockerImage),
+      )
+
+    return toReplicationActivityInput(
       syncInput = syncInput,
       jobRunConfig = jobRunConfig,
       sourceLauncherConfig = sourceLauncherConfig,
@@ -107,51 +133,57 @@ class GenerateReplicationActivityInputActivityImpl(
       refreshSchemaOutput = refreshSchemaOutput,
       signalInput = signalInput,
       featureFlags = resolveFeatureFlags(syncInput = syncInput),
-      heartbeatMaxSecondsBetweenMessages = retrieveHeartbeatMaxSecondsBetweenMessages(syncInput = syncInput, airbyteApiClient = airbyteApiClient),
+      heartbeatMaxSecondsBetweenMessages = heartbeatSeconds,
+      supportsRefreshes = destDef?.supportRefreshes ?: false,
+      sourceIPCOptions = sourceDef?.connectorIPCOptions,
+      destinationIPCOptions = destDef?.connectorIPCOptions,
     )
+  }
+
+  private fun retrieveHeartbeatMaxSeconds(sourceDefinitionId: UUID?): Long =
+    runCatching {
+      sourceDefinitionId
+        ?.let { SourceDefinitionIdRequestBody(it) }
+        ?.let { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(it).maxSecondsBetweenMessages }
+        ?: DEFAULT_MAX_HEARTBEAT_SECONDS_BETWEEN_MESSAGES
+    }.onFailure { e ->
+      logger.warn(e) { "Failed to fetch heartbeat config—falling back to $DEFAULT_MAX_HEARTBEAT_SECONDS_BETWEEN_MESSAGES s" }
+    }.getOrDefault(DEFAULT_MAX_HEARTBEAT_SECONDS_BETWEEN_MESSAGES)
+
+  private fun fetchActorDefinitionVersion(
+    definitionId: UUID?,
+    actorType: ActorType,
+    dockerImageTag: String,
+  ) = definitionId
+    ?.let { id ->
+      runCatching {
+        airbyteApiClient.actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(
+          ResolveActorDefinitionVersionRequestBody(
+            actorDefinitionId = id,
+            actorType = actorType,
+            dockerImageTag = dockerImageTag,
+          ),
+        )
+      }.onFailure { e ->
+        logger.warn(e) { "Could not resolve $actorType definition for ID=$id, tag=$dockerImageTag" }
+      }.getOrNull()
+    }
 
   private fun resolveFeatureFlags(syncInput: StandardSyncInput): Map<String, Any> {
-    val context = getFeatureFlagContext(syncInput = syncInput)
-    return replicationFeatureFlags.featureFlags.associate { flag -> flag.key to featureFlagClient.variation(flag, context)!! }
-  }
-
-  private fun retrieveHeartbeatMaxSecondsBetweenMessages(
-    syncInput: StandardSyncInput,
-    airbyteApiClient: AirbyteApiClient,
-  ): Long? =
-    try {
-      val sourceDefinitionId = airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(syncInput.sourceId)).sourceDefinitionId
-      airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(sourceDefinitionId)).maxSecondsBetweenMessages
-    } catch (e: Exception) {
-      logger.warn(e) { "An error occurred while fetch the max seconds between messages for this source. We are using a default of 24 hours" }
-      TimeUnit.HOURS.toSeconds(24)
+    val contexts =
+      listOfNotNull(
+        syncInput.workspaceId?.let(::Workspace),
+        syncInput.connectionId?.let(::Connection),
+        syncInput.sourceId?.let(::Source),
+        syncInput.destinationId?.let(::Destination),
+        syncInput.syncResourceRequirements
+          ?.configKey
+          ?.subType
+          ?.let(::SourceType),
+      )
+    val multiCtx = Multi(contexts)
+    return replicationFeatureFlags.featureFlags.associate { flag ->
+      flag.key to (featureFlagClient.variation(flag, multiCtx)!!)
     }
-
-  private fun getFeatureFlagContext(syncInput: StandardSyncInput): Context {
-    val contexts: MutableList<Context> = mutableListOf()
-    if (syncInput.workspaceId != null) {
-      contexts.add(Workspace(syncInput.workspaceId))
-    }
-    if (syncInput.connectionId != null) {
-      contexts.add(Connection(syncInput.connectionId))
-    }
-    if (syncInput.sourceId != null) {
-      contexts.add(Source(syncInput.sourceId))
-    }
-    if (syncInput.destinationId != null) {
-      contexts.add(Destination(syncInput.destinationId))
-    }
-    if (syncInput.syncResourceRequirements != null &&
-      syncInput.syncResourceRequirements
-        .configKey != null &&
-      syncInput.syncResourceRequirements.configKey.subType != null
-    ) {
-      contexts.add(SourceType(syncInput.syncResourceRequirements.configKey.subType))
-    }
-    return Multi(contexts)
   }
 }
-
-data class ReplicationFeatureFlags(
-  val featureFlags: List<Flag<*>>,
-)

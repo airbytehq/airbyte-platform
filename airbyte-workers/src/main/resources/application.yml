@@ -37,6 +37,7 @@ micronaut:
     enabled: false
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
   activity:
     initial-delay: ${ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS:30}
@@ -112,6 +113,7 @@ airbyte:
   protocol:
     min-version: ${AIRBYTE_PROTOCOL_VERSION_MIN:0.0.0}
     max-version: ${AIRBYTE_PROTOCOL_VERSION_MAX:0.3.0}
+  proxy-object-storage: ${PROXY_OBJECT_STORAGE:false}
   retries:
     complete-failures:
       max-successive: ${SYNC_JOB_RETRIES_COMPLETE_FAILURES_MAX_SUCCESSIVE:5}

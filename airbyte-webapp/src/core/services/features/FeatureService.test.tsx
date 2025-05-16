@@ -59,25 +59,25 @@ describe("Feature Service", () => {
     describe("env variable overwrites", () => {
       beforeEach(() => {
         process.env.REACT_APP_FEATURE_ALLOW_SYNC = "false";
-        process.env.REACT_APP_FEATURE_ALLOW_CHANGE_DATA_GEOGRAPHIES = "true";
+        process.env.REACT_APP_FEATURE_ALLOW_CHANGE_DATAPLANES = "true";
       });
 
       afterEach(() => {
         (process.env.NODE_ENV as string) = "test";
         process.env.REACT_APP_FEATURE_ALLOW_SYNC = undefined;
-        process.env.REACT_APP_FEATURE_ALLOW_CHANGE_DATA_GEOGRAPHIES = undefined;
+        process.env.REACT_APP_FEATURE_ALLOW_CHANGE_DATAPLANES = undefined;
       });
 
       it("should allow overwriting it in dev", () => {
         (process.env.NODE_ENV as string) = "development";
         const getFeature = (feature: FeatureItem) => renderHook(() => useFeature(feature), { wrapper }).result.current;
-        expect(getFeature(FeatureItem.AllowChangeDataGeographies)).toBe(true);
+        expect(getFeature(FeatureItem.AllowChangeDataplanes)).toBe(true);
       });
 
       it("should not overwrite in a non dev environment", () => {
         (process.env.NODE_ENV as string) = "production";
         const getFeature = (feature: FeatureItem) => renderHook(() => useFeature(feature), { wrapper }).result.current;
-        expect(getFeature(FeatureItem.AllowChangeDataGeographies)).toBe(false);
+        expect(getFeature(FeatureItem.AllowChangeDataplanes)).toBe(false);
       });
     });
   });

@@ -15,7 +15,6 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_OAUTH_PARAMETER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTOR_BUILDER_PROJECT;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DECLARATIVE_MANIFEST;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.SCHEMA_MANAGEMENT;
@@ -148,10 +147,7 @@ public class DbConverter {
             Jsons.deserialize(record.get(CONNECTION.RESOURCE_REQUIREMENTS).data(), ResourceRequirements.class))
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
-        .withGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
-            .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
-        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
-
+        .withDataplaneGroupId(record.get(CONNECTION.DATAPLANE_GROUP_ID))
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
@@ -197,9 +193,7 @@ public class DbConverter {
             : Jsons.deserialize(record.get(WORKSPACE.NOTIFICATION_SETTINGS).data(), NotificationSettings.class))
         .withFirstCompletedSync(record.get(WORKSPACE.FIRST_SYNC_COMPLETE))
         .withFeedbackDone(record.get(WORKSPACE.FEEDBACK_COMPLETE))
-        .withDefaultGeography(Optional.ofNullable(record.get(DATAPLANE_GROUP.NAME))
-            .orElseThrow(() -> new IllegalStateException("Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.")))
-        .withDataplaneGroupId(record.get(DATAPLANE_GROUP.ID))
+        .withDataplaneGroupId(record.get(WORKSPACE.DATAPLANE_GROUP_ID))
         .withWebhookOperationConfigs(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS) == null ? null
             : Jsons.deserialize(record.get(WORKSPACE.WEBHOOK_OPERATION_CONFIGS).data()))
         .withOrganizationId(record.get(WORKSPACE.ORGANIZATION_ID))
@@ -555,7 +549,11 @@ public class DbConverter {
         .withSupportState(Enums.toEnum(record.get(ACTOR_DEFINITION_VERSION.SUPPORT_STATE, String.class), SupportState.class).orElseThrow())
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
         .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
-        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER));
+        .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER))
+        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION))
+        .withConnectorIPCOptions(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS).data()));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

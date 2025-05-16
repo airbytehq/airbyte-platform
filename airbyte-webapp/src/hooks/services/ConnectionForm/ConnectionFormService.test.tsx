@@ -65,7 +65,7 @@ describe("ConnectionFormService", () => {
     };
     const { result } = renderHook(useConnectionFormService, {
       wrapper: ({ children }) => (
-        <Wrapper connection={partialConnection} mode="create" refreshSchema={refreshSchema}>
+        <Wrapper connection={partialConnection} refreshSchema={refreshSchema}>
           {children}
         </Wrapper>
       ),
@@ -77,7 +77,7 @@ describe("ConnectionFormService", () => {
   it("should take a full Connection", async () => {
     const { result } = renderHook(useConnectionFormService, {
       wrapper: ({ children }) => (
-        <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+        <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
           {children}
         </Wrapper>
       ),
@@ -90,7 +90,7 @@ describe("ConnectionFormService", () => {
     it("should return an error message if the form is invalid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),
@@ -104,7 +104,7 @@ describe("ConnectionFormService", () => {
     it("should not return an error message if the form is valid and dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),
@@ -116,7 +116,7 @@ describe("ConnectionFormService", () => {
     it("should return an error message if the form is invalid and not dirty", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),
@@ -130,7 +130,7 @@ describe("ConnectionFormService", () => {
     it("should return an error message when given a submit error", () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),
@@ -150,7 +150,7 @@ describe("ConnectionFormService", () => {
     it("should return an error message if the streams field is invalid", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),
@@ -170,7 +170,7 @@ describe("ConnectionFormService", () => {
     it("should not return an error message if the form is valid", async () => {
       const { result } = renderHook(useConnectionFormService, {
         wrapper: ({ children }) => (
-          <Wrapper connection={mockConnection} mode="create" refreshSchema={refreshSchema}>
+          <Wrapper connection={mockConnection} refreshSchema={refreshSchema}>
             {children}
           </Wrapper>
         ),

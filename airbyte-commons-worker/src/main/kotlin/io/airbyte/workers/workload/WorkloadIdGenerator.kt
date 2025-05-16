@@ -18,6 +18,7 @@ import java.util.UUID
  * NOTE: UUIDs are 36 characters.
  */
 @Singleton
+@Deprecated("To delete in favor of io.airbyte.server.helpers.WorkloadIdGenerator once migrated to commands")
 class WorkloadIdGenerator {
   fun generateCheckWorkloadId(
     actorDefinitionId: UUID,

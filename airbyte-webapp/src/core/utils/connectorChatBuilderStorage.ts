@@ -14,7 +14,7 @@ const launchBuilderSchema = z.object({
   name: z.string(),
   stream: z.string(),
   documentation_url: z.string().url(),
-  submit_form: z.boolean().optional(),
+  submit_form: z.union([z.string(), z.boolean()]).optional(),
 });
 
 export type SetUpNewConnectorParams = z.infer<typeof setUpNewConnectorSchema>;

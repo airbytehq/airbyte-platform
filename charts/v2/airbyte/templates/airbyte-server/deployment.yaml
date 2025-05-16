@@ -67,18 +67,22 @@ spec:
           value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.server.debug.remoteDebugPort }},server=y,suspend=n"
         {{- end}}
 
-        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
+        {{- if (or (eq .Values.global.edition "community") (eq .Values.global.edition "enterprise")) }}
         {{- include "airbyte.auth.envs" . | nindent 8 }}
-        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal server"
         {{- end}}
 
+        {{- include "airbyte.auth.jwt.envs" . | nindent 8 }}
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.cluster.envs" . | nindent 8 }}
         {{- include "airbyte.connector.envs" . | nindent 8 }}
+        {{- include "airbyte.customerio.envs" . | nindent 8 }}
         {{- include "airbyte.database.envs" . | nindent 8 }}
         {{- include "airbyte.database.migrations.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.errors.envs" . | nindent 8 }}
+        {{- include "airbyte.jobs.scheduling.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }} 
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
@@ -89,7 +93,14 @@ spec:
         {{- include "airbyte.worker.envs" . | nindent 8 }}
         {{- include "airbyte.workloads.resources.envs" . | nindent 8 }}
 
-        {{- if or (eq .Values.global.edition "enterprise") (eq .Values.global.edition "pro") }}
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE 
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
+
+        {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.auth.instanceAdmin.enterprise.envs" . | nindent 8 }} 
         {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }} 
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
@@ -98,13 +109,18 @@ spec:
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- else if (eq .Values.global.edition "cloud") }}
-        {{- include "airbyte.cloudApi.envs" . | nindent 8 }}
+        {{- include "airbyte.connectorRollout.envs" . | nindent 8 }}
+        {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
+        {{- include "airbyte.redis.envs" . | nindent 8 -}}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.cloud.billing.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.cloud.connectorRollout.envs" . | nindent 8 }}
+        {{- include "airbyte.temporal.cloud.credentials.envs" . | nindent 8 }}
         {{- end}}
 
         # Values from secret

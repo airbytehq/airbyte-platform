@@ -75,5 +75,7 @@ class StreamAttemptMetadataService(
   private fun getAttemptId(
     jobId: Long,
     attemptNumber: Long,
-  ): Long = attemptsRepository.findByJobIdAndAttemptNumber(jobId, attemptNumber).id ?: throw NoSuchElementException()
+  ): Long =
+    attemptsRepository.findByJobIdAndAttemptNumber(jobId, attemptNumber)?.id
+      ?: throw NoSuchElementException("No attempt found for jobId:$jobId and attemptNumber:$attemptNumber")
 }

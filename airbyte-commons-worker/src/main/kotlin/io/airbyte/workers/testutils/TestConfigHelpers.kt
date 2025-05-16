@@ -149,7 +149,7 @@ object TestConfigHelpers {
           DestinationSyncMode.APPEND,
         )
 
-      val streams = listOf<ConfiguredAirbyteStream>(streamOne, streamTwo)
+      val streams = listOf(streamOne, streamTwo)
       catalog.withStreams(streams)
     } else {
       val stream =

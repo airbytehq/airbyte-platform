@@ -35,6 +35,7 @@ micronaut:
   security:
     enabled: false
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   auth:
     control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
     dataplane-client-id: ${DATAPLANE_CLIENT_ID}
@@ -106,6 +107,7 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
+  proxy-object-storage: ${PROXY_OBJECT_STORAGE:false}
   tracking:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}

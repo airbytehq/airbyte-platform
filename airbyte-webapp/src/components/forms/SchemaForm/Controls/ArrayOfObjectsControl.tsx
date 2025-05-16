@@ -48,6 +48,7 @@ export const ArrayOfObjectsControl = ({
     <ControlGroup
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
+      optional={baseProps.optional}
       path={baseProps.name}
       error={error}
       header={baseProps.header}

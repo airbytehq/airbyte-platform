@@ -21,6 +21,11 @@ jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
     connection: mockConnection,
   }),
 }));
+jest.mock("core/services/ui/FormModeContext", () => ({
+  useFormMode: () => ({
+    mode: "create",
+  }),
+}));
 jest.mock("components/connection/ConnectionSync/ConnectionSyncContext", () => ({
   useConnectionSyncContext: () => ({
     syncConnection: jest.fn(),

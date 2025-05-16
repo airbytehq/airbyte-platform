@@ -1,0 +1,32 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.list {
+  list-style: none;
+  padding-top: variables.$spacing-sm;
+  padding-left: variables.$spacing-lg;
+  padding-right: variables.$spacing-lg;
+  border: variables.$border-thin solid colors.$grey-100;
+  border-radius: variables.$border-radius-sm;
+  width: fit-content;
+  font-family: monospace;
+  background-color: colors.$grey-50;
+}
+
+.card {
+  width: 562px;
+}
+
+.cardWrapper {
+  position: relative;
+}
+
+.buttonContainer {
+  position: absolute;
+  bottom: 0;
+  right: 36px;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: variables.$spacing-md;
+}

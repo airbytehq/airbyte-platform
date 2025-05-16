@@ -124,6 +124,7 @@ class ReplicationInputHydratorTest {
               null,
               null,
               null,
+              null,
               null))));
   private static final ConnectionState CONNECTION_STATE_RESPONSE = Jsons.deserialize(String
       .format("""
@@ -276,6 +277,9 @@ class ReplicationInputHydratorTest {
         false,
         false,
         Map.of(),
+        null,
+        false,
+        null,
         null);
   }
 
@@ -454,12 +458,12 @@ class ReplicationInputHydratorTest {
     if (withRefresh) {
       when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
-              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
-              null, null));
+              null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null, null,
+              null));
     } else {
       when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
           .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false,
-              null, null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
+              null, null, null, null, null, null, null, null, null, null, null, null, null, SchemaChangeBackfillPreference.ENABLED, null,
               null, null));
     }
   }
@@ -467,27 +471,30 @@ class ReplicationInputHydratorTest {
   private void mockRefresh() throws IOException {
     when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
         true,
-        false));
+        false,
+        false, null));
   }
 
   private void mockNonRefresh() throws IOException {
     when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
-            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
 
     when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
         UUID.randomUUID(),
         "dockerRepo",
         "dockerTag",
         false,
-        false));
+        false,
+        false,
+        null));
   }
 
 }

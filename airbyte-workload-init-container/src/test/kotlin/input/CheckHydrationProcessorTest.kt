@@ -108,13 +108,12 @@ class CheckHydrationProcessorTest {
 
     val workload =
       Workload(
-        WORKLOAD_ID,
-        listOf(),
-        "inputPayload",
-        "logPath",
-        "geography",
-        WorkloadType.CHECK,
-        UUID.randomUUID(),
+        id = WORKLOAD_ID,
+        labels = listOf(),
+        inputPayload = "inputPayload",
+        logPath = "logPath",
+        type = WorkloadType.CHECK,
+        autoId = UUID.randomUUID(),
       )
   }
 }

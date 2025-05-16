@@ -53,6 +53,24 @@ Renders the storage.bucket.activityPayload environment variable
 {{- end }}
 
 {{/*
+Renders the global.storage.bucket.auditLogging value
+*/}}
+{{- define "airbyte.storage.bucket.auditLogging" }}
+    {{- .Values.global.storage.bucket.auditLogging | default "airbyte-storage" }}
+{{- end }}
+
+{{/*
+Renders the storage.bucket.auditLogging environment variable
+*/}}
+{{- define "airbyte.storage.bucket.auditLogging.env" }}
+- name: STORAGE_BUCKET_AUDIT_LOGGING
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: STORAGE_BUCKET_AUDIT_LOGGING
+{{- end }}
+
+{{/*
 Renders the global.storage.bucket.log value
 */}}
 {{- define "airbyte.storage.bucket.log" }}
@@ -343,11 +361,11 @@ Renders the global.storage.minio.s3PathStyleAccess value
 Renders the storage.minio.s3PathStyleAccess environment variable
 */}}
 {{- define "airbyte.storage.minio.s3PathStyleAccess.env" }}
-- name: S3_PATH_STYLE
+- name: S3_PATH_STYLE_ACCESS
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: S3_PATH_STYLE
+      key: S3_PATH_STYLE_ACCESS
 {{- end }}
 
 {{/*
@@ -356,6 +374,7 @@ Renders the set of all storage environment variables
 {{- define "airbyte.storage.envs" }}
 {{- include "airbyte.storage.type.env" . }}
 {{- include "airbyte.storage.bucket.activityPayload.env" . }}
+{{- include "airbyte.storage.bucket.auditLogging.env" . }}
 {{- include "airbyte.storage.bucket.log.env" . }}
 {{- include "airbyte.storage.bucket.state.env" . }}
 {{- include "airbyte.storage.bucket.workloadOutput.env" . }}
@@ -392,6 +411,7 @@ Renders the set of all storage config map variables
 {{- define "airbyte.storage.configVars" }}
 STORAGE_TYPE: {{ include "airbyte.storage.type" . | quote }}
 STORAGE_BUCKET_ACTIVITY_PAYLOAD: {{ include "airbyte.storage.bucket.activityPayload" . | quote }}
+STORAGE_BUCKET_AUDIT_LOGGING: {{ include "airbyte.storage.bucket.auditLogging" . | quote }}
 STORAGE_BUCKET_LOG: {{ include "airbyte.storage.bucket.log" . | quote }}
 STORAGE_BUCKET_STATE: {{ include "airbyte.storage.bucket.state" . | quote }}
 STORAGE_BUCKET_WORKLOAD_OUTPUT: {{ include "airbyte.storage.bucket.workloadOutput" . | quote }}
@@ -406,7 +426,7 @@ GOOGLE_APPLICATION_CREDENTIALS: {{ include "airbyte.storage.gcs.credentialsJsonP
 
 {{- if eq $opt "minio" }}
 MINIO_ENDPOINT: {{ include "airbyte.storage.minio.endpoint" . | quote }}
-S3_PATH_STYLE: {{ include "airbyte.storage.minio.s3PathStyleAccess" . | quote }}
+S3_PATH_STYLE_ACCESS: {{ include "airbyte.storage.minio.s3PathStyleAccess" . | quote }}
 {{- end }}
 
 {{- if eq $opt "s3" }}

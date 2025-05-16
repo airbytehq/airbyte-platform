@@ -81,7 +81,7 @@ open class TagsController(
       workspaceId.toString(),
       Scope.WORKSPACE,
       userId,
-      PermissionType.WORKSPACE_EDITOR,
+      PermissionType.WORKSPACE_READER,
     )
 
     val tag =

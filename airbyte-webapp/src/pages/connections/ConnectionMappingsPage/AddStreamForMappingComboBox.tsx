@@ -10,14 +10,14 @@ import { FloatLayout } from "components/ui/ListBox/FloatLayout";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 
 import styles from "./AddStreamForMappingComboBox.module.scss";
 import { getKeyForStream, getStreamDescriptorForKey, useMappingContext } from "./MappingContext";
 import { useGetStreamsForNewMapping } from "./useGetStreamsForNewMappings";
 
 export const AddStreamForMappingComboBox: React.FC<{ secondary?: boolean }> = ({ secondary = false }) => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const [selectedStream, setSelectedStream] = useState<string | undefined>(undefined);
   const [query, setQuery] = useState<string>("");
   const streamsToList = useGetStreamsForNewMapping();

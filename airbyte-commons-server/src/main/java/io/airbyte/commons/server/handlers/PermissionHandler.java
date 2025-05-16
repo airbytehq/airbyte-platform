@@ -7,7 +7,6 @@ package io.airbyte.commons.server.handlers;
 import io.airbyte.api.model.generated.PermissionCheckRead;
 import io.airbyte.api.model.generated.PermissionCheckRead.StatusEnum;
 import io.airbyte.api.model.generated.PermissionCheckRequest;
-import io.airbyte.api.model.generated.PermissionCreate;
 import io.airbyte.api.model.generated.PermissionDeleteUserFromWorkspaceRequestBody;
 import io.airbyte.api.model.generated.PermissionIdRequestBody;
 import io.airbyte.api.model.generated.PermissionRead;
@@ -21,20 +20,21 @@ import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
+import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.persistence.PermissionPersistence;
+import io.airbyte.data.services.PermissionDao;
 import io.airbyte.data.services.PermissionRedundantException;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -42,8 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * PermissionHandler, provides basic CRUD operation access for permissions. Some are migrated from
- * Cloud PermissionHandler {@link io.airbyte.cloud.server.handlers.PermissionHandler}.
+ * PermissionHandler, provides basic CRUD operation access for permissions.
  */
 @Singleton
 public class PermissionHandler {
@@ -52,17 +51,17 @@ public class PermissionHandler {
   private final Supplier<UUID> uuidGenerator;
   private final PermissionPersistence permissionPersistence;
   private final WorkspaceService workspaceService;
-  private final PermissionService permissionService;
+  private final PermissionDao permissionDao;
 
   public PermissionHandler(
                            final PermissionPersistence permissionPersistence,
                            final WorkspaceService workspaceService,
                            @Named("uuidGenerator") final Supplier<UUID> uuidGenerator,
-                           final PermissionService permissionService) {
+                           final PermissionDao permissionDao) {
     this.uuidGenerator = uuidGenerator;
     this.permissionPersistence = permissionPersistence;
     this.workspaceService = workspaceService;
-    this.permissionService = permissionService;
+    this.permissionDao = permissionDao;
   }
 
   /**
@@ -71,39 +70,50 @@ public class PermissionHandler {
    * @param permissionCreate The new permission.
    * @return The created permission.
    * @throws IOException if unable to retrieve the existing permissions.
-   * @throws ConfigNotFoundException if unable to build the response.
    * @throws JsonValidationException if unable to validate the existing permission data.
    */
-  public PermissionRead createPermission(final PermissionCreate permissionCreate)
-      throws IOException, JsonValidationException {
+  public Permission createPermission(final Permission permissionCreate)
+      throws IOException, JsonValidationException, PermissionRedundantException {
 
     // INSTANCE_ADMIN permissions are only created in special cases, so we block them here.
-    if (permissionCreate.getPermissionType().equals(PermissionType.INSTANCE_ADMIN)) {
+    if (permissionCreate.getPermissionType().equals(Permission.PermissionType.INSTANCE_ADMIN)) {
       throw new JsonValidationException("Cannot create INSTANCE_ADMIN permission record.");
     }
 
-    final Optional<PermissionRead> existingPermission = getExistingPermission(permissionCreate);
-    if (existingPermission.isPresent()) {
-      return existingPermission.get();
+    if (permissionCreate.getPermissionType().equals(Permission.PermissionType.DATAPLANE)) {
+      throw new JsonValidationException("Cannot create DATAPLANE_ADMIN permission record.");
     }
 
-    final UUID permissionId = permissionCreate.getPermissionId() != null ? permissionCreate.getPermissionId() : uuidGenerator.get();
-
-    final Permission permission = new Permission()
-        .withPermissionId(permissionId)
-        .withPermissionType(Enums.convertTo(permissionCreate.getPermissionType(), Permission.PermissionType.class))
-        .withUserId(permissionCreate.getUserId())
-        .withWorkspaceId(permissionCreate.getWorkspaceId())
-        .withOrganizationId(permissionCreate.getOrganizationId());
-
-    try {
-      return buildPermissionRead(permissionService.createPermission(permission));
-    } catch (final PermissionRedundantException e) {
-      throw new ConflictException(e.getMessage(), e);
+    // Look for an existing permission.
+    final List<Permission> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId());
+    for (final Permission p : existingPermissions) {
+      if (checkPermissionsAreEqual(permissionCreate, p)) {
+        return p;
+      }
     }
+
+    if (permissionCreate.getPermissionId() == null) {
+      permissionCreate.setPermissionId(uuidGenerator.get());
+    }
+
+    return permissionDao.createPermission(permissionCreate);
   }
 
-  private Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
+  public void grantInstanceAdmin(final UUID userId) throws PermissionRedundantException {
+    permissionDao.createPermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN));
+  }
+
+  public void createDataplane(final UUID userId) throws PermissionRedundantException {
+    permissionDao.createPermission(new Permission()
+        .withPermissionId(uuidGenerator.get())
+        .withUserId(userId)
+        .withPermissionType(Permission.PermissionType.DATAPLANE));
+  }
+
+  public Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
     final Optional<Permission> permission =
         permissionPersistence.getPermission(permissionId);
     if (permission.isEmpty()) {
@@ -126,20 +136,7 @@ public class PermissionHandler {
         .organizationId(permission.getOrganizationId());
   }
 
-  private Optional<PermissionRead> getExistingPermission(final PermissionCreate permissionCreate) throws IOException {
-    final List<PermissionRead> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId()).stream()
-        .map(PermissionHandler::buildPermissionRead)
-        .filter(permission -> checkPermissionsAreEqual(permission, permissionCreate))
-        .sorted(Comparator.comparing(PermissionRead::getPermissionId))
-        .collect(Collectors.toList());
-
-    if (existingPermissions.isEmpty()) {
-      return Optional.empty();
-    }
-    return Optional.of(existingPermissions.get(0));
-  }
-
-  private boolean checkPermissionsAreEqual(final PermissionRead permission, final PermissionCreate permissionCreate) {
+  private boolean checkPermissionsAreEqual(final Permission permission, final Permission permissionCreate) {
     if (!permission.getPermissionType().equals(permissionCreate.getPermissionType())) {
       return false;
     }
@@ -167,7 +164,7 @@ public class PermissionHandler {
    * @throws ConfigNotFoundException if unable to get the permissions.
    * @throws JsonValidationException if unable to get the permissions.
    */
-  public PermissionRead getPermission(final PermissionIdRequestBody permissionIdRequestBody)
+  public PermissionRead getPermissionRead(final PermissionIdRequestBody permissionIdRequestBody)
       throws ConfigNotFoundException, IOException {
     return buildPermissionRead(permissionIdRequestBody.getPermissionId());
   }
@@ -207,7 +204,7 @@ public class PermissionHandler {
         .withWorkspaceId(existingPermission.getWorkspaceId()) // cannot be updated
         .withUserId(existingPermission.getUserId()); // cannot be updated
     try {
-      permissionService.updatePermission(updatedPermission);
+      permissionDao.updatePermission(updatedPermission);
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
@@ -223,7 +220,7 @@ public class PermissionHandler {
    * @throws IOException if unable to check the permission.
    */
   public PermissionCheckRead checkPermissions(final PermissionCheckRequest permissionCheckRequest) throws IOException {
-    final List<PermissionRead> userPermissions = listPermissionsByUser(permissionCheckRequest.getUserId()).getPermissions();
+    final List<PermissionRead> userPermissions = permissionReadListForUser(permissionCheckRequest.getUserId()).getPermissions();
 
     final boolean anyMatch =
         userPermissions.stream().anyMatch(userPermission -> Exceptions.toRuntime(() -> checkPermissions(permissionCheckRequest, userPermission)));
@@ -365,21 +362,6 @@ public class PermissionHandler {
   }
 
   /**
-   * Lists the permissions for a workspace.
-   *
-   * @param workspaceId The workspace identifier.
-   * @return The permissions for the given workspace.
-   * @throws IOException if unable to retrieve the permissions for the user.
-   * @throws JsonValidationException if unable to retrieve the permissions for the user.
-   */
-  public PermissionReadList listPermissionsByWorkspaceId(final UUID workspaceId) throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionByWorkspace(workspaceId);
-    return new PermissionReadList().permissions(permissions.stream()
-        .map(PermissionHandler::buildPermissionRead)
-        .collect(Collectors.toList()));
-  }
-
-  /**
    * Lists the permissions by user.
    *
    * @param userId The user ID.
@@ -387,11 +369,15 @@ public class PermissionHandler {
    * @throws IOException if unable to retrieve the permissions for the user.
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
-  public PermissionReadList listPermissionsByUser(final UUID userId) throws IOException {
+  public PermissionReadList permissionReadListForUser(final UUID userId) throws IOException {
     final List<Permission> permissions = permissionPersistence.listPermissionsByUser(userId);
     return new PermissionReadList().permissions(permissions.stream()
         .map(PermissionHandler::buildPermissionRead)
         .collect(Collectors.toList()));
+  }
+
+  public List<Permission> listPermissionsForUser(final UUID userId) throws IOException {
+    return permissionPersistence.listPermissionsByUser(userId);
   }
 
   /**
@@ -418,7 +404,7 @@ public class PermissionHandler {
    */
   public void deletePermission(final PermissionIdRequestBody permissionIdRequestBody) {
     try {
-      permissionService.deletePermission(permissionIdRequestBody.getPermissionId());
+      permissionDao.deletePermission(permissionIdRequestBody.getPermissionId());
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
@@ -439,10 +425,46 @@ public class PermissionHandler {
         .toList();
 
     try {
-      permissionService.deletePermissions(userWorkspacePermissionIds);
+      permissionDao.deletePermissions(userWorkspacePermissionIds);
     } catch (final RemoveLastOrgAdminPermissionException e) {
       throw new ConflictException(e.getMessage(), e);
     }
+  }
+
+  public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
+    return permissionPersistence.listUsersInOrganization(organizationId);
+  }
+
+  public List<UserPermission> listInstanceAdminUsers() throws IOException {
+    return permissionPersistence.listInstanceAdminUsers();
+  }
+
+  public List<UserPermission> listPermissionsForOrganization(final UUID organizationId) throws IOException {
+    return permissionPersistence.listPermissionsForOrganization(organizationId);
+  }
+
+  public int countInstanceEditors() {
+    final Set<Permission.PermissionType> editorRoles =
+        Set.of(Permission.PermissionType.ORGANIZATION_EDITOR, Permission.PermissionType.ORGANIZATION_ADMIN,
+            Permission.PermissionType.ORGANIZATION_RUNNER,
+            Permission.PermissionType.WORKSPACE_EDITOR, Permission.PermissionType.WORKSPACE_OWNER, Permission.PermissionType.WORKSPACE_ADMIN,
+            Permission.PermissionType.WORKSPACE_RUNNER);
+
+    return permissionDao.listPermissions().stream()
+        .filter(p -> editorRoles.contains(p.getPermissionType()))
+        .map(Permission::getUserId)
+        .collect(Collectors.toSet())
+        .size();
+  }
+
+  public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
+      throws IOException {
+    return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
+  }
+
+  public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId)
+      throws IOException {
+    return permissionPersistence.findPermissionTypeForUserAndOrganization(organizationId, authUserId);
   }
 
 }

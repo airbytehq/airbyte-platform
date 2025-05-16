@@ -11,6 +11,7 @@ dependencies {
   implementation(libs.bundles.jackson)
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
+  implementation(project(":oss:airbyte-featureflag"))
   implementation(libs.airbyte.protocol)
 }
 

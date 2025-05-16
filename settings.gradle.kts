@@ -2,11 +2,6 @@
 // NOTE: this settings is only discovered when running from oss/build.gradle
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-import java.net.HttpURLConnection
-import java.net.URI
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.DurationUnit.MILLISECONDS
-
 pluginManagement {
   repositories {
     maven {
@@ -45,7 +40,7 @@ buildscript {
 // Configure the gradle enterprise plugin to enable build scans. Enabling the plugin at the top of the settings file allows the build scan to record
 // as much information as possible.
 plugins {
-  id("com.gradle.develocity") version "3.19.2"
+  id("com.gradle.develocity") version "4.0.1"
   id("com.gradle.common-custom-user-data-gradle-plugin") version "2.1"
   id("com.github.burrunan.s3-build-cache") version "1.8.1"
 }
@@ -53,28 +48,15 @@ plugins {
 val isCiServer = System.getenv().containsKey("CI")
 
 develocity {
-  server = "http://gradle.internal.airbyte.io"
-  allowUntrustedServer = true
   buildScan {
-    publishing.onlyIf { urlAccessible() }
+    termsOfUseUrl = "https://gradle.com/help/legal-terms-of-use"
+    termsOfUseAgree = "yes"
     uploadInBackground = !isCiServer // Disable async upload so that the containers doesn't terminate the upload
     buildScanPublished {
       file("scan-journal.log").writeText("${java.util.Date()} - $buildScanId - ${buildScanUri}\n")
     }
   }
 }
-
-private fun urlAccessible(url: String = "http://gradle.internal.airbyte.io"): Boolean =
-  runCatching {
-    val connection =
-      (URI(url).toURL().openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = 2.seconds.toInt(MILLISECONDS)
-        readTimeout = 2.seconds.toInt(MILLISECONDS)
-      }
-
-    (connection.responseCode in 200..299)
-  }.getOrDefault(false)
 
 buildCache {
   local {
@@ -142,6 +124,7 @@ include(":oss:airbyte-commons-temporal")
 include(":oss:airbyte-commons-temporal-core")
 include(":oss:airbyte-commons-converters")
 include(":oss:airbyte-commons-worker")
+include(":oss:airbyte-commons-workload")
 include(":oss:airbyte-config:config-persistence")
 include(":oss:airbyte-config:config-secrets")
 include(":oss:airbyte-featureflag")
@@ -208,6 +191,7 @@ project(":oss:airbyte-commons-temporal").projectDir = file("airbyte-commons-temp
 project(":oss:airbyte-commons-temporal-core").projectDir = file("airbyte-commons-temporal-core")
 project(":oss:airbyte-commons-converters").projectDir = file("airbyte-commons-converters")
 project(":oss:airbyte-commons-worker").projectDir = file("airbyte-commons-worker")
+project(":oss:airbyte-commons-workload").projectDir = file("airbyte-commons-workload")
 project(":oss:airbyte-config:config-persistence").projectDir = file("airbyte-config/config-persistence")
 project(":oss:airbyte-config:config-secrets").projectDir = file("airbyte-config/config-secrets")
 project(":oss:airbyte-csp-check").projectDir = file("airbyte-csp-check")

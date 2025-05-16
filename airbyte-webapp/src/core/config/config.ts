@@ -5,10 +5,8 @@ export const config: AirbyteWebappConfig = {
   hockeyStackApiKey: process.env.REACT_APP_HOCKEYSTACK_API_KEY,
   segmentToken: process.env.REACT_APP_SEGMENT_TOKEN,
   apiUrl: process.env.REACT_APP_API_URL ?? "/api",
-  cloudApiUrl: process.env.REACT_APP_CLOUD_API_URL ?? "/cloud",
-  connectorBuilderApiUrl: process.env.REACT_APP_CONNECTOR_BUILDER_API_URL ?? "/connector-builder-api",
+  connectorBuilderApiUrl: process.env.REACT_APP_CONNECTOR_BUILDER_API_URL ?? "",
   version: process.env.REACT_APP_VERSION,
-  cloudPublicApiUrl: process.env.REACT_APP_CLOUD_PUBLIC_API_URL ?? "/cloud_api",
   zendeskKey: process.env.REACT_APP_ZENDESK_KEY,
   launchDarkly: process.env.REACT_APP_LAUNCHDARKLY_KEY,
   datadog: {

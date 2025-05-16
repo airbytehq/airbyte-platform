@@ -40,7 +40,7 @@ class CustomerIoEmailConfigFetcherTest {
     final String email = "em@il.com";
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
         .thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", true, UUID.randomUUID(), email, null, null, null, null,
-            null, null, null, null, null, UUID.randomUUID(), null, null, null));
+            null, null, null, null, null, null, null, null));
 
     CustomerIoEmailConfig customerIoEmailConfig = cloudCustomerIoEmailConfigFetcher.fetchConfig(connectionId);
     assertEquals(email, customerIoEmailConfig.getTo());

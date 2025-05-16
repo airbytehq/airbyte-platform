@@ -105,6 +105,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.temporal.testing)
   testImplementation(libs.json.path)
+  testImplementation(libs.json.smart)
   testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
   testImplementation(libs.postgresql)

@@ -31,8 +31,8 @@ class RegionResponseMapperTest {
     assertEquals(dataplaneGroup.organizationId, mapped.organizationId)
     assertEquals(dataplaneGroup.enabled, mapped.enabled)
 
-    val expectedInstant = Instant.ofEpochSecond(now).toString()
-    assertEquals(expectedInstant, mapped.createdAt)
-    assertEquals(expectedInstant, mapped.updatedAt)
+    val expectedInstant = Instant.ofEpochSecond(now)
+    assertEquals(expectedInstant, Instant.parse(mapped.createdAt))
+    assertEquals(expectedInstant, Instant.parse(mapped.updatedAt))
   }
 }

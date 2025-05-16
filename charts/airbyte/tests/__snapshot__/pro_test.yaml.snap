@@ -104,7 +104,6 @@ manifest should match snapshot:
       CONFIG_ROOT: /configs
       CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.35.15.001
       CONNECTOR_BUILDER_API_HOST: RELEASE-NAME-airbyte-connector-builder-server-svc:80
-      CONNECTOR_BUILDER_API_URL: /connector-builder-api
       CONTAINER_ORCHESTRATOR_ENABLED: "true"
       CONTAINER_ORCHESTRATOR_IMAGE: ""
       CRON_MICRONAUT_ENVIRONMENTS: control-plane

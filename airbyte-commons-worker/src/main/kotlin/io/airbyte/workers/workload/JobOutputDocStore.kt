@@ -4,6 +4,8 @@
 
 package io.airbyte.workers.workload
 
+import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.model.generated.WorkloadOutputWriteRequest
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.config.ConnectorJobOutput
@@ -13,15 +15,22 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workers.workload.exception.DocStoreAccessException
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
 
+// TODO The read logic has been duplicated in airbyte-server/src/main/kotlin/io.airbyte.workload.output.WorkloadOutputDocStore
+// TODO Delete the reader code once we have transitioned to using commands
+@Deprecated("Once transitioned to commands, we should use the API version instead of direct DocStore for read access")
 @Singleton
 class JobOutputDocStore(
   @Named("outputDocumentStore") val storageClient: StorageClient,
+  val airbyteApiClient: AirbyteApiClient,
   val metricClient: MetricClient,
+  @Value("\${airbyte.proxy-object-storage}") val proxyObjectStorage: Boolean,
 ) {
+  // reader code
   @Throws(DocStoreAccessException::class)
   fun read(workloadId: String): Optional<ConnectorJobOutput> {
     val output: String? =
@@ -32,14 +41,6 @@ class JobOutputDocStore(
       }
 
     return Optional.ofNullable(output?.let { Jsons.deserialize(it, ConnectorJobOutput::class.java) })
-  }
-
-  @Throws(DocStoreAccessException::class)
-  fun write(
-    workloadId: String,
-    connectorJobOutput: ConnectorJobOutput,
-  ) {
-    writeOutput(workloadId = workloadId, output = connectorJobOutput)
   }
 
   @Throws(DocStoreAccessException::class)
@@ -56,15 +57,46 @@ class JobOutputDocStore(
     return Optional.ofNullable(output?.let { Jsons.deserialize(it, ReplicationOutput::class.java) })
   }
 
+  // writer code
+  @Throws(DocStoreAccessException::class)
+  fun write(
+    workloadId: String,
+    connectorJobOutput: ConnectorJobOutput,
+  ) {
+    if (proxyObjectStorage) {
+      writeOutputViaServerProxy(workloadId, connectorJobOutput)
+    } else {
+      writeOutputDirectlyToObjectStorage(workloadId = workloadId, output = connectorJobOutput)
+    }
+  }
+
   @Throws(DocStoreAccessException::class)
   fun writeSyncOutput(
     workloadId: String,
     connectorJobOutput: ReplicationOutput,
   ) {
-    writeOutput(workloadId = workloadId, output = connectorJobOutput)
+    if (proxyObjectStorage) {
+      writeOutputViaServerProxy(workloadId, connectorJobOutput)
+    } else {
+      writeOutputDirectlyToObjectStorage(workloadId = workloadId, output = connectorJobOutput)
+    }
   }
 
-  private fun writeOutput(
+  private fun writeOutputViaServerProxy(
+    workloadId: String,
+    output: Any,
+  ) {
+    try {
+      val request = WorkloadOutputWriteRequest(workloadId, Jsons.serialize(output))
+      airbyteApiClient.workloadOutputApi.writeWorkloadOutput(request)
+      metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_WRITE, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "success")))
+    } catch (e: Exception) {
+      metricClient.count(metric = OssMetricsRegistry.JOB_OUTPUT_WRITE, attributes = arrayOf(MetricAttribute(MetricTags.STATUS, "error")))
+      throw DocStoreAccessException("Unable to write output for $workloadId", e)
+    }
+  }
+
+  private fun writeOutputDirectlyToObjectStorage(
     workloadId: String,
     output: Any,
   ) {

@@ -3136,6 +3136,29 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/source_oauths/get_embedded_consent_url:
+    post:
+      tags:
+        - source_oauth
+      summary: Given a source connector definition ID, return the URL to the consent screen where to redirect the user to. This endpoint is specific for the embedded widget, and does not allow configuring the oAuthInputConfiguration for security purposes.
+      operationId: getEmbeddedSourceOAuthConsent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmbeddedSourceOauthConsentRequest"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthConsentRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/connector_builder_projects/get_oauth_consent_url:
     post:
       tags:
@@ -3512,6 +3535,21 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebBackendGeographiesListResult"
+  /v1/web_backend/config:
+    get:
+      summary: Fetch webapp configuration
+      tags:
+        - web_backend
+      operationId: getWebappConfig
+      responses:
+        "200":
+          description: Successfully returned webapp configuration.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WebappConfigResponse"
+        "401":
+          description: Webapp configuration failed.
   /v1/jobs/create:
     post:
       tags:
@@ -4092,29 +4130,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/users/list_by_workspace_id:
-    post:
-      tags:
-        - user
-      summary: List all users in a workspace
-      operationId: listUsersInWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceUserReadList"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
 
   /v1/users/list_access_info_by_workspace_id:
     post:
@@ -4325,6 +4340,67 @@ paths:
       responses:
         "200":
           description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/create:
+    post:
+      tags:
+        - secret_storage
+      summary: Create secret storage
+      operationId: createSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/list:
+    post:
+      tags:
+        - secret_storage
+      summary: List all secret storages for a given scope
+      operationId: listSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/delete:
+    post:
+      tags:
+        - secret_storage
+      summary: Delete secret storage by its id
+      operationId: deleteSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/secret_storage/get:
@@ -5936,6 +6012,394 @@ paths:
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
+  /v1/commands/run/check:
+    post:
+      summary: Run a Check command for a Connector
+      description: >
+        Expected input is an id and either an actor_id to run a check for an existing actor or
+        an actor_definition_id, a workspace_id and a config to validate a config for a given actor definition.
+      tags: [command, internal]
+      operationId: runCheckCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunCheckCommandRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                workspace_id:
+                  type: string
+                  format: uuid
+                actor_id:
+                  type: string
+                  format: uuid
+                actor_definition_id:
+                  type: string
+                  format: uuid
+                config:
+                  type: object
+                job_id:
+                  type: string
+                  description: internal usage
+                attempt_number:
+                  $ref: "#/components/schemas/AttemptNumber"
+                priority:
+                  type: string
+                  description: internal usage
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunCheckCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/run/discover:
+    post:
+      summary: Run a Discover command for a Connector
+      tags: [command, internal]
+      operationId: runDiscoverCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunDiscoverCommandRequest
+              required: [id, actor_id]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                actor_id:
+                  type: string
+                  format: uuid
+                jobId:
+                  type: string
+                  description: internal usage
+                attemptNumber:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                priority:
+                  type: string
+                  description: internal usage
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunDiscoverCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/run/replicate:
+    post:
+      summary: Run a Replicate command for a Connection
+      tags: [command, internal]
+      operationId: runReplicateCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunReplicateCommandRequest
+              required: [id, connection_id, job_id, attempt_number]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                connection_id:
+                  type: string
+                  format: uuid
+                job_id:
+                  type: string
+                  description: internal usage
+                attempt_number:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                applied_catalog_diff:
+                  description: internal usage
+                  $ref: "#/components/schemas/CatalogDiff"
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunReplicateCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/output/check:
+    post:
+      summary: Get the status of a check command
+      tags: [command]
+      operationId: getCheckCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CheckCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CheckCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  message:
+                    type: string
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/discover:
+    post:
+      summary: Get the status of a discover command
+      tags: [command]
+      operationId: getDiscoverCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: DiscoverCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: DiscoverCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
+                  catalogId:
+                    type: string
+                    format: uuid
+                  catalogDiff:
+                    $ref: "#/components/schemas/CatalogDiff"
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/replicate:
+    post:
+      summary: Get the status of a replicate command
+      tags: [command]
+      operationId: getReplicateCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ReplicateCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ReplicateCommandOutputResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                  attempt_summary:
+                    type: object
+                  failures:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/status:
+    post:
+      summary: Get the status of command
+      tags: [command]
+      operationId: getCommandStatus
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CommandStatusRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CommandStatusResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [pending, running, completed, cancelled]
+
+  /v1/commands/get:
+    post:
+      summary: Get the a command record
+      tags: [command, internal]
+      operationId: getCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CommandGetRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CommandGetResponse
+                required:
+                  - id
+                  - workload_id
+                  - command_input
+                  - command_type
+                  - workspace_id
+                  - organization_id
+                  - created_at
+                  - updated_at
+                properties:
+                  id:
+                    type: string
+                  workload_id:
+                    type: string
+                  command_type:
+                    type: string
+                  command_input:
+                    type: object
+                  workspace_id:
+                    type: string
+                    format: uuid
+                  organization_id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+
+  /v1/commands/cancel:
+    post:
+      summary: Get the status of command
+      tags: [command]
+      operationId: cancelCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CancelCommandRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CancelCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/workload_output/write:
+    post:
+      summary: Write the output of a workload
+      tags:
+        - workload_output
+      operationId: writeWorkloadOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: WorkloadOutputWriteRequest
+              required:
+                - workloadId
+                - output
+              properties:
+                workloadId:
+                  type: string
+                output:
+                  type: string
+      responses:
+        "204":
+          description: Successfully wrote output
+
   /v1/dataplane_group/create:
     post:
       summary: Create a dataplane group
@@ -6268,7 +6732,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PartialUserConfigWithSource"
+                $ref: "#/components/schemas/SourceRead"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/list:
@@ -6346,8 +6810,9 @@ paths:
       security: []
       x-sdk-alias: getHealthCheck
       x-sdk-group: Health
-  /public/v1/config_templates:
+  /public/v1/config_templates/sources:
     get:
+      description: List all config templates available to a workspace. This endpoint is only available when Airbyte Embedded is enabled.
       tags:
         - public_config_templates
         - public
@@ -6358,7 +6823,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfigTemplateListResponse"
-          description: List all Applications a User has permission to view.
+          description: List all config templates a User has permission to view.
         "403":
           description: Not allowed
       operationId: publicListConfigTemplate
@@ -6374,6 +6839,7 @@ paths:
           in: query
           required: true
     post:
+      description: Create a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
       requestBody:
         content:
           application/json:
@@ -6390,15 +6856,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ConfigTemplateCreateResponse"
-          description: Create a config template.
+          description: Created a config template.
         "403":
           description: Not allowed
       operationId: publicCreateConfigTemplate
       summary: Create config template
       x-sdk-alias: createConfigTemplate
       x-sdk-group: ConfigTemplates
-  /public/v1/config_templates/{configTemplateId}:
+  /public/v1/config_templates/connections:
+    post:
+      description: Create a connection template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionTemplateCreateRequestBody"
+        required: true
+      tags:
+        - public_connection_templates
+        - public
+        - ConnectionTemplates
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionTemplateCreateResponse"
+          description: Created a connection template.
+        "403":
+          description: Not allowed
+      operationId: publicCreateConnectionTemplate
+      summary: Create connection template
+      x-sdk-alias: createConnectionTemplate
+      x-sdk-group: ConnectionTemplates
+  /public/v1/config_templates/sources/{configTemplateId}:
     patch:
+      description: Edit a config template for an organization. This endpoint is only available when Airbyte Embedded is enabled.
       requestBody:
         content:
           application/json:
@@ -6434,6 +6927,7 @@ paths:
           in: path
           required: true
     get:
+      description: Get a config template. This endpoint is only available when Airbyte Embedded is enabled.
       tags:
         - public_config_templates
         - public
@@ -6971,7 +7465,7 @@ paths:
         required: true
 
   # Dataplanes endpoints
-  /public/v1/regions/{regionId}/dataplanes:
+  /public/v1/dataplanes:
     get:
       tags:
         - public_dataplanes
@@ -7020,15 +7514,8 @@ paths:
       summary: Create a dataplane
       x-sdk-alias: createDataplane
       x-sdk-group: Dataplanes
-    parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
 
-  /public/v1/regions/{regionId}/dataplanes/{dataplaneId}:
+  /public/v1/dataplanes/{dataplaneId}:
     get:
       tags:
         - public_dataplanes
@@ -7098,12 +7585,6 @@ paths:
       x-sdk-group: Dataplanes
       summary: Delete a dataplane
     parameters:
-      - name: regionId
-        schema:
-          type: string
-          format: uuid
-        in: path
-        required: true
       - name: dataplaneId
         schema:
           type: string
@@ -8180,7 +8661,7 @@ paths:
       x-sdk-alias: listConnections
       x-sdk-group: Connections
       summary: List connections
-      x-sdk-entity-operation: Connection#list
+      x-sdk-entity-operation: Connections#read
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to list connections for. Empty list will retrieve all allowed workspaces.
@@ -8979,11 +9460,13 @@ paths:
       x-sdk-alias: updateTag
       x-sdk-group: Tags
 
-  /public/v1/embedded/widget:
+  /public/v1/embedded/widget_token:
     post:
+      description: "Get a token for the embedded widget. This endpoint is only available when Airbyte Embedded is enabled."
       operationId: getEmbeddedWidget
-      summary: Get a token for Airbyte Embedded
+      x-sdk-alias: getEmbeddedWidget
       x-sdk-group: EmbeddedWidget
+      summary: Get a token for Airbyte Embedded
       requestBody:
         content:
           application/json:
@@ -8993,13 +9476,38 @@ paths:
       responses:
         "200":
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: "#/components/schemas/EmbeddedWidgetResponse"
           description: Success
       tags:
         - public
         - embedded_widget
+
+  /v1/service_accounts/token:
+    post:
+      summary: Get an access token for a service account.
+      tags:
+        - service_accounts
+      operationId: getServiceAccountToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
 components:
   securitySchemes:
@@ -9717,8 +10225,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -9754,8 +10263,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -9986,8 +10496,6 @@ components:
           type: boolean
         feedbackDone:
           type: boolean
-        defaultGeography:
-          type: string
         dataplaneGroupId:
           type: string
           format: uuid
@@ -10124,8 +10632,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         notificationsConfig:
           $ref: "#/components/schemas/NotificationsConfig"
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -10311,7 +10820,12 @@ components:
       format: uuid
     DeclarativeManifest:
       x-sdk-component: true
-      x-speakeasy-type-override: any
+      x-speakeasy-type-override: "any"
+      x-speakeasy-terraform-custom-type:
+        imports:
+          - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes
+        schemaType: "jsontypes.NormalizedType{}"
+        valueType: jsontypes.Normalized
       description: Low code CDK manifest JSON object
       type: object
     DeclarativeManifestBaseImageRead:
@@ -10843,6 +11357,7 @@ components:
       required:
         - sourceDefinitionId
         - dockerImageTag
+        - workspaceId
       properties:
         name:
           type: string
@@ -10852,6 +11367,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     SourceDefinitionRead:
       type: object
       required:
@@ -11118,6 +11635,7 @@ components:
       description: The specification for what values are required to configure the sourceDefinition.
       type: object
       example: { user: { type: string } }
+      x-sdk-component: true
     SourceDefinitionSpecificationRead:
       type: object
       required:
@@ -11216,8 +11734,6 @@ components:
           type: string
           format: uuid
         disable_cache:
-          type: boolean
-        notifySchemaChange:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
@@ -11457,7 +11973,8 @@ components:
       type: object
       required:
         - destinationDefinitionId
-        - dockerImageag
+        - workspaceId
+        - dockerImageTag
       properties:
         name:
           type: string
@@ -11467,6 +11984,8 @@ components:
           type: string
         resourceRequirements:
           $ref: "#/components/schemas/ScopedResourceRequirements"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
     DestinationDefinitionRead:
       type: object
       required:
@@ -11522,6 +12041,9 @@ components:
         language:
           description: The language the connector is written in
           type: string
+        supportsDataActivation:
+          description: Whether the connector supports data activation
+          type: boolean
     DestinationDefinitionReadList:
       type: object
       required:
@@ -11791,6 +12313,7 @@ components:
         - supportState
         - isVersionOverrideApplied
         - supportsFileTransfer
+        - supportsDataActivation
       properties:
         dockerRepository:
           type: string
@@ -11814,6 +12337,10 @@ components:
           type: string
         supportsFileTransfer:
           type: boolean
+        supportsDataActivation:
+          type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -11822,6 +12349,7 @@ components:
         - dockerImageTag
         - supportRefreshes
         - supportFileTransfer
+        - supportDataActivation
       properties:
         versionId:
           $ref: "#/components/schemas/ActorDefinitionVersionId"
@@ -11833,6 +12361,13 @@ components:
           type: boolean
         supportFileTransfer:
           type: boolean
+        supportDataActivation:
+          type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
+    ConnectorIPCOptions:
+      description: Connector IPC Options.
+      type: object
     ActorDefinitionBreakingChange:
       type: object
       required:
@@ -12050,8 +12585,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12111,8 +12647,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         nonBreakingChangesPreference:
@@ -12174,8 +12711,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12246,8 +12784,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12309,8 +12848,6 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
-          type: string
         breakingChange:
           type: boolean
         notifySchemaChanges:
@@ -13941,6 +14478,9 @@ components:
             type: string
         destinationSyncMode:
           $ref: "#/components/schemas/DestinationSyncMode"
+        namespace:
+          type: string
+          description: Namespace of the stream.
         primaryKey:
           description: Paths to the fields that will be used as primary key. This field is REQUIRED if `destination_sync_mode` is `*_dedup`. Otherwise it is ignored.
           type: array
@@ -15206,6 +15746,7 @@ components:
       description: A unique identifier for an actor definition.
       type: string
       format: uuid
+      x-sdk-component: true
     ActorDefinitionRequestBody:
       type: object
       additionalProperties: false
@@ -15435,6 +15976,22 @@ components:
                     }
                   }
           $ref: "#/components/schemas/OAuthConfiguration"
+    EmbeddedSourceOauthConsentRequest:
+      type: object
+      required:
+        - sourceDefinitionId
+        - workspaceId
+        - redirectUrl
+      properties:
+        sourceDefinitionId:
+          $ref: "#/components/schemas/SourceDefinitionId"
+        workspaceId:
+          $ref: "#/components/schemas/WorkspaceId"
+        redirectUrl:
+          description: The url to redirect to after getting the user consent
+          type: string
+        sourceId:
+          $ref: "#/components/schemas/SourceId"
     SourceOauthConsentRequest:
       type: object
       required:
@@ -15874,8 +16431,9 @@ components:
           format: uuid
         catalogDiff:
           $ref: "#/components/schemas/CatalogDiff"
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
@@ -16371,6 +16929,36 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         metadata:
           $ref: "#/components/schemas/StreamStatusRateLimitedMetadata"
+    WebappConfigResponse:
+      type: object
+      required:
+        - airbyteVersion
+        - edition
+      properties:
+        edition:
+          type: string
+        datadogApplicationId:
+          type: string
+        datadogClientToken:
+          type: string
+        datadogSite:
+          type: string
+        datadogService:
+          type: string
+        datadogEnv:
+          type: string
+        hockeystackApiKey:
+          type: string
+        keycloakBaseUrl:
+          type: string
+        launchdarklyKey:
+          type: string
+        osanoKey:
+          type: string
+        segmentToken:
+          type: string
+        zendeskKey:
+          type: string
     StreamStatusReadList:
       type: object
       properties:
@@ -16721,6 +17309,35 @@ components:
       properties:
         value:
           type: boolean
+    SecretStorageCreateRequestBody:
+      description: Object representing a secret storage create request
+      required:
+        - descriptor
+        - secretStorageType
+        - config
+        - scope
+        - scopeId
+      properties:
+        descriptor:
+          type: string
+        secretStorageType:
+          $ref: "#/components/schemas/SecretStorageType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        config:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
+    SecretStorageListRequestBody:
+      description: Request body for listing secret storage
+      required:
+        - scopeType
+        - scopeId
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
     CreateOrUpdateSecretsPersistenceConfigRequestBody:
       description: Object representing a secret persistence configuration create/update request
       required:
@@ -16809,6 +17426,15 @@ components:
         - vault
         - aws_secrets_manager
         - azure_key_vault
+    SecretStorageReadList:
+      description: Object representing a list of secret storages
+      required:
+        - secretStorages
+      properties:
+        secretStorages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecretStorageRead"
     SecretStorageRead:
       description: Object representing a secret storage
       required:
@@ -18084,8 +18710,6 @@ components:
       properties:
         name:
           type: string
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18093,11 +18717,8 @@ components:
       type: object
       x-sdk-component: true
       required:
-        - name
         - manifest
       properties:
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18135,6 +18756,7 @@ components:
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
         version:
+          x-speakeasy-terraform-ignore: true
           $ref: "#/components/schemas/ManifestVersion"
 
     CreateDefinitionRequest:
@@ -18250,6 +18872,9 @@ components:
       properties:
         name:
           type: string
+        namespace:
+          type: string
+          description: Namespace of the stream.
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -18302,6 +18927,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: string
         defaultCursorField:
           type: array
           items:
@@ -18464,10 +19091,14 @@ components:
       type: object
       required:
         - dataplane_id
+        - region_id
         - client_id
         - client_secret
       properties:
         dataplane_id:
+          type: string
+          format: UUID
+        region_id:
           type: string
           format: UUID
         client_id:
@@ -18609,7 +19240,6 @@ components:
       required:
         - name
         - organizationId
-        - enabled
       properties:
         name:
           type: string
@@ -18676,9 +19306,12 @@ components:
     DataplaneCreateRequest:
       type: object
       required:
+        - regionId
         - name
-        - enabled
       properties:
+        regionId:
+          type: string
+          format: uuid
         name:
           type: string
         enabled:
@@ -18690,13 +19323,17 @@ components:
     DataplaneCreateResponseBody:
       type: object
       required:
+        - regionId
         - dataplaneId
         - clientId
         - clientSecret
       properties:
         dataplaneId:
           type: string
-          format: UUID
+          format: uuid
+        regionId:
+          type: string
+          format: uuid
         clientId:
           type: string
         clientSecret:
@@ -18762,6 +19399,7 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ConfigTemplateListItem"
+      x-sdk-component: true
     ConfigTemplateList:
       type: object
       required:
@@ -18785,6 +19423,7 @@ components:
           type: string
         icon:
           type: string
+      x-sdk-component: true
     ConfigTemplateRequestBody:
       type: object
       required:
@@ -18846,6 +19485,7 @@ components:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
         partialDefaultConfig:
           type: object
+      x-sdk-component: true
     ListConfigTemplatesRequestBody:
       type: object
       required:
@@ -18859,7 +19499,6 @@ components:
       required:
         - actorDefinitionId
         - partialDefaultConfig
-        - partialUserConfigSpec
         - organizationId
       properties:
         organizationId:
@@ -18871,6 +19510,7 @@ components:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
           $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
     ConfigTemplateSpec:
       type: object
     ConfigTemplateCreateResponse:
@@ -18881,6 +19521,7 @@ components:
         id:
           type: string
           format: uuid
+      x-sdk-component: true
     ConfigTemplateUpdateRequestBody:
       type: object
       required:
@@ -18893,6 +19534,7 @@ components:
           $ref: "#/components/schemas/SourceConfiguration"
         partialUserConfigSpec:
           $ref: "#/components/schemas/SourceConfiguration"
+      x-sdk-component: true
     ConfigTemplateUpdateResponse:
       type: object
       required:
@@ -18901,6 +19543,7 @@ components:
         id:
           type: string
           format: uuid
+      x-sdk-component: true
 
     # PARTIAL USER CONFIGS
     PartialUserConfigRequestBody:
@@ -18999,6 +19642,7 @@ components:
         - partialUserConfigId
         - configTemplateName
         - configTemplateIcon
+        - configTemplateId
       properties:
         partialUserConfigId:
           type: string
@@ -19009,18 +19653,91 @@ components:
         configTemplateIcon:
           type: string
           description: url to icon in connector asset (svg) registry
+        configTemplateId:
+          type: string
+          format: uuid
+          description: config template corresponding to this partial config
     EmbeddedWidgetRequest:
       type: object
       required:
-        - workspaceId
         - allowedOrigin
+        - externalUserId
+        - organizationId
       properties:
-        workspaceId:
-          type: string
-          format: uuid
         allowedOrigin:
           type: string
         externalUserId:
+          type: string
+        organizationId:
+          type: string
+          format: uuid
+      x-sdk-component: true
+    EmbeddedWidgetResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+      x-sdk-component: true
+
+    ConnectionTemplateCreateRequestBody:
+      type: object
+      required:
+        - destinationConfiguration
+        - organizationId
+        - destinationName
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        destinationName:
+          type: string
+        destinationType:
+          type: string
+        destinationConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        destinationActorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        namespaceDefinitionType:
+          $ref: "#/components/schemas/NamespaceDefinitionType"
+          description: The namespace definition type for the connection. This is used to determine how the namespace is defined for the connection. If none is provided, the namespace will be set to ${WORKSPACE_NAME}.
+        namespaceFormat:
+          type: string
+          default: null
+        prefix:
+          type: string
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          description: The schedule for connections. If none is provided, syncs will run every hour.
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+        nonBreakingChangesPreference:
+          $ref: "#/components/schemas/NonBreakingChangesPreference"
+        syncOnCreate:
+          type: boolean
+          default: true
+      x-sdk-component: true
+    ConnectionTemplateCreateResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+      x-sdk-component: true
+
+    ServiceAccountTokenRequestBody:
+      required:
+        - service_account_id
+        - secret
+      type: object
+      properties:
+        service_account_id:
+          type: string
+          format: uuid
+        secret:
           type: string
 
   responses:
@@ -19056,5 +19773,6 @@ components:
         the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
         provider to authenticate.
       x-sdk-component: true
+
 security:
   - {}

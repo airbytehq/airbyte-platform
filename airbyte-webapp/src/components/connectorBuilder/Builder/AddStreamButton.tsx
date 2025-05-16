@@ -239,7 +239,10 @@ const AddStreamModal = ({
         const dynamicStreamValues = values as AddDynamicStreamFormValues;
         onSubmit({
           dynamicStreamName: dynamicStreamValues.dynamicStreamName,
-          streamTemplate: structuredClone(DEFAULT_BUILDER_STREAM_VALUES),
+          streamTemplate: {
+            ...structuredClone(DEFAULT_BUILDER_STREAM_VALUES),
+            name: `${dynamicStreamValues.dynamicStreamName}_stream_template`,
+          },
           componentsResolver: {
             type: "HttpComponentsResolver",
             retriever: {
@@ -262,7 +265,6 @@ const AddStreamModal = ({
                 },
               },
             },
-            components_mapping: [],
           },
         });
       }

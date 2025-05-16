@@ -11,4 +11,9 @@ import io.micronaut.data.repository.PageableRepository
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface WorkspaceRepository : PageableRepository<Workspace, UUID>
+interface WorkspaceRepository : PageableRepository<Workspace, UUID> {
+  fun findByNameAndOrganizationId(
+    name: String,
+    organizationId: UUID,
+  ): List<Workspace>
+}

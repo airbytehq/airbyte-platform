@@ -7,6 +7,7 @@ package io.airbyte.persistence.job.errorreporter;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs;
@@ -24,7 +25,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;

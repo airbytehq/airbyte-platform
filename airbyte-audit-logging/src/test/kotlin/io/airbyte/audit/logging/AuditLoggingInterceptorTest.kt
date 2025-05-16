@@ -7,7 +7,14 @@ package io.airbyte.audit.logging
 import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionRead
 import io.airbyte.api.model.generated.PermissionType
+import io.airbyte.audit.logging.model.Actor
+import io.airbyte.audit.logging.provider.AuditProvider
 import io.airbyte.commons.annotation.AuditLogging
+import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.StorageClientFactory
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.StoreAuditLogs
 import io.micronaut.aop.MethodInvocationContext
 import io.micronaut.context.ApplicationContext
 import io.micronaut.core.annotation.AnnotationValue
@@ -16,7 +23,9 @@ import io.micronaut.http.HttpHeaders
 import io.micronaut.http.context.ServerRequestContext
 import io.micronaut.http.server.netty.NettyHttpRequest
 import io.micronaut.inject.qualifiers.Qualifiers
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
@@ -33,12 +42,16 @@ class AuditLoggingInterceptorTest {
   private lateinit var context: MethodInvocationContext<Any, Any>
   private lateinit var applicationContext: ApplicationContext
   private lateinit var auditLoggingHelper: AuditLoggingHelper
+  private lateinit var storageClientFactory: StorageClientFactory
+  private lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun setUp() {
     context = mockk()
     applicationContext = mockk()
     auditLoggingHelper = mockk()
+    storageClientFactory = mockk(relaxed = true)
+    featureFlagClient = mockk()
   }
 
   @AfterEach
@@ -48,10 +61,19 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should only proceed the request without logging the result if it is not enabled`() {
-    interceptor = AuditLoggingInterceptor(false, null, applicationContext, auditLoggingHelper)
+    interceptor =
+      AuditLoggingInterceptor(
+        false,
+        null,
+        applicationContext,
+        auditLoggingHelper,
+        featureFlagClient,
+        storageClientFactory,
+      )
 
     every { context.methodName } returns "createPermission"
-
+    every { storageClientFactory.create(DocumentType.AUDIT_LOGS) } returns mockk()
+    every { featureFlagClient.boolVariation(StoreAuditLogs, any()) } returns false
     every { context.proceed() } returns
       PermissionRead()
         .userId(UUID.randomUUID())
@@ -66,16 +88,31 @@ class AuditLoggingInterceptorTest {
 
   @Test
   fun `should proceed the request and log the result`() {
-    interceptor = spyk(AuditLoggingInterceptor(true, "test-audit-log-bucket", applicationContext, auditLoggingHelper))
+    interceptor =
+      spyk(
+        AuditLoggingInterceptor(
+          true,
+          "test-audit-log-bucket",
+          applicationContext,
+          auditLoggingHelper,
+          featureFlagClient,
+          storageClientFactory,
+        ),
+      )
     val request = mockk<NettyHttpRequest<Any>>()
     val headers = mockk<HttpHeaders>()
 
     val actionName = "createPermission"
     every { context.methodName } returns actionName
     every { request.headers } returns headers
-    every { auditLoggingHelper.getCurrentUser() } returns User("userId", "email")
     every { headers.get("User-Agent") } returns "userAgent"
     every { headers.get("X-Forwarded-For") } returns null
+    every { auditLoggingHelper.buildActor(headers) } returns Actor("userId", "email", null, "userAgent")
+
+    val storageClient = mockk<StorageClient>()
+    every { storageClient.write(any(), any()) } just Runs
+    every { storageClientFactory.create(DocumentType.AUDIT_LOGS) } returns storageClient
+    every { featureFlagClient.boolVariation(StoreAuditLogs, any()) } returns true
 
     val parameterValue = mockk<MutableArgumentValue<Any>>()
     val permissionUpdate =
@@ -118,9 +155,10 @@ class AuditLoggingInterceptorTest {
     // Verify logAuditInfo was called with the correct parameters
     verify {
       interceptor.logAuditInfo(
-        user = match { it.userId == "userId" && it.userAgent == "userAgent" },
-        actionName = "createPermission",
-        summary = "{}",
+        actor = match { it.actorId == "userId" && it.userAgent == "userAgent" },
+        operationName = "createPermission",
+        request = "{}",
+        response = "{\"result\": \"summary\"}",
         success = true,
         error = null,
       )

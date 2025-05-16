@@ -10,33 +10,21 @@ provided in this repository OR use the following manual steps:
 
 ## Steps
 
-1. Pull, tag and push the `amd64` image. Change the version accordingly.
-   ```bash
-   docker pull --platform linux/amd64 quay.io/keycloak/keycloak:25.0.2
-   docker tag quay.io/keycloak/keycloak:25.0.2 airbyte/mirrored-keycloak-amd:25.0.2
-   docker push airbyte/mirrored-keycloak-amd:25.0.2
-    ```
+1. Set upstream version
+```bash
+export version=26.2
+```
 
-2. Pull, tag and push the `arm64` image. Change the version accordingly.
-   ```bash
-   docker pull --platform linux/arm64 quay.io/keycloak/keycloak:25.0.2
-   docker tag quay.io/keycloak/keycloak:25.0.2 airbyte/mirrored-keycloak-arm:25.0.2
-   docker push airbyte/mirrored-keycloak-arm:25.0.2
-    ```
+2. Push a copy keycloak into our dockerhub repository
+```bash
+docker buildx imagetools create \
+  --tag airbyte/mirrored-keycloak:$version \
+  quay.io/keycloak/keycloak:$version
+```
 
-3. Create a multi-arch manifest. This will create a new image `airbyte/mirrored-keycloak:25.0.2` that will be a manifest of the two images above.
-    ```bash
-    docker manifest create airbyte/mirrored-keycloak:25.0.2
-      --amend airbyte/mirrored-keycloak-amd:25.0.2
-      --amend airbyte/mirrored-keycloak-arm:25.0.2
-    ```
+3. Verify the result
+```bash
+docker buildx imagetools inspect airbyte/mirrored-keycloak:$version
+```
 
-4. Annotate the manifest with the two architectures. This tells Docker which image is associated with what architecture.
-   ```bash
-   docker manifest annotate airbyte/mirrored-keycloak:25.0.2 airbyte/mirrored-keycloak-amd:25.0.2 --arch amd64
-   docker manifest annotate airbyte/mirrored-keycloak:25.0.2 airbyte/mirrored-keycloak-arm:25.0.2 --arch arm64
 
-5. Finally, push the manifest to the repository. You are done!
-    ```bash
-    docker manifest push airbyte/mirrored-keycloak:25.0.2
-    ```

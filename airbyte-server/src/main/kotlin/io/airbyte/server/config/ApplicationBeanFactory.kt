@@ -5,6 +5,7 @@
 package io.airbyte.server.config
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.server.handlers.helpers.BuilderProjectUpdater
 import io.airbyte.commons.server.handlers.helpers.CompositeBuilderProjectUpdater
@@ -13,6 +14,9 @@ import io.airbyte.commons.server.handlers.helpers.LocalFileSystemBuilderProjectU
 import io.airbyte.commons.server.limits.ProductLimitsProvider
 import io.airbyte.commons.server.scheduler.EventRunner
 import io.airbyte.commons.server.scheduler.TemporalEventRunner
+import io.airbyte.commons.storage.DocumentType
+import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.StorageClientFactory
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.commons.workers.config.WorkerConfigsProvider
 import io.airbyte.config.Configs
@@ -26,19 +30,31 @@ import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OperationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
+import io.airbyte.featureflag.DestinationTimeoutEnabled
+import io.airbyte.featureflag.DestinationTimeoutSeconds
+import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.FieldSelectionEnabled
+import io.airbyte.featureflag.Flag
+import io.airbyte.featureflag.LogConnectorMessages
+import io.airbyte.featureflag.LogStateMsgs
+import io.airbyte.featureflag.PrintLongRecordPks
+import io.airbyte.featureflag.RemoveValidationLimit
+import io.airbyte.featureflag.ReplicationBufferOverride
+import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
+import io.airbyte.featureflag.WorkloadHeartbeatRate
+import io.airbyte.featureflag.WorkloadHeartbeatTimeout
 import io.airbyte.metrics.MetricClient
 import io.airbyte.oauth.OAuthImplementationFactory
 import io.airbyte.persistence.job.DefaultJobCreator
 import io.airbyte.persistence.job.JobNotifier
 import io.airbyte.persistence.job.JobPersistence
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.persistence.job.factory.DefaultSyncJobFactory
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
 import io.airbyte.persistence.job.factory.SyncJobFactory
 import io.airbyte.persistence.job.tracker.JobTracker
-import io.airbyte.validation.json.JsonSchemaValidator
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import io.micronaut.context.annotation.Factory
@@ -48,6 +64,7 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.net.http.HttpClient
 import java.nio.file.Path
+import java.util.List
 import java.util.UUID
 import java.util.function.Supplier
 
@@ -150,11 +167,6 @@ class ApplicationBeanFactory {
     )
 
   @Singleton
-  fun webUrlHelper(
-    @Value("\${airbyte.web-app.url}") webAppUrl: String?,
-  ): WebUrlHelper = WebUrlHelper(webAppUrl)
-
-  @Singleton
   @Named("workspaceRoot")
   fun workspaceRoot(
     @Value("\${airbyte.workspace.root}") workspaceRoot: String,
@@ -185,9 +197,6 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("jsonSecretsProcessorWithCopy")
   fun jsonSecretsProcessorWithCopy(): JsonSecretsProcessor = JsonSecretsProcessor(true)
-
-  @Singleton
-  fun jsonSchemaValidator(): JsonSchemaValidator = JsonSchemaValidator()
 
   @Singleton
   @Named("oauthHttpClient")
@@ -229,4 +238,34 @@ class ApplicationBeanFactory {
     @Value("\${airbyte.server.limits.workspaces}") maxWorkspaces: Long,
     @Value("\${airbyte.server.limits.users}") maxUsers: Long,
   ): ProductLimitsProvider.OrganizationLimits = ProductLimitsProvider.OrganizationLimits(maxWorkspaces, maxUsers)
+
+  /**
+   * This bean is duplicated from the bean in the config of the airbyte workers module.
+   * This duplication has been made to avoid moving this bean to the common module.
+   * In the future we should only need this bean.
+   */
+  @Singleton
+  @Named("replicationFeatureFlags")
+  fun replicationFeatureFlags(): ReplicationFeatureFlags {
+    val featureFlags =
+      List.of<Flag<*>>(
+        DestinationTimeoutEnabled,
+        DestinationTimeoutSeconds,
+        FailSyncOnInvalidChecksum,
+        FieldSelectionEnabled,
+        LogConnectorMessages,
+        LogStateMsgs,
+        PrintLongRecordPks,
+        RemoveValidationLimit,
+        ReplicationBufferOverride,
+        ShouldFailSyncOnDestinationTimeout,
+        WorkloadHeartbeatRate,
+        WorkloadHeartbeatTimeout,
+      )
+    return ReplicationFeatureFlags(featureFlags)
+  }
+
+  @Singleton
+  @Named("outputDocumentStore")
+  fun workloadStorageClient(factory: StorageClientFactory): StorageClient = factory.create(DocumentType.WORKLOAD_OUTPUT)
 }

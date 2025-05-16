@@ -31,6 +31,7 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
+import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
@@ -69,7 +70,7 @@ public class AuthenticationHeaderResolver {
    * 1. If the organization ID is provided in the header, we will use it directly. 2. Otherwise, we
    * infer the workspace ID from the header and use the workspace ID to find the organization Id.
    */
-  public List<UUID> resolveOrganization(final Map<String, String> properties) {
+  public @Nullable List<UUID> resolveOrganization(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
     try {
       if (properties.containsKey(ORGANIZATION_ID_HEADER)) {
@@ -115,7 +116,7 @@ public class AuthenticationHeaderResolver {
    * Resolves workspaces from header.
    */
   @SuppressWarnings("PMD.CyclomaticComplexity") // This is an indication that the workspace ID as a group for auth needs refactoring
-  public List<UUID> resolveWorkspace(final Map<String, String> properties) {
+  public @Nullable List<UUID> resolveWorkspace(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
     try {
       if (properties.containsKey(WORKSPACE_ID_HEADER)) {
@@ -181,7 +182,7 @@ public class AuthenticationHeaderResolver {
     }
   }
 
-  public Set<String> resolveAuthUserIds(final Map<String, String> properties) {
+  public @Nullable Set<String> resolveAuthUserIds(final Map<String, String> properties) {
     log.debug("properties: {}", properties);
     try {
       if (properties.containsKey(EXTERNAL_AUTH_ID_HEADER)) {
@@ -216,7 +217,7 @@ public class AuthenticationHeaderResolver {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }
-    final PermissionRead permission = permissionHandler.getPermission(
+    final PermissionRead permission = permissionHandler.getPermissionRead(
         new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
     return permission.getWorkspaceId();
   }
@@ -226,7 +227,7 @@ public class AuthenticationHeaderResolver {
     if (!properties.containsKey(PERMISSION_ID_HEADER)) {
       return null;
     }
-    final PermissionRead permission = permissionHandler.getPermission(
+    final PermissionRead permission = permissionHandler.getPermissionRead(
         new PermissionIdRequestBody().permissionId(UUID.fromString(properties.get(PERMISSION_ID_HEADER))));
     return permission.getOrganizationId();
   }

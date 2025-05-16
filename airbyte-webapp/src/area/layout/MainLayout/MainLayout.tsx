@@ -1,0 +1,34 @@
+import classNames from "classnames";
+import React from "react";
+import { Outlet } from "react-router-dom";
+
+import { LoadingPage } from "components";
+import { LicenseBanner } from "components/LicenseBanner/LicenseBanner";
+import { FlexContainer } from "components/ui/Flex";
+
+import { SideBar } from "area/layout/SideBar";
+import { DefaultErrorBoundary } from "core/errors";
+import { isCloudApp } from "core/utils/app";
+import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner";
+
+import styles from "./MainLayout.module.scss";
+
+const MainLayout: React.FC<React.PropsWithChildren> = () => {
+  return (
+    <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
+      {isCloudApp() ? <StatusBanner /> : <LicenseBanner />}
+      <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
+        <SideBar />
+        <div className={styles.content}>
+          <DefaultErrorBoundary>
+            <React.Suspense fallback={<LoadingPage />}>
+              <Outlet />
+            </React.Suspense>
+          </DefaultErrorBoundary>
+        </div>
+      </FlexContainer>
+    </FlexContainer>
+  );
+};
+
+export default MainLayout;

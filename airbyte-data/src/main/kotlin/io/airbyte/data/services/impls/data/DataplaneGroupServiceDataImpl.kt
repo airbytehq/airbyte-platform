@@ -4,8 +4,11 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.config.ConfigSchema
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
@@ -78,6 +81,13 @@ open class DataplaneGroupServiceDataImpl(
         ).map { unit ->
           unit.toConfigModel()
         }
+    }
+
+  override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup =
+    if (airbyteEdition == AirbyteEdition.CLOUD) {
+      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP)
+    } else {
+      getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
     }
 
   fun validateDataplaneGroupName(dataplaneGroup: DataplaneGroup) {

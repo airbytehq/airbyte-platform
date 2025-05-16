@@ -29,54 +29,44 @@ open class DataplaneController(
   private val currentUserService: CurrentUserService,
 ) : PublicDataplanesApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicListDataplanes(regionId: UUID): Response {
+  override fun publicListDataplanes(): Response {
     val userId = currentUserService.currentUser.userId
     apiAuthorizationHelper.isUserInstanceAdminOrThrow(userId)
-    return dataplaneService.controllerListDataplanes(regionId)
+    return dataplaneService.controllerListDataplanes()
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
-  override fun publicCreateDataplane(
-    regionId: UUID,
-    dataplaneCreateRequest: DataplaneCreateRequest,
-  ): Response {
+  override fun publicCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
     val userId = currentUserService.currentUser.userId
     apiAuthorizationHelper.isUserInstanceAdminOrThrow(userId)
-    return dataplaneService.controllerCreateDataplane(regionId, dataplaneCreateRequest)
+    return dataplaneService.controllerCreateDataplane(dataplaneCreateRequest)
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
-  override fun publicGetDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response {
+  override fun publicGetDataplane(dataplaneId: UUID): Response {
     val userId = currentUserService.currentUser.userId
     apiAuthorizationHelper.isUserInstanceAdminOrThrow(userId)
-    return dataplaneService.controllerGetDataplane(regionId, dataplaneId)
+    return dataplaneService.controllerGetDataplane(dataplaneId)
   }
 
   @Patch
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
   override fun publicUpdateDataplane(
-    regionId: UUID,
     dataplaneId: UUID,
     dataplanePatchRequest: DataplanePatchRequest,
   ): Response {
     val userId = currentUserService.currentUser.userId
     apiAuthorizationHelper.isUserInstanceAdminOrThrow(userId)
-    return dataplaneService.controllerUpdateDataplane(regionId, dataplaneId, dataplanePatchRequest)
+    return dataplaneService.controllerUpdateDataplane(dataplaneId, dataplanePatchRequest)
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   @Path("$DATAPLANES_PATH/{dataplaneId}")
-  override fun publicDeleteDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response {
+  override fun publicDeleteDataplane(dataplaneId: UUID): Response {
     val userId = currentUserService.currentUser.userId
     apiAuthorizationHelper.isUserInstanceAdminOrThrow(userId)
-    return dataplaneService.controllerDeleteDataplane(regionId, dataplaneId)
+    return dataplaneService.controllerDeleteDataplane(dataplaneId)
   }
 }

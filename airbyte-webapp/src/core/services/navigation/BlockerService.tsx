@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef } from "react";
-import { unstable_useBlocker } from "react-router-dom";
+import { useBlocker as unstable_useBlocker } from "react-router-dom";
 
 export type Blocker = Extract<ReturnType<typeof unstable_useBlocker>, { state: "blocked" }>;
 export type BlockerFn = (blocker: Blocker) => void;

@@ -7,6 +7,7 @@ import { Text } from "components/ui/Text";
 
 import { ConnectorIds } from "area/connector/utils";
 import { ConnectorDefinitionSpecificationRead, ConnectorSpecification } from "core/domain/connector";
+import { useIsAirbyteEmbeddedContext } from "core/services/embedded";
 
 import styles from "./AuthButton.module.scss";
 import { GoogleAuthButton } from "./GoogleAuthButton";
@@ -54,20 +55,12 @@ export const AuthButton: React.FC<{
   selectedConnectorDefinitionSpecification: ConnectorDefinitionSpecificationRead;
 }> = ({ selectedConnectorDefinitionSpecification }) => {
   const { selectedConnectorDefinition } = useConnectorForm();
+  const isAirbyteEmbedded = useIsAirbyteEmbeddedContext();
 
   const { hiddenAuthFieldErrors, manualOAuthMode, toggleManualOAuthMode } = useAuthentication();
   const authRequiredError = Object.values(hiddenAuthFieldErrors).includes("required");
 
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  const { loading, done, run } = useFormOauthAdapter(
-    selectedConnectorDefinitionSpecification,
-    selectedConnectorDefinition
-  );
-
-  if (!selectedConnectorDefinition) {
-    console.error("Entered non-auth flow while no supported connector is selected");
-    return null;
-  }
+  const { loading, done, run } = useFormOauthAdapter(selectedConnectorDefinitionSpecification);
 
   const definitionId = ConnectorSpecification.id(selectedConnectorDefinitionSpecification);
   const Component = getButtonComponent(definitionId);
@@ -96,9 +89,11 @@ export const AuthButton: React.FC<{
           )}
         </Component>
 
-        <Button variant="clear" onClick={toggleManualOAuthMode}>
-          <FormattedMessage id="connectorForm.manualAuth.toggle" />
-        </Button>
+        {!isAirbyteEmbedded && (
+          <Button variant="clear" onClick={toggleManualOAuthMode}>
+            <FormattedMessage id="connectorForm.manualAuth.toggle" />
+          </Button>
+        )}
       </FlexContainer>
 
       {authRequiredError && (
@@ -119,7 +114,6 @@ export const AuthButtonBuilder = React.forwardRef<
     disabled?: boolean;
   }
 >(({ builderProjectId, onComplete, onClick, disabled }, ref) => {
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const { loading, run } = useFormOauthAdapterBuilder(builderProjectId, onComplete);
   const [isAccented, setIsAccented] = useState(false);
 

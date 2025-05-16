@@ -105,3 +105,15 @@ properties:
     type: object
   heartbeatConfig:
     "$ref": HeartbeatConfig.yaml
+  supportsRefreshes:
+    description: whether the sync supports refreshes
+    type: boolean
+    default: false
+  sourceIPCOptions:
+    description: config containing information about source architecture
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode
+  destinationIPCOptions:
+    description: config containing information about source architecture
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode

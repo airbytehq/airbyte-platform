@@ -1,8 +1,8 @@
 import { ReactElement } from "react";
-import { useWatch } from "react-hook-form";
 
 import { SchemaFormControl } from "./Controls/SchemaFormControl";
 import { useSchemaForm } from "./SchemaForm";
+import { getDeclarativeSchemaTypeValue } from "./utils";
 
 type OverrideByPath = Record<string, ReactElement | null>;
 
@@ -22,25 +22,31 @@ export interface SchemaFormRemainingFieldsProps {
 }
 
 export const SchemaFormRemainingFields = ({ path = "", overrideByPath = {} }: SchemaFormRemainingFieldsProps) => {
-  const { getSchemaAtPath, isPathRendered } = useSchemaForm();
-  const value = useWatch({ name: path });
+  const { getSchemaAtPath, isPathRendered, registerRenderedPath } = useSchemaForm();
+
+  registerRenderedPath(path);
 
   // Get the property at the specified path
-  const targetProperty = getSchemaAtPath(path, value);
+  const targetProperty = getSchemaAtPath(path, true);
 
-  // If not an object or has no properties, nothing to render
-  if (targetProperty.type !== "object" || !targetProperty.properties) {
+  // If object has no properties, nothing to render
+  if (!targetProperty.properties) {
     return null;
   }
 
   // Render only properties that haven't been rendered yet
   return (
     <>
-      {Object.keys(targetProperty.properties).map((propertyName) => {
+      {Object.entries(targetProperty.properties).map(([propertyName, property]) => {
         const fullPath = path ? `${path}.${propertyName}` : propertyName;
 
         // Skip if this path or any parent path has already been rendered
         if (isPathRendered(fullPath)) {
+          return null;
+        }
+
+        // ~ declarative_component_schema type handling ~
+        if (getDeclarativeSchemaTypeValue(propertyName, property)) {
           return null;
         }
 

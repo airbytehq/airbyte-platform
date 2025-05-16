@@ -165,7 +165,8 @@ public class AcceptanceTestsResources {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId())
                 .build());
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
@@ -278,7 +279,8 @@ public class AcceptanceTestsResources {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId())
                 .build());
     LOGGER.info("Beginning runSmallSyncForAWorkspaceId() sync");
 

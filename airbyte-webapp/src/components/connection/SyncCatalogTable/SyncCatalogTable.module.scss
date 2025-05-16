@@ -154,6 +154,7 @@ $table-header-fixed-height: 40px;
 
   top: $initial-top;
   height: $controls-container-fixed-height;
+  z-index: z-indices.$listBox; // ensure listbox is above stickyTabsContainer
 }
 
 .stickyTabsContainer {

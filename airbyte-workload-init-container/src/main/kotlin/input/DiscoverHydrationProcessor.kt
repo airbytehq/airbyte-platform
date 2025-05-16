@@ -40,16 +40,22 @@ class DiscoverHydrationProcessor(
         inputHydrator.getHydratedStandardDiscoverInput(parsed.discoverCatalogInput)
       } catch (e: SecretCoordinateException) {
         val attrs =
-          listOf(
+          mutableListOf(
             MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
             MetricAttribute(
               CONNECTOR_TYPE,
               parsed.discoverCatalogInput.actorContext.actorType
                 .toString(),
             ),
-            MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
           )
-        metricClient.count(metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, attributes = attrs.toTypedArray())
+        if (parsed.launcherConfig.connectionId != null) {
+          attrs.add(MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()))
+        }
+
+        metricClient.count(
+          metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+          attributes = attrs.toTypedArray(),
+        )
         throw e
       }
 

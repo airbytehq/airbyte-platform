@@ -18,7 +18,7 @@ import org.slf4j.LoggerFactory;
  * {@link UserPersistence}. Community edition of Airbyte doesn't surface the concept of real users,
  * so this implementation simply returns the default user that ships with the application.
  * `@RequestScope` means one bean is created per request, so the default user is cached for any
- * subsequent calls to getCurrentUser() within the same request.
+ * later calls to getCurrentUser() within the same request.
  */
 @RequestScope
 public class CommunityCurrentUserService implements CurrentUserService {

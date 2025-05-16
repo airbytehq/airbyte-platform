@@ -74,7 +74,7 @@ open class DestinationDefinitionApiController(
   }
 
   @Post(uri = "/get")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getDestinationDefinition(
     @Body destinationDefinitionIdRequestBody: DestinationDefinitionIdRequestBody,

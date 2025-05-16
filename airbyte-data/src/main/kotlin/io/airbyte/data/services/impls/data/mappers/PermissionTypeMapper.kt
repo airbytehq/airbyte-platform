@@ -19,6 +19,7 @@ fun EntityPermissionType.toConfigModel(): ModelPermissionType =
     EntityPermissionType.organization_reader -> ModelPermissionType.ORGANIZATION_READER
     EntityPermissionType.organization_member -> ModelPermissionType.ORGANIZATION_MEMBER
     EntityPermissionType.instance_admin -> ModelPermissionType.INSTANCE_ADMIN
+    EntityPermissionType.dataplane -> ModelPermissionType.DATAPLANE
   }
 
 fun ModelPermissionType.toEntity(): EntityPermissionType =
@@ -34,4 +35,5 @@ fun ModelPermissionType.toEntity(): EntityPermissionType =
     ModelPermissionType.ORGANIZATION_READER -> EntityPermissionType.organization_reader
     ModelPermissionType.ORGANIZATION_MEMBER -> EntityPermissionType.organization_member
     ModelPermissionType.INSTANCE_ADMIN -> EntityPermissionType.instance_admin
+    ModelPermissionType.DATAPLANE -> EntityPermissionType.dataplane
   }

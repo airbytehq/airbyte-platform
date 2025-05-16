@@ -28,6 +28,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandlerManual
+import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context
@@ -45,6 +46,7 @@ import java.util.concurrent.Callable
 class ConnectorRolloutApiController(
   private val connectorRolloutHandler: ConnectorRolloutHandler,
   private val connectorRolloutHandlerManual: ConnectorRolloutHandlerManual,
+  private val connectorRolloutHelper: ConnectorRolloutHelper,
 ) : ConnectorRolloutApi {
   //  Endpoints hit by the connector rollout workflow
 
@@ -168,7 +170,7 @@ class ConnectorRolloutApiController(
     execute<ConnectorRolloutActorSyncInfoResponse> {
       val connectorRolloutId = connectorRolloutGetActorSyncInfoRequestBody.id
       val connectorRolloutSyncInfo =
-        connectorRolloutHandler
+        connectorRolloutHelper
           .getActorSyncInfo(connectorRolloutId)
           .entries
           .associate { entry -> entry.key.toString() to entry.value }

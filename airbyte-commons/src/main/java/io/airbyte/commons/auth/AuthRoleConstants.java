@@ -31,6 +31,8 @@ public final class AuthRoleConstants {
 
   public static final String EMBEDDED_END_USER = "EMBEDDED_END_USER";
 
+  public static final String DATAPLANE = "DATAPLANE";
+
   // the 'SELF' role is used to secure endpoints that should only be called by the user themselves.
   // For example, creating an Airbyte User record for a particular authUserId should only be done
   // by callers that have authenticated as that authUserId.

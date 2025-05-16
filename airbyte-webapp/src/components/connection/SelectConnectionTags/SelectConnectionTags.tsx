@@ -4,6 +4,7 @@ import classNames from "classnames";
 import { useDeferredValue, useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { CheckBox } from "components/ui/CheckBox";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -95,22 +96,6 @@ const TagRow: React.FC<TagRowProps> = ({ disabled, handleTagChange, isSelected, 
         <CheckBox readOnly disabled={disabled} id={`tag-checkbox-${tag.tagId}`} checked={isSelected} />
         <TagBadge color={tag.color} text={tag.name} />
       </FlexContainer>
-    </button>
-  );
-};
-
-interface TriggerButtonProps {
-  icon: "plus" | "pencil";
-}
-
-/**
- * TODO: refactor our main <Button> so we don't have to reimplement it here
- * https://github.com/airbytehq/airbyte-internal-issues/issues/11481
- */
-const TriggerButton: React.FC<TriggerButtonProps> = ({ icon }) => {
-  return (
-    <button className={styles.selectConnectionTags__trigger} data-testid="select-connection-tags-popover">
-      <Icon size="xs" type={icon} />
     </button>
   );
 };
@@ -218,7 +203,18 @@ export const SelectConnectionTags: React.FC<SelectConnectionTagsProps> = ({
         return (
           <>
             <PopoverButton ref={reference} as="span">
-              <Tooltip placement="top" control={<TriggerButton icon={selectedTags.length === 0 ? "plus" : "pencil"} />}>
+              <Tooltip
+                placement="top"
+                control={
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={selectedTags.length === 0 ? "plus" : "pencil"}
+                    iconSize="sm"
+                    className={styles.selectConnectionTags__trigger}
+                  />
+                }
+              >
                 <FormattedMessage id={selectedTags.length === 0 ? "connection.tags.add" : "connection.tags.edit"} />
               </Tooltip>
             </PopoverButton>

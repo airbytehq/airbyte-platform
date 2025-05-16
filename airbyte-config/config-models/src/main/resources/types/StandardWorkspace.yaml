@@ -9,7 +9,6 @@ required:
   - name
   - slug
   - initialSetupComplete
-  - defaultGeography
 additionalProperties: true
 properties:
   workspaceId:
@@ -50,8 +49,6 @@ properties:
     type: boolean
   feedbackDone:
     type: boolean
-  defaultGeography:
-    type: string
   dataplaneGroupId:
     type: string
     format: uuid

@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentUser } from "core/services/auth";
 
-import { useGetWorkspace } from "./workspaces";
+import { useGetWorkspace, useCurrentWorkspaceOrUndefined } from "./workspaces";
 import {
   getOrganization,
   getOrganizationInfo,
@@ -11,11 +13,14 @@ import {
   getOrganizationTrialStatus,
   getOrganizationUsage,
   listWorkspacesInOrganization,
+  listOrganizationsByUser,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
+  ListOrganizationsByUserRequestBody,
+  OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
@@ -35,6 +40,19 @@ export const organizationKeys = {
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
   workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
+  listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
+    [...organizationKeys.all, "byUser", requestBody] as const,
+};
+
+/**
+ * Returns the organization ID from either the current workspace or the current organization context.
+ * This hook is useful when you need to work with organization data in both workspace and non-workspace contexts.
+ */
+export const useMaybeWorkspaceCurrentOrganizationId = () => {
+  const workspace = useCurrentWorkspaceOrUndefined();
+  const currentOrganizationId = useCurrentOrganizationId();
+
+  return workspace?.organizationId ?? currentOrganizationId;
 };
 
 /**
@@ -119,7 +137,7 @@ export const useOrganizationTrialStatus = (
 
 export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTimeWindow }) => {
   const requestOptions = useRequestOptions();
-  const { organizationId } = useCurrentOrganizationInfo();
+  const organizationId = useMaybeWorkspaceCurrentOrganizationId();
 
   return useSuspenseQuery(organizationKeys.usage(organizationId, timeWindow), () =>
     getOrganizationUsage({ organizationId, timeWindow }, requestOptions)
@@ -131,4 +149,21 @@ export const useListWorkspacesInOrganization = ({ organizationId }: { organizati
   const queryKey = organizationKeys.workspaces(organizationId);
 
   return useSuspenseQuery(queryKey, () => listWorkspacesInOrganization({ organizationId }, requestOptions));
+};
+
+export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.listByUser(requestBody), () =>
+    listOrganizationsByUser(requestBody, requestOptions)
+  );
+};
+
+// Maybe better called useFirstOrg
+export const useCurrentOrganization = (): OrganizationRead => {
+  const { userId } = useCurrentUser();
+  const { organizations } = useListOrganizationsByUser({ userId });
+
+  // NOTE: How do we handle users with multiple orgs?
+  // NOTE: Turns out some users don't have any orgs. We should probably handle this better.
+  return organizations[0] || {};
 };

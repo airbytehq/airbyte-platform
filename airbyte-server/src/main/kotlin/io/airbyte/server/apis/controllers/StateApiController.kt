@@ -25,7 +25,7 @@ open class StateApiController(
   private val stateHandler: StateHandler,
 ) : StateApi {
   @Post("/create_or_update")
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun createOrUpdateState(
     @Body connectionStateCreateOrUpdate: ConnectionStateCreateOrUpdate,
@@ -39,7 +39,7 @@ open class StateApiController(
   ): ConnectionState? = execute { stateHandler.createOrUpdateStateSafe(connectionStateCreateOrUpdate) }
 
   @Post("/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getState(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,

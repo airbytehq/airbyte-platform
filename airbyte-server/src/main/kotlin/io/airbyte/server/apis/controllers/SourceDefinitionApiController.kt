@@ -81,7 +81,7 @@ open class SourceDefinitionApiController(
   }
 
   @Post("/get")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getSourceDefinition(
     @Body sourceDefinitionIdRequestBody: SourceDefinitionIdRequestBody,

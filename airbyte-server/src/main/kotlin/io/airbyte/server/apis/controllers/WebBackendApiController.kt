@@ -23,6 +23,7 @@ import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
 import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
+import io.airbyte.api.model.generated.WebappConfigResponse
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
@@ -38,13 +39,15 @@ import io.airbyte.metrics.lib.TracingHelper
 import io.airbyte.server.apis.execute
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
 import io.airbyte.server.handlers.WebBackendMappersHandler
+import io.micronaut.context.annotation.ConfigurationProperties
+import io.micronaut.context.annotation.Value
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
+import io.micronaut.http.annotation.Get
 import io.micronaut.http.annotation.Post
 import io.micronaut.scheduling.annotation.ExecuteOn
 import io.micronaut.security.annotation.Secured
 import io.micronaut.security.rules.SecurityRule
-import java.util.Set
 import java.util.concurrent.Callable
 
 @Controller("/api/v1/web_backend")
@@ -57,6 +60,7 @@ open class WebBackendApiController(
   private val webBackendMappersHandler: WebBackendMappersHandler,
   private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val currentUserService: CurrentUserService,
+  private val webappConfig: WebappConfig,
 ) : WebBackendApi {
   @Post("/state/get_type")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
@@ -77,7 +81,7 @@ open class WebBackendApiController(
   @Post("/connections/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendCreateConnection(
     @Body webBackendConnectionCreate: WebBackendConnectionCreate,
   ): WebBackendConnectionRead? =
@@ -101,7 +105,7 @@ open class WebBackendApiController(
           webBackendConnectionRequestBody.connectionId.toString(),
           Scope.CONNECTION,
           currentUserService.currentUser.userId,
-          Set.of(
+          setOf(
             PermissionType.WORKSPACE_EDITOR,
             PermissionType.ORGANIZATION_EDITOR,
           ),
@@ -147,7 +151,7 @@ open class WebBackendApiController(
   @Post("/connections/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun webBackendUpdateConnection(
     @Body webBackendConnectionUpdate: WebBackendConnectionUpdate,
   ): WebBackendConnectionRead? =
@@ -179,4 +183,34 @@ open class WebBackendApiController(
         body,
       )
     }
+
+  @Get("/config")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getWebappConfig(): WebappConfigResponse =
+    WebappConfigResponse().apply {
+      edition = webappConfig.edition
+      datadogApplicationId = webappConfig.webApp["datadog-application-id"]
+      datadogClientToken = webappConfig.webApp["datadog-client-token"]
+      datadogEnv = webappConfig.webApp["datadog-env"]
+      datadogService = webappConfig.webApp["datadog-service"]
+      datadogSite = webappConfig.webApp["datadog-site"]
+      hockeystackApiKey = webappConfig.webApp["hockeystick-api-key"]
+      launchdarklyKey = webappConfig.webApp["launchdarkly-key"]
+      osanoKey = webappConfig.webApp["osano-key"]
+      segmentToken = webappConfig.webApp["segment-token"]
+      zendeskKey = webappConfig.webApp["zendesk-key"]
+    }
 }
+
+/**
+ * This class is populated by Micronaut with the values from the `airbyte.web-app` section in the application.yaml.
+ *
+ * It is only used for by [WebBackendApiController.getWebappConfig].
+ *
+ * This class should be internal, but due to airbyte-server-wrapped extending the [WebBackendApiController] class, this must be public.
+ */
+@ConfigurationProperties("airbyte")
+data class WebappConfig(
+  @Value("\${AIRBYTE_EDITION}") val edition: String,
+  val webApp: Map<String, String>,
+)

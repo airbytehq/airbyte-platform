@@ -315,6 +315,7 @@ class ConnectorMessageProcessor(
         ConnectorJobOutput.OutputType.SPEC -> ConnectorCommand.SPEC
         ConnectorJobOutput.OutputType.CHECK_CONNECTION -> ConnectorCommand.CHECK
         ConnectorJobOutput.OutputType.DISCOVER_CATALOG_ID -> ConnectorCommand.DISCOVER
+        ConnectorJobOutput.OutputType.REPLICATE -> throw IllegalStateException("Cannot get connector command from output type $outputType")
       }
 
     fun getMessagesByType(

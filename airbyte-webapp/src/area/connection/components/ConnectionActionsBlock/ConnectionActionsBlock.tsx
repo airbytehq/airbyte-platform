@@ -13,17 +13,17 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { useDeleteConnection, useDestinationDefinitionVersion } from "core/api";
 import { ConnectionStatus, ConnectionSyncStatus } from "core/api/types/AirbyteClient";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useModalService } from "hooks/services/Modal";
 import { useNotificationService } from "hooks/services/Notification";
 import { useDeleteModal } from "hooks/useDeleteModal";
 import { ConnectionRefreshModal } from "pages/connections/ConnectionSettingsPage/ConnectionRefreshModal";
 
 export const ConnectionActionsBlock: React.FC = () => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { connection, streamsByRefreshType } = useConnectionEditService();
   const canSyncConnection = useGeneratedIntent(Intent.RunAndCancelConnectionSyncAndRefresh);
   const canEditConnection = useGeneratedIntent(Intent.CreateOrEditConnection);

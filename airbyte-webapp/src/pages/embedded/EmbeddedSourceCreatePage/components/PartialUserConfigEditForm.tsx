@@ -1,5 +1,8 @@
+import React from "react";
+
 import { useGetPartialUserConfig, useUpdatePartialUserConfig } from "core/api";
-import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
+import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
@@ -11,14 +14,24 @@ export const PartialUserConfigEditForm: React.FC = () => {
 
   const partialUserConfig = useGetPartialUserConfig(selectedPartialConfigId ?? "");
 
-  const sourceDefinitionSpecification: SourceDefinitionSpecificationDraft =
-    partialUserConfig.configTemplate.configTemplateSpec;
+  const sourceDefinitionSpecification: SourceDefinitionSpecification = {
+    ...partialUserConfig.configTemplate.configTemplateSpec,
+    sourceDefinitionId: partialUserConfig.configTemplate.sourceDefinitionId,
+  };
 
   const onSubmit = (values: ConnectorFormValues) => {
-    updatePartialUserConfig({
-      partialUserConfigId: selectedPartialConfigId ?? "",
-      connectionConfiguration: values.connectionConfiguration,
-      workspaceId,
+    return new Promise<void>((resolve, reject) => {
+      updatePartialUserConfig(
+        {
+          partialUserConfigId: selectedPartialConfigId ?? "",
+          connectionConfiguration: values.connectionConfiguration,
+          workspaceId,
+        },
+        {
+          onSuccess: () => resolve(),
+          onError: (error) => reject(error),
+        }
+      );
     });
   };
 
@@ -28,14 +41,16 @@ export const PartialUserConfigEditForm: React.FC = () => {
   };
 
   return (
-    <PartialUserConfigForm
-      isEditMode
-      connectorName={partialUserConfig.configTemplate.name}
-      icon={partialUserConfig.configTemplate.icon}
-      onSubmit={onSubmit}
-      initialValues={initialValues}
-      sourceDefinitionSpecification={sourceDefinitionSpecification}
-      showSuccessView={isSuccess}
-    />
+    <IsAirbyteEmbeddedContext.Provider value>
+      <PartialUserConfigForm
+        isEditMode
+        connectorName={partialUserConfig.configTemplate.name}
+        icon={partialUserConfig.configTemplate.icon}
+        onSubmit={onSubmit}
+        initialValues={initialValues}
+        sourceDefinitionSpecification={sourceDefinitionSpecification}
+        showSuccessView={isSuccess}
+      />
+    </IsAirbyteEmbeddedContext.Provider>
   );
 };

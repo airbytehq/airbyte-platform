@@ -2,7 +2,7 @@ import React, { ReactNode } from "react";
 import { Path } from "react-hook-form";
 import { useIntl } from "react-intl";
 
-import { useAvailableGeographies } from "core/api";
+import { useListDataplaneGroups } from "core/api";
 
 import { FormValues } from "./Form";
 import { FormControl } from "./FormControl";
@@ -26,15 +26,13 @@ export const DataResidencyDropdown = <T extends FormValues>({
   disabled = false,
 }: DataResidencyFormControlProps<T>): JSX.Element => {
   const { formatMessage } = useIntl();
-  const { geographies } = useAvailableGeographies();
+  const dataplaneGroups = useListDataplaneGroups();
 
-  const options = geographies.map((geography) => {
+  // NOTE: should disabled dataplanegroups be filtered out?
+  const options = dataplaneGroups.map(({ dataplane_group_id, name }) => {
     return {
-      label: formatMessage({
-        id: `connection.geography.${geography}`,
-        defaultMessage: geography,
-      }),
-      value: geography,
+      label: name,
+      value: dataplane_group_id,
     };
   });
 
@@ -56,16 +54,12 @@ export const StandaloneDataResidencyDropdown = <T extends FormValues>({
   name,
   disabled,
 }: Pick<DataResidencyFormControlProps<T>, "name" | "disabled">): JSX.Element => {
-  const { formatMessage } = useIntl();
-  const { geographies } = useAvailableGeographies();
+  const dataplaneGroups = useListDataplaneGroups();
 
-  const options = geographies.map((geography) => {
+  const options = dataplaneGroups.map(({ dataplane_group_id, name }) => {
     return {
-      label: formatMessage({
-        id: `connection.geography.${geography}`,
-        defaultMessage: geography,
-      }),
-      value: geography,
+      label: name,
+      value: dataplane_group_id,
     };
   });
 

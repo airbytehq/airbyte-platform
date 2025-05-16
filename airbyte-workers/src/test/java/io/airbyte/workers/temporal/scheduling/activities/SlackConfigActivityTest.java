@@ -41,7 +41,7 @@ class SlackConfigActivityTest {
     SlackNotificationConfiguration config = new SlackNotificationConfiguration("webhook");
     List<Notification> notifications = List.of(new Notification(NotificationType.SLACK, false, true, config, null));
     final WorkspaceRead workspaceRead = new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null,
-        null, null, null, notifications, null, null, null, null, null, null, null, null);
+        null, null, null, notifications, null, null, null, null, null, null, null);
     when(mAirbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(requestBody)).thenReturn(workspaceRead);
     Assertions.assertThat("webhook").isEqualTo(slackConfigActivity.fetchSlackConfiguration(connectionId).get().getWebhook());
   }
@@ -53,7 +53,7 @@ class SlackConfigActivityTest {
     CustomerioNotificationConfiguration config = new CustomerioNotificationConfiguration();
     List<Notification> notifications = List.of(new Notification(NotificationType.CUSTOMERIO, false, true, null, config));
     final WorkspaceRead workspaceRead = new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null,
-        null, null, null, notifications, null, null, null, null, null, null, null, null);
+        null, null, null, notifications, null, null, null, null, null, null, null);
     when(mAirbyteApiClient.getWorkspaceApi().getWorkspaceByConnectionId(requestBody)).thenReturn(workspaceRead);
     Assertions.assertThat(Optional.ofNullable(null)).isEqualTo(slackConfigActivity.fetchSlackConfiguration(connectionId));
   }

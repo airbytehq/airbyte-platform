@@ -30,6 +30,7 @@ dependencies {
   implementation(libs.slf4j.api)
   implementation(libs.bundles.micronaut.metrics)
   implementation(platform(libs.micronaut.platform))
+  implementation(project(":oss:airbyte-analytics"))
   implementation(project(":oss:airbyte-api:workload-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-converters"))

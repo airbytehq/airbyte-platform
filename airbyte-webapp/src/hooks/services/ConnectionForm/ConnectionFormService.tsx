@@ -19,26 +19,19 @@ export type ConnectionOrPartialConnection =
 
 interface ConnectionServiceProps {
   connection: ConnectionOrPartialConnection;
-  mode: ConnectionFormMode;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
 }
 
 interface ConnectionFormHook {
   connection: ConnectionOrPartialConnection;
-  mode: ConnectionFormMode;
   schemaError?: Error | null;
   refreshSchema: () => Promise<void>;
   setSubmitError: (submitError: FormError | null) => void;
   getErrorMessage: (formValid: boolean, errors?: FieldErrors<FormConnectionFormValues>) => React.ReactNode;
 }
 
-const useConnectionForm = ({
-  connection,
-  mode,
-  schemaError,
-  refreshSchema,
-}: ConnectionServiceProps): ConnectionFormHook => {
+const useConnectionForm = ({ connection, schemaError, refreshSchema }: ConnectionServiceProps): ConnectionFormHook => {
   const formatError = useFormatError();
   const { formatMessage } = useIntl();
   const [submitError, setSubmitError] = useState<FormError | null>(null);
@@ -95,7 +88,6 @@ const useConnectionForm = ({
 
   return {
     connection,
-    mode,
     schemaError,
     refreshSchema,
     setSubmitError,
