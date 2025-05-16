@@ -81,72 +81,10 @@ const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
 };
 
 /**
- * When creating an Airbyte Embedded Template, we need to set the authentication values to mock values.
- * These are overridden when the user creates a Source using the PartialUserCreateForm, but placeholders
- * are required in order for the template to be created + rendered properly.
- */
-
-const prepareOauthFieldsForTemplate = (
-  partialDefaultConfig: Record<string, unknown>,
-  advancedAuth: ConnectorDefinitionSpecificationRead["advancedAuth"]
-) => {
-  if (advancedAuth?.oauthConfigSpecification) {
-    // Set auth_type based on predicate
-    if (advancedAuth.predicateKey && advancedAuth.predicateValue) {
-      const authTypePath = advancedAuth.predicateKey;
-      let current = partialDefaultConfig;
-      for (let i = 0; i < authTypePath.length - 1; i++) {
-        if (!current[authTypePath[i]]) {
-          current[authTypePath[i]] = {};
-        }
-        current = current[authTypePath[i]] as Record<string, unknown>;
-      }
-      current[authTypePath[authTypePath.length - 1]] = advancedAuth.predicateValue;
-    }
-
-    // Handle all three OAuth specifications
-    const specs = [
-      advancedAuth.oauthConfigSpecification.completeOAuthOutputSpecification,
-      advancedAuth.oauthConfigSpecification.completeOAuthServerInputSpecification,
-      advancedAuth.oauthConfigSpecification.completeOAuthServerOutputSpecification,
-    ].filter((spec): spec is NonNullable<typeof spec> => spec !== undefined);
-
-    specs.forEach((spec) => {
-      const typedSpec = spec as unknown as {
-        properties: Record<string, { path_in_connector_config?: string[] }>;
-      };
-      if (typedSpec.properties) {
-        Object.entries(typedSpec.properties).forEach(([_, property]) => {
-          if (property.path_in_connector_config) {
-            const pathParts = property.path_in_connector_config;
-            if (pathParts.length > 0) {
-              let current = partialDefaultConfig;
-              for (let i = 0; i < pathParts.length - 1; i++) {
-                if (!current[pathParts[i]]) {
-                  current[pathParts[i]] = {};
-                }
-                current = current[pathParts[i]] as Record<string, unknown>;
-              }
-              current[pathParts[pathParts.length - 1]] = "mock-string";
-            }
-          }
-        });
-      }
-    });
-  }
-};
-
-/**
  * Prepares the configuration for creating a source config template
  */
-const prepareSourceConfigTemplate = (
-  values: ConnectorFormValues,
-  definitionId: string,
-  advancedAuth: ConnectorDefinitionSpecificationRead["advancedAuth"],
-  organizationId: string
-) => {
+const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: string, organizationId: string) => {
   const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
-  prepareOauthFieldsForTemplate(partialDefaultConfig, advancedAuth);
 
   return {
     organizationId,
@@ -225,7 +163,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     }
     return definition;
   }, [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]);
-  const advancedAuth = selectedConnectorDefinitionSpecification?.advancedAuth;
 
   // Handle Doc panel
   useEffect(() => {
@@ -397,9 +334,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                         const definitionId = selectedConnectorDefinition
                           ? Connector.id(selectedConnectorDefinition)
                           : "";
-                        createConfigTemplate(
-                          prepareSourceConfigTemplate(values, definitionId, advancedAuth, organizationId)
-                        );
+                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
                       }
                     : () => {
                         const values = getValues();

@@ -13,6 +13,7 @@ export const PartialUserConfigCreateForm: React.FC = () => {
 
   const sourceDefinitionSpecification: SourceDefinitionSpecification = {
     ...configTemplate.configTemplateSpec,
+    advancedAuth: configTemplate.advancedAuth,
     sourceDefinitionId: configTemplate.sourceDefinitionId,
   };
 

@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.JsonNodeFactory
 import com.fasterxml.jackson.databind.node.NullNode
@@ -13,10 +12,12 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfigTemplateWithActorDetails
+import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.repositories.ConfigTemplateRepository
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
+import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.impls.data.mappers.EntityConfigTemplate
 import io.airbyte.data.services.impls.data.mappers.objectMapper
@@ -27,6 +28,7 @@ import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonMergingHelper
 import io.airbyte.validation.json.JsonSchemaValidator
 import jakarta.inject.Singleton
+import java.util.Optional
 import java.util.UUID
 
 @Singleton
@@ -34,14 +36,58 @@ open class ConfigTemplateServiceDataImpl(
   private val repository: ConfigTemplateRepository,
   private val actorDefinitionService: ActorDefinitionService,
   private val sourceService: SourceService,
+  private val oAuthService: OAuthService,
   private val validator: JsonSchemaValidator,
 ) : ConfigTemplateService {
   private val jsonMergingHelper = JsonMergingHelper()
   private val schemaDefaultValueHelper = SchemaDefaultValueHelper()
 
   override fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateWithActorDetails {
-    val configTemplate = repository.findById(configTemplateId).orElseThrow().toConfigModel()
+    val template = repository.findById(configTemplateId).orElseThrow()
+
+    var configTemplate = template.toConfigModel()
+
     val actorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
+
+    val actorDefinitionSpec = getConnectorSpecification(ActorDefinitionId(configTemplate.actorDefinitionId))
+
+    configTemplate =
+      configTemplate.copy(
+        advancedAuth = actorDefinitionSpec.advancedAuth,
+      )
+
+    return ConfigTemplateWithActorDetails(
+      configTemplate = configTemplate,
+      actorName = actorDefinition.name,
+      actorIcon = actorDefinition.iconUrl,
+    )
+  }
+
+  override fun getConfigTemplate(
+    configTemplateId: UUID,
+    workspaceId: UUID,
+  ): ConfigTemplateWithActorDetails {
+    val template = repository.findById(configTemplateId).orElseThrow()
+
+    var configTemplate = template.toConfigModel()
+
+    val actorDefinitionSpec = getConnectorSpecification(ActorDefinitionId(configTemplate.actorDefinitionId))
+    val actorDefinition = sourceService.getStandardSourceDefinition(configTemplate.actorDefinitionId, false)
+
+    val isAdvancedAuthGlobalCredentialsAvailable =
+      if (actorDefinitionSpec.advancedAuth != null) {
+        val sourceOAuthParameter: Optional<SourceOAuthParameter> =
+          oAuthService.getSourceOAuthParameterOptional(workspaceId, actorDefinition.sourceDefinitionId)
+        sourceOAuthParameter.isPresent
+      } else {
+        false
+      }
+
+    configTemplate =
+      configTemplate.copy(
+        advancedAuth = actorDefinitionSpec.advancedAuth,
+        advancedAuthGlobalCredentialsAvailable = isAdvancedAuthGlobalCredentialsAvailable,
+      )
 
     return ConfigTemplateWithActorDetails(
       configTemplate = configTemplate,
@@ -152,32 +198,88 @@ open class ConfigTemplateServiceDataImpl(
     return actorDefinitionSpec
   }
 
+  private fun getOauthRequiredFields(actorDefinitionSpec: ConnectorSpecification): List<String> {
+    if (actorDefinitionSpec.advancedAuth == null) {
+      return emptyList()
+    }
+
+    val completeOauthOutputProperties =
+      actorDefinitionSpec.advancedAuth.oauthConfigSpecification.completeOauthOutputSpecification
+        .get("properties") as ObjectNode
+
+    val completeOauthServerProperties =
+      actorDefinitionSpec.advancedAuth.oauthConfigSpecification.completeOauthServerInputSpecification
+        .get("properties") as ObjectNode
+
+    val completeOauthServerOutputProperties =
+      actorDefinitionSpec.advancedAuth.oauthConfigSpecification.completeOauthServerOutputSpecification
+        .get("properties") as ObjectNode
+
+    // List to collect all the required fields for OAuth
+    val oauthRequiredFields = mutableListOf<String>()
+
+// Process completeOauthOutputProperties
+    completeOauthOutputProperties.fields().forEach { (_, propertyObj) ->
+      // Check if the property object has "path_in_connector_config"
+      if (propertyObj.has("path_in_connector_config") && propertyObj.get("path_in_connector_config").isArray) {
+        val pathArray = propertyObj.get("path_in_connector_config") as ArrayNode
+        // Add each element in the array to the list
+        (0 until pathArray.size()).forEach { i ->
+          oauthRequiredFields.add(pathArray.get(i).asText())
+        }
+      }
+    }
+
+// Process completeOauthServerProperties
+    completeOauthServerProperties.fields().forEach { (_, propertyObj) ->
+      // Check if the property object has "path_in_connector_config"
+      if (propertyObj.has("path_in_connector_config") && propertyObj.get("path_in_connector_config").isArray) {
+        val pathArray = propertyObj.get("path_in_connector_config") as ArrayNode
+        // Add each element in the array to the list
+        (0 until pathArray.size()).forEach { i ->
+          oauthRequiredFields.add(pathArray.get(i).asText())
+        }
+      }
+    }
+    completeOauthServerOutputProperties.fields().forEach { (_, propertyObj) ->
+      // Check if the property object has "path_in_connector_config"
+      if (propertyObj.has("path_in_connector_config") && propertyObj.get("path_in_connector_config").isArray) {
+        val pathArray = propertyObj.get("path_in_connector_config") as ArrayNode
+        // Add each element in the array to the list
+        (0 until pathArray.size()).forEach { i ->
+          oauthRequiredFields.add(pathArray.get(i).asText())
+        }
+      }
+    }
+
+    return oauthRequiredFields.toList()
+  }
+
   private fun inferPartialUserSpec(
     actorDefinitionSpec: ConnectorSpecification,
     partialDefaultConfig: JsonNode,
-  ): ObjectNode {
+  ): JsonNode {
     val inferredSpec: JsonNode = actorDefinitionSpec.connectionSpecification.deepCopy()
+
     val required = inferredSpec.get("required") as ArrayNode
-    required.removeAll { partialDefaultConfig.has(it.asText()) }
+    val requiredForOauth = getOauthRequiredFields(actorDefinitionSpec)
+
+    required.removeAll { partialDefaultConfig.has(it.asText()) && !requiredForOauth.contains(it.asText()) }
+
     val properties = inferredSpec.get("properties") as ObjectNode
     val requiredProperties = required.map { it.asText() }
     val allFields: Set<String> = properties.fieldNames().asSequence().toSet()
     for (f in allFields) {
-      if (!requiredProperties.contains(f)) {
+      if (!requiredProperties.contains(f) && !requiredForOauth.contains(f)) {
         properties.remove(f)
       }
     }
-
-    val connectionSpec = JsonNodeFactory.instance.objectNode()
-    connectionSpec.put("connectionSpecification", inferredSpec)
-    connectionSpec.put("type", "object")
-
-    if (actorDefinitionSpec.advancedAuth != null) {
-      val advancedAuthNode: JsonNode = ObjectMapper().valueToTree(actorDefinitionSpec.advancedAuth)
-      connectionSpec.put("advancedAuth", advancedAuthNode)
-    }
+    val connectionSpec = objectMapper.valueToTree<ObjectNode>(actorDefinitionSpec).deepCopy()
 
     (inferredSpec as ObjectNode).put("type", "object")
+
+    connectionSpec.set<ObjectNode>("connectionSpecification", inferredSpec)
+
     return connectionSpec
   }
 

@@ -19459,6 +19459,10 @@ components:
           format: uuid
         configTemplateSpec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
+        advancedAuth:
+          $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
     ConfigTemplatePublicRead:
       type: object
       required:
