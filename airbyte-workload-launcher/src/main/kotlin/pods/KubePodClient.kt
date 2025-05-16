@@ -148,6 +148,7 @@ class KubePodClient(
         destRuntimeEnvVars = kubeInput.destinationRuntimeEnvVars,
         isFileTransfer = replicationInput.useFileTransfer,
         workspaceId = replicationInput.workspaceId,
+        architectureEnvironmentVariables = payload.architectureEnvironmentVariables ?: ArchitectureDecider.buildLegacyEnvironment(),
       )
 
     logger.info { "Launching reset pod: ${kubeInput.podName} (selectors = ${kubeInput.nodeSelectors}) with containers:" }
