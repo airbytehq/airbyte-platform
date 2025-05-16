@@ -189,6 +189,7 @@ class SourceReader(
       if (exitValue == 0) {
         replicationWorkerHelper.endOfSource()
       } else {
+        logger.error { "Source process exited with non-zero exit code $exitValue" }
         throw SourceException("Source process exited with non-zero exit code $exitValue")
       }
     } catch (e: Exception) {
