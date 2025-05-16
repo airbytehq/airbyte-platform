@@ -21,10 +21,17 @@
       // Use as a background color the primary color of the message as set via the Message component
       background-color: var(--message-color);
       animation: timeout-bar forwards 5s linear;
+      animation-play-state: paused;
     }
 
     &:hover::after {
       animation-play-state: paused;
+    }
+  }
+
+  &--focused {
+    &::after {
+      animation-play-state: running;
     }
   }
 }
