@@ -124,10 +124,13 @@ class PartialUserConfigHandler(
       val configuredSchema = schemaResponse.catalog
 
       for (stream in configuredSchema.streams) {
-        if (stream.config.syncMode == SyncMode.INCREMENTAL) {
-          // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
-          // We can make this configurable in the future as needed
-          stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+        // For the typical AI use case, APPEND is the right mode as it'll allow Operators to process new data
+        // We can make this configurable in the future as needed
+        stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+        // When possible, set the sync mode to INCREMENTAL
+        if (stream.stream.supportedSyncModes.contains(SyncMode.INCREMENTAL) and stream.stream.sourceDefinedCursor) {
+          stream.config.syncMode = SyncMode.INCREMENTAL
+          stream.config.cursorField = stream.stream.defaultCursorField
         }
       }
 
