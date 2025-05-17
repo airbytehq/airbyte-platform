@@ -153,11 +153,6 @@ spec:
             configMapKeyRef:
               name: {{ .Release.Name }}-airbyte-env
               key: WORKERS_MICRONAUT_ENVIRONMENTS
-        - name: AB_JWT_SIGNATURE_SECRET
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
-              key: {{ .Values.global.auth.jwtSignatureSecretKey | default "jwt-signature-secret" | quote }}
         {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
         - name: AIRBYTE_API_AUTH_HEADER_NAME
           value: "X-Airbyte-Auth"
