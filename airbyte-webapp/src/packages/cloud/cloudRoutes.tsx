@@ -45,6 +45,7 @@ const CloudMainViewRoutes = () => {
   return (
     <Routes>
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
+
       {isOrgPickerEnabled ? (
         <Route element={<MainLayout />}>
           <Route path="account" element={<div>User Settings</div>} />

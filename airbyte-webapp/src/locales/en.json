@@ -1605,6 +1605,8 @@
   "errorView.title": "Oops! Something went wrong…",
   "errorView.unknown": "Unknown",
   "errorView.unknownError": "Unknown error occurred",
+  "errors.forbidden.message": "Sorry, you don't have permission to access this page.",
+  "errors.forbidden.goBack": "Back to workspaces",
 
   "frequency.basic": "Scheduled",
   "frequency.manual": "Manual",
