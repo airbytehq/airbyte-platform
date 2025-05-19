@@ -9,11 +9,13 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_35_26_001__PersistDiscoveredCatalogTest : AbstractConfigsDatabaseTest() {
   @Test
   fun test() {

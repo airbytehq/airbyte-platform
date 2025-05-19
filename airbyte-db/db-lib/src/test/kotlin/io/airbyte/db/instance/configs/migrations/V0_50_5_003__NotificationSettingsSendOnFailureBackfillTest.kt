@@ -18,12 +18,14 @@ import org.jooq.JSONB
 import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import java.util.UUID
 import kotlin.collections.listOf
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

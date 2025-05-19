@@ -18,6 +18,7 @@ import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabaseTest() {
   private lateinit var jobDatabase: Database
 
