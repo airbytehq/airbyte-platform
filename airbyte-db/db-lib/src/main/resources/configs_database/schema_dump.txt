@@ -633,6 +633,8 @@ create table "public"."workload" (
   "signal_input" text,
   "dataplane_group" varchar(256),
   "priority" int,
+  "workspace_id" uuid,
+  "organization_id" uuid,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (

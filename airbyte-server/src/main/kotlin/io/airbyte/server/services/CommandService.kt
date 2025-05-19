@@ -395,6 +395,8 @@ class CommandService(
       workloadId = workloadPayload.workloadId,
       labels = workloadPayload.labels,
       input = workloadPayload.workloadInput,
+      workspaceId = workspaceId,
+      organizationId = organizationId,
       logPath = workloadPayload.logPath,
       mutexKey = mutexKey,
       type = workloadPayload.type,

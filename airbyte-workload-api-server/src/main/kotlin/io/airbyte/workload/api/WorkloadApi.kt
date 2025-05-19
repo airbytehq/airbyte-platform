@@ -104,6 +104,8 @@ open class WorkloadApi(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
       workloadCreateRequest.workloadInput,
+      workloadCreateRequest.workspaceId,
+      workloadCreateRequest.organizationId,
       workloadCreateRequest.logPath,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,

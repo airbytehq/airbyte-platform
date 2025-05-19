@@ -30,10 +30,10 @@ Check `io.airbyte.db.instance.configs` for example.
 - Run the `dumpSchema` command to update the database schema.
   - Configs database: `./gradlew :oss:airbyte-db:db-lib:dumpConfigsSchema`
   - Jobs database: `./gradlew :oss:airbyte-db:db-lib:dumpJobsSchema`
-- Update the appropriate `BootloaderTest.java` constant (`CURRENT_CONFIGS_MIGRATION`, `CURRENT_JOBS_MIGRATION`) based off the version described below.
+- Update the appropriate `BootloaderTest.kt` constant (`CURRENT_CONFIGS_MIGRATION`, `CURRENT_JOBS_MIGRATION`) to reference the new migration class.
 
 ## Migration Filename
-- The name of the file should follow this pattern: `V(version)__(migration_description_in_snake_case).java`.
+- The name of the file should follow this pattern: `V(version)__(migration_description_in_snake_case).kt`.
 - This pattern is mandatory for Flyway to correctly locate and sort the migrations.
 - The first part is `V`, which denotes for *versioned* migration.
 - The second part is a version string with this pattern: `<major>_<minor>_<patch>_<id>`.

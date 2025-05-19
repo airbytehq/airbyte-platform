@@ -112,10 +112,14 @@ public class WorkloadApiWorker {
         replicationInput.getJobRunConfig().getAttemptId().intValue());
 
     final ConnectionContext context = replicationInput.getConnectionContext();
+    final var organizationId = context != null ? context.getOrganizationId() : null;
+    final var workspaceId = context != null ? context.getWorkspaceId() : replicationInput.getWorkspaceId();
+    final var connectionId = context != null ? context.getConnectionId() : replicationInput.getConnectionId();
+
     final String dataplaneGroup = dataplaneGroupResolver.resolveForSync(
-        context != null ? context.getOrganizationId() : null,
-        context != null ? context.getWorkspaceId() : replicationInput.getWorkspaceId(),
-        context != null ? context.getConnectionId() : replicationInput.getConnectionId());
+        organizationId,
+        workspaceId,
+        connectionId);
 
     log.info("Creating workload {}", workloadId);
 
@@ -133,6 +137,8 @@ public class WorkloadApiWorker {
         logClientManager.fullLogPath(jobRoot),
         WorkloadType.SYNC,
         WorkloadPriority.DEFAULT,
+        workspaceId,
+        organizationId,
         replicationInput.getConnectionId().toString(),
         null,
         replicationInput.getSignalInput(),

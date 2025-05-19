@@ -43,6 +43,10 @@ data class Workload(
   @Nullable
   var workloadLabels: List<WorkloadLabel>?,
   var inputPayload: String,
+  @Nullable
+  var workspaceId: UUID?,
+  @Nullable
+  var organizationId: UUID?,
   var logPath: String,
   @Nullable
   var mutexKey: String?,
@@ -70,6 +74,8 @@ data class Workload(
     status: WorkloadStatus,
     workloadLabels: List<WorkloadLabel>?,
     inputPayload: String,
+    workspaceId: UUID?,
+    organizationId: UUID?,
     logPath: String,
     mutexKey: String,
     type: WorkloadType,
@@ -80,6 +86,8 @@ data class Workload(
     status = status,
     workloadLabels = workloadLabels,
     inputPayload = inputPayload,
+    workspaceId = workspaceId,
+    organizationId = organizationId,
     logPath = logPath,
     mutexKey = mutexKey,
     type = type,
