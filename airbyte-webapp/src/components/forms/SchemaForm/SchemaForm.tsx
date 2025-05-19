@@ -1,16 +1,7 @@
 import { ExtendedJSONSchema } from "json-schema-to-ts";
 import isBoolean from "lodash/isBoolean";
 import { createContext, useCallback, useContext, useMemo, useRef } from "react";
-import {
-  DefaultValues,
-  FieldError,
-  FieldValues,
-  FormProvider,
-  get,
-  useForm,
-  useFormContext,
-  useFormState,
-} from "react-hook-form";
+import { DefaultValues, FieldValues, FormProvider, get, useForm, useFormContext } from "react-hook-form";
 
 import { DynamicValidator } from "./DynamicValidator";
 import { RefsHandlerProvider } from "./RefsHandler";
@@ -140,7 +131,6 @@ interface SchemaFormContextValue {
   schema: AirbyteJsonSchema;
   onlyShowErrorIfTouched?: boolean;
   nestedUnderPath?: string;
-  errorAtPath: (path: string) => FieldError | undefined;
   extractDefaultValuesFromSchema: <T extends FieldValues>(fieldSchema: AirbyteJsonSchema) => DefaultValues<T>;
   verifyArrayItems: (
     items:
@@ -178,26 +168,9 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
   onlyShowErrorIfTouched,
   nestedUnderPath,
 }) => {
-  const { errors, touchedFields } = useFormState();
   const { getValues } = useFormContext();
   // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
   const renderedPathsRef = useRef<Set<string>>(new Set<string>());
-
-  // Setup validation functions
-  const errorAtPath = (path: string): FieldError | undefined => {
-    const error: FieldError | undefined = get(errors, path);
-    const touched = get(touchedFields, path);
-    if ((onlyShowErrorIfTouched && !touched) || !error?.message) {
-      return undefined;
-    }
-    return {
-      type: error.type,
-      message: error.message,
-      ref: error.ref,
-      types: error.types,
-      root: error.root,
-    };
-  };
 
   // Update rendered paths tracking functions to use ref
   const registerRenderedPath = useCallback((path: string) => {
@@ -277,7 +250,6 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
         schema,
         onlyShowErrorIfTouched,
         nestedUnderPath,
-        errorAtPath,
         extractDefaultValuesFromSchema: extractDefaultValuesFromSchemaCallback,
         verifyArrayItems: verifyArrayItemsCallback,
         getSelectedOptionSchema: getSelectedOptionSchemaCallback,

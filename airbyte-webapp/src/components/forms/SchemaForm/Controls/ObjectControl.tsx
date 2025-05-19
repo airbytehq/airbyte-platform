@@ -13,8 +13,9 @@ import styles from "./ObjectControl.module.scss";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
-import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName } from "../utils";
+
 export const ObjectControl = ({
   fieldSchema,
   baseProps,
@@ -23,10 +24,10 @@ export const ObjectControl = ({
   hideBorder = false,
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
-  const { errorAtPath } = useSchemaForm();
   const { errors } = useFormState();
   const value = useWatch({ name: baseProps.name });
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
+  const error = useErrorAtPath(baseProps.name);
 
   if (!fieldSchema.properties) {
     if (!fieldSchema.additionalProperties) {
@@ -135,7 +136,7 @@ export const ObjectControl = ({
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={errorAtPath(baseProps.name)}
+      error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
     >
@@ -152,7 +153,7 @@ const JsonEditor = ({
   toggleConfig: ReturnType<typeof useToggleConfig>;
 }) => {
   const { formatMessage } = useIntl();
-  const { errorAtPath } = useSchemaForm();
+  const error = useErrorAtPath(baseProps.name);
   const value = useWatch({ name: baseProps.name });
   const { setValue } = useFormContext();
   const [textValue, setTextValue] = useState(JSON.stringify(value, null, 2));
@@ -169,7 +170,7 @@ const JsonEditor = ({
       title={displayName(baseProps.name, baseProps.label)}
       tooltip={baseProps.labelTooltip}
       optional={baseProps.optional}
-      error={errorAtPath(baseProps.name)}
+      error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       footer={!textValue ? formatMessage({ id: "form.enterValidJson" }) : undefined}
     >

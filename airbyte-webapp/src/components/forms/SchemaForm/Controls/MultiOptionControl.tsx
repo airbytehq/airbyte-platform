@@ -13,6 +13,7 @@ import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, OverrideByPath, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, resolveTopLevelRef } from "../utils";
 
 export const MultiOptionControl = ({
@@ -28,12 +29,11 @@ export const MultiOptionControl = ({
   const {
     schema: rootSchema,
     getSelectedOptionSchema,
-    errorAtPath,
     extractDefaultValuesFromSchema,
     verifyArrayItems,
   } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
-  const error = errorAtPath(baseProps.name);
+  const error = useErrorAtPath(baseProps.name);
   const optionSchemas = fieldSchema.oneOf ?? fieldSchema.anyOf;
   const options = useMemo(
     () =>
