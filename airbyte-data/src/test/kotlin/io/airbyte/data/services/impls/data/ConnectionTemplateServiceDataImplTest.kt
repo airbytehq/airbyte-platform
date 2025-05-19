@@ -13,7 +13,6 @@ import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.config.StandardSync.ScheduleType
 import io.airbyte.data.repositories.ConnectionTemplateRepository
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.impls.data.mappers.EntityConnectionTemplate
 import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
 import io.airbyte.domain.models.ActorDefinitionId
@@ -76,7 +75,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,
@@ -138,7 +137,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,
@@ -200,7 +199,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,

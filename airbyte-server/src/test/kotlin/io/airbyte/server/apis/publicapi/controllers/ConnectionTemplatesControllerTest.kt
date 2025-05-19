@@ -14,7 +14,6 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.config.StandardSync.ScheduleType
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.ConnectionTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
@@ -44,7 +43,6 @@ class ConnectionTemplatesControllerTest {
 
   val destinationName = "destination_name"
   val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
-  val destinationType = "s3"
   val destinationConfig = objectMapper.readTree("{}")
   val organizationId = OrganizationId(UUID.randomUUID())
   val namespaceDefinitionType = NamespaceDefinitionType.DESTINATION
@@ -61,6 +59,7 @@ class ConnectionTemplatesControllerTest {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
+    every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
   }
 
   @Test
@@ -86,7 +85,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -103,7 +102,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         prefix = prefix,
       )
@@ -111,78 +109,6 @@ class ConnectionTemplatesControllerTest {
     val response = controller.createConnectionTemplate(requestBody)
 
     assertEquals(response.id, connectionTemplate.id)
-  }
-
-  @Test
-  fun `test create endpoint with destination type`() {
-    val connectionTemplate =
-      ConnectionTemplate(
-        id = UUID.randomUUID(),
-        organizationId = organizationId,
-        destinationName = destinationName,
-        destinationActorDefinitionId = actorDefinitionId.value,
-        destinationConfiguration = destinationConfig,
-        namespaceDefinitionType = namespaceDefinitionType,
-        namespaceFormat = namespaceFormat,
-        prefix = prefix,
-        scheduleType = ScheduleType.CRON,
-        scheduleData = DEFAULT_CRON_SCHEDULE,
-        resourceRequirements = resourceRequirements,
-        nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        syncOnCreate = false,
-      )
-
-    every {
-      connectionTemplateService.createTemplate(
-        any(),
-        eq(destinationName),
-        eq(ActorDefinitionIdOrType.Type(destinationType)),
-        eq(destinationConfig),
-        namespaceDefinitionType,
-        namespaceFormat,
-        prefix,
-        DEFAULT_CRON_SCHEDULE,
-        isNull(),
-        ignoreNonBreakingChangesPreference,
-        false,
-      )
-    } returns connectionTemplate
-
-    val requestBody =
-      ConnectionTemplateCreateRequestBody(
-        organizationId.value,
-        destinationName,
-        destinationConfig,
-        destinationType,
-        null,
-        io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
-        namespaceFormat,
-        prefix,
-        syncOnCreate = false,
-      )
-
-    val response = controller.createConnectionTemplate(requestBody)
-
-    assertEquals(response.id, connectionTemplate.id)
-  }
-
-  @Test
-  fun `test create endpoint with both destination actor definition ID and actor type`() {
-    val requestBody =
-      ConnectionTemplateCreateRequestBody(
-        organizationId.value,
-        destinationType,
-        destinationConfig,
-        destinationType,
-        actorDefinitionId.value,
-        io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
-        namespaceFormat,
-        prefix,
-      )
-
-    org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
-      controller.createConnectionTemplate(requestBody)
-    }
   }
 
   @Test
@@ -208,7 +134,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         NamespaceDefinitionType.SOURCE,
         namespaceFormat,
@@ -225,7 +151,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.SOURCE,
         namespaceFormat,
@@ -262,7 +187,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat,
@@ -279,7 +204,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat,
@@ -315,7 +239,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         namespaceDefinitionType,
         namespaceFormat,
@@ -332,7 +256,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
         namespaceFormat,
@@ -368,7 +291,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         namespaceDefinitionType,
         namespaceFormat,
@@ -385,7 +308,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
         namespaceFormat,
@@ -421,7 +343,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -438,7 +360,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.CRON, cronExpression),
       )
@@ -471,7 +392,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -488,7 +409,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.MANUAL),
       )

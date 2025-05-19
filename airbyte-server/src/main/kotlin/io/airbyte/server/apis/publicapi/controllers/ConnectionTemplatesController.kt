@@ -12,7 +12,6 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Cron
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.ConnectionTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
@@ -67,29 +66,18 @@ open class ConnectionTemplatesController(
       organizationId.value,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
     )
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId.value,
+      Entitlement.DESTINATION_CONNECTOR,
+      connectionTemplateCreateRequestBody.destinationActorDefinitionId,
+    )
 
-    if (connectionTemplateCreateRequestBody.destinationType == null && connectionTemplateCreateRequestBody.destinationActorDefinitionId == null) {
-      throw IllegalArgumentException("Either destinationType or destinationActorDefinitionId must be provided.")
-    }
-
-    if (connectionTemplateCreateRequestBody.destinationType != null && connectionTemplateCreateRequestBody.destinationActorDefinitionId != null) {
-      throw IllegalArgumentException("Only one of destinationType or destinationActorDefinitionId can be provided.")
-    }
-
-    val destinationIdOrType =
-      if (connectionTemplateCreateRequestBody.destinationActorDefinitionId != null) {
-        ActorDefinitionIdOrType.DefinitionId(ActorDefinitionId(connectionTemplateCreateRequestBody.destinationActorDefinitionId!!))
-      } else {
-        ActorDefinitionIdOrType.Type(connectionTemplateCreateRequestBody.destinationType!!)
-      }
-
-    // FIXME this endpoint should check for entitlements on the destination type https://github.com/airbytehq/airbyte-internal-issues/issues/12814
     val namespaceDefinitionType = convertNamespaceDefinitionType(connectionTemplateCreateRequestBody.namespaceDefinitionType)
     val connectionTemplate =
       connectionTemplateService.createTemplate(
         organizationId,
         connectionTemplateCreateRequestBody.destinationName,
-        destinationIdOrType,
+        ActorDefinitionId(connectionTemplateCreateRequestBody.destinationActorDefinitionId),
         connectionTemplateCreateRequestBody.destinationConfiguration,
         namespaceDefinitionType,
         connectionTemplateCreateRequestBody.namespaceFormat,

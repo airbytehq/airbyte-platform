@@ -19691,13 +19691,12 @@ components:
         - destinationConfiguration
         - organizationId
         - destinationName
+        - destinationActorDefinitionId
       properties:
         organizationId:
           type: string
           format: uuid
         destinationName:
-          type: string
-        destinationType:
           type: string
         destinationConfiguration:
           $ref: "#/components/schemas/DestinationConfiguration"

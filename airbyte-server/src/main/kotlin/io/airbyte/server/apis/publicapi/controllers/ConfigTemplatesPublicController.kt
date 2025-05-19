@@ -5,9 +5,13 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
+import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
+import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
+import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.ConfigTemplateWithActorDetails
@@ -42,11 +46,12 @@ open class ConfigTemplatesPublicController(
   private val configTemplateService: ConfigTemplateService,
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
+  private val organizationsHandler: OrganizationsHandler,
 ) : PublicConfigTemplatesApi {
   private val logger = KotlinLogging.logger {}
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun publicCreateConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): Response =
     wrap {
       createConfigTemplate(configTemplateCreateRequestBody).ok()
@@ -59,6 +64,11 @@ open class ConfigTemplatesPublicController(
     licenseEntitlementChecker.ensureEntitled(
       organizationId,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId,
+      Entitlement.SOURCE_CONNECTOR,
+      configTemplateCreateRequestBody.actorDefinitionId,
     )
 
     val configTemplate =
@@ -73,15 +83,25 @@ open class ConfigTemplatesPublicController(
   }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @Secured(AuthRoleConstants.ORGANIZATION_READER)
   override fun publicGetConfigTemplate(configTemplateId: UUID): Response =
     wrap {
       getConfigTemplate(configTemplateId).ok()
     }
 
   @VisibleForTesting
-  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplatePublicRead = configTemplateService.getConfigTemplate(configTemplateId).toApiModel()
+  fun getConfigTemplate(configTemplateId: UUID): ConfigTemplatePublicRead {
+    val user = currentUserService.currentUser
+    val userId: UUID = user.userId
+
+    ensureUserBelongsToAtLeastOneEntitledOrg(userId)
+
+    val configTemplate = configTemplateService.getConfigTemplate(configTemplateId)
+    return configTemplate.toApiModel()
+  }
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @Secured(AuthRoleConstants.ORGANIZATION_READER)
   override fun publicListConfigTemplate(organizationId: String): Response =
     wrap {
       listConfigTemplate(organizationId).ok()
@@ -89,6 +109,11 @@ open class ConfigTemplatesPublicController(
 
   @VisibleForTesting
   fun listConfigTemplate(organizationId: String): ConfigTemplateListResponse {
+    licenseEntitlementChecker.checkEntitlements(
+      UUID.fromString(organizationId),
+      Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+    )
+
     val configTemplates =
       configTemplateService
         .listConfigTemplatesForOrganization(OrganizationId(UUID.fromString(organizationId)))
@@ -98,8 +123,8 @@ open class ConfigTemplatesPublicController(
     )
   }
 
-  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun publicUpdateConfigTemplate(
     configTemplateId: UUID,
     configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,
@@ -130,6 +155,23 @@ open class ConfigTemplatesPublicController(
         )
 
     return ConfigTemplateUpdateResponse(id = updated.configTemplate.id)
+  }
+
+  private fun ensureUserBelongsToAtLeastOneEntitledOrg(userId: UUID) {
+    val anyOrganizationIsEntitled =
+      organizationsHandler.listOrganizationsByUser(ListOrganizationsByUserRequestBody().userId(userId)).organizations.any {
+        licenseEntitlementChecker.checkEntitlements(
+          it.organizationId,
+          Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+        )
+      }
+
+    if (!anyOrganizationIsEntitled) {
+      throw LicenseEntitlementProblem(
+        ProblemLicenseEntitlementData()
+          .entitlement(Entitlement.CONFIG_TEMPLATE_ENDPOINTS.name),
+      )
+    }
   }
 
   private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplatePublicRead =

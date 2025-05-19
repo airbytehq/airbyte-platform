@@ -13,12 +13,12 @@ import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.data.repositories.ConnectionTemplateRepository
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.ConnectionTemplateService
 import io.airbyte.data.services.impls.data.mappers.EntityConnectionTemplate
 import io.airbyte.data.services.impls.data.mappers.camelToSnake
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
+import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 import jakarta.inject.Singleton
 
@@ -29,7 +29,7 @@ open class ConnectionTemplateServiceDataImpl(
   override fun createTemplate(
     organizationId: OrganizationId,
     destinationName: String,
-    destinationActorDefinitionIdOrDestinationType: ActorDefinitionIdOrType,
+    actorDefinitionId: ActorDefinitionId,
     destinationConfig: JsonNode,
     namespaceDefinitionType: NamespaceDefinitionType,
     namespaceFormat: String?,
@@ -41,20 +41,13 @@ open class ConnectionTemplateServiceDataImpl(
   ): ConnectionTemplate {
     // FIXME: there should be a check preventing from creating a template with the same name https://github.com/airbytehq/airbyte-internal-issues/issues/12818
     // Duplicates cannot be allowed because we lookup by name when creating the connection.
-    val destinationActorDefinition =
-      when (destinationActorDefinitionIdOrDestinationType) {
-        is ActorDefinitionIdOrType.DefinitionId -> destinationActorDefinitionIdOrDestinationType.id
-        // FIXME: Need to handle this case https://github.com/airbytehq/airbyte-internal-issues/issues/12811
-        is ActorDefinitionIdOrType.Type -> null
-      }
-
     val scheduleType = inferScheduleType(scheduleData).value()
     val entity =
       EntityConnectionTemplate(
         organizationId = organizationId.value,
         destinationName = destinationName,
-        // FIXME remove !! when null case is handled! https://github.com/airbytehq/airbyte-internal-issues/issues/12811
-        destinationDefinitionId = destinationActorDefinition!!.value,
+        // FIXME we eventually want to support passing destinationType instead of actor definition ID https://github.com/airbytehq/airbyte-internal-issues/issues/12811
+        destinationDefinitionId = actorDefinitionId.value,
         destinationConfig = destinationConfig,
         namespaceDefinition =
           io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType
