@@ -21,6 +21,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
@@ -302,6 +303,41 @@ class PartialUserConfigHandlerTest {
     Assertions.assertNotNull(capturedConnectionConfig)
     Assertions.assertTrue(capturedConnectionConfig.has("testKey"))
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
+  }
+
+  @Test
+  fun `test delete partial user config also deletes its source`() {
+    val partialUserConfigId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+
+    val partialUserConfig =
+      PartialUserConfigWithConfigTemplateAndActorDetails(
+        partialUserConfig =
+          PartialUserConfig(
+            id = partialUserConfigId,
+            workspaceId = workspaceId,
+            configTemplateId = configTemplateId,
+            actorId = sourceId,
+          ),
+        actorName = "test-source",
+        actorIcon = "test-icon",
+        configTemplate =
+          ConfigTemplate(
+            id = configTemplateId,
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = objectMapper.createObjectNode(),
+            organizationId = organizationId,
+            userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+          ),
+      )
+
+    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfig
+    every { partialUserConfigService.deletePartialUserConfig(partialUserConfigId) } returns Unit
+    every { sourceHandler.deleteSource(SourceIdRequestBody().sourceId(sourceId)) } returns Unit
+
+    handler.deletePartialUserConfig(partialUserConfigId)
+
+    verify(exactly = 1) { sourceHandler.deleteSource(SourceIdRequestBody().sourceId(sourceId)) }
   }
 
   /**

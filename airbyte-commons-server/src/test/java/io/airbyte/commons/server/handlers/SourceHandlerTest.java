@@ -72,6 +72,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
@@ -116,6 +117,7 @@ class SourceHandlerTest {
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
+  private PartialUserConfigService partialUserConfigService;
 
   private static final String API_KEY_FIELD = "apiKey";
   private static final String API_KEY_VALUE = "987-xyz";
@@ -171,6 +173,7 @@ class SourceHandlerTest {
     secretReferenceService = mock(SecretReferenceService.class);
     currentUserService = mock(CurrentUserService.class);
     secretPersistence = mock(SecretPersistence.class);
+    partialUserConfigService = mock(PartialUserConfigService.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
     when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(ORG_ID);
@@ -222,7 +225,8 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService);
   }
 
   @Test
@@ -380,7 +384,10 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService
+
+    );
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -598,7 +605,8 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();

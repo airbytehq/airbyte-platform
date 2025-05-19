@@ -20,4 +20,8 @@ interface PartialUserConfigService {
   fun createPartialUserConfig(partialUserConfigCreate: PartialUserConfig): PartialUserConfigWithActorDetails
 
   fun updatePartialUserConfig(partialUserConfig: PartialUserConfig): PartialUserConfigWithActorDetails
+
+  fun deletePartialUserConfig(partialUserConfigId: UUID)
+
+  fun deletePartialUserConfigForSource(sourceId: UUID)
 }

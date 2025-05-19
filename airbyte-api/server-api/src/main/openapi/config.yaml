@@ -6759,11 +6759,11 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/update:
     post:
-      summary: Update a part
+      summary: Update a partial user config
       tags:
         - partial_user_configs
         - embedded
-      operationId: updateUserConfig
+      operationId: updatePartialUserConfig
       requestBody:
         content:
           application/json:
@@ -6776,7 +6776,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PartialUserConfigWithSource"
+                $ref: "#/components/schemas/SourceRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/delete:
+    post:
+      summary: Tombstone a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: deletePartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 

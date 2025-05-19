@@ -306,6 +306,12 @@ class PartialUserConfigHandler(
     return sourceRead
   }
 
+  fun deletePartialUserConfig(partialUserConfigId: UUID) {
+    val partialUserConfig = partialUserConfigService.getPartialUserConfig(partialUserConfigId)
+
+    partialUserConfig.partialUserConfig.actorId?.let { sourceHandler.deleteSource(SourceIdRequestBody().apply { this.sourceId = it }) }
+  }
+
   private fun createSourceCreateFromPartialUserConfig(
     configTemplate: ConfigTemplate,
     partialUserConfig: PartialUserConfig,

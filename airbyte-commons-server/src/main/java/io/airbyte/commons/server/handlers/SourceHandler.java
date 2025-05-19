@@ -56,6 +56,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.domain.models.SecretStorage;
@@ -107,6 +108,7 @@ public class SourceHandler {
   private final SecretStorageService secretStorageService;
   private final SecretReferenceService secretReferenceService;
   private final CurrentUserService currentUserService;
+  private final PartialUserConfigService partialUserConfigService;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -130,7 +132,8 @@ public class SourceHandler {
                        final SecretsRepositoryWriter secretsRepositoryWriter,
                        final SecretStorageService secretStorageService,
                        final SecretReferenceService secretReferenceService,
-                       final CurrentUserService currentUserService) {
+                       final CurrentUserService currentUserService,
+                       final PartialUserConfigService partialUserConfigService) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -153,6 +156,7 @@ public class SourceHandler {
     this.secretStorageService = secretStorageService;
     this.secretReferenceService = secretReferenceService;
     this.currentUserService = currentUserService;
+    this.partialUserConfigService = partialUserConfigService;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -421,6 +425,9 @@ public class SourceHandler {
 
     // Delete secret references for this source
     secretReferenceService.deleteActorSecretReferences(source.getSourceId());
+
+    // Delete partial user config(s) for this source, if any
+    partialUserConfigService.deletePartialUserConfigForSource(source.getSourceId());
 
     // Mark source as tombstoned and clear config
     try {

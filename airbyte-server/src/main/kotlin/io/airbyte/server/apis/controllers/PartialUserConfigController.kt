@@ -3,7 +3,7 @@
  */
 
 package io.airbyte.server.apis.controllers
-
+import io.airbyte.api.generated.PartialUserConfigsApi
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ListPartialUserConfigsRequest
 import io.airbyte.api.model.generated.PartialUserConfigCreate
@@ -33,32 +33,38 @@ import java.util.UUID
 class PartialUserConfigController(
   private val partialUserConfigHandler: PartialUserConfigHandler,
   private val partialUserConfigService: PartialUserConfigService,
-) {
+) : PartialUserConfigsApi {
   @Post("/list")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun listPartialUserConfigs(
+  override fun listPartialUserConfigs(
     @Body listPartialUserConfigRequestBody: ListPartialUserConfigsRequest,
   ): PartialUserConfigReadList = partialUserConfigService.listPartialUserConfigs(listPartialUserConfigRequestBody.workspaceId).toApiModel()
 
   @Post("/create")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun createPartialUserConfig(
+  override fun createPartialUserConfig(
     @Body partialUserConfigCreate: PartialUserConfigCreate,
   ): SourceRead =
     partialUserConfigHandler.createSourceFromPartialConfig(partialUserConfigCreate.toConfigModel(), partialUserConfigCreate.connectionConfiguration)
 
   @Post("/update")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun updatePartialUserConfig(
+  override fun updatePartialUserConfig(
     @Body partialUserConfigUpdate: PartialUserConfigUpdate,
   ): SourceRead =
     partialUserConfigHandler.updateSourceFromPartialConfig(partialUserConfigUpdate.toConfigModel(), partialUserConfigUpdate.connectionConfiguration)
 
   @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun getPartialUserConfig(
+  override fun getPartialUserConfig(
     @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
   ): PartialUserConfigRead = partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId).toApiModel()
+
+  @Post("/delete")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun deletePartialUserConfig(
+    @Body partialUserConfigIdRequestBody: PartialUserConfigRequestBody,
+  ) = partialUserConfigHandler.deletePartialUserConfig(partialUserConfigIdRequestBody.partialUserConfigId)
 
   private fun PartialUserConfigCreate.toConfigModel(): PartialUserConfig =
     PartialUserConfig(
