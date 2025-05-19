@@ -157,7 +157,7 @@ export const AdditionalPropertiesControl = ({
 
   const addButton = (
     <Button variant="secondary" onClick={addPair} type="button" icon="plus">
-      <FormattedMessage id="form.addKeyValuePair" defaultMessage="Add Key/Value Pair" />
+      <FormattedMessage id="form.additionalProperties.addKeyValuePair" />
     </Button>
   );
 

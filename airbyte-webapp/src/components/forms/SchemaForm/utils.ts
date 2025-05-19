@@ -163,7 +163,7 @@ export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAd
 };
 
 export const nestPath = (path: string, rootPath?: string) => {
-  return rootPath ? `${rootPath}${path ? `.${path}` : ""}` : path;
+  return rootPath && !path.startsWith(rootPath) ? `${rootPath}${path ? `.${path}` : ""}` : path;
 };
 
 export const unnestPath = (path: string, rootPath?: string) => {

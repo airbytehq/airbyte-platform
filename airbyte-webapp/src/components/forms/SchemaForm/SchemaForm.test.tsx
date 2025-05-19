@@ -1238,7 +1238,7 @@ describe("SchemaForm", () => {
           ],
         },
       },
-      required: ["primaryKey"],
+      required: [],
     } as const;
 
     it("handles simple array of strings correctly", async () => {
@@ -1377,6 +1377,8 @@ describe("SchemaForm", () => {
           <FormSubmissionButtons />
         </SchemaForm>
       );
+
+      await userEvent.click(screen.getByRole("checkbox", { name: "PrimaryKey" }));
 
       // Check that the select for options is rendered
       await waitFor(() => {

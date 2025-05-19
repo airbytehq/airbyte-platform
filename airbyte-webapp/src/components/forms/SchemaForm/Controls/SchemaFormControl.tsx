@@ -1,6 +1,4 @@
 import { useMemo } from "react";
-import { useFormContext } from "react-hook-form";
-import { useUnmount } from "react-use";
 
 import { LabelInfo } from "components/Label";
 
@@ -72,11 +70,10 @@ export const SchemaFormControl = ({
     onlyShowErrorIfTouched,
     nestedUnderPath,
     verifyArrayItems,
-    convertJsonSchemaToZodSchema,
+    isRequired: isPathRequired,
   } = useSchemaForm();
-  const { register, clearErrors } = useFormContext();
 
-  const targetPath = path ? path : nestPath(path, nestedUnderPath);
+  const targetPath = useMemo(() => nestPath(path, nestedUnderPath), [nestedUnderPath, path]);
 
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
@@ -90,48 +87,12 @@ export const SchemaFormControl = ({
       return !isRequired;
     }
 
-    if (!path) {
+    if (!path || targetPath === nestedUnderPath) {
       return false;
     }
 
-    const pathParts = path.split(".");
-    const fieldName = pathParts.at(-1);
-    if (!fieldName) {
-      return false;
-    }
-
-    const parentPath = pathParts.slice(0, -1).join(".");
-    const parentSchema = getSchemaAtPath(parentPath, true);
-    if (parentSchema?.required?.includes(fieldName)) {
-      return false;
-    }
-
-    return true;
-  }, [getSchemaAtPath, isRequired, path]);
-
-  useUnmount(() => {
-    // Remove the validation logic for this field when unmounting.
-    // Using unregister() fully removes the field from the form which causes other issues,
-    // so just use register() to replace the validation logic with a no-op.
-    register(targetPath, {
-      validate: () => {
-        return true;
-      },
-    });
-    clearErrors(targetPath);
-  });
-
-  // Register validation logic for this field
-  register(targetPath, {
-    validate: (value) => {
-      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, !isOptional);
-      const result = zodSchema.safeParse(value);
-      if (result.success === false) {
-        return result.error.issues.at(-1)?.message;
-      }
-      return true;
-    },
-  });
+    return !isPathRequired(path);
+  }, [isPathRequired, isRequired, nestedUnderPath, path, targetPath]);
 
   // ~ declarative_component_schema type $parameters handling ~
   if (path.includes("$parameters")) {

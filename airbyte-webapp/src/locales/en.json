@@ -238,9 +238,11 @@
   "form.additionalProperties.key": "Key",
   "form.additionalProperties.value": "Value",
   "form.additionalProperties.duplicateKey": "Must not duplicate keys",
+  "form.additionalProperties.addKeyValuePair": "Add Key/Value Pair",
   "form.invalidNumber": "Must be a number",
   "form.enterValidJson": "Enter a valid JSON object",
   "form.invalidJson": "Must be a valid JSON object",
+  "form.failedValidation": "Validation failed: {error}",
 
   "setupForm.check.loading": "Checking the security of your installation…",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",

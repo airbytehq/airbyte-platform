@@ -24,7 +24,7 @@ export const MultiOptionControl = ({
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
-  const { setValue, unregister } = useFormContext();
+  const { setValue, clearErrors } = useFormContext();
   const {
     schema: rootSchema,
     getSelectedOptionSchema,
@@ -46,6 +46,7 @@ export const MultiOptionControl = ({
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
     [getSelectedOptionSchema, options, value]
   );
+  const displayError = useMemo(() => (value === undefined ? error : undefined), [error, value]);
 
   const getOptionLabel = useCallback(
     (option: AirbyteJsonSchema | undefined): string => {
@@ -111,11 +112,11 @@ export const MultiOptionControl = ({
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={error}
+      error={displayError}
       header={baseProps.header}
       control={
         <ListBox
-          className={classNames({ [styles.listBoxError]: !!error })}
+          className={classNames({ [styles.listBoxError]: !!displayError })}
           options={options.map((option) => ({
             label: getOptionLabel(option),
             value: getOptionLabel(option),
@@ -127,11 +128,11 @@ export const MultiOptionControl = ({
               return;
             }
 
-            // unregister the field to remove the validation logic of the previous option
-            unregister(baseProps.name);
-
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
+
+            // Only clear the error for the parent field itself, without validating
+            clearErrors(baseProps.name);
           }}
           selectedValue={getOptionLabel(currentlySelectedOption)}
           adaptiveWidth={false}
