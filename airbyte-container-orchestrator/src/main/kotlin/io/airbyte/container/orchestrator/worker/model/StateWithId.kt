@@ -8,18 +8,21 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import java.util.concurrent.atomic.AtomicInteger
 
-private const val ID = "id"
+const val ID = "id"
 
 fun attachIdToStateMessageFromSource(message: AirbyteMessage): AirbyteMessage {
   if (message.type == AirbyteMessage.Type.STATE) {
-    message.state.setAdditionalProperty(ID, StateIdProvider.nextId)
+    attachIdToStateMessageFromSource(message.state)
   }
+
   return message
 }
 
 fun attachIdToStateMessageFromSource(message: AirbyteStateMessage): AirbyteStateMessage =
   with(message) {
-    setAdditionalProperty(ID, StateIdProvider.nextId)
+    if (!message.additionalProperties.contains(ID)) {
+      setAdditionalProperty(ID, StateIdProvider.nextId)
+    }
     return this
   }
 

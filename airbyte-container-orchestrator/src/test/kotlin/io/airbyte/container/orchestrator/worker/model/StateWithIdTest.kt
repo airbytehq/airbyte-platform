@@ -14,6 +14,7 @@ import io.airbyte.protocol.models.v0.StreamDescriptor
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -99,6 +100,15 @@ internal class StateWithIdTest {
       getIdFromStateMessage(stateMessageWithIdAdded),
       getIdFromStateMessage(deserializedMessage.orElseThrow()),
     )
+  }
+
+  @Test
+  fun testAttachStateId() {
+    val stateMessage = AirbyteStateMessage()
+    val updatedStateMessage = attachIdToStateMessageFromSource(stateMessage)
+    assertTrue(updatedStateMessage.additionalProperties.contains(ID))
+    val updatedStateMessage2 = attachIdToStateMessageFromSource(updatedStateMessage)
+    assertEquals(updatedStateMessage.additionalProperties[ID], updatedStateMessage2.additionalProperties[ID])
   }
 
   @Test
