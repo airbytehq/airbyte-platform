@@ -2,12 +2,8 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.context
+package io.airbyte.workload.launcher.context
 
-import io.airbyte.workers.context.WorkloadSecurityContextProvider.Companion.DEFAULT_CAPABILITIES
-import io.airbyte.workers.context.WorkloadSecurityContextProvider.Companion.ROOTLESS_GROUP_ID
-import io.airbyte.workers.context.WorkloadSecurityContextProvider.Companion.ROOTLESS_USER_ID
-import io.airbyte.workers.context.WorkloadSecurityContextProvider.Companion.SECCOMP_PROFILE_TYPE
 import io.fabric8.kubernetes.api.model.SeccompProfileBuilder
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull

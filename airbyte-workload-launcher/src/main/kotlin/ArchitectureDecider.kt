@@ -22,12 +22,12 @@ import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_FILE_POSTFIX
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_FILE_PREFIX
 import io.airbyte.workers.models.ArchitectureConstants.SOCKET_PATH
-import io.airbyte.workers.pod.PodConstants.CPU_RESOURCE_KEY
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.constants.PodConstants.CPU_RESOURCE_KEY
 import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.airbyte.workload.launcher.pipeline.stages.model.IPCOptions
 import io.airbyte.workload.launcher.pipeline.stages.model.Serialization
 import io.airbyte.workload.launcher.pipeline.stages.model.Transport
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.github.oshai.kotlinlogging.KotlinLogging

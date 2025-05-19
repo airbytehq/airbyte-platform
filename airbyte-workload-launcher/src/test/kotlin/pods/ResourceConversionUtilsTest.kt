@@ -2,11 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import io.airbyte.config.ResourceRequirements
-import io.airbyte.workers.pod.PodConstants.CPU_RESOURCE_KEY
-import io.airbyte.workers.pod.PodConstants.MEMORY_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.PodConstants.CPU_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.PodConstants.MEMORY_RESOURCE_KEY
 import io.fabric8.kubernetes.api.model.Quantity
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -15,7 +15,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.stream.Stream
 
-class ResourceConversionUtilsTest {
+internal class ResourceConversionUtilsTest {
   @Test
   fun `builds fabric resource requirements from airbyte model`() {
     val actualReqs =

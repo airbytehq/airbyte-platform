@@ -8,8 +8,8 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.ArchitectureDecider
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.fabric8.kubernetes.api.model.EnvVar
 import io.fabric8.kubernetes.api.model.LocalObjectReference

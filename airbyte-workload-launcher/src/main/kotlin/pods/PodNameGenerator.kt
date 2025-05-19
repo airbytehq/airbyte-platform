@@ -2,9 +2,10 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import io.airbyte.commons.random.randomAlpha
+import io.airbyte.workload.launcher.constants.PodConstants.KUBE_NAME_LEN_LIMIT
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
@@ -54,7 +55,6 @@ class PodNameGenerator(
     )
 }
 
-internal const val KUBE_NAME_LEN_LIMIT = 63
 private val ALPHABETIC = "[a-zA-Z]+".toPattern()
 
 /**

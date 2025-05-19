@@ -2,8 +2,9 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
+import io.airbyte.workers.pod.Metadata
 import io.airbyte.workers.pod.Metadata.CHECK_JOB
 import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
 import io.airbyte.workers.pod.Metadata.JOB_TYPE_KEY
@@ -14,8 +15,8 @@ import io.airbyte.workers.pod.Metadata.SPEC_JOB
 import io.airbyte.workers.pod.Metadata.SYNC_JOB
 import io.airbyte.workers.pod.Metadata.SYNC_STEP_KEY
 import io.airbyte.workers.pod.Metadata.WRITE_STEP
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
-import io.airbyte.workers.pod.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_KEY
+import io.airbyte.workload.launcher.pods.PodLabeler.LabelKeys.SWEEPER_LABEL_VALUE
 import jakarta.inject.Singleton
 import java.util.UUID
 

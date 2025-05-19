@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workers.hashing.TestHasher
 import io.fabric8.kubernetes.api.model.LabelSelector
@@ -15,13 +15,13 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.verify
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.Optional
 import java.util.UUID
 
-class PodNetworkSecurityLabelerTest {
+internal class PodNetworkSecurityLabelerTest {
   private lateinit var mNetworkPolicyFetcher: NetworkPolicyFetcher
   private lateinit var mCacheManager: CacheManager<Any>
   private lateinit var mCache: SyncCache<Any>
@@ -66,7 +66,7 @@ class PodNetworkSecurityLabelerTest {
         },
       )
     val result = labeler.getLabels(workspaceId, networkSecurityTokens)
-    assertEquals(mapOf("Label1" to "value1", "Label2" to "value2"), result)
+    Assertions.assertEquals(mapOf("Label1" to "value1", "Label2" to "value2"), result)
   }
 
   @Test
@@ -78,7 +78,7 @@ class PodNetworkSecurityLabelerTest {
     every { mCache.get(workspaceId, Map::class.java) } returns Optional.empty()
     every { mCache.put(any(), any()) } just runs
     val result = labeler.getLabels(workspaceId, networkSecurityTokens)
-    assertEquals(emptyMap<String, String>(), result)
+    Assertions.assertEquals(emptyMap<String, String>(), result)
     verify(exactly = 0) { mNetworkPolicyFetcher.matchingNetworkPolicies(any(), any(), any()) }
     verify(exactly = 0) { mCache.get(any(), Map::class.java) }
     verify(exactly = 0) { mCache.put(any(), any()) }

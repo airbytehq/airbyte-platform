@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.context
+package io.airbyte.workload.launcher.context
 
 import io.fabric8.kubernetes.api.model.CapabilitiesBuilder
 import io.fabric8.kubernetes.api.model.PodSecurityContext
@@ -13,12 +13,18 @@ import io.fabric8.kubernetes.api.model.SecurityContextBuilder
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 
+val DEFAULT_CAPABILITIES = listOf("ALL")
+const val ROOT_USER_ID = 0L
+const val ROOTLESS_USER_ID = 1000L
+const val ROOTLESS_GROUP_ID = 1000L
+const val SECCOMP_PROFILE_TYPE = "RuntimeDefault"
+
 @Singleton
 class WorkloadSecurityContextProvider(
   @Value("\${airbyte.container.rootless-workload}") private val rootlessWorkload: Boolean,
 ) {
   /**
-   * Returns a default [SecurityContext] specific to containers.
+   * Returns a default [io.fabric8.kubernetes.api.model.SecurityContext] specific to containers.
    *
    * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
    */
@@ -49,7 +55,7 @@ class WorkloadSecurityContextProvider(
     }
 
   /**
-   * Returns a rootless [PodSecurityContext] specific to pods.
+   * Returns a rootless [io.fabric8.kubernetes.api.model.PodSecurityContext] specific to pods.
    *
    * @return SecurityContext if ROOTLESS_WORKLOAD is enabled, null otherwise.
    */
@@ -92,12 +98,4 @@ class WorkloadSecurityContextProvider(
       .withAllowPrivilegeEscalation(false)
       .withReadOnlyRootFilesystem(false)
       .withCapabilities(CapabilitiesBuilder().addAllToDrop(DEFAULT_CAPABILITIES).build())
-
-  companion object {
-    val DEFAULT_CAPABILITIES = listOf("ALL")
-    const val ROOT_USER_ID = 0L
-    const val ROOTLESS_USER_ID = 1000L
-    const val ROOTLESS_GROUP_ID = 1000L
-    const val SECCOMP_PROFILE_TYPE = "RuntimeDefault"
-  }
 }

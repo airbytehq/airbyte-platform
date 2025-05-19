@@ -2,19 +2,19 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.workers.pod.PodConstants.CPU_RESOURCE_KEY
-import io.airbyte.workers.pod.PodConstants.EPHEMERAL_STORAGE_RESOURCE_KEY
-import io.airbyte.workers.pod.PodConstants.MEMORY_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.PodConstants.CPU_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.PodConstants.EPHEMERAL_STORAGE_RESOURCE_KEY
+import io.airbyte.workload.launcher.constants.PodConstants.MEMORY_RESOURCE_KEY
 import io.fabric8.kubernetes.api.model.Quantity
 import io.fabric8.kubernetes.api.model.ResourceRequirements
 import io.fabric8.kubernetes.api.model.ResourceRequirementsBuilder
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements
 
-val logger = KotlinLogging.logger {}
+private val logger = KotlinLogging.logger {}
 
 /**
  * Utility functions for converting to / from Kube / Fabric layer abstractions

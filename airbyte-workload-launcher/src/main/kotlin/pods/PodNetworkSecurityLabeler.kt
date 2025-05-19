@@ -2,15 +2,18 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workers.hashing.Hasher
 import io.fabric8.kubernetes.api.model.networking.v1.NetworkPolicy
 import io.fabric8.kubernetes.client.KubernetesClient
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.cache.CacheManager
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.util.UUID
+
+private val logger = KotlinLogging.logger {}
 
 /**
  * Class which lets us get the network security labels for pods.

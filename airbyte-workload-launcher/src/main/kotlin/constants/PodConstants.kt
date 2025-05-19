@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.constants
 
 object PodConstants {
   const val KUBE_NAME_LEN_LIMIT = 63

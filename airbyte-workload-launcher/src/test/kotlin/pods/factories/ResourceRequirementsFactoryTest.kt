@@ -11,7 +11,7 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.mockk.every
 import io.mockk.mockk

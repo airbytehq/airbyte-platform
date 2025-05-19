@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.pod
+package io.airbyte.workload.launcher.pods
 
 import io.airbyte.workers.pod.Metadata.CHECK_JOB
 import io.airbyte.workers.pod.Metadata.DISCOVER_JOB
@@ -26,9 +26,9 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.UUID
 import java.util.stream.Stream
-import io.airbyte.workers.pod.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
+import io.airbyte.workload.launcher.pods.ORCHESTRATOR_IMAGE_NAME as REPL_ORCHESTRATOR_IMAGE_NAME
 
-class PodLabelerTest {
+internal class PodLabelerTest {
   private lateinit var mPodNetworkSecurityLabeler: PodNetworkSecurityLabeler
 
   @BeforeEach
