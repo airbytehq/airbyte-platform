@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.serde
+package io.airbyte.initContainer.serde
 
 import io.airbyte.commons.json.Jsons
 import jakarta.inject.Singleton

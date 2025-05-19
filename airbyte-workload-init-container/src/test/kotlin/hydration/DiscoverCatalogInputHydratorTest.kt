@@ -2,26 +2,27 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.workers.hydration
+package io.airbyte.initContainer.hydration
 
 import com.fasterxml.jackson.databind.node.POJONode
 import io.airbyte.config.ActorContext
-import io.airbyte.config.ActorType
-import io.airbyte.config.StandardCheckConnectionInput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.toConfigWithRefs
+import io.airbyte.workers.hydration.ConnectorSecretsHydrator
+import io.airbyte.workers.hydration.SecretHydrationContext
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-class CheckConnectionInputHydratorTest {
+class DiscoverCatalogInputHydratorTest {
   @Test
   fun `hydrates from base hydrator and copies expected values over`() {
     val base: ConnectorSecretsHydrator = mockk()
 
-    val hydrator = CheckConnectionInputHydrator(base)
+    val hydrator = DiscoverCatalogInputHydrator(base)
 
     val unhydratedConfig = InlinedConfigWithSecretRefs(POJONode("un-hydrated"))
     val hydratedConfig = POJONode("hydrated")
@@ -29,10 +30,10 @@ class CheckConnectionInputHydratorTest {
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
     val input =
-      StandardCheckConnectionInput()
+      StandardDiscoverCatalogInput()
         .withActorContext(ActorContext().withWorkspaceId(workspaceId).withOrganizationId(orgId))
-        .withActorType(ActorType.DESTINATION)
-        .withActorId(UUID.randomUUID())
+        .withConfigHash(UUID.randomUUID().toString())
+        .withSourceId(UUID.randomUUID().toString())
         .withConnectionConfiguration(unhydratedConfig.value)
 
     every {
@@ -45,11 +46,11 @@ class CheckConnectionInputHydratorTest {
       )
     } returns hydratedConfig
 
-    val result = hydrator.getHydratedStandardCheckInput(input)
+    val result = hydrator.getHydratedStandardDiscoverInput(input)
 
     Assertions.assertEquals(input.actorContext, result.actorContext)
-    Assertions.assertEquals(input.actorId, result.actorId)
-    Assertions.assertEquals(input.actorType, result.actorType)
+    Assertions.assertEquals(input.configHash, result.configHash)
+    Assertions.assertEquals(input.sourceId, result.sourceId)
     Assertions.assertEquals(hydratedConfig, result.connectionConfiguration)
   }
 }
