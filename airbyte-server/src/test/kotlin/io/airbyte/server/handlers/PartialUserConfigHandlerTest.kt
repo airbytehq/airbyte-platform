@@ -95,16 +95,28 @@ class PartialUserConfigHandlerTest {
   private val incrementalAirbyteStream =
     io.airbyte.api.model.generated
       .AirbyteStream()
-      .name("test-stream")
+      .name("incremental-stream")
       .jsonSchema(
         objectMapper.createObjectNode().put("type", "object"),
       ).supportedSyncModes(listOf(SyncMode.INCREMENTAL, SyncMode.INCREMENTAL))
       .sourceDefinedCursor(true)
 
+  private val streamAndConfig = AirbyteStreamAndConfiguration()
+
+  private val airbyteCatalog =
+    AirbyteCatalog().streams(
+      listOf(
+        streamAndConfig,
+      ),
+    )
+  private val schemaResponse =
+    SourceDiscoverSchemaRead()
+      .catalog(airbyteCatalog)
+
   private val incrementalAirbyteStreamWithoutSourceDefinedCursor =
     io.airbyte.api.model.generated
       .AirbyteStream()
-      .name("test-stream")
+      .name("no-source-defined-cursor-stream")
       .jsonSchema(
         objectMapper.createObjectNode().put("type", "object"),
       ).supportedSyncModes(listOf(SyncMode.INCREMENTAL, SyncMode.INCREMENTAL))
@@ -113,7 +125,7 @@ class PartialUserConfigHandlerTest {
   private val fullRefreshOnlyAirbyteStream =
     io.airbyte.api.model.generated
       .AirbyteStream()
-      .name("test-stream")
+      .name("full-refresh-stream")
       .jsonSchema(
         objectMapper.createObjectNode().put("type", "object"),
       ).supportedSyncModes(listOf(SyncMode.FULL_REFRESH))
@@ -156,6 +168,17 @@ class PartialUserConfigHandlerTest {
     every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns emptyList()
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
       Optional.of(ActorDefinitionVersion().withSpec(ConnectorSpecification()))
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns SourceDiscoverSchemaRead().catalog(AirbyteCatalog().streams(emptyList()))
+
+    streamAndConfig.config(
+      AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
+    )
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
+
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
+      Optional.of(ActorDefinitionVersion().withSpec(ConnectorSpecification()))
   }
 
   @Test
@@ -172,6 +195,7 @@ class PartialUserConfigHandlerTest {
 
     val sourceCreateSlot = slot<SourceCreate>()
     every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+    every { sourceService.getSourceSchema(sourceId, false) } returns SourceDiscoverSchemaRead().catalog(AirbyteCatalog().streams(emptyList()))
 
     val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
 
