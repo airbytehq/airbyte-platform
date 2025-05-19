@@ -45,10 +45,11 @@ const PanelContainer: React.FC<React.PropsWithChildren<PanelContainerProps>> = (
   overlay,
 }) => {
   const width = dimensions?.width ?? 0;
+  const showOverlay = overlay && Boolean(width) && width <= overlay.displayThreshold;
 
   return (
     <div className={classNames(className, styles.panelContainer)}>
-      {overlay && width <= overlay.displayThreshold && (
+      {showOverlay ? (
         <div className={styles.lightOverlay}>
           <Heading
             as="h2"
@@ -59,8 +60,9 @@ const PanelContainer: React.FC<React.PropsWithChildren<PanelContainerProps>> = (
             {overlay.header}
           </Heading>
         </div>
+      ) : (
+        children
       )}
-      {children}
     </div>
   );
 };
