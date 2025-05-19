@@ -4,10 +4,10 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicUsersApi
 import io.airbyte.publicApi.server.generated.models.UsersResponse
@@ -28,7 +28,7 @@ import java.util.UUID
 open class UsersController(
   private val userService: UserService,
   private val trackingHelper: TrackingHelper,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicUsersApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
@@ -37,13 +37,13 @@ open class UsersController(
     ids: List<String>?,
     emails: List<String>?,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
     // You need to have an organization_member or a higher role to get all users within the same organization.
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.ORGANIZATION,
-      listOf(organizationId),
-      setOf(OrganizationAuthRole.ORGANIZATION_MEMBER),
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_MEMBER)
+
     // Process and monitor the request.
     val usersResponse: UsersResponse =
       trackingHelper.callWithTracker(
@@ -52,7 +52,7 @@ open class UsersController(
         },
         USERS_PATH,
         GET,
-        userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)

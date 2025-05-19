@@ -4,12 +4,10 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.api.model.generated.PermissionType
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.publicApi.server.generated.apis.PublicWorkspacesApi
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
@@ -34,8 +32,7 @@ private val logger = KotlinLogging.logger {}
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WorkspacesController(
   protected val workspaceService: WorkspaceService,
-  protected val apiAuthorizationHelper: ApiAuthorizationHelper,
-  private val currentUserService: CurrentUserService,
+  private val roleResolver: RoleResolver,
 ) : PublicWorkspacesApi {
   @Path("$WORKSPACES_PATH/{workspaceId}/oauthCredentials")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
@@ -43,13 +40,12 @@ open class WorkspacesController(
     workspaceId: String,
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      workspaceId,
-      Scope.WORKSPACE,
-      userId,
-      PermissionType.WORKSPACE_EDITOR,
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+
     return workspaceService.controllerSetWorkspaceOverrideOAuthParams(
       UUID.fromString(workspaceId),
       workspaceOAuthCredentialsRequest,
@@ -58,38 +54,38 @@ open class WorkspacesController(
 
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicCreateWorkspace(workspaceCreateRequest: WorkspaceCreateRequest): Response {
-    // Now that we have orgs everywhere, ensure the user is at least an organization editor
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.ORGANIZATION,
-      listOf(DEFAULT_ORGANIZATION_ID.toString()),
-      setOf(OrganizationAuthRole.ORGANIZATION_EDITOR),
-    )
+    // This request is hard-coded to the DEFAULT_ORGANIZATION_ID in OSS,
+    // because there's only one organization in OSS/SME.
+    // This controller is overridden in Airbyte Cloud to allow multiple workspaces.
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.ORGANIZATION_ID, DEFAULT_ORGANIZATION_ID)
+      .requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
+
     return workspaceService.controllerCreateWorkspace(workspaceCreateRequest)
   }
 
   @Path("$WORKSPACES_PATH/{workspaceId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteWorkspace(workspaceId: String): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      workspaceId,
-      Scope.WORKSPACE,
-      userId,
-      PermissionType.WORKSPACE_EDITOR,
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
+
     return workspaceService.controllerDeleteWorkspace(UUID.fromString(workspaceId))
   }
 
   @Path("$WORKSPACES_PATH/{workspaceId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetWorkspace(workspaceId: String): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      workspaceId,
-      Scope.WORKSPACE,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_READER)
     return workspaceService.controllerGetWorkspace(UUID.fromString(workspaceId))
   }
 
@@ -100,14 +96,16 @@ open class WorkspacesController(
     limit: Int,
     offset: Int,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    logger.debug { "listing workspaces: $workspaceIds" }
-    apiAuthorizationHelper.checkWorkspacesPermission(
-      workspaceIds?.map { it.toString() } ?: emptyList(),
-      Scope.WORKSPACES,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
+    // If workspace IDs were given, then verify the user has access to those workspaces.
+    // If none were given, then the WorkspaceService will determine the workspaces for the current user.
+    if (!workspaceIds.isNullOrEmpty()) {
+      roleResolver
+        .Request()
+        .withCurrentUser()
+        .withWorkspaces(workspaceIds)
+        .requireRole(AuthRoleConstants.WORKSPACE_READER)
+    }
+
     return workspaceService.controllerListWorkspaces(
       workspaceIds ?: emptyList(),
       includeDeleted,
@@ -123,13 +121,11 @@ open class WorkspacesController(
     workspaceId: String,
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      workspaceId,
-      Scope.WORKSPACE,
-      userId,
-      PermissionType.WORKSPACE_EDITOR,
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
     return workspaceService.controllerUpdateWorkspace(UUID.fromString(workspaceId), workspaceUpdateRequest)
   }
 }

@@ -5,13 +5,10 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import io.airbyte.commons.auth.AuthRoleConstants
-import io.airbyte.commons.auth.OrganizationAuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
@@ -43,7 +40,6 @@ import java.util.UUID
 @Controller
 class EmbeddedController(
   val jwtTokenGenerator: JwtTokenGenerator,
-  val apiAuthorizationHelper: ApiAuthorizationHelper,
   val tokenExpirationConfig: TokenExpirationConfig,
   val currentUserService: CurrentUserService,
   val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
@@ -53,6 +49,7 @@ class EmbeddedController(
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
 
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getEmbeddedWidget(req: EmbeddedWidgetRequest): Response {
     val organizationId = OrganizationId(req.organizationId)
@@ -60,13 +57,6 @@ class EmbeddedController(
     licenseEntitlementChecker.ensureEntitled(
       organizationId.value,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
-    )
-
-    // Ensure the user is admin of the org that owns the requested workspace.
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.ORGANIZATION,
-      listOf(organizationId.value.toString()),
-      setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
     )
 
     val currentUser = currentUserService.getCurrentUser()

@@ -29,6 +29,15 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   @Query(
     """
+    select * from permission p
+    join auth_user au on p.user_id = au.user_id
+    where au.auth_user_id = :authUserId
+  """,
+  )
+  fun queryByAuthUser(authUserId: String): List<Permission>
+
+  @Query(
+    """
     select * from permission
     where exists (
       select * from "user"

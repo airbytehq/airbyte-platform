@@ -6,13 +6,13 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.helpers.buildStandardWorkspace
 import io.airbyte.commons.server.handlers.helpers.validateWorkspace
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigSchema
@@ -40,7 +40,7 @@ open class ResourceBootstrapHandler(
   private val organizationService: OrganizationService,
   private val permissionHandler: PermissionHandler,
   private val currentUserService: CurrentUserService,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
   private val organizationPaymentConfigService: OrganizationPaymentConfigService,
   private val airbyteEdition: AirbyteEdition,
   private val dataplaneGroupService: DataplaneGroupService,
@@ -64,11 +64,11 @@ open class ResourceBootstrapHandler(
       }
 
     // Ensure user has the required permissions to create a workspace
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.ORGANIZATION,
-      listOf(organization.organizationId.toString()),
-      setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
-    )
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.ORGANIZATION_ID, organization.organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     val standardWorkspace =
       buildStandardWorkspace(
