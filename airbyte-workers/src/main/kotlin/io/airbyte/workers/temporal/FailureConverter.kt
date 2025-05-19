@@ -8,7 +8,7 @@ import io.airbyte.commons.temporal.utils.ActivityFailureClassifier
 import io.airbyte.config.ActorType
 import io.airbyte.config.FailureReason
 import org.slf4j.LoggerFactory
-import kotlin.time.Duration
+import java.time.Duration
 import kotlin.time.toKotlinDuration
 
 class FailureConverter {
@@ -17,14 +17,14 @@ class FailureConverter {
     commandName: String,
     actorType: ActorType,
     e: Exception,
-    timeout: java.time.Duration? = null,
+    timeout: Duration? = null,
   ): FailureReason = getFailureReason(commandName, actorType, e, timeout?.toKotlinDuration())
 
   fun getFailureReason(
     commandName: String,
     actorType: ActorType,
     e: Exception,
-    timeout: Duration?,
+    timeout: kotlin.time.Duration?,
   ): FailureReason {
     val failureReason =
       FailureReason()

@@ -5,10 +5,6 @@
 package io.airbyte.workers.storage.activities
 
 import io.airbyte.metrics.MetricClient
-import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.ATTEMPT_NUMBER
-import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.CONNECTION_ID
-import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.JOB_ID
-import io.airbyte.workers.storage.activities.OutputStorageClientTest.Fixtures.TEST_PAYLOAD_NAME
 import io.micrometer.core.instrument.Counter
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
@@ -38,7 +34,7 @@ class OutputStorageClientTest {
 
   @BeforeEach
   fun setup() {
-    client = OutputStorageClient(storageClient, metricClient, TEST_PAYLOAD_NAME, TestClass::class.java)
+    client = OutputStorageClient(storageClient, metricClient, Fixtures.TEST_PAYLOAD_NAME, TestClass::class.java)
 
     every { metricClient.count(metric = any(), value = any(), attributes = anyVararg()) } returns mockk<Counter>()
   }
@@ -46,14 +42,14 @@ class OutputStorageClientTest {
   @Test
   fun `persist writes json to storage`() {
     val obj = TestClass("test", 123)
-    client.persist(obj, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, arrayOf())
+    client.persist(obj, Fixtures.CONNECTION_ID, Fixtures.JOB_ID, Fixtures.ATTEMPT_NUMBER, arrayOf())
 
     verify(exactly = 1) { storageClient.writeJSON(any(), obj) }
   }
 
   @Test
   fun `persist short circuits if input null`() {
-    client.persist(null, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, arrayOf())
+    client.persist(null, Fixtures.CONNECTION_ID, Fixtures.JOB_ID, Fixtures.ATTEMPT_NUMBER, arrayOf())
 
     verify(exactly = 0) { storageClient.writeJSON(any(), any()) }
   }
@@ -64,7 +60,15 @@ class OutputStorageClientTest {
 
     every { storageClient.writeJSON(any(), any()) } throws Exception("bang")
 
-    assertDoesNotThrow { client.persist(obj, CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, arrayOf()) }
+    assertDoesNotThrow {
+      client.persist(
+        obj,
+        Fixtures.CONNECTION_ID,
+        Fixtures.JOB_ID,
+        Fixtures.ATTEMPT_NUMBER,
+        arrayOf(),
+      )
+    }
   }
 
   object Fixtures {

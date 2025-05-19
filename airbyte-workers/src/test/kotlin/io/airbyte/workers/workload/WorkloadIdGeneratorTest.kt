@@ -4,7 +4,7 @@
 
 package io.airbyte.workers.workload
 
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -24,7 +24,7 @@ class WorkloadIdGeneratorTest {
     attemptNumber: Int,
   ) {
     val generatedWorkloadId = generator.generateCheckWorkloadId(actorId, jobId, attemptNumber)
-    assertEquals(
+    Assertions.assertEquals(
       "${actorId}_${jobId}_${attemptNumber}_check",
       generatedWorkloadId,
     )
@@ -38,7 +38,7 @@ class WorkloadIdGeneratorTest {
     attemptNumber: Int,
   ) {
     val generatedWorkloadId = generator.generateDiscoverWorkloadId(actorId, jobId, attemptNumber)
-    assertEquals(
+    Assertions.assertEquals(
       "${actorId}_${jobId}_${attemptNumber}_discover",
       generatedWorkloadId,
     )
@@ -51,7 +51,7 @@ class WorkloadIdGeneratorTest {
     timestampMs: Long,
   ) {
     val generatedWorkloadId = generator.generateDiscoverWorkloadIdV2(actorId, timestampMs)
-    assertEquals(
+    Assertions.assertEquals(
       "${actorId}_${timestampMs}_discover",
       generatedWorkloadId,
     )
@@ -66,7 +66,7 @@ class WorkloadIdGeneratorTest {
   ) {
     val actorId = UUID.randomUUID()
     val generatedWorkloadId = generator.generateDiscoverWorkloadIdV2WithSnap(actorId, timestampMs, windowWidthMs)
-    assertEquals(
+    Assertions.assertEquals(
       "${actorId}_${expectedSnappedTimestampMs}_discover",
       generatedWorkloadId,
     )
@@ -77,7 +77,7 @@ class WorkloadIdGeneratorTest {
     val jobId = UUID.randomUUID()
 
     val generatedWorkloadId = generator.generateSpecWorkloadId(jobId.toString())
-    assertEquals(
+    Assertions.assertEquals(
       "${jobId}_spec",
       generatedWorkloadId,
     )
@@ -90,7 +90,7 @@ class WorkloadIdGeneratorTest {
     val attemptNumber = 1
 
     val generatedWorkloadId = generator.generateSyncWorkloadId(connectionId, jobId, attemptNumber)
-    assertEquals(
+    Assertions.assertEquals(
       "${connectionId}_${jobId}_${attemptNumber}_sync",
       generatedWorkloadId,
     )
