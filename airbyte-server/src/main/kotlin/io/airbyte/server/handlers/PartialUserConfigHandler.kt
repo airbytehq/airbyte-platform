@@ -262,8 +262,8 @@ class PartialUserConfigHandler(
         ),
       connectionConfiguration = sanitizedConnectionConfiguration,
       configTemplate = configTemplate.configTemplate,
-      actorName = sourceRead.name,
-      actorIcon = sourceRead.icon,
+      actorName = configTemplate.actorName,
+      actorIcon = configTemplate.actorIcon,
     )
   }
 

@@ -4,23 +4,14 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
 interface PartialUserConfigFormControlsProps {
-  isEditMode: boolean;
   isSubmitting: boolean;
-  dirty: boolean;
 }
 
-export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormControlsProps> = ({
-  isEditMode,
-  isSubmitting,
-}) => {
+export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormControlsProps> = ({ isSubmitting }) => {
   return (
     <FlexContainer justifyContent="flex-end">
       <Button full type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
-        {isEditMode ? (
-          <FormattedMessage id="form.saveChanges" />
-        ) : (
-          <FormattedMessage id="onboarding.sourceSetUp.buttonText" />
-        )}
+        <FormattedMessage id="partialUserConfig.buttonText" />
       </Button>
     </FlexContainer>
   );

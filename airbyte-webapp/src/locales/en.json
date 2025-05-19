@@ -2474,6 +2474,7 @@
   "partialUserConfig.update.tab": "Saved integrations",
   "partialUserConfig.create.title": "Create integration",
   "partialUserConfig.update.title": "Update your integration",
+  "partialUserConfig.buttonText": "Save integration",
   "partialUserConfig.create.success": "Source created successfully",
   "partialUserConfig.update.success": "Source updated successfully",
   "partialUserConfig.back": "Back",
