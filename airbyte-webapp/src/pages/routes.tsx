@@ -11,7 +11,7 @@ import {
   useInvalidateAllWorkspaceScopeOnChange,
   useListWorkspacesInfinite,
 } from "core/api";
-import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -255,14 +255,7 @@ const AuthenticatedRoutes = () => {
           {multiWorkspaceUI && <Route path={RoutePaths.Workspaces} element={<WorkspacesPage />} />}
           <Route path="/" element={<DefaultView />} />
           <Route element={<MainView />}>
-            <Route
-              path={`${RoutePaths.Workspaces}/:workspaceId/*`}
-              element={
-                <ForbiddenErrorBoundary>
-                  <WorkspacesRoutes />
-                </ForbiddenErrorBoundary>
-              }
-            />
+            <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
           </Route>
           <Route path="*" element={<AutoSelectFirstWorkspace />} />
         </>
