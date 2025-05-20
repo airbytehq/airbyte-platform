@@ -6,7 +6,6 @@ package io.airbyte.container.orchestrator.bookkeeping
 
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
-import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.LogStateMsgs

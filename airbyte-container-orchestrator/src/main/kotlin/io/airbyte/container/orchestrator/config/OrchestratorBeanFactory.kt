@@ -4,83 +4,83 @@
 
 package io.airbyte.container.orchestrator.config
 
-import io.airbyte.commons.concurrency.VoidCallable
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
-import io.airbyte.container.orchestrator.worker.BufferConfiguration
 import io.airbyte.container.orchestrator.worker.DestinationReader
-import io.airbyte.container.orchestrator.worker.DestinationStarter
 import io.airbyte.container.orchestrator.worker.DestinationWriter
 import io.airbyte.container.orchestrator.worker.MessageProcessor
-import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
+import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerContext
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerHelper
 import io.airbyte.container.orchestrator.worker.ReplicationWorkerState
 import io.airbyte.container.orchestrator.worker.SourceReader
-import io.airbyte.container.orchestrator.worker.SourceStarter
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.container.orchestrator.worker.util.ClosableChannelQueue
-import io.airbyte.container.orchestrator.worker.withBufferSize
-import io.airbyte.container.orchestrator.worker.withDefaultConfiguration
-import io.airbyte.featureflag.ReplicationBufferOverride
+import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.NamespacingMapper
+import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
+import io.airbyte.validation.json.JsonSchemaValidator
+import io.airbyte.workers.WorkerUtils
+import io.airbyte.workers.models.ArchitectureConstants.ORCHESTRATOR
+import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.micronaut.context.annotation.Factory
+import io.micronaut.context.annotation.Requires
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.nio.file.Path
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
+/**
+ * Defines and creates any singletons that are only required when running in [ORCHESTRATOR] (legacy) mode.
+ * <p />
+ * Any singletons defined/created in this factory will only be available if the [PLATFORM_MODE]
+ * environment variable contains the value [ORCHESTRATOR].
+ */
 @Factory
-class ReplicationFactory {
+@Requires(property = PLATFORM_MODE, value = ORCHESTRATOR, defaultValue = ORCHESTRATOR)
+class OrchestratorBeanFactory {
   @Singleton
-  fun bufferConfiguration(replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader): BufferConfiguration {
-    val bufferSize = replicationInputFeatureFlagReader.read(ReplicationBufferOverride)
-    return if (bufferSize > 0) withBufferSize(bufferSize) else withDefaultConfiguration()
-  }
+  fun fieldSelector(
+    recordSchemaValidator: RecordSchemaValidator,
+    metricReporter: ReplicationMetricReporter,
+    replicationInput: ReplicationInput,
+    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
+  ) = FieldSelector(
+    recordSchemaValidator = recordSchemaValidator,
+    metricReporter = metricReporter,
+    replicationInput = replicationInput,
+    replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
+  )
 
   @Singleton
-  fun namespaceMapper(replicationInput: ReplicationInput) =
-    NamespacingMapper(
-      replicationInput.namespaceDefinition,
-      replicationInput.namespaceFormat,
-      replicationInput.prefix,
+  @Named("streamNamesToSchemas")
+  fun streamNamesToSchemas(replicationInput: ReplicationInput): MutableMap<AirbyteStreamNameNamespacePair, JsonNode?> =
+    WorkerUtils.mapStreamNamesToSchemas(replicationInput.catalog)
+
+  @Singleton
+  @Named("schemaValidationExecutorService")
+  fun schemaValidationExecutorService(): ExecutorService = Executors.newSingleThreadExecutor()
+
+  @Singleton
+  fun recordSchemaValidator(
+    @Named("jsonSchemaValidator") jsonSchemaValidator: JsonSchemaValidator,
+    @Named("schemaValidationExecutorService") schemaValidationExecutorService: ExecutorService,
+    @Named("streamNamesToSchemas") streamNamesToSchemas: MutableMap<AirbyteStreamNameNamespacePair, JsonNode?>,
+  ): RecordSchemaValidator =
+    RecordSchemaValidator(
+      jsonSchemaValidator = jsonSchemaValidator,
+      schemaValidationExecutorService = schemaValidationExecutorService,
+      streamNamesToSchemas = streamNamesToSchemas,
     )
 
   @Singleton
-  fun replicationContext(
-    replicationContextProvider: ReplicationContextProvider,
-    replicationInput: ReplicationInput,
-  ) = replicationContextProvider.provideContext(replicationInput)
-
-  @Singleton
-  @Named("onReplicationRunning")
-  fun replicationRunningCallback(
-    @Named("workloadId") workloadId: String,
-  ): VoidCallable = VoidCallable { workloadId }
-
-  @Singleton
-  @Named("startReplicationJobs")
-  fun startReplicationJobs(
-    destination: AirbyteDestination,
-    @Named("jobRoot") jobRoot: Path,
-    replicationInput: ReplicationInput,
-    replicationWorkerContext: ReplicationWorkerContext,
-    source: AirbyteSource,
-  ) = listOf(
-    DestinationStarter(
-      destination = destination,
-      jobRoot = jobRoot,
-      context = replicationWorkerContext,
-    ),
-    SourceStarter(
-      source = source,
-      jobRoot = jobRoot,
-      replicationInput = replicationInput,
-      context = replicationWorkerContext,
-    ),
-  )
+  @Named("destinationMessageQueue")
+  fun destinationMessageQueue(context: ReplicationWorkerContext) =
+    ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.destinationMaxBufferSize)
 
   @Singleton
   @Named("syncReplicationJobs")
@@ -119,13 +119,4 @@ class ReplicationFactory {
       replicationWorkerState = replicationWorkerState,
     ),
   )
-
-  @Singleton
-  @Named("destinationMessageQueue")
-  fun destinationMessageQueue(context: ReplicationWorkerContext) =
-    ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.destinationMaxBufferSize)
-
-  @Singleton
-  @Named("sourceMessageQueue")
-  fun sourceMessageQueue(context: ReplicationWorkerContext) = ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.sourceMaxBufferSize)
 }

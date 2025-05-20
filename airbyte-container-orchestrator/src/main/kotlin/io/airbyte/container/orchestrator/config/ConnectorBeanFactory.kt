@@ -33,8 +33,11 @@ import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.Optional
 
+/**
+ * Defines and creates any singletons that are necessary to interact with connectors during a replication sync.
+ */
 @Factory
-class ConnectorFactory {
+class ConnectorBeanFactory {
   @Singleton
   @Named("destinationStreamFactory")
   fun destinationStreamFactory(
@@ -65,7 +68,6 @@ class ConnectorFactory {
     messageWriterFactory: AirbyteMessageBufferedWriterFactory,
     messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
-    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   ): AirbyteDestination =
     LocalContainerAirbyteDestination(
       streamFactory = destinationStreamFactory,
@@ -81,7 +83,6 @@ class ConnectorFactory {
     heartbeatMonitor: HeartbeatMonitor,
     messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
-    replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
   ): AirbyteSource =
     if (replicationInput.isReset) {
