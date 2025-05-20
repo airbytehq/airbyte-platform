@@ -7,12 +7,14 @@ package io.airbyte.container.orchestrator.bookkeeping
 import com.amazonaws.internal.ExceptionUtils
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.WebUrlHelper
+import io.airbyte.api.client.model.generated.ActorDefinitionVersionRead
 import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.api.client.model.generated.DestinationDefinitionRead
 import io.airbyte.api.client.model.generated.DestinationRead
 import io.airbyte.api.client.model.generated.ReleaseStage
 import io.airbyte.api.client.model.generated.SourceDefinitionRead
 import io.airbyte.api.client.model.generated.SourceRead
+import io.airbyte.api.client.model.generated.SupportState
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.Configs
 import io.airbyte.config.FailureReason
@@ -104,6 +106,16 @@ class StateCheckSumErrorReporterTest {
 
     val sourceId = UUID.randomUUID()
     val sourceDefinitionId = UUID.randomUUID()
+    val sourceVersion =
+      ActorDefinitionVersionRead(
+        "source-repo",
+        "0.0.1",
+        supportsRefreshes = true,
+        isVersionOverrideApplied = true,
+        SupportState.SUPPORTED,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
     val sourceDefinition =
       SourceDefinitionRead(
         sourceDefinitionId,
@@ -121,6 +133,7 @@ class StateCheckSumErrorReporterTest {
 
     every { airbyteApiClient.connectionApi.getConnection(any()) } returns connection
     every { airbyteApiClient.sourceApi.getSource(any()) } returns source
+    every { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForSourceId(any()) } returns sourceVersion
     every { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(any()) } returns sourceDefinition
 
     stateCheckSumErrorReporter.reportError(
@@ -141,7 +154,7 @@ class StateCheckSumErrorReporterTest {
     ).reportJobFailureReason(
       any(StandardWorkspace::class.java),
       any(FailureReason::class.java),
-      eq("source-repo:0.1.0"),
+      eq("source-repo:0.0.1"),
       anyMap(),
       ArgumentMatchers.eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
     )
@@ -160,6 +173,16 @@ class StateCheckSumErrorReporterTest {
 
     val destinationId = UUID.randomUUID()
     val destinationDefinitionId = UUID.randomUUID()
+    val destinationVersion =
+      ActorDefinitionVersionRead(
+        "destination-repo",
+        "0.0.1",
+        supportsRefreshes = true,
+        isVersionOverrideApplied = true,
+        SupportState.SUPPORTED,
+        supportsFileTransfer = false,
+        supportsDataActivation = false,
+      )
 
     val destinationDefinition =
       DestinationDefinitionRead(
@@ -179,6 +202,7 @@ class StateCheckSumErrorReporterTest {
 
     every { airbyteApiClient.connectionApi.getConnection(any()) } returns connection
     every { airbyteApiClient.destinationApi.getDestination(any()) } returns destination
+    every { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(any()) } returns destinationVersion
     every { airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(any()) } returns destinationDefinition
 
     stateCheckSumErrorReporter.reportError(
@@ -199,7 +223,7 @@ class StateCheckSumErrorReporterTest {
     ).reportJobFailureReason(
       any(StandardWorkspace::class.java),
       any(FailureReason::class.java),
-      eq("destination-repo:0.1.0"),
+      eq("destination-repo:0.0.1"),
       anyMap(),
       ArgumentMatchers.eq(AttemptConfigReportingContext(null, null, State().withState(Jsons.jsonNode(stateMessage)))),
     )
