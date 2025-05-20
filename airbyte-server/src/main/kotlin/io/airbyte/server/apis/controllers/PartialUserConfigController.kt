@@ -22,6 +22,7 @@ import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.server.handlers.PartialUserConfigHandler
+import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -95,22 +96,35 @@ class PartialUserConfigController(
     return PartialUserConfigReadList().partialUserConfigs(items)
   }
 
-  private fun PartialUserConfigWithFullDetails.toApiModel(): PartialUserConfigRead =
-    PartialUserConfigRead()
-      .id(
-        this.partialUserConfig.id,
-      ).actorId(this.partialUserConfig.actorId)
-      .connectionConfiguration(this.connectionConfiguration)
-      .configTemplate(
-        ConfigTemplateRead()
-          .id(
-            this.configTemplate.id,
-          ).configTemplateSpec(
-            this.configTemplate.userConfigSpec.let {
-              objectMapper.valueToTree(it)
-            },
-          ).icon(this.actorIcon)
-          .name(this.actorName)
-          .sourceDefinitionId(this.configTemplate.actorDefinitionId),
+  private fun PartialUserConfigWithFullDetails.toApiModel(): PartialUserConfigRead {
+    val partialUserConfig =
+      PartialUserConfigRead()
+        .id(
+          this.partialUserConfig.id,
+        ).actorId(this.partialUserConfig.actorId)
+        .connectionConfiguration(this.connectionConfiguration)
+        .configTemplate(
+          ConfigTemplateRead()
+            .id(
+              this.configTemplate.id,
+            ).configTemplateSpec(
+              this.configTemplate.userConfigSpec.let {
+                objectMapper.valueToTree(it)
+              },
+            ).icon(this.actorIcon)
+            .name(this.actorName)
+            .sourceDefinitionId(this.configTemplate.actorDefinitionId),
+        )
+
+    if (this.configTemplate.advancedAuth != null) {
+      partialUserConfig.configTemplate.advancedAuth(
+        ConfigTemplateAdvancedAuthHelper.mapAdvancedAuth(this.configTemplate.advancedAuth!!),
       )
+      partialUserConfig.configTemplate.advancedAuthGlobalCredentialsAvailable(
+        this.configTemplate.advancedAuthGlobalCredentialsAvailable,
+      )
+    }
+
+    return partialUserConfig
+  }
 }

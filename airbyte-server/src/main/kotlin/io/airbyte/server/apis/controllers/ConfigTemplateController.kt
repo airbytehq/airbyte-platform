@@ -6,14 +6,11 @@ package io.airbyte.server.apis.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.generated.ConfigTemplateApi
-import io.airbyte.api.model.generated.AdvancedAuth
-import io.airbyte.api.model.generated.AdvancedAuth.AuthFlowTypeEnum
 import io.airbyte.api.model.generated.ConfigTemplateList
 import io.airbyte.api.model.generated.ConfigTemplateListItem
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ConfigTemplateRequestBody
 import io.airbyte.api.model.generated.ListConfigTemplatesRequestBody
-import io.airbyte.api.model.generated.OAuthConfigSpecification
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.entitlements.Entitlement
@@ -23,6 +20,7 @@ import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Controller
 
 @Controller
@@ -80,31 +78,11 @@ private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead {
 
   if (this.configTemplate.advancedAuth != null) {
     configTemplate.advancedAuth(
-      AdvancedAuth()
-        .authFlowType(
-          when (this.configTemplate.advancedAuth!!.authFlowType) {
-            io.airbyte.protocol.models.v0.AdvancedAuth.AuthFlowType.OAUTH_1_0 -> AuthFlowTypeEnum.OAUTH1_0
-            io.airbyte.protocol.models.v0.AdvancedAuth.AuthFlowType.OAUTH_2_0 -> AuthFlowTypeEnum.OAUTH2_0
-            null -> AuthFlowTypeEnum.OAUTH2_0
-          },
-        ).predicateKey(this.configTemplate.advancedAuth!!.predicateKey)
-        .predicateValue(this.configTemplate.advancedAuth!!.predicateValue)
-        .oauthConfigSpecification(
-          OAuthConfigSpecification()
-            .completeOAuthOutputSpecification(
-              this.configTemplate.advancedAuth!!
-                .oauthConfigSpecification.completeOauthOutputSpecification,
-            ).oauthUserInputFromConnectorConfigSpecification(
-              this.configTemplate.advancedAuth!!
-                .oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification,
-            ).completeOAuthServerInputSpecification(
-              this.configTemplate.advancedAuth!!
-                .oauthConfigSpecification.completeOauthServerInputSpecification,
-            ).completeOAuthServerOutputSpecification(
-              this.configTemplate.advancedAuth!!
-                .oauthConfigSpecification.completeOauthServerOutputSpecification,
-            ),
-        ),
+      ConfigTemplateAdvancedAuthHelper.mapAdvancedAuth(this.configTemplate.advancedAuth!!),
+    )
+    // Use the appropriate method signature for setting global credentials
+    configTemplate.advancedAuthGlobalCredentialsAvailable(
+      this.configTemplate.advancedAuthGlobalCredentialsAvailable,
     )
   }
   return configTemplate
