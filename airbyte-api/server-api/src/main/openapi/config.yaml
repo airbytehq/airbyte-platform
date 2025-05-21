@@ -3541,6 +3541,8 @@ paths:
       tags:
         - web_backend
       operationId: getWebappConfig
+      # This route is unsecured to be available during initial load of the webapp
+      security: []
       responses:
         "200":
           description: Successfully returned webapp configuration.
