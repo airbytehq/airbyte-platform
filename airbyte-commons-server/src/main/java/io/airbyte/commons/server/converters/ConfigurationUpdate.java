@@ -14,6 +14,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsHelpers;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
@@ -108,7 +109,7 @@ public class ConfigurationUpdate {
 
     // Merge update configuration into the persisted configuration
     final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedSource.getConfiguration());
-    final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedSource.getConfiguration(), mergeConfiguration);
+    final JsonNode updatedConfiguration = SecretsHelpers.INSTANCE.mergeNodesExceptForSecrets(persistedSource.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedSource).withConfiguration(updatedConfiguration);
   }
@@ -175,7 +176,8 @@ public class ConfigurationUpdate {
 
     // Merge update configuration into the persisted configuration
     final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedDestination.getConfiguration());
-    final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedDestination.getConfiguration(), mergeConfiguration);
+    final JsonNode updatedConfiguration =
+        SecretsHelpers.INSTANCE.mergeNodesExceptForSecrets(persistedDestination.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedDestination).withConfiguration(updatedConfiguration);
   }
