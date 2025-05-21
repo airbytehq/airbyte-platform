@@ -31,6 +31,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
     [styles["button--size-xs"]]: size === "xs",
     [styles["button--danger"]]: variant === "danger",
     [styles["button--clear"]]: variant === "clear",
+    [styles["button--clear-danger"]]: variant === "clearDanger",
     [styles["button--magic"]]: variant === "magic",
     [styles["button--primary"]]: variant === "primary",
     [styles["button--secondary"]]: variant === "secondary",

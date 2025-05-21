@@ -13,17 +13,17 @@ export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormContro
   onDelete,
 }) => {
   return (
-    <FlexContainer justifyContent="flex-end">
+    <FlexContainer justifyContent="flex-end" direction="column" gap="lg">
+      <Button full type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
+        <FormattedMessage id="partialUserConfig.buttonText" />
+      </Button>
       {onDelete && (
-        <Button full type="button" variant="danger" disabled={isSubmitting} onClick={onDelete}>
+        <Button type="button" full variant="clearDanger" disabled={isSubmitting} onClick={onDelete}>
           <FlexContainer justifyContent="center">
             <FormattedMessage id="partialUserConfig.delete.buttonText" />
           </FlexContainer>
         </Button>
       )}
-      <Button full type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
-        <FormattedMessage id="partialUserConfig.buttonText" />
-      </Button>
     </FlexContainer>
   );
 };
