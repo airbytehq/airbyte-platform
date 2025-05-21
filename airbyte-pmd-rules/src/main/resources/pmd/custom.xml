@@ -8,6 +8,8 @@
     Collection of custom PMD rules.
   </description>
 
+  <exclude-pattern>.*/generated/.*</exclude-pattern>
+
   <rule name="CheckBodyAnnotationInControllerMethodsRule"
     language="java"
     class="io.airbyte.pmd.CheckBodyAnnotationInControllerMethodsRule"
