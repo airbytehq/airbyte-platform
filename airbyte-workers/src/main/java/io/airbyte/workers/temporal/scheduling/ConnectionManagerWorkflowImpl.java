@@ -41,6 +41,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.featureflag.UseCommandCheck;
+import io.airbyte.featureflag.UseSyncV2;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -374,7 +375,7 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
             jobInputs = getJobInput();
           }
 
-          final boolean useSyncWorkflowV2 = featureFlags.getOrDefault(UseCommandCheck.INSTANCE.getKey(), false);
+          final boolean useSyncWorkflowV2 = featureFlags.getOrDefault(UseSyncV2.INSTANCE.getKey(), false);
           final boolean canSyncWorkflowV2 = Workflow.getVersion(USE_SYNC_WORKFLOW_V2_TAG, Workflow.DEFAULT_VERSION,
               USE_SYNC_WORKFLOW_V2_VERSION) > Workflow.DEFAULT_VERSION;
           standardSyncOutput = canSyncWorkflowV2 && useSyncWorkflowV2 ? runChildWorkflowV2(
