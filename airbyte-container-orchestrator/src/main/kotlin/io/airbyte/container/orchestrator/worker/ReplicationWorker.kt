@@ -48,8 +48,11 @@ class ReplicationWorker(
    * Helper function to track failures.
    */
   private fun trackFailure(e: Throwable?) {
+    // Only track if there is an exception AND the sync has not been canceled
     if (e != null) {
-      ApmTraceUtils.addExceptionToTrace(e)
+      if (!context.replicationWorkerState.cancelled) {
+        ApmTraceUtils.addExceptionToTrace(e)
+      }
       context.replicationWorkerState.trackFailure(e.cause ?: e, context.jobId, context.attempt)
       context.replicationWorkerState.markFailed()
     }
@@ -100,7 +103,6 @@ class ReplicationWorker(
         } catch (e: Exception) {
           logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
           trackFailure(e)
-          ApmTraceUtils.addExceptionToTrace(e)
         } finally {
           heartbeatSender.cancel()
         }
@@ -113,7 +115,6 @@ class ReplicationWorker(
       return context.replicationWorkerHelper.getReplicationOutput(PerformanceMetrics())
     } catch (e: Exception) {
       trackFailure(e)
-      ApmTraceUtils.addExceptionToTrace(e)
       throw WorkerException("Sync failed", e)
     } finally {
       safeClose(dedicatedDispatcher)
