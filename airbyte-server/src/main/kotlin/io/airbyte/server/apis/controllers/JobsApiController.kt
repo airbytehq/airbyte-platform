@@ -10,6 +10,7 @@ import io.airbyte.api.model.generated.CheckInput
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
+import io.airbyte.api.model.generated.GetWebhookConfigRequest
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.JobCreate
 import io.airbyte.api.model.generated.JobDebugInfoRead
@@ -138,6 +139,14 @@ open class JobsApiController(
   override fun getLastReplicationJobWithCancel(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobOptionalRead? = execute { jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody) }
+
+  @Post("/getWebhookConfig")
+  @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getWebhookConfig(getWebhookConfigRequest: GetWebhookConfigRequest): Any? =
+    execute {
+      jobInputHandler.getJobWebhookConfig(getWebhookConfigRequest.jobId)
+    }
 
   @Post("/job_failure")
   @Secured(AuthRoleConstants.ADMIN)

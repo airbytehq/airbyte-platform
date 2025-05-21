@@ -519,7 +519,7 @@ class JobInputServiceTest {
     assertEquals(dockerImageTag, actual.discoverCatalogInput.connectorVersion)
     assertEquals(configuration, actual.discoverCatalogInput.connectionConfiguration)
     assertEquals(null, actual.discoverCatalogInput.resourceRequirements)
-    assertEquals(true, actual.discoverCatalogInput.manual)
+    assertEquals(false, actual.discoverCatalogInput.manual)
 
     assertEquals(workspaceId, actual.integrationLauncherConfig.workspaceId)
     assertEquals(testDockerImage, actual.integrationLauncherConfig.dockerImage)
@@ -558,7 +558,6 @@ class JobInputServiceTest {
     every { mockSourceDefinitionVersion.dockerImageTag } returns dockerImageTag
     every { mockSourceDefinitionVersion.protocolVersion } returns protocolVersion
     every { mockSourceDefinitionVersion.allowedHosts } returns AllowedHosts()
-    every { mockSourceDefinitionVersion.supportsRefreshes } returns false
     every { mockSourceDefinitionVersion.connectorIPCOptions } returns sourceICPOption
 
     val mockDestination = mockk<DestinationConnection>()
@@ -583,6 +582,7 @@ class JobInputServiceTest {
     every { mockDestinationDefinitionVersion.protocolVersion } returns protocolVersion
     every { mockDestinationDefinitionVersion.allowedHosts } returns AllowedHosts()
     every { mockDestinationDefinitionVersion.connectorIPCOptions } returns destinationICPOption
+    every { mockDestinationDefinitionVersion.supportsRefreshes } returns false
 
     val attemptSyncConfig = mockk<AttemptSyncConfig>()
     every { attemptSyncConfig.sourceConfiguration } returns null
@@ -604,7 +604,7 @@ class JobInputServiceTest {
 
     val mockJob = mockk<Job>()
     every { mockJob.id } returns jobId
-    every { mockJob.status } returns io.airbyte.config.JobStatus.SUCCEEDED
+    every { mockJob.status } returns io.airbyte.config.JobStatus.PENDING
     every { mockJob.config } returns jobConfig
 
     every { connectionService.getStandardSync(connectionId) } returns mockConnection
@@ -656,7 +656,8 @@ class JobInputServiceTest {
               Version(protocolVersion),
             ).withIsCustomConnector(false)
             .withAttemptId(attemptNumber.toLong())
-            .withAllowedHosts(AllowedHosts()),
+            .withAllowedHosts(AllowedHosts())
+            .withConnectionId(connectionId),
         destinationLauncherConfig =
           IntegrationLauncherConfig()
             .withJobId(jobId.toString())
@@ -666,7 +667,8 @@ class JobInputServiceTest {
               Version(protocolVersion),
             ).withIsCustomConnector(true)
             .withAttemptId(attemptNumber.toLong())
-            .withAllowedHosts(AllowedHosts()),
+            .withAllowedHosts(AllowedHosts())
+            .withConnectionId(connectionId),
         syncResourceRequirements = SyncResourceRequirements(),
         workspaceId = workspaceId,
         connectionId = connectionId,

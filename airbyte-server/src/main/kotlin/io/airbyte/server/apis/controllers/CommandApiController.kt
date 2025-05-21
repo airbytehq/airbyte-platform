@@ -29,7 +29,9 @@ import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter
 import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.protocol.models.Jsons
@@ -130,11 +132,12 @@ class CommandApiController(
   override fun getReplicateCommandOutput(
     @Body replicateCommandOutputRequest: ReplicateCommandOutputRequest,
   ): ReplicateCommandOutputResponse {
-    val output = commandService.getReplicationOutput(replicateCommandOutputRequest.id)
+    val output: ReplicationOutput? = commandService.getReplicationOutput(replicateCommandOutputRequest.id)
     return ReplicateCommandOutputResponse().apply {
       id(replicateCommandOutputRequest.id)
       attemptSummary(output?.replicationAttemptSummary)
       failures(output?.failures?.map { it.toApi() })
+      catalog(output?.outputCatalog?.let { catalogConverter.toApi(it, null) })
     }
   }
 
@@ -237,7 +240,15 @@ class CommandApiController(
       jobId = runReplicateCommandRequest.jobId,
       attemptNumber = runReplicateCommandRequest.attemptNumber.toLong(),
       signalInput = runReplicateCommandRequest.signalInput,
-      commandInput = Jsons.jsonNode(runReplicateCommandRequest),
+      commandInput =
+        Jsons.jsonNode(
+          ReplicationCommandApiInput.ReplicationApiInput(
+            connectionId = runReplicateCommandRequest.connectionId,
+            jobId = runReplicateCommandRequest.jobId,
+            attemptId = runReplicateCommandRequest.attemptNumber.toLong(),
+            appliedCatalogDiff = runReplicateCommandRequest.appliedCatalogDiff?.toDomain(),
+          ),
+        ),
     )
     return RunReplicateCommandResponse().id(runReplicateCommandRequest.id)
   }

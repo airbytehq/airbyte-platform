@@ -10,7 +10,9 @@ import io.airbyte.api.client.model.generated.CommandGetResponse
 import io.airbyte.api.client.model.generated.FailureType
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputRequest
 import io.airbyte.api.client.model.generated.ReplicateCommandOutputResponse
+import io.airbyte.commons.converters.CatalogClientConverters
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.temporal.scheduling.ReplicationCommandApiInput
 import io.airbyte.config.ActivityPayloadURI
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.CatalogDiff
@@ -19,7 +21,6 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
-import io.airbyte.config.ReplicationOutput
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.WriteOutputCatalogToObjectStorage
@@ -38,9 +39,10 @@ class ReplicationCommandTest {
   private val featureFlagClient: FeatureFlagClient = mockk(relaxed = true)
   private val catalogStorageClient: OutputStorageClient<ConfiguredAirbyteCatalog> = mockk(relaxed = true)
   private val failureConverter: FailureConverter = mockk(relaxed = true)
+  private val catalogClientConverters: CatalogClientConverters = mockk(relaxed = true)
   private val commandApi = airbyteApiClient.commandApi
   private val replicationCommand =
-    ReplicationCommand(airbyteApiClient, featureFlagClient, catalogStorageClient, failureConverter)
+    ReplicationCommand(airbyteApiClient, featureFlagClient, catalogStorageClient, failureConverter, catalogClientConverters)
 
   private val connectionId = UUID.randomUUID()
   private val jobId = 1L
@@ -65,17 +67,15 @@ class ReplicationCommandTest {
             ),
           ),
         )
-    val replicationOutput =
-      ReplicationOutput().withOutputCatalog(outputCatalog).withReplicationAttemptSummary(
-        ReplicationAttemptSummary()
-          .withBytesSynced(100L)
-          .withRecordsSynced(10L)
-          .withStartTime(0L)
-          .withEndTime(1000L)
-          .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED),
-      )
+    val replicationAttemptSummary =
+      ReplicationAttemptSummary()
+        .withBytesSynced(100L)
+        .withRecordsSynced(10L)
+        .withStartTime(0L)
+        .withEndTime(1000L)
+        .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED)
 
-    val attemptSummary = Jsons.jsonNode(replicationOutput)
+    val attemptSummary = Jsons.jsonNode(replicationAttemptSummary)
     val replicateCommandOutputResponse =
       ReplicateCommandOutputResponse(
         commandId,
@@ -97,7 +97,11 @@ class ReplicationCommandTest {
         id = commandId,
         workspaceId = workspaceId,
         commandType = "replicate",
-        commandInput = Jsons.jsonNode(ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff())),
+        commandInput =
+          Jsons
+            .jsonNode(
+              ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
+            ).toString(),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
@@ -106,7 +110,7 @@ class ReplicationCommandTest {
     val expectedOutput =
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationOutput))
+        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null, null))
 
     val actualOutput = replicationCommand.getOutput(commandId)
 
@@ -123,29 +127,15 @@ class ReplicationCommandTest {
   fun `getOutput should return replicate output with failure reason on failure`() {
     val externalMessage = "External error message"
 
-    val outputCatalog =
-      ConfiguredAirbyteCatalog()
-        .withStreams(
-          listOf(
-            ConfiguredAirbyteStream(
-              AirbyteStream(
-                name = "stream1",
-                jsonSchema = Jsons.emptyObject(),
-                supportedSyncModes = listOf(io.airbyte.config.SyncMode.FULL_REFRESH),
-              ),
-            ),
-          ),
-        )
-    val replicationOutput =
-      ReplicationOutput().withOutputCatalog(outputCatalog).withReplicationAttemptSummary(
-        ReplicationAttemptSummary()
-          .withBytesSynced(100L)
-          .withRecordsSynced(10L)
-          .withStartTime(0L)
-          .withEndTime(1000L)
-          .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED),
-      )
-    val attemptSummary = Jsons.jsonNode(replicationOutput) as com.fasterxml.jackson.databind.node.ObjectNode
+    val replicationAttemptSummary =
+      ReplicationAttemptSummary()
+        .withBytesSynced(100L)
+        .withRecordsSynced(10L)
+        .withStartTime(0L)
+        .withEndTime(1000L)
+        .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED)
+
+    val attemptSummary = Jsons.jsonNode(replicationAttemptSummary) as com.fasterxml.jackson.databind.node.ObjectNode
     val failureReason =
       io.airbyte.api.client.model.generated.FailureReason(
         timestamp = System.currentTimeMillis(),
@@ -169,7 +159,11 @@ class ReplicationCommandTest {
         id = commandId,
         workspaceId = workspaceId,
         commandType = "replicate",
-        commandInput = Jsons.jsonNode(ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff())),
+        commandInput =
+          Jsons
+            .jsonNode(
+              ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
+            ).toString(),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
@@ -184,7 +178,7 @@ class ReplicationCommandTest {
     val expectedOutput =
       ConnectorJobOutput()
         .withOutputType(ConnectorJobOutput.OutputType.REPLICATE)
-        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationOutput))
+        .withReplicate(replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, null, null))
         .withFailureReason(expectedFailureReason)
 
     val actualOutput = replicationCommand.getOutput(commandId)
@@ -208,15 +202,13 @@ class ReplicationCommandTest {
             ),
           ),
         )
-    val replicationOutput =
-      ReplicationOutput().withOutputCatalog(outputCatalog).withReplicationAttemptSummary(
-        ReplicationAttemptSummary()
-          .withBytesSynced(100L)
-          .withRecordsSynced(10L)
-          .withStartTime(0L)
-          .withEndTime(1000L)
-          .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED),
-      )
+    val replicationAttemptSummary =
+      ReplicationAttemptSummary()
+        .withBytesSynced(100L)
+        .withRecordsSynced(10L)
+        .withStartTime(0L)
+        .withEndTime(1000L)
+        .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED)
 
     val expectedUri = "s3://bucket/path/to/catalog.json"
     val expectedActivityPayloadURI = ActivityPayloadURI().withId(expectedUri)
@@ -238,13 +230,17 @@ class ReplicationCommandTest {
         id = commandId,
         workspaceId = workspaceId,
         commandType = "replicate",
-        commandInput = Jsons.jsonNode(ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff())),
+        commandInput =
+          Jsons
+            .jsonNode(
+              ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
+            ).toString(),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
         updatedAt = java.time.OffsetDateTime.now(),
       )
-    val output = replicationCommand.finalizeOutput(commandId, replicationOutput)
+    val output = replicationCommand.finalizeOutput(commandId, replicationAttemptSummary, outputCatalog, null)
 
     verify {
       catalogStorageClient.persist(outputCatalog, connectionId, jobId, attemptId.toInt(), emptyArray())
@@ -255,28 +251,13 @@ class ReplicationCommandTest {
 
   @Test
   fun `finalizeOutput should not persist catalog to object storage when feature flag is disabled`() {
-    val outputCatalog =
-      ConfiguredAirbyteCatalog()
-        .withStreams(
-          listOf(
-            ConfiguredAirbyteStream(
-              AirbyteStream(
-                name = "stream1",
-                jsonSchema = Jsons.emptyObject(),
-                supportedSyncModes = listOf(io.airbyte.config.SyncMode.FULL_REFRESH),
-              ),
-            ),
-          ),
-        )
     val replicationOutput =
-      ReplicationOutput().withOutputCatalog(outputCatalog).withReplicationAttemptSummary(
-        ReplicationAttemptSummary()
-          .withBytesSynced(100L)
-          .withRecordsSynced(10L)
-          .withStartTime(0L)
-          .withEndTime(1000L)
-          .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED),
-      )
+      ReplicationAttemptSummary()
+        .withBytesSynced(100L)
+        .withRecordsSynced(10L)
+        .withStartTime(0L)
+        .withEndTime(1000L)
+        .withStatus(io.airbyte.config.StandardSyncSummary.ReplicationStatus.COMPLETED)
 
     every {
       featureFlagClient.boolVariation(
@@ -292,13 +273,17 @@ class ReplicationCommandTest {
         id = commandId,
         workspaceId = workspaceId,
         commandType = "replicate",
-        commandInput = Jsons.jsonNode(ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff())),
+        commandInput =
+          Jsons
+            .jsonNode(
+              ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
+            ).toString(),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
         updatedAt = java.time.OffsetDateTime.now(),
       )
-    val output = replicationCommand.finalizeOutput(commandId, replicationOutput)
+    val output = replicationCommand.finalizeOutput(commandId, replicationOutput, null, null)
 
     verify(exactly = 0) {
       catalogStorageClient.persist(any(), any(), any(), any(), any())

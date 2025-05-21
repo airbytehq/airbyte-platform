@@ -319,7 +319,7 @@ class CommandService(
       )
     createCommand(
       commandId = commandId,
-      commandType = CommandType.DISCOVER.name,
+      commandType = CommandType.REPLICATE.name,
       commandInput = commandInput,
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,

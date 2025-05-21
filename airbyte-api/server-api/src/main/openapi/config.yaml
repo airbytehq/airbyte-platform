@@ -3907,6 +3907,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/getWebhookConfig:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get a webhook config for a job.
+      operationId: getWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: integer
+                  format: int64
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                type: object
   /v1/jobs/job_failure:
     post:
       tags:
@@ -6262,6 +6288,8 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/FailureReason"
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
 
   /v1/commands/status:
     post:

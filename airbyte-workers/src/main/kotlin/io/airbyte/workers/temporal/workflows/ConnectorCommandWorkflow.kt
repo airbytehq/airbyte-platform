@@ -125,7 +125,7 @@ class ConnectorCommandActivityImpl(
     fun DiscoverCommandInput.DiscoverCatalogInput.toWorkerModels(): DiscoverCatalogInput =
       DiscoverCatalogInput(jobRunConfig, integrationLauncherConfig, discoverCatalogInput)
 
-    fun DiscoverCommandApiInput.DiscoverApiInput.toWorkerModels(): DiscoverSourceApiInput = DiscoverSourceApiInput(actorId, jobId, attemptId)
+    fun DiscoverCommandApiInput.DiscoverApiInput.toWorkerModels(): DiscoverSourceApiInput = DiscoverSourceApiInput(actorId, jobId, attemptNumber)
 
     fun SpecCommandInput.SpecInput.toWorkerModels(): SpecInput = SpecInput(jobRunConfig, integrationLauncherConfig)
 
