@@ -13,6 +13,7 @@ import { ControlGroup } from "./ControlGroup";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps } from "./types";
 import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema } from "../utils";
 
 export const ArrayOfObjectsControl = ({
@@ -21,10 +22,10 @@ export const ArrayOfObjectsControl = ({
   skipRenderedPathRegistration = false,
   overrideByPath = {},
 }: BaseControlComponentProps) => {
-  const { errorAtPath, extractDefaultValuesFromSchema } = useSchemaForm();
+  const { extractDefaultValuesFromSchema } = useSchemaForm();
   const { fields: items, append, remove } = useFieldArray({ name: baseProps.name });
   // react-hook-form adds "root" to the path of errors on the array of objects field
-  const error = errorAtPath(`${baseProps.name}.root`);
+  const error = useErrorAtPath(`${baseProps.name}.root`);
 
   if (!fieldSchema.items) {
     throw new Error("items is required on array of object fields");

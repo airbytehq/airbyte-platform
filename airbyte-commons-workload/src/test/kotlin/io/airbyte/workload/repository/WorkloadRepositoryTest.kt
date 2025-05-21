@@ -154,12 +154,16 @@ class WorkloadRepositoryTest {
     val signalInput = "signalInput"
     val dataplaneGroup = "dataplane-group-1"
     val priority = 0
+    val workspaceId = UUID.randomUUID()
+    val organizationId = UUID.randomUUID()
     val workload =
       Fixtures.workload(
         id = workloadId,
         dataplaneId = null,
         status = WorkloadStatus.PENDING,
         workloadLabels = labels,
+        workspaceId = workspaceId,
+        organizationId = organizationId,
         deadline = defaultDeadline,
         signalInput = signalInput,
         dataplaneGroup = dataplaneGroup,
@@ -179,6 +183,8 @@ class WorkloadRepositoryTest {
     assertEquals(signalInput, persistedWorkload.get().signalInput)
     assertEquals(dataplaneGroup, persistedWorkload.get().dataplaneGroup)
     assertEquals(priority, persistedWorkload.get().priority)
+    assertEquals(workspaceId, persistedWorkload.get().workspaceId)
+    assertEquals(organizationId, persistedWorkload.get().organizationId)
 
     val workloadLabels = persistedWorkload.get().workloadLabels!!.toMutableList()
     workloadLabels.sortWith(Comparator.comparing(WorkloadLabel::key))
@@ -487,6 +493,8 @@ class WorkloadRepositoryTest {
       status: WorkloadStatus = WorkloadStatus.PENDING,
       workloadLabels: List<WorkloadLabel>? = null,
       inputPayload: String = "",
+      workspaceId: UUID? = UUID.randomUUID(),
+      organizationId: UUID? = UUID.randomUUID(),
       logPath: String = "/",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
@@ -501,6 +509,8 @@ class WorkloadRepositoryTest {
         status = status,
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
+        workspaceId = workspaceId,
+        organizationId = organizationId,
         logPath = logPath,
         mutexKey = mutexKey,
         type = type,

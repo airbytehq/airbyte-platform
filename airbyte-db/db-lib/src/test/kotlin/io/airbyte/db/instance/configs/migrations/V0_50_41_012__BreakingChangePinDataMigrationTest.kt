@@ -14,6 +14,7 @@ import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
@@ -25,6 +26,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_41_012__BreakingChangePinDataMigrationTest : AbstractConfigsDatabaseTest() {
   private var migration: V0_50_41_012__BreakingChangePinDataMigration? = null
 

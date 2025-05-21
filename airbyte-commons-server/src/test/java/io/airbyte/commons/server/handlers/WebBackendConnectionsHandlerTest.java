@@ -116,6 +116,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
@@ -189,6 +190,7 @@ class WebBackendConnectionsHandlerTest {
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private CatalogConfigDiffHelper catalogConfigDiffHelper;
+  private PartialUserConfigService partialUserConfigService;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -218,6 +220,7 @@ class WebBackendConnectionsHandlerTest {
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     catalogConfigDiffHelper = mock(CatalogConfigDiffHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    partialUserConfigService = mock(PartialUserConfigService.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -284,7 +287,7 @@ class WebBackendConnectionsHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService, partialUserConfigService);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,

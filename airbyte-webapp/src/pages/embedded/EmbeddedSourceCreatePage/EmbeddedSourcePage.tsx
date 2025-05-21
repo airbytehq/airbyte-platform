@@ -68,7 +68,7 @@ export const EmbeddedSourceCreatePage: React.FC = () => {
             </Box>
           }
         />
-        <PartialUserConfigEditForm />
+        <PartialUserConfigEditForm selectedPartialConfigId={selectedPartialConfigId} />
       </EmbeddedSourcePageWrapper>
     );
   }

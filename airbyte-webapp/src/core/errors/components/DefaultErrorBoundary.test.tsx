@@ -12,6 +12,22 @@ jest.mock("core/utils/datadog", () => ({
   trackError: jest.fn(),
 }));
 
+jest.mock("hooks/theme/useAirbyteTheme", () => {
+  const themeContextValue = {
+    theme: "airbyteThemeLight",
+    colorValues: {},
+    setTheme: jest.fn(),
+  };
+
+  return {
+    AirbyteThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useAirbyteTheme: jest.fn().mockReturnValue(themeContextValue),
+    AirbyteThemeContext: {
+      Provider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    },
+  };
+});
+
 const ChildThatThrowsError = () => {
   throw mockError;
 };

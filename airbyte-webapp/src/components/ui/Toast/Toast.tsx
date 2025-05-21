@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect } from "react";
 
 import styles from "./Toast.module.scss";
 import { Message, MessageProps } from "../Message";
@@ -9,30 +9,71 @@ export interface ToastProps extends MessageProps {
 }
 
 export const Toast: React.FC<ToastProps> = ({ timeout, ...props }) => {
-  // Delay the timeout animation until the user has focused the current tab
-  const [isFocused, setIsFocused] = useState(document.hasFocus());
-  useEffect(() => {
-    const onFocus = () => setIsFocused(true);
-    const onBlur = () => setIsFocused(false);
+  const progressBarRef = React.useRef<HTMLDivElement>(null);
+  const changeAnimationState = useCallback(
+    (newState: "pause" | "play") => {
+      if (!progressBarRef.current || !timeout) {
+        return;
+      }
 
-    window.addEventListener("focus", onFocus);
-    window.addEventListener("blur", onBlur);
+      const progressBar = progressBarRef.current;
+      const animations = progressBar.getAnimations();
+
+      if (animations.length > 0) {
+        const animation = animations[0];
+
+        if (animation.playState === "finished") {
+          return;
+        }
+
+        if (newState === "pause") {
+          animation.pause();
+        } else {
+          animation.play();
+        }
+      }
+    },
+    [timeout]
+  );
+
+  useEffect(() => {
+    if (!timeout || !progressBarRef.current) {
+      return;
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        changeAnimationState("play");
+      } else {
+        changeAnimationState("pause");
+      }
+    };
+
+    // Set initial state
+    handleVisibilityChange();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", onFocus);
-      window.removeEventListener("blur", onBlur);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [changeAnimationState, timeout]);
 
   return (
-    <div onAnimationEnd={props.onClose}>
+    <div
+      className={styles.container}
+      onMouseEnter={() => changeAnimationState("pause")}
+      onMouseLeave={() => changeAnimationState("play")}
+    >
       <Message
         {...props}
-        className={classNames(props.className, styles.toastContainer, {
-          [styles["toastContainer--timeout"]]: timeout,
-          [styles["toastContainer--focused"]]: isFocused,
-        })}
+        className={classNames(props.className, styles.toastMessage)}
         textClassName={styles.toastText}
+        header={
+          timeout ? (
+            <div className={styles.progressBar} ref={progressBarRef} onAnimationEnd={props.onClose} />
+          ) : undefined
+        }
       />
     </div>
   );

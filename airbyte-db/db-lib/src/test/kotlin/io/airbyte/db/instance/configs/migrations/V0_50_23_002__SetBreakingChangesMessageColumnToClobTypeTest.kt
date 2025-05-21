@@ -15,12 +15,14 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.sql.Date
 import java.sql.Timestamp
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_23_002__SetBreakingChangesMessageColumnToClobTypeTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

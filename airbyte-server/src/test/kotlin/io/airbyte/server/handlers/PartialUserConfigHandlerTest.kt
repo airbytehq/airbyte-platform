@@ -7,6 +7,7 @@ package io.airbyte.server.handlers
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.AirbyteCatalog
+import io.airbyte.api.model.generated.AirbyteStream
 import io.airbyte.api.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.model.generated.AirbyteStreamConfiguration
 import io.airbyte.api.model.generated.ConnectionRead
@@ -20,6 +21,7 @@ import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.PartialSourceUpdate
 import io.airbyte.api.model.generated.SourceCreate
 import io.airbyte.api.model.generated.SourceDiscoverSchemaRead
+import io.airbyte.api.model.generated.SourceIdRequestBody
 import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.commons.constants.AirbyteSecretConstants.SECRETS_MASK
@@ -68,7 +70,6 @@ class PartialUserConfigHandlerTest {
   private lateinit var sourceHandler: SourceHandler
   private lateinit var secretsProcessor: JsonSecretsProcessor
   private lateinit var handler: PartialUserConfigHandler
-  private lateinit var objectMapper: ObjectMapper
   private lateinit var connectionTemplateRepository: ConnectionTemplateRepository
   private lateinit var workspaceHelper: WorkspaceHelper
   private lateinit var workspaceRepository: WorkspaceRepository
@@ -79,6 +80,8 @@ class PartialUserConfigHandlerTest {
   private lateinit var jobService: JobService
   private lateinit var actorDefinitionService: ActorDefinitionService
 
+  private val objectMapper: ObjectMapper = ObjectMapper()
+
   private val organizationId = UUID.randomUUID()
   private val workspaceId = UUID.randomUUID()
   private val configTemplateId = UUID.randomUUID()
@@ -88,6 +91,45 @@ class PartialUserConfigHandlerTest {
   private val destinationName = "test-destination"
   private val sourceName = "test-source"
   private val connectionId = UUID.randomUUID()
+
+  private val incrementalAirbyteStream =
+    io.airbyte.api.model.generated
+      .AirbyteStream()
+      .name("incremental-stream")
+      .jsonSchema(
+        objectMapper.createObjectNode().put("type", "object"),
+      ).supportedSyncModes(listOf(SyncMode.INCREMENTAL, SyncMode.INCREMENTAL))
+      .sourceDefinedCursor(true)
+
+  private val streamAndConfig = AirbyteStreamAndConfiguration()
+
+  private val airbyteCatalog =
+    AirbyteCatalog().streams(
+      listOf(
+        streamAndConfig,
+      ),
+    )
+  private val schemaResponse =
+    SourceDiscoverSchemaRead()
+      .catalog(airbyteCatalog)
+
+  private val incrementalAirbyteStreamWithoutSourceDefinedCursor =
+    io.airbyte.api.model.generated
+      .AirbyteStream()
+      .name("no-source-defined-cursor-stream")
+      .jsonSchema(
+        objectMapper.createObjectNode().put("type", "object"),
+      ).supportedSyncModes(listOf(SyncMode.INCREMENTAL, SyncMode.INCREMENTAL))
+      .sourceDefinedCursor(false)
+
+  private val fullRefreshOnlyAirbyteStream =
+    io.airbyte.api.model.generated
+      .AirbyteStream()
+      .name("full-refresh-stream")
+      .jsonSchema(
+        objectMapper.createObjectNode().put("type", "object"),
+      ).supportedSyncModes(listOf(SyncMode.FULL_REFRESH))
+      .sourceDefinedCursor(false)
 
   @BeforeEach
   fun setup() {
@@ -120,11 +162,21 @@ class PartialUserConfigHandlerTest {
         jobService,
         actorDefinitionService,
       )
-    objectMapper = ObjectMapper()
 
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
     every { destinationHandler.listDestinationsForWorkspace(any()) } returns DestinationReadList()
     every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns emptyList()
+    every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
+      Optional.of(ActorDefinitionVersion().withSpec(ConnectorSpecification()))
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns SourceDiscoverSchemaRead().catalog(AirbyteCatalog().streams(emptyList()))
+
+    streamAndConfig.config(
+      AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
+    )
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
+
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId) } returns
       Optional.of(ActorDefinitionVersion().withSpec(ConnectorSpecification()))
   }
@@ -143,6 +195,7 @@ class PartialUserConfigHandlerTest {
 
     val sourceCreateSlot = slot<SourceCreate>()
     every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+    every { sourceService.getSourceSchema(sourceId, false) } returns SourceDiscoverSchemaRead().catalog(AirbyteCatalog().streams(emptyList()))
 
     val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
 
@@ -155,111 +208,17 @@ class PartialUserConfigHandlerTest {
 
   @Test
   fun `test createPartialUserConfig with connection template`() {
-    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
-    val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
-    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
-    val savedSource = createMockSourceRead(sourceId, sourceName)
+    runTestCreatePartialUserConfigWithConnectionTemplate(incrementalAirbyteStream, SyncMode.INCREMENTAL)
+  }
 
-    val destinationId = UUID.randomUUID()
-    val streamAndConfig = AirbyteStreamAndConfiguration()
-    streamAndConfig.config(
-      AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
-    )
-    val airbyteCatalog =
-      AirbyteCatalog().streams(
-        listOf(
-          streamAndConfig,
-        ),
-      )
+  @Test
+  fun `test createPartialUserConfig with source that does not support incremental sync mode`() {
+    runTestCreatePartialUserConfigWithConnectionTemplate(fullRefreshOnlyAirbyteStream, SyncMode.FULL_REFRESH)
+  }
 
-    every { destinationHandler.listDestinationsForWorkspace(any()) } returns
-      DestinationReadList()
-        .destinations(
-          listOf(
-            DestinationRead()
-              .destinationId(destinationId)
-              .name(destinationName)
-              .workspaceId(workspaceId),
-          ),
-        )
-
-    val schemaResponse =
-      SourceDiscoverSchemaRead()
-        .catalog(airbyteCatalog)
-
-    val expectedAirbyteStreamAndConfig = AirbyteStreamAndConfiguration()
-    expectedAirbyteStreamAndConfig.config(AirbyteStreamConfiguration().syncMode(SyncMode.INCREMENTAL).destinationSyncMode(DestinationSyncMode.APPEND))
-
-    val connectionRead = ConnectionRead().connectionId(connectionId)
-    every {
-      connectionsHandler.createConnection(
-        match {
-          it.name == "$sourceName -> $destinationName" &&
-            it.namespaceDefinition == io.airbyte.api.model.generated.NamespaceDefinitionType.DESTINATION &&
-            it.sourceId == sourceId &&
-            it.destinationId == destinationId &&
-            it.syncCatalog == AirbyteCatalog().streams(listOf(expectedAirbyteStreamAndConfig)) &&
-            it.scheduleType == ConnectionScheduleType.MANUAL &&
-            it.scheduleData == ConnectionScheduleData() &&
-            it.status == ConnectionStatus.ACTIVE &&
-            it.nonBreakingChangesPreference == NonBreakingChangesPreference.IGNORE
-        },
-      )
-    } returns connectionRead
-
-    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
-
-    val connectionTemplate =
-      ConnectionTemplate(
-        id = UUID.randomUUID(),
-        organizationId = organizationId,
-        destinationName = destinationName,
-        destinationDefinitionId = UUID.randomUUID(),
-        destinationConfig = objectMapper.createObjectNode(),
-        namespaceDefinition = NamespaceDefinitionType.destination,
-        namespaceFormat = null,
-        prefix = null,
-        scheduleType = ScheduleType.manual,
-        scheduleData = null,
-        nonBreakingChangesPreference = NonBreakingChangePreferenceType.ignore,
-        resourceRequirements =
-          Jsons.jsonNode(
-            ResourceRequirements()
-              .withCpuLimit(
-                "1",
-              ).withMemoryLimit("1g")
-              .withCpuRequest("0.5")
-              .withMemoryRequest("0.5g")
-              .withEphemeralStorageLimit("1g")
-              .withEphemeralStorageRequest("0.5g"),
-          ),
-      )
-    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns listOf(connectionTemplate)
-
-    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
-    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
-    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
-      configTemplate.configTemplate.partialDefaultConfig
-
-    val sourceCreateSlot = slot<SourceCreate>()
-    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
-
-    every { jobService.sync(connectionId) } returns
-      JobResponse(
-        jobId = 2L,
-        status = JobStatusEnum.PENDING,
-        jobType = JobTypeEnum.SYNC,
-        startTime = "",
-        connectionId = connectionId.toString(),
-      )
-
-    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
-
-    Assertions.assertNotNull(result)
-    Assertions.assertEquals(sourceId, result.sourceId)
-
-    verify { partialUserConfigService.createPartialUserConfig(any()) }
-    verify { sourceHandler.createSource(any()) }
+  @Test
+  fun `test createPartialUserConfig with source that does not have a source defined cursor`() {
+    runTestCreatePartialUserConfigWithConnectionTemplate(incrementalAirbyteStreamWithoutSourceDefinedCursor, SyncMode.FULL_REFRESH)
   }
 
   @Test
@@ -370,6 +329,41 @@ class PartialUserConfigHandlerTest {
     Assertions.assertEquals("updatedValue", capturedConnectionConfig.get("testKey").asText())
   }
 
+  @Test
+  fun `test delete partial user config also deletes its source`() {
+    val partialUserConfigId = UUID.randomUUID()
+    val sourceId = UUID.randomUUID()
+
+    val partialUserConfig =
+      PartialUserConfigWithConfigTemplateAndActorDetails(
+        partialUserConfig =
+          PartialUserConfig(
+            id = partialUserConfigId,
+            workspaceId = workspaceId,
+            configTemplateId = configTemplateId,
+            actorId = sourceId,
+          ),
+        actorName = "test-source",
+        actorIcon = "test-icon",
+        configTemplate =
+          ConfigTemplate(
+            id = configTemplateId,
+            actorDefinitionId = actorDefinitionId,
+            partialDefaultConfig = objectMapper.createObjectNode(),
+            organizationId = organizationId,
+            userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+          ),
+      )
+
+    every { partialUserConfigService.getPartialUserConfig(partialUserConfigId) } returns partialUserConfig
+    every { partialUserConfigService.deletePartialUserConfig(partialUserConfigId) } returns Unit
+    every { sourceHandler.deleteSource(SourceIdRequestBody().sourceId(sourceId)) } returns Unit
+
+    handler.deletePartialUserConfig(partialUserConfigId)
+
+    verify(exactly = 1) { sourceHandler.deleteSource(SourceIdRequestBody().sourceId(sourceId)) }
+  }
+
   /**
    * helper functions for testing
    */
@@ -460,4 +454,122 @@ class PartialUserConfigHandlerTest {
       sourceDefinitionId = UUID.randomUUID()
       connectionConfiguration = objectMapper.createObjectNode()
     }
+
+  private fun runTestCreatePartialUserConfigWithConnectionTemplate(
+    airbyteStream: AirbyteStream,
+    expectedSyncMode: SyncMode,
+  ) {
+    val configTemplate = createMockConfigTemplate(configTemplateId, actorDefinitionId)
+    val partialUserConfigCreate = createMockPartialUserConfigCreate(workspaceId, configTemplateId)
+    val savedPartialUserConfig = createMockPartialUserConfig(partialUserConfigId, workspaceId, configTemplateId, sourceId)
+    val savedSource = createMockSourceRead(sourceId, sourceName)
+
+    val destinationId = UUID.randomUUID()
+    val streamAndConfig = AirbyteStreamAndConfiguration()
+    streamAndConfig
+      .config(
+        AirbyteStreamConfiguration().syncMode(expectedSyncMode).destinationSyncMode(DestinationSyncMode.APPEND_DEDUP),
+      ).stream(
+        airbyteStream,
+      )
+    val airbyteCatalog =
+      AirbyteCatalog().streams(
+        listOf(
+          streamAndConfig,
+        ),
+      )
+
+    every { destinationHandler.listDestinationsForWorkspace(any()) } returns
+      DestinationReadList()
+        .destinations(
+          listOf(
+            DestinationRead()
+              .destinationId(destinationId)
+              .name(destinationName)
+              .workspaceId(workspaceId),
+          ),
+        )
+
+    val schemaResponse =
+      SourceDiscoverSchemaRead()
+        .catalog(airbyteCatalog)
+
+    val expectedAirbyteStreamAndConfig = AirbyteStreamAndConfiguration()
+    expectedAirbyteStreamAndConfig
+      .config(AirbyteStreamConfiguration().syncMode(expectedSyncMode).destinationSyncMode(DestinationSyncMode.APPEND))
+      .stream(
+        airbyteStream,
+      )
+
+    val connectionRead = ConnectionRead().connectionId(connectionId)
+    every {
+      connectionsHandler.createConnection(
+        match {
+          it.name == "$sourceName -> $destinationName" &&
+            it.namespaceDefinition == io.airbyte.api.model.generated.NamespaceDefinitionType.DESTINATION &&
+            it.sourceId == sourceId &&
+            it.destinationId == destinationId &&
+            it.syncCatalog == AirbyteCatalog().streams(listOf(expectedAirbyteStreamAndConfig)) &&
+            it.scheduleType == ConnectionScheduleType.MANUAL &&
+            it.scheduleData == ConnectionScheduleData() &&
+            it.status == ConnectionStatus.ACTIVE &&
+            it.nonBreakingChangesPreference == NonBreakingChangesPreference.IGNORE
+        },
+      )
+    } returns connectionRead
+
+    every { sourceService.getSourceSchema(sourceId, false) } returns schemaResponse
+
+    val connectionTemplate =
+      ConnectionTemplate(
+        id = UUID.randomUUID(),
+        organizationId = organizationId,
+        destinationName = destinationName,
+        destinationDefinitionId = UUID.randomUUID(),
+        destinationConfig = objectMapper.createObjectNode(),
+        namespaceDefinition = NamespaceDefinitionType.destination,
+        namespaceFormat = null,
+        prefix = null,
+        scheduleType = ScheduleType.manual,
+        scheduleData = null,
+        nonBreakingChangesPreference = NonBreakingChangePreferenceType.ignore,
+        resourceRequirements =
+          Jsons.jsonNode(
+            ResourceRequirements()
+              .withCpuLimit(
+                "1",
+              ).withMemoryLimit("1g")
+              .withCpuRequest("0.5")
+              .withMemoryRequest("0.5g")
+              .withEphemeralStorageLimit("1g")
+              .withEphemeralStorageRequest("0.5g"),
+          ),
+      )
+    every { connectionTemplateRepository.findByOrganizationIdAndTombstoneFalse(organizationId) } returns listOf(connectionTemplate)
+
+    every { configTemplateService.getConfigTemplate(configTemplateId) } returns configTemplate
+    every { partialUserConfigService.createPartialUserConfig(any()) } returns savedPartialUserConfig
+    every { secretsProcessor.prepareSecretsForOutput(any(), any()) } returns
+      configTemplate.configTemplate.partialDefaultConfig
+
+    val sourceCreateSlot = slot<SourceCreate>()
+    every { sourceHandler.createSource(capture(sourceCreateSlot)) } returns savedSource
+
+    every { jobService.sync(connectionId) } returns
+      JobResponse(
+        jobId = 2L,
+        status = JobStatusEnum.PENDING,
+        jobType = JobTypeEnum.SYNC,
+        startTime = "",
+        connectionId = connectionId.toString(),
+      )
+
+    val result = handler.createSourceFromPartialConfig(partialUserConfigCreate, objectMapper.createObjectNode())
+
+    Assertions.assertNotNull(result)
+    Assertions.assertEquals(sourceId, result.sourceId)
+
+    verify { partialUserConfigService.createPartialUserConfig(any()) }
+    verify { sourceHandler.createSource(any()) }
+  }
 }

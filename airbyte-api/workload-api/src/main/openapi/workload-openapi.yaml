@@ -446,6 +446,14 @@ components:
             $ref: "#/components/schemas/WorkloadLabel"
         inputPayload:
           type: string
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
         logPath:
           type: string
         mutexKey:
@@ -521,6 +529,14 @@ components:
             $ref: "#/components/schemas/WorkloadLabel"
         workloadInput:
           type: string
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
         logPath:
           type: string
         mutexKey:

@@ -4,9 +4,9 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.WorkspaceAuthRole
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.ConnectorDefinitionsApi
 import io.airbyte.publicApi.server.generated.models.ConnectorType
@@ -24,7 +24,7 @@ import java.util.UUID
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class ConnectorDefinitionsController(
-  val apiAuthorizationHelper: ApiAuthorizationHelper,
+  val roleResolver: RoleResolver,
   val connectorDefinitionsService: ConnectorDefinitionsService,
   val currentUserService: CurrentUserService,
   val trackingHelper: TrackingHelper,
@@ -35,18 +35,15 @@ class ConnectorDefinitionsController(
   ): Response {
     val userId: UUID = currentUserService.currentUser.userId
 
-    when (workspaceId) {
-      null -> {
-        throw IllegalArgumentException("Workspace ID must be provided.")
-      }
-      workspaceId -> {
-        apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-          Scope.WORKSPACE,
-          listOf(workspaceId.toString()),
-          setOf(WorkspaceAuthRole.WORKSPACE_READER),
-        )
-      }
+    if (workspaceId == null) {
+      throw IllegalArgumentException("Workspace ID must be provided.")
     }
+
+    roleResolver
+      .Request()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_READER)
 
     val response =
       trackingHelper.callWithTracker(

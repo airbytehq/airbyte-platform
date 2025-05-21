@@ -81,22 +81,26 @@ class StateCheckSumErrorReporter(
           FailureReason.FailureOrigin.SOURCE -> {
             val sourceId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).sourceId }
             val source = retry { airbyteApiClient.sourceApi.getSource(SourceIdRequestBody(sourceId)) }
+            val sourceVersion =
+              retry { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForSourceId(SourceIdRequestBody(sourceId)) }
             val sourceDefinition =
               retry { airbyteApiClient.sourceDefinitionApi.getSourceDefinition(SourceDefinitionIdRequestBody(source.sourceDefinitionId)) }
-            dockerImageName = getDockerImageName(sourceDefinition.dockerRepository, sourceDefinition.dockerImageTag)
+            dockerImageName = getDockerImageName(sourceVersion.dockerRepository, sourceVersion.dockerImageTag)
             metadata =
               getDefinitionMetadata(sourceDefinition.sourceDefinitionId, sourceDefinition.name, dockerImageName, sourceDefinition.releaseStage)
           }
           FailureReason.FailureOrigin.DESTINATION -> {
             val destinationId = retry { airbyteApiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId)).destinationId }
             val destination = retry { airbyteApiClient.destinationApi.getDestination(DestinationIdRequestBody(destinationId)) }
+            val destinationVersion =
+              retry { airbyteApiClient.actorDefinitionVersionApi.getActorDefinitionVersionForDestinationId(DestinationIdRequestBody(destinationId)) }
             val destinationDefinition =
               retry {
                 airbyteApiClient.destinationDefinitionApi.getDestinationDefinition(
                   DestinationDefinitionIdRequestBody(destination.destinationDefinitionId),
                 )
               }
-            dockerImageName = getDockerImageName(destinationDefinition.dockerRepository, destinationDefinition.dockerImageTag)
+            dockerImageName = getDockerImageName(destinationVersion.dockerRepository, destinationVersion.dockerImageTag)
             metadata =
               getDefinitionMetadata(
                 destinationDefinition.destinationDefinitionId,

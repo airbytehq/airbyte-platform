@@ -36,7 +36,7 @@ class ReplicationWorker(
   @Named("syncPersistence") private val syncPersistence: SyncPersistence,
   private val onReplicationRunning: VoidCallable,
   private val workloadHeartbeatSender: WorkloadHeartbeatSender,
-  private val recordSchemaValidator: RecordSchemaValidator,
+  private val recordSchemaValidator: RecordSchemaValidator? = null,
   private val context: ReplicationWorkerContext,
   @Named("startReplicationJobs") private val startReplicationJobs: List<ReplicationTask>,
   @Named("syncReplicationJobs") private val syncReplicationJobs: List<ReplicationTask>,
@@ -55,10 +55,10 @@ class ReplicationWorker(
     }
   }
 
-  private fun safeClose(closeable: AutoCloseable) {
+  private fun safeClose(closeable: AutoCloseable?) {
     try {
       logger.info { "Closing $closeable" }
-      closeable.close()
+      closeable?.close()
     } catch (e: Exception) {
       logger.error(e) { "Error closing resource $closeable; recording failure but continuing." }
       trackFailure(e)

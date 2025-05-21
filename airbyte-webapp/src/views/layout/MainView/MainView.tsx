@@ -6,7 +6,7 @@ import { LoadingPage } from "components";
 import { LicenseBanner } from "components/LicenseBanner/LicenseBanner";
 import { FlexContainer } from "components/ui/Flex";
 
-import { DefaultErrorBoundary } from "core/errors";
+import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 
 import styles from "./MainView.module.scss";
@@ -17,19 +17,21 @@ const MainView: React.FC<React.PropsWithChildren> = () => {
   const { hasNewVersions } = useGetConnectorsOutOfDate();
 
   return (
-    <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-      <LicenseBanner />
-      <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
-        <SideBar bottomSlot={<HelpDropdown />} settingHighlight={hasNewVersions} />
-        <div className={styles.content}>
-          <DefaultErrorBoundary>
-            <React.Suspense fallback={<LoadingPage />}>
-              <Outlet />
-            </React.Suspense>
-          </DefaultErrorBoundary>
-        </div>
+    <ForbiddenErrorBoundary>
+      <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
+        <LicenseBanner />
+        <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
+          <SideBar bottomSlot={<HelpDropdown />} settingHighlight={hasNewVersions} />
+          <div className={styles.content}>
+            <DefaultErrorBoundary>
+              <React.Suspense fallback={<LoadingPage />}>
+                <Outlet />
+              </React.Suspense>
+            </DefaultErrorBoundary>
+          </div>
+        </FlexContainer>
       </FlexContainer>
-    </FlexContainer>
+    </ForbiddenErrorBoundary>
   );
 };
 

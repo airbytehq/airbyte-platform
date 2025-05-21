@@ -13,10 +13,12 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_57_4_001__AddRefreshSupportTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

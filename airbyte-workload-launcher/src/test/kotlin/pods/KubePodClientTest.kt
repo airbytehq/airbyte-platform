@@ -19,8 +19,6 @@ import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.POD_INIT_TIMEOUT_VALUE
 import io.airbyte.workload.launcher.pods.KubePodClient.Companion.REPL_CONNECTOR_STARTUP_TIMEOUT_VALUE
@@ -53,7 +51,7 @@ import java.util.UUID
 import java.util.concurrent.TimeoutException
 
 @ExtendWith(MockKExtension::class)
-class KubePodClientTest {
+internal class KubePodClientTest {
   @MockK
   private lateinit var launcher: KubePodLauncher
 

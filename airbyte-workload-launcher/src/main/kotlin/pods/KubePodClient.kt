@@ -19,7 +19,6 @@ import io.airbyte.workers.exception.ResourceConstraintException
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.pod.PodLabeler
 import io.airbyte.workload.launcher.ArchitectureDecider
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_REPLICATION_OPERATION_NAME
 import io.airbyte.workload.launcher.metrics.MeterFilterFactory.Companion.LAUNCH_RESET_OPERATION_NAME

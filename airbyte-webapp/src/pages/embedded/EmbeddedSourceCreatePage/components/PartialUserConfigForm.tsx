@@ -22,6 +22,8 @@ interface PartialUserConfigFormProps {
   sourceDefinitionSpecification: SourceDefinitionSpecificationDraft;
   isEditMode: boolean;
   showSuccessView: boolean;
+  isDeleteSuccess?: boolean;
+  onDelete?: () => void;
 }
 
 export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
@@ -32,6 +34,8 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
   sourceDefinitionSpecification,
   isEditMode,
   showSuccessView,
+  isDeleteSuccess,
+  onDelete,
 }) => {
   const { clearSelectedConfig, clearSelectedTemplate } = useEmbeddedSourceParams();
 
@@ -50,7 +54,7 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
   };
   return (
     <>
-      {!showSuccessView ? (
+      {!showSuccessView && !isDeleteSuccess ? (
         <FlexContainer className={styles.content} direction="column">
           <FlexContainer alignItems="center" gap="sm" justifyContent="center">
             <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
@@ -74,26 +78,32 @@ export const PartialUserConfigForm: React.FC<PartialUserConfigFormProps> = ({
               }
             }}
             canEdit
-            renderFooter={({ dirty, isSubmitting }) => (
-              <PartialUserConfigFormControls isEditMode={isEditMode} isSubmitting={isSubmitting} dirty={dirty} />
+            renderFooter={({ isSubmitting }) => (
+              <PartialUserConfigFormControls onDelete={onDelete} isSubmitting={isSubmitting} />
             )}
           />
         </FlexContainer>
       ) : (
         <FlexContainer className={styles.content} direction="column" justifyContent="space-between">
-          <FlexContainer alignItems="center" gap="sm" justifyContent="center">
-            <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
-              <SvgIcon src={icon} />
+          {!isDeleteSuccess && (
+            <FlexContainer alignItems="center" gap="sm" justifyContent="center">
+              <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
+                <SvgIcon src={icon} />
+              </FlexContainer>
+              <p>{connectorName}</p>
             </FlexContainer>
-            <p>{connectorName}</p>
-          </FlexContainer>
+          )}
           <FlexContainer direction="column" gap="lg" justifyContent="center" alignItems="center">
             <Icon size="xl" type="checkCircle" color="disabled" />
             <Text size="lg">
               <FormattedMessage id="partialUserConfig.success.title" />
             </Text>
             <Text size="md">
-              <FormattedMessage id="partialUserConfig.success.description" />
+              {isDeleteSuccess ? (
+                <FormattedMessage id="partialUserConfig.delete.success" />
+              ) : (
+                <FormattedMessage id="partialUserConfig.success.description" />
+              )}
             </Text>
           </FlexContainer>
           <div className={styles.buttonContainer}>

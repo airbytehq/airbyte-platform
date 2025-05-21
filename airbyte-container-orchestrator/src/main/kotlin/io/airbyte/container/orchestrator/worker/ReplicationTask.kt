@@ -134,25 +134,28 @@ class MessageProcessor(
   private val replicationWorkerState: ReplicationWorkerState,
   private val replicationWorkerHelper: ReplicationWorkerHelper,
   private val sourceQueue: ClosableChannelQueue<AirbyteMessage>,
-  private val destinationQueue: ClosableChannelQueue<AirbyteMessage>,
+  private val destinationQueue: ClosableChannelQueue<AirbyteMessage>? = null,
 ) : ReplicationTask {
   override suspend fun run() {
     logger.info { "MessageProcessor started." }
     try {
-      while (!replicationWorkerState.shouldAbort && !sourceQueue.isClosedForReceiving() && !destinationQueue.isClosedForSending()) {
+      while (!replicationWorkerState.shouldAbort &&
+        !sourceQueue.isClosedForReceiving() &&
+        (destinationQueue == null || !destinationQueue.isClosedForSending())
+      ) {
         val message = sourceQueue.receive() ?: continue
         val processedMessageOpt = replicationWorkerHelper.processMessageFromSource(message)
 
         if (processedMessageOpt.isPresent) {
           val processedMessage = processedMessageOpt.get()
           if (processedMessage.type == Type.RECORD || processedMessage.type == Type.STATE) {
-            destinationQueue.send(processedMessage)
+            destinationQueue?.send(processedMessage)
           }
         }
       }
     } finally {
       sourceQueue.close()
-      destinationQueue.close()
+      destinationQueue?.close()
       logger.info { "MessageProcessor finished." }
     }
   }

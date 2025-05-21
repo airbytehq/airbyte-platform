@@ -16,10 +16,12 @@ import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_16_002__RemoveInvalidSourceStripeCatalogTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

@@ -474,7 +474,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
       }
 
     } else {
-      final String failureReason = failureType == FailureType.CONFIG_ERROR ? "Connection Check Failed " + connectionId
+      final String internalFailureMessage =
+          failureReasons.stream().findFirst().map(FailureReason::getInternalMessage).orElse("Unknown failure reason");
+      final String failureReason = failureType == FailureType.CONFIG_ERROR ? internalFailureMessage
           : "Job failed after too many retries for connection " + connectionId;
       failJob(connectionUpdaterInput, failureReason);
 

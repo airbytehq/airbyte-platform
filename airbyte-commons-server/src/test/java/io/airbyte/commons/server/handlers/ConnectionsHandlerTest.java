@@ -179,6 +179,7 @@ import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
@@ -326,6 +327,7 @@ class ConnectionsHandlerTest {
   private SecretReferenceService secretReferenceService;
   private DataplaneGroupService dataplaneGroupService;
   private CurrentUserService currentUserService;
+  private PartialUserConfigService partialUserConfigService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -498,7 +500,7 @@ class ConnectionsHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService, partialUserConfigService);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =

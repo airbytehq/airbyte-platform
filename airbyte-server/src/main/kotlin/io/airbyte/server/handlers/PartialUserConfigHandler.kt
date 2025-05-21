@@ -105,6 +105,20 @@ class PartialUserConfigHandler(
 
     partialUserConfigService.createPartialUserConfig(partialUserConfigToPersist)
 
+    // Create a configured schema and set the sync mode to incremental_append
+    val schemaResponse: SourceDiscoverSchemaRead = sourceService.getSourceSchema(sourceRead.sourceId, false)
+    val configuredSchema = schemaResponse.catalog
+
+    for (stream in configuredSchema.streams) {
+      stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+      if (stream.stream.supportedSyncModes.contains(SyncMode.INCREMENTAL) and stream.stream.sourceDefinedCursor) {
+        // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
+        // We can make this configurable in the future as needed
+        stream.config.syncMode = SyncMode.INCREMENTAL
+        stream.config.cursorField = stream.stream.defaultCursorField
+      }
+    }
+
     // Create connection
     val destinations = destinationHandler.listDestinationsForWorkspace(WorkspaceIdRequestBody().workspaceId(partialUserConfigCreate.workspaceId))
     val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigCreate.workspaceId)
@@ -117,72 +131,65 @@ class PartialUserConfigHandler(
       }
       val destination =
         matchingDestinations.firstOrNull()
-          ?: throw IllegalStateException("No destination found with name: ${connectionTemplate.destinationName}. This is unexpected!")
 
-      val schemaResponse: SourceDiscoverSchemaRead = sourceService.getSourceSchema(sourceRead.sourceId, false)
+      if (destination != null) {
+        val namespaceFormat =
+          if (connectionTemplate.namespaceDefinitionType == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT &&
+            connectionTemplate.namespaceFormat == null
+          ) {
+            workspaceRepository.findById(partialUserConfigToPersist.workspaceId).get().name
+          } else {
+            connectionTemplate.namespaceFormat
+          }
 
-      val configuredSchema = schemaResponse.catalog
-
-      for (stream in configuredSchema.streams) {
-        if (stream.config.syncMode == SyncMode.INCREMENTAL) {
-          // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
-          // We can make this configurable in the future as needed
-          stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+        val createConnection =
+          ConnectionCreate()
+            .sourceId(sourceRead.sourceId)
+            .destinationId(destination.destinationId)
+            .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
+            .name("${sourceRead.name} -> ${destination.name}")
+            .namespaceFormat(namespaceFormat)
+            .status(ConnectionStatus.ACTIVE)
+            .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
+            .prefix(connectionTemplate.prefix)
+            .syncCatalog(schemaResponse.catalog)
+            .scheduleType(
+              when (connectionTemplate.scheduleType) {
+                StandardSync.ScheduleType.MANUAL -> ConnectionScheduleType.MANUAL
+                StandardSync.ScheduleType.BASIC_SCHEDULE -> ConnectionScheduleType.BASIC
+                StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
+              },
+            ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
+        // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
+        if (connectionTemplate.resourceRequirements != null) {
+          createConnection.resourceRequirements(
+            io.airbyte.api.model.generated
+              .ResourceRequirements()
+              .cpuLimit(connectionTemplate.resourceRequirements!!.cpuLimit)
+              .cpuRequest(connectionTemplate.resourceRequirements!!.cpuRequest)
+              .memoryLimit(connectionTemplate.resourceRequirements!!.memoryLimit)
+              .memoryRequest(connectionTemplate.resourceRequirements!!.memoryRequest)
+              .ephemeralStorageLimit(connectionTemplate.resourceRequirements!!.ephemeralStorageLimit)
+              .ephemeralStorageRequest(connectionTemplate.resourceRequirements!!.ephemeralStorageRequest),
+          )
         }
-      }
+        val connection =
+          connectionsHandler.createConnection(
+            createConnection,
+          )
 
-      val namespaceFormat =
-        if (connectionTemplate.namespaceDefinitionType == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT &&
-          connectionTemplate.namespaceFormat == null
-        ) {
-          workspaceRepository.findById(partialUserConfigToPersist.workspaceId).get().name
+        if (connectionTemplate.syncOnCreate) {
+          val syncId = jobService.sync(connection.connectionId)
+          logger.info(
+            "Created connection: ${connection.connectionId} and started sync with id $syncId",
+          )
         } else {
-          connectionTemplate.namespaceFormat
+          logger.info("Created connection: ${connection.connectionId} but did not start sync")
         }
-
-      val createConnection =
-        ConnectionCreate()
-          .sourceId(sourceRead.sourceId)
-          .destinationId(destination.destinationId)
-          .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
-          .name("${sourceRead.name} -> ${destination.name}")
-          .namespaceFormat(namespaceFormat)
-          .status(ConnectionStatus.ACTIVE)
-          .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
-          .prefix(connectionTemplate.prefix)
-          .syncCatalog(schemaResponse.catalog)
-          .scheduleType(
-            when (connectionTemplate.scheduleType) {
-              StandardSync.ScheduleType.MANUAL -> ConnectionScheduleType.MANUAL
-              StandardSync.ScheduleType.BASIC_SCHEDULE -> ConnectionScheduleType.BASIC
-              StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
-            },
-          ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
-      // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
-      if (connectionTemplate.resourceRequirements != null) {
-        createConnection.resourceRequirements(
-          io.airbyte.api.model.generated
-            .ResourceRequirements()
-            .cpuLimit(connectionTemplate.resourceRequirements!!.cpuLimit)
-            .cpuRequest(connectionTemplate.resourceRequirements!!.cpuRequest)
-            .memoryLimit(connectionTemplate.resourceRequirements!!.memoryLimit)
-            .memoryRequest(connectionTemplate.resourceRequirements!!.memoryRequest)
-            .ephemeralStorageLimit(connectionTemplate.resourceRequirements!!.ephemeralStorageLimit)
-            .ephemeralStorageRequest(connectionTemplate.resourceRequirements!!.ephemeralStorageRequest),
-        )
-      }
-      val connection =
-        connectionsHandler.createConnection(
-          createConnection,
-        )
-
-      if (connectionTemplate.syncOnCreate) {
-        val syncId = jobService.sync(connection.connectionId)
-        logger.info(
-          "Created connection: ${connection.connectionId} and started sync with id $syncId",
-        )
       } else {
-        logger.info("Created connection: ${connection.connectionId} but did not start sync")
+        logger.info(
+          "Did not create a connection for source ${sourceRead.sourceId} because no matching destination was found for ${connectionTemplate.destinationName}",
+        )
       }
     }
 
@@ -259,8 +266,8 @@ class PartialUserConfigHandler(
         ),
       connectionConfiguration = sanitizedConnectionConfiguration,
       configTemplate = configTemplate.configTemplate,
-      actorName = sourceRead.name,
-      actorIcon = sourceRead.icon,
+      actorName = configTemplate.actorName,
+      actorIcon = configTemplate.actorIcon,
     )
   }
 
@@ -301,6 +308,12 @@ class PartialUserConfigHandler(
       )
 
     return sourceRead
+  }
+
+  fun deletePartialUserConfig(partialUserConfigId: UUID) {
+    val partialUserConfig = partialUserConfigService.getPartialUserConfig(partialUserConfigId)
+
+    partialUserConfig.partialUserConfig.actorId?.let { sourceHandler.deleteSource(SourceIdRequestBody().apply { this.sourceId = it }) }
   }
 
   private fun createSourceCreateFromPartialUserConfig(

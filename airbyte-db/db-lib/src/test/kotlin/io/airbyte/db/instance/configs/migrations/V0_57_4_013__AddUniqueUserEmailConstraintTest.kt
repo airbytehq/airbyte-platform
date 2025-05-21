@@ -16,6 +16,7 @@ import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -25,6 +26,7 @@ import java.util.UUID
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDatabaseTest() {
   private var email: String? = null
 

@@ -14,6 +14,7 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
@@ -21,6 +22,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

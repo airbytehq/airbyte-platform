@@ -9,7 +9,8 @@ import {
   createPartialUserConfig,
   listPartialUserConfigs,
   getPartialUserConfig,
-  updateUserConfig,
+  updatePartialUserConfig,
+  deletePartialUserConfig,
 } from "../generated/AirbyteClient";
 import { SCOPE_ORGANIZATION } from "../scopes";
 import { PartialUserConfigCreate, PartialUserConfigReadList, PartialUserConfigUpdate } from "../types/AirbyteClient";
@@ -46,8 +47,8 @@ export const useCreatePartialUserConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation(
-    async (partialUserConfigCreate: PartialUserConfigCreate) => {
-      return await createPartialUserConfig(partialUserConfigCreate, requestOptions);
+    (partialUserConfigCreate: PartialUserConfigCreate) => {
+      return createPartialUserConfig(partialUserConfigCreate, requestOptions);
     },
     {
       onSuccess: (data) => {
@@ -95,8 +96,8 @@ export const useUpdatePartialUserConfig = () => {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   return useMutation(
-    async (partialUserConfigUpdate: PartialUserConfigUpdate) => {
-      return await updateUserConfig(partialUserConfigUpdate, requestOptions);
+    (partialUserConfigUpdate: PartialUserConfigUpdate) => {
+      return updatePartialUserConfig(partialUserConfigUpdate, requestOptions);
     },
     {
       onSuccess: (data, variables) => {
@@ -134,6 +135,23 @@ export const useUpdatePartialUserConfig = () => {
           type: "error",
           text: error.message,
         });
+      },
+    }
+  );
+};
+
+export const useDeletePartialUserConfig = () => {
+  const requestOptions = useRequestOptions();
+  const queryClient = useQueryClient();
+
+  const workspaceId = useCurrentWorkspaceId();
+  return useMutation(
+    (partialUserConfigId: string) => {
+      return deletePartialUserConfig({ partialUserConfigId, workspaceId }, requestOptions);
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: partialUserConfigs.lists() });
       },
     }
   );

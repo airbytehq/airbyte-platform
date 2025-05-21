@@ -17,7 +17,6 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Singleton
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -49,7 +48,6 @@ private fun getUnexpectedFieldNames(
 /**
  * Handles FieldSelection.
  */
-@Singleton
 class FieldSelector(
   private val recordSchemaValidator: RecordSchemaValidator,
   private val metricReporter: ReplicationMetricReporter,

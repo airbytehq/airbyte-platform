@@ -26,7 +26,10 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: jest.fn(),
-  Intent: jest.requireActual("core/utils/rbac").Intent,
+  Intent: {
+    ViewOrganizationTrialStatus: "ViewOrganizationTrialStatus",
+    ManageOrganizationBilling: "ManageOrganizationBilling",
+  },
 }));
 
 const mockOrgInfo = (paymentConfig: Partial<OrganizationPaymentConfigRead>) => {

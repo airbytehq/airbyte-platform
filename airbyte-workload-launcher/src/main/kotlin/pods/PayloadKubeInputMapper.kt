@@ -16,11 +16,6 @@ import io.airbyte.workers.input.usesCustomConnector
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SpecInput
-import io.airbyte.workers.pod.KubeContainerInfo
-import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.PodLabeler
-import io.airbyte.workers.pod.PodNameGenerator
-import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.pipeline.stages.model.SyncPayload
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory

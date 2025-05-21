@@ -75,10 +75,10 @@ class WorkloadApiTest(
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
-    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 

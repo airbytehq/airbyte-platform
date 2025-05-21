@@ -83,7 +83,9 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
         </div>
         {error ? (
           <Text color="red" size="xs" className={styles.footer}>
-            {error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message })}
+            {error.type === NON_I18N_ERROR_TYPE || error.type === "validate"
+              ? error.message
+              : formatMessage({ id: error.message })}
           </Text>
         ) : footer && !isDisabled ? (
           <Text color="grey300" size="xs" className={styles.footer}>

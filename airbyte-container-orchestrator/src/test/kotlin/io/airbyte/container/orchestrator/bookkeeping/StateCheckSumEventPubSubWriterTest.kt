@@ -10,6 +10,8 @@ import com.google.protobuf.ByteString
 import com.google.pubsub.v1.PubsubMessage
 import io.airbyte.commons.json.Jsons
 import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
+import io.airbyte.workers.models.ArchitectureConstants.ORCHESTRATOR
+import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.micronaut.context.annotation.Property
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.Runs
@@ -28,6 +30,7 @@ import java.util.UUID
 import java.util.function.Supplier
 
 @MicronautTest
+@Property(name = PLATFORM_MODE, value = ORCHESTRATOR)
 @Property(name = "airbyte.attempt-id", value = "1")
 @Property(name = "airbyte.auth.control-plane-token-endpoint", value = "https://localhost:8080/test-token-endpoint")
 @Property(name = "airbyte.auth.dataplane-client-id", value = "test")
