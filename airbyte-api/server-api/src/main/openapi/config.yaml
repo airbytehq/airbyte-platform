@@ -16950,9 +16950,11 @@ components:
     WebappConfigResponse:
       type: object
       required:
-        - airbyteVersion
+        - version
         - edition
       properties:
+        version:
+          type: string
         edition:
           type: string
         datadogApplicationId:

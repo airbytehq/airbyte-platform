@@ -181,6 +181,7 @@ open class WebBackendApiController(
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {
+      version = webappConfig.version
       edition = webappConfig.edition
       datadogApplicationId = webappConfig.webApp["datadog-application-id"]
       datadogClientToken = webappConfig.webApp["datadog-client-token"]
@@ -204,6 +205,7 @@ open class WebBackendApiController(
  */
 @ConfigurationProperties("airbyte")
 data class WebappConfig(
+  @Value("\${AIRBYTE_VERSION}") val version: String,
   @Value("\${AIRBYTE_EDITION}") val edition: String,
   val webApp: Map<String, String>,
 )
