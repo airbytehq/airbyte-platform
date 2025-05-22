@@ -60,6 +60,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -182,6 +183,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -308,6 +310,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -434,6 +437,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID

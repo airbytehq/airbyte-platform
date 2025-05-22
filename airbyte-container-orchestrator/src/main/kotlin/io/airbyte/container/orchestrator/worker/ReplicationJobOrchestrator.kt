@@ -82,6 +82,7 @@ class ReplicationJobOrchestrator(
 
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf<String, Any>(
+        ApmTraceConstants.Tags.IS_RESET_KEY to replicationInput.isReset,
         ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
         ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY to destinationLauncherConfig.dockerImage,
         ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY to sourceLauncherConfig.dockerImage,

@@ -101,6 +101,11 @@ public final class ApmTraceConstants {
     public static final String FAILURE_TYPES_KEY = "failure_types";
 
     /**
+     * Name of the APM trace tag that holds whether the sync is a reset or not.
+     */
+    public static final String IS_RESET_KEY = "is_reset";
+
+    /**
      * Name of the APM trace tag that holds the job ID value associated with the trace.
      */
     public static final String JOB_ID_KEY = "job_id";
