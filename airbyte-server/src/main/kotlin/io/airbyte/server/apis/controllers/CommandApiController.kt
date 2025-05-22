@@ -92,7 +92,7 @@ class CommandApiController(
       id(commandGetRequest?.id)
       command?.let {
         commandType(it.commandType)
-        commandInput(it.commandInput)
+        commandInput(it.commandInput.toString())
         workspaceId(it.workspaceId)
         workloadId(it.workloadId)
         organizationId(it.organizationId)

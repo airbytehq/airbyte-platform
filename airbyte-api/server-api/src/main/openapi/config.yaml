@@ -3934,7 +3934,14 @@ paths:
           content:
             application/json:
               schema:
+                title: GetWebhookConfigResponse
                 type: object
+                required:
+                  - value
+                properties:
+                  value:
+                    type: string
+
   /v1/jobs/job_failure:
     post:
       tags:
@@ -6364,7 +6371,7 @@ paths:
                   command_type:
                     type: string
                   command_input:
-                    type: object
+                    type: string
                   workspace_id:
                     type: string
                     format: uuid

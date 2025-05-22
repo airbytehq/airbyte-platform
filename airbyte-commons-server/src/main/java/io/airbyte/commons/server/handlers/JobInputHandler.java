@@ -342,7 +342,7 @@ public class JobInputHandler {
         .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
   }
 
-  public Object getJobWebhookConfig(final long jobId) throws IOException {
+  public JobWebhookConfig getJobWebhookConfig(final long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
     final JobConfig jobConfig = job.getConfig();
     if (jobConfig == null) {

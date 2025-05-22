@@ -320,9 +320,9 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
   public GetWebhookConfigOutput getWebhookConfig(GetWebhookConfigInput input) {
     try {
       final JobWebhookConfig jobWebhookConfig = Jsons.deserialize(
-          airbyteApiClient.getJobsApi().getWebhookConfig(new GetWebhookConfigRequest(input.getJobId())).toString(), JobWebhookConfig.class);
+          airbyteApiClient.getJobsApi().getWebhookConfig(new GetWebhookConfigRequest(input.getJobId())).getValue(), JobWebhookConfig.class);
       return new GetWebhookConfigOutput(jobWebhookConfig.getOperationSequence(), jobWebhookConfig.getWebhookOperationConfigs());
-    } catch (IOException e) {
+    } catch (Exception e) {
       log.warn("Fail to get the webhook config.", e);
       throw new RuntimeException(e);
     }

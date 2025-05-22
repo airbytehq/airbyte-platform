@@ -99,9 +99,9 @@ class ReplicationCommandTest {
         commandType = "replicate",
         commandInput =
           Jsons
-            .jsonNode(
+            .serialize(
               ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
-            ).toString(),
+            ),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
@@ -161,9 +161,9 @@ class ReplicationCommandTest {
         commandType = "replicate",
         commandInput =
           Jsons
-            .jsonNode(
+            .serialize(
               ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
-            ).toString(),
+            ),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
@@ -232,9 +232,9 @@ class ReplicationCommandTest {
         commandType = "replicate",
         commandInput =
           Jsons
-            .jsonNode(
+            .serialize(
               ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
-            ).toString(),
+            ),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
@@ -275,9 +275,9 @@ class ReplicationCommandTest {
         commandType = "replicate",
         commandInput =
           Jsons
-            .jsonNode(
+            .serialize(
               ReplicationCommandApiInput.ReplicationApiInput(connectionId, jobId.toString(), attemptId, CatalogDiff()),
-            ).toString(),
+            ),
         workloadId = workloadId,
         organizationId = organizationId,
         createdAt = java.time.OffsetDateTime.now(),
