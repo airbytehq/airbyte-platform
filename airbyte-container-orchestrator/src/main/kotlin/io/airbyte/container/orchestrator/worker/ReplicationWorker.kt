@@ -46,11 +46,18 @@ class ReplicationWorker(
 
   /**
    * Helper function to track failures.
+   *
+   * @param e the exception to track
+   * @param ignoreApmTrace if true, the exception will not be added to the APM trace. This is avoid overwriting any previous exception
+   *  already added to the trace, as the span only supports reporting one exception per span.
    */
-  private fun trackFailure(e: Throwable?) {
+  private fun trackFailure(
+    e: Throwable?,
+    ignoreApmTrace: Boolean = false,
+  ) {
     // Only track if there is an exception AND the sync has not been canceled
     if (e != null) {
-      if (!context.replicationWorkerState.cancelled) {
+      if (!context.replicationWorkerState.cancelled && !ignoreApmTrace) {
         ApmTraceUtils.addExceptionToTrace(e)
       }
       context.replicationWorkerState.trackFailure(e.cause ?: e, context.jobId, context.attempt)
@@ -64,7 +71,8 @@ class ReplicationWorker(
       closeable?.close()
     } catch (e: Exception) {
       logger.error(e) { "Error closing resource $closeable; recording failure but continuing." }
-      trackFailure(e)
+      // Do not add the exception to the APM trace to avoid overwriting any previously tracked error
+      trackFailure(e = e, ignoreApmTrace = true)
     }
   }
 
