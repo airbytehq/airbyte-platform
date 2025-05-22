@@ -118,9 +118,9 @@ class ReplicationWorker(
       throw WorkerException("Sync failed", e)
     } finally {
       safeClose(dedicatedDispatcher)
+      safeClose(destination)
       safeClose(source)
       safeClose(recordSchemaValidator)
-      safeClose(destination)
       safeClose(syncPersistence)
     }
   }
