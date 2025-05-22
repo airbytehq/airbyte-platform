@@ -138,22 +138,8 @@ class WorkloadHandlerImpl(
   }
 
   override fun succeedWorkload(workloadId: String) {
-    val workload = getDomainWorkload(workloadId)
-
-    when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.SUCCESS,
-          null,
-        )
-        signalSender.sendSignal(workload.type, workload.signalInput)
-      }
-      WorkloadStatus.SUCCESS ->
-        logger.info { "Workload $workloadId is already marked as succeeded. Succeeding an already succeeded workload is a noop" }
-      else -> throw InvalidStatusTransitionException(
-        "Tried to succeed a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
-      )
+    withWorkloadServiceExceptionConverter {
+      workloadService.succeedWorkload(workloadId)
     }
   }
 

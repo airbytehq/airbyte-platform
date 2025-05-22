@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import org.testcontainers.containers.PostgreSQLContainer
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
@@ -37,6 +39,66 @@ class WorkloadRepositoryTest {
     workloadLabelRepo.deleteAll()
     workloadQueueRepo.deleteAll()
     workloadRepo.deleteAll()
+  }
+
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["PENDING", "CLAIMED", "LAUNCHED", "RUNNING"])
+  fun `cancel a non terminal workload updates the status to cancel and clears the deadline`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val reason = "cancel reason"
+    val source = "cancel test"
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val actualWorkload = workloadRepo.cancel(workloadId, reason, source)
+
+    assertEquals(workloadId, actualWorkload?.id)
+    assertEquals(WorkloadStatus.CANCELLED, actualWorkload?.status)
+    assertEquals(reason, actualWorkload?.terminationReason)
+    assertEquals(source, actualWorkload?.terminationSource)
+
+    assertNull(actualWorkload?.deadline)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
+  }
+
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["CANCELLED", "FAILURE", "SUCCESS"])
+  fun `cancel a terminal workload doesn't update the workload and returns null`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+    val expected = workloadRepo.findById(workloadId).get()
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val cancelResponse = workloadRepo.cancel(workloadId, "reason", "source")
+    assertNull(cancelResponse)
+
+    val actualWorkload = workloadRepo.findById(workloadId).get()
+    assertEquals(expected, actualWorkload)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
   }
 
   @Test
@@ -131,6 +193,65 @@ class WorkloadRepositoryTest {
     assertEquals(originalDeadline, actualWorkload.deadline)
   }
 
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["PENDING", "CLAIMED", "LAUNCHED", "RUNNING"])
+  fun `failing a non terminal workload updates the status to cancel and clears the deadline`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val reason = "failure reason"
+    val source = "failure test"
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val actualWorkload = workloadRepo.fail(workloadId, reason, source)
+
+    assertEquals(workloadId, actualWorkload?.id)
+    assertEquals(WorkloadStatus.FAILURE, actualWorkload?.status)
+    assertNull(actualWorkload?.deadline)
+    assertEquals(reason, actualWorkload?.terminationReason)
+    assertEquals(source, actualWorkload?.terminationSource)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
+  }
+
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["CANCELLED", "FAILURE", "SUCCESS"])
+  fun `failing a terminal workload doesn't update the workload and returns null`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+    val expected = workloadRepo.findById(workloadId).get()
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val response = workloadRepo.fail(workloadId, "reason", "source")
+    assertNull(response)
+
+    val actualWorkload = workloadRepo.findById(workloadId).get()
+    assertEquals(expected, actualWorkload)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
+  }
+
   @Test
   fun `saving a workload writes all the expected fields`() {
     val workloadId = Fixtures.newWorkloadId()
@@ -194,6 +315,61 @@ class WorkloadRepositoryTest {
     assertEquals("key2", workloadLabels[1].key)
     assertEquals("value2", workloadLabels[1].value)
     assertNotNull(workloadLabels[1].id)
+  }
+
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["PENDING", "CLAIMED", "LAUNCHED", "RUNNING"])
+  fun `succeeding a non terminal workload updates the status to cancel and clears the deadline`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val actualWorkload = workloadRepo.succeed(workloadId)
+
+    assertEquals(workloadId, actualWorkload?.id)
+    assertEquals(WorkloadStatus.SUCCESS, actualWorkload?.status)
+    assertNull(actualWorkload?.deadline)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
+  }
+
+  @ParameterizedTest
+  @EnumSource(WorkloadStatus::class, names = ["CANCELLED", "FAILURE", "SUCCESS"])
+  fun `succeeding a terminal workload doesn't update the workload and returns null`(status: WorkloadStatus) {
+    val workloadId = Fixtures.newWorkloadId()
+    val workload =
+      Fixtures.workload(
+        id = workloadId,
+        dataplaneId = null,
+        status = status,
+        deadline = OffsetDateTime.now(),
+      )
+    workloadRepo.save(workload)
+    val expected = workloadRepo.findById(workloadId).get()
+
+    val safeguardWorkloadId = Fixtures.newWorkloadId()
+    val safeguardWorkload = workload.copy(id = safeguardWorkloadId)
+    workloadRepo.save(safeguardWorkload)
+
+    val response = workloadRepo.succeed(workloadId)
+    assertNull(response)
+
+    val actualWorkload = workloadRepo.findById(workloadId).get()
+    assertEquals(expected, actualWorkload)
+
+    val safeguardCheck = workloadRepo.findById(safeguardWorkloadId)
+    assertEquals(safeguardWorkload.status, safeguardCheck.get().status)
   }
 
   @Test

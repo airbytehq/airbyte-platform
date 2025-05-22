@@ -74,6 +74,29 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   ): List<Workload>
 
   /**
+   * Cancel transitions a workload into a cancelled state if the workload was non-terminal.
+   * Cancel returns the workload if the status was just updated to cancelled.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'cancelled',
+       termination_reason = :reason,
+       termination_source = :source,
+       deadline = null,
+       updated_at = now()
+      WHERE id = :id AND status in ('pending', 'claimed', 'launched', 'running')
+      RETURNING *
+    """,
+  )
+  fun cancel(
+    @Id id: String,
+    reason: String?,
+    source: String?,
+  ): Workload?
+
+  /**
    * Claim transitions a workload into a claimed state and updates the deadline if the workload was pending.
    * Claim returns the workload if it is in a valid claimed status by the dataplane (either from this call or if it was already claimed).
    */
@@ -96,6 +119,48 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
     @Id id: String,
     dataplaneId: String,
     deadline: OffsetDateTime,
+  ): Workload?
+
+  /**
+   * Fail transitions a workload into a cancelled state if the workload was non-terminal.
+   * Fail returns the workload if the status was just updated to failure.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'failure',
+       termination_reason = :reason,
+       termination_source = :source,
+       deadline = null,
+       updated_at = now()
+      WHERE id = :id AND status in ('pending', 'claimed', 'launched', 'running')
+      RETURNING *
+    """,
+  )
+  fun fail(
+    @Id id: String,
+    reason: String?,
+    source: String?,
+  ): Workload?
+
+  /**
+   * Succeed transitions a workload into a cancelled state if the workload was non-terminal.
+   * Succeed returns the workload if the status was just updated to success.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'success',
+       deadline = null,
+       updated_at = now()
+      WHERE id = :id AND status in ('pending', 'claimed', 'launched', 'running')
+      RETURNING *
+    """,
+  )
+  fun succeed(
+    @Id id: String,
   ): Workload?
 
   fun update(

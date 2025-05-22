@@ -826,6 +826,7 @@ class WorkloadHandlerImplTest {
           workloadQueueRepository = workloadQueueRepository,
           signalSender = signalSender,
           defaultDeadlineValues = DefaultDeadlineValues(),
+          featureFlagClient = featureFlagClient,
         ),
       )
     const val WORKLOAD_ID = "test"
