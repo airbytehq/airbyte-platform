@@ -16,8 +16,6 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendCronExpressionDescription
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
-import io.airbyte.api.model.generated.WebBackendGeographiesListRequest
-import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
 import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
@@ -30,7 +28,6 @@ import io.airbyte.commons.lang.MoreBooleans
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.metrics.lib.TracingHelper
@@ -52,7 +49,6 @@ import java.util.concurrent.Callable
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WebBackendApiController(
   private val webBackendConnectionsHandler: WebBackendConnectionsHandler,
-  private val webBackendGeographiesHandler: WebBackendGeographiesHandler,
   private val webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler,
   private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler,
   private val webBackendMappersHandler: WebBackendMappersHandler,
@@ -128,18 +124,6 @@ open class WebBackendApiController(
       TracingHelper.addWorkspace(webBackendConnectionListRequestBody.workspaceId)
       webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody)
     }
-
-  @Post("/geographies/list")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun webBackendListGeographies(
-    @Body webBackendGeographiesListRequest: WebBackendGeographiesListRequest,
-  ): WebBackendGeographiesListResult? =
-    execute(
-      Callable {
-        webBackendGeographiesHandler.listGeographies(webBackendGeographiesListRequest.organizationId)
-      },
-    )
 
   @Post("/connections/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

@@ -11,14 +11,12 @@ import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.model.generated.WebBackendConnectionRead
 import io.airbyte.api.model.generated.WebBackendConnectionReadList
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
-import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.server.generated.models.WebappConfigResponse
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -52,9 +50,6 @@ internal class WebBackendApiControllerTest {
   lateinit var webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler
 
   @Inject
-  lateinit var webBackendGeographiesHandler: WebBackendGeographiesHandler
-
-  @Inject
   @Client("/")
   lateinit var client: HttpClient
 
@@ -66,9 +61,6 @@ internal class WebBackendApiControllerTest {
 
   @MockBean(WebBackendCheckUpdatesHandler::class)
   fun webBackendCheckUpdatesHandler(): WebBackendCheckUpdatesHandler = mockk()
-
-  @MockBean(WebBackendGeographiesHandler::class)
-  fun webBackendGeographiesHandler(): WebBackendGeographiesHandler = mockk()
 
   @MockBean(WebBackendCronExpressionHandler::class)
   fun webBackendCronExpressionHandler(): WebBackendCronExpressionHandler = mockk()
@@ -153,14 +145,6 @@ internal class WebBackendApiControllerTest {
     every { webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(any()) } returns WebBackendConnectionReadList()
 
     val path = "/api/v1/web_backend/connections/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-  }
-
-  @Test
-  fun testWebBackendListGeographies() {
-    every { webBackendGeographiesHandler.listGeographies(any()) } returns WebBackendGeographiesListResult()
-
-    val path = "/api/v1/web_backend/geographies/list"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
   }
 
