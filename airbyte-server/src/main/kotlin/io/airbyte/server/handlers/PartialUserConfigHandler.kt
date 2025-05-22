@@ -142,6 +142,8 @@ class PartialUserConfigHandler(
             connectionTemplate.namespaceFormat
           }
 
+        val defaultPrefix = "${sourceRead.sourceId}_"
+
         val createConnection =
           ConnectionCreate()
             .sourceId(sourceRead.sourceId)
@@ -151,7 +153,7 @@ class PartialUserConfigHandler(
             .namespaceFormat(namespaceFormat)
             .status(ConnectionStatus.ACTIVE)
             .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
-            .prefix(connectionTemplate.prefix)
+            .prefix(connectionTemplate.prefix ?: defaultPrefix)
             .syncCatalog(schemaResponse.catalog)
             .scheduleType(
               when (connectionTemplate.scheduleType) {
