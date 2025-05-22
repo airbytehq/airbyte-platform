@@ -495,6 +495,7 @@ class WebBackendConnectionsHandlerTest {
         .latestSyncJobStatus(JobStatus.SUCCEEDED)
         .isSyncing(false)
         .schemaChange(schemaChange)
+        .dataplaneGroupId(connectionRead.getDataplaneGroupId())
         .resourceRequirements(new ResourceRequirements()
             .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
             .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
