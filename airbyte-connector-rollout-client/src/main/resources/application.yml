@@ -44,8 +44,9 @@ temporal:
       cert: ${TEMPORAL_CLOUD_CLIENT_CERT:}
       key: ${TEMPORAL_CLOUD_CLIENT_KEY:}
     enabled: ${TEMPORAL_CLOUD_ENABLED:false}
-    host: ${TEMPORAL_CLOUD_HOST:}
-    namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
+    connector-rollout:
+      host: ${TEMPORAL_CLOUD_HOST:}
+      namespace: ${TEMPORAL_CLOUD_NAMESPACE:}
   host: ${TEMPORAL_HOST:`localhost:7233`}
   retention: ${TEMPORAL_HISTORY_RETENTION_IN_DAYS:30}
   sdk:
