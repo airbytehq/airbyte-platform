@@ -373,7 +373,10 @@ class EnvVarConfigBeanFactory {
     }
 
     // add this conditionally to trigger datasource bean creation via application.yaml
-    if (secretPersistenceType == Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE.toString()) {
+    if (Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE
+        .toString()
+        .equals(secretPersistenceType, ignoreCase = true)
+    ) {
       envs.add(EnvConstants.LOCAL_SECRETS)
     }
 
@@ -538,7 +541,10 @@ class EnvVarConfigBeanFactory {
     @Value("\${datasources.local-secrets.password:}") dbPassword: String,
   ): Map<String, String> {
     // Only pass through DB env vars if configured for local storage of secrets
-    if (secretPersistenceType != Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE.toString()) {
+    if (!Configs.SecretPersistenceType.TESTING_CONFIG_DB_TABLE
+        .toString()
+        .equals(secretPersistenceType, ignoreCase = true)
+    ) {
       return mapOf()
     }
 
