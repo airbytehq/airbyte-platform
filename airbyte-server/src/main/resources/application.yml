@@ -46,8 +46,10 @@ micronaut:
           # which is used to add auth tokens when using keycloak for internal service auth.
           # For more information, see https://github.com/airbytehq/airbyte-platform-internal/pull/14655
           enabled: false
+      retry:
+        enabled: true
       web:
-        enabled: ${MICROMETER_METRICS_ENABLED:false}
+        enabled: true
     export:
       otlp:
         enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}

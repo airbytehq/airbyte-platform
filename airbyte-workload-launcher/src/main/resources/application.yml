@@ -22,6 +22,9 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
+    binders:
+      retry:
+        enabled: true
   caches:
     network-policy-label-cache:
       expire-after-write: 10m

@@ -18,6 +18,8 @@ micronaut:
           enabled: false
         queues:
           enabled: true
+      retry:
+        enabled: true
       web:
         enabled: true
         server:
