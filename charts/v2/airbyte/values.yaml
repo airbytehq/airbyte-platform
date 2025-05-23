@@ -126,7 +126,7 @@ global:
     port: 
 
     # -- The database name
-    database: ""
+    name: ""
 
     # -- The database user
     user: ""
