@@ -8,7 +8,6 @@ import dev.failsafe.Failsafe
 import dev.failsafe.function.CheckedRunnable
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
-import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerSourceConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
@@ -21,22 +20,16 @@ import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
+private const val CALLER = "airbyte-source"
 
 class LocalContainerAirbyteSource(
   private val heartbeatMonitor: HeartbeatMonitor,
   private val streamFactory: AirbyteStreamFactory,
   private val messageMetricsTracker: MessageMetricsTracker,
   private val containerIOHandle: ContainerIOHandle,
+  private val containerLogMdcBuilder: MdcScope.Builder,
 ) : AirbyteSource {
   private lateinit var messageIterator: Iterator<AirbyteMessage>
-
-  companion object {
-    const val CALLER = "airbyte-source"
-    val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope
-        .Builder()
-        .setExtraMdcEntries(LogSource.SOURCE.toMdc())
-  }
 
   override fun close() {
     messageMetricsTracker.flushSourceReadCountMetric()
