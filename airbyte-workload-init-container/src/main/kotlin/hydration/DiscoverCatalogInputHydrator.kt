@@ -32,6 +32,7 @@ class DiscoverCatalogInputHydrator(
     return StandardDiscoverCatalogInput()
       .withActorContext(rawInput.actorContext)
       .withConfigHash(rawInput.configHash)
+      .withConnectorVersion(rawInput.connectorVersion)
       .withSourceId(rawInput.sourceId)
       .withConnectionConfiguration(fullConfig)
   }
