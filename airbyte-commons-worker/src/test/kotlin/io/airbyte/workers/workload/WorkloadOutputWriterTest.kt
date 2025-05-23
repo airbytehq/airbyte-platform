@@ -32,7 +32,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import java.util.Optional
 
 @ExtendWith(MockKExtension::class)
-internal class JobOutputDocStoreTest {
+internal class WorkloadOutputWriterTest {
   @MockK
   private lateinit var storageClient: StorageClient
 
@@ -45,7 +45,7 @@ internal class JobOutputDocStoreTest {
   @MockK(relaxed = true)
   private lateinit var metricClient: MetricClient
 
-  private lateinit var jobOutputDocStore: JobOutputDocStore
+  private lateinit var outputWriter: WorkloadOutputWriter
 
   private val connectorJobOutput =
     ConnectorJobOutput()
@@ -61,13 +61,13 @@ internal class JobOutputDocStoreTest {
 
   @BeforeEach
   fun init() {
-    jobOutputDocStore = JobOutputDocStore(storageClient, apiClientWrapper, metricClient, true)
+    outputWriter = WorkloadOutputWriter(storageClient, apiClientWrapper, metricClient)
     every { apiClientWrapper.workloadOutputApi } returns apiClient
   }
 
   @Test
-  fun `properly create an output (proxied)`() {
-    jobOutputDocStore.write(workloadId, connectorJobOutput)
+  fun `properly create an output`() {
+    outputWriter.write(workloadId, connectorJobOutput)
 
     verifyOrder {
       apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, connectorJobOutputSerialized))
@@ -76,10 +76,10 @@ internal class JobOutputDocStoreTest {
   }
 
   @Test
-  fun `properly wrap writing error (proxied)`() {
+  fun `properly wrap writing error`() {
     every { apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, connectorJobOutputSerialized)) } throws Exception()
 
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.write(workloadId, connectorJobOutput) }
+    assertThrows<DocStoreAccessException> { outputWriter.write(workloadId, connectorJobOutput) }
     verifyOrder {
       apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, connectorJobOutputSerialized))
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
@@ -87,8 +87,8 @@ internal class JobOutputDocStoreTest {
   }
 
   @Test
-  fun `properly create an output for syncs (proxied)`() {
-    jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput)
+  fun `properly create an output for syncs`() {
+    outputWriter.writeSyncOutput(workloadId, replicationOutput)
 
     verifyOrder {
       apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, replicationOutputSerialized))
@@ -97,66 +97,12 @@ internal class JobOutputDocStoreTest {
   }
 
   @Test
-  fun `properly wrap writing error for syncs (proxied)`() {
+  fun `properly wrap writing error for syncs`() {
     every { apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, replicationOutputSerialized)) } throws Exception()
 
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    assertThrows<DocStoreAccessException> { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
     verifyOrder {
       apiClient.writeWorkloadOutput(WorkloadOutputWriteRequest(workloadId, replicationOutputSerialized))
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
-    }
-  }
-
-  @Test
-  fun `properly create an output (direct access)`() {
-    jobOutputDocStore = JobOutputDocStore(storageClient, apiClientWrapper, metricClient, false)
-    every { storageClient.write(workloadId, connectorJobOutputSerialized) } returns Unit
-    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success")) } returns mockk<Counter>()
-
-    jobOutputDocStore.write(workloadId, connectorJobOutput)
-
-    verifyOrder {
-      storageClient.write(workloadId, connectorJobOutputSerialized)
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
-    }
-  }
-
-  @Test
-  fun `properly wrap writing error (direct access)`() {
-    jobOutputDocStore = JobOutputDocStore(storageClient, apiClientWrapper, metricClient, false)
-    every { storageClient.write(workloadId, connectorJobOutputSerialized) } throws RuntimeException()
-    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns mockk<Counter>()
-
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.write(workloadId, connectorJobOutput) }
-    verifyOrder {
-      storageClient.write(workloadId, connectorJobOutputSerialized)
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
-    }
-  }
-
-  @Test
-  fun `properly create an output for syncs (direct access)`() {
-    jobOutputDocStore = JobOutputDocStore(storageClient, apiClientWrapper, metricClient, false)
-    every { storageClient.write(workloadId, replicationOutputSerialized) } returns Unit
-    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success")) } returns mockk<Counter>()
-
-    jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput)
-
-    verifyOrder {
-      storageClient.write(workloadId, replicationOutputSerialized)
-      metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "success"))
-    }
-  }
-
-  @Test
-  fun `properly wrap writing error for syncs (direct access)`() {
-    jobOutputDocStore = JobOutputDocStore(storageClient, apiClientWrapper, metricClient, false)
-    every { storageClient.write(workloadId, replicationOutputSerialized) } throws RuntimeException()
-    every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns mockk<Counter>()
-
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
-    verifyOrder {
-      storageClient.write(workloadId, replicationOutputSerialized)
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_WRITE, 1, MetricAttribute(MetricTags.STATUS, "error"))
     }
   }
@@ -165,7 +111,7 @@ internal class JobOutputDocStoreTest {
   fun `properly read an output`() {
     every { storageClient.read(workloadId) } returns connectorJobOutputSerialized
 
-    val output: Optional<ConnectorJobOutput> = jobOutputDocStore.read(workloadId)
+    val output: Optional<ConnectorJobOutput> = outputWriter.read(workloadId)
 
     assertTrue(output.isPresent)
     assertEquals(connectorJobOutput, output.get())
@@ -175,7 +121,7 @@ internal class JobOutputDocStoreTest {
   fun `properly read a missing output`() {
     every { storageClient.read(workloadId) } returns null
 
-    val output: Optional<ConnectorJobOutput> = jobOutputDocStore.read(workloadId)
+    val output: Optional<ConnectorJobOutput> = outputWriter.read(workloadId)
 
     assertTrue(output.isEmpty)
   }
@@ -184,7 +130,7 @@ internal class JobOutputDocStoreTest {
   fun `properly wrap reading error`() {
     every { storageClient.read(workloadId) } throws RuntimeException()
 
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.read(workloadId) }
+    assertThrows<DocStoreAccessException> { outputWriter.read(workloadId) }
   }
 
   @Test
@@ -192,7 +138,7 @@ internal class JobOutputDocStoreTest {
     every { storageClient.read(workloadId) } returns replicationOutputSerialized
     every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success")) } returns mockk<Counter>()
 
-    val output: Optional<ReplicationOutput> = jobOutputDocStore.readSyncOutput(workloadId)
+    val output: Optional<ReplicationOutput> = outputWriter.readSyncOutput(workloadId)
 
     assertTrue(output.isPresent)
     assertEquals(replicationOutput, output.get())
@@ -207,7 +153,7 @@ internal class JobOutputDocStoreTest {
     every { storageClient.read(workloadId) } returns null
     every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "success")) } returns mockk<Counter>()
 
-    val output: Optional<ReplicationOutput> = jobOutputDocStore.readSyncOutput(workloadId)
+    val output: Optional<ReplicationOutput> = outputWriter.readSyncOutput(workloadId)
 
     assertTrue(output.isEmpty)
     verifyOrder {
@@ -221,7 +167,7 @@ internal class JobOutputDocStoreTest {
     every { storageClient.read(workloadId) } throws RuntimeException()
     every { metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error")) } returns mockk<Counter>()
 
-    assertThrows<DocStoreAccessException> { jobOutputDocStore.readSyncOutput(workloadId) }
+    assertThrows<DocStoreAccessException> { outputWriter.readSyncOutput(workloadId) }
     verifyOrder {
       storageClient.read(workloadId)
       metricClient.count(OssMetricsRegistry.JOB_OUTPUT_READ, 1, MetricAttribute(MetricTags.STATUS, "error"))

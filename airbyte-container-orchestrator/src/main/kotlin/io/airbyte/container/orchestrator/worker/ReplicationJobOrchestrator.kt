@@ -24,7 +24,7 @@ import io.airbyte.workers.helper.FailureHelper.platformFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
-import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -71,7 +71,7 @@ class ReplicationJobOrchestrator(
   private val jobRunConfig: JobRunConfig,
   private val replicationWorker: ReplicationWorker,
   private val workloadApiClient: WorkloadApiClient,
-  private val jobOutputDocStore: JobOutputDocStore,
+  private val outputWriter: WorkloadOutputWriter,
   private val metricClient: MetricClient,
 ) {
   @Trace(operationName = ApmTraceConstants.JOB_ORCHESTRATOR_OPERATION_NAME)
@@ -94,7 +94,7 @@ class ReplicationJobOrchestrator(
     val replicationOutput =
       run(replicationWorker, replicationInput, jobRoot, workloadId)
 
-    jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput)
+    outputWriter.writeSyncOutput(workloadId, replicationOutput)
     updateStatusInWorkloadApi(replicationOutput, workloadId)
 
     val attributes =

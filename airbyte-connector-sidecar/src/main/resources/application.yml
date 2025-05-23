@@ -65,7 +65,6 @@ airbyte:
   data.plane.service-account:
     credentials-path: ${DATA_PLANE_SERVICE_ACCOUNT_CREDENTIALS_PATH:}
     email: ${DATA_PLANE_SERVICE_ACCOUNT_EMAIL:}
-  proxy-object-storage: ${PROXY_OBJECT_STORAGE:false}
   sidecar:
     # Can we bump this value? Does it need to be configured per operation?
     # Should we pass it in from the launcher?

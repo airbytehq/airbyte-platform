@@ -204,8 +204,6 @@ object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", de
 
 object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)
 
-object ProxyObjectStorage : Temporary<Boolean>("platform.proxy-object-storage", default = false)
-
 object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = false)
 
 object UseAtomicWorkloadStateTransitions : Temporary<Boolean>(key = "platform.use-atomic-workload-state-transitions", default = false)

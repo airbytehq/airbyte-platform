@@ -13,7 +13,6 @@ import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.ConnectorApmEnabled
 import io.airbyte.featureflag.ContainerOrchestratorJavaOpts
 import io.airbyte.featureflag.InjectAwsSecretsToConnectorPods
-import io.airbyte.featureflag.ProxyObjectStorage
 import io.airbyte.featureflag.TestClient
 import io.airbyte.featureflag.UseAllowCustomCode
 import io.airbyte.featureflag.UseRuntimeSecretPersistence
@@ -69,7 +68,6 @@ class RuntimeEnvVarFactoryTest {
     ffClient = mockk()
     every { ffClient.boolVariation(InjectAwsSecretsToConnectorPods, any()) } returns false
     every { ffClient.boolVariation(UseAllowCustomCode, any()) } returns false
-    every { ffClient.boolVariation(ProxyObjectStorage, any()) } returns false
     airbyteEdition = AirbyteEdition.COMMUNITY
 
     factory =
@@ -344,7 +342,6 @@ class RuntimeEnvVarFactoryTest {
   fun `builds expected env vars for check connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
-    every { ffClient.boolVariation(ProxyObjectStorage, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
@@ -355,8 +352,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null) +
-        EnvVar(EnvVarConstants.PROXY_OBJECT_STORAGE, flagValue.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
     )
   }
@@ -366,7 +362,6 @@ class RuntimeEnvVarFactoryTest {
   fun `builds expected env vars for discover connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
-    every { ffClient.boolVariation(ProxyObjectStorage, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
@@ -377,16 +372,13 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
-        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null) +
-        EnvVar(EnvVarConstants.PROXY_OBJECT_STORAGE, flagValue.toString(), null),
+        EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
       result,
     )
   }
 
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  fun `builds expected env vars for spec connector container`(flagValue: Boolean) {
-    every { ffClient.boolVariation(ProxyObjectStorage, any()) } returns flagValue
+  @Test
+  fun `builds expected env vars for spec connector container`() {
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
@@ -398,12 +390,7 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null),
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.SPEC.toString(), null),
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
-      ) +
-        EnvVar(
-          EnvVarConstants.PROXY_OBJECT_STORAGE,
-          flagValue.toString(),
-          null,
-        ),
+      ),
       result,
     )
   }
@@ -453,7 +440,6 @@ class RuntimeEnvVarFactoryTest {
   ) {
     every { ffClient.stringVariation(ContainerOrchestratorJavaOpts, any()) } returns optsOverride
     every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
-    every { ffClient.boolVariation(ProxyObjectStorage, any()) } returns useRuntimeSecretPersistence // hacky but this is temporary
     val jobRunConfig =
       JobRunConfig()
         .withJobId("2324")
@@ -477,7 +463,6 @@ class RuntimeEnvVarFactoryTest {
         EnvVar(EnvVarConstants.USE_FILE_TRANSFER, useFileTransfer.toString(), null),
         EnvVar(EnvVarConstants.JAVA_OPTS_ENV_VAR, expectedOpts, null),
         EnvVar(EnvVarConstants.AIRBYTE_STAGING_DIRECTORY, stagingMountPath, null),
-        EnvVar(EnvVarConstants.PROXY_OBJECT_STORAGE, useRuntimeSecretPersistence.toString(), null),
         EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null),
       ),
       result,

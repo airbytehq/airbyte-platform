@@ -29,9 +29,9 @@ import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.models.ReplicationActivityInput;
 import io.airbyte.workers.pod.Metadata;
 import io.airbyte.workers.workload.DataplaneGroupResolver;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadConstants;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workers.workload.WorkloadOutputWriter;
 import io.airbyte.workers.workload.exception.DocStoreAccessException;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.airbyte.workload.api.client.model.generated.Workload;
@@ -68,7 +68,7 @@ public class WorkloadApiWorker {
 
   private static final Logger log = LoggerFactory.getLogger(WorkloadApiWorker.class);
   private static final Set<WorkloadStatus> TERMINAL_STATUSES = Set.of(WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS);
-  private final JobOutputDocStore jobOutputDocStore;
+  private final WorkloadOutputWriter workloadOutputWriter;
   private final WorkloadApiClient workloadApiClient;
   private final WorkloadClient workloadClient;
   private final WorkloadIdGenerator workloadIdGenerator;
@@ -79,7 +79,7 @@ public class WorkloadApiWorker {
 
   private String workloadId = null;
 
-  public WorkloadApiWorker(final JobOutputDocStore jobOutputDocStore,
+  public WorkloadApiWorker(final WorkloadOutputWriter workloadOutputWriter,
                            final WorkloadApiClient workloadApiClient,
                            final WorkloadClient workloadClient,
                            final WorkloadIdGenerator workloadIdGenerator,
@@ -87,7 +87,7 @@ public class WorkloadApiWorker {
                            final FeatureFlagClient featureFlagClient,
                            final LogClientManager logClientManager,
                            final DataplaneGroupResolver dataplaneGroupResolver) {
-    this.jobOutputDocStore = jobOutputDocStore;
+    this.workloadOutputWriter = workloadOutputWriter;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
@@ -254,7 +254,7 @@ public class WorkloadApiWorker {
 
     output = fetchReplicationOutput(workloadId, (location) -> {
       try {
-        return jobOutputDocStore.readSyncOutput(location);
+        return workloadOutputWriter.readSyncOutput(location);
       } catch (final DocStoreAccessException e) {
         throw new RuntimeException(e);
       }
