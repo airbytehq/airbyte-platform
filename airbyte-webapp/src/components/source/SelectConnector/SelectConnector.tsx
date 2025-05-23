@@ -196,8 +196,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions]);
 
   function keywordMatch(definition: ConnectorDefinitionOrEnterpriseStub, searchTerm: string) {
-    const keywords = searchTerm.split(" ").filter(Boolean);
-    return keywords.every((keyword) => definition.name.toLowerCase().includes(keyword));
+    const keywords = searchTerm.toLowerCase().split(" ").filter(Boolean);
+    const name = definition.name.toLowerCase();
+    return keywords.every((keyword) => name.includes(keyword));
   }
 
   // Filter all connectors based on search term
