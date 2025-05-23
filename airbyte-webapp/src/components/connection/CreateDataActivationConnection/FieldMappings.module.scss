@@ -1,0 +1,24 @@
+.fieldMappings {
+  &__leftGutter {
+    grid-column: 1;
+  }
+
+  &__source {
+    grid-column: 2;
+  }
+
+  &__arrow {
+    grid-column: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__destination {
+    grid-column: 4;
+  }
+
+  &__addField {
+    grid-column: 1 / -1;
+  }
+}

@@ -114,7 +114,7 @@ export interface ConnectionValues {
   operations?: OperationCreate[];
 }
 
-interface CreateConnectionProps {
+export interface CreateConnectionProps {
   values: ConnectionValues;
   source: SourceRead;
   destination: DestinationRead;

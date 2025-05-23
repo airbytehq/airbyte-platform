@@ -63,6 +63,7 @@ export const links = {
   billingNotificationsForm:
     "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
+  dataActivationDocs: `${BASE_DOCS_LINK}`, // Does not exist yet - this is a placeholder
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
 } as const;
 
