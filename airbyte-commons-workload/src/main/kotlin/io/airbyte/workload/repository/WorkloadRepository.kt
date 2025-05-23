@@ -145,6 +145,67 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   ): Workload?
 
   /**
+   * Heartbeat transitions a workload into a running state if the workload was claimed, launched or running and updates last heartbeat.
+   * Succeed returns the workload if the status is running.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'running',
+       deadline = :deadline,
+       last_heartbeat_at = now(),
+       updated_at = now()
+      WHERE id = :id AND status in ('claimed', 'launched', 'running')
+      RETURNING *
+    """,
+  )
+  fun heartbeat(
+    @Id id: String,
+    deadline: OffsetDateTime,
+  ): Workload?
+
+  /**
+   * Launch transitions a workload into a launched state if the workload was claimed or launched.
+   * Succeed returns the workload if the status is launched.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'launched',
+       deadline = :deadline,
+       updated_at = now()
+      WHERE id = :id AND status in ('claimed', 'launched')
+      RETURNING *
+    """,
+  )
+  fun launch(
+    @Id id: String,
+    deadline: OffsetDateTime,
+  ): Workload?
+
+  /**
+   * Running transitions a workload into a running state if the workload was claimed, launched or running.
+   * Succeed returns the workload if the status is launched.
+   */
+  @Query(
+    """
+      UPDATE workload
+      SET
+       status = 'running',
+       deadline = :deadline,
+       updated_at = now()
+      WHERE id = :id AND status in ('claimed', 'launched', 'running')
+      RETURNING *
+    """,
+  )
+  fun running(
+    @Id id: String,
+    deadline: OffsetDateTime,
+  ): Workload?
+
+  /**
    * Succeed transitions a workload into a cancelled state if the workload was non-terminal.
    * Succeed returns the workload if the status was just updated to success.
    */

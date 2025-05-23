@@ -213,6 +213,134 @@ class WorkloadService(
     }
   }
 
+  fun launchWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    if (featureFlagClient.boolVariation(UseAtomicWorkloadStateTransitions, Empty)) {
+      val workload = workloadRepository.launch(workloadId, deadline)
+      if (workload == null) {
+        workloadRepository
+          .findById(workloadId)
+          .map { w ->
+            when (w.status) {
+              WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+                "Trying to set a workload in a terminal state (${w.status}) to launched",
+              )
+              WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+                "Can't set a workload status to running on a workload that hasn't been claimed",
+              )
+              else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            }
+          }
+      }
+    } else {
+      val workload = getWorkload(workloadId)
+
+      when (workload.status) {
+        WorkloadStatus.CLAIMED -> {
+          workloadRepository.update(
+            workloadId,
+            WorkloadStatus.LAUNCHED,
+            deadline,
+          )
+        }
+
+        WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
+        WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
+        WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+          "Heartbeat a workload in a terminal state",
+        )
+
+        WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+          "Can't set a workload status to launched on a workload that hasn't been claimed",
+        )
+      }
+    }
+  }
+
+  fun heartbeatWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    if (featureFlagClient.boolVariation(UseAtomicWorkloadStateTransitions, Empty)) {
+      val workload = workloadRepository.heartbeat(workloadId, deadline)
+      if (workload == null) {
+        workloadRepository
+          .findById(workloadId)
+          .map { w ->
+            when (w.status) {
+              WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+                "Heartbeat a workload in a terminal state (${w.status})",
+              )
+              WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+              else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            }
+          }
+      }
+    } else {
+      val workload: Workload = getWorkload(workloadId)
+
+      when (workload.status) {
+        WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
+          workloadRepository.update(
+            workloadId,
+            WorkloadStatus.RUNNING,
+            OffsetDateTime.now(),
+            deadline,
+          )
+        }
+        WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+          "Heartbeat a workload in a terminal state",
+        )
+        WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+      }
+    }
+  }
+
+  fun runningWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    if (featureFlagClient.boolVariation(UseAtomicWorkloadStateTransitions, Empty)) {
+      val workload = workloadRepository.running(workloadId, deadline)
+      if (workload == null) {
+        workloadRepository
+          .findById(workloadId)
+          .map { w ->
+            when (w.status) {
+              WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+                "Trying to set a workload in a terminal state (${w.status}) to running",
+              )
+              WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+                "Can't set a workload status to running on a workload that hasn't been claimed",
+              )
+              else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+            }
+          }
+      }
+    } else {
+      val workload = getWorkload(workloadId)
+
+      when (workload.status) {
+        WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED -> {
+          workloadRepository.update(
+            workloadId,
+            WorkloadStatus.RUNNING,
+            deadline,
+          )
+        }
+        WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
+        WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+          "Heartbeat a workload in a terminal state",
+        )
+        WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+          "Can't set a workload status to running on a workload that hasn't been claimed",
+        )
+      }
+    }
+  }
+
   fun succeedWorkload(workloadId: String) {
     if (featureFlagClient.boolVariation(UseAtomicWorkloadStateTransitions, Empty)) {
       val workload = workloadRepository.succeed(workloadId)

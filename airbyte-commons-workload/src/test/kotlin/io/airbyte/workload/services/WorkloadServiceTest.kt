@@ -19,6 +19,7 @@ import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -103,6 +104,84 @@ class WorkloadServiceTest {
 
     assertThrows<InvalidStatusTransitionException> {
       workloadService.failWorkload(workloadId = defaultWorkloadId, reason = reason, source = source)
+    }
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
+  fun `heartbeat a workload to running does nothing else`() {
+    val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.RUNNING)
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns launchedWorkload
+    every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
+
+    workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
+  }
+
+  @Test
+  fun `heartbeat a workload to running only throws when it fails`() {
+    val failedWorkload = defaultWorkload.copy(status = WorkloadStatus.FAILURE)
+    every { workloadRepository.heartbeat(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
+
+    assertThrows<InvalidStatusTransitionException> {
+      workloadService.heartbeatWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+    }
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
+  fun `setting a workload to launched does nothing else`() {
+    val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.LAUNCHED)
+    every { workloadRepository.launch(defaultWorkloadId, any()) } returns launchedWorkload
+    every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
+
+    workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
+  }
+
+  @Test
+  fun `setting a workload to launched only throws when it fails`() {
+    val failedWorkload = defaultWorkload.copy(status = WorkloadStatus.FAILURE)
+    every { workloadRepository.launch(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
+
+    assertThrows<InvalidStatusTransitionException> {
+      workloadService.launchWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+    }
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) }
+  }
+
+  @Test
+  fun `setting a workload to running does nothing else`() {
+    val launchedWorkload = defaultWorkload.copy(status = WorkloadStatus.RUNNING)
+    every { workloadRepository.running(defaultWorkloadId, any()) } returns launchedWorkload
+    every { workloadQueueRepository.ackWorkloadQueueItem(defaultWorkloadId) } returns Unit
+
+    workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
+
+    verify(exactly = 0) { signalSender.sendSignal(any(), any()) }
+    verify(exactly = 0) { workloadQueueRepository.ackWorkloadQueueItem(any()) }
+  }
+
+  @Test
+  fun `setting a workload to running only throws when it fails`() {
+    val failedWorkload = defaultWorkload.copy(status = WorkloadStatus.FAILURE)
+    every { workloadRepository.running(defaultWorkloadId, any()) } returns null
+    every { workloadRepository.findById(defaultWorkloadId) } returns Optional.of(failedWorkload)
+
+    assertThrows<InvalidStatusTransitionException> {
+      workloadService.runningWorkload(defaultWorkloadId, OffsetDateTime.now().plusMinutes(5))
     }
 
     verify(exactly = 0) { signalSender.sendSignal(any(), any()) }

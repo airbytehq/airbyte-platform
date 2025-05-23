@@ -147,23 +147,8 @@ class WorkloadHandlerImpl(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
-    val workload = getDomainWorkload(workloadId)
-
-    when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.RUNNING,
-          deadline,
-        )
-      }
-      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
-      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
-        "Heartbeat a workload in a terminal state",
-      )
-      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
-        "Can't set a workload status to running on a workload that hasn't been claimed",
-      )
+    withWorkloadServiceExceptionConverter {
+      workloadService.runningWorkload(workloadId, deadline)
     }
   }
 
@@ -171,25 +156,8 @@ class WorkloadHandlerImpl(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
-    // TODO rework for atomicity and track time to transition to LAUNCHED from start
-    val workload = getDomainWorkload(workloadId)
-
-    when (workload.status) {
-      WorkloadStatus.CLAIMED -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.LAUNCHED,
-          deadline,
-        )
-      }
-      WorkloadStatus.LAUNCHED -> logger.info { "Workload $workloadId is already marked as launched. Skipping..." }
-      WorkloadStatus.RUNNING -> logger.info { "Workload $workloadId is already marked as running. Skipping..." }
-      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
-        "Heartbeat a workload in a terminal state",
-      )
-      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
-        "Can't set a workload status to running on a workload that hasn't been claimed",
-      )
+    withWorkloadServiceExceptionConverter {
+      workloadService.launchWorkload(workloadId, deadline)
     }
   }
 
@@ -197,21 +165,8 @@ class WorkloadHandlerImpl(
     workloadId: String,
     deadline: OffsetDateTime,
   ) {
-    val workload: DomainWorkload = getDomainWorkload(workloadId)
-
-    when (workload.status) {
-      WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.RUNNING,
-          offsetDateTime(),
-          deadline,
-        )
-      }
-      WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
-        "Heartbeat a workload in a terminal state",
-      )
-      WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+    withWorkloadServiceExceptionConverter {
+      workloadService.heartbeatWorkload(workloadId, deadline)
     }
   }
 
