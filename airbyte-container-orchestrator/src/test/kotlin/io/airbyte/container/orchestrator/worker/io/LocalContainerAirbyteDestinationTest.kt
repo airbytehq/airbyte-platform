@@ -4,6 +4,8 @@
 
 package io.airbyte.container.orchestrator.worker.io
 
+import io.airbyte.commons.logging.LogSource
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.container.orchestrator.worker.io.ContainerIOHandle.Companion.EXIT_CODE_CHECK_EXISTS_FAILURE
@@ -33,6 +35,7 @@ internal class LocalContainerAirbyteDestinationTest {
   private lateinit var exitValueFile: File
   private lateinit var jobRoot: Path
   private lateinit var containerIOHandle: ContainerIOHandle
+  private lateinit var containerLogMdcBuilder: MdcScope.Builder
   private lateinit var message: AirbyteMessage
   private lateinit var messageMetricsTracker: MessageMetricsTracker
   private lateinit var messageWriterFactory: AirbyteMessageBufferedWriterFactory
@@ -61,6 +64,10 @@ internal class LocalContainerAirbyteDestinationTest {
         outputStream = stdOutFile.outputStream(),
         terminationFile = terminationFile,
       )
+    containerLogMdcBuilder =
+      MdcScope
+        .Builder()
+        .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
     randomConnectionId = UUID.randomUUID()
     destinationTimeoutMonitor = mockk<DestinationTimeoutMonitor>()
     jobRoot = Path.of(".")
@@ -106,6 +113,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -132,6 +140,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -160,6 +169,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -188,6 +198,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -215,6 +226,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -247,6 +259,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -268,6 +281,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = containerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -302,6 +316,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -336,6 +351,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -366,6 +382,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -393,6 +410,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -420,6 +438,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageMetricsTracker = messageMetricsTracker,
         messageWriterFactory = messageWriterFactory,
         containerIOHandle = mockedContainerIOHandle,
+        containerLogMdcBuilder = containerLogMdcBuilder,
         destinationTimeoutMonitor = destinationTimeoutMonitor,
       )
 
@@ -442,6 +461,7 @@ internal class LocalContainerAirbyteDestinationTest {
         messageWriterFactory,
         mockk(relaxed = true),
         mockk(relaxed = true),
+        containerLogMdcBuilder = containerLogMdcBuilder,
         true,
       )
 

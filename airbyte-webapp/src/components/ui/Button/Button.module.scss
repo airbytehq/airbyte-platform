@@ -52,6 +52,12 @@ $clear-dark-background-color: transparent;
 $clear-dark-text-color-hover: colors.$grey-600;
 $clear-dark-text-color-active: colors.$grey-600;
 
+// Clear Danger
+$clear-danger-text-color: colors.$red-400;
+$clear-danger-text-color-hover: colors.$red-600;
+$clear-danger-text-color-active: colors.$red-600;
+$clear-danger-background-color: transparent;
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -259,6 +265,20 @@ $clear-dark-text-color-active: colors.$grey-600;
     &:active {
       border-color: $secondary-dark-border-color-active;
       color: $secondary-dark-text-color-active;
+    }
+  }
+
+  &--clear-danger {
+    background-color: $clear-danger-background-color;
+    color: $clear-danger-text-color;
+    padding: 0;
+
+    &:hover {
+      color: $clear-danger-text-color-hover;
+    }
+
+    &:active {
+      color: $clear-danger-text-color-active;
     }
   }
 

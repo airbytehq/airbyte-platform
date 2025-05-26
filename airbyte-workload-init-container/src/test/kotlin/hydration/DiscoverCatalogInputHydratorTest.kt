@@ -33,6 +33,7 @@ class DiscoverCatalogInputHydratorTest {
       StandardDiscoverCatalogInput()
         .withActorContext(ActorContext().withWorkspaceId(workspaceId).withOrganizationId(orgId))
         .withConfigHash(UUID.randomUUID().toString())
+        .withConnectorVersion("1.0.0")
         .withSourceId(UUID.randomUUID().toString())
         .withConnectionConfiguration(unhydratedConfig.value)
 
@@ -50,6 +51,7 @@ class DiscoverCatalogInputHydratorTest {
 
     Assertions.assertEquals(input.actorContext, result.actorContext)
     Assertions.assertEquals(input.configHash, result.configHash)
+    Assertions.assertEquals(input.connectorVersion, result.connectorVersion)
     Assertions.assertEquals(input.sourceId, result.sourceId)
     Assertions.assertEquals(hydratedConfig, result.connectionConfiguration)
   }

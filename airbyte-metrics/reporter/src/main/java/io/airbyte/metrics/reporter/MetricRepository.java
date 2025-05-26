@@ -21,6 +21,7 @@ import jakarta.inject.Singleton;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.jooq.DSLContext;
 import org.jooq.Field;
 import org.jooq.Record;
@@ -37,16 +38,24 @@ class MetricRepository {
   // Another option we didn't use here is to build this into SQL query - it will lead SQL much less
   // readable while not decreasing any complexity.
   private static final List<String> REGISTERED_ATTEMPT_QUEUE = List.of("SYNC", "AWS_PARIS_SYNC", "null");
-  private static final List<String> REGISTERED_GEOGRAPHY = List.of("US", "AUTO", "EU");
+  private static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   MetricRepository(final DSLContext ctx) {
     this.ctx = ctx;
   }
 
-  Map<String, Integer> numberOfPendingJobsByGeography() {
-    final String geographyResultAlias = "geography";
+  List<String> getDataplaneGroupNames() {
+    return ctx.select(DATAPLANE_GROUP.NAME)
+        .from(DATAPLANE_GROUP)
+        .where(DATAPLANE_GROUP.TOMBSTONE.eq(false))
+        .and(DATAPLANE_GROUP.ORGANIZATION_ID.eq(DEFAULT_ORGANIZATION_ID))
+        .fetchInto(String.class);
+  }
+
+  Map<String, Integer> numberOfPendingJobsByDataplaneGroupName() {
+    final String dataplaneGroupNameResultAlias = "data_plane_group_name";
     final String countResultAlias = "result";
-    final var result = ctx.select(DATAPLANE_GROUP.NAME.cast(String.class).as(geographyResultAlias), count(asterisk()).as(countResultAlias))
+    final var result = ctx.select(DATAPLANE_GROUP.NAME.cast(String.class).as(dataplaneGroupNameResultAlias), count(asterisk()).as(countResultAlias))
         .from(JOBS)
         .join(CONNECTION)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
@@ -54,12 +63,12 @@ class MetricRepository {
         .on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(JOBS.STATUS.eq(JobStatus.pending))
         .groupBy(DATAPLANE_GROUP.NAME);
-    final Field<String> geographyResultField = DSL.field(name(geographyResultAlias), String.class);
+    final Field<String> dataplaneGroupNameResultField = DSL.field(name(dataplaneGroupNameResultAlias), String.class);
     final Field<Integer> countResultField = DSL.field(name(countResultAlias), Integer.class);
-    final Map<String, Integer> queriedMap = result.fetchMap(geographyResultField, countResultField);
-    for (final String potentialGeography : REGISTERED_GEOGRAPHY) {
-      if (!queriedMap.containsKey(potentialGeography)) {
-        queriedMap.put(potentialGeography, 0);
+    final Map<String, Integer> queriedMap = result.fetchMap(dataplaneGroupNameResultField, countResultField);
+    for (final String potentialDataplaneGroup : getDataplaneGroupNames()) {
+      if (!queriedMap.containsKey(potentialDataplaneGroup)) {
+        queriedMap.put(potentialDataplaneGroup, 0);
       }
     }
     return queriedMap;
@@ -98,11 +107,11 @@ class MetricRepository {
         .fetchOne(0, int.class);
   }
 
-  Map<String, Double> oldestPendingJobAgeSecsByGeography() {
+  Map<String, Double> oldestPendingJobAgeSecsByDataplaneGroupName() {
     final var query =
         """
         SELECT
-          cast(dataplane_group.name as varchar) AS geography,
+          cast(dataplane_group.name as varchar) AS dataplane_group_name,
           MAX(EXTRACT(EPOCH FROM (current_timestamp - jobs.created_at)))::float AS run_duration_seconds
         FROM jobs
         JOIN connection
@@ -113,12 +122,12 @@ class MetricRepository {
         GROUP BY dataplane_group.name;
         """;
     final var result = ctx.fetch(query);
-    final Field<String> geographyResultField = DSL.field(name("geography"), String.class);
+    final Field<String> dataplaneGroupNameResultField = DSL.field(name("dataplane_group_name"), String.class);
     final Field<Double> runDurationSecondsField = DSL.field(name("run_duration_seconds"), Double.class);
-    final Map<String, Double> queriedMap = result.intoMap(geographyResultField, runDurationSecondsField);
-    for (final String potentialGeography : REGISTERED_GEOGRAPHY) {
-      if (!queriedMap.containsKey(potentialGeography)) {
-        queriedMap.put(potentialGeography, 0.0);
+    final Map<String, Double> queriedMap = result.intoMap(dataplaneGroupNameResultField, runDurationSecondsField);
+    for (final String potentialDataplaneGroup : getDataplaneGroupNames()) {
+      if (!queriedMap.containsKey(potentialDataplaneGroup)) {
+        queriedMap.put(potentialDataplaneGroup, 0.0);
       }
     }
     return queriedMap;

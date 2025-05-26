@@ -415,6 +415,7 @@ public class WebBackendConnectionsHandler {
         .source(source)
         .destination(destination)
         .operations(operations.getOperations())
+        .dataplaneGroupId(connectionRead.getDataplaneGroupId())
         .resourceRequirements(connectionRead.getResourceRequirements())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())

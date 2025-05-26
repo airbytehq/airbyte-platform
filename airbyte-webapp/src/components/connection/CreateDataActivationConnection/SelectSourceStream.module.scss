@@ -1,0 +1,10 @@
+@use "scss/variables";
+
+.selectSourceStream {
+  grid-column: 2;
+
+  &__icon {
+    width: 15px;
+    height: 15px;
+  }
+}

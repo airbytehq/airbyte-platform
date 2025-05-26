@@ -435,7 +435,6 @@ internal class SecretsRepositoryWriterTest {
 //        .withSecurityUpdates(false)
 //        .withTombstone(false)
 //        .withNotifications(emptyList())
-//        .withDefaultGeography(Geography.AUTO) // Serialize it to a string, then deserialize it to a JsonNode.
 //        .withWebhookOperationConfigs(Jsons.jsonNode(webhookConfigs))
 //
 //    every { configRepository.getStandardWorkspaceNoSecrets(any(), any()) } returns workspace

@@ -39,6 +39,7 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.JobWebhookConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
@@ -339,6 +340,38 @@ public class JobInputHandler {
         .jobId(jobId)
         .attemptNumber(attemptNumber)
         .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
+  }
+
+  public JobWebhookConfig getJobWebhookConfig(final long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+    final JobConfig jobConfig = job.getConfig();
+    if (jobConfig == null) {
+      throw new IllegalStateException("Job config is null");
+    }
+    return getJobWebhookConfig(jobId, jobConfig);
+  }
+
+  private JobWebhookConfig getJobWebhookConfig(final long jobId, final JobConfig jobConfig) {
+    final JobConfig.ConfigType jobConfigType = jobConfig.getConfigType();
+    if (JobConfig.ConfigType.SYNC.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getSync().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getSync().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getResetConnection().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getResetConnection().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.REFRESH.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getRefresh().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getRefresh().getWebhookOperationConfigs());
+    } else {
+      throw new IllegalStateException(
+          String.format("Unexpected config type %s for job %d. The only supported config types for this activity are (%s)",
+              jobConfigType,
+              jobId,
+              REPLICATION_TYPES));
+    }
   }
 
   /**

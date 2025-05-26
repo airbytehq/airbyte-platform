@@ -150,26 +150,26 @@ data class DiscoverCommandApiInput(
   data class DiscoverApiInput(
     val actorId: UUID,
     val jobId: String,
-    val attemptId: Long,
+    val attemptNumber: Long,
   ) {
     class Builder
       @JvmOverloads
       constructor(
         var actorId: UUID? = null,
         var jobId: String? = null,
-        var attemptId: Long? = null,
+        var attemptNumber: Long? = null,
       ) {
         fun actorId(actorId: UUID) = apply { this.actorId = actorId }
 
         fun jobId(jobId: String) = apply { this.jobId = jobId }
 
-        fun attemptId(attemptId: Long) = apply { this.attemptId = attemptId }
+        fun attemptNumber(attemptNumber: Long) = apply { this.attemptNumber = attemptNumber }
 
         fun build() =
           DiscoverApiInput(
             actorId = actorId ?: throw IllegalArgumentException("actorId must be specified"),
             jobId = jobId ?: throw IllegalArgumentException("jobId must be specified"),
-            attemptId = attemptId ?: throw IllegalArgumentException("attemptId must be specified"),
+            attemptNumber = attemptNumber ?: throw IllegalArgumentException("attemptId must be specified"),
           )
       }
   }
@@ -290,7 +290,6 @@ data class ReplicationCommandApiInput(
 ) : ConnectorCommandInput {
   override val type: String = ConnectorCommandInput.REPLICATION_COMMAND
 
-  // This is duplicated of io.airbyte.workers.model.CheckConnectionInput to avoid dependency hell
   @JsonDeserialize(builder = ReplicationApiInput.Builder::class)
   data class ReplicationApiInput(
     val connectionId: UUID,
@@ -316,7 +315,7 @@ data class ReplicationCommandApiInput(
 
         fun build() =
           ReplicationApiInput(
-            connectionId = connectionId ?: throw IllegalArgumentException("actorId must be specified"),
+            connectionId = connectionId ?: throw IllegalArgumentException("connectionId must be specified"),
             jobId = jobId ?: throw IllegalArgumentException("jobId must be specified"),
             attemptId = attemptId ?: throw IllegalArgumentException("attemptId must be specified"),
             appliedCatalogDiff = appliedCatalogDiff,

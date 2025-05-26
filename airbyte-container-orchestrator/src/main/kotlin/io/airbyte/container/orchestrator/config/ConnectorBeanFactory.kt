@@ -68,6 +68,7 @@ class ConnectorBeanFactory {
     messageWriterFactory: AirbyteMessageBufferedWriterFactory,
     messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
+    @Named("destinationMdcScopeBuilder") mdcScopeBuilder: MdcScope.Builder,
   ): AirbyteDestination =
     LocalContainerAirbyteDestination(
       streamFactory = destinationStreamFactory,
@@ -75,6 +76,7 @@ class ConnectorBeanFactory {
       messageWriterFactory = messageWriterFactory,
       destinationTimeoutMonitor = airbyteDestinationMonitor,
       containerIOHandle = dest(),
+      containerLogMdcBuilder = mdcScopeBuilder,
       flushImmediately = replicationInput.useFileTransfer,
     )
 
@@ -84,6 +86,7 @@ class ConnectorBeanFactory {
     messageMetricsTracker: MessageMetricsTracker,
     replicationInput: ReplicationInput,
     @Named("sourceStreamFactory") sourceStreamFactory: AirbyteStreamFactory,
+    @Named("sourceMdcScopeBuilder") mdcScopeBuilder: MdcScope.Builder,
   ): AirbyteSource =
     if (replicationInput.isReset) {
       EmptyAirbyteSource(replicationInput.namespaceDefinition == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT)
@@ -93,6 +96,7 @@ class ConnectorBeanFactory {
         streamFactory = sourceStreamFactory,
         messageMetricsTracker = messageMetricsTracker,
         containerIOHandle = source(),
+        containerLogMdcBuilder = mdcScopeBuilder,
       )
     }
 

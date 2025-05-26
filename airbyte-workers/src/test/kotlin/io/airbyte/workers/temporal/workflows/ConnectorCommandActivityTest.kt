@@ -259,7 +259,7 @@ class ConnectorCommandActivityTest {
     activity.startCommand(getActivityInput(input = discoverApiInput, signalPayload = signalPayload))
     verify {
       discoverCommandV2.start(
-        DiscoverSourceApiInput(discoverApiInput.input.actorId, discoverApiInput.input.jobId, discoverApiInput.input.attemptId),
+        DiscoverSourceApiInput(discoverApiInput.input.actorId, discoverApiInput.input.jobId, discoverApiInput.input.attemptNumber),
         signalPayload,
       )
     }
@@ -324,7 +324,7 @@ class ConnectorCommandActivityTest {
         DiscoverCommandApiInput.DiscoverApiInput(
           actorId = UUID.randomUUID(),
           jobId = "jobId",
-          attemptId = 1337L,
+          attemptNumber = 1337L,
         ),
     )
 

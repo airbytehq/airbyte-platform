@@ -6,8 +6,8 @@ package io.airbyte.workers.sync
 
 import io.airbyte.commons.temporal.HeartbeatUtils
 import io.airbyte.workers.sync.WorkloadClient.Companion.CANCELLATION_SOURCE_STR
-import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
@@ -30,7 +30,7 @@ import java.util.concurrent.atomic.AtomicReference
 class WorkloadClientTest {
   private val apiClientWrapper: WorkloadApiClient = mockk()
   private val apiClient: WorkloadApi = mockk()
-  private val jobOutputDocStore: JobOutputDocStore = mockk()
+  private val outputWriter: WorkloadOutputWriter = mockk()
 
   private lateinit var client: WorkloadClient
 
@@ -38,7 +38,7 @@ class WorkloadClientTest {
   fun setup() {
     every { apiClientWrapper.workloadApi } returns apiClient
 
-    client = spyk(WorkloadClient(apiClientWrapper, jobOutputDocStore))
+    client = spyk(WorkloadClient(apiClientWrapper, outputWriter))
   }
 
   @Test

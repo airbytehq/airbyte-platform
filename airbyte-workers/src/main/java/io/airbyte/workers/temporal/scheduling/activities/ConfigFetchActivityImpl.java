@@ -20,12 +20,15 @@ import io.airbyte.api.client.model.generated.ConnectionScheduleDataBasicSchedule
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron;
 import io.airbyte.api.client.model.generated.ConnectionScheduleType;
 import io.airbyte.api.client.model.generated.ConnectionStatus;
+import io.airbyte.api.client.model.generated.GetWebhookConfigRequest;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.SourceIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.converters.CommonConvertersKt;
+import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.config.JobWebhookConfig;
 import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.FieldSelectionWorkspaces.AddSchedulingJitter;
@@ -41,6 +44,8 @@ import io.airbyte.workers.temporal.activities.GetConnectionContextInput;
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput;
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput;
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput;
+import io.airbyte.workers.temporal.activities.GetWebhookConfigInput;
+import io.airbyte.workers.temporal.activities.GetWebhookConfigOutput;
 import io.micronaut.context.annotation.Value;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Named;
@@ -308,6 +313,18 @@ public class ConfigFetchActivityImpl implements ConfigFetchActivity {
     } catch (final IOException e) {
       log.warn("Fail to get the workspace.", e);
       return false;
+    }
+  }
+
+  @Override
+  public GetWebhookConfigOutput getWebhookConfig(GetWebhookConfigInput input) {
+    try {
+      final JobWebhookConfig jobWebhookConfig = Jsons.deserialize(
+          airbyteApiClient.getJobsApi().getWebhookConfig(new GetWebhookConfigRequest(input.getJobId())).getValue(), JobWebhookConfig.class);
+      return new GetWebhookConfigOutput(jobWebhookConfig.getOperationSequence(), jobWebhookConfig.getWebhookOperationConfigs());
+    } catch (Exception e) {
+      log.warn("Fail to get the webhook config.", e);
+      throw new RuntimeException(e);
     }
   }
 

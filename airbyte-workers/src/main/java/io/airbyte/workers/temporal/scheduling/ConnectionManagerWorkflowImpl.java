@@ -23,6 +23,8 @@ import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.ConnectionUpdaterInput;
 import io.airbyte.commons.temporal.scheduling.ConnectorCommandWorkflow;
 import io.airbyte.commons.temporal.scheduling.SyncWorkflow;
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2;
+import io.airbyte.commons.temporal.scheduling.SyncWorkflowV2Input;
 import io.airbyte.commons.temporal.scheduling.retries.RetryManager;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowInternalState;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
@@ -39,6 +41,7 @@ import io.airbyte.config.StandardSyncSummary;
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.featureflag.UseCommandCheck;
+import io.airbyte.featureflag.UseSyncV2;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
@@ -137,6 +140,9 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
 
   private static final String CHECK_USING_COMMAND_API_TAG = "check_using_command_api";
   private static final int CHECK_USING_COMMAND_API_VERSION = 1;
+
+  private static final String USE_SYNC_WORKFLOW_V2_TAG = "use_sync_workflow_v2";
+  private static final int USE_SYNC_WORKFLOW_V2_VERSION = 1;
 
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private GenerateInputActivity getSyncInputActivity;
@@ -369,7 +375,15 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
             jobInputs = getJobInput();
           }
 
-          standardSyncOutput = runChildWorkflow(jobInputs);
+          final boolean useSyncWorkflowV2 = featureFlags.getOrDefault(UseSyncV2.INSTANCE.getKey(), false);
+          final boolean canSyncWorkflowV2 = Workflow.getVersion(USE_SYNC_WORKFLOW_V2_TAG, Workflow.DEFAULT_VERSION,
+              USE_SYNC_WORKFLOW_V2_VERSION) > Workflow.DEFAULT_VERSION;
+          standardSyncOutput = canSyncWorkflowV2 && useSyncWorkflowV2 ? runChildWorkflowV2(
+              connectionId,
+              workflowInternalState.getJobId(),
+              workflowInternalState.getAttemptNumber(),
+              connectionContext.getSourceId())
+              : runChildWorkflow(jobInputs);
           workflowState.setFailed(getFailStatus(standardSyncOutput));
           workflowState.setCancelled(getCancelledStatus(standardSyncOutput));
 
@@ -1102,6 +1116,28 @@ public class ConnectionManagerWorkflowImpl implements ConnectionManagerWorkflow 
         jobInputs.getDestinationLauncherConfig(),
         jobInputs.getSyncInput(),
         connectionId);
+  }
+
+  private StandardSyncOutput runChildWorkflowV2(final UUID connectionId,
+                                                final long jobId,
+                                                final int attemptNumber,
+                                                final UUID sourceId) {
+    final String taskQueue = TemporalTaskQueueUtils.getTaskQueue(TemporalJobType.SYNC);
+
+    final SyncWorkflowV2 childSync = Workflow.newChildWorkflowStub(SyncWorkflowV2.class,
+        ChildWorkflowOptions.newBuilder()
+            .setWorkflowId("sync_" + workflowInternalState.getJobId())
+            .setTaskQueue(taskQueue)
+            // This will cancel the child workflow when the parent is terminated
+            .setParentClosePolicy(ParentClosePolicy.PARENT_CLOSE_POLICY_REQUEST_CANCEL)
+            .build());
+
+    return childSync.run(
+        new SyncWorkflowV2Input(
+            connectionId,
+            jobId,
+            attemptNumber,
+            sourceId));
   }
 
   private ConnectorJobOutput runCheckInChildWorkflow(final JobRunConfig jobRunConfig,

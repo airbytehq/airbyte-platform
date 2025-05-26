@@ -1,0 +1,20 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.deleteButton {
+  border: none;
+  background: none;
+  color: colors.$red-400;
+  font-weight: 500;
+  font-size: variables.$font-size-sm;
+  padding: variables.$spacing-xs;
+  cursor: pointer;
+
+  &:hover {
+    color: colors.$red-600;
+  }
+}
+
+.buttonContainer {
+  align-self: flex-end;
+}

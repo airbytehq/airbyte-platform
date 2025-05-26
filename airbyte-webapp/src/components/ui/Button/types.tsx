@@ -10,6 +10,7 @@ export type ButtonVariant =
   | "magic"
   | "clear"
   | "clearDark"
+  | "clearDanger"
   | "primaryDark"
   | "secondaryDark"
   | "link";

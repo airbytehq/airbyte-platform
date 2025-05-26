@@ -36,6 +36,7 @@ export const enum ConnectionRoutePaths {
   JobHistory = "job-history", // deprecated, used to support legacy logs links
   ConnectionNew = "new-connection",
   Configure = "configure",
+  ConfigureDataActivation = "configure-da",
   ConfigureContinued = "continued",
   Timeline = "timeline",
   Mappings = "mappings",

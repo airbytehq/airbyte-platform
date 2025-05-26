@@ -21,7 +21,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
-import io.airbyte.config.JobStatus.NON_TERMINAL_STATUSES
+import io.airbyte.config.JobStatus.TERMINAL_STATUSES
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
@@ -156,6 +156,7 @@ class JobInputService(
         isCustomConnector = sourceDefinition.custom,
         attemptId = attemptNumber,
         allowedHosts = sourceDefinitionVersion.allowedHosts,
+        connectionId = connectionId,
       )
 
     val destinationIntegrationLauncherConfig =
@@ -167,6 +168,7 @@ class JobInputService(
         isCustomConnector = destinationDefinition.custom,
         attemptId = attemptNumber,
         allowedHosts = destinationDefinitionVersion.allowedHosts,
+        connectionId = connectionId,
       )
 
     val jobConfigData = getJobConfig(currentJob, currentAttempt)
@@ -189,8 +191,7 @@ class JobInputService(
         JobRunConfig()
           .withJobId(currentJob.id.toString())
           .withAttemptId(attemptNumber),
-      sourceLauncherConfig =
-      sourceIntegrationLauncherConfig,
+      sourceLauncherConfig = sourceIntegrationLauncherConfig,
       destinationLauncherConfig = destinationIntegrationLauncherConfig,
       syncResourceRequirements = jobConfigData.syncResourceRequirements,
       workspaceId = source.workspaceId,
@@ -206,7 +207,7 @@ class JobInputService(
       omitFileTransferEnvVar = jobConfigData.omitFileTransferEnvVar,
       featureFlags = featureFlags,
       heartbeatMaxSecondsBetweenMessages = sourceDefinition.maxSecondsBetweenMessages,
-      supportsRefreshes = sourceDefinitionVersion.supportsRefreshes,
+      supportsRefreshes = destinationDefinitionVersion.supportsRefreshes,
       schemaRefreshOutput = appliedCatalogDiff?.let { RefreshSchemaActivityOutput(appliedDiff = it) },
       sourceIPCOptions = sourceDefinitionVersion.connectorIPCOptions,
       destinationIPCOptions = destinationDefinitionVersion.connectorIPCOptions,
@@ -342,8 +343,8 @@ class JobInputService(
       jobService.findById(jobId)
         ?: throw NotFoundException()
 
-    if (NON_TERMINAL_STATUSES.contains(job.status)) {
-      throw IllegalStateException("Cannot create replication input for a non-terminal job")
+    if (TERMINAL_STATUSES.contains(job.status)) {
+      throw IllegalStateException("Cannot create replication input for a non-terminal job. Job status: ${job.status}")
     }
 
     val attempt = attemptService.getAttempt(jobId, attemptNumber)
@@ -398,9 +399,9 @@ class JobInputService(
     return when (actor.actorType) {
       ActorType.source ->
         if (jobId == null && attemptId == null) {
-          getDiscoverInputBySourceId(sourceId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L)
+          getDiscoverInputBySourceId(sourceId = actorId, jobId = UUID.randomUUID().toString(), attemptId = 0L, true)
         } else {
-          getDiscoverInputBySourceId(actorId, jobId!!, attemptId!!)
+          getDiscoverInputBySourceId(actorId, jobId!!, attemptId!!, false)
         }
       ActorType.destination -> throw IllegalArgumentException("Discovery is not supported for destination, actorId: $actorId")
       else -> throw IllegalStateException("Actor type ${actor.actorType} not supported")
@@ -597,6 +598,7 @@ class JobInputService(
           isCustomConnector = isCustomConnector,
           attemptId = attemptId,
           allowedHosts = allowedHosts,
+          connectionId = null,
         ),
       checkConnectionInput =
         StandardCheckConnectionInput()
@@ -617,6 +619,7 @@ class JobInputService(
     isCustomConnector: Boolean,
     attemptId: Long,
     allowedHosts: AllowedHosts?,
+    connectionId: UUID?,
   ): IntegrationLauncherConfig =
     IntegrationLauncherConfig()
       .withJobId(jobId)
@@ -626,6 +629,7 @@ class JobInputService(
       .withIsCustomConnector(isCustomConnector)
       .withAttemptId(attemptId)
       .withAllowedHosts(allowedHosts)
+      .withConnectionId(connectionId)
 
   private fun buildJobDiscoverConfig(
     actorType: io.airbyte.config.ActorType,
@@ -698,6 +702,7 @@ class JobInputService(
     sourceId: UUID,
     jobId: String,
     attemptId: Long,
+    isManual: Boolean,
   ): DiscoverCommandInput.DiscoverCatalogInput {
     val (source, sourceDefinition, sourceDefinitionVersion, resourceRequirements) = getSourceInformation(sourceId)
 
@@ -725,7 +730,7 @@ class JobInputService(
       actorContext = contextBuilder.fromSource(source),
       jobId = jobId,
       attemptId = attemptId,
-      isManual = true,
+      isManual = isManual,
     )
   }
 

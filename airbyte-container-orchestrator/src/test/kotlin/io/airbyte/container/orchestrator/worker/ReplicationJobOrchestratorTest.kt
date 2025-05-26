@@ -17,7 +17,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.input.getJobId
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
-import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.micrometer.core.instrument.Counter
@@ -32,7 +32,6 @@ import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
 import java.util.UUID
 import java.util.function.ToDoubleFunction
-import kotlin.text.toLong
 
 internal class ReplicationJobOrchestratorTest {
   @Test
@@ -60,6 +59,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -105,8 +105,8 @@ internal class ReplicationJobOrchestratorTest {
       mockk<WorkloadApiClient> {
         every { workloadApi } returns workloadapi
       }
-    val jobOutputDocStore =
-      mockk<JobOutputDocStore> {
+    val outputWriter =
+      mockk<WorkloadOutputWriter> {
         every { writeSyncOutput(workloadId, replicationOutput) } returns Unit
       }
     val metricClient =
@@ -129,7 +129,7 @@ internal class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
-        jobOutputDocStore,
+        outputWriter,
         metricClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
@@ -137,7 +137,7 @@ internal class ReplicationJobOrchestratorTest {
     val output = replicationJobOrchestrator.runJob()
 
     assertTrue(output.isPresent)
-    verify(exactly = 1) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    verify(exactly = 1) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadSuccess(any()) }
     verify(exactly = 1) {
       metricClient.gauge(
@@ -182,6 +182,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -229,8 +230,8 @@ internal class ReplicationJobOrchestratorTest {
       mockk<WorkloadApiClient> {
         every { workloadApi } returns workloadapi
       }
-    val jobOutputDocStore =
-      mockk<JobOutputDocStore> {
+    val outputWriter =
+      mockk<WorkloadOutputWriter> {
         every { writeSyncOutput(workloadId, replicationOutput) } returns Unit
       }
     val metricClient =
@@ -254,7 +255,7 @@ internal class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
-        jobOutputDocStore,
+        outputWriter,
         metricClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
@@ -263,7 +264,7 @@ internal class ReplicationJobOrchestratorTest {
       replicationJobOrchestrator.runJob()
     }
 
-    verify(exactly = 0) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(
@@ -308,6 +309,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -353,8 +355,8 @@ internal class ReplicationJobOrchestratorTest {
       mockk<WorkloadApiClient> {
         every { workloadApi } returns workloadapi
       }
-    val jobOutputDocStore =
-      mockk<JobOutputDocStore> {
+    val outputWriter =
+      mockk<WorkloadOutputWriter> {
         every { writeSyncOutput(workloadId, replicationOutput) } returns Unit
       }
     val metricClient =
@@ -378,7 +380,7 @@ internal class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
-        jobOutputDocStore,
+        outputWriter,
         metricClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
@@ -389,7 +391,7 @@ internal class ReplicationJobOrchestratorTest {
       }
     Assertions.assertEquals(WorkerException::class.java, e.cause?.javaClass)
 
-    verify(exactly = 0) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(
@@ -434,6 +436,7 @@ internal class ReplicationJobOrchestratorTest {
         every { connectionId } returns connectionUUID
         every { destinationId } returns destinationUUID
         every { destinationLauncherConfig } returns destinationIntegrationLauncherConfig
+        every { isReset } returns false
         every { sourceLauncherConfig } returns sourceIntegrationLauncherConfig
         every { getJobId() } returns jobId.toString()
         every { sourceId } returns sourceUUID
@@ -479,8 +482,8 @@ internal class ReplicationJobOrchestratorTest {
       mockk<WorkloadApiClient> {
         every { workloadApi } returns workloadapi
       }
-    val jobOutputDocStore =
-      mockk<JobOutputDocStore> {
+    val outputWriter =
+      mockk<WorkloadOutputWriter> {
         every { writeSyncOutput(workloadId, replicationOutput) } returns Unit
       }
     val metricClient =
@@ -504,7 +507,7 @@ internal class ReplicationJobOrchestratorTest {
         jobRunConfig,
         replicationWorker,
         workloadApiClient,
-        jobOutputDocStore,
+        outputWriter,
         metricClient,
       )
     val expectedAttributes = replicationJobOrchestrator.buildMetricAttributes(replicationInput, jobId, attemptNumber).toTypedArray()
@@ -513,7 +516,7 @@ internal class ReplicationJobOrchestratorTest {
       replicationJobOrchestrator.runJob()
     }
 
-    verify(exactly = 0) { jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput) }
+    verify(exactly = 0) { outputWriter.writeSyncOutput(workloadId, replicationOutput) }
     verify(exactly = 1) { workloadapi.workloadFailure(any()) }
     verify(exactly = 0) {
       metricClient.gauge(

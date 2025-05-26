@@ -416,6 +416,70 @@ internal class SecretsHelpersTest {
       .containsExactlyElementsOf(testCase.expectedSecretsPaths)
   }
 
+  @Test
+  fun testMergeNodesSecret() {
+    val mainNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": {\"_secret\": \"12345\"}, \"def\": \"asdf\"}")
+    val updateNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}}")
+
+    val expected =
+      io.airbyte.commons.json.Jsons.deserialize(
+        "{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}",
+      )
+    Assertions.assertEquals(expected, SecretsHelpers.mergeNodesExceptForSecrets(mainNode, updateNode))
+  }
+
+  @Test
+  fun testMergeNodesSecretNoValue() {
+    val mainNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": {\"_secret\": \"12345\"}, \"def\": \"asdf\"}")
+    val updateNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"ghi\": {\"more\": \"things\"}}")
+
+    val expected =
+      io.airbyte.commons.json.Jsons.deserialize(
+        "{ \"abc\": {\"_secret\": \"12345\"}, \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}",
+      )
+    Assertions.assertEquals(expected, SecretsHelpers.mergeNodesExceptForSecrets(mainNode, updateNode))
+  }
+
+  @Test
+  fun testMergeNodesSecretReference() {
+    val mainNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": {\"_secret_reference_id\": \"12345\"}, \"def\": \"asdf\"}")
+    val updateNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}}")
+
+    val expected =
+      io.airbyte.commons.json.Jsons.deserialize(
+        "{ \"abc\": \"never-mind\", \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}",
+      )
+    Assertions.assertEquals(expected, SecretsHelpers.mergeNodesExceptForSecrets(mainNode, updateNode))
+  }
+
+  @Test
+  fun testMergeNodesSecretReferenceNoValue() {
+    val mainNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"abc\": {\"_secret_reference_id\": \"12345\"}, \"def\": \"asdf\"}")
+    val updateNode =
+      io.airbyte.commons.json.Jsons
+        .deserialize("{ \"ghi\": {\"more\": \"things\"}}")
+
+    val expected =
+      io.airbyte.commons.json.Jsons.deserialize(
+        "{ \"abc\": {\"_secret_reference_id\": \"12345\"}, \"ghi\": {\"more\": \"things\"}, \"def\": \"asdf\"}",
+      )
+    Assertions.assertEquals(expected, SecretsHelpers.mergeNodesExceptForSecrets(mainNode, updateNode))
+  }
+
   @Nested
   inner class SecretReferenceHelpersTest {
     @Test

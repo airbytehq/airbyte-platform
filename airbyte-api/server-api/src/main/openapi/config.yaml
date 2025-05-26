@@ -3511,36 +3511,14 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/web_backend/geographies/list:
-    post:
-      tags:
-        - web_backend
-      description: Returns all available geographies in which a data sync can run.
-      summary: |
-        Returns available geographies can be selected to run data syncs in a particular geography.
-        The 'auto' entry indicates that the sync will be automatically assigned to a geography according
-        to the platform default behavior. Entries other than 'auto' are two-letter country codes that
-        follow the ISO 3166-1 alpha-2 standard.
-      operationId: webBackendListGeographies
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WebBackendGeographiesListRequest"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WebBackendGeographiesListResult"
   /v1/web_backend/config:
     get:
       summary: Fetch webapp configuration
       tags:
         - web_backend
       operationId: getWebappConfig
+      # This route is unsecured to be available during initial load of the webapp
+      security: []
       responses:
         "200":
           description: Successfully returned webapp configuration.
@@ -3907,6 +3885,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/getWebhookConfig:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get a webhook config for a job.
+      operationId: getWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: integer
+                  format: int64
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                title: GetWebhookConfigResponse
+                type: object
+                required:
+                  - value
+                properties:
+                  value:
+                    type: string
+
   /v1/jobs/job_failure:
     post:
       tags:
@@ -6262,6 +6273,8 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/FailureReason"
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
 
   /v1/commands/status:
     post:
@@ -6334,7 +6347,7 @@ paths:
                   command_type:
                     type: string
                   command_input:
-                    type: object
+                    type: string
                   workspace_id:
                     type: string
                     format: uuid
@@ -10807,23 +10820,6 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
-    WebBackendGeographiesListRequest:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-    WebBackendGeographiesListResult:
-      type: object
-      required:
-        - geographies
-      properties:
-        geographies:
-          type: array
-          items:
-            type: string
     # SLUG
     SlugRequestBody:
       type: object
@@ -16950,9 +16946,11 @@ components:
     WebappConfigResponse:
       type: object
       required:
-        - airbyteVersion
+        - version
         - edition
       properties:
+        version:
+          type: string
         edition:
           type: string
         datadogApplicationId:

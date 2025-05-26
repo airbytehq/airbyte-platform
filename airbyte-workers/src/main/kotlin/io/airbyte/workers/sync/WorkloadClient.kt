@@ -7,8 +7,8 @@ package io.airbyte.workers.sync
 import io.airbyte.commons.temporal.HeartbeatUtils
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
-import io.airbyte.workers.workload.JobOutputDocStore
 import io.airbyte.workers.workload.WorkloadConstants.WORKLOAD_CANCELLED_BY_USER_REASON
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
@@ -32,7 +32,7 @@ private val logger = KotlinLogging.logger { }
 @Singleton
 class WorkloadClient(
   private val workloadApiClient: WorkloadApiClient,
-  private val jobOutputDocStore: JobOutputDocStore,
+  private val outputWriter: WorkloadOutputWriter,
 ) {
   companion object {
     const val CANCELLATION_SOURCE_STR = "Cancellation callback."
@@ -84,7 +84,7 @@ class WorkloadClient(
   ): ConnectorJobOutput =
     Result
       .runCatching {
-        jobOutputDocStore.read(workloadId).orElseThrow()
+        outputWriter.read(workloadId).orElseThrow()
       }.fold(
         onFailure = { t -> onFailure(handleMissingConnectorJobOutput(workloadId, t)) },
         onSuccess = { x -> x },

@@ -10,6 +10,8 @@ import io.airbyte.api.model.generated.CheckInput
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionJobRequestBody
 import io.airbyte.api.model.generated.DeleteStreamResetRecordsForJobRequest
+import io.airbyte.api.model.generated.GetWebhookConfigRequest
+import io.airbyte.api.model.generated.GetWebhookConfigResponse
 import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.JobCreate
 import io.airbyte.api.model.generated.JobDebugInfoRead
@@ -30,6 +32,7 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.JobInputHandler
 import io.airbyte.commons.server.handlers.JobsHandler
@@ -138,6 +141,16 @@ open class JobsApiController(
   override fun getLastReplicationJobWithCancel(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): JobOptionalRead? = execute { jobHistoryHandler.getLastReplicationJobWithCancel(connectionIdRequestBody) }
+
+  @Post("/getWebhookConfig")
+  @Secured(AuthRoleConstants.READER, AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getWebhookConfig(
+    @Body getWebhookConfigRequest: GetWebhookConfigRequest,
+  ): GetWebhookConfigResponse? =
+    execute {
+      GetWebhookConfigResponse().value(Jsons.serialize(jobInputHandler.getJobWebhookConfig(getWebhookConfigRequest.jobId)))
+    }
 
   @Post("/job_failure")
   @Secured(AuthRoleConstants.ADMIN)

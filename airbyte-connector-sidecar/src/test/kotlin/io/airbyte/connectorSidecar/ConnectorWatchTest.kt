@@ -20,7 +20,7 @@ import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.models.SidecarInput.OperationType
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.generated.WorkloadApi
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -67,7 +67,7 @@ class ConnectorWatchTest {
   private lateinit var workloadApiClient: WorkloadApiClient
 
   @MockK
-  private lateinit var jobOutputDocStore: JobOutputDocStore
+  private lateinit var outputWriter: WorkloadOutputWriter
 
   @MockK
   private lateinit var logContextFactory: SidecarLogContextFactory
@@ -105,7 +105,7 @@ class ConnectorWatchTest {
           airbyteProtocolVersionedMigratorFactory,
           gsonPksExtractor,
           workloadApiClient,
-          jobOutputDocStore,
+          outputWriter,
           logContextFactory,
           heartbeatMonitor,
           metricClient = metricClient,
@@ -122,7 +122,7 @@ class ConnectorWatchTest {
 
     every { connectorWatcher.exitInternalError() } returns Unit
 
-    every { jobOutputDocStore.write(any(), any()) } returns Unit
+    every { outputWriter.write(any(), any()) } returns Unit
 
     every { logContextFactory.create(any()) } returns mapOf()
 
@@ -153,7 +153,7 @@ class ConnectorWatchTest {
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
-      jobOutputDocStore.write(workloadId, output)
+      outputWriter.write(workloadId, output)
       workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
@@ -177,7 +177,7 @@ class ConnectorWatchTest {
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
-      jobOutputDocStore.write(workloadId, output)
+      outputWriter.write(workloadId, output)
       workloadApi.workloadSuccess(WorkloadSuccessRequest(workloadId))
       connectorWatcher.exitProperly()
     }
@@ -213,7 +213,7 @@ class ConnectorWatchTest {
 
     verifyOrder {
       connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType))
-      jobOutputDocStore.write(workloadId, output)
+      outputWriter.write(workloadId, output)
       workloadApi.workloadFailure(
         WorkloadFailureRequest(workloadId, output.failureReason.failureOrigin.value(), output.failureReason.externalMessage),
       )
@@ -312,7 +312,7 @@ class ConnectorWatchTest {
       Jsons.serialize(SidecarInput(checkInput, discoveryInput, workloadId, IntegrationLauncherConfig(), operationType, ""))
 
     every { connectorMessageProcessor.run(any(), any(), any(), any(), eq(operationType)) } returns output
-    every { jobOutputDocStore.write(any(), any()) } throws RuntimeException("Unable to Write")
+    every { outputWriter.write(any(), any()) } throws RuntimeException("Unable to Write")
     every { workloadApi.workloadFailure(any()) } returns Unit
 
     connectorWatcher.run()

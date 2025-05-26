@@ -33,6 +33,7 @@ import io.airbyte.workload.output.WorkloadOutputDocStoreReader
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.services.ConflictException
 import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
 import io.micronaut.context.annotation.Property
@@ -319,7 +320,7 @@ class CommandService(
       )
     createCommand(
       commandId = commandId,
-      commandType = CommandType.DISCOVER.name,
+      commandType = CommandType.REPLICATE.name,
       commandInput = commandInput,
       workspaceId = workspaceId,
       workloadPayload = workloadPayload,
@@ -391,21 +392,25 @@ class CommandService(
     val workloadAutoId = UUID.randomUUID()
 
     // TODO the workloadService.createWorkload and Command.save should be in a transaction
-    workloadService.createWorkload(
-      workloadId = workloadPayload.workloadId,
-      labels = workloadPayload.labels,
-      input = workloadPayload.workloadInput,
-      workspaceId = workspaceId,
-      organizationId = organizationId,
-      logPath = workloadPayload.logPath,
-      mutexKey = mutexKey,
-      type = workloadPayload.type,
-      autoId = workloadAutoId,
-      deadline = null,
-      signalInput = workloadPayload.signalInput,
-      dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
-      priority = workloadPayload.priority,
-    )
+    try {
+      workloadService.createWorkload(
+        workloadId = workloadPayload.workloadId,
+        labels = workloadPayload.labels,
+        input = workloadPayload.workloadInput,
+        workspaceId = workspaceId,
+        organizationId = organizationId,
+        logPath = workloadPayload.logPath,
+        mutexKey = mutexKey,
+        type = workloadPayload.type,
+        autoId = workloadAutoId,
+        deadline = null,
+        signalInput = workloadPayload.signalInput,
+        dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
+        priority = workloadPayload.priority,
+      )
+    } catch (e: ConflictException) {
+      log.info { "The workload ${workloadPayload.workloadId} already exists for command $commandId, continuing" }
+    }
 
     // because workloadId is a foreign key
     commandsRepository.save(command)

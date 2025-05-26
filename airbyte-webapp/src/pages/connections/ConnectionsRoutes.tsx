@@ -3,6 +3,9 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import { useEffectOnce } from "react-use";
 
 import { LoadingPage } from "components";
+import { ConfigureConnectionRoute } from "components/connection/CreateDataActivationConnection/ConfigureConnectionRoute";
+import { CreateDataActivationConnectionRouteWrapper } from "components/connection/CreateDataActivationConnection/CreateDataActivationConnectionRouteWrapper";
+import { MapFieldsRoute } from "components/connection/CreateDataActivationConnection/MapFieldsRoute";
 
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 
@@ -66,6 +69,13 @@ export const ConnectionsRoutes: React.FC = () => {
           path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/*`}
           element={<ConfigureConnectionPage />}
         />
+        <Route
+          path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
+          element={<CreateDataActivationConnectionRouteWrapper />}
+        >
+          <Route index element={<MapFieldsRoute />} />
+          <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureConnectionRoute />} />
+        </Route>
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />

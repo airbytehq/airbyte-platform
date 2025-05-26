@@ -4,6 +4,7 @@ import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
+import { PartialUserConfigSuccessView } from "./PartialUserConfigSuccessView";
 import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 
 export const PartialUserConfigCreateForm: React.FC = () => {
@@ -33,6 +34,16 @@ export const PartialUserConfigCreateForm: React.FC = () => {
     });
   };
 
+  if (isSuccess) {
+    return (
+      <PartialUserConfigSuccessView
+        successType="create"
+        connectorName={configTemplate.name}
+        icon={configTemplate.icon}
+      />
+    );
+  }
+
   return (
     <IsAirbyteEmbeddedContext.Provider value>
       <PartialUserConfigForm
@@ -41,7 +52,6 @@ export const PartialUserConfigCreateForm: React.FC = () => {
         icon={configTemplate.icon}
         onSubmit={onSubmit}
         sourceDefinitionSpecification={sourceDefinitionSpecification}
-        showSuccessView={isSuccess}
       />
     </IsAirbyteEmbeddedContext.Provider>
   );
