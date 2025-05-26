@@ -1,8 +1,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import classNames from "classnames";
-import { useRef, useMemo, useContext, useState } from "react";
+import React, { useRef, useMemo, useContext, useState } from "react";
 import { FormattedMessage } from "react-intl";
-import { useToggle } from "react-use";
 
 import { useConnectionStatus } from "components/connection/ConnectionStatus/useConnectionStatus";
 import { StreamStatusType } from "components/connection/StreamStatusIndicator";
@@ -10,12 +9,9 @@ import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ScrollParentContext } from "components/ui/ScrollParent";
 import { SearchInput } from "components/ui/SearchInput";
 import { Table } from "components/ui/Table";
-import { Text } from "components/ui/Text";
-import { Tooltip } from "components/ui/Tooltip";
 
 import { activeStatuses } from "area/connection/utils";
 import { useTrackSyncProgress } from "area/connection/utils/useStreamsTableAnalytics";
@@ -23,15 +19,17 @@ import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { useCurrentConnection } from "core/api";
 
 import { DataFreshnessCell } from "./DataFreshnessCell";
+import { DateMetricListbox, DateMetricOption } from "./DateMetricListbox";
 import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import styles from "./StreamsList.module.scss";
 import { StatusCell } from "./StreamsListStatusCell";
 import { StreamsListSubtitle } from "./StreamsListSubtitle";
+import { SyncMetricOption, SyncMetricListbox } from "./SyncMetricListbox";
 
 export const StreamsList: React.FC = () => {
-  const [showRelativeTime, setShowRelativeTime] = useToggle(true);
-  const [showBytes, setShowBytes] = useToggle(false);
+  const [dateMetric, setDateMetric] = useState<DateMetricOption>(DateMetricOption.relative);
+  const [syncMetric, setSyncMetric] = useState<SyncMetricOption>(SyncMetricOption.records);
 
   const connection = useCurrentConnection();
   const streamEntries = useUiStreamStates(connection.connectionId);
@@ -59,36 +57,9 @@ export const StreamsList: React.FC = () => {
       columnHelper.accessor("recordsLoaded", {
         id: "latestSync",
         header: () => (
-          <FlexContainer alignItems="baseline" gap="none">
-            <FormattedMessage
-              id="connection.stream.status.table.latestSync"
-              values={{
-                denomination: (
-                  <Tooltip
-                    placement="top"
-                    control={
-                      <button className={styles.clickableHeader} onClick={setShowBytes}>
-                        <Text color="grey" size="sm">
-                          {showBytes ? (
-                            <FormattedMessage id="connection.stream.status.table.latestSync.bytes" />
-                          ) : (
-                            <FormattedMessage id="connection.stream.status.table.latestSync.records" />
-                          )}
-                        </Text>
-                      </button>
-                    }
-                  >
-                    <FormattedMessage
-                      id={
-                        showBytes
-                          ? "connection.stream.status.table.latestSync.showRecords"
-                          : "connection.stream.status.table.latestSync.showBytes"
-                      }
-                    />
-                  </Tooltip>
-                ),
-              }}
-            />
+          <FlexContainer alignItems="baseline" gap="sm">
+            <FormattedMessage id="connection.stream.status.table.latestSync" />
+            <SyncMetricListbox selectedValue={syncMetric} onSelect={setSyncMetric} />
           </FlexContainer>
         ),
         cell: (props) => {
@@ -101,7 +72,7 @@ export const StreamsList: React.FC = () => {
               syncStartedAt={props.row.original.activeJobStartedAt}
               status={props.row.original.status}
               isLoadingHistoricalData={props.row.original.isLoadingHistoricalData}
-              showBytes={showBytes}
+              showBytes={syncMetric === SyncMetricOption.bytes}
             />
           );
         },
@@ -111,26 +82,16 @@ export const StreamsList: React.FC = () => {
       }),
       columnHelper.accessor("dataFreshAsOf", {
         header: () => (
-          <Tooltip
-            placement="top"
-            control={
-              <button onClick={setShowRelativeTime} className={styles.clickableHeader}>
-                <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
-                <Icon type="clockOutline" size="sm" className={styles.icon} />
-              </button>
-            }
-          >
-            <FormattedMessage
-              id={
-                showRelativeTime
-                  ? "connection.stream.status.table.dataFreshAsOf.absolute"
-                  : "connection.stream.status.table.dataFreshAsOf.relative"
-              }
-            />
-          </Tooltip>
+          <FlexContainer alignItems="baseline" gap="sm">
+            <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
+            <DateMetricListbox selectedValue={dateMetric} onSelect={setDateMetric} />
+          </FlexContainer>
         ),
         cell: (props) => (
-          <DataFreshnessCell transitionedAt={props.cell.getValue()} showRelativeTime={showRelativeTime} />
+          <DataFreshnessCell
+            transitionedAt={props.cell.getValue()}
+            showRelativeTime={dateMetric === DateMetricOption.relative}
+          />
         ),
         meta: {
           thClassName: styles.dataFreshAsOfHeader,
@@ -151,7 +112,7 @@ export const StreamsList: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, setShowBytes, setShowRelativeTime, showBytes, showRelativeTime]
+    [columnHelper, dateMetric, syncMetric]
   );
 
   const {

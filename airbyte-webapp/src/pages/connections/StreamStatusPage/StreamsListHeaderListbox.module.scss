@@ -1,0 +1,8 @@
+@use "scss/variables";
+
+.controlButton {
+  height: variables.$spacing-xl;
+  gap: 0;
+  padding-left: variables.$spacing-sm;
+  padding-right: variables.$spacing-sm;
+}
