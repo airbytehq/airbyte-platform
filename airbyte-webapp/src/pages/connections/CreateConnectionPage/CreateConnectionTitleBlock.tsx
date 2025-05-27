@@ -94,7 +94,7 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
       : step === "configureConnection"
       ? "connectionForm.configureConnection"
       : isDataActivation
-      ? "Map fields"
+      ? "connection.create.mapFields"
       : "connectionForm.selectStreams";
 
   return (

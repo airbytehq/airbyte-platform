@@ -8,14 +8,24 @@ import { Icon } from "../Icon";
 
 export type ExtractProps<T> = T extends ComponentType<infer P> ? P : T;
 
-export const ListboxButton = React.forwardRef<HTMLButtonElement, ExtractProps<typeof HeadlessUIListboxButton>>(
-  (props, ref) => {
-    const mergedClassNames = classNames(styles.listboxButton, props.className);
+export interface ListboxButtonProps extends ExtractProps<typeof HeadlessUIListboxButton> {
+  hasError?: boolean;
+}
+
+export const ListboxButton = React.forwardRef<HTMLButtonElement, ListboxButtonProps>(
+  ({ className, hasError, ...restProps }, ref) => {
+    const mergedClassNames = classNames(
+      styles.listboxButton,
+      { [styles["listboxButton--error"]]: hasError },
+      className
+    );
     return (
-      <HeadlessUIListboxButton {...props} className={mergedClassNames} ref={ref}>
+      <HeadlessUIListboxButton {...restProps} className={mergedClassNames} ref={ref}>
         {(bag) => (
           <FlexContainer justifyContent="space-between" className={styles.listboxButton__content} alignItems="center">
-            <FlexItem>{typeof props.children === "function" ? props.children(bag) : props.children}</FlexItem>
+            <FlexItem>
+              {typeof restProps.children === "function" ? restProps.children(bag) : restProps.children}
+            </FlexItem>
             <Icon type="chevronDown" color="action" />
           </FlexContainer>
         )}

@@ -5,7 +5,6 @@ $spaceBelow: 30px;
 
 .control {
   position: relative;
-  padding-bottom: $spaceBelow;
 
   &__label {
     display: block;
@@ -41,6 +40,15 @@ $spaceBelow: 30px;
     padding-top: variables.$spacing-sm;
     bottom: 0;
     left: 0;
+
+    &--doesShiftLayout {
+      position: relative;
+      height: auto;
+    }
+  }
+
+  &--reserveSpaceForError {
+    padding-bottom: $spaceBelow;
   }
 
   &--inline {

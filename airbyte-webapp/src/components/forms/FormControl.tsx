@@ -77,6 +77,11 @@ interface ControlBaseProps<T extends FormValues> {
    * Otherwise, the error will be shown regardless of whether the field has been touched.
    */
   onlyShowErrorIfTouched?: boolean;
+  /**
+   * Whether to reserve space for the error message, avoiding layout shifts when the error message appears. By default
+   * we want this to be true to avoid layout shifts.
+   */
+  reserveSpaceForError?: boolean;
 }
 
 /**
@@ -134,6 +139,7 @@ export const FormControl = <T extends FormValues>({
   containerControlClassName,
   footer,
   onlyShowErrorIfTouched,
+  reserveSpaceForError = true,
   ...props
 }: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
@@ -186,7 +192,13 @@ export const FormControl = <T extends FormValues>({
   const displayFooter = !!error || !!footer;
 
   return (
-    <div className={classNames(styles.control, { [styles["control--inline"]]: inline }, containerControlClassName)}>
+    <div
+      className={classNames(
+        styles.control,
+        { [styles["control--inline"]]: inline, [styles["control--reserveSpaceForError"]]: reserveSpaceForError },
+        containerControlClassName
+      )}
+    >
       {label && (
         <FormLabel
           description={description}
@@ -199,7 +211,7 @@ export const FormControl = <T extends FormValues>({
       )}
       <div className={styles.control__field}>{renderControl()}</div>
       {displayFooter && (
-        <FormControlFooter>
+        <FormControlFooter doesShiftLayout={!reserveSpaceForError}>
           <FormControlErrorMessage<FormValues> name={props.name} />
           {!error && footer && <FormControlFooterInfo>{footer}</FormControlFooterInfo>}
         </FormControlFooter>
@@ -246,8 +258,21 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   );
 };
 
-export const FormControlFooter: React.FC<React.PropsWithChildren> = ({ children }) => {
-  return <div className={styles.control__footer}>{children}</div>;
+interface FormControlFooterProps {
+  doesShiftLayout?: boolean;
+}
+
+export const FormControlFooter: React.FC<React.PropsWithChildren<FormControlFooterProps>> = ({
+  children,
+  doesShiftLayout,
+}) => {
+  return (
+    <div
+      className={classNames(styles.control__footer, { [styles["control__footer--doesShiftLayout"]]: doesShiftLayout })}
+    >
+      {children}
+    </div>
+  );
 };
 
 export const FormControlFooterInfo: React.FC<React.PropsWithChildren> = ({ children }) => {

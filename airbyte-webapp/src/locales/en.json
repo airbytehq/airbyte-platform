@@ -775,6 +775,7 @@
   "connection.create.selectSourceStream": "Select source stream",
   "connection.dataActivationDescription": "Here you can create mappings that link at least one stream from your source to a destination object in {destinationName}.",
   "connection.create.map": "Map",
+  "connection.create.mapFields": "Map fields",
   "connection.dataActivation.selectDestinationSyncMode": "Select insertion method",
   "connection.dataActivation.destinationSyncMode": "insertion method",
   "connection.dataActivation.append": "Insert",

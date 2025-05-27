@@ -18,11 +18,17 @@ export function createSyncCatalogFromMappedStreams(
             selected: true,
           })) ?? undefined;
 
+        const primaryKey =
+          mappedStream?.destinationSyncMode === "append_dedup" ? [mappedStream.primaryKey.split(".")] : undefined;
+        const cursorField = mappedStream?.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
+
         return {
           config: {
             ...stream.config,
             destinationObjectName: mappedStream?.destinationObjectName,
             destinationSyncMode: mappedStream?.destinationSyncMode ?? stream.config?.destinationSyncMode ?? "append",
+            primaryKey,
+            cursorField,
             syncMode: mappedStream?.sourceSyncMode ?? stream.config?.syncMode ?? "full_refresh",
             mappers:
               mappedStream?.fields.map(({ sourceFieldName, destinationFieldName }) => ({

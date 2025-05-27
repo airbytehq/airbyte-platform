@@ -12,6 +12,7 @@
 
   &__leftGutter {
     grid-column: 1;
+    height: variables.$form-input-height;
   }
 
   &__sourceSettings {
@@ -26,6 +27,7 @@
   }
 
   &__arrow {
+    height: variables.$form-input-height;
     grid-column: 3;
     display: flex;
     justify-content: center;
