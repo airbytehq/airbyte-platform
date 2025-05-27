@@ -53,9 +53,9 @@ class Application(
    * is updated appropriately.
    */
   @VisibleForTesting
-  fun run(): Int {
-    // set mdc scope for the remaining execution
+  fun run(): Int =
     try {
+      // set mdc scope for the remaining execution
       MdcScope
         .Builder()
         .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
@@ -64,11 +64,9 @@ class Application(
           val result: String = jobOrchestrator.runJob().orElse("")
           logger.debug { "Job orchestrator completed with result: $result" }
         }
+      SUCCESS_EXIT_CODE
     } catch (t: Throwable) {
       logger.error(t) { "Killing orchestrator because of an Exception" }
-      return FAILURE_EXIT_CODE
+      FAILURE_EXIT_CODE
     }
-
-    return SUCCESS_EXIT_CODE
-  }
 }
