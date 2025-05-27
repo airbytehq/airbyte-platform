@@ -392,41 +392,46 @@ class CommandService(
     val workloadAutoId = UUID.randomUUID()
 
     // TODO the workloadService.createWorkload and Command.save should be in a transaction
-    try {
-      workloadService.createWorkload(
-        workloadId = workloadPayload.workloadId,
-        labels = workloadPayload.labels,
-        input = workloadPayload.workloadInput,
-        workspaceId = workspaceId,
-        organizationId = organizationId,
-        logPath = workloadPayload.logPath,
-        mutexKey = mutexKey,
-        type = workloadPayload.type,
-        autoId = workloadAutoId,
-        deadline = null,
-        signalInput = workloadPayload.signalInput,
-        dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
-        priority = workloadPayload.priority,
-      )
-    } catch (e: ConflictException) {
-      log.info { "The workload ${workloadPayload.workloadId} already exists for command $commandId, continuing" }
-    }
+    val createdWorkload =
+      try {
+        workloadService.createWorkload(
+          workloadId = workloadPayload.workloadId,
+          labels = workloadPayload.labels,
+          input = workloadPayload.workloadInput,
+          workspaceId = workspaceId,
+          organizationId = organizationId,
+          logPath = workloadPayload.logPath,
+          mutexKey = mutexKey,
+          type = workloadPayload.type,
+          autoId = workloadAutoId,
+          deadline = null,
+          signalInput = workloadPayload.signalInput,
+          dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
+          priority = workloadPayload.priority,
+        )
+        true
+      } catch (e: ConflictException) {
+        log.info { "The workload ${workloadPayload.workloadId} already exists for command $commandId, continuing" }
+        false
+      }
 
     // because workloadId is a foreign key
     commandsRepository.save(command)
 
     // TODO this should only run if both saves above are successful
-    workloadQueueService.create(
-      workloadId = workloadPayload.workloadId,
-      workloadInput = workloadPayload.workloadInput,
-      labels = workloadPayload.labels.associate { it.key to it.value },
-      logPath = workloadPayload.logPath,
-      mutexKey = mutexKey,
-      workloadType = workloadPayload.type,
-      autoId = workloadAutoId,
-      priority = workloadPayload.priority,
-      dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
-    )
+    if (createdWorkload) {
+      workloadQueueService.create(
+        workloadId = workloadPayload.workloadId,
+        workloadInput = workloadPayload.workloadInput,
+        labels = workloadPayload.labels.associate { it.key to it.value },
+        logPath = workloadPayload.logPath,
+        mutexKey = mutexKey,
+        workloadType = workloadPayload.type,
+        autoId = workloadAutoId,
+        priority = workloadPayload.priority,
+        dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
+      )
+    }
   }
 
   fun cancel(commandId: String) {
