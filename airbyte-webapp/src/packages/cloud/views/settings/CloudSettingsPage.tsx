@@ -27,7 +27,7 @@ export const CloudSettingsPage: React.FC = () => {
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
-  const canManageEmbedded = useGeneratedIntent(Intent.ViewConfigTemplates);
+  const canManageEmbedded = useIntent("CreateConfigTemplate", { organizationId: workspace.organizationId });
   const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
 
   return (

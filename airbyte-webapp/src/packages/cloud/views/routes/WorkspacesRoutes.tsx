@@ -55,7 +55,7 @@ export const WorkspacesRoutes: React.FC = () => {
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
   const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
-  const canManageEmbedded = useGeneratedIntent(Intent.ViewConfigTemplates);
+  const canManageEmbedded = useIntent("CreateConfigTemplate", { organizationId: workspace.organizationId });
 
   useExperimentContext("organization", workspace.organizationId);
 
