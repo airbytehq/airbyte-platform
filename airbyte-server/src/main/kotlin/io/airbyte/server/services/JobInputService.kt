@@ -265,7 +265,7 @@ class JobInputService(
         JobConfigData(
           syncResourceRequirements = currentJob.config.resetConnection.syncResourceRequirements,
           namespaceDefinition = currentJob.config.resetConnection.namespaceDefinition,
-          namespaceFormat = currentJob.config.refresh.namespaceFormat,
+          namespaceFormat = currentJob.config.resetConnection.namespaceFormat,
           includeFiles = includeFile || isDeprecatedFileTransfer,
           omitFileTransferEnvVar = includeFile,
         )

@@ -55,6 +55,8 @@ import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.EnumSource
 import java.util.Optional
 import java.util.UUID
 
@@ -529,8 +531,9 @@ class JobInputServiceTest {
     assertEquals(jobId, actual.integrationLauncherConfig.jobId)
   }
 
-  @Test
-  fun `getReplicationInput returns correct ReplicationActivityInput`() {
+  @EnumSource(JobConfig.ConfigType::class, names = ["SYNC", "RESET_CONNECTION", "REFRESH", "CLEAR"])
+  @ParameterizedTest
+  fun `getReplicationInput returns correct ReplicationActivityInput`(configType: JobConfig.ConfigType) {
     val mockConnection = mockk<StandardSync>()
     every { mockConnection.connectionId } returns connectionId
     every { mockConnection.sourceId } returns sourceId
@@ -599,8 +602,38 @@ class JobInputServiceTest {
     every { jobSyncConfig.configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
 
     val jobConfig = mockk<JobConfig>()
-    every { jobConfig.configType } returns JobConfig.ConfigType.SYNC
-    every { jobConfig.sync } returns jobSyncConfig
+    every { jobConfig.configType } returns configType
+
+    when (configType) {
+      JobConfig.ConfigType.SYNC ->
+        every { jobConfig.sync } returns
+          mockk {
+            every { namespaceDefinition } returns null
+            every { namespaceFormat } returns null
+            every { syncResourceRequirements } returns SyncResourceRequirements()
+            every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
+          }
+
+      JobConfig.ConfigType.REFRESH ->
+        every { jobConfig.refresh } returns
+          mockk {
+            every { namespaceDefinition } returns null
+            every { namespaceFormat } returns null
+            every { syncResourceRequirements } returns SyncResourceRequirements()
+            every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
+          }
+
+      JobConfig.ConfigType.CLEAR, JobConfig.ConfigType.RESET_CONNECTION ->
+        every { jobConfig.resetConnection } returns
+          mockk {
+            every { namespaceDefinition } returns null
+            every { namespaceFormat } returns null
+            every { syncResourceRequirements } returns SyncResourceRequirements()
+            every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
+          }
+
+      else -> throw IllegalStateException("$configType not handled by the test setup")
+    }
 
     val mockJob = mockk<Job>()
     every { mockJob.id } returns jobId
@@ -640,6 +673,7 @@ class JobInputServiceTest {
 
     val appliedCatalogDiff = CatalogDiff()
 
+    val isResetExpected = configType == JobConfig.ConfigType.CLEAR || configType == JobConfig.ConfigType.RESET_CONNECTION
     val expected =
       ReplicationActivityInput(
         sourceId = sourceId,
@@ -673,7 +707,7 @@ class JobInputServiceTest {
         workspaceId = workspaceId,
         connectionId = connectionId,
         taskQueue = "test_queue",
-        isReset = false,
+        isReset = isResetExpected,
         connectionContext = connectionContext,
         signalInput = signalInput,
         networkSecurityTokens = emptyList(),
