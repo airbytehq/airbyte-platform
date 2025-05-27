@@ -3,6 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 
@@ -32,9 +33,9 @@ export const AssistWaiting: React.FC<AssistWaitingProps> = ({ onSkip }) => {
   return (
     <FlexContainer alignItems="center" direction="column" gap="md" className={styles.container}>
       <AssistLoadingAnimation />
-      <Text size="xl" color="darkBlue">
+      <Heading as="h3" color="darkBlue">
         <FormattedMessage id="connectorBuilder.assist.waiting.message" />
-      </Text>
+      </Heading>
       <Button onClick={onSkip} variant="link">
         <Text size="sm" color="grey">
           <FormattedMessage id="connectorBuilder.assist.waiting.skip" />
