@@ -241,7 +241,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   return (
     <label className={styles.control__label} htmlFor={htmlFor}>
       <FlexContainer alignItems="center" gap="md">
-        <Text size="lg" className={styles.control__label__text}>
+        <Text size="lg" className={styles.control__labelText} bold>
           {label}
           {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
           {optional && (

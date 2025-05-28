@@ -8,14 +8,13 @@ $spaceBelow: 30px;
 
   &__label {
     display: block;
-    font-weight: 500;
     margin: 0;
     padding-bottom: variables.$spacing-sm;
+  }
 
-    &__text {
-      display: flex;
-      align-items: center;
-    }
+  &__labelText {
+    display: flex;
+    align-items: center;
   }
 
   &__description {
