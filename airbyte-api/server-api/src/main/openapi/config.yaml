@@ -9875,6 +9875,7 @@ components:
         - TIER_0
         - TIER_1
         - TIER_2
+        - ALL
 
     ConnectorRolloutListRequestBody:
       type: object

@@ -271,7 +271,7 @@ internal class ConnectorRolloutHandlerManualTest {
             .ConnectorRolloutFilters()
             .tierFilter(
               ConnectorRolloutTierFilter().tier(
-                io.airbyte.api.model.generated.CustomerTier._1,
+                io.airbyte.api.model.generated.CustomerTier.TIER_1,
               ),
             )
       }
@@ -309,6 +309,73 @@ internal class ConnectorRolloutHandlerManualTest {
           listOf(
             CustomerTierFilter(name = AttributeName.TIER, operator = Operator.IN, value = listOf(CustomerTier.TIER_1)),
           ),
+      ),
+      capturedRollout.filters,
+    )
+
+    verifyAll {
+      connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+      connectorRolloutService.getConnectorRollout(rolloutId)
+      connectorRolloutService.listConnectorRollouts(any(), any())
+      actorDefinitionService.getActorDefinitionVersion(any())
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+      connectorRolloutService.writeConnectorRollout(any())
+      userPersistence.getUser(any())
+    }
+  }
+
+  @Test
+  fun `test manualStartConnectorRollout all tiers`() {
+    val rolloutId = UUID.randomUUID()
+    val connectorRolloutWorkflowStart =
+      ConnectorRolloutManualStartRequestBody().apply {
+        dockerRepository = DOCKER_REPOSITORY
+        dockerImageTag = DOCKER_IMAGE_TAG
+        actorDefinitionId = ACTOR_DEFINITION_ID
+        updatedBy = UPDATED_BY
+        rolloutStrategy = ConnectorRolloutStrategy.MANUAL
+        migratePins = false
+        filters =
+          io.airbyte.api.model.generated
+            .ConnectorRolloutFilters()
+            .tierFilter(
+              ConnectorRolloutTierFilter().tier(
+                io.airbyte.api.model.generated.CustomerTier.ALL,
+              ),
+            )
+      }
+    val connectorRollout = createMockConnectorRollout(rolloutId, rolloutStrategy = null)
+
+    every { connectorRolloutService.listConnectorRollouts(any(), any()) } returns listOf(connectorRollout)
+    every { connectorRolloutClient.startRolloutWorkflow(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { connectorRolloutService.getConnectorRollout(rolloutId) } returns connectorRollout
+    every { actorDefinitionService.getActorDefinitionVersion(any()) } returns createMockActorDefinitionVersion()
+    every {
+      actorDefinitionService.getActorDefinitionVersion(ACTOR_DEFINITION_ID, DOCKER_IMAGE_TAG)
+    } returns Optional.of(createMockActorDefinitionVersion())
+    every {
+      actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any())
+    } returns Optional.of(createMockActorDefinitionVersion())
+    val rolloutSlot = slot<ConnectorRollout>()
+    every { connectorRolloutService.writeConnectorRollout(capture(rolloutSlot)) } returns connectorRollout
+    every { userPersistence.getUser(any()) } returns
+      Optional.of(
+        User().apply {
+          userId = UUID.randomUUID()
+          email = ""
+        },
+      )
+
+    val result = connectorRolloutHandler.manualStartConnectorRollout(connectorRolloutWorkflowStart)
+
+    assertEquals(connectorRollout.id, result.id)
+    assertEquals(connectorRollout.rolloutStrategy, ConnectorEnumRolloutStrategy.MANUAL)
+    assertEquals(connectorRollout.updatedBy, UPDATED_BY)
+    val capturedRollout = rolloutSlot.captured
+    assertEquals(
+      ConnectorRolloutFilters(
+        customerTierFilters = emptyList(),
       ),
       capturedRollout.filters,
     )
