@@ -89,6 +89,14 @@ private data class StagedStats(
 
 private val logger = KotlinLogging.logger { }
 
+private const val DEST_EMITTED_BYTES_COUNT = "emittedBytesCount"
+
+private const val DEST_COMMITTED_RECORDS_COUNT = "committedRecordsCount"
+
+private const val DEST_EMITTED_RECORDS_COUNT = "emittedRecordsCount"
+
+private const val DEST_COMMITTED_BYTES_COUNT = "committedBytesCount"
+
 /**
  * Track Stats for a specific stream.
  * <p>
@@ -103,6 +111,7 @@ private val logger = KotlinLogging.logger { }
 class StreamStatsTracker(
   val nameNamespacePair: AirbyteStreamNameNamespacePair,
   private val metricClient: MetricClient,
+  private val isBookkeeperMode: Boolean,
 ) {
   val streamStats = StreamStatsCounters()
   private val stateIds = ConcurrentHashMap.newKeySet<Int>()
@@ -121,6 +130,42 @@ class StreamStatsTracker(
     with(streamStats) {
       filteredOutRecords.incrementAndGet()
       filteredOutBytesCount.addAndGet(filteredOutByteSize)
+    }
+  }
+
+  fun trackRecordCountFromDestination(recordMessage: AirbyteRecordMessage) {
+    if (!isBookkeeperMode) {
+      return
+    }
+    val byteCount =
+      if (recordMessage.additionalProperties.contains(
+          DEST_EMITTED_BYTES_COUNT,
+        )
+      ) {
+        recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT] as Long
+      } else {
+        0
+      }
+
+    val recordCount =
+      if (recordMessage.additionalProperties.contains(
+          DEST_EMITTED_RECORDS_COUNT,
+        )
+      ) {
+        recordMessage.additionalProperties[DEST_EMITTED_RECORDS_COUNT] as Long
+      } else {
+        0
+      }
+
+    val emittedStatsToUpdate = emittedStats
+    with(emittedStatsToUpdate) {
+      remittedRecordsCount.addAndGet(recordCount)
+      emittedBytesCount.addAndGet(byteCount)
+    }
+
+    with(streamStats) {
+      emittedRecordsCount.addAndGet(recordCount)
+      emittedBytesCount.addAndGet(byteCount)
     }
   }
 
@@ -279,6 +324,10 @@ class StreamStatsTracker(
       // Cleaning up stateIds as we go to avoid un-staging on duplicate or our of order state messages
       stateIds.remove(stagedStats.stateId)
 
+      if (isBookkeeperMode) {
+        handleStateStatsBookkeeperMode(stateMessage, stagedStats)
+      }
+
       // Increment committed stats as we are un-staging stats
       streamStats.committedBytesCount.addAndGet(
         stagedStats.emittedStatsCounters.emittedBytesCount
@@ -288,7 +337,7 @@ class StreamStatsTracker(
       streamStats.committedRecordsCount.addAndGet(
         stagedStats.emittedStatsCounters.remittedRecordsCount
           .get()
-          .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+          .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
       )
 
       if (stagedStats.stateId == stateId) {
@@ -306,6 +355,29 @@ class StreamStatsTracker(
           newDataPoint = durationBetweenStateEmittedAndCommitted.toDouble(),
         ),
       )
+    }
+  }
+
+  private fun handleStateStatsBookkeeperMode(
+    stateMessage: AirbyteStateMessage,
+    stagedStats: StagedStats,
+  ) {
+    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_RECORDS_COUNT)) {
+      val committedRecordsCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as Long
+      if (stagedStats.emittedStatsCounters.remittedRecordsCount.get() != committedRecordsCountFromState) {
+        stagedStats.emittedStatsCounters.remittedRecordsCount.set(committedRecordsCountFromState)
+      }
+
+      stagedStats.emittedStatsCounters.filteredOutRecords.set(0)
+    }
+
+    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_BYTES_COUNT)) {
+      val committedBytesCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as Long
+      if (stagedStats.emittedStatsCounters.emittedBytesCount.get() != committedBytesCountFromState) {
+        stagedStats.emittedStatsCounters.emittedBytesCount.set(committedBytesCountFromState)
+      }
+
+      stagedStats.emittedStatsCounters.filteredOutBytesCount.set(0)
     }
   }
 

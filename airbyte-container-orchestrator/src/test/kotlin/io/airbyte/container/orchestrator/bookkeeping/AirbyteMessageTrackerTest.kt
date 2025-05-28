@@ -17,6 +17,7 @@ import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.helper.FailureHelper.destinationFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.mockk.Called
 import io.mockk.every
@@ -56,6 +57,7 @@ internal class AirbyteMessageTrackerTest {
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         replicationInput = replicationInput,
         syncPersistence = syncPersistence,
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
       )
   }
 

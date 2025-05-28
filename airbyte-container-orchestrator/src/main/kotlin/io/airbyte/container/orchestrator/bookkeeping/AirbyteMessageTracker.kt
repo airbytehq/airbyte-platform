@@ -15,7 +15,9 @@ import io.airbyte.protocol.models.v0.AirbyteAnalyticsTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.helper.FailureHelper
+import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
@@ -33,11 +35,13 @@ class AirbyteMessageTracker(
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val replicationInput: ReplicationInput,
   @Named("syncPersistence") private val syncPersistence: SyncPersistence,
+  @Value("\${airbyte.platform-mode}") private val platformMode: String,
 ) {
   private val dstErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val srcErrorTraceMsgs = mutableListOf<AirbyteTraceMessage>()
   private val sourceDockerImage = replicationInput.sourceLauncherConfig.dockerImage
   private val destinationDockerImage = replicationInput.destinationLauncherConfig.dockerImage
+  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
 
   /**
    * Accepts an AirbyteMessage emitted from a source and tracks any metadata about it that is required
@@ -73,6 +77,11 @@ class AirbyteMessageTracker(
           syncPersistence.accept(replicationInput.connectionId, stateMessage = it)
           syncStatsTracker.updateDestinationStateStats(it)
         }
+      AirbyteMessage.Type.RECORD -> {
+        if (isBookkeeperMode) {
+          syncStatsTracker.updateStatsFromDestination(msg.record)
+        }
+      }
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }
       else -> logger.warn { " Invalid message type for message: $msg" }
     }

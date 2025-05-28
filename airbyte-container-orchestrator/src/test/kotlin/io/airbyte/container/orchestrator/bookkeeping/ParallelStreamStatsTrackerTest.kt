@@ -30,6 +30,7 @@ import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.Runs
@@ -103,8 +104,9 @@ class ParallelStreamStatsTrackerTest {
         attemptNumber = ATTEMPT_NUMBER,
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, platformMode = ArchitectureConstants.ORCHESTRATOR)
   }
 
   @Test
