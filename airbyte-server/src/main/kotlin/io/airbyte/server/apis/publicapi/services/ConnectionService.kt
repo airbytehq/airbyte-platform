@@ -49,7 +49,7 @@ interface ConnectionService {
   fun updateConnection(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
-    catalogId: UUID,
+    catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
   ): ConnectionResponse
@@ -166,7 +166,7 @@ class ConnectionServiceImpl(
   override fun updateConnection(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
-    catalogId: UUID,
+    catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
   ): ConnectionResponse {
