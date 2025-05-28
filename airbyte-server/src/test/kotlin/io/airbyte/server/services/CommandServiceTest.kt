@@ -6,6 +6,7 @@ package io.airbyte.server.services
 
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
 import io.airbyte.config.FailureReason
@@ -14,6 +15,7 @@ import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.CatalogService
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
@@ -23,6 +25,7 @@ import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.DocStoreAccessException
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
@@ -229,6 +232,56 @@ class CommandServiceTest {
 
     verify { commandsRepository.save(any()) }
     verify(exactly = 0) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `createReplicate sets the mutexKey`() {
+    val connectionId = UUID.randomUUID()
+    val jobId = "12345"
+    val attemptNumber = 0L
+    val signalInput = "signal-input"
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { jobInputService.getReplicationInput(any(), any(), any(), any(), any()) } returns
+      ReplicationActivityInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        connectionContext =
+          ConnectionContext()
+            .withConnectionId(
+              connectionId,
+            ).withWorkspaceId(WORKSPACE_ID)
+            .withOrganizationId(ORGANIZATION.organizationId),
+      )
+
+    service.createReplicateCommand(
+      commandId = COMMAND_ID,
+      connectionId = connectionId,
+      jobId = jobId,
+      attemptNumber = attemptNumber,
+      appliedCatalogDiff = null,
+      signalInput = signalInput,
+      commandInput = Jsons.emptyObject(),
+    )
+    verify {
+      workloadService.createWorkload(
+        workloadId = any(),
+        labels = any(),
+        input = any(),
+        workspaceId = WORKSPACE_ID,
+        organizationId = ORGANIZATION.organizationId,
+        logPath = any(),
+        mutexKey = connectionId.toString(),
+        type = WorkloadType.SYNC,
+        autoId = any(),
+        deadline = any(),
+        signalInput = signalInput,
+        dataplaneGroup = any(),
+        priority = WorkloadPriority.DEFAULT,
+      )
+    }
   }
 
   @Test

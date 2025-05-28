@@ -67,6 +67,7 @@ private data class WorkloadCreatePayload(
   val priority: WorkloadPriority,
   val dataplaneGroupId: UUID,
   val signalInput: String?,
+  val mutexKey: String?,
 )
 
 @Singleton
@@ -201,6 +202,7 @@ class CommandService(
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
+      mutexKey = null,
     )
   }
 
@@ -286,6 +288,7 @@ class CommandService(
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
+      mutexKey = null,
     )
   }
 
@@ -365,6 +368,7 @@ class CommandService(
       priority = WorkloadPriority.DEFAULT,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
+      mutexKey = connectionId.toString(),
     )
   }
 
@@ -388,7 +392,6 @@ class CommandService(
         createdAt = currentTime,
         updatedAt = currentTime,
       )
-    val mutexKey: String? = null
     val workloadAutoId = UUID.randomUUID()
 
     // TODO the workloadService.createWorkload and Command.save should be in a transaction
@@ -401,7 +404,7 @@ class CommandService(
           workspaceId = workspaceId,
           organizationId = organizationId,
           logPath = workloadPayload.logPath,
-          mutexKey = mutexKey,
+          mutexKey = workloadPayload.mutexKey,
           type = workloadPayload.type,
           autoId = workloadAutoId,
           deadline = null,
@@ -425,7 +428,7 @@ class CommandService(
         workloadInput = workloadPayload.workloadInput,
         labels = workloadPayload.labels.associate { it.key to it.value },
         logPath = workloadPayload.logPath,
-        mutexKey = mutexKey,
+        mutexKey = workloadPayload.mutexKey,
         workloadType = workloadPayload.type,
         autoId = workloadAutoId,
         priority = workloadPayload.priority,
