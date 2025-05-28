@@ -31,7 +31,7 @@ import {
   useConnectorDocumentation,
 } from "core/api";
 import { ConnectorDefinition } from "core/domain/connector";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { isDevelopment } from "core/utils/isDevelopment";
 import { useGetActorIdFromParams } from "core/utils/useGetActorIdFromParams";
 import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanelContext";
@@ -172,6 +172,7 @@ const ConnectorDocumentationHeader: React.FC<{ selectedConnectorDefinition: Conn
 };
 
 export const DocumentationPanel: React.FC = () => {
+  const isCloudApp = useIsCloudApp();
   const { formatMessage } = useIntl();
   const { setDocumentationPanelOpen, selectedConnectorDefinition } = useDocumentationPanelContext();
   const actorId = useGetActorIdFromParams();
@@ -198,9 +199,9 @@ export const DocumentationPanel: React.FC = () => {
   const docsContent = useMemo(
     () =>
       doc && !error
-        ? prepareMarkdown(doc, isCloudApp() ? "cloud" : "oss")
+        ? prepareMarkdown(doc, isCloudApp ? "cloud" : "oss")
         : formatMessage({ id: "connector.setupGuide.notFound" }),
-    [doc, error, formatMessage]
+    [doc, error, formatMessage, isCloudApp]
   );
 
   const markdownOptions = useMemo(() => {

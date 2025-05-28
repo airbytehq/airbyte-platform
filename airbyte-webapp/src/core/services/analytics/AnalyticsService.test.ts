@@ -1,13 +1,5 @@
-import { config } from "core/config";
-
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, Namespace } from "./types";
-
-jest.mock("core/config", () => ({
-  config: {
-    version: "1.0.0",
-  },
-}));
 
 describe("AnalyticsService", () => {
   beforeEach(() => {
@@ -40,8 +32,8 @@ describe("AnalyticsService", () => {
   });
 
   it("should send version and environment for prod", () => {
-    config.version = "0.42.13";
     const service = new AnalyticsService();
+    service.setContext({ airbyte_version: "0.42.13", environment: "prod" });
     service.track(Namespace.CONNECTION, Action.CREATE, {});
     expect(window.analytics.track).toHaveBeenCalledWith(
       expect.anything(),
@@ -50,8 +42,8 @@ describe("AnalyticsService", () => {
   });
 
   it("should send version and environment for dev", () => {
-    config.version = "dev";
     const service = new AnalyticsService();
+    service.setContext({ airbyte_version: "dev", environment: "dev" });
     service.track(Namespace.CONNECTION, Action.CREATE, {});
     expect(window.analytics.track).toHaveBeenCalledWith(
       expect.anything(),

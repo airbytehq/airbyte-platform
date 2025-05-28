@@ -2,6 +2,8 @@ import throttle from "lodash/throttle";
 import { useCallback, useEffect } from "react";
 import { useShallowCompareEffect } from "react-use";
 
+import { useWebappConfig } from "core/config";
+
 import { AnalyticsService } from "./AnalyticsService";
 import { Action, EventParams, Namespace } from "./types";
 
@@ -10,6 +12,17 @@ type AnalyticsContext = Record<string, unknown>;
 const analyticsService = new AnalyticsService();
 
 export const useAnalyticsService = (): AnalyticsService => {
+  const config = useWebappConfig();
+
+  useEffect(() => {
+    if (!analyticsService.hasContext("airbyte_version")) {
+      analyticsService.setContext({
+        airbyte_version: config.version,
+        environment: config.version === "dev" ? "dev" : "prod",
+      });
+    }
+  }, [config.version]);
+
   return analyticsService;
 };
 

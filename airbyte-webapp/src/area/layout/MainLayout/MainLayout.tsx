@@ -8,16 +8,17 @@ import { FlexContainer } from "components/ui/Flex";
 
 import { SideBar } from "area/layout/SideBar";
 import { DefaultErrorBoundary, ForbiddenErrorBoundary } from "core/errors";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { StatusBanner } from "packages/cloud/area/billing/components/StatusBanner";
 
 import styles from "./MainLayout.module.scss";
 
 const MainLayout: React.FC<React.PropsWithChildren> = () => {
+  const isCloudApp = useIsCloudApp();
   return (
     <ForbiddenErrorBoundary>
       <FlexContainer className={classNames(styles.wrapper)} direction="column" gap="none">
-        {isCloudApp() ? <StatusBanner /> : <LicenseBanner />}
+        {isCloudApp ? <StatusBanner /> : <LicenseBanner />}
         <FlexContainer className={classNames(styles.mainViewContainer)} gap="none">
           <SideBar />
           <div className={styles.content}>

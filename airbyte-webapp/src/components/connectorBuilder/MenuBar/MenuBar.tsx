@@ -9,7 +9,7 @@ import { isAnyModalOpen, isElementInModal } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { CloudHelpDropdown } from "packages/cloud/views/layout/CloudMainView/CloudHelpDropdown";
 import { RoutePaths } from "pages/routePaths";
@@ -29,6 +29,7 @@ export const MenuBar: React.FC = () => {
     undoRedo: { canUndo, canRedo, undo, redo },
   } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
+  const isCloudApp = useIsCloudApp();
 
   // The browser default undo/redo behavior maintains a stack of all edited fields, and
   // as the user continues to undo/redo, it will continue to apply it to the next input
@@ -160,7 +161,7 @@ export const MenuBar: React.FC = () => {
         <AssistConfigButton />
       </FlexContainer>
       <FlexContainer direction="row" alignItems="center" className={styles.rightSide}>
-        {isCloudApp() ? (
+        {isCloudApp ? (
           <CloudHelpDropdown className={styles.helpButton} hideLabel placement="bottom" />
         ) : (
           <HelpDropdown className={styles.helpButton} hideLabel placement="bottom" />

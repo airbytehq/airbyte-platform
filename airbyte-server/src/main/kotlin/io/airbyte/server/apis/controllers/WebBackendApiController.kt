@@ -162,6 +162,7 @@ open class WebBackendApiController(
     }
 
   @Get("/config")
+  @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {

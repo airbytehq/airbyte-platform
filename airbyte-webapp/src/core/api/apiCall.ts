@@ -36,9 +36,7 @@ export const fetchApiCall = async <T, U = unknown>(
   apiUrl: string
 ): Promise<typeof responseType extends "blob" ? Blob : T> => {
   const { url, method, params, data, headers, responseType } = request;
-  // Remove the `v1/` in the end of the apiUrl for now, during the transition period
-  // to get rid of it from all environment variables.
-  const requestUrl = `${apiUrl.replace(/\/v1\/?$/, "")}${url.startsWith("/") ? "" : "/"}${url}`;
+  const requestUrl = `${apiUrl}${url.startsWith("/") ? "" : "/"}${url}`;
 
   const requestHeaders = new Headers(headers);
   const accessToken = await options.getAccessToken();

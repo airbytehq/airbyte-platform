@@ -2,12 +2,14 @@ import React from "react";
 
 import { Text } from "components/ui/Text";
 
-import { config } from "core/config";
+import { useWebappConfig } from "core/config";
 
 export const Version: React.FC = () => {
+  const { version } = useWebappConfig();
+
   return (
     <Text size="sm" color="grey300" align="center" italicized>
-      {config.version}
+      {version}
     </Text>
   );
 };

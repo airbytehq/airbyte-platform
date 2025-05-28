@@ -21,7 +21,7 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -139,6 +139,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     reset,
     isSuccess: connectionTestSuccess,
   } = useTestConnector(props);
+  const isCloudApp = useIsCloudApp();
   const { trackTestConnectorFailure, trackTestConnectorSuccess, trackTestConnectorStarted } =
     useAnalyticsTrackFunctions(props.formType);
 
@@ -286,7 +287,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
           <>
-            {isCloudApp() &&
+            {isCloudApp &&
               selectedConnectorDefinition &&
               "sourceDefinitionId" in selectedConnectorDefinition &&
               selectedConnectorDefinition.sourceType === "database" && <AllowlistIpBanner connectorId={connectorId} />}
