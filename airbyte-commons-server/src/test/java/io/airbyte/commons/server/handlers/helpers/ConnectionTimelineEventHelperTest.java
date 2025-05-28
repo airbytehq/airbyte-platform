@@ -242,7 +242,7 @@ class ConnectionTimelineEventHelperTest {
     expectedPatches.put("notifySchemaChanges", Map.of("from", false, "to", true));
     connectionTimelineEventHelper.logConnectionSettingsChangedEventInConnectionTimeline(connectionId, originalConnectionRead, patch, null, true);
     ArgumentCaptor<ConnectionSettingsChangedEvent> eventCaptor = ArgumentCaptor.forClass(ConnectionSettingsChangedEvent.class);
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull());
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull(), isNull());
     ConnectionSettingsChangedEvent capturedEvent = eventCaptor.getValue();
 
     assertNotNull(capturedEvent);
@@ -261,7 +261,7 @@ class ConnectionTimelineEventHelperTest {
 
     connectionTimelineEventHelper.logSchemaChangeAutoPropagationEventInConnectionTimeline(connectionId, diff);
     ArgumentCaptor<SchemaChangeAutoPropagationEvent> eventCaptor = ArgumentCaptor.forClass(SchemaChangeAutoPropagationEvent.class);
-    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull());
+    verify(connectionTimelineEventService).writeEvent(eq(connectionId), eventCaptor.capture(), isNull(), isNull());
     SchemaChangeAutoPropagationEvent capturedEvent = eventCaptor.getValue();
 
     assertNotNull(capturedEvent);

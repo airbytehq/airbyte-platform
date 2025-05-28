@@ -1399,7 +1399,7 @@ public class ConnectionsHandler {
             JobConverter.getStreamsAssociatedWithJob(job));
       }
       // Save an event
-      connectionTimelineEventService.writeEventWithTimestamp(
+      connectionTimelineEventService.writeEvent(
           UUID.fromString(job.getScope()), event, null, Instant.ofEpochSecond(job.getUpdatedAtInSecond()).atOffset(ZoneOffset.UTC));
     });
   }

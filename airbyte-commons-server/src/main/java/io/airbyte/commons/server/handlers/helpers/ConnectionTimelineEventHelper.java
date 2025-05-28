@@ -181,7 +181,7 @@ public class ConnectionTimelineEventHelper {
           job.getConfigType().name(),
           JobStatus.SUCCEEDED.name(),
           JobConverter.getStreamsAssociatedWithJob(job));
-      connectionTimelineEventService.writeEvent(connectionId, event, null);
+      connectionTimelineEventService.writeEvent(connectionId, event, null, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist timeline event for job: {}", job.getId(), e);
     }
@@ -206,7 +206,7 @@ public class ConnectionTimelineEventHelper {
           jobEventFailureStatus,
           JobConverter.getStreamsAssociatedWithJob(job),
           firstFailureReasonOfLastAttempt);
-      connectionTimelineEventService.writeEvent(connectionId, event, null);
+      connectionTimelineEventService.writeEvent(connectionId, event, null, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist timeline event for job: {}", job.getId(), e);
     }
@@ -227,7 +227,7 @@ public class ConnectionTimelineEventHelper {
           job.getConfigType().name(),
           io.airbyte.config.JobStatus.CANCELLED.name(),
           JobConverter.getStreamsAssociatedWithJob(job));
-      connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
+      connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist(), null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist job cancelled event for job: {}", job.getId(), e);
     }
@@ -241,7 +241,7 @@ public class ConnectionTimelineEventHelper {
             jobInfo.getJob().getCreatedAt(),
             jobInfo.getJob().getConfigType().name(),
             streams);
-        connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+        connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist(), null);
       }
     } catch (final Exception e) {
       LOGGER.error("Failed to persist job started event for job: {}", jobInfo.getJob().getId(), e);
@@ -261,7 +261,7 @@ public class ConnectionTimelineEventHelper {
       }
       LOGGER.info("Persisting source schema change auto-propagated event for connection: {} with diff: {}", connectionId, diff);
       final SchemaChangeAutoPropagationEvent event = new SchemaChangeAutoPropagationEvent(diff);
-      connectionTimelineEventService.writeEvent(connectionId, event, null);
+      connectionTimelineEventService.writeEvent(connectionId, event, null, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist source schema change auto-propagated event for connection: {}", connectionId, e);
     }
@@ -272,7 +272,7 @@ public class ConnectionTimelineEventHelper {
     try {
       LOGGER.debug("Persisting schema config change event for connection: {} with diff: {}", connectionId, airbyteCatalogDiff);
       final SchemaConfigUpdateEvent event = new SchemaConfigUpdateEvent(airbyteCatalogDiff);
-      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist(), null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist schema config change event for connection: {}", connectionId, e);
     }
@@ -299,10 +299,10 @@ public class ConnectionTimelineEventHelper {
       if (status != null) {
         if (status == ConnectionStatus.ACTIVE) {
           final ConnectionEnabledEvent event = new ConnectionEnabledEvent();
-          connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+          connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist(), null);
         } else if (status == ConnectionStatus.INACTIVE) {
           final ConnectionDisabledEvent event = new ConnectionDisabledEvent(updateReason);
-          connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+          connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist(), null);
         }
       }
     } catch (final Exception e) {
@@ -338,7 +338,7 @@ public class ConnectionTimelineEventHelper {
       if (!patches.isEmpty()) {
         final ConnectionSettingsChangedEvent event = new ConnectionSettingsChangedEvent(
             patches, updateReason);
-        connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist());
+        connectionTimelineEventService.writeEvent(connectionId, event, autoUpdate ? null : getCurrentUserIdIfExist(), null);
       }
     } catch (final Exception e) {
       LOGGER.error("Failed to persist connection settings changed event for connection: {}", connectionId, e);

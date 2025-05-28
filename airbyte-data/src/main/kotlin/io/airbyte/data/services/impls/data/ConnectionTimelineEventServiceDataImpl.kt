@@ -20,7 +20,7 @@ import java.util.UUID
 private val logger = KotlinLogging.logger {}
 
 @Singleton
-class ConnectionTimelineEventServiceDataImpl(
+open class ConnectionTimelineEventServiceDataImpl(
   private val repository: ConnectionTimelineEventRepository,
   private val mapper: ObjectMapper,
 ) : ConnectionTimelineEventService {
@@ -28,23 +28,18 @@ class ConnectionTimelineEventServiceDataImpl(
     connectionId: UUID,
     event: ConnectionEvent,
     userId: UUID?,
+    createdAt: OffsetDateTime?,
   ): ConnectionTimelineEvent {
     val serializedEvent = mapper.writeValueAsString(event)
     val timelineEvent =
-      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, OffsetDateTime.now())
-    return repository.save(timelineEvent)
-  }
+      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, createdAt ?: OffsetDateTime.now())
 
-  override fun writeEventWithTimestamp(
-    connectionId: UUID,
-    event: ConnectionEvent,
-    userId: UUID?,
-    createdAt: OffsetDateTime,
-  ): ConnectionTimelineEvent {
-    val serializedEvent = mapper.writeValueAsString(event)
-    val timelineEvent =
-      ConnectionTimelineEvent(null, connectionId, userId, event.getEventType().toString(), serializedEvent, createdAt)
-    return repository.save(timelineEvent)
+    val existing = repository.findDuplicateEvent(connectionId, userId, timelineEvent.eventType, timelineEvent.summary, createdAt)
+
+    if (existing != null) {
+      logger.info { "Duplicate event. connectionId=$connectionId userId=$userId event=$event" }
+    }
+    return existing ?: repository.save(timelineEvent)
   }
 
   override fun getEvent(eventId: UUID): ConnectionTimelineEvent = repository.findById(eventId).get()

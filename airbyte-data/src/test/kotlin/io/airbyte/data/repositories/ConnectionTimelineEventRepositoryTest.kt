@@ -416,4 +416,108 @@ internal class ConnectionTimelineEventRepositoryTest : AbstractConfigRepositoryT
       assert(res[0] == null)
     }
   }
+
+  @Test
+  fun `findDuplicateEvent should return existing event with same connectionId, userId, eventType, and summary`() {
+    val connectionId = UUID.randomUUID()
+    val userId = UUID.randomUUID()
+    val eventType = ConnectionEvent.Type.SYNC_SUCCEEDED.name
+    val summary = """{"someField":"someValue"}"""
+
+    val insertedEvent =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        userId = userId,
+        eventType = eventType,
+        summary = summary,
+        createdAt = OffsetDateTime.now(),
+      )
+
+    connectionTimelineEventRepository.save(insertedEvent)
+
+    val result =
+      connectionTimelineEventRepository.findDuplicateEvent(
+        connectionId = connectionId,
+        userId = userId,
+        eventType = eventType,
+        eventSummary = summary,
+        null,
+      )
+
+    assert(result != null)
+    assert(result!!.id == insertedEvent.id)
+  }
+
+  @Test
+  fun `findDuplicateEvent should match when userId is null`() {
+    val connectionId = UUID.randomUUID()
+    val eventType = ConnectionEvent.Type.SYNC_SUCCEEDED.name
+    val summary = """{"key":"value"}"""
+
+    val insertedEvent =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        userId = null,
+        eventType = eventType,
+        summary = summary,
+        createdAt = OffsetDateTime.now(),
+      )
+
+    connectionTimelineEventRepository.save(insertedEvent)
+
+    val result =
+      connectionTimelineEventRepository.findDuplicateEvent(
+        connectionId = connectionId,
+        userId = null,
+        eventType = eventType,
+        eventSummary = summary,
+        null,
+      )
+
+    assert(result != null)
+    assert(result!!.id == insertedEvent.id)
+  }
+
+  @Test
+  fun `findDuplicateEvent should respect createdAtStart filter`() {
+    val connectionId = UUID.randomUUID()
+    val userId = UUID.randomUUID()
+    val eventType = ConnectionEvent.Type.REFRESH_SUCCEEDED.name
+    val summary = """{"key":"value"}"""
+
+    val createdAt = OffsetDateTime.of(2024, 9, 1, 12, 0, 0, 0, ZoneOffset.UTC)
+    val event =
+      ConnectionTimelineEvent(
+        connectionId = connectionId,
+        userId = userId,
+        eventType = eventType,
+        summary = summary,
+        createdAt = createdAt,
+      )
+
+    connectionTimelineEventRepository.save(event)
+
+    // Case 1: createdAtStart is the same as the event -> should find it
+    val resultBefore =
+      connectionTimelineEventRepository.findDuplicateEvent(
+        connectionId = connectionId,
+        userId = userId,
+        eventType = eventType,
+        eventSummary = summary,
+        createdAt = createdAt,
+      )
+    assert(resultBefore != null)
+    assert(resultBefore!!.id == event.id)
+
+    // Case 2: createdAtStart is != the event createdAt -> should not find it
+    val resultAfter =
+      connectionTimelineEventRepository.findDuplicateEvent(
+        connectionId = connectionId,
+        userId = userId,
+        eventType = eventType,
+        eventSummary = summary,
+        createdAt = createdAt.plusSeconds(1),
+      )
+    assert(resultAfter == null)
+  }
 }
