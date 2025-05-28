@@ -23,6 +23,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.withContext
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
@@ -77,46 +79,52 @@ class ReplicationWorker(
   }
 
   @Throws(WorkerException::class)
-  fun runReplicationBlocking(jobRoot: Path): ReplicationOutput =
-    runBlocking {
-      run(jobRoot)
+  fun runReplicationBlocking(jobRoot: Path): ReplicationOutput {
+    val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
+    return runBlocking {
+      run(jobRoot = jobRoot, mdc = mdc)
     }
+  }
 
   @Throws(WorkerException::class)
-  internal suspend fun run(jobRoot: Path): ReplicationOutput {
+  internal suspend fun run(
+    jobRoot: Path,
+    mdc: Map<String, String> = emptyMap(),
+  ): ReplicationOutput {
     try {
       coroutineScope {
-        val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
-        logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
-        LineGobbler.startSection("REPLICATION")
+        withContext(MDCContext(mdc)) {
+          logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
+          LineGobbler.startSection("REPLICATION")
 
-        context.replicationWorkerHelper.initialize(jobRoot)
+          context.replicationWorkerHelper.initialize(jobRoot)
 
-        val startJobs =
-          startReplicationJobs.map { job ->
-            AsyncUtils.runAsync(Dispatchers.Default, this, mdc) { job.run() }
+          val startJobs =
+            startReplicationJobs.map { job ->
+              AsyncUtils.runAsync(Dispatchers.Default, this, mdc) { job.run() }
+            }
+
+          startJobs.awaitAll()
+
+          context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
+
+          val heartbeatSender =
+            AsyncUtils.runLaunch(Dispatchers.Default, this, mdc) {
+              workloadHeartbeatSender.sendHeartbeat()
+            }
+
+          try {
+            runJobs(dedicatedDispatcher, mdc)
+          } catch (e: Exception) {
+            logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
+            trackFailure(e)
+          } finally {
+            heartbeatSender.cancel()
           }
 
-        startJobs.awaitAll()
-
-        context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
-
-        val heartbeatSender =
-          AsyncUtils.runLaunch(Dispatchers.Default, this, mdc) {
-            workloadHeartbeatSender.sendHeartbeat()
+          if (!context.replicationWorkerState.cancelled) {
+            context.replicationWorkerHelper.endOfReplication()
           }
-
-        try {
-          runJobs(dedicatedDispatcher, mdc)
-        } catch (e: Exception) {
-          logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
-          trackFailure(e)
-        } finally {
-          heartbeatSender.cancel()
-        }
-
-        if (!context.replicationWorkerState.cancelled) {
-          context.replicationWorkerHelper.endOfReplication()
         }
       }
 
