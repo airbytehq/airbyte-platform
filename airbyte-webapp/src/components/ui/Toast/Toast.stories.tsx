@@ -91,7 +91,15 @@ export const ErrorVariantLongMessage: StoryObj<typeof Toast> = {
 
 export const SuccessToast: StoryObj<typeof Toast> = {
   args: {
-    text: "This is a card with a close button",
+    text: "This is a success toast",
     type: "success",
+  },
+};
+
+export const Timeout: StoryObj<typeof Toast> = {
+  args: {
+    text: "This is toast with a timeout",
+    type: "success",
+    timeout: true,
   },
 };

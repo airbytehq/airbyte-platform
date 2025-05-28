@@ -14,6 +14,23 @@ jest.mock("locales/en.errors.json", () => ({
   "dont-panic": "Don't panic!",
 }));
 
+// Mock the AirbyteTheme
+jest.mock("hooks/theme/useAirbyteTheme", () => {
+  const themeContextValue = {
+    theme: "airbyteThemeLight",
+    colorValues: {},
+    setTheme: jest.fn(),
+  };
+
+  return {
+    AirbyteThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useAirbyteTheme: jest.fn().mockReturnValue(themeContextValue),
+    AirbyteThemeContext: {
+      Provider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    },
+  };
+});
+
 describe("ErrorDetails", () => {
   it("should render a standard error by its message", async () => {
     const result = await render(<ErrorDetails error={new Error("Test error")} />);

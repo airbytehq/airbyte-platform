@@ -5,6 +5,8 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
+import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricAttribute
@@ -14,15 +16,16 @@ import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.pod.FileConstants
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
-import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Requires
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -41,6 +44,7 @@ class ReplicationHydrationProcessor(
   private val fileClient: FileClient,
   private val destinationCatalogGenerator: DestinationCatalogGenerator,
   private val metricClient: MetricClient,
+  @Value("\${airbyte.platform-mode}") private val platformMode: String,
 ) : InputHydrationProcessor {
   override fun process(workload: Workload) {
     logger.info { "Deserializing replication input..." }
@@ -89,20 +93,35 @@ class ReplicationHydrationProcessor(
         hydrated.prefix,
       )
 
-    val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
+    if (platformMode == ArchitectureConstants.BOOKKEEPER) {
+      // Write original catalog as is
+      fileClient.writeInputFile(
+        FileConstants.CATALOG_FILE,
+        protocolSerializer.serialize(hydrated.catalog, hydrated.destinationSupportsRefreshes),
+        DEST_DIR,
+      )
 
-    parsed.connectionId?.let {
-      sendMapperErrorMetrics(transformedCatalog, it)
+      // Write namespace mapping info details for destination to generate the final catalog on its own
+      fileClient.writeInputFile(
+        FileConstants.NAMESPACE_MAPPING_FILE,
+        serializer.serialize(NamespaceInfo(hydrated.namespaceDefinition, hydrated.namespaceFormat, hydrated.prefix)),
+        DEST_DIR,
+      )
+    } else {
+      val transformedCatalog = destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog)
+
+      parsed.connectionId?.let {
+        sendMapperErrorMetrics(transformedCatalog, it)
+      }
+
+      val destinationCatalog = mapper.mapCatalog(transformedCatalog.catalog)
+
+      fileClient.writeInputFile(
+        FileConstants.CATALOG_FILE,
+        protocolSerializer.serialize(destinationCatalog, hydrated.destinationSupportsRefreshes),
+        DEST_DIR,
+      )
     }
-
-    val destinationCatalog = mapper.mapCatalog(destinationCatalogGenerator.generateDestinationCatalog(hydrated.catalog).catalog)
-
-    fileClient.writeInputFile(
-      FileConstants.CATALOG_FILE,
-      protocolSerializer.serialize(destinationCatalog, hydrated.destinationSupportsRefreshes),
-      DEST_DIR,
-    )
-
     fileClient.writeInputFile(
       FileConstants.CONNECTOR_CONFIG_FILE,
       serializer.serialize(hydrated.destinationConfiguration),
@@ -132,3 +151,9 @@ class ReplicationHydrationProcessor(
     }
   }
 }
+
+data class NamespaceInfo(
+  val namespaceDefinitionType: NamespaceDefinitionType?,
+  val namespaceFormat: String?,
+  val streamPrefix: String?,
+)

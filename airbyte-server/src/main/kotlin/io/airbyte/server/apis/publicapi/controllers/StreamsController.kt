@@ -8,12 +8,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.airbyte.api.model.generated.DestinationSyncMode
-import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.publicApi.server.generated.apis.PublicStreamsApi
 import io.airbyte.publicApi.server.generated.models.ConnectionSyncModeEnum
@@ -40,7 +40,7 @@ class StreamsController(
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
   private val trackingHelper: TrackingHelper,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
 ) : PublicStreamsApi {
   companion object {
@@ -55,20 +55,19 @@ class StreamsController(
   ): Response {
     // Check permission for source and destination
     val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.checkWorkspacePermission(
-      sourceId,
-      Scope.SOURCE,
-      userId,
-      PermissionType.WORKSPACE_READER,
-    )
-    destinationId?.apply {
-      apiAuthorizationHelper.checkWorkspacePermission(
-        destinationId,
-        Scope.DESTINATION,
-        userId,
-        PermissionType.WORKSPACE_READER,
-      )
+
+    val authReq =
+      roleResolver
+        .Request()
+        .withCurrentUser()
+        .withRef(AuthenticationId.SOURCE_ID, sourceId)
+
+    if (destinationId != null) {
+      authReq.withRef(AuthenticationId.DESTINATION_ID_, destinationId)
     }
+
+    authReq.requireRole(AuthRoleConstants.WORKSPACE_READER)
+
     val httpResponse =
       trackingHelper.callWithTracker(
         {
@@ -104,6 +103,7 @@ class StreamsController(
       streamList.map { airbyteStream ->
         StreamProperties(
           streamName = airbyteStream.name,
+          streamnamespace = airbyteStream.namespace,
           syncModes = getValidSyncModes(sourceSyncModes = airbyteStream!!.supportedSyncModes!!, destinationSyncModes = destinationSyncModes),
           defaultCursorField = airbyteStream.defaultCursorField,
           sourceDefinedPrimaryKey = airbyteStream.sourceDefinedPrimaryKey,

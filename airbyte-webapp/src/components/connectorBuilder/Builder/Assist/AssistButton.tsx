@@ -32,8 +32,9 @@ import {
   useBuilderAssistStreamResponse,
   parseAssistErrorToFormErrors,
   computeStreamResponse,
+  useBuilderAssistFindIncrementalSync,
 } from "./assist";
-import { AssistData, BuilderFormInput, BuilderFormValues } from "../../types";
+import { AssistData, BuilderFormInput, BuilderFormValues, StreamId } from "../../types";
 
 /**
  * HELPERS
@@ -147,7 +148,7 @@ const getAssistButtonState = ({
 
 export interface AssistButtonProps {
   assistKey: AssistKey;
-  streamNum?: number;
+  streamId?: StreamId;
 }
 
 interface AssistButtonConfig {
@@ -189,7 +190,12 @@ const assistButtonConfigs: { [key in AssistKey]: AssistButtonConfig } = {
   request_options: {
     useHook: useBuilderAssistFindRequestOptions,
     useHookParams: ["stream_name", "stream_response"],
-    formPathToSet: (streamNum: number) => `streams.${streamNum}.requestOptions.requestHeaders`,
+    formPathToSet: (streamNum: number) => `streams.${streamNum}.requestOptions`,
+  },
+  incremental_sync: {
+    useHook: useBuilderAssistFindIncrementalSync,
+    useHookParams: ["stream_name", "stream_response"],
+    formPathToSet: (streamNum: number) => `streams.${streamNum}.incrementalSync`,
   },
 };
 
@@ -209,9 +215,9 @@ const useOptionalStreamData = (streamNum?: number) => {
   return { stream_name, stream_response };
 };
 
-export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum }) => {
+export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamId }) => {
   const streams = useBuilderWatch("formValues.streams");
-  const { stream_name, stream_response } = useOptionalStreamData(streamNum);
+  const { stream_name, stream_response } = useOptionalStreamData(streamId?.index);
 
   const config = assistButtonConfigs[assistKey];
   const hookParams = useMemo(
@@ -223,6 +229,12 @@ export const AssistButton: React.FC<AssistButtonProps> = ({ assistKey, streamNum
   if (!assistEnabled) {
     return null;
   }
+
+  if (streamId && streamId.type !== "stream") {
+    return null;
+  }
+
+  const streamNum = streamId?.index;
 
   if (streamNum && streams[streamNum].requestType === "async") {
     return null;

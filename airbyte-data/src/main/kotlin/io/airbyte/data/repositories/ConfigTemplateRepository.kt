@@ -14,8 +14,10 @@ import java.util.UUID
 interface ConfigTemplateRepository : PageableRepository<ConfigTemplate, UUID> {
   fun findByOrganizationId(organizationId: UUID): List<ConfigTemplate>
 
-  fun findByOrganizationIdAndActorDefinitionId(
+  fun findByActorDefinitionIdInAndOrganizationIdIsNullAndTombstoneFalse(actorDefinitionIds: List<UUID>): List<ConfigTemplate>
+
+  fun findByOrganizationIdAndActorDefinitionIdInAndTombstoneFalse(
     organizationId: UUID,
-    actorDefinitionId: UUID,
+    actorDefinitionIds: List<UUID>,
   ): List<ConfigTemplate>
 }

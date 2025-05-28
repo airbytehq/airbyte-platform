@@ -10,7 +10,8 @@ const jestConfig: Config = {
   maxWorkers: isInCI ? 4 : "100%",
   snapshotSerializers: ["./src/test-utils/classname-serializer.js"],
   coveragePathIgnorePatterns: ["\\.stories\\.tsx$"],
-  modulePathIgnorePatterns: ["src/.*/__mocks__"],
+  modulePathIgnorePatterns: ["src/.*/__mocks__", "playwright/.*"],
+  testPathIgnorePatterns: ["<rootDir>/playwright/"],
   testEnvironment: "./patchJSDOMEnvironment.ts",
   moduleDirectories: ["node_modules", "src"],
   moduleNameMapper: {
@@ -18,6 +19,7 @@ const jestConfig: Config = {
     "\\.(css|png|scss)$": "test-utils/mock-data/mockEmpty.js",
     "\\.svg$": "test-utils/mock-data/mockSvgString.js",
     "\\.svg\\?react$": "test-utils/mock-data/mockSvg.js",
+    "^monaco-editor$": "test-utils/mockMonaco.ts",
   },
   setupFilesAfterEnv: ["./src/test-utils/setup-tests.ts"],
   globalSetup: "./src/test-utils/global-setup.js",

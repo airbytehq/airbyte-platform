@@ -2,15 +2,21 @@ import dayjs from "dayjs";
 
 import { mocked, render } from "test-utils";
 
-import { useCurrentOrganizationInfo, useOrganizationTrialStatus } from "core/api";
-import { OrganizationTrialStatusRead, WorkspaceOrganizationInfoReadBilling } from "core/api/types/AirbyteClient";
+import { useGetOrganizationPaymentConfig, useOrganizationTrialStatus } from "core/api";
+import { OrganizationPaymentConfigRead, OrganizationTrialStatusRead } from "core/api/types/AirbyteClient";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
 
 import { StatusBanner } from "./StatusBanner";
 
 jest.mock("core/api", () => ({
-  useCurrentOrganizationInfo: jest.fn(),
+  useCurrentOrganization: jest.fn().mockReturnValue({ organizationId: "org-1" }),
+  useGetOrganizationPaymentConfig: jest.fn(),
   useOrganizationTrialStatus: jest.fn(),
+  useCurrentWorkspaceOrUndefined: jest.fn().mockReturnValue({
+    workspaceId: "workspace-1",
+    organizationId: "org-1",
+  }),
+  useMaybeWorkspaceCurrentOrganizationId: jest.fn().mockReturnValue("org-1"),
 }));
 
 jest.mock("area/workspace/utils", () => ({
@@ -20,15 +26,44 @@ jest.mock("area/workspace/utils", () => ({
 
 jest.mock("core/utils/rbac", () => ({
   useGeneratedIntent: jest.fn(),
-  Intent: jest.requireActual("core/utils/rbac").Intent,
+  Intent: {
+    ViewOrganizationTrialStatus: "ViewOrganizationTrialStatus",
+    ManageOrganizationBilling: "ManageOrganizationBilling",
+  },
 }));
 
-const mockOrgInfo = (billing: WorkspaceOrganizationInfoReadBilling | undefined) => {
-  mocked(useCurrentOrganizationInfo).mockReturnValue({
-    organizationId: "org-1",
-    organizationName: "org name",
-    sso: false,
-    billing,
+const mockOrgInfo = (paymentConfig: Partial<OrganizationPaymentConfigRead>) => {
+  mocked(useGetOrganizationPaymentConfig).mockReturnValue({
+    data: {
+      organizationId: "org-1",
+      paymentStatus: paymentConfig.paymentStatus || "okay",
+      subscriptionStatus: paymentConfig.subscriptionStatus || "subscribed",
+      ...paymentConfig,
+    },
+    isLoading: false,
+    isError: false,
+    isLoadingError: false,
+    isRefetchError: false,
+    isSuccess: true,
+    error: null,
+    isFetching: false,
+    isRefetching: false,
+    isInitialLoading: false,
+    status: "success",
+    fetchStatus: "idle",
+    errorUpdateCount: 0,
+    refetch: jest.fn(),
+    remove: jest.fn(),
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    isPaused: false,
+    isPlaceholderData: false,
+    isPreviousData: false,
+    isStale: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
   });
 };
 
@@ -94,7 +129,10 @@ describe("StatusBanner", () => {
   });
 
   it("should render grace period banner w/o link (1 day)", async () => {
-    mockOrgInfo({ paymentStatus: "grace_period", gracePeriodEndsAt: dayjs().add(25, "hours").valueOf() / 1000 });
+    mockOrgInfo({
+      paymentStatus: "grace_period",
+      gracePeriodEndAt: dayjs().add(25, "hours").toISOString(),
+    });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
     const wrapper = await render(<StatusBanner />);
@@ -103,7 +141,10 @@ describe("StatusBanner", () => {
   });
 
   it("should render grace period banner w/o link (very soon)", async () => {
-    mockOrgInfo({ paymentStatus: "grace_period", gracePeriodEndsAt: dayjs().add(5, "hours").valueOf() / 1000 });
+    mockOrgInfo({
+      paymentStatus: "grace_period",
+      gracePeriodEndAt: dayjs().add(5, "hours").toISOString(),
+    });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: false });
     const wrapper = await render(<StatusBanner />);
@@ -112,7 +153,10 @@ describe("StatusBanner", () => {
   });
 
   it("should render grace period banner w/ link (1 day)", async () => {
-    mockOrgInfo({ paymentStatus: "grace_period", gracePeriodEndsAt: dayjs().add(25, "hours").valueOf() / 1000 });
+    mockOrgInfo({
+      paymentStatus: "grace_period",
+      gracePeriodEndAt: dayjs().add(25, "hours").toISOString(),
+    });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);
@@ -121,7 +165,10 @@ describe("StatusBanner", () => {
   });
 
   it("should render grace period banner w/ link (very soon)", async () => {
-    mockOrgInfo({ paymentStatus: "grace_period", gracePeriodEndsAt: dayjs().add(5, "hours").valueOf() / 1000 });
+    mockOrgInfo({
+      paymentStatus: "grace_period",
+      gracePeriodEndAt: dayjs().add(5, "hours").toISOString(),
+    });
     mockTrialStatus({ trialStatus: "post_trial" });
     mockGeneratedIntent({ canViewTrialStatus: true, canManageOrganizationBilling: true });
     const wrapper = await render(<StatusBanner />);

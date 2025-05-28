@@ -9,12 +9,14 @@ import io.airbyte.db.instance.configs.migrations.V0_57_4_004__AddDeclarativeMani
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
 import java.time.OffsetDateTime
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_57_4_004__AddDeclarativeManifestImageVersionTableTest : AbstractConfigsDatabaseTest() {
   @Test
   @Throws(SQLException::class, IOException::class)

@@ -98,39 +98,84 @@ func GetConfigMap(renderedYaml, name string) *corev1.ConfigMap {
 }
 
 func GetSecret(renderedYaml, name string) *corev1.Secret {
-	return GetK8sResourceByKindAndName(renderedYaml, "Secret", name).(*corev1.Secret)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Secret", name)
+	if obj != nil {
+		return obj.(*corev1.Secret)
+	}
+
+	return nil
 }
 
 func GetDeployment(renderedYaml, name string) *appsv1.Deployment {
-	return GetK8sResourceByKindAndName(renderedYaml, "Deployment", name).(*appsv1.Deployment)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Deployment", name)
+	if obj != nil {
+		return obj.(*appsv1.Deployment)
+	}
+
+	return nil
 }
 
 func GetStatefulSet(renderedYaml, name string) *appsv1.StatefulSet {
-	return GetK8sResourceByKindAndName(renderedYaml, "StatefulSet", name).(*appsv1.StatefulSet)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "StatefulSet", name)
+	if obj != nil {
+		return obj.(*appsv1.StatefulSet)
+	}
+
+	return nil
 }
 
 func GetPod(renderedYaml, name string) *corev1.Pod {
-	return GetK8sResourceByKindAndName(renderedYaml, "Pod", name).(*corev1.Pod)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Pod", name)
+	if obj != nil {
+		return obj.(*corev1.Pod)
+	}
+
+	return nil
 }
 
 func GetJob(renderedYaml, name string) *batchv1.Job {
-	return GetK8sResourceByKindAndName(renderedYaml, "Job", name).(*batchv1.Job)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Job", name)
+	if obj != nil {
+		return obj.(*batchv1.Job)
+	}
+
+	return nil
 }
 
 func GetService(renderedYaml, name string) *corev1.Service {
-	return GetK8sResourceByKindAndName(renderedYaml, "Service", name).(*corev1.Service)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Service", name)
+	if obj != nil {
+		return obj.(*corev1.Service)
+	}
+
+	return nil
 }
 
 func GetServiceAccount(renderedYaml, name string) *corev1.ServiceAccount {
-	return GetK8sResourceByKindAndName(renderedYaml, "ServiceAccount", name).(*corev1.ServiceAccount)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "ServiceAccount", name)
+	if obj != nil {
+		return obj.(*corev1.ServiceAccount)
+	}
+
+	return nil
 }
 
 func GetRole(renderedYaml, name string) *rbac.Role {
-	return GetK8sResourceByKindAndName(renderedYaml, "Role", name).(*rbac.Role)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "Role", name)
+	if obj != nil {
+		return obj.(*rbac.Role)
+	}
+
+	return nil
 }
 
 func GetRoleBinding(renderedYaml, name string) *rbac.RoleBinding {
-	return GetK8sResourceByKindAndName(renderedYaml, "RoleBinding", name).(*rbac.RoleBinding)
+	obj := GetK8sResourceByKindAndName(renderedYaml, "RoleBinding", name)
+	if obj != nil {
+		return obj.(*rbac.RoleBinding)
+	}
+
+	return nil
 }
 
 func EnvVarMap(vars []corev1.EnvVar) map[string]corev1.EnvVar {
@@ -143,7 +188,9 @@ func EnvVarMap(vars []corev1.EnvVar) map[string]corev1.EnvVar {
 
 type ExpectedEnvVar interface {
 	RefName(name string) ExpectedEnvVar
+	GetRefName() string
 	RefKey(key string) ExpectedEnvVar
+	GetRefKey() string
 	Value(value string) ExpectedEnvVar
 }
 
@@ -161,9 +208,17 @@ func (e ExpectedVarFromConfigMap) RefName(n string) ExpectedEnvVar {
 	return e
 }
 
+func (e ExpectedVarFromConfigMap) GetRefName() string {
+	return e.refName
+}
+
 func (e ExpectedVarFromConfigMap) RefKey(k string) ExpectedEnvVar {
 	e.refKey = k
 	return e
+}
+
+func (e ExpectedVarFromConfigMap) GetRefKey() string {
+	return e.refKey
 }
 
 func (e ExpectedVarFromConfigMap) Value(v string) ExpectedEnvVar {
@@ -189,9 +244,17 @@ func (e ExpectedVarFromSecret) RefName(n string) ExpectedEnvVar {
 	return e
 }
 
+func (e ExpectedVarFromSecret) GetRefName() string {
+	return e.refName
+}
+
 func (e ExpectedVarFromSecret) RefKey(k string) ExpectedEnvVar {
 	e.refKey = k
 	return e
+}
+
+func (e ExpectedVarFromSecret) GetRefKey() string {
+	return e.refKey
 }
 
 func (e ExpectedVarFromSecret) Value(v string) ExpectedEnvVar {
@@ -206,17 +269,26 @@ func ExpectedSecretVar() *ExpectedVarFromSecret {
 func VerifyEnvVar(t *testing.T, chartYaml string, expected ExpectedEnvVar, actual corev1.EnvVar) {
 	switch expected := expected.(type) {
 	case ExpectedVarFromConfigMap:
-		assert.NotNil(t, actual.ValueFrom.ConfigMapKeyRef)
+		assert.NotNil(t, actual.ValueFrom, "env var '%s' has no 'valueFrom' set", expected.GetRefKey())
+		assert.NotNil(t, actual.ValueFrom.ConfigMapKeyRef, "env var '%s' has no 'configMapRefKey' set", expected.GetRefKey())
 		assert.Equal(t, expected.refName, actual.ValueFrom.ConfigMapKeyRef.Name)
 		assert.Equal(t, expected.refKey, actual.ValueFrom.ConfigMapKeyRef.Key)
 
 		configMap := GetConfigMap(chartYaml, expected.refName)
-		assert.Equal(t, expected.value, configMap.Data[expected.refKey])
+		if configMap != nil {
+			assert.Equal(t, expected.value, configMap.Data[expected.refKey])
+		}
 
 	case ExpectedVarFromSecret:
-		assert.NotNil(t, actual.ValueFrom.SecretKeyRef)
+		assert.NotNil(t, actual.ValueFrom, "env var '%s' has no 'valueFrom' set", expected.GetRefKey())
+		assert.NotNil(t, actual.ValueFrom.SecretKeyRef, "env var '%s' has no 'secretRefKey' set", expected.GetRefKey())
 		assert.Equal(t, expected.refName, actual.ValueFrom.SecretKeyRef.Name)
 		assert.Equal(t, expected.refKey, actual.ValueFrom.SecretKeyRef.Key)
+
+		secret := GetSecret(chartYaml, expected.refName)
+		if secret != nil {
+			assert.Equal(t, expected.value, secret.StringData[expected.refKey])
+		}
 	}
 }
 

@@ -296,6 +296,14 @@ components:
       x-speakeasy-component: true
       type: "integer"
       format: "int64"
+    SourceDefinitionSpecification:
+      description: "The specification for what values are required to configure the\
+        \ sourceDefinition."
+      type: "object"
+      example:
+        user:
+          type: "string"
+      x-speakeasy-component: true
     TagId:
       type: "string"
       format: "uuid"
@@ -620,6 +628,11 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/JobTypeResourceLimit"
+    ActorDefinitionId:
+      description: "A unique identifier for an actor definition."
+      type: "string"
+      format: "uuid"
+      x-speakeasy-component: true
     JobTypeResourceLimit:
       x-speakeasy-component: true
       description: "sets resource requirements for a specific job type for an actor\
@@ -1042,6 +1055,23 @@ components:
         color:
           type: "string"
       x-speakeasy-entity: "Tag"
+      x-speakeasy-component: true
+    OrganizationOAuthCredentialsRequest:
+      title: "Root Type for OrganizationOAuthCredentials"
+      description: "POST body for creating/updating organization level OAuth credentials"
+      required:
+      - "actorType"
+      - "name"
+      - "configuration"
+      type: "object"
+      properties:
+        actorType:
+          $ref: "#/components/schemas/ActorTypeEnum"
+        name:
+          type: "string"
+          description: "The name of the source i.e. google-ads"
+        configuration:
+          $ref: "#/components/schemas/OAuthCredentialsConfiguration"
       x-speakeasy-component: true
     ConnectionResponse:
       title: "Root Type for ConnectionResponse"
@@ -1898,6 +1928,9 @@ components:
       properties:
         name:
           type: "string"
+        namespace:
+          type: "string"
+          description: "Namespace of the stream."
         syncMode:
           $ref: "#/components/schemas/ConnectionSyncModeEnum"
         cursorField:
@@ -1957,6 +1990,8 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/ConnectionSyncModeEnum"
+        streamnamespace:
+          type: "string"
         defaultCursorField:
           type: "array"
           items:
@@ -1995,7 +2030,6 @@ components:
       required:
       - "name"
       - "organizationId"
-      - "enabled"
       properties:
         name:
           type: "string"
@@ -2057,9 +2091,12 @@ components:
     DataplaneCreateRequest:
       type: "object"
       required:
+      - "regionId"
       - "name"
-      - "enabled"
       properties:
+        regionId:
+          type: "string"
+          format: "uuid"
         name:
           type: "string"
         enabled:
@@ -2113,6 +2150,121 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/DataplaneResponse"
+      x-speakeasy-component: true
+    ConfigTemplateListResponse:
+      type: "object"
+      required:
+      - "data"
+      properties:
+        data:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ConfigTemplateListItem"
+      x-speakeasy-component: true
+    ConfigTemplateListItem:
+      type: "object"
+      required:
+      - "id"
+      - "name"
+      - "icon"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+        icon:
+          type: "string"
+      x-speakeasy-component: true
+    ConfigTemplatePublicRead:
+      type: "object"
+      required:
+      - "id"
+      - "name"
+      - "icon"
+      - "sourceDefinitionId"
+      - "configTemplateSpec"
+      - "partialDefaultConfig"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          description: "Name of the associated actor definition"
+        icon:
+          type: "string"
+          description: "url to icon in connector asset (svg) registry"
+        sourceDefinitionId:
+          type: "string"
+          format: "uuid"
+        configTemplateSpec:
+          $ref: "#/components/schemas/SourceDefinitionSpecification"
+        partialDefaultConfig:
+          type: "object"
+      x-speakeasy-component: true
+    ConfigTemplateCreateRequestBody:
+      type: "object"
+      required:
+      - "actorDefinitionId"
+      - "partialDefaultConfig"
+      - "partialUserConfigSpec"
+      - "organizationId"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        actorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-speakeasy-component: true
+    ConfigTemplateCreateResponse:
+      type: "object"
+      required:
+      - "id"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    ConfigTemplateUpdateRequestBody:
+      type: "object"
+      required:
+      - "organizationId"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        partialDefaultConfig:
+          $ref: "#/components/schemas/SourceConfiguration"
+        partialUserConfigSpec:
+          $ref: "#/components/schemas/SourceConfiguration"
+      x-speakeasy-component: true
+    ConfigTemplateUpdateResponse:
+      type: "object"
+      required:
+      - "id"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+      x-speakeasy-component: true
+    EmbeddedWidgetRequest:
+      type: "object"
+      required:
+      - "workspaceId"
+      - "allowedOrigin"
+      properties:
+        workspaceId:
+          type: "string"
+          format: "uuid"
+        allowedOrigin:
+          type: "string"
+        externalUserId:
+          type: "string"
       x-speakeasy-component: true
     destination-clickhouse:
       title: "ClickHouse Destination Spec"
@@ -9543,7 +9695,7 @@ components:
             >here</a>. If you set this value, you must not set the account key."
           title: "Shared Access Signature"
           examples:
-          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+          - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
           airbyte_secret: true
           always_show: true
           x-speakeasy-param-sensitive: true
@@ -9651,7 +9803,7 @@ components:
             >here</a>. If you set this value, you must not set the account key."
           title: "Shared Access Signature"
           examples:
-          - "a012345678910ABCDEFGH/AbCdEfGhEXAMPLEKEY"
+          - "sv=2021-08-06&st=2025-04-11T00%3A00%3A00Z&se=2025-04-12T00%3A00%3A00Z&sr=b&sp=rw&sig=abcdefghijklmnopqrstuvwxyz1234567890%2Fabcdefg%3D"
           airbyte_secret: true
           always_show: true
         azure_blob_storage_account_key:
@@ -18470,6 +18622,7 @@ components:
           - "europe-central1"
           - "europe-central2"
           - "europe-north1"
+          - "europe-north2"
           - "europe-southwest1"
           - "europe-west1"
           - "europe-west2"
@@ -18723,6 +18876,7 @@ components:
           - "europe-central1"
           - "europe-central2"
           - "europe-north1"
+          - "europe-north2"
           - "europe-southwest1"
           - "europe-west1"
           - "europe-west2"

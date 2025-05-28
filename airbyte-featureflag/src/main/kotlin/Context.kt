@@ -279,12 +279,6 @@ data class ImageVersion(
   override val kind = "image-version"
 }
 
-data class Geography(
-  override val key: String,
-) : Context {
-  override val kind: String = "geography"
-}
-
 /**
  * Context for representing a plane by name.
  *

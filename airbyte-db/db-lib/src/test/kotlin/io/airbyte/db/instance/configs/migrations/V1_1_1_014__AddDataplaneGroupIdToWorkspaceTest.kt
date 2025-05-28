@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
+import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -137,7 +137,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         false,
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, GEOGRAPHY_AUTO),
+        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, AUTO_DATAPLANE_GROUP),
         UUID.randomUUID(),
       ).execute()
 

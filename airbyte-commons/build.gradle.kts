@@ -17,6 +17,7 @@ dependencies {
 
   // this dependency is an exception to the above rule because it is only used INTERNALLY to the Commons library.
   implementation(libs.json.path)
+  implementation(libs.json.smart)
 
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)

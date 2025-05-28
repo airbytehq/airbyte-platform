@@ -7,11 +7,11 @@ import { Collapsible } from "components/ui/Collapsible";
 import { BuilderCard } from "./BuilderCard";
 import { BuilderYamlField } from "./BuilderYamlField";
 import styles from "./UnknownFieldsSection.module.scss";
-import { StreamPathFn } from "../types";
+import { AnyDeclarativeStreamPathFn } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface UnknownFieldsSectionProps {
-  streamFieldPath: StreamPathFn;
+  streamFieldPath: AnyDeclarativeStreamPathFn;
 }
 
 export const UnknownFieldsSection: React.FC<UnknownFieldsSectionProps> = ({ streamFieldPath }) => {

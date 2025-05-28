@@ -15,7 +15,6 @@ import io.airbyte.api.model.generated.UserUpdate
 import io.airbyte.api.model.generated.UserWithPermissionInfoReadList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUserAccessInfoReadList
-import io.airbyte.api.model.generated.WorkspaceUserReadList
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.UserHandler
 import io.airbyte.server.assertStatus
@@ -89,14 +88,6 @@ internal class UserApiControllerTest {
 
     val path = "/api/v1/users/list_by_organization_id"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, OrganizationIdRequestBody())))
-  }
-
-  @Test
-  fun testListUsersInWorkspace() {
-    every { userHandler.listUsersInWorkspace(any()) } returns WorkspaceUserReadList()
-
-    val path = "/api/v1/users/list_by_workspace_id"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WorkspaceIdRequestBody())))
   }
 
   @Test

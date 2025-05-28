@@ -17,27 +17,24 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import styles from "./LinkComponentsToggle.module.scss";
 import { useRefsHandler } from "./RefsHandler";
-import { useSchemaForm } from "./SchemaForm";
-import { displayName } from "./utils";
+import { AirbyteJsonSchema, displayName } from "./utils";
 
 interface LinkComponentsToggleProps {
   path: string;
+  fieldSchema: AirbyteJsonSchema;
 }
 
-export const LinkComponentsToggle: React.FC<LinkComponentsToggleProps> = ({ path }) => {
+export const LinkComponentsToggle: React.FC<LinkComponentsToggleProps> = ({ path, fieldSchema }) => {
   const { formatMessage } = useIntl();
-  const { getReferenceInfo, handleLinkAction, handleUnlinkAction, isFieldLinkable, getRefTargetPathForField } =
-    useRefsHandler();
-  const { schemaAtPath } = useSchemaForm();
+  const { getReferenceInfo, handleLinkAction, handleUnlinkAction, getRefTargetPathForField } = useRefsHandler();
   const currentValue = useWatch({ name: path });
   const refTargetPath = useMemo(() => getRefTargetPathForField(path), [getRefTargetPathForField, path]);
   const refTargetValue = useWatch({ name: refTargetPath ?? "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fieldDisplayName = useMemo(() => {
-    const schema = schemaAtPath(path);
-    return displayName(path, schema?.title);
-  }, [path, schemaAtPath]);
+    return displayName(path, fieldSchema?.title);
+  }, [path, fieldSchema?.title]);
 
   const currentValueExists = useMemo(() => currentValue !== undefined && !isEmpty(currentValue), [currentValue]);
 
@@ -45,10 +42,13 @@ export const LinkComponentsToggle: React.FC<LinkComponentsToggleProps> = ({ path
   const refInfo = getReferenceInfo(path);
 
   // Check if this field is linkable
-  const isLinkable = isFieldLinkable(path);
+  const isLinkable = useMemo(
+    () => fieldSchema.linkable === true && (refInfo.type === "source" || refInfo.type === "none") && !!refTargetPath,
+    [fieldSchema.linkable, refInfo.type, refTargetPath]
+  );
 
   // Determine if the toggle should be on (field is a source or target)
-  const isToggleOn = refInfo.type === "source" || refInfo.type === "target";
+  const isToggleOn = refInfo.type === "source";
 
   const closeModal = useCallback(() => {
     setIsModalOpen(false);

@@ -21,7 +21,7 @@ class WorkspaceResonseMapperTest {
       }
 
     // When
-    val workspaceResponse = WorkspaceResponseMapper.from(workspaceRead)
+    val workspaceResponse = WorkspaceResponseMapper.from(workspaceRead, "fake name")
 
     // Then
     assertEquals(workspaceRead.workspaceId.toString(), workspaceResponse.workspaceId)

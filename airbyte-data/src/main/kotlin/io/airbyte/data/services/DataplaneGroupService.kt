@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services
 
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import java.util.UUID
 
@@ -14,7 +15,7 @@ interface DataplaneGroupService {
   fun getDataplaneGroup(id: UUID): DataplaneGroup
 
   /**
-   * Get the dataplane group by geography .
+   * Get the dataplane group by organization ID and name.
    */
   fun getDataplaneGroupByOrganizationIdAndName(
     organizationId: UUID,
@@ -33,4 +34,9 @@ interface DataplaneGroupService {
     organizationIds: List<UUID>,
     withTombstone: Boolean,
   ): List<DataplaneGroup>
+
+  /**
+   * Get the default dataplane group
+   */
+  fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup
 }

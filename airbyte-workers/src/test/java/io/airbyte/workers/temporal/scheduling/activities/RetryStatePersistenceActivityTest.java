@@ -47,7 +47,7 @@ class RetryStatePersistenceActivityTest {
     mRetryStateClient = mock(RetryStateClient.class);
     mWorkspaceApi = mock(WorkspaceApi.class);
     when(mWorkspaceApi.getWorkspaceByConnectionId(any())).thenReturn(new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", false,
-        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null, null, null));
+        UUID.randomUUID(), null, null, null, null, null, null, null, null, null, null, null, null, null));
     when(mAirbyteApiClient.getWorkspaceApi()).thenReturn(mWorkspaceApi);
   }
 

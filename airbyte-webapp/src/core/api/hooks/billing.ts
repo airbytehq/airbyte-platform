@@ -7,6 +7,7 @@ import {
   listPastInvoices,
   cancelSubscription,
   unscheduleCancelSubscription,
+  getOrganizationPaymentConfig,
 } from "../generated/AirbyteClient";
 import { CustomerPortalRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION } from "../scopes";
@@ -17,6 +18,7 @@ export const billingKeys = {
   subscriptionInfo: (organizationId: string) => [...billingKeys.all, "subscriptionInfo", organizationId] as const,
   invoices: (organizationId: string) => [...billingKeys.all, "invoices", organizationId] as const,
   paymentMethod: (organizationId: string) => [...billingKeys.all, "paymentMethod", organizationId] as const,
+  paymentConfig: (organizationId: string) => [...billingKeys.all, "paymentConfig", organizationId] as const,
 };
 
 export const useGetCustomerPortalUrl = () => {
@@ -56,6 +58,14 @@ export const useGetOrganizationSubscriptionInfo = (organizationId: string, enabl
     billingKeys.subscriptionInfo(organizationId),
     () => getSubscriptionInfo({ organizationId }, requestOptions),
     { enabled }
+  );
+};
+
+export const useGetOrganizationPaymentConfig = (organizationId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(billingKeys.paymentConfig(organizationId), () =>
+    getOrganizationPaymentConfig(organizationId, requestOptions)
   );
 };
 

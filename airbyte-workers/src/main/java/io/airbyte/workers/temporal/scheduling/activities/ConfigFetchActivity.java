@@ -10,6 +10,8 @@ import io.airbyte.workers.temporal.activities.GetConnectionContextInput;
 import io.airbyte.workers.temporal.activities.GetConnectionContextOutput;
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffInput;
 import io.airbyte.workers.temporal.activities.GetLoadShedBackoffOutput;
+import io.airbyte.workers.temporal.activities.GetWebhookConfigInput;
+import io.airbyte.workers.temporal.activities.GetWebhookConfigOutput;
 import io.temporal.activity.ActivityInterface;
 import io.temporal.activity.ActivityMethod;
 import java.time.Duration;
@@ -151,5 +153,8 @@ public interface ConfigFetchActivity {
 
   @ActivityMethod
   Boolean isWorkspaceTombstone(UUID connectionId);
+
+  @ActivityMethod
+  GetWebhookConfigOutput getWebhookConfig(GetWebhookConfigInput input);
 
 }

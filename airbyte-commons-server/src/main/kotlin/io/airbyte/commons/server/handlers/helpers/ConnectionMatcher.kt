@@ -36,7 +36,6 @@ class ConnectionMatcher(
       syncCatalog(query.syncCatalog)
       operationIds(query.operationIds)
       sourceCatalogId(query.sourceCatalogId)
-      geography(query.geography)
       dataplaneGroupId(query.dataplaneGroupId)
       breakingChange(query.breakingChange)
       notifySchemaChanges(query.notifySchemaChanges)

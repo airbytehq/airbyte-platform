@@ -1,0 +1,25 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.connectorName {
+  font-size: variables.$font-size-lg;
+  font-weight: 500;
+}
+
+.content {
+  height: 100%;
+}
+
+.successView {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 450px;
+  height: 100%;
+}
+
+.buttonContainer {
+  width: 100%;
+  justify-self: end;
+}

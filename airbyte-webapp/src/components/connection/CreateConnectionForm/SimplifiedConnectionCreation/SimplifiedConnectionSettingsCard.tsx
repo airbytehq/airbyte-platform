@@ -40,7 +40,7 @@ export const SimplifiedConnectionsSettingsCard: React.FC<SimplifiedConnectionsSe
   isDeprecated = false,
 }) => {
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
-  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const canEditDataGeographies = useFeature(FeatureItem.AllowChangeDataplanes);
 
   return (
     <Card title={title}>

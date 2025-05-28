@@ -847,7 +847,7 @@ class SourceDefinitionsHandlerTest {
         .thenReturn(sourceDefinitionVersion);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
-        sourceDefinition.getCustom())).thenReturn(updatedSourceDefVersion);
+        sourceDefinition.getCustom(), workspaceId)).thenReturn(updatedSourceDefVersion);
 
     final List<ActorDefinitionBreakingChange> breakingChanges = generateBreakingChangesFromSourceDefinition(updatedSource);
     when(actorDefinitionHandlerHelper.getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE)).thenReturn(breakingChanges);
@@ -855,7 +855,7 @@ class SourceDefinitionsHandlerTest {
     final SourceDefinitionRead sourceRead =
         sourceDefinitionsHandler.updateSourceDefinition(
             new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
-                .dockerImageTag(newDockerImageTag));
+                .dockerImageTag(newDockerImageTag).workspaceId(workspaceId));
 
     final SourceDefinitionRead expectedSourceDefinitionRead = new SourceDefinitionRead()
         .sourceDefinitionId(sourceDefinition.getSourceDefinitionId())
@@ -875,7 +875,7 @@ class SourceDefinitionsHandlerTest {
 
     assertEquals(expectedSourceDefinitionRead, sourceRead);
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
-        sourceDefinition.getCustom());
+        sourceDefinition.getCustom(), workspaceId);
     verify(actorDefinitionHandlerHelper).getBreakingChanges(updatedSourceDefVersion, ActorType.SOURCE);
     verify(sourceService).writeConnectorMetadata(updatedSource, updatedSourceDefVersion, breakingChanges);
     verify(supportStateUpdater).updateSupportStatesForSourceDefinition(persistedUpdatedSource);
@@ -931,15 +931,15 @@ class SourceDefinitionsHandlerTest {
     assertNotEquals(newDockerImageTag, currentTag);
 
     when(actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
-        sourceDefinition.getCustom()))
+        sourceDefinition.getCustom(), workspaceId))
             .thenThrow(UnsupportedProtocolVersionException.class);
 
     assertThrows(UnsupportedProtocolVersionException.class, () -> sourceDefinitionsHandler.updateSourceDefinition(
         new SourceDefinitionUpdate().sourceDefinitionId(this.sourceDefinition.getSourceDefinitionId())
-            .dockerImageTag(newDockerImageTag)));
+            .dockerImageTag(newDockerImageTag).workspaceId(workspaceId)));
 
     verify(actorDefinitionHandlerHelper).defaultDefinitionVersionFromUpdate(sourceDefinitionVersion, ActorType.SOURCE, newDockerImageTag,
-        sourceDefinition.getCustom());
+        sourceDefinition.getCustom(), workspaceId);
     verify(sourceService, never()).writeConnectorMetadata(any(StandardSourceDefinition.class), any(), any());
 
     verifyNoMoreInteractions(actorDefinitionHandlerHelper);

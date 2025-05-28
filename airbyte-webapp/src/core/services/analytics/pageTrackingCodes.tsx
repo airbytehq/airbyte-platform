@@ -10,6 +10,7 @@ export enum PageTrackingCodes {
   DESTINATION_ITEM = "Destination.Item",
   DESTINATION_ITEM_SETTINGS = "Destination.Item.Settings",
   CONNECTIONS_NEW = "Connections.New",
+  CONNECTIONS_NEW_DATA_ACTIVATION = "Connections.NewDataAcvitation",
   CONNECTIONS_NEW_DEFINE_SOURCE = "Connections.New.DefineSource",
   CONNECTIONS_NEW_DEFINE_DESTINATION = "Connections.New.DefineDestination",
   CONNECTIONS_NEW_SELECT_STREAMS = "Connections.New.SelectStreams",

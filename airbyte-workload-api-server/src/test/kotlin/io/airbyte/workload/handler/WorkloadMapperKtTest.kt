@@ -39,6 +39,8 @@ class WorkloadMapperKtTest {
         lastHeartbeatAt = lastHeartbeatAt,
         workloadLabels = listOf(WorkloadLabel(id = UUID.randomUUID(), key = "key", value = "value")),
         inputPayload = "inputPayload",
+        workspaceId = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
         logPath = "log/path",
         mutexKey = "mutexKey",
         type = WorkloadType.SYNC,
@@ -68,6 +70,8 @@ class WorkloadMapperKtTest {
     assertEquals(domainWorkload.signalInput, apiWorkload.signalInput)
     assertEquals(domainWorkload.dataplaneGroup, apiWorkload.dataplaneGroup)
     assertEquals(expectedApiPriority, apiWorkload.priority)
+    assertEquals(domainWorkload.workspaceId, apiWorkload.workspaceId)
+    assertEquals(domainWorkload.organizationId, apiWorkload.organizationId)
   }
 
   @Test

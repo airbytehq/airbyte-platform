@@ -120,6 +120,7 @@ export const useCreateDestinationDefinition = () => {
 export const useUpdateDestinationDefinition = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
+  const workspaceId = useCurrentWorkspaceId();
 
   return useMutation<
     DestinationDefinitionRead,
@@ -128,7 +129,7 @@ export const useUpdateDestinationDefinition = () => {
       destinationDefinitionId: string;
       dockerImageTag: string;
     }
-  >((destinationDefinition) => updateDestinationDefinition(destinationDefinition, requestOptions), {
+  >((destinationDefinition) => updateDestinationDefinition({ ...destinationDefinition, workspaceId }, requestOptions), {
     onSuccess: (data) => {
       queryClient.setQueryData(destinationDefinitionKeys.detail(data.destinationDefinitionId), data);
 

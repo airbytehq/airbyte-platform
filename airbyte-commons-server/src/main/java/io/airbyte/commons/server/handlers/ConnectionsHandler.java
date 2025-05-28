@@ -76,7 +76,6 @@ import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileT
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.converters.ApiConverters;
 import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
@@ -140,6 +139,7 @@ import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
@@ -237,6 +237,7 @@ public class ConnectionsHandler {
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
   private final WorkspaceService workspaceService;
+  private final DataplaneGroupService dataplaneGroupService;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final CatalogConverter catalogConverter;
@@ -272,6 +273,7 @@ public class ConnectionsHandler {
                             final DestinationService destinationService,
                             final ConnectionService connectionService,
                             final WorkspaceService workspaceService,
+                            final DataplaneGroupService dataplaneGroupService,
                             final DestinationCatalogGenerator destinationCatalogGenerator,
                             final CatalogConverter catalogConverter,
                             final ApplySchemaChangeHelper applySchemaChangeHelper,
@@ -305,6 +307,7 @@ public class ConnectionsHandler {
     this.destinationService = destinationService;
     this.connectionService = connectionService;
     this.workspaceService = workspaceService;
+    this.dataplaneGroupService = dataplaneGroupService;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
     this.catalogConverter = catalogConverter;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
@@ -381,14 +384,6 @@ public class ConnectionsHandler {
       sync.setResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
     }
 
-    if (patch.getGeography() != null) {
-      if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(patch.getGeography())) {
-        sync.setGeography(DataplaneConstantsKt.GEOGRAPHY_US);
-      } else {
-        sync.setGeography(patch.getGeography());
-      }
-    }
-
     if (patch.getBreakingChange() != null) {
       sync.setBreakingChange(patch.getBreakingChange());
     }
@@ -411,6 +406,10 @@ public class ConnectionsHandler {
 
     if (patch.getTags() != null) {
       sync.setTags(patch.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
+    }
+
+    if (patch.getDataplaneGroupId() != null) {
+      sync.setDataplaneGroupId(patch.getDataplaneGroupId());
     }
   }
 
@@ -578,7 +577,7 @@ public class ConnectionsHandler {
         .withOperationIds(operationIds)
         .withStatus(apiPojoConverters.toPersistenceStatus(connectionCreate.getStatus()))
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
-        .withGeography(getGeographyFromConnectionCreateOrWorkspace(connectionCreate))
+        .withDataplaneGroupId(getDataplaneGroupIdFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
@@ -614,6 +613,7 @@ public class ConnectionsHandler {
             null);
       }
 
+      applyDefaultIncludeFiles(connectionCreate.getSyncCatalog(), sourceVersion, destinationVersion);
       assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
           catalogConverter.toConfiguredInternal(connectionCreate.getSyncCatalog());
@@ -659,31 +659,21 @@ public class ConnectionsHandler {
   }
 
   @VisibleForTesting
-  String getGeographyFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+  UUID getDataplaneGroupIdFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
+      throws JsonValidationException, ConfigNotFoundException, IOException {
 
-    String geography;
-
-    if (connectionCreate.getGeography() != null) {
-      geography = connectionCreate.getGeography();
+    if (connectionCreate.getDataplaneGroupId() != null) {
+      return connectionCreate.getDataplaneGroupId();
     } else {
-      // connectionCreate didn't specify a geography, so use the workspace default geography if one exists
+      // connectionCreate didn't specify a dataplane group ID, so use the workspace default if one exists
       final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
       final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
 
-      if (workspace.getDefaultGeography() != null) {
-        geography = workspace.getDefaultGeography();
-      } else {
-        // if the workspace doesn't have a default geography, default to 'auto'
-        geography = DataplaneConstantsKt.GEOGRAPHY_AUTO;
+      if (workspace.getDataplaneGroupId() != null) {
+        return workspace.getDataplaneGroupId();
       }
     }
-
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(geography)) {
-      geography = DataplaneConstantsKt.GEOGRAPHY_US;
-    }
-
-    return geography;
+    return dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).getId();
   }
 
   private void populateSyncFromLegacySchedule(final StandardSync standardSync, final ConnectionCreate connectionCreate) {
@@ -796,6 +786,7 @@ public class ConnectionsHandler {
       final ActorDefinitionVersion destinationVersion = actorDefinitionVersionHelper
           .getDestinationVersion(destinationDefinition, workspaceId, sync.getDestinationId());
       validateCatalogIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
+      applyDefaultIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
     }
 
     if (isPatchRelevantForDestinationValidation(connectionPatch)
@@ -1861,6 +1852,32 @@ public class ConnectionsHandler {
       map.put(streamDescriptor, stat);
     }
     return map;
+  }
+
+  /**
+   * Applies defaults to the config of a sync catalog based off catalog and actor definition versions.
+   * Mainly here to apply includeFiles default logic — this can be deleted once we default to
+   * includesFiles to true from the UI. Mutates!
+   */
+  @VisibleForTesting
+  protected AirbyteCatalog applyDefaultIncludeFiles(
+                                                    final AirbyteCatalog catalog,
+                                                    final ActorDefinitionVersion sourceVersion,
+                                                    final ActorDefinitionVersion destinationVersion) {
+    if (!sourceVersion.getSupportsFileTransfer()) {
+      return catalog;
+    }
+
+    for (final AirbyteStreamAndConfiguration pair : catalog.getStreams()) {
+      final var streamIsFileBased = pair.getStream().getIsFileBased() != null && pair.getStream().getIsFileBased();
+      final var includeFilesIsUnset = pair.getConfig().getIncludeFiles() == null;
+      if (streamIsFileBased && includeFilesIsUnset) {
+        final var defaultValue = destinationVersion.getSupportsFileTransfer();
+        pair.getConfig().setIncludeFiles(defaultValue);
+      }
+    }
+
+    return catalog;
   }
 
 }

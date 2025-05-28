@@ -14,7 +14,6 @@ import static io.temporal.workflow.Workflow.DEFAULT_VERSION;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
@@ -53,10 +52,13 @@ import io.temporal.failure.CanceledFailure;
 import io.temporal.workflow.CancellationScope;
 import io.temporal.workflow.ChildWorkflowOptions;
 import io.temporal.workflow.Workflow;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,8 +74,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
 
   private static final HashFunction HASH_FUNCTION = Hashing.md5();
 
+  private static final String GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY = "generate_replication_activity_input_activity";
+  private static final int GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY_VERSION = 1;
+
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ConfigFetchActivity configFetchActivity;
+  @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
+  private GenerateReplicationActivityInputActivity generateReplicationActivityInputActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
   private ReportRunTimeActivity reportRunTimeActivity;
   @TemporalActivityStub(activityOptionsBeanName = "shortActivityOptions")
@@ -93,12 +100,13 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     this.shouldBlock = false;
   }
 
+  @NotNull
   @Trace(operationName = WORKFLOW_TRACE_OPERATION_NAME)
   @Override
   public StandardSyncOutput run(final JobRunConfig jobRunConfig,
                                 final IntegrationLauncherConfig sourceLauncherConfig,
                                 final IntegrationLauncherConfig destinationLauncherConfig,
-                                final StandardSyncInput syncInput,
+                                @NotNull final StandardSyncInput syncInput,
                                 final UUID connectionId) {
 
     final long startTime = Workflow.currentTimeMillis();
@@ -212,7 +220,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
           .withConnectionConfiguration(syncInput.getSourceConfiguration())
           .withSourceId(syncInput.getSourceId().toString())
           .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(sourceConfig).getBytes(
-              Charsets.UTF_8)).toString())
+              StandardCharsets.UTF_8)).toString())
           .withConnectorVersion(DockerImageName.INSTANCE.extractTag(sourceLauncherConfig.getDockerImage()))
           .withManual(false);
       final ConnectorCommandWorkflow childDiscoverWorkflow = Workflow.newChildWorkflowStub(
@@ -250,27 +258,17 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     } else {
       signalInput = null;
     }
-    return new ReplicationActivityInput(
-        syncInput.getSourceId(),
-        syncInput.getDestinationId(),
-        syncInput.getSourceConfiguration(),
-        syncInput.getDestinationConfiguration(),
-        jobRunConfig,
-        sourceLauncherConfig,
-        destinationLauncherConfig,
-        syncInput.getSyncResourceRequirements(),
-        syncInput.getWorkspaceId(),
-        syncInput.getConnectionId(),
-        taskQueue,
-        syncInput.getIsReset(),
-        syncInput.getNamespaceDefinition(),
-        syncInput.getNamespaceFormat(),
-        syncInput.getPrefix(),
-        refreshSchemaOutput,
-        syncInput.getConnectionContext(),
-        signalInput,
-        syncInput.getNetworkSecurityTokens(),
-        syncInput.getIncludesFiles());
+    final int version =
+        Workflow.getVersion(GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY, Workflow.DEFAULT_VERSION,
+            GENERATE_REPLICATION_ACTIVITY_INPUT_ACTIVITY_VERSION);
+    if (version == Workflow.DEFAULT_VERSION) {
+      return GenerateReplicationActivityInputActivity.toReplicationActivityInput(syncInput, jobRunConfig,
+          sourceLauncherConfig, destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput,
+          Map.of(), TimeUnit.HOURS.toSeconds(24), false, null, null);
+    } else {
+      return generateReplicationActivityInputActivity.generate(syncInput, jobRunConfig, sourceLauncherConfig,
+          destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput);
+    }
   }
 
 }

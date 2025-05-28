@@ -9,6 +9,7 @@ import { Icon } from "components/ui/Icon";
 import { ThemeToggle } from "components/ui/ThemeToggle";
 import { WorkspacesPicker } from "components/workspace/WorkspacesPicker";
 
+import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { ConnectorBuilderRoutePaths } from "pages/connectorBuilder/ConnectorBuilderRoutes";
@@ -43,6 +44,9 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
     return user?.name?.trim() || user?.email?.trim();
   }, [authType, user?.name, user?.email, formatMessage]);
 
+  const workspaceId = useCurrentWorkspaceId();
+  const workspacesPath = `${RoutePaths.Workspaces}/${workspaceId}/`;
+
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteHomeLink />
@@ -57,31 +61,31 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
           <NavItem
             label={<FormattedMessage id="sidebar.connections" />}
             icon="connection"
-            to={RoutePaths.Connections}
+            to={workspacesPath + RoutePaths.Connections}
             testId="connectionsLink"
           />
           <NavItem
             label={<FormattedMessage id="sidebar.sources" />}
             icon="source"
-            to={RoutePaths.Source}
+            to={workspacesPath + RoutePaths.Source}
             testId="sourcesLink"
           />
           <NavItem
             label={<FormattedMessage id="sidebar.destinations" />}
             icon="destination"
             testId="destinationsLink"
-            to={RoutePaths.Destination}
+            to={workspacesPath + RoutePaths.Destination}
           />
           <NavItem
             label={<FormattedMessage id="sidebar.builder" />}
             icon="wrench"
             testId="builderLink"
-            to={RoutePaths.ConnectorBuilder}
+            to={workspacesPath + RoutePaths.ConnectorBuilder}
           />
           <NavItem
             label={<FormattedMessage id="sidebar.settings" />}
             icon="gear"
-            to={RoutePaths.Settings}
+            to={workspacesPath + RoutePaths.Settings}
             withNotification={settingHighlight}
           />
         </MenuContent>
@@ -97,7 +101,7 @@ export const SideBar: React.FC<PropsWithChildren<SideBarProps>> = ({ bottomSlot,
               options={[
                 {
                   as: "a",
-                  href: RoutePaths.Settings,
+                  href: workspacesPath + RoutePaths.Settings,
                   displayName: formatMessage({ id: "sidebar.userSettings" }),
                   internal: true,
                   icon: <Icon type="gear" />,

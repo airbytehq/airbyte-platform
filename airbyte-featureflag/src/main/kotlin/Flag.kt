@@ -18,7 +18,7 @@ package io.airbyte.featureflag
  */
 sealed class Flag<T>(
   val key: String,
-  internal var default: T,
+  val default: T,
   internal val attrs: Map<String, String> = mapOf(),
 )
 

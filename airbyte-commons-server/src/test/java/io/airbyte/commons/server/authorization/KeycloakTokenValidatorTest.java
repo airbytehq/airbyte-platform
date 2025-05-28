@@ -5,20 +5,20 @@
 package io.airbyte.commons.server.authorization;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
 import io.micronaut.security.authentication.Authentication;
+import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -69,7 +69,7 @@ class KeycloakTokenValidatorTest {
   private KeycloakTokenValidator keycloakTokenValidator;
   private OkHttpClient httpClient;
   private AirbyteKeycloakConfiguration keycloakConfiguration;
-  private TokenRoleResolver tokenRoleResolver;
+  private JwtAuthenticationFactory authenticationFactory;
 
   @BeforeEach
   void setUp() {
@@ -82,9 +82,9 @@ class KeycloakTokenValidatorTest {
     keycloakConfiguration = mock(AirbyteKeycloakConfiguration.class);
     when(keycloakConfiguration.getKeycloakUserInfoEndpointForRealm(any())).thenReturn(LOCALHOST + URI_PATH);
     when(keycloakConfiguration.getInternalRealm()).thenReturn(INTERNAL_REALM_NAME);
-    tokenRoleResolver = mock(TokenRoleResolver.class);
+    authenticationFactory = mock(JwtAuthenticationFactory.class);
 
-    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, tokenRoleResolver, Optional.empty());
+    keycloakTokenValidator = new KeycloakTokenValidator(httpClient, keycloakConfiguration, authenticationFactory, Optional.empty());
   }
 
   @Test
@@ -98,8 +98,8 @@ class KeycloakTokenValidatorTest {
     final Set<String> mockedRoles =
         Set.of("ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER", "ADMIN", "EDITOR", "READER");
 
-    when(tokenRoleResolver.resolveRoles(eq(expectedUserId), any(HttpRequest.class)))
-        .thenReturn(mockedRoles);
+    when(authenticationFactory.createAuthentication(any()))
+        .thenReturn(Optional.of(Authentication.build(expectedUserId, mockedRoles)));
 
     StepVerifier.create(responsePublisher)
         .expectNextMatches(r -> matchSuccessfulResponse(r, expectedUserId, mockedRoles))
@@ -118,10 +118,10 @@ class KeycloakTokenValidatorTest {
 
     final Publisher<Authentication> responsePublisher = keycloakTokenValidator.validateToken(accessToken, httpRequest);
 
-    verifyNoInteractions(tokenRoleResolver);
+    verifyNoInteractions(authenticationFactory);
 
     StepVerifier.create(responsePublisher)
-        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, RbacRoleHelper.getInstanceAdminRoles()))
+        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, AuthRole.getInstanceAdminRoles()))
         .verifyComplete();
   }
 

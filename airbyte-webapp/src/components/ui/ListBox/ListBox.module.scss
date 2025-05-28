@@ -3,10 +3,10 @@
 @use "scss/z-indices";
 
 .button {
+  padding: 0 variables.$spacing-md;
   width: 100%;
   cursor: pointer;
   background-color: initial;
-  color: colors.$dark-blue;
   border: variables.$border-thin solid colors.$grey-200;
   border-radius: variables.$border-radius-sm;
   padding-inline: variables.$spacing-md;

@@ -38,6 +38,19 @@ import { useDocumentationPanelContext } from "views/Connector/ConnectorDocumenta
 
 import styles from "./DocumentationPanel.module.scss";
 
+const DocumentationLoadingPage: React.FC = () => (
+  <FlexContainer className={styles.container} direction="column" gap="none">
+    <FlexContainer alignItems="center" className={styles.header} justifyContent="space-between">
+      <Heading as="h1">
+        <FormattedMessage id="connector.setupGuide" />
+      </Heading>
+    </FlexContainer>
+    <div className={styles.content}>
+      <LoadingPage />
+    </div>
+  </FlexContainer>
+);
+
 const OSS_ENV_MARKERS = /<!-- env:oss -->([\s\S]*?)<!-- \/env:oss -->/gm;
 const CLOUD_ENV_MARKERS = /<!-- env:cloud -->([\s\S]*?)<!-- \/env:cloud -->/gm;
 
@@ -213,7 +226,7 @@ export const DocumentationPanel: React.FC = () => {
   }, [actorType]);
 
   return isLoading || !selectedConnectorDefinition?.documentationUrl ? (
-    <LoadingPage />
+    <DocumentationLoadingPage />
   ) : (
     <FlexContainer className={styles.container} direction="column" gap="none">
       <FlexContainer alignItems="center" className={styles.header} justifyContent="space-between">

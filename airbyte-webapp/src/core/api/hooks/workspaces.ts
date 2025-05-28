@@ -40,10 +40,27 @@ export const workspaceKeys = {
 };
 type WorkspacesCount = { count: "zero" } | { count: "one"; workspace: WorkspaceRead } | { count: "multiple" };
 
+/**
+ * Returns the current workspace. Throws an error if the user isn't inside a workspace.
+ */
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
 
+  // NOTE: Do we even want to throw this error?
+  if (!workspaceId) {
+    throw new Error("Called useCurrentWorkspace outside of a workspace");
+  }
+
   return useGetWorkspace(workspaceId);
+};
+
+/**
+ * Returns the current workspace or undefined if the user isn't inside a workspace.
+ * Use this hook when you need to handle both workspace and non-workspace contexts.
+ */
+export const useCurrentWorkspaceOrUndefined = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  return useGetWorkspace(workspaceId, { enabled: Boolean(workspaceId) });
 };
 
 export const getCurrentWorkspaceStateQueryKey = (workspaceId: string) => {
@@ -239,9 +256,14 @@ export const useListWorkspaceAccessUsers = (workspaceId: string) => {
 export const useIsForeignWorkspace = () => {
   const { userId } = useCurrentUser();
   const { permissions } = useListPermissions(userId);
-  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const workspace = useCurrentWorkspace();
+
+  if (!workspace) {
+    return false;
+  }
 
   return !permissions.some(
-    (permission) => permission.workspaceId === workspaceId || permission.organizationId === organizationId
+    (permission) =>
+      permission.workspaceId === workspace.workspaceId || permission.organizationId === workspace.organizationId
   );
 };

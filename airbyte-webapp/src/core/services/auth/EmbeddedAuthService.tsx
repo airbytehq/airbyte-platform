@@ -3,6 +3,8 @@ import { PropsWithChildren, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useCookie } from "react-use";
 
+import { ALLOWED_ORIGIN_PARAM } from "pages/embedded/EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
+
 import { AuthContext } from "./AuthContext";
 
 /**
@@ -11,7 +13,6 @@ import { AuthContext } from "./AuthContext";
  */
 
 const SCOPED_AUTH_TOKEN_COOKIE = "_airbyte_scoped_auth_token";
-export const ALLOWED_ORIGIN_SEARCH_PARAM = "allowedOrigin";
 
 interface ScopedAuthMessage {
   scopedAuthToken: string;
@@ -19,7 +20,7 @@ interface ScopedAuthMessage {
 
 const useScopedAuthToken = () => {
   const [searchParams] = useSearchParams();
-  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_SEARCH_PARAM);
+  const allowedOriginParam = searchParams.get(ALLOWED_ORIGIN_PARAM);
 
   const allowedOrigin = allowedOriginParam ? decodeURIComponent(allowedOriginParam) : "";
   const [token, setToken, deleteToken] = useCookie(SCOPED_AUTH_TOKEN_COOKIE);
@@ -36,6 +37,11 @@ const useScopedAuthToken = () => {
 
     window.parent.postMessage("auth_token_request", allowedOrigin);
 
+    // Set a timeout to log if no response is received within 5 seconds
+    const timeoutId = setTimeout(() => {
+      console.error("No auth token response received from allowed origin after 5 seconds");
+    }, 5000);
+
     const messageHandler = (event: MessageEvent<ScopedAuthMessage>) => {
       try {
         if (event.origin !== allowedOrigin) {
@@ -43,6 +49,9 @@ const useScopedAuthToken = () => {
         }
 
         if (event.data?.scopedAuthToken) {
+          // Clear the timeout as we received a response
+          clearTimeout(timeoutId);
+
           const expiry = jwtDecode(event.data.scopedAuthToken).exp;
           setToken(event.data.scopedAuthToken, {
             expires: expiry ? new Date(expiry * 1000) : new Date(),
@@ -59,6 +68,7 @@ const useScopedAuthToken = () => {
 
     return () => {
       window.removeEventListener("message", messageHandler);
+      clearTimeout(timeoutId);
     };
   }, [allowedOrigin, token, deleteToken, setToken]);
 

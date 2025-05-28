@@ -13,7 +13,7 @@ import { Tooltip } from "components/ui/Tooltip";
 import { getDataType } from "area/connection/utils";
 import { AirbyteStreamConfiguration, DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
@@ -44,7 +44,7 @@ export const StreamFieldNameCell: React.FC<StreamFieldNameCellProps> = ({
   const isMappingsUIEnabled = useExperiment("connection.mappingsUI");
   const isColumnSelectionEnabled = useExperiment("connection.columnSelection");
   const { formatMessage } = useIntl();
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
 
   if (!row.original.streamNode) {
     return null;

@@ -18,6 +18,7 @@ import io.airbyte.workload.api.domain.WorkloadQueuePollRequest
 import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.errors.InvalidStatusTransitionException
 import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.ApiWorkload
@@ -74,10 +75,10 @@ class WorkloadApiTest(
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
-    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
+    every { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } just Runs
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/create", Jsons.serialize(WorkloadCreateRequest())), HttpStatus.NO_CONTENT)
-    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+    verify(exactly = 1) { workloadHandler.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) }
     verify(exactly = 1) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
   }
 

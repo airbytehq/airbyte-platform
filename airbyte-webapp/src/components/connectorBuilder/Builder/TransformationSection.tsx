@@ -12,19 +12,18 @@ import { manifestTransformationsToBuilder } from "../convertManifestToBuilderFor
 import {
   BuilderTransformation,
   DownloadRequesterPathFn,
-  StreamPathFn,
+  AnyDeclarativeStreamPathFn,
+  StreamId,
   builderTransformationsToManifest,
 } from "../types";
+import { StreamFieldPath } from "../utils";
 
 interface TransformationSectionProps {
-  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
-  currentStreamIndex: number;
+  streamFieldPath: AnyDeclarativeStreamPathFn | DownloadRequesterPathFn;
+  streamId: StreamId;
 }
 
-export const TransformationSection: React.FC<TransformationSectionProps> = ({
-  streamFieldPath,
-  currentStreamIndex,
-}) => {
+export const TransformationSection: React.FC<TransformationSectionProps> = ({ streamFieldPath, streamId }) => {
   const { formatMessage } = useIntl();
 
   const getTransformationOptions = (buildPath: (path: string) => string): Array<OneOfOption<BuilderTransformation>> => [
@@ -79,11 +78,15 @@ export const TransformationSection: React.FC<TransformationSectionProps> = ({
           manifestToBuilder: manifestTransformationsToBuilder,
         },
       }}
-      copyConfig={{
-        path: streamFieldPath("transformations"),
-        currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        streamId.type === "stream"
+          ? {
+              path: streamFieldPath("transformations") as StreamFieldPath,
+              currentStreamIndex: streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       <BuilderList
         addButtonLabel={formatMessage({ id: "connectorBuilder.addNewTransformation" })}

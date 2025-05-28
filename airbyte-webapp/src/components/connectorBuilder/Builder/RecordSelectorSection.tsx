@@ -8,17 +8,20 @@ import { BuilderCard } from "./BuilderCard";
 import { BuilderField } from "./BuilderField";
 import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import { manifestRecordSelectorToBuilder } from "../convertManifestToBuilderForm";
-import { DownloadRequesterPathFn, StreamPathFn, builderRecordSelectorToManifest } from "../types";
+import {
+  AnyDeclarativeStreamPathFn,
+  DownloadRequesterPathFn,
+  StreamId,
+  builderRecordSelectorToManifest,
+} from "../types";
+import { StreamFieldPath } from "../utils";
 
 interface RecordSelectorSectionProps {
-  streamFieldPath: StreamPathFn | DownloadRequesterPathFn;
-  currentStreamIndex: number;
+  streamFieldPath: AnyDeclarativeStreamPathFn | DownloadRequesterPathFn;
+  streamId: StreamId;
 }
 
-export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
-  streamFieldPath,
-  currentStreamIndex,
-}) => {
+export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({ streamFieldPath, streamId }) => {
   const { formatMessage } = useIntl();
   const label = getLabelByManifest("RecordSelector");
 
@@ -27,7 +30,7 @@ export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
       docLink={links.connectorBuilderRecordSelector}
       label={label}
       tooltip={getDescriptionByManifest("RecordSelector")}
-      labelAction={<AssistButton assistKey="record_selector" streamNum={currentStreamIndex} />}
+      labelAction={<AssistButton assistKey="record_selector" streamId={streamId} />}
       inputsConfig={{
         toggleable: true,
         path: streamFieldPath("recordSelector"),
@@ -40,11 +43,15 @@ export const RecordSelectorSection: React.FC<RecordSelectorSectionProps> = ({
           manifestToBuilder: manifestRecordSelectorToBuilder,
         },
       }}
-      copyConfig={{
-        path: streamFieldPath("recordSelector"),
-        currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        streamId.type === "stream"
+          ? {
+              path: streamFieldPath("recordSelector") as StreamFieldPath,
+              currentStreamIndex: streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       <BuilderField
         type="array"

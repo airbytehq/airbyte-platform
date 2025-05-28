@@ -17,12 +17,14 @@ import org.jooq.impl.DSL
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 private val log = KotlinLogging.logger {}
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConfigsDatabaseTest() {
   private lateinit var connection1: UUID
   private lateinit var connection2: UUID

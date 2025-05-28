@@ -30,6 +30,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
   placement = "bottom",
   displacement = 5,
   textSize = "lg",
+  style = {},
   ...restProps
 }) => {
   const { x, y, reference, floating, strategy } = useFloating({
@@ -92,6 +93,7 @@ export const DropdownMenu: React.FC<DropdownMenuProps> = ({
                 position: strategy,
                 top: y ?? 0,
                 left: x ?? 0,
+                ...style,
               }}
             >
               {options.map((item, index) => {

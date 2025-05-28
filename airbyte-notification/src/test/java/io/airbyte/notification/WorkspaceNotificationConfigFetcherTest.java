@@ -44,7 +44,7 @@ class WorkspaceNotificationConfigFetcherTest {
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(connectionId)))
         .thenReturn(
             new WorkspaceRead(UUID.randomUUID(), UUID.randomUUID(), "name", "slug", true, UUID.randomUUID(), email, null, null, null, null, null,
-                new NotificationSettings(null, null, null, null, null, notificationItem, null, null), null, null, null, UUID.randomUUID(), null, null,
+                new NotificationSettings(null, null, null, null, null, notificationItem, null, null), null, null, null, null, null,
                 null));
 
     NotificationItemWithCustomerIoConfig result =

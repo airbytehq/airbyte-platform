@@ -1,5 +1,10 @@
-@use "./StreamConfigView.module.scss";
+/* stylelint-disable airbyte/no-use-renaming */
+@import "./StreamConfigView.module";
+
+.fullHeight {
+  height: 100%;
+}
 
 .streamNameInput {
-  @include mixins.streamNameInput;
+  @extend %streamNameInput;
 }

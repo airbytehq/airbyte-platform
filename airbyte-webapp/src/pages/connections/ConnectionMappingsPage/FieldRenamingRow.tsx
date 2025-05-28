@@ -6,12 +6,17 @@ import { fieldRenamingMapperConfiguration } from "components/connection/Connecti
 import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Text } from "components/ui/Text";
 
-import { FieldRenamingMapperConfiguration, StreamMapperType } from "core/api/types/AirbyteClient";
+import {
+  FieldRenamingMapperConfiguration,
+  MapperValidationErrorType,
+  StreamMapperType,
+} from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
 import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./MappingRow";
 import { MappingTypeListBox } from "./MappingTypeListBox";
+import { MappingValidationErrorMessage } from "./MappingValidationErrorMessage";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 
@@ -42,8 +47,14 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
   });
 
   useEffect(() => {
-    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
-      methods.setError("originalFieldName", { message: mapping.validationError.message });
+    if (
+      mapping.validationError &&
+      mapping.validationError.type === MapperValidationErrorType.FIELD_NOT_FOUND &&
+      "originalFieldName" in methods.formState.touchedFields
+    ) {
+      methods.setError("originalFieldName", {
+        message: "connections.mappings.error.FIELD_NOT_FOUND",
+      });
     } else {
       methods.clearErrors("originalFieldName");
     }
@@ -87,11 +98,10 @@ export const FieldRenamingRow: React.FC<FieldRenamingRowProps> = ({ mapping, str
             <FormControlErrorMessage<FieldRenamingMapperConfiguration> name="newFieldName" />
           </MappingRowItem>
         </MappingRowContent>
-        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
-          <Text italicized color="red">
-            {mapping.validationError.message}
-          </Text>
-        )}
+        <MappingValidationErrorMessage<FieldRenamingMapperConfiguration>
+          validationError={mapping.validationError}
+          touchedFields={methods.formState.touchedFields}
+        />
       </form>
     </FormProvider>
   );

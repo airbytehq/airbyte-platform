@@ -68,6 +68,26 @@ sealed interface FeatureFlagClient {
     flag: Flag<Int>,
     context: Context,
   ): Int
+
+  /**
+   * Calculates the value of the [flag] for the given [context].  This method
+   * defers to the typed variants of this method declared in this client.
+   *
+   * Returns the [flag] default value if no calculated value exists
+   */
+  @Suppress("UNCHECKED_CAST")
+  fun <T> variation(
+    flag: Flag<T>,
+    context: Context,
+  ): T =
+    when (flag.default) {
+      is Boolean -> boolVariation(flag = flag as Flag<Boolean>, context = context)
+      is Int -> intVariation(flag = flag as Flag<Int>, context = context)
+      is String -> stringVariation(flag = flag as Flag<String>, context = context)
+      else -> throw IllegalArgumentException(
+        "Unsupported flag type: ${if (flag.default != null) flag.default::class.java.name else null}",
+      ) as Throwable
+    } as T
 }
 
 /** Config key used to determine which [FeatureFlagClient] to expose. */

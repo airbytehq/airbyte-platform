@@ -12,6 +12,7 @@ import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * A class holding the input to the Temporal replication activity.
@@ -60,4 +61,10 @@ data class ReplicationActivityInput(
   val signalInput: String? = null,
   val networkSecurityTokens: List<String>? = null,
   val includesFiles: Boolean? = false,
+  val omitFileTransferEnvVar: Boolean? = false,
+  val featureFlags: Map<String, Any> = emptyMap(),
+  val heartbeatMaxSecondsBetweenMessages: Long? = TimeUnit.HOURS.toSeconds(24),
+  val supportsRefreshes: Boolean = false,
+  val sourceIPCOptions: JsonNode? = null,
+  val destinationIPCOptions: JsonNode? = null,
 )

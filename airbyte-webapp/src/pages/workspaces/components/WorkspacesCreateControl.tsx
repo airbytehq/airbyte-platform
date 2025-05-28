@@ -86,7 +86,7 @@ export const WorkspacesCreateControl: React.FC = () => {
             onClick={toggleMode}
             variant="secondary"
             data-testid="workspaces.createNew"
-            size="lg"
+            size="sm"
             icon="plus"
             className={styles.createButton}
           >

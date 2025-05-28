@@ -40,8 +40,8 @@ import io.airbyte.workers.storage.activities.OutputStorageClient;
 import io.airbyte.workers.sync.WorkloadApiWorker;
 import io.airbyte.workers.sync.WorkloadClient;
 import io.airbyte.workers.workload.DataplaneGroupResolver;
-import io.airbyte.workers.workload.JobOutputDocStore;
 import io.airbyte.workers.workload.WorkloadIdGenerator;
+import io.airbyte.workers.workload.WorkloadOutputWriter;
 import io.airbyte.workload.api.client.WorkloadApiClient;
 import io.temporal.activity.Activity;
 import jakarta.inject.Named;
@@ -68,7 +68,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
   private final Path workspaceRoot;
   private final WorkloadApiClient workloadApiClient;
   private final WorkloadClient workloadClient;
-  private final JobOutputDocStore jobOutputDocStore;
+  private final WorkloadOutputWriter workloadOutputWriter;
   private final WorkloadIdGenerator workloadIdGenerator;
   private final MetricClient metricClient;
   private final FeatureFlagClient featureFlagClient;
@@ -79,7 +79,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
 
   public AsyncReplicationActivityImpl(
                                       @Named("workspaceRoot") final Path workspaceRoot,
-                                      final JobOutputDocStore jobOutputDocStore,
+                                      final WorkloadOutputWriter workloadOutputWriter,
                                       final WorkloadApiClient workloadApiClient,
                                       final WorkloadClient workloadClient,
                                       final WorkloadIdGenerator workloadIdGenerator,
@@ -91,7 +91,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                       final DataplaneGroupResolver dataplaneGroupResolver) {
     this.replicationInputMapper = new ReplicationInputMapper();
     this.workspaceRoot = workspaceRoot;
-    this.jobOutputDocStore = jobOutputDocStore;
+    this.workloadOutputWriter = workloadOutputWriter;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
@@ -106,7 +106,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
   @VisibleForTesting
   AsyncReplicationActivityImpl(final ReplicationInputMapper replicationInputMapper,
                                @Named("workspaceRoot") final Path workspaceRoot,
-                               final JobOutputDocStore jobOutputDocStore,
+                               final WorkloadOutputWriter workloadOutputWriter,
                                final WorkloadApiClient workloadApiClient,
                                final WorkloadClient workloadClient,
                                final WorkloadIdGenerator workloadIdGenerator,
@@ -118,7 +118,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
                                final DataplaneGroupResolver dataplaneGroupResolver) {
     this.replicationInputMapper = replicationInputMapper;
     this.workspaceRoot = workspaceRoot;
-    this.jobOutputDocStore = jobOutputDocStore;
+    this.workloadOutputWriter = workloadOutputWriter;
     this.workloadApiClient = workloadApiClient;
     this.workloadClient = workloadClient;
     this.workloadIdGenerator = workloadIdGenerator;
@@ -201,7 +201,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
       final var workerAndReplicationInput = getWorkerAndReplicationInput(replicationActivityInput);
       final WorkloadApiWorker worker = workerAndReplicationInput.worker;
 
-      final var output = worker.getOutput(workloadId);
+      final ReplicationOutput output = worker.getOutput(workloadId);
       return finalizeOutput(replicationActivityInput, output);
     } catch (final Exception e) {
       ApmTraceUtils.addActualRootCauseToTrace(e);
@@ -254,7 +254,7 @@ public class AsyncReplicationActivityImpl implements AsyncReplicationActivity {
     final WorkloadApiWorker worker;
 
     replicationInput = replicationInputMapper.toReplicationInput(replicationActivityInput);
-    worker = new WorkloadApiWorker(jobOutputDocStore, workloadApiClient,
+    worker = new WorkloadApiWorker(workloadOutputWriter, workloadApiClient,
         workloadClient, workloadIdGenerator, replicationActivityInput, featureFlagClient, logClientManager, dataplaneGroupResolver);
 
     return new WorkerAndReplicationInput(worker, replicationInput);

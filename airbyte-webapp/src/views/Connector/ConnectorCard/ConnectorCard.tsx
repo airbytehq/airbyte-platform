@@ -12,8 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
-import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { ErrorWithJobInfo } from "core/api";
+import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -26,6 +25,7 @@ import { isCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
+import { useExperiment } from "hooks/services/Experiment";
 import { ConnectorCardValues, ConnectorForm, ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { Controls } from "./components/Controls";
@@ -80,6 +80,35 @@ const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
   return "sourceId" in connectorRead ? connectorRead.sourceId : connectorRead.destinationId;
 };
 
+/**
+ * Prepares the configuration for creating a source config template
+ */
+const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: string, organizationId: string) => {
+  const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
+
+  return {
+    organizationId,
+    actorDefinitionId: definitionId,
+    partialDefaultConfig,
+  };
+};
+
+/**
+ * Prepares the configuration for creating a destination config template
+ */
+const prepareDestinationConfigTemplate = (
+  values: ConnectorFormValues,
+  definitionId: string,
+  organizationId: string
+) => {
+  return {
+    organizationId,
+    destinationName: values.name,
+    destinationConfiguration: values.connectionConfiguration,
+    destinationActorDefinitionId: definitionId,
+  };
+};
+
 export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
   onSubmit,
   onDeleteClick,
@@ -94,7 +123,12 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
   const [errorStatusRequest, setErrorStatusRequest] = useState<Error | null>(null);
   const { formatMessage } = useIntl();
-  const workspaceId = useCurrentWorkspaceId();
+  const { organizationId, workspaceId } = useCurrentWorkspace();
+  const { mutate: createConfigTemplate } = useCreateConfigTemplate();
+  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
+  const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
+  const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
+  const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
   const {
@@ -120,10 +154,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     selectedConnectorDefinitionId ||
     (selectedConnectorDefinitionSpecification && ConnectorSpecification.id(selectedConnectorDefinitionSpecification));
 
-  const selectedConnectorDefinition = useMemo(
-    () => availableConnectorDefinitions.find((s) => Connector.id(s) === selectedConnectorDefinitionSpecificationId),
-    [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]
-  );
+  const selectedConnectorDefinition = useMemo(() => {
+    const definition = availableConnectorDefinitions.find(
+      (s) => Connector.id(s) === selectedConnectorDefinitionSpecificationId
+    );
+    if (!definition) {
+      throw new Error(`Connector definition not found for id: ${selectedConnectorDefinitionSpecificationId}`);
+    }
+    return definition;
+  }, [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]);
 
   // Handle Doc panel
   useEffect(() => {
@@ -200,8 +239,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     if (isEditMode && connector) {
       return connector;
     }
-    return { name: selectedConnectorDefinition?.name };
-  }, [isEditMode, connector, selectedConnectorDefinition?.name]);
+    return { name: selectedConnectorDefinition.name };
+  }, [isEditMode, connector, selectedConnectorDefinition.name]);
 
   return (
     <ConnectorForm
@@ -215,7 +254,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
             <div className={styles.loaderContainer}>
               <Spinner />
               <div className={styles.loadingMessage}>
-                <ShowLoadingMessage connector={selectedConnectorDefinition?.name} />
+                <ShowLoadingMessage connector={selectedConnectorDefinition.name} />
               </div>
             </div>
           )}
@@ -287,6 +326,27 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                   schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
                 };
               }}
+              onCreateConfigTemplate={
+                showCreateTemplateButton
+                  ? props.formType === "source"
+                    ? () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
+                      }
+                    : () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConnectionTemplate(
+                          prepareDestinationConfigTemplate(values, definitionId, organizationId)
+                        );
+                      }
+                  : undefined
+              }
             />
           </>
         )

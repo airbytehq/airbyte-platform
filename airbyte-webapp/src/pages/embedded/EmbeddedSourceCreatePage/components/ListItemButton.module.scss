@@ -1,29 +1,58 @@
 @use "scss/colors";
 @use "scss/variables";
 
-$iconWidth: 38px;
-
 .button {
-  border: 1px solid transparent;
-  display: flex;
-  gap: variables.$spacing-lg;
-  align-items: center;
-  justify-content: space-between;
-  padding: variables.$spacing-lg;
-  box-shadow: variables.$box-shadow;
+  border: variables.$border-thin solid colors.$grey-300;
+  display: grid;
+  padding: 8px 12px;
   background-color: colors.$foreground;
   border-radius: variables.$border-radius-md;
   cursor: pointer;
   transition: box-shadow variables.$transition ease;
-  text-align: left;
+  text-align: center;
   color: colors.$dark-blue;
+  width: 145px;
+  height: 130px;
+  position: relative;
 
   &:hover {
-    box-shadow: variables.$box-shadow-raised;
-    border-color: colors.$blue-100;
+    background-color: colors.$blue-30;
+  }
+
+  &:focus {
+    background-color: colors.$blue-30;
+  }
+
+  &:active {
+    background-color: colors.$blue-100;
   }
 }
 
-.iconAndName {
-  min-width: $iconWidth;
+.configuredIcon {
+  position: absolute;
+  top: 10px;
+  right: 11px;
+}
+
+.buttonContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.iconContainer {
+  height: 56px;
+  width: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: variables.$spacing-md;
+}
+
+.label {
+  text-align: center;
+  width: 100%;
 }

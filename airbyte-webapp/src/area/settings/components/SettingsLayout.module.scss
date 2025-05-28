@@ -25,5 +25,6 @@
     padding: variables.$spacing-xl;
     background: colors.$foreground;
     overflow-y: auto;
+    scrollbar-gutter: stable;
   }
 }

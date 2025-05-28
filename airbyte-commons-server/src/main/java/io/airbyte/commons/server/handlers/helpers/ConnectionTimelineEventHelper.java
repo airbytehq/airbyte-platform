@@ -15,6 +15,7 @@ import io.airbyte.api.model.generated.JobInfoRead;
 import io.airbyte.api.model.generated.UserReadInConnectionEvent;
 import io.airbyte.commons.server.JobStatus;
 import io.airbyte.commons.server.converters.JobConverter;
+import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper.StreamStatsRecord;
 import io.airbyte.commons.server.support.CurrentUserService;
 import io.airbyte.config.AirbyteStream;
@@ -25,13 +26,11 @@ import io.airbyte.config.FailureReason;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfigProxy;
 import io.airbyte.config.Organization;
-import io.airbyte.config.Permission.PermissionType;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.shared.ConnectionDisabledEvent;
 import io.airbyte.data.services.shared.ConnectionEnabledEvent;
 import io.airbyte.data.services.shared.ConnectionEvent;
@@ -69,7 +68,7 @@ public class ConnectionTimelineEventHelper {
   private final Set<String> airbyteSupportEmailDomains;
   private final CurrentUserService currentUserService;
   private final OrganizationPersistence organizationPersistence;
-  private final PermissionService permissionService;
+  private final PermissionHandler permissionHandler;
   private final UserPersistence userPersistence;
   private final ConnectionTimelineEventService connectionTimelineEventService;
 
@@ -78,13 +77,13 @@ public class ConnectionTimelineEventHelper {
                                        @Named("airbyteSupportEmailDomains") final Set<String> airbyteSupportEmailDomains,
                                        final CurrentUserService currentUserService,
                                        final OrganizationPersistence organizationPersistence,
-                                       final PermissionService permissionService,
+                                       final PermissionHandler permissionHandler,
                                        final UserPersistence userPersistence,
                                        final ConnectionTimelineEventService connectionTimelineEventService) {
     this.airbyteSupportEmailDomains = airbyteSupportEmailDomains;
     this.currentUserService = currentUserService;
     this.organizationPersistence = organizationPersistence;
-    this.permissionService = permissionService;
+    this.permissionHandler = permissionHandler;
     this.userPersistence = userPersistence;
     this.connectionTimelineEventService = connectionTimelineEventService;
   }
@@ -98,34 +97,16 @@ public class ConnectionTimelineEventHelper {
     }
   }
 
-  private boolean isUserInstanceAdmin(final UUID userId) {
-    return permissionService.getPermissionsForUser(userId).stream()
-        .anyMatch(permission -> PermissionType.INSTANCE_ADMIN.equals(permission.getPermissionType()));
-  }
-
   private boolean isUserEmailFromAirbyteSupport(final String email) {
     final String emailDomain = email.split("@")[1];
     return airbyteSupportEmailDomains.contains(emailDomain);
   }
 
-  public boolean isAirbyteUser(final UUID userId) {
-    try {
-      if (userId == null) {
-        return false;
-      }
-      final Optional<User> res = userPersistence.getUser(userId);
-      return res.filter(this::isAirbyteUser).isPresent();
-    } catch (final Exception e) {
-      LOGGER.error("Error while retrieving user information.", e);
-      return false;
-    }
-  }
-
-  private boolean isAirbyteUser(final User user) {
+  private boolean isAirbyteUser(final User user) throws IOException {
     // User is an Airbyte user if:
     // 1. the user is an instance admin
     // 2. user email is from Airbyte domain(s), e.g. "airbyte.io".
-    return isUserInstanceAdmin(user.getUserId()) && isUserEmailFromAirbyteSupport(user.getEmail());
+    return permissionHandler.isUserInstanceAdmin(user.getUserId()) && isUserEmailFromAirbyteSupport(user.getEmail());
   }
 
   public UserReadInConnectionEvent getUserReadInConnectionEvent(final UUID userId, final UUID connectionId) {
@@ -347,7 +328,7 @@ public class ConnectionTimelineEventHelper {
       addPatchIfFieldIsChanged(patches, "namespaceFormat", originalConnectionRead.getNamespaceFormat(), patch.getNamespaceFormat());
       addPatchIfFieldIsChanged(patches, "prefix", originalConnectionRead.getPrefix(), patch.getPrefix());
       addPatchIfFieldIsChanged(patches, "resourceRequirements", originalConnectionRead.getResourceRequirements(), patch.getResourceRequirements());
-      addPatchIfFieldIsChanged(patches, "geography", originalConnectionRead.getGeography(), patch.getGeography());
+      addPatchIfFieldIsChanged(patches, "dataplaneGroupId", originalConnectionRead.getDataplaneGroupId(), patch.getDataplaneGroupId());
       addPatchIfFieldIsChanged(patches, "notifySchemaChanges", originalConnectionRead.getNotifySchemaChanges(), patch.getNotifySchemaChanges());
       addPatchIfFieldIsChanged(patches, "notifySchemaChangesByEmail", originalConnectionRead.getNotifySchemaChangesByEmail(),
           patch.getNotifySchemaChangesByEmail());

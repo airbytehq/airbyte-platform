@@ -10,7 +10,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
-import { BuilderState, StreamId } from "../types";
+import { StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 interface StreamSelectorProps {
@@ -51,7 +51,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-  const generatedStreams = useBuilderWatch("generatedStreams");
+  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
   const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
@@ -94,20 +94,19 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const handleStreamSelect = (selectedStream: SelectorOption) => {
     const { type, name: selectedStreamName } = selectedStream;
 
-    let selectedView: BuilderState["view"] | undefined;
     let selectedStreamId: StreamId | undefined;
 
     if (type === "stream") {
-      selectedView = streamNames.findIndex((streamName) => selectedStreamName === streamName);
-      selectedStreamId = { type: "stream" as const, index: selectedView };
+      selectedStreamId = {
+        type: "stream" as const,
+        index: streamNames.findIndex((streamName) => selectedStreamName === streamName),
+      };
     } else if (type === "dynamic_stream") {
       const selectedStreamIndex = dynamicStreamNames.findIndex((streamName) => selectedStreamName === streamName);
-      selectedView = `dynamic_stream_${selectedStreamIndex}`;
       selectedStreamId = { type: "dynamic_stream" as const, index: selectedStreamIndex };
     } else if (type === "generated_stream") {
       const selectedGeneratedStreams = generatedStreams[selectedStream.dynamicStreamName];
       const selectedStreamIndex = selectedGeneratedStreams.findIndex((stream) => selectedStreamName === stream.name);
-      selectedView = `generated_stream_${selectedStreamIndex}`;
       selectedStreamId = {
         type: "generated_stream" as const,
         index: selectedStreamIndex,
@@ -115,11 +114,11 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
       };
     }
 
-    if (selectedView != null) {
+    if (selectedStreamId != null) {
       setValue("testStreamId", selectedStreamId);
 
-      if (view !== "global" && view !== "inputs") {
-        setValue("view", selectedView);
+      if (view.type !== "global" && view.type !== "inputs") {
+        setValue("view", selectedStreamId);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected in testing panel",
           stream_name: selectedStreamName,
@@ -130,9 +129,16 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   const selectedValueType: SelectorOption["type"] = testStreamId.type;
 
-  const selectedValue = options.find(
-    (option) => option.value.type === selectedValueType && option.value.idx === testStreamId.index
-  )?.value;
+  const selectedValue = options.find((option) => {
+    if (option.value.type === "generated_stream") {
+      return (
+        option.value.type === selectedValueType &&
+        option.value.idx === testStreamId.index &&
+        option.value.dynamicStreamName === ("dynamicStreamName" in testStreamId ? testStreamId.dynamicStreamName : "")
+      );
+    }
+    return option.value.type === selectedValueType && option.value.idx === testStreamId.index;
+  })?.value;
 
   return (
     <ListBox

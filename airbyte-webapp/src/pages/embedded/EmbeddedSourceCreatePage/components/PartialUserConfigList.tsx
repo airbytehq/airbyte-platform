@@ -10,12 +10,13 @@ interface ConfigListProps {
 export const PartialUserConfigList: React.FC<ConfigListProps> = ({ workspaceId, onSelectConfig }) => {
   const { partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
-  const items = partialUserConfigs.map((config) => ({
-    id: config.partialUserConfigId,
-    name: config.configTemplateName,
-    icon: config.configTemplateIcon,
-  }));
-
-  // no empty state because we redirect to the mask create form if there are no configs
+  const items = partialUserConfigs
+    .sort((a, b) => a.configTemplateName.localeCompare(b.configTemplateName))
+    .map((config) => ({
+      id: config.partialUserConfigId,
+      name: config.configTemplateName,
+      icon: config.configTemplateIcon,
+      configured: true,
+    }));
   return <SelectableList items={items} onSelect={onSelectConfig} />;
 };

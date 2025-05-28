@@ -11,6 +11,7 @@ export interface Experiments {
   "billing.early-sync-enabled": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
   "connection.columnSelection": boolean;
+  "connection.dataActivationUI": boolean;
   "connection.hashingUI": boolean;
   "connection.mappingsUI": boolean;
   "connection.onboarding.destinations": string;
@@ -26,6 +27,9 @@ export interface Experiments {
   "connectorBuilder.declarativeOauth": boolean;
   "connectorBuilder.dynamicStreams": boolean;
   "connectorBuilder.generateConnectorFromParams": boolean;
+  "connectorBuilder.schemaForm": boolean;
+  "embedded.templateCreateButton": boolean;
+  "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
   productLimitsUI: boolean;
@@ -33,6 +37,7 @@ export interface Experiments {
   "settings.downloadDiagnostics": boolean;
   "settings.organizationRbacImprovements": boolean;
   "settings.showAdvancedSettings": boolean;
+  "sidebar.showOrgPicker": boolean;
 }
 
 export const defaultExperimentValues: Experiments = {
@@ -40,6 +45,7 @@ export const defaultExperimentValues: Experiments = {
   "billing.early-sync-enabled": false,
   "connection.allowToSupportAllSyncModes": false,
   "connection.columnSelection": true,
+  "connection.dataActivationUI": false,
   "connection.hashingUI": true, // also requires FeatureItem.FieldHashing
   "connection.mappingsUI": true, // requires FeatureItem.MappingsUI to enable configuration
   "connection.onboarding.destinations": "",
@@ -56,6 +62,9 @@ export const defaultExperimentValues: Experiments = {
   "connectorBuilder.declarativeOauth": true,
   "connectorBuilder.dynamicStreams": false,
   "connectorBuilder.generateConnectorFromParams": false,
+  "connectorBuilder.schemaForm": false,
+  "embedded.templateCreateButton": false,
+  "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,
   productLimitsUI: false,
@@ -63,4 +72,5 @@ export const defaultExperimentValues: Experiments = {
   "settings.downloadDiagnostics": false,
   "settings.organizationRbacImprovements": false,
   "settings.showAdvancedSettings": false,
+  "sidebar.showOrgPicker": false,
 };

@@ -4,6 +4,7 @@ import { Range } from "monaco-editor";
 import React, { useCallback, useEffect, useMemo } from "react";
 import { AnyObjectSchema } from "yup";
 
+import { assertNever } from "core/utils/asserts";
 import { removeEmptyProperties } from "core/utils/form";
 import {
   useConnectorBuilderFormState,
@@ -24,24 +25,26 @@ import { useBuilderValidationSchema } from "../useBuilderValidationSchema";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
-  switch (selectedView) {
+  switch (selectedView.type) {
     case "global":
       return <GlobalConfigView />;
     case "inputs":
       return <InputsView />;
     case "components":
       return <ComponentsView />;
+    case "dynamic_stream":
+      return <DynamicStreamConfigView key={selectedView.index} streamId={selectedView} scrollToTop={scrollToTop} />;
+    case "stream":
+    case "generated_stream":
+      return (
+        <StreamConfigView
+          streamId={selectedView}
+          key={`${selectedView.type}-${selectedView.index}`}
+          scrollToTop={scrollToTop}
+        />
+      );
     default:
-      if (typeof selectedView === "string") {
-        if (selectedView.startsWith("dynamic_stream_")) {
-          return <DynamicStreamConfigView key={selectedView} streamNum={parseInt(selectedView.split("_")[2], 10)} />;
-        }
-        // generated stream
-        return null;
-      }
-
-      // key is used to re-mount when changing stream
-      return <StreamConfigView streamNum={selectedView} key={selectedView} scrollToTop={scrollToTop} />;
+      assertNever(selectedView);
   }
 }
 

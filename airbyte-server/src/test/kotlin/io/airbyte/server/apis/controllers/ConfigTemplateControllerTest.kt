@@ -122,7 +122,7 @@ class ConfigTemplateControllerTest {
           actorIcon = "actorIcon",
         )
       every {
-        configTemplateService.getConfigTemplate(configTemplateId)
+        configTemplateService.getConfigTemplate(configTemplateId, workspaceId)
       } returns configTemplate
 
       val requestBody = ConfigTemplateRequestBody()

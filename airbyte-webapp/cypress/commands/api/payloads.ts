@@ -9,7 +9,6 @@ import {
 import { getWorkspaceId } from "./workspace";
 
 export const getConnectionCreateRequest = (params: WebBackendConnectionCreate): WebBackendConnectionCreate => ({
-  geography: "auto",
   namespaceDefinition: "source",
   namespaceFormat: "${SOURCE_NAMESPACE}",
   nonBreakingChangesPreference: "ignore",

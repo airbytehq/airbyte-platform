@@ -67,6 +67,7 @@ function filterRowModelFromLeafs(
           continue;
         }
       } else if (filterRow(newRow)) {
+        newRow.subRows = rowsToFilter[i].subRows;
         rows.push(newRow);
       }
     }

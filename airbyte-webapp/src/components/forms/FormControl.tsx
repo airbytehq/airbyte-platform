@@ -72,6 +72,16 @@ interface ControlBaseProps<T extends FormValues> {
    * Optional text displayed below the input, but only when there is no error to display
    */
   footer?: string;
+  /**
+   * If true, the error message will only be shown if the field has been touched.
+   * Otherwise, the error will be shown regardless of whether the field has been touched.
+   */
+  onlyShowErrorIfTouched?: boolean;
+  /**
+   * Whether to reserve space for the error message, avoiding layout shifts when the error message appears. By default
+   * we want this to be true to avoid layout shifts.
+   */
+  reserveSpaceForError?: boolean;
 }
 
 /**
@@ -128,11 +138,13 @@ export const FormControl = <T extends FormValues>({
   optional = false,
   containerControlClassName,
   footer,
+  onlyShowErrorIfTouched,
+  reserveSpaceForError = true,
   ...props
 }: ControlProps<T>) => {
   // only retrieve new form state if form state of current field has changed
-  const { errors } = useFormState<T>({ name: props.name });
-  const error = get(errors, props.name);
+  const { errors, touchedFields } = useFormState<T>({ name: props.name });
+  const error = !!get(errors, props.name) && (onlyShowErrorIfTouched ? !!get(touchedFields, props.name) : true);
   const [controlId] = useState(`input-control-${uniqueId()}`);
 
   // Properties to pass to the underlying control
@@ -180,7 +192,13 @@ export const FormControl = <T extends FormValues>({
   const displayFooter = !!error || !!footer;
 
   return (
-    <div className={classNames(styles.control, { [styles["control--inline"]]: inline }, containerControlClassName)}>
+    <div
+      className={classNames(
+        styles.control,
+        { [styles["control--inline"]]: inline, [styles["control--reserveSpaceForError"]]: reserveSpaceForError },
+        containerControlClassName
+      )}
+    >
       {label && (
         <FormLabel
           description={description}
@@ -193,7 +211,7 @@ export const FormControl = <T extends FormValues>({
       )}
       <div className={styles.control__field}>{renderControl()}</div>
       {displayFooter && (
-        <FormControlFooter>
+        <FormControlFooter doesShiftLayout={!reserveSpaceForError}>
           <FormControlErrorMessage<FormValues> name={props.name} />
           {!error && footer && <FormControlFooterInfo>{footer}</FormControlFooterInfo>}
         </FormControlFooter>
@@ -223,7 +241,7 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   return (
     <label className={styles.control__label} htmlFor={htmlFor}>
       <FlexContainer alignItems="center" gap="md">
-        <Text size="lg" className={styles.control__label__text}>
+        <Text size="lg" className={styles.control__labelText} bold>
           {label}
           {labelTooltip && <InfoTooltip placement="top-start">{labelTooltip}</InfoTooltip>}
           {optional && (
@@ -240,8 +258,21 @@ export const FormLabel: React.FC<FormLabelProps> = ({
   );
 };
 
-export const FormControlFooter: React.FC<React.PropsWithChildren> = ({ children }) => {
-  return <div className={styles.control__footer}>{children}</div>;
+interface FormControlFooterProps {
+  doesShiftLayout?: boolean;
+}
+
+export const FormControlFooter: React.FC<React.PropsWithChildren<FormControlFooterProps>> = ({
+  children,
+  doesShiftLayout,
+}) => {
+  return (
+    <div
+      className={classNames(styles.control__footer, { [styles["control__footer--doesShiftLayout"]]: doesShiftLayout })}
+    >
+      {children}
+    </div>
+  );
 };
 
 export const FormControlFooterInfo: React.FC<React.PropsWithChildren> = ({ children }) => {
@@ -279,7 +310,12 @@ export const FormControlErrorMessage = <TFormValues extends FormValues>({
 
   return (
     <Text color="red" size="xs" className={styles.control__footerText}>
-      {!message && (error.type === NON_I18N_ERROR_TYPE ? error.message : formatMessage({ id: error.message }))}
+      {!message &&
+        // NON_I18N_ERROR_TYPE is a custom error type that is used to display a non-i18n error message.
+        // "validate" type means the error came from the react-hook-form validate() method.
+        (error.type === NON_I18N_ERROR_TYPE || error.type === "validate"
+          ? error.message
+          : formatMessage({ id: error.message }))}
       {message && message}
     </Text>
   );

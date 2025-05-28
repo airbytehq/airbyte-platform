@@ -4,9 +4,9 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.constants.EU_DATAPLANE_GROUP
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -118,16 +118,16 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
         false,
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, GEOGRAPHY_AUTO),
+        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, AUTO_DATAPLANE_GROUP),
         UUID.randomUUID(),
       ).execute()
 
     V1_1_1_013__PopulateDataplaneGroups.doMigration(ctx)
 
     val dataplaneGroupNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetchSet(NAME)
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_US))
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_EU))
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_AUTO))
+    Assertions.assertTrue(dataplaneGroupNames.contains(US_DATAPLANE_GROUP))
+    Assertions.assertTrue(dataplaneGroupNames.contains(EU_DATAPLANE_GROUP))
+    Assertions.assertTrue(dataplaneGroupNames.contains(AUTO_DATAPLANE_GROUP))
   }
 
   @Test
@@ -138,7 +138,7 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
 
     val dataplaneNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetch(NAME)
     Assertions.assertEquals(1, dataplaneNames.size)
-    Assertions.assertEquals(GEOGRAPHY_AUTO, dataplaneNames[0])
+    Assertions.assertEquals(AUTO_DATAPLANE_GROUP, dataplaneNames[0])
   }
 
   @Test

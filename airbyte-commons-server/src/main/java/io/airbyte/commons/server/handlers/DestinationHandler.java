@@ -46,7 +46,6 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
-import io.airbyte.domain.models.SecretReferenceScopeType;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
@@ -181,8 +180,9 @@ public class DestinationHandler {
       connectionsHandler.deleteConnection(connectionRead.getConnectionId());
     }
     final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(destination.getWorkspaceId());
-    final ConfigWithSecretReferences configWithSecretReferences = secretReferenceService.getConfigWithSecretReferences(
-        SecretReferenceScopeType.ACTOR, destination.getDestinationId(), destination.getConnectionConfiguration());
+    final ConfigWithSecretReferences configWithSecretReferences =
+        secretReferenceService.getConfigWithSecretReferences(destination.getDestinationId(), destination.getConnectionConfiguration(),
+            destination.getWorkspaceId());
 
     // Delete airbyte-managed secrets for this destination
     secretsRepositoryWriter.deleteFromConfig(configWithSecretReferences, secretPersistence);
@@ -437,12 +437,13 @@ public class DestinationHandler {
 
     if (secretStorageId.isPresent()) {
       final ConfigWithProcessedSecrets reprocessedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
-          updatedConfig, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+          updatedConfig, spec.getConnectionSpecification(), secretStorageId.get());
       updatedConfig = secretReferenceService.createAndInsertSecretReferencesWithStorageId(
           reprocessedConfig,
           destinationId,
+          workspaceId,
           secretStorageId.get(),
-          currentUserService.getCurrentUser().getUserId());
+          currentUserService.getCurrentUserIdIfExists().orElse(null));
     }
 
     destinationConnection.setConfiguration(updatedConfig);
@@ -469,9 +470,9 @@ public class DestinationHandler {
     if (previousConfig.isPresent()) {
       final ConfigWithSecretReferences priorConfigWithSecretReferences =
           secretReferenceService.getConfigWithSecretReferences(
-              SecretReferenceScopeType.ACTOR,
               destinationId,
-              previousConfig.get());
+              previousConfig.get(),
+              workspaceId);
       return secretsRepositoryWriter.updateFromConfig(
           workspaceId,
           priorConfigWithSecretReferences,
@@ -527,7 +528,8 @@ public class DestinationHandler {
       throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
     }
     final ConfigWithSecretReferences configWithRefs =
-        this.secretReferenceService.getConfigWithSecretReferences(SecretReferenceScopeType.ACTOR, dci.getDestinationId(), dci.getConfiguration());
+        this.secretReferenceService.getConfigWithSecretReferences(dci.getDestinationId(), dci.getConfiguration(),
+            destinationConnection.getWorkspaceId());
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
             ? secretsProcessor.simplifySecretsForOutput(

@@ -72,7 +72,11 @@ export type AuthPath =
   | "formValues.global.authenticator"
   | `formValues.streams.${number}.creationRequester.authenticator`
   | `formValues.streams.${number}.pollingRequester.authenticator`
-  | `formValues.streams.${number}.downloadRequester.authenticator`;
+  | `formValues.streams.${number}.downloadRequester.authenticator`
+  | `formValues.generatedStreams.${string}.${number}.creationRequester.authenticator`
+  | `formValues.generatedStreams.${string}.${number}.pollingRequester.authenticator`
+  | `formValues.generatedStreams.${string}.${number}.downloadRequester.authenticator`;
+
 type AuthFieldPathFn = <T extends string>(fieldPath: T) => `${AuthPath}.${T}`;
 
 interface AuthenticationSectionProps {
@@ -495,8 +499,8 @@ const DeclarativeOAuthForm = ({ authFieldPath }: { authFieldPath: AuthFieldPathF
                       text: <FormattedMessage id="connectorBuilder.authentication.oauthButton.inputsRequired" />,
                       type: "info",
                     });
-                    setValue("view", "inputs");
-                    validateAndTouch(undefined, ["inputs"]);
+                    setValue("view", { type: "inputs" });
+                    validateAndTouch(undefined, [{ type: "inputs" }]);
                   }
             }
             onComplete={async (payload) => {

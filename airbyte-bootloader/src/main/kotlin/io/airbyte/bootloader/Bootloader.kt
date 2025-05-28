@@ -5,9 +5,9 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.annotation.InternalForTesting
+import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
@@ -54,6 +54,7 @@ class Bootloader(
   private val dataplaneInitializer: DataplaneInitializer,
   val airbyteEdition: AirbyteEdition,
   private val authSecretInitializer: AuthKubernetesSecretInitializer?,
+  private val secretStorageInitializer: SecretStorageInitializer,
 ) {
   /**
    * Performs all required bootstrapping for the Airbyte environment. This includes the following:
@@ -103,6 +104,9 @@ class Bootloader(
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence)
     }
+
+    log.info { "Initializing default secret storage..." }
+    secretStorageInitializer.createOrUpdateDefaultSecretStorage()
 
     val airbyteVersion = currentAirbyteVersion.serialize()
     log.info { "Setting Airbyte version to '$airbyteVersion'" }
@@ -208,7 +212,7 @@ class Bootloader(
         .withInitialSetupComplete(false)
         .withDisplaySetupWizard(true)
         .withTombstone(false)
-        .withDefaultGeography(if (airbyteEdition == AirbyteEdition.CLOUD) GEOGRAPHY_US else GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
         // attach this new workspace to the Default Organization which should always exist at this point.
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
@@ -232,7 +236,7 @@ class Bootloader(
           DataplaneGroup()
             .withId(dataplaneGroupId)
             .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-            .withName(GEOGRAPHY_US)
+            .withName(US_DATAPLANE_GROUP)
             .withEnabled(true)
             .withTombstone(false)
         dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
@@ -248,7 +252,7 @@ class Bootloader(
       DataplaneGroup()
         .withId(dataplaneGroupId)
         .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
-        .withName(GEOGRAPHY_AUTO)
+        .withName(AUTO_DATAPLANE_GROUP)
         .withEnabled(true)
         .withTombstone(false)
     dataplaneGroupService.writeDataplaneGroup(dataplaneGroup)
@@ -272,8 +276,8 @@ class Bootloader(
       return null
     }
 
-    log.info { "${"Current Airbyte version: {}"} $airbyteDatabaseVersion" }
-    log.info { "${"Future Airbyte version: {}"} $airbyteVersion" }
+    log.info { "Current Airbyte version: $airbyteDatabaseVersion" }
+    log.info { "Future Airbyte version: $airbyteVersion" }
 
     for (version in REQUIRED_VERSION_UPGRADES) {
       val futureVersionIsAfterVersionBreak = airbyteVersion.greaterThan(version) || airbyteVersion.isDev

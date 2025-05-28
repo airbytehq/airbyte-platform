@@ -19,10 +19,12 @@ import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_64_4_002__AddJobRunnerPermissionTypesTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

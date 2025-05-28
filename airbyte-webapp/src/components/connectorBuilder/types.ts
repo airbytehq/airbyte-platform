@@ -87,18 +87,23 @@ import { CDK_VERSION } from "./cdk";
 import { filterPartitionRouterToType, formatJson, streamRef } from "./utils";
 import { AirbyteJSONSchema } from "../../core/jsonSchema/types";
 
-interface GeneratedStreamId {
+export interface GeneratedStreamId {
   type: "generated_stream";
   index: number;
   dynamicStreamName: string;
 }
 
-interface BaseStreamId {
-  type: "stream" | "dynamic_stream";
+export interface StaticStreamId {
+  type: "stream";
   index: number;
 }
 
-export type StreamId = BaseStreamId | GeneratedStreamId;
+export interface DynamicStreamId {
+  type: "dynamic_stream";
+  index: number;
+}
+
+export type StreamId = StaticStreamId | GeneratedStreamId | DynamicStreamId;
 
 export interface BuilderState {
   name: string;
@@ -107,17 +112,11 @@ export interface BuilderState {
   previewValues?: BuilderFormValues;
   yaml: string;
   customComponentsCode?: string;
-  view:
-    | "global"
-    | "inputs"
-    | "components"
-    | `dynamic_stream_${number}` /* dynamic stream index */
-    | `generated_stream_${number}` /* stream instance generated from a dynamic stream */
-    | number /* stream index */;
+  view: { type: "global" } | { type: "inputs" } | { type: "components" } | StreamId;
   streamTab: BuilderStreamTab;
   testStreamId: StreamId;
-  generatedStreams: Record<string, DeclarativeStream[]>;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
+  manifest: ConnectorManifest | null;
 }
 
 export interface AssistData {
@@ -257,7 +256,7 @@ export const DECODER_CONFIGS: Partial<Record<(typeof BUILDER_DECODER_TYPES)[numb
   },
 };
 
-interface BuilderRequestOptions {
+export interface BuilderRequestOptions {
   requestParameters: Array<[string, string]>;
   requestHeaders: Array<[string, string]>;
   requestBody: BuilderRequestBody;
@@ -328,6 +327,7 @@ export interface BuilderFormValues {
   inputs: BuilderFormInput[];
   streams: BuilderStream[];
   dynamicStreams: BuilderDynamicStream[];
+  generatedStreams: Record<string, GeneratedBuilderStream[]>;
   checkStreams: string[];
   dynamicStreamCheckConfigs: DynamicStreamCheckConfig[];
   version: string;
@@ -473,21 +473,14 @@ export type BuilderPollingTimeout =
       value: string;
     };
 
-interface BuilderComponentMappingDefinition {
-  type: "ComponentMappingDefinition";
-  field_path: string[];
-  value: string;
-}
-
 interface BuilderHttpComponentsResolver {
   type: "HttpComponentsResolver";
   retriever: SimpleRetriever;
-  components_mapping: BuilderComponentMappingDefinition[];
 }
 export type BuilderComponentsResolver = BuilderHttpComponentsResolver;
 
 export interface BuilderDynamicStream {
-  streamTemplate: Omit<BuilderStream, "name" | "id">;
+  streamTemplate: BuilderStream;
   dynamicStreamName: string;
   componentsResolver: BuilderComponentsResolver;
 }
@@ -499,6 +492,7 @@ export type BuilderStream = {
   autoImportSchema: boolean;
   unknownFields?: YamlString;
   testResults?: StreamTestResults;
+  dynamicStreamName?: string;
 } & (
   | {
       requestType: "sync";
@@ -543,6 +537,19 @@ export type BuilderStream = {
       // urlRequester: BuilderBaseRequester;
     }
 );
+
+export type GeneratedDeclarativeStream = DeclarativeStream & {
+  dynamic_stream_name: string;
+};
+
+export type GeneratedBuilderStream = BuilderStream & {
+  dynamicStreamName: string;
+  declarativeStream: GeneratedDeclarativeStream;
+};
+
+export function declarativeStreamIsGenerated(stream: DeclarativeStream): stream is GeneratedDeclarativeStream {
+  return "dynamic_stream_name" in stream;
+}
 
 export interface BuilderBaseRequester {
   url: string;
@@ -623,6 +630,7 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   inputs: [],
   streams: [],
   dynamicStreams: [],
+  generatedStreams: {},
   checkStreams: [],
   dynamicStreamCheckConfigs: [],
   version: CDK_VERSION,
@@ -815,7 +823,7 @@ export function builderAuthenticatorToManifest(
     return {
       ...omit(authenticator, "declarative", "type", "grant_type"),
       type: OAUTH_AUTHENTICATOR,
-      grant_type: isRefreshTokenFlowEnabled && !usesRefreshToken ? "client_credentials" : authenticator.grant_type,
+      grant_type: usesRefreshToken ? authenticator.grant_type : "client_credentials",
       refresh_token:
         authenticator.grant_type === "client_credentials" || !usesRefreshToken
           ? undefined
@@ -1420,19 +1428,49 @@ function builderStreamToDeclarativeStream(stream: BuilderStream, allStreams: Bui
 }
 
 function builderDynamicStreamToDeclarativeStream(dynamicStream: BuilderDynamicStream): DynamicDeclarativeStream {
+  // the user operates on the streamTemplate, including component-mapped fields using `record`
+  // we need to extract the component-mapped fields and add them to the components_mapping array
+
+  const declarativeStream: DeclarativeStream = {
+    ...builderStreamToDeclarativeStream(dynamicStream.streamTemplate, []),
+    schema_loader: {
+      type: InlineSchemaLoaderType.InlineSchemaLoader,
+      schema: schemaRef(`${dynamicStream.dynamicStreamName}_stream_template`),
+    },
+  };
+
+  const streamTemplateEntries = getRecursiveObjectEntries(declarativeStream);
+  const { templateEntries, mappedEntries } = streamTemplateEntries.reduce<{
+    templateEntries: Array<[string, unknown]>;
+    mappedEntries: Array<[string, unknown]>;
+  }>(
+    (acc, entry) => {
+      const isMapped = typeof entry[1] === "string" && entry[1].includes("components_values");
+      if (isMapped) {
+        acc.mappedEntries.push(entry);
+        acc.templateEntries.push([entry[0], "placeholder"]); // keep a populated string here to ensure validation
+      } else {
+        acc.templateEntries.push(entry);
+      }
+      return acc;
+    },
+    { templateEntries: [], mappedEntries: [] }
+  );
+
+  const unmappedStreamTemplate = objectFromRecursiveEntries(templateEntries) as DeclarativeStream;
+
   const declarativeDynamicStream: DynamicDeclarativeStream = {
     type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
     name: dynamicStream.dynamicStreamName,
-    components_resolver: dynamicStream.componentsResolver,
-    stream_template: {
-      ...builderStreamToDeclarativeStream(
-        {
-          ...dynamicStream.streamTemplate,
-          name: `${dynamicStream.dynamicStreamName}_template`,
-        } as BuilderStream,
-        []
-      ),
+    components_resolver: {
+      ...dynamicStream.componentsResolver,
+      components_mapping: mappedEntries.map(([key, value]) => ({
+        type: "ComponentMappingDefinition" as const,
+        field_path: key.split("."),
+        value: value as string,
+      })),
     },
+    stream_template: unmappedStreamTemplate,
   };
 
   // if there isn't a record filter condition, remove the filter component
@@ -1455,10 +1493,26 @@ export const builderFormValuesToMetadata = (values: BuilderFormValues): BuilderM
     }
   });
 
+  Object.values(values.generatedStreams)
+    .flat()
+    .forEach((generatedStream) => {
+      if (generatedStream.testResults) {
+        testedStreams[generatedStream.name] = generatedStream.testResults;
+      }
+    });
+
   const assistData = values.assist ?? {};
 
   return {
-    autoImportSchema: Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+    autoImportSchema: {
+      ...Object.fromEntries(values.streams.map((stream) => [stream.name, stream.autoImportSchema])),
+      ...Object.fromEntries(
+        values.dynamicStreams.map((dynamicStream) => [
+          dynamicStream.dynamicStreamName,
+          dynamicStream.streamTemplate.autoImportSchema,
+        ])
+      ),
+    },
     testedStreams,
     assist: assistData,
   };
@@ -1579,7 +1633,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
   const correctedCheckStreams =
     validCheckStreamNames.length > 0 ? validCheckStreamNames : streamNames.length > 0 ? [streamNames[0]] : [];
 
-  const dynamicStreamNames = values.dynamicStreamCheckConfigs.map((s) => s.dynamic_stream_name);
+  const dynamicStreamNames = values.dynamicStreams.map((s) => s.dynamicStreamName);
   const validCheckDynamicStream = (values.dynamicStreamCheckConfigs ?? []).filter((dynamicStreamCheckConfig) =>
     dynamicStreamNames.includes(dynamicStreamCheckConfig.dynamic_stream_name)
   );
@@ -1612,7 +1666,7 @@ export const convertToManifest = (values: BuilderFormValues): ConnectorManifest 
         schema = JSON.parse(DEFAULT_SCHEMA);
       }
       schema.additionalProperties = true;
-      return [`${dynamicStream.dynamicStreamName}_template`, schema];
+      return [`${dynamicStream.dynamicStreamName}_stream_template`, schema];
     })
   );
 
@@ -1672,7 +1726,6 @@ function schemaRef(streamName: string) {
   return { $ref: `#/schemas/${streamName}` };
 }
 
-export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = convertToManifest(DEFAULT_BUILDER_FORM_VALUES);
 export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
   type: "DeclarativeStream",
   retriever: {
@@ -1687,16 +1740,63 @@ export const DEFAULT_JSON_MANIFEST_STREAM: DeclarativeStream = {
     requester: {
       type: "HttpRequester",
       url_base: "",
-      authenticator: undefined,
-      path: "",
       http_method: "GET",
     },
-    paginator: undefined,
   },
-  primary_key: undefined,
+};
+export const DEFAULT_JSON_MANIFEST_VALUES: ConnectorManifest = {
+  type: "DeclarativeSource",
+  version: CDK_VERSION,
+  check: {
+    type: "CheckStream",
+    stream_names: [],
+  },
+  streams: [],
+  spec: {
+    type: "Spec",
+    connection_specification: {
+      type: "object",
+      properties: {},
+    },
+  },
+};
+
+export const DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE: DeclarativeStream = {
+  type: "DeclarativeStream",
+  retriever: {
+    type: "SimpleRetriever",
+    record_selector: {
+      type: "RecordSelector",
+      extractor: {
+        type: "DpathExtractor",
+        field_path: [],
+      },
+    },
+    requester: {
+      type: "HttpRequester",
+      http_method: "GET",
+    },
+  },
+};
+export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
+  ...DEFAULT_JSON_MANIFEST_VALUES,
+  streams: [DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE],
 };
 
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
+
+export type DynamicStreamStreamTemplatePathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.dynamicStreams.${number}.streamTemplate.${T}`;
+
+export type GeneratedStreamStreamTemplatePathFn = <T extends string>(
+  fieldPath: T
+) => `formValues.generatedStreams.${string}.${number}.${T}`;
+
+export type AnyDeclarativeStreamPathFn =
+  | StreamPathFn
+  | DynamicStreamStreamTemplatePathFn
+  | GeneratedStreamStreamTemplatePathFn;
 export type DynamicStreamPathFn = <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${number}.${T}`;
 export type CreationRequesterPathFn = <T extends string>(
   fieldPath: T
@@ -1710,3 +1810,52 @@ export type DownloadRequesterPathFn = <T extends string>(
 
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;
+
+type StreamIdToFieldPath<T extends "stream" | "dynamic_stream", K extends string> = T extends "stream"
+  ? `formValues.streams.${number}.${K}`
+  : `formValues.dynamicStreams.${number}.streamTemplate.${K}`;
+export function getStreamFieldPath<T extends "stream" | "dynamic_stream", K extends string>(
+  streamId: StreamId,
+  fieldPath: K
+): StreamIdToFieldPath<T, K> {
+  if (streamId.type === "stream") {
+    return `formValues.streams.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
+  } else if (streamId.type === "generated_stream") {
+    return `formValues.generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<
+      T,
+      K
+    >;
+  }
+  return `formValues.dynamicStreams.${streamId.index}.streamTemplate.${fieldPath}` as StreamIdToFieldPath<T, K>;
+}
+
+function getRecursiveObjectEntries(obj: object, prefix: string = ""): Array<[string, unknown]> {
+  return Object.entries(obj).flatMap(([key, value]) => {
+    const cleanedPrefix = prefix ? `${prefix}.` : "";
+    const valueIsEmptyArray = Array.isArray(value) && value.length === 0;
+    if (typeof value === "object" && value !== null && !valueIsEmptyArray) {
+      return getRecursiveObjectEntries(value as Record<string, unknown>, `${cleanedPrefix}${key}`);
+    }
+    return [[`${cleanedPrefix}${key}`, value]];
+  });
+}
+
+function objectFromRecursiveEntries(entries: Array<[string, unknown]>) {
+  return entries.reduce<Record<string, unknown>>((acc, [key, value]) => {
+    const pathParts = key.split(".");
+    const finalKey = pathParts.at(-1)!;
+    let current = acc;
+
+    while (pathParts.length > 1) {
+      const next = pathParts.shift()!;
+      const peek = pathParts.at(0);
+      const peekIsIndex = peek && peek.match(/^\d+$/);
+
+      current[next] = current[next] || (peekIsIndex ? [] : {});
+      current = current[next] as Record<string, unknown>;
+    }
+
+    current[finalKey] = value;
+    return acc;
+  }, {});
+}

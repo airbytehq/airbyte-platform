@@ -5,7 +5,7 @@
 package io.airbyte.bootloader
 
 import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials
@@ -39,7 +39,7 @@ private val dpg =
 private val dpgUS =
   DataplaneGroup().apply {
     id = UUID.randomUUID()
-    name = GEOGRAPHY_US
+    name = US_DATAPLANE_GROUP
     organizationId = DEFAULT_ORGANIZATION_ID
     enabled = true
   }
@@ -62,6 +62,7 @@ private val dp =
 private const val SECRET_NAME = "secret name"
 private const val CLIENT_ID_SECRET_KEY = "client-id-key"
 private const val CLIENT_SECRET_SECRET_KEY = "client-secret-key"
+private const val JOBS_NAMESPACE = "jobs"
 
 class DataplaneInitializerTest {
   private val service = mockk<DataplaneService>()
@@ -100,6 +101,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -133,6 +135,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -146,7 +149,7 @@ class DataplaneInitializerTest {
 
   @Test
   fun `dataplane is created for US dataplane group on Cloud and secret copied to jobs namespace`() {
-    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns dpgUS
+    every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
     every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }
@@ -163,6 +166,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()
@@ -182,7 +186,7 @@ class DataplaneInitializerTest {
         k8sClient,
         SECRET_NAME,
         "ab",
-        "jobs",
+        JOBS_NAMESPACE,
       )
     }
   }
@@ -201,6 +205,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     shouldThrow<IllegalStateException> { initializer.createDataplaneIfNotExists() }
@@ -226,6 +231,7 @@ class DataplaneInitializerTest {
         secretName = SECRET_NAME,
         clientIdSecretKey = CLIENT_ID_SECRET_KEY,
         clientSecretSecretKey = CLIENT_SECRET_SECRET_KEY,
+        jobsNamespace = JOBS_NAMESPACE,
       )
 
     initializer.createDataplaneIfNotExists()

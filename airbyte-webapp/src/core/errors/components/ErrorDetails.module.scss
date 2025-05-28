@@ -1,5 +1,27 @@
 @use "scss/variables";
 
+.wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 680px;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content {
+  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+
+  // prevents this div from overflowing when its children grow too large, as this overrides the default min-width:auto behavior of flexbox
+  min-width: 0;
+}
+
 .error {
   flex: 1;
   height: 100%;

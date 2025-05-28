@@ -27,7 +27,6 @@ public class WorkspaceConverter {
         .securityUpdates(workspace.getSecurityUpdates())
         .notifications(NotificationConverter.toApiList(workspace.getNotifications()))
         .notificationSettings(NotificationSettingsConverter.toApi(workspace.getNotificationSettings()))
-        .defaultGeography(workspace.getDefaultGeography())
         .dataplaneGroupId(workspace.getDataplaneGroupId())
         .organizationId(workspace.getOrganizationId())
         .tombstone(workspace.getTombstone());

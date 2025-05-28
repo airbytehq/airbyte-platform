@@ -42,6 +42,12 @@ export const YamlManifestEditor: React.FC = () => {
   const debouncedUpdateJsonManifest = useMemo(() => debounce(updateJsonManifest, 200), [updateJsonManifest]);
 
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
+  const customComponentsCodeValue = useBuilderWatch("customComponentsCode");
+
+  // We want to show the custom components tab any time the custom components code is set.
+  // This is to ensure a user can still remove the custom components code if they want to (in the event of a fork).
+  const showCustomComponentsTab = areCustomComponentsEnabled || customComponentsCodeValue;
+
   const [selectedTab, setSelectedTab] = useState(TAB_MANIFEST);
 
   return (
@@ -52,7 +58,7 @@ export const YamlManifestEditor: React.FC = () => {
         </FlexItem>
       </Sidebar>
       <div className={styles.editorContainer}>
-        {areCustomComponentsEnabled && (
+        {showCustomComponentsTab && (
           <Tabs gap="none" className={styles.tabContainer}>
             {Object.values(tabs).map((tab) => (
               <ButtonTab

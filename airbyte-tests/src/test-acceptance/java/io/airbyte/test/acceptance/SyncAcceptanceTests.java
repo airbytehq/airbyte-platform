@@ -162,7 +162,8 @@ class SyncAcceptanceTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId())
                 .build())
             .getConnectionId();
     final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);
@@ -203,7 +204,8 @@ class SyncAcceptanceTests {
         sourceId,
         destinationId,
         catalog,
-        discoverResult.getCatalogId())
+        discoverResult.getCatalogId(),
+        testHarness.getDataplaneGroupId())
             .setSchedule(ConnectionScheduleType.BASIC, testResources.getBasicScheduleData())
             .build());
     final var connectionId = conn.getConnectionId();
@@ -247,7 +249,8 @@ class SyncAcceptanceTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId()).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId()).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
                 .build());
 
     final var connectionId = conn.getConnectionId();
@@ -318,7 +321,8 @@ class SyncAcceptanceTests {
             sourceId,
             destinationId,
             catalog,
-            discoverResult.getCatalogId())
+            discoverResult.getCatalogId(),
+            testHarness.getDataplaneGroupId())
                 .build());
 
     final var connectionId = conn.getConnectionId();

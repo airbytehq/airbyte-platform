@@ -4,8 +4,11 @@
 
 package io.airbyte.workers.temporal.activities
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConnectionContext
+import io.airbyte.config.StandardSyncOperation
 import java.time.Duration
 import java.util.UUID
 
@@ -69,6 +72,51 @@ data class GetLoadShedBackoffOutput(
       fun build(): GetLoadShedBackoffOutput =
         GetLoadShedBackoffOutput(
           duration!!,
+        )
+    }
+}
+
+@JsonDeserialize(builder = GetWebhookConfigInput.Builder::class)
+data class GetWebhookConfigInput(
+  val jobId: Long,
+) {
+  class Builder
+    @JvmOverloads
+    constructor(
+      val jobId: Long? = null,
+    ) {
+      fun build(): GetWebhookConfigInput =
+        GetWebhookConfigInput(
+          jobId!!,
+        )
+    }
+}
+
+@JsonDeserialize(builder = GetWebhookConfigOutput.Builder::class)
+data class GetWebhookConfigOutput(
+  val operations: List<StandardSyncOperation>,
+  val webhookOperationConfigs: JsonNode?,
+) {
+  class Builder
+    @JvmOverloads
+    constructor(
+      var operations: List<StandardSyncOperation>? = null,
+      var webhookOperationConfigs: JsonNode? = null,
+    ) {
+      fun operations(operations: List<StandardSyncOperation>) =
+        apply {
+          this.operations = operations
+        }
+
+      fun webhookOperationConfigs(webhookOperationConfigs: JsonNode?) =
+        apply {
+          this.webhookOperationConfigs = webhookOperationConfigs
+        }
+
+      fun build(): GetWebhookConfigOutput =
+        GetWebhookConfigOutput(
+          operations ?: emptyList(),
+          webhookOperationConfigs ?: Jsons.emptyObject(),
         )
     }
 }

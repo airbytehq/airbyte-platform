@@ -9,6 +9,7 @@ import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
+  DatetimeBasedCursor,
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
   HttpRequesterHttpMethod,
@@ -19,7 +20,14 @@ import {
 } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
+export type AssistKey =
+  | "urlbase"
+  | "auth"
+  | "metadata"
+  | "record_selector"
+  | "paginator"
+  | "request_options"
+  | "incremental_sync";
 
 export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
   const update = updates.manifest_update;
@@ -49,10 +57,12 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
             request_headers: update?.request_headers ?? undefined,
+            request_body_json: update?.request_body_json ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
         primary_key: update?.primary_key ?? undefined,
+        incremental_sync: update?.incremental_sync ?? undefined,
       },
     ],
     spec: {
@@ -104,6 +114,8 @@ export interface ManifestUpdate {
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
   request_headers: Record<string, string> | null;
+  request_body_json: Record<string, string> | null;
+  incremental_sync: DatetimeBasedCursor | null;
 }
 
 export interface BuilderAssistBaseResponse {
@@ -218,6 +230,13 @@ export const useBuilderAssistStreamResponse = (input: BuilderAssistInputStreamPa
 export const useBuilderAssistFindRequestOptions = (input: BuilderAssistInputStreamParams) => {
   const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
   return useAssistProxyQuery<BuilderAssistManifestResponse>("find_request_parameters", hasRequiredParams, params, [
+    "url_base",
+  ]);
+};
+
+export const useBuilderAssistFindIncrementalSync = (input: BuilderAssistInputStreamParams) => {
+  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
+  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_stream_incremental_sync", hasRequiredParams, params, [
     "url_base",
   ]);
 };

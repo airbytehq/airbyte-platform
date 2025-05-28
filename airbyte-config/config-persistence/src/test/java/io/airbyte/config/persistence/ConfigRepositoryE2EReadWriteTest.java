@@ -21,7 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
@@ -83,7 +82,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -111,6 +109,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   private static final String DOCKER_IMAGE_TAG = "1.2.0";
   private static final String CONFIG_HASH = "ConfigHash";
+  private static final UUID DATAPLANE_GROUP_ID = UUID.randomUUID();
 
   private CatalogService catalogService;
   private OAuthService oauthService;
@@ -142,18 +141,14 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
     dataplaneGroupIds = new HashMap<String, UUID>();
-    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
-        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
-      var dataplaneGroup = dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography)
-          .withEnabled(true)
-          .withTombstone(false));
-      dataplaneGroupIds.put(geography, dataplaneGroup.getId());
-    }
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(DATAPLANE_GROUP_ID)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("test")
+        .withEnabled(true)
+        .withTombstone(false));
 
-    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
+    connectionService = spy(new ConnectionServiceJooqImpl(database));
     actorDefinitionService = spy(new ActorDefinitionServiceJooqImpl(database));
     final ActorDefinitionVersionUpdater actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
         featureFlagClient,
@@ -189,8 +184,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        dataplaneGroupService));
+        metricClient));
     operationService = spy(new OperationServiceJooqImpl(database));
 
     for (final StandardWorkspace workspace : MockData.standardWorkspaces()) {
@@ -450,7 +444,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testListWorkspaceStandardSyncAll() throws IOException {
     final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 4)
-        .stream().map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO))).toList();
+        .stream().toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(
         MockData.standardWorkspaces().get(0).getWorkspaceId(), true);
 
@@ -465,7 +459,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
-            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO)))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -479,7 +472,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.destinationId().contains(sync.getDestinationId()))
-            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO)))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -493,7 +485,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final List<StandardSync> expectedSyncs =
         MockData.standardSyncs().subList(0, 3).stream()
             .filter(sync -> query.sourceId().contains(sync.getSourceId()))
-            .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO)))
             .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(query);
 
@@ -504,7 +495,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testListWorkspaceStandardSyncExcludeDeleted() throws IOException {
     final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 3)
         .stream()
-        .map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO)))
         .toList();
     final List<StandardSync> actualSyncs = connectionService.listWorkspaceStandardSyncs(MockData.standardWorkspaces().get(0).getWorkspaceId(), false);
 
@@ -514,10 +504,10 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   @Test
   void testGetWorkspaceBySlug() throws IOException {
     final StandardWorkspace workspace =
-        MockData.standardWorkspaces().get(0).withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_US));
+        MockData.standardWorkspaces().get(0);
 
     final StandardWorkspace tombstonedWorkspace =
-        MockData.standardWorkspaces().get(2).withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO));
+        MockData.standardWorkspaces().get(2);
     final Optional<StandardWorkspace> retrievedWorkspace = workspaceService.getWorkspaceBySlugOptional(workspace.getSlug(), false);
     final Optional<StandardWorkspace> retrievedTombstonedWorkspaceNoTombstone =
         workspaceService.getWorkspaceBySlugOptional(tombstonedWorkspace.getSlug(), false);
@@ -796,7 +786,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
   void testGetStandardSyncUsingOperation() throws IOException {
     final UUID operationId = MockData.standardSyncOperations().get(0).getOperationId();
     final List<StandardSync> expectedSyncs = MockData.standardSyncs().subList(0, 3)
-        .stream().map(sync -> sync.withDataplaneGroupId(dataplaneGroupIds.get(DataplaneConstantsKt.GEOGRAPHY_AUTO))).toList();
+        .stream().toList();
     final List<StandardSync> actualSyncs = connectionService.listStandardSyncsUsingOperation(operationId);
 
     assertSyncsMatch(expectedSyncs, actualSyncs);
@@ -886,39 +876,6 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     }).toList();
 
     assertThat(result).hasSameElementsAs(expected);
-  }
-
-  @Test
-  void testGetGeographyForConnection() throws IOException {
-    final StandardSync sync = MockData.standardSyncs().get(0);
-    final String expected = sync.getGeography();
-    final String actual = connectionService.getDataplaneGroupNameForConnection(sync.getConnectionId());
-
-    assertEquals(expected, actual);
-  }
-
-  @Test
-  void testGetGeographyForWorkspace() throws IOException, JsonValidationException {
-    final UUID organizationId = UUID.randomUUID();
-    OrganizationService organizationService = new OrganizationServiceJooqImpl(database);
-    organizationService.writeOrganization(MockData.defaultOrganization().withOrganizationId(organizationId));
-    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
-    workspace.withOrganizationId(organizationId);
-
-    final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-        .withId(UUID.randomUUID())
-        .withOrganizationId(workspace.getOrganizationId())
-        .withName(workspace.getDefaultGeography())
-        .withEnabled(true)
-        .withTombstone(false));
-
-    workspaceService.writeStandardWorkspaceNoSecrets(workspace);
-
-    final String expected = workspace.getDefaultGeography();
-    final String actual = workspaceService.getGeographyForWorkspace(workspace.getWorkspaceId());
-
-    assertEquals(expected, actual);
   }
 
   @SuppressWarnings("OptionalGetWithoutIsPresent")

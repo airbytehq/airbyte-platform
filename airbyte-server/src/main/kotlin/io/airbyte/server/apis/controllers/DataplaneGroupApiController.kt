@@ -88,7 +88,7 @@ class DataplaneGroupApiController(
   }
 
   @Post("/list")
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listDataplaneGroups(
     @Body dataplaneGroupListRequestBody: DataplaneGroupListRequestBody,

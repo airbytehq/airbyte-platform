@@ -105,6 +105,7 @@ dependencies {
   testImplementation(libs.bundles.micronaut.test)
   testImplementation(libs.temporal.testing)
   testImplementation(libs.json.path)
+  testImplementation(libs.json.smart)
   testImplementation(libs.mockito.inline)
   testImplementation(libs.mockk)
   testImplementation(libs.postgresql)
@@ -115,6 +116,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 

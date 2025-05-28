@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.card {
+  width: auto;
+  background: colors.$foreground;
+  border: variables.$border-thin solid colors.$border-color;
+  border-radius: variables.$border-radius-sm;
+  padding: variables.$spacing-xl;
+
+  &__header {
+    cursor: pointer;
+  }
+
+  &__header-link {
+    margin-left: auto;
+  }
+
+  &__header-button {
+    color: colors.$blue-400;
+  }
+}

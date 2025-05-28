@@ -275,14 +275,6 @@ public class UserPersistence {
    * @throws IOException in case of a db error
    */
   public Optional<AuthenticatedUser> getUserByAuthId(final String userAuthId) throws IOException {
-    final var resultFromAuthUsersTable = getUserByAuthIdFromAuthUserTable(userAuthId);
-    if (resultFromAuthUsersTable.isEmpty()) {
-      log.warn("User with auth user id {} not found in auth_user table", userAuthId);
-    }
-    return resultFromAuthUsersTable;
-  }
-
-  public Optional<AuthenticatedUser> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
     final var result = database.query(ctx -> ctx
         .select(
             AUTH_USER.AUTH_USER_ID,

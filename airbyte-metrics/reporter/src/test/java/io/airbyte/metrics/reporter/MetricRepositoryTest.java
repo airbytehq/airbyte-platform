@@ -15,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import io.airbyte.db.instance.configs.jooq.generated.enums.ActorType;
-import io.airbyte.db.instance.configs.jooq.generated.enums.GeographyType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.NamespaceDefinitionType;
 import io.airbyte.db.instance.configs.jooq.generated.enums.StatusType;
 import io.airbyte.db.instance.jobs.jooq.generated.enums.AttemptStatus;
@@ -77,7 +76,7 @@ abstract class MetricRepositoryTest {
       final var inactiveConnectionId = UUID.randomUUID();
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.STATUS, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID,
           CONNECTION.DESTINATION_ID, CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.DATAPLANE_GROUP_ID)
@@ -124,7 +123,8 @@ abstract class MetricRepositoryTest {
       final var dstId = UUID.randomUUID();
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION)
+          .values(UUID.randomUUID(), DEFAULT_ORGANIZATION_ID, AUTO_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -139,7 +139,7 @@ abstract class MetricRepositoryTest {
           .values(4L, connectionUuid.toString(), JobStatus.running)
           .execute();
 
-      final var res = db.numberOfPendingJobsByGeography();
+      final var res = db.numberOfPendingJobsByDataplaneGroupName();
       assertEquals(2, res.get(EU_REGION));
       assertEquals(0, res.get(AUTO_REGION));
     }
@@ -151,7 +151,8 @@ abstract class MetricRepositoryTest {
       final var dstId = UUID.randomUUID();
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION)
+          .values(UUID.randomUUID(), DEFAULT_ORGANIZATION_ID, AUTO_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -165,7 +166,7 @@ abstract class MetricRepositoryTest {
           .values(2L, connectionUuid.toString(), JobStatus.failed)
           .execute();
 
-      final var result = db.numberOfPendingJobsByGeography();
+      final var result = db.numberOfPendingJobsByDataplaneGroupName();
       assertEquals(result.get(AUTO_REGION), 0);
       assertEquals(result.get(EU_REGION), 0);
     }
@@ -184,7 +185,7 @@ abstract class MetricRepositoryTest {
       final var dstId = UUID.randomUUID();
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -204,7 +205,7 @@ abstract class MetricRepositoryTest {
           .values(4L, connectionUuid.toString(), JobStatus.failed)
           .execute();
 
-      final Double result = db.oldestPendingJobAgeSecsByGeography().get(EU_REGION);
+      final Double result = db.oldestPendingJobAgeSecsByDataplaneGroupName().get(EU_REGION);
       // expected age is 1000 seconds, but allow for +/- 1 second to account for timing/rounding errors
       assertTrue(999 < result && result < 1001);
     }
@@ -216,7 +217,8 @@ abstract class MetricRepositoryTest {
       final var dstId = UUID.randomUUID();
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION)
+          .values(UUID.randomUUID(), DEFAULT_ORGANIZATION_ID, AUTO_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -229,7 +231,7 @@ abstract class MetricRepositoryTest {
           .values(2L, connectionUuid.toString(), JobStatus.running)
           .values(3L, connectionUuid.toString(), JobStatus.failed).execute();
 
-      final var result = db.oldestPendingJobAgeSecsByGeography();
+      final var result = db.oldestPendingJobAgeSecsByDataplaneGroupName();
       assertEquals(result.get(EU_REGION), 0.0);
       assertEquals(result.get(AUTO_REGION), 0.0);
     }
@@ -303,7 +305,7 @@ abstract class MetricRepositoryTest {
 
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -337,7 +339,7 @@ abstract class MetricRepositoryTest {
 
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -375,7 +377,7 @@ abstract class MetricRepositoryTest {
 
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.DATAPLANE_GROUP_ID)
@@ -500,7 +502,7 @@ abstract class MetricRepositoryTest {
       final var syncConfigType = JobConfigType.sync;
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,
@@ -535,7 +537,7 @@ abstract class MetricRepositoryTest {
       final var syncConfigType = JobConfigType.sync;
       final var euDataplaneGroupId = UUID.randomUUID();
       ctx.insertInto(DATAPLANE_GROUP, DATAPLANE_GROUP.ID, DATAPLANE_GROUP.ORGANIZATION_ID, DATAPLANE_GROUP.NAME)
-          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, GeographyType.EU.name()).execute();
+          .values(euDataplaneGroupId, DEFAULT_ORGANIZATION_ID, EU_REGION).execute();
 
       ctx.insertInto(CONNECTION, CONNECTION.ID, CONNECTION.NAMESPACE_DEFINITION, CONNECTION.SOURCE_ID, CONNECTION.DESTINATION_ID,
           CONNECTION.NAME, CONNECTION.CATALOG, CONNECTION.SCHEDULE, CONNECTION.MANUAL, CONNECTION.STATUS, CONNECTION.CREATED_AT,

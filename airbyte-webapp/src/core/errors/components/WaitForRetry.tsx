@@ -48,7 +48,7 @@ export const WaitForRetry: React.FC<WaitForRetryProps> = ({ retry }) => {
         </Text>
       </FlexItem>
       <FlexItem grow={false}>
-        <Button variant="light" icon="rotate" onClick={retry}>
+        <Button variant="clear" icon="rotate" onClick={retry}>
           <FormattedMessage id="errors.retry.button" />
         </Button>
       </FlexItem>

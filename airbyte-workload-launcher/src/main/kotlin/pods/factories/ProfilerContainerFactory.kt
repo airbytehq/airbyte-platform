@@ -5,9 +5,9 @@
 package io.airbyte.workload.launcher.pods.factories
 
 import io.airbyte.config.ResourceRequirements
-import io.airbyte.workers.pod.ContainerConstants
-import io.airbyte.workers.pod.KubeContainerInfo
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.constants.ContainerConstants
+import io.airbyte.workload.launcher.pods.KubeContainerInfo
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -26,6 +26,7 @@ class ProfilerContainerFactory(
       "WORKLOAD_ID",
       "CONNECTION_ID",
       "JOB_ID",
+      "ATTEMPT_ID",
       "STORAGE_TYPE",
       "STORAGE_BUCKET_LOG",
       "STORAGE_BUCKET_STATE",

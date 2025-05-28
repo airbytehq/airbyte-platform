@@ -4,6 +4,6 @@
 
 package io.airbyte.commons.constants
 
-const val GEOGRAPHY_AUTO = "AUTO"
-const val GEOGRAPHY_US = "US"
-const val GEOGRAPHY_EU = "EU"
+const val AUTO_DATAPLANE_GROUP = "AUTO"
+const val US_DATAPLANE_GROUP = "US"
+const val EU_DATAPLANE_GROUP = "EU"

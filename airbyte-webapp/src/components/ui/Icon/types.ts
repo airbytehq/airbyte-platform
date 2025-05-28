@@ -14,6 +14,7 @@ export type IconType =
   | "chart"
   | "chat"
   | "check"
+  | "checkCircle"
   | "chevronDown"
   | "chevronLeft"
   | "chevronRight"
@@ -164,4 +165,5 @@ export interface IconProps {
   color?: IconColor;
   withBackground?: boolean;
   title?: string;
+  onClick?: () => void;
 }

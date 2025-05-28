@@ -100,7 +100,7 @@ class CatalogConverterTest {
     final var internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog);
     assertEquals(1, internalCatalog.getStreams().size());
     final var internalStream = internalCatalog.getStreams().getFirst();
-    assertEquals(includeFiles, internalStream.getIncludesFiles());
+    assertEquals(includeFiles, internalStream.getIncludeFiles());
   }
 
   @Test

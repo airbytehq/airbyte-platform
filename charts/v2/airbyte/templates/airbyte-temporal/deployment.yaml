@@ -59,8 +59,8 @@ spec:
         image: {{ include "imageUrl" (list .Values.temporal.image $) }}
         imagePullPolicy: {{ .Values.temporal.image.pullPolicy }}
         env:
-
           {{- include "airbyte.temporal.envs" . | nindent 10 }}
+          {{- include "airbyte.temporal.database.envs" . | nindent 10 }}
 
         {{- if .Values.temporal.extraEnv }}
         {{ .Values.temporal.extraEnv | toYaml | nindent 10 }}

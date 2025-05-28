@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.jooq
 
 import com.google.common.io.Resources
-import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
 import io.airbyte.config.Notification
@@ -16,8 +15,8 @@ import io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE
 import org.jooq.JSONB
 import org.jooq.Record
 import org.jooq.impl.DSL
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -51,8 +50,16 @@ internal class DbConverterTest {
     internal: InternalConfiguredAirbyteCatalog,
     protocol: ProtocolConfiguredAirbyteCatalog,
   ) {
-    val internalToProtocol = parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
-    Assertions.assertEquals(protocol, internalToProtocol)
+    val internalToProtocol: ProtocolConfiguredAirbyteCatalog =
+      parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
+
+    // This is to ease the defaults in the comparison. The frozen catalogs do not have includeFiles,
+    // we default to false in the new model
+    protocol.streams.map {
+      assertNull(it.includeFiles)
+      it.withIncludeFiles(false)
+    }
+    assertEquals(protocol, internalToProtocol)
   }
 
   companion object {
@@ -75,6 +82,7 @@ internal class DbConverterTest {
     val workspaceId = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
     val customerId = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
     val createdAt = OffsetDateTime.now()
     val updatedAt = OffsetDateTime.now()
 
@@ -96,7 +104,7 @@ internal class DbConverterTest {
     val mockRecord: Record =
       DSL
         .using(org.jooq.SQLDialect.POSTGRES)
-        .newRecord(*WORKSPACE.fields(), DATAPLANE_GROUP.NAME)
+        .newRecord(*WORKSPACE.fields(), DATAPLANE_GROUP.ID)
         .apply {
           set(WORKSPACE.ID, workspaceId)
           set(WORKSPACE.NAME, "Test Workspace")
@@ -113,7 +121,7 @@ internal class DbConverterTest {
           set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.jsonb(notificationSettingsJson))
           set(WORKSPACE.FIRST_SYNC_COMPLETE, true)
           set(WORKSPACE.FEEDBACK_COMPLETE, false)
-          set(DATAPLANE_GROUP.NAME, "US")
+          set(WORKSPACE.DATAPLANE_GROUP_ID, dataplaneGroupId)
           set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.jsonb(webhookOperationConfigsJson))
           set(WORKSPACE.ORGANIZATION_ID, organizationId)
           set(WORKSPACE.CREATED_AT, createdAt)
@@ -135,7 +143,7 @@ internal class DbConverterTest {
     assertEquals(false, workspace.tombstone)
     assertEquals(true, workspace.firstCompletedSync)
     assertEquals(false, workspace.feedbackDone)
-    assertEquals(GEOGRAPHY_US, workspace.defaultGeography)
+    assertEquals(dataplaneGroupId, workspace.dataplaneGroupId)
     assertEquals(organizationId, workspace.organizationId)
     assertEquals(createdAt.toEpochSecond(), workspace.createdAt)
     assertEquals(updatedAt.toEpochSecond(), workspace.updatedAt)
@@ -155,66 +163,5 @@ internal class DbConverterTest {
     assertEquals(expectedNotificationSettings, workspace.notificationSettings)
 
     assertEquals(Jsons.deserialize(webhookOperationConfigsJson), workspace.webhookOperationConfigs)
-  }
-
-  @Test
-  fun `test missing dataplane group name throws exception`() {
-    val workspaceId = UUID.randomUUID()
-    val organizationId = UUID.randomUUID()
-    val customerId = UUID.randomUUID()
-    val createdAt = OffsetDateTime.now()
-    val updatedAt = OffsetDateTime.now()
-    val notificationsJson =
-      """
-      [
-        {
-          "notificationType": "customerio",
-          "sendOnSuccess": false,
-          "sendOnFailure": true,
-          "slackConfiguration": null,
-          "customerioConfiguration": null
-        }
-      ]
-      """.trimIndent()
-
-    val notificationSettingsJson = """{"customerio": true, "slack": false}"""
-    val webhookOperationConfigsJson = """{"enabled": false}"""
-
-    val mockRecord: Record =
-      DSL
-        .using(org.jooq.SQLDialect.POSTGRES)
-        .newRecord(*WORKSPACE.fields(), DATAPLANE_GROUP.NAME)
-        .apply {
-          set(WORKSPACE.ID, workspaceId)
-          set(WORKSPACE.NAME, "Test Workspace")
-          set(WORKSPACE.SLUG, "test-workspace")
-          set(WORKSPACE.INITIAL_SETUP_COMPLETE, true)
-          set(WORKSPACE.CUSTOMER_ID, customerId)
-          set(WORKSPACE.EMAIL, "test@example.com")
-          set(WORKSPACE.ANONYMOUS_DATA_COLLECTION, false)
-          set(WORKSPACE.SEND_NEWSLETTER, true)
-          set(WORKSPACE.SEND_SECURITY_UPDATES, false)
-          set(WORKSPACE.DISPLAY_SETUP_WIZARD, true)
-          set(WORKSPACE.TOMBSTONE, false)
-          set(WORKSPACE.NOTIFICATIONS, JSONB.jsonb(notificationsJson))
-          set(WORKSPACE.NOTIFICATION_SETTINGS, JSONB.jsonb(notificationSettingsJson))
-          set(WORKSPACE.FIRST_SYNC_COMPLETE, true)
-          set(WORKSPACE.FEEDBACK_COMPLETE, false)
-          set(WORKSPACE.WEBHOOK_OPERATION_CONFIGS, JSONB.jsonb(webhookOperationConfigsJson))
-          set(WORKSPACE.ORGANIZATION_ID, organizationId)
-          set(WORKSPACE.CREATED_AT, createdAt)
-          set(WORKSPACE.UPDATED_AT, updatedAt)
-          // Intentionally NOT setting DATAPLANE_GROUP.NAME to trigger the exception
-        }
-
-    val exception =
-      Assertions.assertThrows(IllegalStateException::class.java) {
-        DbConverter.buildStandardWorkspace(mockRecord)
-      }
-
-    assertEquals(
-      "Missing or invalid geography: DATAPLANE_GROUP.NAME is null or not present in the record.",
-      exception.message,
-    )
   }
 }

@@ -5,7 +5,7 @@ import { useCallback, useMemo } from "react";
 import { useIntl } from "react-intl";
 import * as yup from "yup";
 import { MixedSchema } from "yup/lib/mixed";
-import { AnyObject, SchemaLike } from "yup/lib/types";
+import { AnyObject, SchemaLike, ValidateOptions } from "yup/lib/types";
 import { z } from "zod";
 
 import {
@@ -31,6 +31,7 @@ import {
   SUBSTREAM_PARTITION_ROUTER,
   isYamlString,
   JWT_AUTHENTICATOR,
+  GeneratedBuilderStream,
 } from "./types";
 
 const INTERPOLATION_PATTERN = /^\{\{.+\}\}$/;
@@ -198,8 +199,17 @@ export const useBuilderValidationSchema = () => {
             "unique-stream-name",
             "connectorBuilder.unique",
             (value: string | undefined, testContext: AnyObject) => {
-              const allStreamNames = testContext.from[1].value.streams.map((stream: BuilderStream) => stream.name);
-              return allStreamNames.filter((name: string) => name === value).length === 1;
+              const streamNames =
+                testContext.from.at(-1)!.value.streams?.map((stream: BuilderStream) => stream.name) ?? [];
+
+              const generatedStreamNames = Object.values<GeneratedBuilderStream[]>(
+                testContext.from.at(-1)!.value.generatedStreams ?? {}
+              )
+                .flat()
+                .map((stream: GeneratedBuilderStream) => stream.name);
+
+              const allStreamNames = [...streamNames, ...generatedStreamNames];
+              return allStreamNames.filter((name: string) => name === value).length <= 1;
             }
           ),
         schema: jsonString,
@@ -291,13 +301,47 @@ export const useBuilderValidationSchema = () => {
     [formatMessage, parameterizedRequestsSchema, parentStreamSchema, authenticatorSchema]
   );
 
+  const generatedStreamsSchema = useMemo(
+    () =>
+      yup
+        .object()
+        .shape({})
+        .test("generatedStreams", "Generated streams must be valid streams", (value, testContext) => {
+          for (const key in value) {
+            const streams: BuilderStream[] = value[key];
+            try {
+              streams.forEach((stream) => {
+                streamSchema.validateSync(stream, testContext as ValidateOptions);
+              });
+            } catch (e) {
+              return false;
+            }
+          }
+          return true;
+        }),
+    [streamSchema]
+  );
+
   const builderFormValidationSchema = useMemo(
     () =>
       yup.object().shape({
         global: globalSchema,
         streams: yup.array().of(streamSchema),
+        dynamicStreams: yup.array().of(
+          yup.object().shape({
+            dynamicStreamName: yup.string().required(REQUIRED_ERROR),
+            componentsResolver: yup.object().shape({
+              retriever: yup.object().shape({
+                requester: yup.object().shape({
+                  path: yup.string().required(REQUIRED_ERROR),
+                }),
+              }),
+            }),
+          })
+        ),
+        generatedStreams: generatedStreamsSchema,
       }),
-    [globalSchema, streamSchema]
+    [globalSchema, streamSchema, generatedStreamsSchema]
   );
 
   const testingValuesSchema = useMemo(
@@ -346,25 +390,6 @@ export const useBuilderValidationSchema = () => {
     []
   );
 
-  const generatedStreamsSchema = useMemo(
-    () =>
-      yup
-        .object()
-        .shape({})
-        .test("generatedStreams", "Generated streams must be valid streams", (value) => {
-          for (const key in value) {
-            const stream = value[key];
-            try {
-              streamSchema.validateSync(stream);
-            } catch {
-              return false;
-            }
-          }
-          return true;
-        }),
-    [streamSchema]
-  );
-
   const builderStateValidationSchema = useMemo(
     () =>
       yup.object().shape({
@@ -376,8 +401,13 @@ export const useBuilderValidationSchema = () => {
           .mixed()
           .test(
             "isValidView",
-            'Must be "global", "inputs", "components", or a number',
-            (value) => typeof value === "number" || value === "global" || value === "inputs" || value === "components"
+            'Must be an object with a "type" property that is one of "global", "inputs", "components", or an object with a "type" property that is one of "stream", "dynamic_stream", "generated_stream" and a "index" property that is a number',
+            (value) =>
+              value != null &&
+              typeof value === "object" &&
+              (["global", "inputs", "components"].includes(value.type) ||
+                (["stream", "dynamic_stream", "generated_stream"].includes(value.type) &&
+                  typeof value.index === "number"))
           ),
         testStreamId: yup
           .object()
@@ -386,10 +416,9 @@ export const useBuilderValidationSchema = () => {
             index: yup.number().min(0).required(REQUIRED_ERROR),
           })
           .required(REQUIRED_ERROR),
-        generatedStreams: generatedStreamsSchema,
         testingValues: testingValuesSchema,
       }),
-    [builderFormValidationSchema, testingValuesSchema, generatedStreamsSchema]
+    [builderFormValidationSchema, testingValuesSchema]
   );
 
   return {

@@ -1,0 +1,35 @@
+@use "scss/variables";
+
+.fieldMappings {
+  &__leftGutter {
+    grid-column: 1;
+    height: variables.$form-input-height;
+  }
+
+  &__source {
+    grid-column: 2;
+  }
+
+  &__arrow {
+    grid-column: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: variables.$form-input-height;
+  }
+
+  &__destination {
+    grid-column: 4;
+  }
+
+  &__addField {
+    grid-column: 1 / -1;
+  }
+
+  &__removeField {
+    height: variables.$form-input-height;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+}

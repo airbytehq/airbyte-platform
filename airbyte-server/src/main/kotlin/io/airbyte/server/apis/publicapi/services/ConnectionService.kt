@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.Pagination
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.Configs.AirbyteEdition
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionPatchRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
@@ -28,6 +28,7 @@ import io.airbyte.server.apis.publicapi.mappers.ConnectionUpdateMapper
 import io.airbyte.server.apis.publicapi.mappers.ConnectionsResponseMapper
 import io.micronaut.context.annotation.Secondary
 import io.micronaut.context.annotation.Value
+import jakarta.inject.Inject
 import jakarta.inject.Singleton
 import org.slf4j.LoggerFactory
 import java.util.Collections
@@ -48,7 +49,7 @@ interface ConnectionService {
   fun updateConnection(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
-    catalogId: UUID,
+    catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
   ): ConnectionResponse
@@ -69,12 +70,15 @@ class ConnectionServiceImpl(
   private val sourceService: SourceService,
   private val connectionHandler: ConnectionsHandler,
   private val currentUserService: CurrentUserService,
-  private val airbyteEdition: AirbyteEdition,
+  private val dataplaneGroupService: DataplaneGroupService,
   private val dataResidencyHelper: DataResidencyHelper,
 ) : ConnectionService {
   companion object {
     private val log = LoggerFactory.getLogger(ConnectionServiceImpl::class.java)
   }
+
+  @Inject
+  private lateinit var dataplaneService: DataplaneService
 
   @Value("\${airbyte.api.host}")
   var publicApiHost: String? = null
@@ -89,10 +93,12 @@ class ConnectionServiceImpl(
     workspaceId: UUID,
   ): ConnectionResponse {
     val connectionCreateOss: ConnectionCreate =
-      ConnectionCreateMapper.from(connectionCreateRequest, catalogId, configuredCatalog)
-
-    connectionCreateOss.geography =
-      dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionCreateRequest.dataResidency)
+      ConnectionCreateMapper.from(
+        connectionCreateRequest,
+        catalogId,
+        configuredCatalog,
+        dataResidencyHelper.getDataplaneGroupFromResidencyAndAirbyteEdition(connectionCreateRequest.dataResidency)?.id,
+      )
 
     val result: Result<ConnectionRead> =
       kotlin
@@ -106,7 +112,7 @@ class ConnectionServiceImpl(
       ConnectionReadMapper.from(
         result.getOrNull()!!,
         workspaceId,
-        airbyteEdition,
+        dataplaneGroupService.getDataplaneGroup(result.getOrNull()!!.dataplaneGroupId).name,
       )
     } catch (e: Exception) {
       log.error("Error while reading response and converting to Connection read: ", e)
@@ -150,7 +156,7 @@ class ConnectionServiceImpl(
     return ConnectionReadMapper.from(
       connectionRead,
       UUID.fromString(sourceResponse.workspaceId),
-      airbyteEdition,
+      dataplaneGroupService.getDataplaneGroup(connectionRead.dataplaneGroupId).name,
     )
   }
 
@@ -160,22 +166,25 @@ class ConnectionServiceImpl(
   override fun updateConnection(
     connectionId: UUID,
     connectionPatchRequest: ConnectionPatchRequest,
-    catalogId: UUID,
+    catalogId: UUID?,
     configuredCatalog: AirbyteCatalog?,
     workspaceId: UUID,
   ): ConnectionResponse {
+    val dataplaneGroupId: UUID? =
+      if (connectionPatchRequest.dataResidency != null) {
+        dataResidencyHelper.getDataplaneGroupFromResidencyAndAirbyteEdition(connectionPatchRequest.dataResidency)?.id
+      } else {
+        null
+      }
+
     val connectionUpdate: ConnectionUpdate =
       ConnectionUpdateMapper.from(
         connectionId,
         connectionPatchRequest,
         catalogId,
         configuredCatalog,
+        dataplaneGroupId,
       )
-
-    if (connectionPatchRequest.dataResidency != null) {
-      connectionUpdate.geography =
-        dataResidencyHelper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(connectionPatchRequest.dataResidency)
-    }
 
     // this is kept as a string to easily parse the error response to determine if a source or a
     // destination id is invalid
@@ -194,7 +203,7 @@ class ConnectionServiceImpl(
       ConnectionReadMapper.from(
         connectionRead,
         workspaceId,
-        airbyteEdition,
+        dataplaneGroupService.getDataplaneGroup(connectionRead.dataplaneGroupId).name,
       )
     } catch (e: java.lang.Exception) {
       log.error("Error while reading and converting to Connection Response: ", e)
@@ -240,7 +249,9 @@ class ConnectionServiceImpl(
       limit,
       offset,
       publicApiHost!!,
-      airbyteEdition,
+      connectionReadList.connections.map {
+        dataplaneGroupService.getDataplaneGroup(it.dataplaneGroupId).name
+      },
     )
   }
 }

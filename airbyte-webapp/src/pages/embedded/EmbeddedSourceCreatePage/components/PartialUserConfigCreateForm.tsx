@@ -1,39 +1,58 @@
-import { useSearchParams } from "react-router-dom";
-
 import { useCreatePartialUserConfig, useGetConfigTemplate } from "core/api";
-import { SourceDefinitionSpecificationDraft } from "core/domain/connector";
+import { SourceDefinitionSpecification } from "core/api/types/AirbyteClient";
+import { IsAirbyteEmbeddedContext } from "core/services/embedded";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import { PartialUserConfigForm } from "./PartialUserConfigForm";
+import { PartialUserConfigSuccessView } from "./PartialUserConfigSuccessView";
+import { useEmbeddedSourceParams } from "../hooks/useEmbeddedSourceParams";
 
 export const PartialUserConfigCreateForm: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const selectedTemplateId = searchParams.get("selectedTemplateId") ?? "";
-  const workspaceId = searchParams.get("workspaceId") ?? "";
-  const { mutate: createPartialUserConfig } = useCreatePartialUserConfig();
-  const configTemplate = useGetConfigTemplate(selectedTemplateId, workspaceId);
+  const { workspaceId, selectedTemplateId } = useEmbeddedSourceParams();
+  const { mutate: createPartialUserConfig, isSuccess } = useCreatePartialUserConfig();
+  const configTemplate = useGetConfigTemplate(selectedTemplateId ?? "", workspaceId);
 
-  const sourceDefinitionSpecification: SourceDefinitionSpecificationDraft = configTemplate.configTemplateSpec;
+  const sourceDefinitionSpecification: SourceDefinitionSpecification = {
+    ...configTemplate.configTemplateSpec,
+    advancedAuth: configTemplate.advancedAuth,
+    sourceDefinitionId: configTemplate.sourceDefinitionId,
+  };
+
   const onSubmit = (values: ConnectorFormValues) => {
-    createPartialUserConfig({
-      workspaceId,
-      configTemplateId: selectedTemplateId,
-      connectionConfiguration: values.connectionConfiguration,
+    return new Promise<void>((resolve, reject) => {
+      createPartialUserConfig(
+        {
+          workspaceId,
+          configTemplateId: selectedTemplateId ?? "",
+          connectionConfiguration: values.connectionConfiguration,
+        },
+        {
+          onSuccess: () => resolve(),
+          onError: (error) => reject(error),
+        }
+      );
     });
   };
 
+  if (isSuccess) {
+    return (
+      <PartialUserConfigSuccessView
+        successType="create"
+        connectorName={configTemplate.name}
+        icon={configTemplate.icon}
+      />
+    );
+  }
+
   return (
-    <PartialUserConfigForm
-      isEditMode={false}
-      title={configTemplate.name}
-      onBack={() => {
-        setSearchParams((params) => {
-          params.delete("selectedTemplateId");
-          return params;
-        });
-      }}
-      onSubmit={onSubmit}
-      sourceDefinitionSpecification={sourceDefinitionSpecification}
-    />
+    <IsAirbyteEmbeddedContext.Provider value>
+      <PartialUserConfigForm
+        isEditMode={false}
+        connectorName={configTemplate.name}
+        icon={configTemplate.icon}
+        onSubmit={onSubmit}
+        sourceDefinitionSpecification={sourceDefinitionSpecification}
+      />
+    </IsAirbyteEmbeddedContext.Provider>
   );
 };

@@ -11,6 +11,8 @@ import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.State
 import io.airbyte.config.SyncMode
+import io.airbyte.initContainer.InputFetcherTest
+import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -18,9 +20,9 @@ import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.workers.ReplicationInputHydrator
 import io.airbyte.workers.internal.NamespacingMapper
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.airbyte.workload.api.client.model.generated.WorkloadType
@@ -72,6 +74,7 @@ class ReplicationHydrationProcessorTest {
         fileClient,
         destinationCatalogGenerator,
         metricClient,
+        ArchitectureConstants.ORCHESTRATOR,
       )
   }
 
@@ -165,13 +168,12 @@ class ReplicationHydrationProcessorTest {
 
     val workload =
       Workload(
-        WORKLOAD_ID,
-        listOf(),
-        "inputPayload",
-        "logPath",
-        "geography",
-        WorkloadType.SYNC,
-        UUID.randomUUID(),
+        id = InputFetcherTest.Fixtures.WORKLOAD_ID,
+        labels = listOf(),
+        inputPayload = "inputPayload",
+        logPath = "logPath",
+        type = WorkloadType.SYNC,
+        autoId = UUID.randomUUID(),
       )
   }
 }

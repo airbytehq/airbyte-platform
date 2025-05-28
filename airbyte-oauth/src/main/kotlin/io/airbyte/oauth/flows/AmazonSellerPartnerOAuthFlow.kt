@@ -38,7 +38,7 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
   @Throws(IOException::class, JsonValidationException::class)
   override fun getSourceConsentUrl(
     workspaceId: UUID,
-    sourceDefinitionId: UUID,
+    sourceDefinitionId: UUID?,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,
     oauthConfigSpecification: OAuthConfigSpecification?,
@@ -122,7 +122,7 @@ class AmazonSellerPartnerOAuthFlow : BaseOAuth2Flow {
      */
   @Throws(IOException::class)
   override fun formatConsentUrl(
-    definitionId: UUID,
+    definitionId: UUID?,
     clientId: String,
     redirectUrl: String,
     inputOAuthConfiguration: JsonNode,

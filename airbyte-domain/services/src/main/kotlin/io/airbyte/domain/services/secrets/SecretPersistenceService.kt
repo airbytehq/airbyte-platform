@@ -53,6 +53,9 @@ class SecretPersistenceService(
 ) {
   fun getPersistenceByStorageId(secretStorageId: SecretStorageId): SecretPersistence {
     val secretStorage = secretStorageService.getById(secretStorageId)
+    if (secretStorage.isDefault()) {
+      return defaultSecretPersistence
+    }
     val secretStorageConfig = secretStorageService.hydrateStorageConfig(secretStorage).config
     val secretPersistenceConfig =
       SecretPersistenceConfig()

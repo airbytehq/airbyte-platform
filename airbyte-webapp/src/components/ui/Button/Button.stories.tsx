@@ -62,13 +62,6 @@ Secondary.args = {
   disabled: false,
 };
 
-export const Light = Template.bind({});
-Light.args = {
-  variant: "light",
-  children: "Light",
-  disabled: false,
-};
-
 export const Danger = Template.bind({});
 Danger.args = {
   variant: "danger",

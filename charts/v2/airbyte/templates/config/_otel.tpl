@@ -9,7 +9,7 @@
 Renders the global.metrics.otel.exporter.endpoint value
 */}}
 {{- define "airbyte.otel.exporter.endpoint" }}
-    {{- .Values.global.metrics.otel.exporter.endpoint | default (ternary "http://$(DD_AGENT_HOST):4317" "" .Values.global.datadog.enabled) }}
+    {{- .Values.global.metrics.otel.exporter.endpoint | default (ternary "http://${DD_AGENT_HOST}:4317" "" .Values.global.datadog.enabled) }}
 {{- end }}
 
 {{/*

@@ -20,7 +20,7 @@ import {
   useGetSource,
 } from "core/api";
 import { SupportLevel } from "core/api/types/AirbyteClient";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
 
@@ -28,8 +28,8 @@ type StepStatus = "complete" | "active" | "incomplete";
 const COMPLETE = "complete";
 const ACTIVE = "active";
 const INCOMPLETE = "incomplete";
-const SOURCEID_PARAM = "sourceId";
-const DESTINATIONID_PARAM = "destinationId";
+export const SOURCEID_PARAM = "sourceId";
+export const DESTINATIONID_PARAM = "destinationId";
 
 interface ConnectionSteps {
   defineSource: StepStatus;
@@ -83,7 +83,9 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
   step,
   value,
 }) => {
+  const location = useLocation();
   const color = state === INCOMPLETE ? "grey" : "blue";
+  const isDataActivation = location.pathname.includes(ConnectionRoutePaths.ConfigureDataActivation);
   const messageId =
     step === "defineSource"
       ? "connectionForm.defineSource"
@@ -91,6 +93,8 @@ const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value
       ? "connectionForm.defineDestination"
       : step === "configureConnection"
       ? "connectionForm.configureConnection"
+      : isDataActivation
+      ? "connection.create.mapFields"
       : "connectionForm.selectStreams";
 
   return (

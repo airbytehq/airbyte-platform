@@ -15,7 +15,8 @@ import { BuilderOneOf, OneOfOption } from "./BuilderOneOf";
 import { getDescriptionByManifest, getOptionsByManifest } from "./manifestHelpers";
 import { ToggleGroupField } from "./ToggleGroupField";
 import { manifestErrorHandlerToBuilder } from "../convertManifestToBuilderForm";
-import { builderErrorHandlersToManifest } from "../types";
+import { builderErrorHandlersToManifest, StreamId } from "../types";
+import { StreamFieldPath } from "../utils";
 
 type ErrorHandlerSectionProps =
   | {
@@ -24,8 +25,10 @@ type ErrorHandlerSectionProps =
         | `formValues.streams.${number}.errorHandler`
         | `formValues.streams.${number}.creationRequester.errorHandler`
         | `formValues.streams.${number}.pollingRequester.errorHandler`
-        | `formValues.streams.${number}.downloadRequester.errorHandler`;
-      currentStreamIndex: number;
+        | `formValues.streams.${number}.downloadRequester.errorHandler`
+        | `formValues.dynamicStreams.${number}.streamTemplate.errorHandler`
+        | `formValues.generatedStreams.${string}.${number}.errorHandler`;
+      streamId: StreamId;
     }
   | {
       inline: true;
@@ -243,11 +246,15 @@ export const ErrorHandlerSection: React.FC<ErrorHandlerSectionProps> = (props) =
           manifestToBuilder: manifestErrorHandlerToBuilder,
         },
       }}
-      copyConfig={{
-        path: props.basePath,
-        currentStreamIndex: props.currentStreamIndex,
-        componentName: label,
-      }}
+      copyConfig={
+        props.streamId.type === "stream"
+          ? {
+              path: props.basePath as StreamFieldPath,
+              currentStreamIndex: props.streamId.index,
+              componentName: label,
+            }
+          : undefined
+      }
     >
       {content}
     </BuilderCard>

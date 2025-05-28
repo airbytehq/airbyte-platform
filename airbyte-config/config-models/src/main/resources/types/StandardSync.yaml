@@ -11,7 +11,6 @@ required:
   - catalog
   - manual
   - namespaceDefinition
-  - geography
   - breakingChange
 additionalProperties: true
 properties:
@@ -121,8 +120,6 @@ properties:
     format: uuid
   resourceRequirements:
     "$ref": ResourceRequirements.yaml
-  geography:
-    type: string
   dataplaneGroupId:
     type: string
     format: uuid

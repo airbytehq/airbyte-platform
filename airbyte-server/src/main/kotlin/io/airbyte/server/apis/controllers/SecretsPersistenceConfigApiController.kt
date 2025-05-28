@@ -94,7 +94,7 @@ class SecretsPersistenceConfigApiController(
   }
 
   @Post("/get")
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   override fun getSecretsPersistenceConfig(
     @Body requestBody: SecretPersistenceConfigGetRequestBody,
   ): SecretPersistenceConfig? {

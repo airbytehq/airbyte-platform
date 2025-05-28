@@ -98,9 +98,10 @@ class DiscoverCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.discoverCatalogInput.actorContext.workspaceId
+    val organizationId = input.discoverCatalogInput.actorContext.organizationId
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForDiscover(
-        organizationId = input.discoverCatalogInput.actorContext.organizationId,
+        organizationId = organizationId,
         workspaceId = workspaceId,
         actorId = input.discoverCatalogInput.actorContext.actorId,
       )
@@ -120,6 +121,8 @@ class DiscoverCommand(
           ),
         ),
       workloadInput = serializedInput,
+      workspaceId = workspaceId,
+      organizationId = organizationId,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
       type = WorkloadType.DISCOVER,
       priority = decode(input.launcherConfig.priority.toString())!!,

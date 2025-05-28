@@ -340,6 +340,42 @@ Renders the secretsManager.googleSecretManager.credentials environment variable
 {{- end }}
 
 {{/*
+Renders the global.secretsManager.googleSecretManager.credentialsSecretKey value
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.credentialsSecretKey" }}
+    {{- (include "airbyte.secretsManager.googleSecretManager.credentials.secretKey" .) }}
+{{- end }}
+
+{{/*
+Renders the secretsManager.googleSecretManager.credentialsSecretKey environment variable
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.credentialsSecretKey.env" }}
+- name: SECRET_STORE_GCP_SECRET_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: SECRET_STORE_GCP_SECRET_KEY
+{{- end }}
+
+{{/*
+Renders the global.secretsManager.googleSecretManager.credentailsSecretName value
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.credentailsSecretName" }}
+    {{- (include "airbyte.secretsManager.secretName" .) }}
+{{- end }}
+
+{{/*
+Renders the secretsManager.googleSecretManager.credentailsSecretName environment variable
+*/}}
+{{- define "airbyte.secretsManager.googleSecretManager.credentailsSecretName.env" }}
+- name: SECRET_STORE_GCP_SECRET_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: SECRET_STORE_GCP_SECRET_NAME
+{{- end }}
+
+{{/*
 Renders the global.secretsManager.vault.address value
 */}}
 {{- define "airbyte.secretsManager.vault.address" }}
@@ -429,6 +465,8 @@ Renders the set of all secretsManager environment variables
 {{- if eq $opt "GOOGLE_SECRET_MANAGER" }}
 {{- include "airbyte.secretsManager.googleSecretManager.projectId.env" . }}
 {{- include "airbyte.secretsManager.googleSecretManager.credentials.env" . }}
+{{- include "airbyte.secretsManager.googleSecretManager.credentialsSecretKey.env" . }}
+{{- include "airbyte.secretsManager.googleSecretManager.credentailsSecretName.env" . }}
 {{- end }}
 
 {{- if eq $opt "TESTING_CONFIG_DB_TABLE" }}
@@ -466,6 +504,8 @@ AB_AZURE_KEY_CLIENT_SECRET_REF_KEY: {{ .Values.global.secretsManager.azureKeyVau
 
 {{- if eq $opt "GOOGLE_SECRET_MANAGER" }}
 SECRET_STORE_GCP_PROJECT_ID: {{ include "airbyte.secretsManager.googleSecretManager.projectId" . | quote }}
+SECRET_STORE_GCP_SECRET_KEY: {{ (include "airbyte.secretsManager.googleSecretManager.credentials.secretKey" .) | quote }}
+SECRET_STORE_GCP_SECRET_NAME: {{ (include "airbyte.secretsManager.secretName" .) | quote }}
 {{- end }}
 
 {{- if eq $opt "TESTING_CONFIG_DB_TABLE" }}

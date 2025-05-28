@@ -4,7 +4,7 @@ import { AlertBanner } from "components/ui/Banner/AlertBanner";
 
 import { useBillingStatusBanner } from "../../utils/useBillingStatusBanner";
 
-const WorkspaceStatusBanner: React.FC = () => {
+const MainViewStatusBanner: React.FC = () => {
   const statusBanner = useBillingStatusBanner("top_level");
   return statusBanner ? (
     <AlertBanner data-testid="billing-status-banner" message={statusBanner.content} color={statusBanner.level} />
@@ -14,7 +14,7 @@ const WorkspaceStatusBanner: React.FC = () => {
 export const StatusBanner: React.FC = () => {
   return (
     <React.Suspense>
-      <WorkspaceStatusBanner />
+      <MainViewStatusBanner />
     </React.Suspense>
   );
 };

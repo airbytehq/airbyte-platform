@@ -134,7 +134,10 @@ public class ConnectorRegistryConverters {
         .withLastPublished(lastModified)
         .withCdkVersion(cdkVersion)
         .withSuggestedStreams(def.getSuggestedStreams())
-        .withLanguage(def.getLanguage());
+        .withLanguage(def.getLanguage())
+        .withSupportsFileTransfer(def.getSupportsFileTransfer())
+        .withConnectorIPCOptions(def.getConnectorIPCOptions());
+
   }
 
   /**
@@ -174,7 +177,10 @@ public class ConnectorRegistryConverters {
         .withCdkVersion(cdkVersion)
         .withSupportsRefreshes(def.getSupportsRefreshes() != null && def.getSupportsRefreshes())
         .withLanguage(def.getLanguage())
-        .withSupportsFileTransfer(def.getSupportsFileTransfer());
+        .withSupportsFileTransfer(def.getSupportsFileTransfer())
+        .withSupportsDataActivation(def.getSupportsDataActivation())
+        .withConnectorIPCOptions(def.getConnectorIPCOptions());
+
   }
 
   /**

@@ -38,6 +38,7 @@ import io.airbyte.api.client.model.generated.ConnectionStatus;
 import io.airbyte.api.client.model.generated.ConnectionUpdate;
 import io.airbyte.api.client.model.generated.CustomDestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.CustomSourceDefinitionCreate;
+import io.airbyte.api.client.model.generated.DataplaneGroupListRequestBody;
 import io.airbyte.api.client.model.generated.DestinationCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionCreate;
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdWithWorkspaceId;
@@ -167,7 +168,7 @@ public class AcceptanceTestHarness {
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
       .asCompatibleSubstituteFor("postgres");
 
-  private static final String TEMPORAL_HOST = "temporal.airbyte.dev:80";
+  private static final String TEMPORAL_HOST = java.util.Optional.ofNullable(System.getenv("TEMPORAL_HOST")).orElse("temporal.airbyte.dev:80");
 
   private static final String SOURCE_E2E_TEST_CONNECTOR_VERSION = "0.1.2";
   private static final String DESTINATION_E2E_TEST_CONNECTOR_VERSION = "0.1.1";
@@ -217,6 +218,7 @@ public class AcceptanceTestHarness {
   private static boolean isKube;
   private static boolean isMinikube;
   private static boolean isGke;
+  private static boolean isCI;
   private static boolean isMac;
   private static boolean ensureCleanSlate;
   private CloudSqlDatabaseProvisioner cloudSqlDatabaseProvisioner;
@@ -234,6 +236,7 @@ public class AcceptanceTestHarness {
   private final AirbyteApiClient apiClient;
   private final TestFlagsSetter testFlagsSetter;
   private final UUID defaultWorkspaceId;
+  private final UUID dataplaneGroupId;
   private final String postgresSqlInitFile;
 
   private final List<UUID> sourceIds = Lists.newArrayList();
@@ -313,6 +316,7 @@ public class AcceptanceTestHarness {
         SyncMode.FULL_REFRESH,
         DestinationSyncMode.OVERWRITE,
         List.of(),
+        null,
         List.of(),
         STREAM_NAME.replace(".", "_"),
         true,
@@ -334,6 +338,9 @@ public class AcceptanceTestHarness {
         .withBackoff(Duration.ofSeconds(JITTER_MAX_INTERVAL_SECS), Duration.ofSeconds(FINAL_INTERVAL_SECS))
         .withMaxRetries(MAX_TRIES)
         .build();
+
+    dataplaneGroupId = apiClient.getDataplaneGroupApi().listDataplaneGroups(new DataplaneGroupListRequestBody(DEFAULT_ORGANIZATION_ID))
+        .getDataplaneGroups().getFirst().getDataplaneGroupId();
 
     LOGGER.info("Using external deployment of airbyte.");
   }
@@ -504,6 +511,7 @@ public class AcceptanceTestHarness {
     isKube = System.getenv().containsKey("KUBE");
     isMinikube = System.getenv().containsKey("IS_MINIKUBE");
     isGke = System.getenv().containsKey("IS_GKE");
+    isCI = System.getenv().containsKey("CI");
     isMac = System.getProperty("os.name").startsWith("Mac");
     ensureCleanSlate = System.getenv("ENSURE_CLEAN_SLATE") != null
         && System.getenv("ENSURE_CLEAN_SLATE").equalsIgnoreCase("true");
@@ -554,7 +562,7 @@ public class AcceptanceTestHarness {
   public SourceDiscoverSchemaRead discoverSourceSchemaWithId(final UUID sourceId) throws IOException {
     return Failsafe.with(retryPolicy).get(() -> {
       final var result =
-          apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null));
+          apiClient.getSourceApi().discoverSchemaForSource(new SourceDiscoverSchemaRequestBody(sourceId, null, true, null));
       if (result.getCatalog() == null) {
         throw new RuntimeException("no catalog returned, retrying...");
       }
@@ -569,7 +577,7 @@ public class AcceptanceTestHarness {
 
   public AirbyteCatalog discoverSourceSchemaWithoutCache(final UUID sourceId) throws IOException {
     return apiClient.getSourceApi().discoverSchemaForSource(
-        new SourceDiscoverSchemaRequestBody(sourceId, null, true, null, null)).getCatalog();
+        new SourceDiscoverSchemaRequestBody(sourceId, null, true, null)).getCatalog();
   }
 
   public DestinationDefinitionSpecificationRead getDestinationDefinitionSpec(final UUID destinationDefinitionId, final UUID workspaceId)
@@ -595,6 +603,10 @@ public class AcceptanceTestHarness {
 
   public Database getDatabase(final DataSource dataSource) {
     return new Database(Databases.createDslContext(dataSource, SQLDialect.POSTGRES));
+  }
+
+  public UUID getDataplaneGroupId() {
+    return dataplaneGroupId;
   }
 
   /**
@@ -666,7 +678,7 @@ public class AcceptanceTestHarness {
         create.getScheduleData(),
         null,
         create.getCatalogId(),
-        create.getGeography(),
+        create.getDataplaneGroupId(),
         null,
         null,
         null,
@@ -702,7 +714,7 @@ public class AcceptanceTestHarness {
             create.getScheduleData(),
             null,
             create.getCatalogId(),
-            create.getGeography(),
+            create.getDataplaneGroupId(),
             null,
             null,
             null,
@@ -936,7 +948,11 @@ public class AcceptanceTestHarness {
                                           final boolean hiddenPassword,
                                           final boolean withSchema) {
     final Map<Object, Object> dbConfig = new HashMap<>();
-    dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
+    if (isCI && !isGke) {
+      dbConfig.put(JdbcUtils.HOST_KEY, psql.getHost());
+    } else {
+      dbConfig.put(JdbcUtils.HOST_KEY, getHostname());
+    }
 
     if (hiddenPassword) {
       dbConfig.put(JdbcUtils.PASSWORD_KEY, "**********");
@@ -1098,13 +1114,15 @@ public class AcceptanceTestHarness {
         .orElseThrow());
   }
 
-  public void updateDestinationDefinitionVersion(final UUID destinationDefinitionId, final String dockerImageTag) throws IOException {
-    apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
+  public void updateDestinationDefinitionVersion(final UUID destinationDefinitionId, final String dockerImageTag)
+      throws IOException {
+    Failsafe.with(retryPolicy).run(() -> apiClient.getDestinationDefinitionApi().updateDestinationDefinition(
         new DestinationDefinitionUpdate(
             destinationDefinitionId,
-            null,
             dockerImageTag,
-            null));
+            defaultWorkspaceId,
+            null,
+            null)));
   }
 
   public void updateSourceDefinitionVersion(final UUID sourceDefinitionId, final String dockerImageTag) throws IOException {
@@ -1112,6 +1130,7 @@ public class AcceptanceTestHarness {
         new SourceDefinitionUpdate(
             sourceDefinitionId,
             dockerImageTag,
+            defaultWorkspaceId,
             null,
             null));
   }
@@ -1422,6 +1441,7 @@ public class AcceptanceTestHarness {
             SyncMode.INCREMENTAL,
             DestinationSyncMode.APPEND,
             cursorField,
+            null,
             stream.getConfig().getPrimaryKey(),
             stream.getConfig().getAliasName(),
             stream.getConfig().getSelected(),

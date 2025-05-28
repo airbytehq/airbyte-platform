@@ -1,5 +1,2 @@
 # Ignore all Orval generated files in this folder
 *.ts
-
-# Allow checking in manual generated files
-!AirbyteApi.*

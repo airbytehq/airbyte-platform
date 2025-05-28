@@ -16,6 +16,8 @@ import io.airbyte.api.model.generated.SlugRequestBody
 import io.airbyte.api.model.generated.TimeWindowRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
+import io.airbyte.api.model.generated.WorkspaceGetDbtJobsRequest
+import io.airbyte.api.model.generated.WorkspaceGetDbtJobsResponse
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
 import io.airbyte.api.model.generated.WorkspaceIdList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
@@ -136,7 +138,7 @@ open class WorkspaceApiController(
     }
 
   @Post("/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWorkspace(
     @Body workspaceIdRequestBody: WorkspaceIdRequestBody,
@@ -246,7 +248,14 @@ open class WorkspaceApiController(
 
   @Post("/list_workspaces_by_most_recently_running_jobs")
   @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listActiveWorkspacesByMostRecentlyRunningJobs(
     @Body timeWindowRequestBody: TimeWindowRequestBody,
   ): WorkspaceIdList = throw ApiNotImplementedInOssProblem()
+
+  @Post("/get_available_dbt_jobs")
+  @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getAvailableDbtJobsForWorkspace(workspaceGetDbtJobsRequest: WorkspaceGetDbtJobsRequest?): WorkspaceGetDbtJobsResponse =
+    throw ApiNotImplementedInOssProblem()
 }

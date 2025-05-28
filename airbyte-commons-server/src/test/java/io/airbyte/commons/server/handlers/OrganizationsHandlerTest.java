@@ -19,7 +19,6 @@ import io.airbyte.api.model.generated.OrganizationUpdateRequestBody;
 import io.airbyte.api.model.generated.Pagination;
 import io.airbyte.config.Organization;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.data.services.PermissionService;
 import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +36,7 @@ class OrganizationsHandlerTest {
   private static final String ORGANIZATION_SSO_REALM = "realm";
   private static final Organization ORGANIZATION =
       new Organization().withOrganizationId(ORGANIZATION_ID_1).withEmail(ORGANIZATION_EMAIL).withName(ORGANIZATION_NAME);
-  private PermissionService permissionService;
+  private PermissionHandler permissionHandler;
   private OrganizationPersistence organizationPersistence;
   private Supplier<UUID> uuidSupplier;
   private OrganizationsHandler organizationsHandler;
@@ -45,11 +44,11 @@ class OrganizationsHandlerTest {
 
   @BeforeEach
   void setup() {
-    permissionService = mock(PermissionService.class);
+    permissionHandler = mock(PermissionHandler.class);
     uuidSupplier = mock(Supplier.class);
     organizationPersistence = mock(OrganizationPersistence.class);
     organizationPaymentConfigService = mock(OrganizationPaymentConfigServiceDataImpl.class);
-    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionService, uuidSupplier, organizationPaymentConfigService);
+    organizationsHandler = new OrganizationsHandler(organizationPersistence, permissionHandler, uuidSupplier, organizationPaymentConfigService);
   }
 
   @Test

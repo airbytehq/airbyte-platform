@@ -58,7 +58,7 @@ public interface WorkspaceService {
 
   void writeWorkspaceServiceAccountNoSecrets(WorkspaceServiceAccount workspaceServiceAccount) throws IOException;
 
-  String getGeographyForWorkspace(UUID workspaceId) throws IOException;
+  String getDataplaneGroupNameForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
 

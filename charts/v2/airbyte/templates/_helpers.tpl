@@ -9,12 +9,18 @@ Expand the name of the chart.
 Returns the name of a given component
 */}}
 {{- define "airbyte.componentName" -}}
-{{ $tplPathParts := split "/" $.Template.Name }}
-{{ $indexLast := printf "_%d" (sub (len $tplPathParts) 2) }}
-{{ $componentName := trimPrefix "airbyte-" (index $tplPathParts $indexLast) }}
+{{- $tplPathParts := split "/" $.Template.Name }}
+{{- $indexLast := printf "_%d" (sub (len $tplPathParts) 2) }}
+{{- $componentName := trimPrefix "airbyte-" (index $tplPathParts $indexLast) }}
 {{- printf "%s" $componentName }}
 {{- end }}
 
+{{/*
+Returns the name of a given component with the `airbyte-` prefix
+*/}}
+{{- define "airbyte.componentNameWithAirbytePrefix" -}}
+{{- printf "airbyte-%s" (include "airbyte.componentName" .) }}
+{{- end }}
 
 {{/*
 Create a default fully qualified app name.
@@ -166,3 +172,39 @@ Hook for passing in extra secrets
 */}}
 {{- define "airbyte.extra.secrets" }}
 {{- end }}
+
+
+{{/*
+Returns a comma-delimited string of imagePullSecret names.
+Usage:
+  {{ include "airbyte.imagePullSecretNames" (dict "secrets" .Values.global.imagePullSecrets "extra" (list "foo" "bar")) }}
+*/}}
+{{- define "airbyte.imagePullSecretNames" -}}
+  {{- $secrets := default list .secrets }}
+  {{- $extra := default list .extra }}
+  {{- $names := list }}
+  {{- range $secrets }}
+    {{- $names = append $names .name }}
+  {{- end }}
+  {{- $all := concat $names $extra }}
+  {{- join "," $all }}
+{{- end }}
+
+{{/*
+Renders a value that contains template perhaps with scope if the scope is present.
+Usage:
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ ) }}
+{{ include "airbyte.tplvalues.render" ( dict "value" .Values.path.to.the.Value "context" $ "scope" $app ) }}
+*/}}
+{{- define "airbyte.tplvalues.render" -}}
+{{- $value := typeIs "string" .value | ternary .value (.value | toYaml) }}
+{{- if contains "{{" (toJson .value) }}
+  {{- if .scope }}
+      {{- tpl (cat "{{- with $.RelativeScope -}}" $value "{{- end }}") (merge (dict "RelativeScope" .scope) .context) }}
+  {{- else }}
+    {{- tpl $value .context }}
+  {{- end }}
+{{- else }}
+    {{- $value }}
+{{- end }}
+{{- end -}}

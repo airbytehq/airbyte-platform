@@ -67,3 +67,11 @@ properties:
     description: an optional flag indicating whether a destination connector supports file transfer.
     type: boolean
     default: false
+  supportsDataActivation:
+    description: an optional flag indicating whether a destination connector supports data activation.
+    type: boolean
+    default: false
+  connectorIPCOptions:
+    description: config containing information about connector sync architecture
+    type: object
+    existingJavaType: com.fasterxml.jackson.databind.JsonNode

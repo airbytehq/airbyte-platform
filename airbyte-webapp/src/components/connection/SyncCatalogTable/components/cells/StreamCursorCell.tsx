@@ -12,8 +12,8 @@ import { TooltipLearnMoreLink } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
 import { SyncSchemaFieldObject } from "core/domain/catalog";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import styles from "./StreamCursorCell.module.scss";
 import { FormConnectionFormValues, SyncStreamFieldWithId } from "../../../ConnectionForm/formConfig";
@@ -33,7 +33,7 @@ interface NextCursorCellProps {
 }
 
 export const StreamCursorCell: React.FC<NextCursorCellProps> = ({ row, updateStreamField }) => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { errors } = useFormState<FormConnectionFormValues>();
 
   if (!row.original?.streamNode || !row.original.streamNode.config || !row.original.streamNode.stream) {

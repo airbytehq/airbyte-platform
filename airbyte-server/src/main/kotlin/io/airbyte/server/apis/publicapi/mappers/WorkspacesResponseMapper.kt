@@ -31,6 +31,7 @@ object WorkspacesResponseMapper {
   fun from(
     workspaceReadList: WorkspaceReadList,
     workspaceIds: List<UUID>,
+    dataplaneGroupNames: List<String>,
     includeDeleted: Boolean,
     limit: Int,
     offset: Int,
@@ -48,7 +49,7 @@ object WorkspacesResponseMapper {
     return WorkspacesResponse(
       next = PaginationMapper.getNextUrl(workspaceReadList.workspaces, limit, offset, uriBuilder),
       previous = PaginationMapper.getPreviousUrl(limit, offset, uriBuilder),
-      data = workspaceReadList.workspaces.map { obj -> from(obj!!) },
+      data = workspaceReadList.workspaces.mapIndexed { index, obj -> from(obj!!, dataplaneGroupNames[index]) },
     )
   }
 }

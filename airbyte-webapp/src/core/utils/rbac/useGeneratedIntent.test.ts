@@ -33,7 +33,7 @@ jest.mock("core/api", () => ({
   useListPermissions: jest.fn().mockResolvedValue({
     permissions: [],
   }),
-  useCurrentWorkspace: () => ({
+  useCurrentWorkspaceOrUndefined: () => ({
     workspaceId: MOCK_WORKSPACE_UUID,
     organizationId: MOCK_ORGANIZATION_UUID,
   }),

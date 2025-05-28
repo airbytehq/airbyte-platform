@@ -2,7 +2,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: airbyte-featureflag-server
+  name: {{ .Release.Name }}-featureflag-server
   labels:
     {{- include "airbyte.labels" . | nindent 4 }}
   annotations:
