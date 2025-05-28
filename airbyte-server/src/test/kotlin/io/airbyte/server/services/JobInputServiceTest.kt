@@ -19,7 +19,7 @@ import io.airbyte.config.ConnectionContext
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
-import io.airbyte.config.JobSyncConfig
+import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
@@ -595,21 +595,19 @@ class JobInputServiceTest {
     every { mockAttempt.processingTaskQueue } returns "test_queue"
     every { mockAttempt.syncConfig } returns Optional.of(attemptSyncConfig)
 
-    val jobSyncConfig = mockk<JobSyncConfig>()
-    every { jobSyncConfig.namespaceDefinition } returns null
-    every { jobSyncConfig.namespaceFormat } returns null
-    every { jobSyncConfig.syncResourceRequirements } returns SyncResourceRequirements()
-    every { jobSyncConfig.configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
-
     val jobConfig = mockk<JobConfig>()
     every { jobConfig.configType } returns configType
 
+    val expectedNamespaceDefinition = NamespaceDefinitionType.CUSTOMFORMAT
+    val expectedNamespaceFormat = "$configType-format"
+    val expectedPrefix = "$configType-prefix"
     when (configType) {
       JobConfig.ConfigType.SYNC ->
         every { jobConfig.sync } returns
           mockk {
-            every { namespaceDefinition } returns null
-            every { namespaceFormat } returns null
+            every { namespaceDefinition } returns expectedNamespaceDefinition
+            every { namespaceFormat } returns expectedNamespaceFormat
+            every { prefix } returns expectedPrefix
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
@@ -617,8 +615,9 @@ class JobInputServiceTest {
       JobConfig.ConfigType.REFRESH ->
         every { jobConfig.refresh } returns
           mockk {
-            every { namespaceDefinition } returns null
-            every { namespaceFormat } returns null
+            every { namespaceDefinition } returns expectedNamespaceDefinition
+            every { namespaceFormat } returns expectedNamespaceFormat
+            every { prefix } returns expectedPrefix
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
@@ -626,8 +625,9 @@ class JobInputServiceTest {
       JobConfig.ConfigType.CLEAR, JobConfig.ConfigType.RESET_CONNECTION ->
         every { jobConfig.resetConnection } returns
           mockk {
-            every { namespaceDefinition } returns null
-            every { namespaceFormat } returns null
+            every { namespaceDefinition } returns expectedNamespaceDefinition
+            every { namespaceFormat } returns expectedNamespaceFormat
+            every { prefix } returns expectedPrefix
             every { syncResourceRequirements } returns SyncResourceRequirements()
             every { configuredAirbyteCatalog } returns ConfiguredAirbyteCatalog()
           }
@@ -703,6 +703,9 @@ class JobInputServiceTest {
             .withAttemptId(attemptNumber.toLong())
             .withAllowedHosts(AllowedHosts())
             .withConnectionId(connectionId),
+        namespaceDefinition = expectedNamespaceDefinition,
+        namespaceFormat = expectedNamespaceFormat,
+        prefix = expectedPrefix,
         syncResourceRequirements = SyncResourceRequirements(),
         workspaceId = workspaceId,
         connectionId = connectionId,
