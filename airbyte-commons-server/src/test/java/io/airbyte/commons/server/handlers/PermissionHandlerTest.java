@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -661,6 +662,18 @@ class PermissionHandlerTest {
           .workspaceId(WORKSPACE_ID)
           .userId(USER_ID)).getStatus());
 
+    }
+
+    @Test
+    void getPermissionsByServiceAccountIdReturnsPermissions() {
+      final UUID serviceAccountId = UUID.randomUUID();
+      final List<Permission> expected = List.of(new Permission()
+          .withPermissionType(PermissionType.DATAPLANE)
+          .withServiceAccountId(serviceAccountId));
+
+      when(permissionDao.getPermissionsByServiceAccountId(eq(serviceAccountId))).thenReturn(expected);
+
+      assertEquals(expected, permissionHandler.getPermissionsByServiceAccountId(serviceAccountId));
     }
 
     private PermissionCheckRequest getWorkspacePermissionCheck(final PermissionType targetPermissionType) {

@@ -29,7 +29,7 @@ class ServiceAccountsService internal constructor(
 
   companion object {
     // TOKEN_TYPE is the value used to identity a token as a service account.
-    const val TOKEN_TYPE = "io.airbyte.auth.service_account"
+    const val SERVICE_ACCOUNT_TOKEN_TYPE = "io.airbyte.auth.service_account"
   }
 
   fun create(
@@ -67,7 +67,7 @@ class ServiceAccountsService internal constructor(
           "iss" to tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to id.toString(),
-          "typ" to TOKEN_TYPE,
+          "typ" to SERVICE_ACCOUNT_TOKEN_TYPE,
           "exp" to clock.instant().plus(tokenExpirationConfig.serviceAccountTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {

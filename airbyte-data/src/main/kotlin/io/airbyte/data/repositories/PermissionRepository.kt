@@ -23,6 +23,8 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   fun findByUserId(userId: UUID): List<Permission>
 
+  fun findByServiceAccountId(serviceAccountId: UUID): List<Permission>
+
   fun findByOrganizationId(organizationId: UUID): List<Permission>
 
   fun deleteByIdIn(permissionIds: List<UUID>)

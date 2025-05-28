@@ -160,7 +160,7 @@ open class RoleResolver(
     organizationIds: Set<UUID>,
     authUserIds: Set<String>,
   ): Set<String> {
-    val roles = mutableSetOf<String>(AuthRoleConstants.AUTHENTICATED_USER)
+    val roles = mutableSetOf(AuthRoleConstants.AUTHENTICATED_USER)
 
     // The SELF role denotes that request refers to the current request's identity.
     //

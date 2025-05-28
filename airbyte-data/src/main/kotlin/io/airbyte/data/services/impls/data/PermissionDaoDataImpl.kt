@@ -41,6 +41,11 @@ open class PermissionDaoDataImpl(
       it.toConfigModel()
     }
 
+  override fun getPermissionsByServiceAccountId(serviceAccountId: UUID): List<Permission> =
+    permissionRepository.findByServiceAccountId(serviceAccountId).map {
+      it.toConfigModel()
+    }
+
   @Transactional("config")
   override fun deletePermission(permissionId: UUID) {
     val permissionsToDelete = permissionRepository.findByIdIn(listOf(permissionId))
@@ -50,7 +55,12 @@ open class PermissionDaoDataImpl(
       throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId")
     }
 
-    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+    val user = permissionsToDelete.first().userId
+    if (user == null) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permission: $permissionId")
+    }
+
+    val userPermissions = getPermissionsForUser(user)
     val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
     permissionRepository.deleteByIdIn(listOf(permissionId) + workspacePermissionsToDelete)
   }
@@ -64,11 +74,17 @@ open class PermissionDaoDataImpl(
       throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permissions not found: $permissionIds")
     }
 
+    val user = permissionsToDelete.first().userId
+    if (user == null) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permissions: $permissionIds")
+    }
+
     if (permissionsToDelete.map { it.userId }.toSet().size > 1) {
       // Guard against the state where we're deleting multiple permissions for different users
       throw IllegalStateException("Permissions to delete must all belong to the same user.")
     }
-    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+
+    val userPermissions = getPermissionsForUser(user)
     val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
     permissionRepository.deleteByIdIn(permissionIds + workspacePermissionsToDelete)
   }

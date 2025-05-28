@@ -19,7 +19,7 @@ data class Permission(
   @field:Id
   @AutoPopulated
   var id: UUID? = null,
-  var userId: UUID,
+  var userId: UUID? = null,
   var workspaceId: UUID? = null,
   var organizationId: UUID? = null,
   @field:TypeDef(type = DataType.OBJECT)
@@ -28,4 +28,5 @@ data class Permission(
   var createdAt: java.time.OffsetDateTime? = null,
   @DateUpdated
   var updatedAt: java.time.OffsetDateTime? = null,
+  var serviceAccountId: UUID? = null,
 )
