@@ -1,7 +1,19 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, Page } from "@playwright/test";
 
 import { signIn } from "../../helpers/sign-in";
 import { signOut } from "../../helpers/sign-out";
+
+// Helper to parse loginRedirect param from search string
+function parseLoginRedirectParam(search: string): string | null {
+  const params = new URLSearchParams(search);
+  return params.get("loginRedirect");
+}
+
+// Helper to assert on login page
+async function assertOnLoginPage(page: Page) {
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.locator("body")).toContainText(/Continue with Google/);
+}
 
 test.describe("Email Authentication on Airbyte Cloud", () => {
   test("sign up", async ({ page }) => {
@@ -44,5 +56,59 @@ test.describe("Email Authentication on Airbyte Cloud", () => {
 
     await page.goto("./");
     await signOut(page);
+  });
+  test("login redirect param parsing", async ({ page }) => {
+    const testRedirectParamParsing = async (initialPath: string, wait?: boolean) => {
+      const pathsWithNoRedirect = ["/", "/login", "/signup", "/settings/account"];
+      const expectedRedirectPath = !pathsWithNoRedirect.includes(initialPath) ? initialPath : null;
+
+      await page.goto(initialPath);
+
+      // check login redirect parameter on login page
+      await assertOnLoginPage(page);
+      const search1 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      expect(parseLoginRedirectParam(search1)).toBe(expectedRedirectPath);
+
+      // wait for cookie banner to disappear if needed
+      if (wait) {
+        await page.waitForTimeout(6000);
+      }
+
+      // check login redirect parameter after navigating to sign up page
+      await page.locator("text=Sign up").click();
+      await expect(page).toHaveURL(/\/signup/);
+      const search2 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      expect(parseLoginRedirectParam(search2)).toBe(expectedRedirectPath);
+
+      // check parameters on sign up with email page -- loginRedirect is unchanged and that method=email was set
+      await page.locator("text=Sign up using email").click();
+      const search3 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      expect(parseLoginRedirectParam(search3)).toBe(expectedRedirectPath);
+      const params3 = new URLSearchParams(search3);
+      expect(params3.get("method")).toBe("email");
+
+      // check that method=email was removed and loginRedirect was unchanged
+      await page.locator("text=Sign up using Google or GitHub").click();
+      const search4 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      const params4 = new URLSearchParams(search4);
+      expect(params4.get("method")).toBeNull();
+      expect(parseLoginRedirectParam(search4)).toBe(expectedRedirectPath);
+
+      // check that loginRedirect is unchanged on password reset page
+      await page.locator("text=Log in").click();
+      await page.locator("text=Forgot your password").click();
+      const search5 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      expect(parseLoginRedirectParam(search5)).toBe(expectedRedirectPath);
+
+      // the Back to Log in link preserves the loginRedirect param as well
+      await page.locator("text=Back to Log in").click();
+      const search6 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
+      expect(parseLoginRedirectParam(search6)).toBe(expectedRedirectPath);
+    };
+
+    const pathsToTest = ["/", "/login", "/signup", "/settings/account", "/connections"];
+    for (const path of pathsToTest) {
+      await testRedirectParamParsing(path);
+    }
   });
 });
