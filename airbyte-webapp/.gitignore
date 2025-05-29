@@ -51,3 +51,9 @@ cypress.env.json
 /cypress/videos
 /cypress/fixtures
 /cypress/downloads
+/playwright/test-results/
+/playwright/playwright-report/
+/playwright/blob-report/
+/playwright/playwright/.cache/
+/playwright/node_modules/
+
