@@ -16,6 +16,7 @@ export async function loadConfig() {
   const config = await getWebappConfig({ getAccessToken: () => Promise.resolve(null) });
   return {
     ...config,
+    edition: config.edition.toLowerCase(),
     launchdarklyKey: process.env.REACT_APP_LAUNCHDARKLY_KEY ?? config.launchdarklyKey,
     osanoKey: process.env.REACT_APP_OSANO_KEY ?? config.osanoKey,
     segmentToken: process.env.REACT_APP_SEGMENT_TOKEN ?? config.segmentToken,
