@@ -5,6 +5,7 @@
 package io.airbyte.server.services
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.google.common.hash.Hashing
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.helpers.ContextBuilder
 import io.airbyte.commons.version.Version
@@ -423,7 +424,8 @@ class JobInputServiceTest {
   }
 
   @Test
-  fun `getDiscoveryInput for Source by actorId returns DiscoverCatalogInput`() {
+  fun `getDiscoverInput for Source by actorId returns DiscoverCatalogInput`() {
+    val configurationWithSecretRef = Jsons.jsonNode(mapOf("test" to "secret-reference"))
     val mockActor =
       mockk<io.airbyte.data.repositories.entities.Actor> {
         every { actorType } returns ActorType.source
@@ -453,7 +455,8 @@ class JobInputServiceTest {
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      mockk { every { config } returns configurationWithSecretRef }
     every { contextBuilder.fromSource(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
@@ -463,7 +466,7 @@ class JobInputServiceTest {
 
     assertEquals(sourceId.toString(), actual.discoverCatalogInput.sourceId)
     assertEquals(dockerImageTag, actual.discoverCatalogInput.connectorVersion)
-    assertEquals(configuration, actual.discoverCatalogInput.connectionConfiguration)
+    assertEquals(configurationWithSecretRef, actual.discoverCatalogInput.connectionConfiguration)
     assertEquals(null, actual.discoverCatalogInput.resourceRequirements)
     assertEquals(true, actual.discoverCatalogInput.manual)
 
@@ -472,6 +475,9 @@ class JobInputServiceTest {
     assertEquals(Version("0.1.0"), actual.integrationLauncherConfig.protocolVersion)
     assertEquals(false, actual.integrationLauncherConfig.isCustomConnector)
     assertEquals(0L, actual.integrationLauncherConfig.attemptId)
+
+    val expectedConfigHash = Hashing.md5().hashBytes(Jsons.serialize(configuration).toByteArray(Charsets.UTF_8)).toString()
+    assertEquals(expectedConfigHash, actual.discoverCatalogInput.configHash)
   }
 
   @Test
