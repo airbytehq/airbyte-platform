@@ -71,24 +71,4 @@ interface ConnectionTimelineEventRepository : PageableRepository<ConnectionTimel
     eventType: ConnectionEvent.Type?,
     createdAtStart: OffsetDateTime?,
   ): List<UUID?>
-
-  @Query(
-    """
-  SELECT * FROM connection_timeline_event
-  WHERE connection_id = :connectionId
-    AND ((user_id IS NULL AND :userId IS NULL) OR user_id = :userId)
-    AND event_type = :eventType
-    AND summary = CAST(:eventSummary AS jsonb)
-    AND (CAST(:createdAt AS timestamptz) IS NULL OR created_at = CAST(:createdAt AS timestamptz))
-  LIMIT 1
-  """,
-    nativeQuery = true,
-  )
-  fun findDuplicateEvent(
-    connectionId: UUID,
-    userId: UUID?,
-    eventType: String,
-    eventSummary: String?,
-    createdAt: OffsetDateTime?,
-  ): ConnectionTimelineEvent?
 }

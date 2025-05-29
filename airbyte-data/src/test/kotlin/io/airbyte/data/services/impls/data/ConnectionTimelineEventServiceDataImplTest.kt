@@ -20,9 +20,6 @@ import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
-import java.time.OffsetDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -46,10 +43,6 @@ internal class ConnectionTimelineEventServiceDataImplTest {
     every {
       repository.save(any())
     } returns ConnectionTimelineEvent(connectionId = connectionId, eventType = "")
-    every {
-      repository.findDuplicateEvent(connectionId, any(), any(), any(), any())
-    } returns null
-
     val syncFailedEvent =
       FailedEvent(
         jobId = 100L,
@@ -74,10 +67,6 @@ internal class ConnectionTimelineEventServiceDataImplTest {
     every {
       repository.save(any())
     } returns ConnectionTimelineEvent(connectionId = connectionId, eventType = "")
-    every {
-      repository.findDuplicateEvent(connectionId, any(), any(), any(), any())
-    } returns null
-
     val schemaChangeEvent =
       SchemaChangeAutoPropagationEvent(
         catalogDiff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)),
@@ -86,83 +75,5 @@ internal class ConnectionTimelineEventServiceDataImplTest {
     verify {
       repository.save(any())
     }
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  internal fun `writeEvent should save new event if no duplicate exists`(withCreatedAt: Boolean) {
-    val schemaChangeEvent =
-      SchemaChangeAutoPropagationEvent(
-        catalogDiff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)),
-      )
-
-    val connectionId = UUID.randomUUID()
-    val userId = UUID.randomUUID()
-    val eventSummary = """{"test":"value"}"""
-    val eventType = schemaChangeEvent.getEventType().toString()
-    val createdAt = if (withCreatedAt) OffsetDateTime.now() else null
-
-    val timelineEvent =
-      ConnectionTimelineEvent(
-        id = null,
-        connectionId = connectionId,
-        userId = userId,
-        eventType = eventType,
-        summary = eventSummary,
-        createdAt = null,
-      )
-
-    every {
-      repository.findDuplicateEvent(connectionId, userId, eventType, any(), createdAt)
-    } returns null
-
-    every {
-      repository.save(any())
-    } returns timelineEvent.copy(id = UUID.randomUUID())
-
-    ConnectionTimelineEventServiceDataImpl(
-      repository = repository,
-      mapper = MoreMappers.initMapper(),
-    ).writeEvent(connectionId, schemaChangeEvent, userId, createdAt)
-
-    verify(exactly = 1) { repository.findDuplicateEvent(connectionId, userId, eventType, any(), createdAt) }
-    verify(exactly = 1) { repository.save(any()) }
-  }
-
-  @ParameterizedTest
-  @ValueSource(booleans = [true, false])
-  internal fun `writeEvent should not save if duplicate exists`(withCreatedAt: Boolean) {
-    val schemaChangeEvent =
-      SchemaChangeAutoPropagationEvent(
-        catalogDiff = CatalogDiff().addTransformsItem(StreamTransform().transformType(StreamTransform.TransformTypeEnum.ADD_STREAM)),
-      )
-
-    val connectionId = UUID.randomUUID()
-    val userId = UUID.randomUUID()
-    val eventSummary = """{"test":"value"}"""
-    val eventType = schemaChangeEvent.getEventType().toString()
-    val createdAt = if (withCreatedAt) OffsetDateTime.now() else null
-
-    val existingEvent =
-      ConnectionTimelineEvent(
-        id = UUID.randomUUID(),
-        connectionId = connectionId,
-        userId = userId,
-        eventType = eventType,
-        summary = eventSummary,
-        createdAt = null,
-      )
-
-    every {
-      repository.findDuplicateEvent(connectionId, userId, eventType, any(), createdAt)
-    } returns existingEvent
-
-    ConnectionTimelineEventServiceDataImpl(
-      repository = repository,
-      mapper = MoreMappers.initMapper(),
-    ).writeEvent(connectionId, schemaChangeEvent, userId, createdAt)
-
-    verify(exactly = 1) { repository.findDuplicateEvent(connectionId, userId, eventType, any(), createdAt) }
-    verify(exactly = 0) { repository.save(any()) }
   }
 }
