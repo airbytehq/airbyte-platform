@@ -110,7 +110,6 @@ class ReplicationWorkerHelperTest {
       DestinationCatalogGenerator.CatalogGenerationResult(configuredCatalog, emptyMap())
     }
 
-    every { messageTracker.syncStatsTracker } returns syncStatsTracker
     every { syncStatsTracker.getTotalBytesEmitted() } returns 0L
     every { syncStatsTracker.getTotalRecordsEmitted() } returns 0L
   }
@@ -249,6 +248,7 @@ class ReplicationWorkerHelperTest {
           timeTracker,
           analyticsTracker,
           streamStatusCompletionTracker,
+          syncStatsTracker,
           streamStatusTracker,
           recordMapper,
           replicationWorkerState,

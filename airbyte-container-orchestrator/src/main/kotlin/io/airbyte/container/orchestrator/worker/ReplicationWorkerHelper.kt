@@ -21,6 +21,7 @@ import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
+import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEvent
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.container.orchestrator.bookkeeping.getPerStreamStats
@@ -52,6 +53,7 @@ import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.internal.AirbyteMapper
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.util.Optional
@@ -67,6 +69,7 @@ class ReplicationWorkerHelper(
   private val timeTracker: ThreadedTimeTracker,
   private val analyticsTracker: AnalyticsMessageTracker,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
+  @Named("parallelStreamStatsTracker") val syncStatsTracker: SyncStatsTracker,
   private val streamStatusTracker: StreamStatusTracker,
   private val recordMapper: RecordMapper,
   private val replicationWorkerState: ReplicationWorkerState,
@@ -181,7 +184,7 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfSource() {
-    val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+    val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
     logger.info { "Total records read: ($bytes)" }
     fieldSelector.reportMetrics(context.replicationContext.sourceId)
     timeTracker.trackSourceReadEndTime()
@@ -209,17 +212,17 @@ class ReplicationWorkerHelper(
       }
     val completed = outputStatus == ReplicationStatus.COMPLETED
     val totalStats = getTotalStats(timeTracker, completed)
-    val streamStats = messageTracker.syncStatsTracker.getPerStreamStats(completed)
+    val streamStats = syncStatsTracker.getPerStreamStats(completed)
 
-    if (!completed && messageTracker.syncStatsTracker.getUnreliableStateTimingMetrics()) {
+    if (!completed && syncStatsTracker.getUnreliableStateTimingMetrics()) {
       logger.warn { "Unreliable committed record counts; setting committed record stats to null" }
     }
 
     val summary =
       ReplicationAttemptSummary()
         .withStatus(outputStatus)
-        .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsCommitted())
-        .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesCommitted())
+        .withRecordsSynced(syncStatsTracker.getTotalRecordsCommitted())
+        .withBytesSynced(syncStatsTracker.getTotalBytesCommitted())
         .withTotalStats(totalStats)
         .withStreamStats(streamStats)
         .withStartTime(timeTracker.replicationStartTime)
@@ -283,7 +286,7 @@ class ReplicationWorkerHelper(
       val adapter = AirbyteJsonRecordAdapter(sourceRawMessage)
       applyTransformationMappers(adapter)
       return if (!adapter.shouldInclude()) {
-        messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
+        syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
         null
       } else {
         sourceRawMessage
@@ -330,7 +333,7 @@ class ReplicationWorkerHelper(
     timeTracker: ThreadedTimeTracker,
     completed: Boolean,
   ): SyncStats =
-    messageTracker.syncStatsTracker.getTotalStats(completed).apply {
+    syncStatsTracker.getTotalStats(completed).apply {
       replicationStartTime = timeTracker.replicationStartTime
       replicationEndTime = timeTracker.replicationEndTime
       sourceReadStartTime = timeTracker.sourceReadStartTime
@@ -371,7 +374,7 @@ class ReplicationWorkerHelper(
     if (recordsRead == 5000L) {
       totalRecordsRead += recordsRead
       logger.info {
-        val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
         "Records read: $totalRecordsRead ($bytes)"
       }
       recordsRead = 0

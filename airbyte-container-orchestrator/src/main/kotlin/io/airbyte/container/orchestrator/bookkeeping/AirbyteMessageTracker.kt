@@ -31,7 +31,6 @@ private val logger = KotlinLogging.logger {}
  */
 @Singleton
 class AirbyteMessageTracker(
-  @Named("parallelStreamStatsTracker") val syncStatsTracker: SyncStatsTracker,
   private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val replicationInput: ReplicationInput,
   @Named("syncPersistence") private val syncPersistence: SyncPersistence,
@@ -54,8 +53,8 @@ class AirbyteMessageTracker(
 
     when (msg.type) {
       AirbyteMessage.Type.TRACE -> handleEmittedTrace(msg.trace, AirbyteMessageOrigin.SOURCE)
-      AirbyteMessage.Type.RECORD -> syncStatsTracker.updateStats(msg.record)
-      AirbyteMessage.Type.STATE -> syncStatsTracker.updateSourceStatesStats(msg.state)
+      AirbyteMessage.Type.RECORD -> syncPersistence.updateStats(msg.record)
+      AirbyteMessage.Type.STATE -> syncPersistence.updateSourceStatesStats(msg.state)
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }
       else -> logger.warn { "Invalid message type for message: $msg" }
     }
@@ -75,11 +74,11 @@ class AirbyteMessageTracker(
       AirbyteMessage.Type.STATE ->
         msg.state?.let {
           syncPersistence.accept(replicationInput.connectionId, stateMessage = it)
-          syncStatsTracker.updateDestinationStateStats(it)
+          syncPersistence.updateDestinationStateStats(it)
         }
       AirbyteMessage.Type.RECORD -> {
         if (isBookkeeperMode) {
-          syncStatsTracker.updateStatsFromDestination(msg.record)
+          syncPersistence.updateStatsFromDestination(msg.record)
         }
       }
       AirbyteMessage.Type.CONTROL -> logger.debug { "Control message not currently tracked." }
@@ -107,7 +106,7 @@ class AirbyteMessageTracker(
     origin: AirbyteMessageOrigin,
   ): Unit =
     when (msg.type) {
-      AirbyteTraceMessage.Type.ESTIMATE -> syncStatsTracker.updateEstimates(msg.estimate)
+      AirbyteTraceMessage.Type.ESTIMATE -> syncPersistence.updateEstimates(msg.estimate)
       AirbyteTraceMessage.Type.ERROR -> handleEmittedTraceError(msg, origin)
       AirbyteTraceMessage.Type.ANALYTICS -> handleEmittedAnalyticsMessage(msg.analytics, origin)
       AirbyteTraceMessage.Type.STREAM_STATUS -> logger.debug { "Stream status trace message not handled by message tracker: $msg" }
@@ -149,6 +148,6 @@ class AirbyteMessageTracker(
   }
 
   fun endOfReplication(completedSuccessfully: Boolean) {
-    syncStatsTracker.endOfReplication(completedSuccessfully)
+    syncPersistence.endOfReplication(completedSuccessfully)
   }
 }

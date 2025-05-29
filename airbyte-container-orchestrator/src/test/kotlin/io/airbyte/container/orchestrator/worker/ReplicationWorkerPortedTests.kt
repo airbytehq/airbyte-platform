@@ -144,7 +144,6 @@ class ReplicationWorkerPortedTests {
     destination = spyk(SimpleAirbyteDestination())
     messageTracker = mockk(relaxed = true)
     syncStatsTracker = mockk(relaxed = true)
-    every { messageTracker.syncStatsTracker } returns syncStatsTracker
     syncPersistence = mockk(relaxed = true)
     recordSchemaValidator = mockk(relaxed = true)
     streamStatusTracker = mockk(relaxed = true)
@@ -194,6 +193,7 @@ class ReplicationWorkerPortedTests {
           ThreadedTimeTracker(),
           analyticsMessageTracker,
           streamStatusCompletionTracker,
+          syncStatsTracker,
           streamStatusTracker,
           recordMapper,
           replicationWorkerState,
@@ -415,6 +415,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
+        syncStatsTracker,
         streamStatusTracker,
         recordMapper,
         replicationWorkerState,
@@ -478,6 +479,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
+        syncStatsTracker,
         streamStatusTracker,
         recordMapper,
         replicationWorkerState,
