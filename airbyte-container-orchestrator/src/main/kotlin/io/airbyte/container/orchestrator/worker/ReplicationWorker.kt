@@ -6,6 +6,7 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.io.LineGobbler
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.container.orchestrator.persistence.SyncPersistence
@@ -43,6 +44,7 @@ class ReplicationWorker(
   @Named("startReplicationJobs") private val startReplicationJobs: List<ReplicationTask>,
   @Named("syncReplicationJobs") private val syncReplicationJobs: List<ReplicationTask>,
   @Named("replicationWorkerDispatcher") private val replicationWorkerDispatcher: ExecutorService,
+  @Named("replicationMdcScopeBuilder") private val replicationLogMdcBuilder: MdcScope.Builder,
 ) {
   private val dedicatedDispatcher = replicationWorkerDispatcher.asCoroutineDispatcher()
 
@@ -79,52 +81,50 @@ class ReplicationWorker(
   }
 
   @Throws(WorkerException::class)
-  fun runReplicationBlocking(jobRoot: Path): ReplicationOutput {
-    val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
-    return runBlocking {
-      run(jobRoot = jobRoot, mdc = mdc)
+  fun runReplicationBlocking(jobRoot: Path): ReplicationOutput =
+    runBlocking {
+      replicationLogMdcBuilder.build().use { _ ->
+        withContext(MDCContext(MDC.getCopyOfContextMap() ?: emptyMap())) {
+          run(jobRoot = jobRoot)
+        }
+      }
     }
-  }
 
   @Throws(WorkerException::class)
-  internal suspend fun run(
-    jobRoot: Path,
-    mdc: Map<String, String> = emptyMap(),
-  ): ReplicationOutput {
+  internal suspend fun run(jobRoot: Path): ReplicationOutput {
     try {
+      val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
       coroutineScope {
-        withContext(MDCContext(mdc)) {
-          logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
-          LineGobbler.startSection("REPLICATION")
+        logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
+        LineGobbler.startSection("REPLICATION")
 
-          context.replicationWorkerHelper.initialize(jobRoot)
+        context.replicationWorkerHelper.initialize(jobRoot)
 
-          val startJobs =
-            startReplicationJobs.map { job ->
-              AsyncUtils.runAsync(Dispatchers.Default, this, mdc) { job.run() }
-            }
-
-          startJobs.awaitAll()
-
-          context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
-
-          val heartbeatSender =
-            AsyncUtils.runLaunch(Dispatchers.Default, this, mdc) {
-              workloadHeartbeatSender.sendHeartbeat()
-            }
-
-          try {
-            runJobs(dedicatedDispatcher, mdc)
-          } catch (e: Exception) {
-            logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
-            trackFailure(e)
-          } finally {
-            heartbeatSender.cancel()
+        val startJobs =
+          startReplicationJobs.map { job ->
+            AsyncUtils.runAsync(Dispatchers.Default, this, mdc) { job.run() }
           }
 
-          if (!context.replicationWorkerState.cancelled) {
-            context.replicationWorkerHelper.endOfReplication()
+        startJobs.awaitAll()
+
+        context.replicationWorkerState.markReplicationRunning(onReplicationRunning)
+
+        val heartbeatSender =
+          AsyncUtils.runLaunch(Dispatchers.Default, this, mdc) {
+            workloadHeartbeatSender.sendHeartbeat()
           }
+
+        try {
+          runJobs(dedicatedDispatcher, mdc)
+        } catch (e: Exception) {
+          logger.error(e) { "runJobs failed; recording failure but continuing to finish." }
+          trackFailure(e)
+        } finally {
+          heartbeatSender.cancel()
+        }
+
+        if (!context.replicationWorkerState.cancelled) {
+          context.replicationWorkerHelper.endOfReplication()
         }
       }
 

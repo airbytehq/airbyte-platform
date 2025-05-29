@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.container.orchestrator.persistence.SyncPersistence
@@ -40,6 +41,7 @@ internal class ReplicationWorkerTest {
   private lateinit var mockBufferConfig: BufferConfiguration
   private lateinit var mockStreamStatusCompletionTracker: StreamStatusCompletionTracker
 
+  private lateinit var mockReplicationMdcScopeBuilder: MdcScope.Builder
   private lateinit var mockReplicationInput: ReplicationInput
   private lateinit var mockPath: Path
 
@@ -59,6 +61,7 @@ internal class ReplicationWorkerTest {
     mockWorkerState = mockk(relaxed = true)
     mockBufferConfig = mockk(relaxed = true)
     mockStreamStatusCompletionTracker = mockk(relaxed = true)
+    mockReplicationMdcScopeBuilder = mockk(relaxed = true)
 
     // Setup context fields
     every { mockContext.replicationWorkerHelper } returns mockWorkerHelper
@@ -116,6 +119,7 @@ internal class ReplicationWorkerTest {
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
           replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       // When
@@ -184,6 +188,7 @@ internal class ReplicationWorkerTest {
             ),
           syncReplicationJobs = syncJobs,
           replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       // Because we have a top-level try-catch that rethrows as WorkerException, we expect that
@@ -231,6 +236,7 @@ internal class ReplicationWorkerTest {
               ),
             ),
           replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       worker.run(mockPath)
@@ -270,6 +276,7 @@ internal class ReplicationWorkerTest {
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
           replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       val result = worker.run(mockPath)
@@ -309,6 +316,7 @@ internal class ReplicationWorkerTest {
           startReplicationJobs = startJobs,
           syncReplicationJobs = syncJobs,
           replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       val result = worker.run(mockPath)

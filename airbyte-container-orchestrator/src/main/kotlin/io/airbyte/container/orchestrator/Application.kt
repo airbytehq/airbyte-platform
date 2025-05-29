@@ -5,11 +5,11 @@
 package io.airbyte.container.orchestrator
 
 import com.google.common.annotations.VisibleForTesting
-import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.container.orchestrator.worker.ReplicationJobOrchestrator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.runtime.Micronaut.build
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import kotlin.system.exitProcess
 
@@ -43,6 +43,7 @@ fun main(args: Array<String>) {
 @Singleton
 class Application(
   private val jobOrchestrator: ReplicationJobOrchestrator,
+  @Named("replicationMdcScopeBuilder") private val replicationLogMdcBuilder: MdcScope.Builder,
 ) {
   /**
    * Configures logging/mdc scope, and creates all objects necessary to handle state updates.
@@ -54,19 +55,15 @@ class Application(
    */
   @VisibleForTesting
   fun run(): Int =
-    try {
-      // set mdc scope for the remaining execution
-      MdcScope
-        .Builder()
-        .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
-        .build()
-        .use { _ ->
-          val result: String = jobOrchestrator.runJob().orElse("")
-          logger.debug { "Job orchestrator completed with result: $result" }
-        }
-      SUCCESS_EXIT_CODE
-    } catch (t: Throwable) {
-      logger.error(t) { "Killing orchestrator because of an Exception" }
-      FAILURE_EXIT_CODE
+    // set mdc scope for the remaining execution
+    replicationLogMdcBuilder.build().use { _ ->
+      try {
+        val result: String = jobOrchestrator.runJob().orElse("")
+        logger.debug { "Job orchestrator completed with result: $result" }
+        SUCCESS_EXIT_CODE
+      } catch (t: Throwable) {
+        logger.error(t) { "Killing orchestrator because of an Exception" }
+        FAILURE_EXIT_CODE
+      }
     }
 }
