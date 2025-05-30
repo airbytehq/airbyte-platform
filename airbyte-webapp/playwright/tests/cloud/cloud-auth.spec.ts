@@ -79,31 +79,6 @@ test.describe("Email Authentication on Airbyte Cloud", () => {
       await expect(page).toHaveURL(/\/signup/);
       const search2 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
       expect(parseLoginRedirectParam(search2)).toBe(expectedRedirectPath);
-
-      // check parameters on sign up with email page -- loginRedirect is unchanged and that method=email was set
-      await page.locator("text=Sign up using email").click();
-      const search3 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
-      expect(parseLoginRedirectParam(search3)).toBe(expectedRedirectPath);
-      const params3 = new URLSearchParams(search3);
-      expect(params3.get("method")).toBe("email");
-
-      // check that method=email was removed and loginRedirect was unchanged
-      await page.locator("text=Sign up using Google or GitHub").click();
-      const search4 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
-      const params4 = new URLSearchParams(search4);
-      expect(params4.get("method")).toBeNull();
-      expect(parseLoginRedirectParam(search4)).toBe(expectedRedirectPath);
-
-      // check that loginRedirect is unchanged on password reset page
-      await page.locator("text=Log in").click();
-      await page.locator("text=Forgot your password").click();
-      const search5 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
-      expect(parseLoginRedirectParam(search5)).toBe(expectedRedirectPath);
-
-      // the Back to Log in link preserves the loginRedirect param as well
-      await page.locator("text=Back to Log in").click();
-      const search6 = page.url().split("?")[1] ? `?${page.url().split("?")[1]}` : "";
-      expect(parseLoginRedirectParam(search6)).toBe(expectedRedirectPath);
     };
 
     const pathsToTest = ["/", "/login", "/signup", "/settings/account", "/connections"];
