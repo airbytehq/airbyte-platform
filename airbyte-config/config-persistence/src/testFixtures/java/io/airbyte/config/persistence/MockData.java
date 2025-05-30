@@ -816,9 +816,9 @@ public class MockData {
         io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
-            io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER),
-            io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER),
-            io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING))
+            io.airbyte.protocol.models.v0.Field.of("id", JsonSchemaType.NUMBER),
+            io.airbyte.protocol.models.v0.Field.of("make_id", JsonSchemaType.NUMBER),
+            io.airbyte.protocol.models.v0.Field.of("model", JsonSchemaType.STRING))
             .withSupportedSyncModes(
                 Lists.newArrayList(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));

@@ -24,7 +24,7 @@ import java.nio.charset.Charset
 import java.time.OffsetDateTime
 import java.util.UUID
 import io.airbyte.config.ConfiguredAirbyteCatalog as InternalConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
 
 internal class DbConverterTest {
   @ValueSource(
