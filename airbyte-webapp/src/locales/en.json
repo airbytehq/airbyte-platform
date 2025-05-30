@@ -1035,8 +1035,6 @@
   "connection.stream.status.table.streamName": "Stream name",
   "connection.stream.status.table.lastRecordAt": "Last record loaded at",
   "connection.stream.status.table.dataFreshAsOf": "Data fresh as of",
-  "connection.stream.status.table.dataFreshAsOf.relative": "relative time",
-  "connection.stream.status.table.dataFreshAsOf.absolute": "absolute time",
   "connection.stream.status.table.latestSync": "Latest sync in",
   "connection.stream.status.table.latestSync.bytes": "bytes",
   "connection.stream.status.table.latestSync.records": "records",

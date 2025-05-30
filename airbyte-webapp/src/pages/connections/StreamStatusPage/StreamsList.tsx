@@ -19,7 +19,6 @@ import { useUiStreamStates } from "area/connection/utils/useUiStreamsStates";
 import { useCurrentConnection } from "core/api";
 
 import { DataFreshnessCell } from "./DataFreshnessCell";
-import { DateMetricListbox, DateMetricOption } from "./DateMetricListbox";
 import { LatestSyncCell } from "./LatestSyncCell";
 import { StreamActionsMenu } from "./StreamActionsMenu";
 import styles from "./StreamsList.module.scss";
@@ -28,7 +27,6 @@ import { StreamsListSubtitle } from "./StreamsListSubtitle";
 import { SyncMetricOption, SyncMetricListbox } from "./SyncMetricListbox";
 
 export const StreamsList: React.FC = () => {
-  const [dateMetric, setDateMetric] = useState<DateMetricOption>(DateMetricOption.relative);
   const [syncMetric, setSyncMetric] = useState<SyncMetricOption>(SyncMetricOption.records);
 
   const connection = useCurrentConnection();
@@ -81,18 +79,8 @@ export const StreamsList: React.FC = () => {
         },
       }),
       columnHelper.accessor("dataFreshAsOf", {
-        header: () => (
-          <FlexContainer alignItems="baseline" gap="sm">
-            <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />
-            <DateMetricListbox selectedValue={dateMetric} onSelect={setDateMetric} />
-          </FlexContainer>
-        ),
-        cell: (props) => (
-          <DataFreshnessCell
-            transitionedAt={props.cell.getValue()}
-            showRelativeTime={dateMetric === DateMetricOption.relative}
-          />
-        ),
+        header: () => <FormattedMessage id="connection.stream.status.table.dataFreshAsOf" />,
+        cell: (props) => <DataFreshnessCell transitionedAt={props.cell.getValue()} />,
         meta: {
           thClassName: styles.dataFreshAsOfHeader,
         },
@@ -112,7 +100,7 @@ export const StreamsList: React.FC = () => {
         },
       }),
     ],
-    [columnHelper, dateMetric, syncMetric]
+    [columnHelper, syncMetric]
   );
 
   const {
