@@ -17,6 +17,12 @@ export async function loadConfig() {
   return {
     ...config,
     edition: config.edition.toLowerCase(),
+    datadogApplicationId: process.env.REACT_APP_DATADOG_APPLICATION_ID ?? config.datadogApplicationId,
+    datadogClientToken: process.env.REACT_APP_DATADOG_CLIENT_TOKEN ?? config.datadogClientToken,
+    datadogSite: process.env.REACT_APP_DATADOG_SITE ?? config.datadogSite,
+    datadogService: process.env.REACT_APP_DATADOG_SERVICE ?? config.datadogService,
+    datadogEnv: process.env.REACT_APP_DATADOG_ENV ?? config.datadogEnv,
+    hockeystackApiKey: process.env.REACT_APP_HOCKEYSTACK_API_KEY ?? config.hockeystackApiKey,
     launchdarklyKey: process.env.REACT_APP_LAUNCHDARKLY_KEY ?? config.launchdarklyKey,
     osanoKey: process.env.REACT_APP_OSANO_KEY ?? config.osanoKey,
     segmentToken: process.env.REACT_APP_SEGMENT_TOKEN ?? config.segmentToken,
