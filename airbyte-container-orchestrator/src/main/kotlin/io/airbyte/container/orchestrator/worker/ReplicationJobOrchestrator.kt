@@ -53,7 +53,7 @@ internal const val FAILED_STATUS: String = "failed"
 internal const val SUCCESS_STATUS: String = "success"
 
 private val BYTES_GAUGE_FUNCTION =
-  ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary -> replicationAttemptSummary.bytesSynced / BYTES_TO_GB }
+  ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary -> (replicationAttemptSummary.bytesSynced ?: 0) / BYTES_TO_GB }
 
 private val DURATION_GAUGE_FUNCTION =
   ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary ->

@@ -7,7 +7,6 @@ package io.airbyte.workload.handler
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.generated.SignalApi
 import io.airbyte.api.client.model.generated.SignalInput
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.SignalInput.Companion.SYNC_WORKFLOW
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.featureflag.FeatureFlagClient
@@ -23,11 +22,7 @@ import io.airbyte.workload.errors.NotFoundException
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.DATAPLANE_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.WORKLOAD_ID
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.metricClient
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApi
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.mockApiFailingSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.signalApi
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyApi
-import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.verifyFailedSignal
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadHandler
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadQueueRepository
 import io.airbyte.workload.handler.WorkloadHandlerImplTest.Fixtures.workloadRepository
@@ -41,8 +36,6 @@ import io.airbyte.workload.repository.domain.WorkloadType
 import io.airbyte.workload.services.WorkloadService
 import io.airbyte.workload.signal.ApiSignalSender
 import io.airbyte.workload.signal.SignalSender
-import io.micrometer.core.instrument.Counter
-import io.mockk.Called
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -272,31 +265,18 @@ class WorkloadHandlerImplTest {
 
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
-  fun `test successfulHeartbeat`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-    every { workloadRepository.update(eq(WORKLOAD_ID), any(), ofType(OffsetDateTime::class), eq(now.plusMinutes(10))) }.returns(Unit)
+  fun `verify successful heartbeat`(workloadStatus: WorkloadStatus) {
+    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any()) } returns Unit
     workloadHandler.heartbeat(WORKLOAD_ID, now.plusMinutes(10))
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), any(), eq(now.plusMinutes(10))) }
+    verify { workloadService.heartbeatWorkload(WORKLOAD_ID, now.plusMinutes(10)) }
   }
 
   @ParameterizedTest
   @EnumSource(value = WorkloadStatus::class, names = ["CANCELLED", "FAILURE", "SUCCESS", "PENDING"])
-  fun `test nonAuthorizedHeartbeat`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
+  fun `verify heartbeat failure exceptions are converted`(workloadStatus: WorkloadStatus) {
+    every { workloadService.heartbeatWorkload(WORKLOAD_ID, any()) } throws
+      io.airbyte.workload.services
+        .InvalidStatusTransitionException("oops")
     assertThrows<InvalidStatusTransitionException> { workloadHandler.heartbeat(WORKLOAD_ID, now) }
   }
 
@@ -345,393 +325,43 @@ class WorkloadHandlerImplTest {
   }
 
   @Test
-  fun `test workload not found when cancelling workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
+  fun `cancelling workload errors are converted`() {
+    every { workloadService.cancelWorkload(WORKLOAD_ID, any(), any()) } throws
+      io.airbyte.workload.services
+        .NotFoundException("who are you")
     assertThrows<NotFoundException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel") }
   }
 
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "FAILURE"])
-  fun `test cancel workload in terminal state`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "invalid cancel") }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
-  fun `test successful cancel`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-    mockApi()
-
-    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
-    verifyApi()
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
-  fun `test successful cancel no signal`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = null,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-    mockApi()
-
-    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
-    verify { signalApi wasNot Called }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
-  fun `test failed signal cancel`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-    mockApiFailingSignal()
-
-    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
-    verifyFailedSignal()
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING", "PENDING"])
-  fun `test failed bad signal input cancel`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = "Not a valid Json",
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("test cancel"), null) } just Runs
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-    every { metricClient.count(OssMetricsRegistry.WORKLOADS_SIGNAL, any(), any()) } returns mockk<Counter>()
-    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), eq("test"), eq("test cancel"), null) }
-    verify {
-      metricClient.count(
-        metric = OssMetricsRegistry.WORKLOADS_SIGNAL,
-        value = 1,
-        attributes =
-          arrayOf(
-            MetricAttribute(MetricTags.STATUS, MetricTags.FAILURE),
-            MetricAttribute(MetricTags.FAILURE_TYPE, "deserialization"),
-            any(),
-          ),
-      )
-    }
-  }
-
   @Test
-  fun `test noop cancel`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.CANCELLED,
-        ),
-      ),
-    )
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-
-    workloadHandler.cancelWorkload(WORKLOAD_ID, "test", "test cancel again")
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.CANCELLED), "test", "test cancel again", null) }
-  }
-
-  @Test
-  fun `test workload not found when failing workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "CANCELLED"])
-  fun `test fail workload in inactive status`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "test", "fail") }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
-  fun `test failing workload succeeded`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), eq("test"), eq("failing a workload"), null) } just Runs
-    every { workloadQueueRepository.ackWorkloadQueueItem(WORKLOAD_ID) } just Runs
-    mockApi()
-
-    workloadHandler.failWorkload(WORKLOAD_ID, "test", "failing a workload")
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("failing a workload"), null) }
-    verifyApi()
-  }
-
-  @Test
-  fun `test noop failure`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.FAILURE,
-        ),
-      ),
-    )
-
-    workloadHandler.failWorkload(WORKLOAD_ID, "test", "noop")
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.FAILURE), eq("test"), eq("noop"), null) }
-  }
-
-  @Test
-  fun `test workload not found when succeeding workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
+  fun `succeeding workload errors are converted`() {
+    every { workloadRepository.succeed(WORKLOAD_ID) } throws
+      io.airbyte.workload.services
+        .NotFoundException("where are you")
     assertThrows<NotFoundException> { workloadHandler.succeedWorkload(WORKLOAD_ID) }
   }
 
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "CANCELLED", "FAILURE"])
-  fun `test succeed workload in inactive status`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.succeedWorkload(WORKLOAD_ID) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED", "RUNNING"])
-  fun `test succeeding workload succeeded`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-          signalPayload = Jsons.serialize(Fixtures.configSignalInput),
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), null) } just Runs
-    mockApi()
-
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
-    verifyApi()
-  }
-
   @Test
-  fun `test noop success`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.SUCCESS,
-        ),
-      ),
-    )
-
-    workloadHandler.succeedWorkload(WORKLOAD_ID)
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.SUCCESS), null) }
-  }
-
-  @Test
-  fun `test workload not found when setting status to running`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["SUCCESS", "CANCELLED", "FAILURE"])
-  fun `test set workload status to running when workload is in terminal state`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
+  fun `setting status to running errors are converted`() {
+    every { workloadRepository.running(WORKLOAD_ID, any()) } throws
+      io.airbyte.workload.services
+        .InvalidStatusTransitionException("bad timing")
     assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
   }
 
   @Test
-  fun `test set workload status to running on unclaimed workload`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          dataplaneId = null,
-          status = WorkloadStatus.PENDING,
-        ),
-      ),
-    )
-
-    assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["CLAIMED", "LAUNCHED"])
-  fun `test set workload status to running succeeded`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
-
-    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
-  }
-
-  @Test
-  fun `test noop when setting workload status to running`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.RUNNING,
-        ),
-      ),
-    )
-
-    workloadHandler.setWorkloadStatusToRunning(WORKLOAD_ID, now.plusMinutes(10))
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.RUNNING), eq(now.plusMinutes(10))) }
-  }
-
-  @Test
-  fun `test workload not found when setting status to launched`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(Optional.empty())
-    assertThrows<NotFoundException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["PENDING", "SUCCESS", "CANCELLED", "FAILURE"])
-  fun `test set workload status to launched when is not in claimed state`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
+  fun `setting status to launched errors are converted`() {
+    every { workloadRepository.launch(WORKLOAD_ID, any()) } throws
+      io.airbyte.workload.services
+        .InvalidStatusTransitionException("boom")
     assertThrows<InvalidStatusTransitionException> { workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now) }
   }
 
   @Test
-  fun `test set workload status to launched succeeded`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.CLAIMED,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
-
-    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
-    verify { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
-  }
-
-  @ParameterizedTest
-  @EnumSource(value = WorkloadStatus::class, names = ["LAUNCHED", "RUNNING"])
-  fun `test set workload status to launched is a noop`(workloadStatus: WorkloadStatus) {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = workloadStatus,
-        ),
-      ),
-    )
-
-    every { workloadRepository.update(any(), ofType(WorkloadStatus::class), any()) } just Runs
-
-    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
-  }
-
-  @Test
-  fun `test noop when setting workload status to launched`() {
-    every { workloadRepository.findById(WORKLOAD_ID) }.returns(
-      Optional.of(
-        Fixtures.workload(
-          id = WORKLOAD_ID,
-          status = WorkloadStatus.LAUNCHED,
-        ),
-      ),
-    )
-
-    workloadHandler.setWorkloadStatusToLaunched(WORKLOAD_ID, now.plusMinutes(10))
-    verify(exactly = 0) { workloadRepository.update(eq(WORKLOAD_ID), eq(WorkloadStatus.LAUNCHED), eq(now.plusMinutes(10))) }
+  fun `failing workload errors are converted`() {
+    every { workloadRepository.fail(WORKLOAD_ID, any(), any()) } throws
+      io.airbyte.workload.services
+        .InvalidStatusTransitionException("boom")
+    assertThrows<InvalidStatusTransitionException> { workloadHandler.failWorkload(WORKLOAD_ID, "testing", "errors") }
   }
 
   @Test

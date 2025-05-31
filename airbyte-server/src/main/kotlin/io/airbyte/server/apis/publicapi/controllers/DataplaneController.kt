@@ -20,7 +20,7 @@ import jakarta.ws.rs.core.Response
 import java.util.UUID
 
 @Controller(DATAPLANES_PATH)
-@Secured(AuthRoleConstants.INSTANCE_ADMIN)
+@Secured(AuthRoleConstants.ADMIN)
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
 ) : PublicDataplanesApi {

@@ -21,7 +21,7 @@ import jakarta.ws.rs.core.Response
 import java.util.UUID
 
 @Controller(API_PATH)
-@Secured(AuthRoleConstants.INSTANCE_ADMIN)
+@Secured(AuthRoleConstants.ADMIN)
 open class RegionController(
   private val regionService: RegionService,
 ) : PublicRegionsApi {

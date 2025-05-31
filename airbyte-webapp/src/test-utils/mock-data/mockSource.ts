@@ -488,8 +488,6 @@ export const mockSourceDiscoverSchemaRead: SourceDiscoverSchemaRead = {
         config: {
           syncMode: "full_refresh",
           destinationSyncMode: "append",
-          primaryKey: [],
-          cursorField: [],
         },
       },
     ],

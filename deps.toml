@@ -1,5 +1,5 @@
 [versions]
-airbyte-protocol = "0.15.0"
+airbyte-protocol = "0.17.0"
 azure-kevault-secrets = "4.3.5"
 azure-identity = "1.3.5"
 azure-storage = "12.27.1"
@@ -20,6 +20,7 @@ keycloak-client = "26.2.2" # should be kept in sync with airbyte-keycloak/Docker
 keycloak-admin-client = "26.0.5" # should be kept in sync with airbyte-keycloak/Dockerfile base image version
 kotest = "5.9.1"
 kotlin-logging = "7.0.6"
+kotlinx-coroutine = "1.10.2"
 kubernetes-client = "7.0.1"
 logback = "1.5.18"
 micrometer = "1.14.7"
@@ -121,8 +122,9 @@ junit-pioneer = { module = "org.junit-pioneer:junit-pioneer", version = "1.7.1" 
 keycloak-admin-client = { module = "org.keycloak:keycloak-admin-client", version.ref = "keycloak-admin-client" }
 keycloak-client-registration-api = { module = "org.keycloak:keycloak-client-registration-api", version.ref = "keycloak-client" }
 kotest-assertions = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
-kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.10.1" }
-kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version = "1.10.1" }
+kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutine" }
+kotlin-coroutines-sl4j = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-slf4j", version.ref = "kotlinx-coroutine" }
+kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutine" }
 kotlin-logging = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version = "2.1.0" }
 kotlin-test-runner-junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }

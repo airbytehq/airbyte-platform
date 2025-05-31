@@ -17,7 +17,9 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.concurrent.ConcurrentHashMap
@@ -35,11 +37,13 @@ private data class SyncStatsCounters(
 class ParallelStreamStatsTracker(
   private val metricClient: MetricClient,
   private val stateCheckSumEventHandler: StateCheckSumCountEventHandler,
+  @Value("\${airbyte.platform-mode}") private val platformMode: String,
 ) : SyncStatsTracker {
   private val streamTrackers: MutableMap<AirbyteStreamNameNamespacePair, StreamStatsTracker> = ConcurrentHashMap()
   private val syncStatsCounters = SyncStatsCounters()
   private var expectedEstimateType: Type? = null
   private var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader? = null
+  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
 
   @Volatile
   private var hasEstimatesErrors = false
@@ -49,6 +53,11 @@ class ParallelStreamStatsTracker(
 
   override fun updateFilteredOutRecordsStats(recordMessage: AirbyteRecordMessage) {
     getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage)).updateFilteredOutRecordsStats(recordMessage)
+  }
+
+  override fun updateStatsFromDestination(recordMessage: AirbyteRecordMessage) {
+    getOrCreateStreamStatsTracker(getNameNamespacePair(recordMessage))
+      .trackRecordCountFromDestination(recordMessage)
   }
 
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
@@ -480,6 +489,7 @@ class ParallelStreamStatsTracker(
       return StreamStatsTracker(
         nameNamespacePair = pair,
         metricClient = metricClient,
+        isBookkeeperMode = isBookkeeperMode,
       ).also { streamTrackers[pair] = it }
     }
   }

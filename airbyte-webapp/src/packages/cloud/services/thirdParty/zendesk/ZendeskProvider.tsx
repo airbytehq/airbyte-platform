@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useEffectOnce } from "react-use";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { config } from "core/config";
+import { useWebappConfig } from "core/config";
 import { useAuthService } from "core/services/auth";
 
 import "./zendesk.scss";
@@ -18,7 +18,7 @@ declare global {
 }
 
 export const ZendeskProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { zendeskKey } = config;
+  const { zendeskKey } = useWebappConfig();
   const { user } = useAuthService();
   const workspaceId = useCurrentWorkspaceId();
   const { checkAndAddStatusMessage } = useUpdateStatusMessage();

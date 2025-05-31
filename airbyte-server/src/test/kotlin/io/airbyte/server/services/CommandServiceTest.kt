@@ -4,25 +4,36 @@
 
 package io.airbyte.server.services
 
+import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.ConnectorJobOutput.OutputType
 import io.airbyte.config.FailureReason
+import io.airbyte.config.Organization
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
+import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.CatalogService
+import io.airbyte.persistence.job.models.IntegrationLauncherConfig
+import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.protocol.models.Jsons
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
+import io.airbyte.workers.models.ReplicationActivityInput
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.DocStoreAccessException
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.services.ConflictException
 import io.airbyte.workload.services.WorkloadService
+import io.micronaut.data.exceptions.DataAccessException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -30,6 +41,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
@@ -40,7 +52,9 @@ import java.util.UUID
 class CommandServiceTest {
   private lateinit var catalogService: CatalogService
   private lateinit var commandsRepository: CommandsRepository
+  private lateinit var jobInputService: JobInputService
   private lateinit var workloadService: WorkloadService
+  private lateinit var workloadQueueService: WorkloadQueueService
   private lateinit var workloadOutputReader: WorkloadOutputDocStoreReader
   private lateinit var service: CommandService
 
@@ -54,20 +68,22 @@ class CommandServiceTest {
       }
 
     catalogService = mockk()
+    jobInputService = mockk()
     workloadService = mockk(relaxed = true)
+    workloadQueueService = mockk(relaxed = true)
     workloadOutputReader = mockk(relaxed = true)
     service =
       CommandService(
-        actorRepository = mockk(),
+        actorRepository = mockk(relaxed = true),
         catalogService = catalogService,
         commandsRepository = commandsRepository,
-        jobInputService = mockk(),
-        logClientManager = mockk(),
-        organizationService = mockk(),
+        jobInputService = jobInputService,
+        logClientManager = mockk(relaxed = true),
+        organizationService = mockk(relaxed = true) { every { getOrganizationForWorkspaceId(any()) } returns Optional.of(ORGANIZATION) },
         workloadService = workloadService,
-        workloadQueueService = mockk(),
+        workloadQueueService = workloadQueueService,
         workloadOutputReader = workloadOutputReader,
-        workspaceService = mockk(),
+        workspaceService = mockk(relaxed = true),
         workspaceRoot = Path.of("/test-root"),
         workloadIdGenerator = WorkloadIdGenerator(),
         discoverAutoRefreshWindowMinutes = 0,
@@ -148,6 +164,124 @@ class CommandServiceTest {
         appliedCatalogDiff = null,
       )
     assertFalse(output)
+  }
+
+  @Test
+  fun `creating a command successfully saves the command and enqueues the workload`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getDiscoverInput(any(), any(), any()) } returns
+      DiscoverCommandInput.DiscoverCatalogInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        integrationLauncherConfig = IntegrationLauncherConfig(),
+        discoverCatalogInput = StandardDiscoverCatalogInput(),
+      )
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Unit
+
+    val output =
+      service.createDiscoverCommand(
+        commandId = COMMAND_ID,
+        actorId = UUID.randomUUID(),
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    verify { commandsRepository.save(any()) }
+    verify { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `creating a command still succeeds if the workload already exists saves the command but doesn't enqueue`() {
+    val jobId = UUID.randomUUID().toString()
+    val attemptNumber = 0L
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { jobInputService.getDiscoverInput(any(), any(), any()) } returns
+      DiscoverCommandInput.DiscoverCatalogInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        integrationLauncherConfig = IntegrationLauncherConfig(),
+        discoverCatalogInput = StandardDiscoverCatalogInput(),
+      )
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } throws
+      ConflictException("dupl")
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) } throws DataAccessException("dupl")
+
+    // The edge case here is that creating a workload that already exists will throw a DataAccessException
+    // on the workloadQueueService because the workload has already been created, enqueued etc.
+    // The common case is discover with a snap window. It is expected that different connection generates
+    // the same workload if they have the same source.
+    val output =
+      service.createDiscoverCommand(
+        commandId = COMMAND_ID,
+        actorId = UUID.randomUUID(),
+        jobId = null,
+        attemptNumber = null,
+        workloadPriority = WorkloadPriority.DEFAULT,
+        signalInput = null,
+        commandInput = Jsons.emptyObject(),
+      )
+    assertTrue(output)
+
+    verify { commandsRepository.save(any()) }
+    verify(exactly = 0) { workloadQueueService.create(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
+  }
+
+  @Test
+  fun `createReplicate sets the mutexKey`() {
+    val connectionId = UUID.randomUUID()
+    val jobId = "12345"
+    val attemptNumber = 0L
+    val signalInput = "signal-input"
+
+    every { commandsRepository.existsById(COMMAND_ID) } returns false
+    every { commandsRepository.save(any()) } returns mockk()
+    every { workloadService.createWorkload(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns
+      mockk()
+    every { jobInputService.getReplicationInput(any(), any(), any(), any(), any()) } returns
+      ReplicationActivityInput(
+        jobRunConfig = JobRunConfig().withJobId(jobId).withAttemptId(attemptNumber),
+        connectionContext =
+          ConnectionContext()
+            .withConnectionId(
+              connectionId,
+            ).withWorkspaceId(WORKSPACE_ID)
+            .withOrganizationId(ORGANIZATION.organizationId),
+      )
+
+    service.createReplicateCommand(
+      commandId = COMMAND_ID,
+      connectionId = connectionId,
+      jobId = jobId,
+      attemptNumber = attemptNumber,
+      appliedCatalogDiff = null,
+      signalInput = signalInput,
+      commandInput = Jsons.emptyObject(),
+    )
+    verify {
+      workloadService.createWorkload(
+        workloadId = any(),
+        labels = any(),
+        input = any(),
+        workspaceId = WORKSPACE_ID,
+        organizationId = ORGANIZATION.organizationId,
+        logPath = any(),
+        mutexKey = connectionId.toString(),
+        type = WorkloadType.SYNC,
+        autoId = any(),
+        deadline = any(),
+        signalInput = signalInput,
+        dataplaneGroup = any(),
+        priority = WorkloadPriority.DEFAULT,
+      )
+    }
   }
 
   @Test
@@ -251,6 +385,8 @@ class CommandServiceTest {
   }
 
   companion object {
+    val ORGANIZATION = Organization().withOrganizationId(UUID.randomUUID())
+    val WORKSPACE_ID = UUID.randomUUID()
     const val UNKNOWN_COMMAND_ID = "i-do-not-exist"
     const val COMMAND_ID = "command-123"
     const val WORKLOAD_ID = "workload-12-123"

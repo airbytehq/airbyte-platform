@@ -6,6 +6,7 @@ package io.airbyte.container.orchestrator.worker
 
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.io.LineGobbler
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.container.orchestrator.persistence.SyncPersistence
@@ -23,6 +24,8 @@ import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.withContext
 import org.slf4j.MDC
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
@@ -41,6 +44,7 @@ class ReplicationWorker(
   @Named("startReplicationJobs") private val startReplicationJobs: List<ReplicationTask>,
   @Named("syncReplicationJobs") private val syncReplicationJobs: List<ReplicationTask>,
   @Named("replicationWorkerDispatcher") private val replicationWorkerDispatcher: ExecutorService,
+  @Named("replicationMdcScopeBuilder") private val replicationLogMdcBuilder: MdcScope.Builder,
 ) {
   private val dedicatedDispatcher = replicationWorkerDispatcher.asCoroutineDispatcher()
 
@@ -79,14 +83,18 @@ class ReplicationWorker(
   @Throws(WorkerException::class)
   fun runReplicationBlocking(jobRoot: Path): ReplicationOutput =
     runBlocking {
-      run(jobRoot)
+      replicationLogMdcBuilder.build().use { _ ->
+        withContext(MDCContext(MDC.getCopyOfContextMap() ?: emptyMap())) {
+          run(jobRoot = jobRoot)
+        }
+      }
     }
 
   @Throws(WorkerException::class)
   internal suspend fun run(jobRoot: Path): ReplicationOutput {
     try {
+      val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
       coroutineScope {
-        val mdc = MDC.getCopyOfContextMap() ?: emptyMap()
         logger.info { "Starting replication worker. job id: ${context.jobId} attempt: ${context.attempt}" }
         LineGobbler.startSection("REPLICATION")
 

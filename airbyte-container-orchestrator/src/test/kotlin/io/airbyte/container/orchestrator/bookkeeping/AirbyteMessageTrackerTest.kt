@@ -17,6 +17,7 @@ import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.airbyte.workers.helper.FailureHelper.destinationFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.mockk.Called
 import io.mockk.every
@@ -31,7 +32,6 @@ import java.util.UUID
 internal class AirbyteMessageTrackerTest {
   private lateinit var messageTracker: AirbyteMessageTracker
   private lateinit var syncPersistence: SyncPersistence
-  private lateinit var syncStatsTracker: SyncStatsTracker
   private lateinit var replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader
   private lateinit var replicationInput: ReplicationInput
 
@@ -48,14 +48,13 @@ internal class AirbyteMessageTrackerTest {
         every { read(LogStateMsgs) } returns false
       }
     syncPersistence = mockk(relaxed = true)
-    syncStatsTracker = mockk(relaxed = true)
 
     this.messageTracker =
       AirbyteMessageTracker(
-        syncStatsTracker = syncStatsTracker,
         replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
         replicationInput = replicationInput,
         syncPersistence = syncPersistence,
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
       )
   }
 
@@ -66,7 +65,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(trace)
 
-    verify(exactly = 1) { syncStatsTracker.updateEstimates((trace.trace.estimate)) }
+    verify(exactly = 1) { syncPersistence.updateEstimates((trace.trace.estimate)) }
   }
 
   @Test
@@ -76,7 +75,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -86,7 +85,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -96,7 +95,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -105,7 +104,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(record)
 
-    verify(exactly = 1) { syncStatsTracker.updateStats(record.record) }
+    verify(exactly = 1) { syncPersistence.updateStats(record.record) }
   }
 
   @Test
@@ -115,7 +114,7 @@ internal class AirbyteMessageTrackerTest {
     messageTracker.acceptFromSource(state)
 
     verify(exactly = 0) { syncPersistence.accept(replicationInput.connectionId, state.state) }
-    verify(exactly = 1) { syncStatsTracker.updateSourceStatesStats(state.state) }
+    verify(exactly = 1) { syncPersistence.updateSourceStatesStats(state.state) }
   }
 
   @Test
@@ -125,7 +124,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(control!!)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -136,7 +135,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(trace)
 
-    verify(exactly = 1) { syncStatsTracker.updateEstimates((trace.trace.estimate)) }
+    verify(exactly = 1) { syncPersistence.updateEstimates((trace.trace.estimate)) }
   }
 
   @Test
@@ -145,7 +144,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(trace!!)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -154,7 +153,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromSource(trace!!)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -164,7 +163,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -174,7 +173,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -185,7 +184,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(trace)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -194,7 +193,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(record)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test
@@ -204,7 +203,7 @@ internal class AirbyteMessageTrackerTest {
     messageTracker.acceptFromDestination(state)
 
     verify(exactly = 1) { syncPersistence.accept(replicationInput.connectionId, state.state) }
-    verify(exactly = 1) { syncStatsTracker.updateDestinationStateStats(state.state) }
+    verify(exactly = 1) { syncPersistence.updateDestinationStateStats(state.state) }
   }
 
   @Test
@@ -214,7 +213,7 @@ internal class AirbyteMessageTrackerTest {
 
     messageTracker.acceptFromDestination(control!!)
 
-    verify { syncStatsTracker wasNot Called }
+    verify { syncPersistence wasNot Called }
   }
 
   @Test

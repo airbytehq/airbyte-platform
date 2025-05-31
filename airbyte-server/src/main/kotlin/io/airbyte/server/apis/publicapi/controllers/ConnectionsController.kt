@@ -311,34 +311,36 @@ open class ConnectionsController(
         userId,
       )
 
-    // get source schema for catalog id and airbyte catalog
-    val schemaResponse =
-      trackingHelper.callWithTracker(
-        { sourceService.getSourceSchema(UUID.fromString(currentConnection.sourceId), false) },
-        CONNECTIONS_WITH_ID_PATH,
-        PUT,
-        userId,
-      )
-    val catalogId = schemaResponse.catalogId
-
-    val airbyteCatalogFromDiscoverSchema = schemaResponse.catalog
-
     // refer to documentation to understand what we need to do for the catalog
     // https://docs.airbyte.com/understanding-airbyte/airbyte-protocol/#catalog
-    var configuredCatalog = AirbyteCatalog()
-
-    val validDestinationSyncModes =
-      trackingHelper.callWithTracker(
-        { destinationService.getDestinationSyncModes(destinationRead) },
-        CONNECTIONS_PATH,
-        POST,
-        userId,
-      ) as List<DestinationSyncMode>
+    var newConfiguredCatalog: AirbyteCatalog? = null
+    var catalogId: UUID? = null
 
     if (AirbyteCatalogHelper.hasStreamConfigurations(validConnectionPatchRequest.configurations)) {
+      // get source schema for catalog id and airbyte catalog
+      val schemaResponse =
+        trackingHelper.callWithTracker(
+          { sourceService.getSourceSchema(UUID.fromString(currentConnection.sourceId), false) },
+          CONNECTIONS_WITH_ID_PATH,
+          PUT,
+          userId,
+        )
+      catalogId = schemaResponse.catalogId
+
+      val airbyteCatalogFromDiscoverSchema = schemaResponse.catalog
+
+      val validDestinationSyncModes =
+        trackingHelper.callWithTracker(
+          { destinationService.getDestinationSyncModes(destinationRead) },
+          CONNECTIONS_PATH,
+          POST,
+          userId,
+        ) as List<DestinationSyncMode>
+
+      newConfiguredCatalog = AirbyteCatalog()
       trackingHelper.callWithTracker(
         {
-          configuredCatalog.streams =
+          newConfiguredCatalog.streams =
             AirbyteCatalogHelper.getValidConfiguredStreams(
               airbyteCatalogFromDiscoverSchema,
               validConnectionPatchRequest.configurations!!,
@@ -349,20 +351,16 @@ open class ConnectionsController(
         POST,
         userId,
       )
-    } else {
-      // no user supplied stream configs, return all streams with full refresh overwrite
-      configuredCatalog = AirbyteCatalogHelper.updateAllStreamsFullRefreshOverwrite(airbyteCatalogFromDiscoverSchema!!)
     }
 
-    val finalConfiguredCatalog = configuredCatalog
     val connectionResponse: Any =
       trackingHelper.callWithTracker(
         {
           connectionService.updateConnection(
             UUID.fromString(connectionId),
             validConnectionPatchRequest,
-            catalogId!!,
-            finalConfiguredCatalog,
+            catalogId,
+            newConfiguredCatalog,
             destinationRead.workspaceId,
           )
         },

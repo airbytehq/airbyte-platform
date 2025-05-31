@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
@@ -33,6 +34,7 @@ jest.mock("core/api", () => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
   })),
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {

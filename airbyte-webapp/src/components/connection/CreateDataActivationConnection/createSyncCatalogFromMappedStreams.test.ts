@@ -40,6 +40,8 @@ describe(`${createSyncCatalogFromMappedStreams.name}`, () => {
             { sourceFieldName: "id", destinationFieldName: "dest_id" },
             { sourceFieldName: "name", destinationFieldName: "dest_name" },
           ],
+          cursorField: "created_at",
+          primaryKey: "id",
         },
       ],
     };
@@ -52,7 +54,9 @@ describe(`${createSyncCatalogFromMappedStreams.name}`, () => {
           config: {
             ...mockSourceDiscoverSchemaRead.catalog?.streams[0].config,
             destinationSyncMode: DestinationSyncMode.append_dedup,
+            primaryKey: [["id"]],
             syncMode: SyncMode.incremental,
+            cursorField: ["created_at"],
             selected: true,
             fieldSelectionEnabled: true,
             destinationObjectName: "destination_stream_1",

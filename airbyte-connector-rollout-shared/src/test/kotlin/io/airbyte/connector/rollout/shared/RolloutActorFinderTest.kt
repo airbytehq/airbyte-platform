@@ -1059,6 +1059,88 @@ class RolloutActorFinderTest {
 
   @ParameterizedTest
   @EnumSource(ActorType::class)
+  fun `test filterByTier excludes no organizations when no filter is present`(actorType: ActorType) {
+    val organizationTiers =
+      mapOf(
+        ORGANIZATION_ID_1 to CustomerTier.TIER_0,
+        ORGANIZATION_ID_2 to CustomerTier.TIER_2,
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns organizationTiers
+
+    val candidates =
+      listOf(
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_2),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to null),
+        ),
+      )
+
+    val filteredCandidates =
+      rolloutActorFinder.filterByTier(
+        createMockConnectorRollout(UUID.randomUUID()),
+        candidates,
+        emptyList(),
+      )
+
+    assertEquals(3, filteredCandidates.size)
+
+    verify { organizationCustomerAttributesService.getOrganizationTiers() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `test filterByTier includes organizations with null tier with Tier 2`(actorType: ActorType) {
+    val organizationTiers =
+      mapOf(
+        ORGANIZATION_ID_1 to null,
+        ORGANIZATION_ID_2 to CustomerTier.TIER_2,
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns organizationTiers
+
+    val candidates =
+      listOf(
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_2),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to null),
+        ),
+      )
+
+    val filteredCandidates =
+      rolloutActorFinder.filterByTier(
+        createMockConnectorRollout(UUID.randomUUID()),
+        candidates,
+        listOf(
+          CustomerTierFilter(
+            AttributeName.TIER,
+            Operator.IN,
+            listOf(CustomerTier.TIER_2),
+          ),
+        ),
+      )
+
+    assertEquals(2, filteredCandidates.size)
+
+    verify { organizationCustomerAttributesService.getOrganizationTiers() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
   fun `test getActorsPinnedToReleaseCandidate no actors pinned`(actorType: ActorType) {
     val actorDefinitionId = if (actorType == ActorType.SOURCE) SOURCE_ACTOR_DEFINITION_ID else DESTINATION_ACTOR_DEFINITION_ID
 

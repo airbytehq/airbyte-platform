@@ -15,6 +15,7 @@ import {
   mockSourceDefinitionSpecification,
   mockSourceDefinitionVersion,
 } from "test-utils/mock-data/mockSource";
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { TestWrapper } from "test-utils/testutils";
 
@@ -53,6 +54,7 @@ jest.mock("core/api", () => ({
   useDestinationDefinitionVersion: () => mockDestinationDefinitionVersion,
   useGetSourceDefinitionSpecification: () => mockSourceDefinitionSpecification,
   useGetDestinationDefinitionSpecification: () => mockDestinationDefinitionSpecification,
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 const utils = {

@@ -25,6 +25,7 @@ import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamState
+import io.airbyte.workers.models.ArchitectureConstants
 import io.mockk.CapturingSlot
 import io.mockk.clearMocks
 import io.mockk.every
@@ -83,7 +84,11 @@ internal class SyncPersistenceImplTest {
       }
 
     syncStatsTracker =
-      ParallelStreamStatsTracker(metricClient = metricClient, stateCheckSumEventHandler = mockk<StateCheckSumCountEventHandler>(relaxed = true))
+      ParallelStreamStatsTracker(
+        metricClient = metricClient,
+        stateCheckSumEventHandler = mockk<StateCheckSumCountEventHandler>(relaxed = true),
+        ArchitectureConstants.ORCHESTRATOR,
+      )
 
     // Setting syncPersistence
     stateApiClient =

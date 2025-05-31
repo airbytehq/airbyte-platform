@@ -13,8 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import io.airbyte.api.client.model.generated.AirbyteCatalog;
 import io.airbyte.api.client.model.generated.CheckConnectionRead;
 import io.airbyte.api.client.model.generated.CheckConnectionRead.Status;
-import io.airbyte.featureflag.Empty;
-import io.airbyte.featureflag.UseAtomicWorkloadStateTransitions;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -68,21 +66,6 @@ class WorkloadBasicAcceptanceTests {
     testResources.getTestHarness().createWorkspaceWithId(REPLICATION_WORKSPACE_ID);
 
     testResources.runSmallSyncForAWorkspaceId(REPLICATION_WORKSPACE_ID);
-  }
-
-  @Test
-  @EnabledIfEnvironmentVariable(named = KUBE,
-                                matches = TRUE)
-  @DisabledIfEnvironmentVariable(named = IS_GKE,
-                                 matches = TRUE,
-                                 disabledReason = DISABLE_TEMPORAL_TESTS_IN_GKE)
-  void testSyncWithWorkloadAndAtomicTransitions() throws Exception {
-    final UUID workspaceId = UUID.randomUUID();
-    testResources.getTestHarness().createWorkspaceWithId(workspaceId);
-
-    try (var ignored = testResources.getTestHarness().withFlag(UseAtomicWorkloadStateTransitions.INSTANCE, Empty.INSTANCE, true)) {
-      testResources.runSmallSyncForAWorkspaceId(workspaceId);
-    }
   }
 
   @Test

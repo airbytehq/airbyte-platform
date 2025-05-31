@@ -11,7 +11,6 @@ import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.json.Jsons
-import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.StateCheckSumCountEventHandler.Companion.DUMMY_STATE_MESSAGE
 import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
 import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
@@ -21,6 +20,7 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.airbyte.workers.models.ArchitectureConstants
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -73,6 +73,7 @@ class StateCheckSumCountEventHandlerTest {
         attemptNumber = attemptNumber,
         epochMilliSupplier = epochMilliSupplier,
         idSupplier = idSupplier,
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
       )
   }
 
@@ -103,6 +104,7 @@ class StateCheckSumCountEventHandlerTest {
         attemptNumber = attemptNumber,
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
       )
     val timeInMicroSecond = handler.getCurrentTimeInMicroSecond()
     val instant = Instant.ofEpochMilli(timeInMicroSecond / 1000)

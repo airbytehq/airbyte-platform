@@ -1,4 +1,6 @@
-import { FormProvider, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
+import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -18,9 +20,15 @@ import { links } from "core/utils/links";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./MapFieldsRoute.module.scss";
-import { EMPTY_STREAM, StreamMappingsFormValues, StreamMappings } from "./StreamMappings";
+import {
+  EMPTY_STREAM,
+  StreamMappingsFormValues,
+  StreamMappings,
+  StreamMappingsFormValuesSchema,
+} from "./StreamMappings";
 import { SOURCE_ID_PARAM } from "../CreateConnection/DefineSource";
 import { CreateConnectionFlowLayout } from "../CreateConnectionFlowLayout";
+
 export const MapFieldsRoute = () => {
   const navigate = useNavigate();
   const source = useGetSourceFromSearchParams();
@@ -29,6 +37,7 @@ export const MapFieldsRoute = () => {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
+  const [showGlobalValidationMessage, setShowGlobalValidationMessage] = useState(false);
 
   if (!source || !destination) {
     throw new Error("Source ID and Destination ID are required");
@@ -39,6 +48,7 @@ export const MapFieldsRoute = () => {
       streams: location.state?.streams || [EMPTY_STREAM],
     },
     mode: "onChange",
+    resolver: zodResolver(StreamMappingsFormValuesSchema),
   });
 
   const onSubmit = (values: StreamMappingsFormValues) => {
@@ -57,7 +67,13 @@ export const MapFieldsRoute = () => {
 
   return (
     <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(onSubmit)} className={styles.form}>
+      <form
+        onSubmit={(event) => {
+          setShowGlobalValidationMessage(true);
+          return methods.handleSubmit(onSubmit)(event);
+        }}
+        className={styles.form}
+      >
         <CreateConnectionFlowLayout.Main>
           <Box p="xl">
             <FlexContainer direction="column" gap="lg">
@@ -102,12 +118,31 @@ export const MapFieldsRoute = () => {
             >
               <FormattedMessage id="connectionForm.backToDefineDestination" />
             </Link>
-            <Button type="submit">
-              <FormattedMessage id="connectionForm.configureConnection" />
-            </Button>
+
+            <FlexContainer justifyContent="flex-end" alignItems="center">
+              {showGlobalValidationMessage && <GlobalValidationMessage />}
+              <Button type="submit">
+                <FormattedMessage id="connectionForm.configureConnection" />
+              </Button>
+            </FlexContainer>
           </CreateConnectionFlowLayout.Footer>
         )}
       </form>
     </FormProvider>
+  );
+};
+
+const GlobalValidationMessage = () => {
+  const { formState } = useFormContext<StreamMappingsFormValues>();
+  const { isValid } = formState;
+
+  if (isValid) {
+    return null;
+  }
+
+  return (
+    <Text color="red">
+      <FormattedMessage id="connectionForm.validation.creationError" />
+    </Text>
   );
 };

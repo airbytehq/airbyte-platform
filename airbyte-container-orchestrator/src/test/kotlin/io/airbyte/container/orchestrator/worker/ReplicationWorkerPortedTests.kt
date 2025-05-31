@@ -9,6 +9,7 @@ import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
 import io.airbyte.commons.logging.LogSource
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.FailureReason
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
@@ -126,6 +127,7 @@ class ReplicationWorkerPortedTests {
   private lateinit var syncJobs: List<ReplicationTask>
   private lateinit var destinationMessageQueue: ClosableChannelQueue<AirbyteMessage>
   private lateinit var sourceMessageQueue: ClosableChannelQueue<AirbyteMessage>
+  private lateinit var replicationMdcScopeBuilder: MdcScope.Builder
 
   @BeforeEach
   fun setup() {
@@ -144,7 +146,6 @@ class ReplicationWorkerPortedTests {
     destination = spyk(SimpleAirbyteDestination())
     messageTracker = mockk(relaxed = true)
     syncStatsTracker = mockk(relaxed = true)
-    every { messageTracker.syncStatsTracker } returns syncStatsTracker
     syncPersistence = mockk(relaxed = true)
     recordSchemaValidator = mockk(relaxed = true)
     streamStatusTracker = mockk(relaxed = true)
@@ -160,6 +161,7 @@ class ReplicationWorkerPortedTests {
     streamStatusCompletionTracker = mockk(relaxed = true)
     recordMapper = mockk(relaxed = true)
     destinationCatalogGenerator = mockk(relaxed = true)
+    replicationMdcScopeBuilder = mockk(relaxed = true)
 
     mapper =
       mockk<AirbyteMapper>(relaxed = true).apply {
@@ -194,6 +196,7 @@ class ReplicationWorkerPortedTests {
           ThreadedTimeTracker(),
           analyticsMessageTracker,
           streamStatusCompletionTracker,
+          syncStatsTracker,
           streamStatusTracker,
           recordMapper,
           replicationWorkerState,
@@ -240,6 +243,7 @@ class ReplicationWorkerPortedTests {
       startReplicationJobs = startJobs,
       syncReplicationJobs = syncJobs,
       replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+      replicationLogMdcBuilder = replicationMdcScopeBuilder,
     )
 
   private fun setUpInfiniteSource() = sourceStub.setInfiniteSourceWithMessages(RECORD_MESSAGE1)
@@ -415,6 +419,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
+        syncStatsTracker,
         streamStatusTracker,
         recordMapper,
         replicationWorkerState,
@@ -445,6 +450,7 @@ class ReplicationWorkerPortedTests {
         startReplicationJobs = startJobs,
         syncReplicationJobs = syncJobs,
         replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+        replicationLogMdcBuilder = replicationMdcScopeBuilder,
       )
 
     runBlocking { workerEnabled.run(jobRoot) }
@@ -478,6 +484,7 @@ class ReplicationWorkerPortedTests {
         ThreadedTimeTracker(),
         analyticsMessageTracker,
         streamStatusCompletionTracker,
+        syncStatsTracker,
         streamStatusTracker,
         recordMapper,
         replicationWorkerState,
@@ -506,6 +513,7 @@ class ReplicationWorkerPortedTests {
         startReplicationJobs = startJobs,
         syncReplicationJobs = syncJobs,
         replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+        replicationLogMdcBuilder = replicationMdcScopeBuilder,
       )
 
     runBlocking { workerDisabled.run(jobRoot) }

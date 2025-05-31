@@ -148,23 +148,6 @@ tasks.register<PnpmTask>("cypress") {
     outputs.upToDateWhen { false }
 }
 
-tasks.register<PnpmTask>("cypressCloud") {
-    dependsOn("pnpmInstall")
-
-    val hasRecordingKey = !System.getenv("CYPRESS_RECORD_KEY").isNullOrEmpty()
-    args = if (hasRecordingKey && System.getProperty("cypressRecord", "false") == "true") {
-        listOf("run", "cloud-test:stage", "--record")
-    } else {
-        listOf("run", "cloud-test:stage")
-    }
-
-    /*
-    Mark the outputs as never up to date, to ensure we always run the tests.
-    We want this because they are e2e tests and can depend on other factors e.g., external dependencies.
-    */
-    outputs.upToDateWhen { false }
-}
-
 tasks.register<PnpmTask>("licenseCheck") {
     dependsOn("pnpmInstall")
 

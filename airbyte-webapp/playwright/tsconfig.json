@@ -1,0 +1,19 @@
+{
+  "include": ["./**/*.ts", "./**/*.tsx"],
+  "exclude": [],
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "types": ["node", "playwright"],
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@src/*": ["../src/*"]
+    }
+  }
+}

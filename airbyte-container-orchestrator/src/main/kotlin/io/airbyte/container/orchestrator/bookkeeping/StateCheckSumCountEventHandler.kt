@@ -15,7 +15,6 @@ import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ScopeType
-import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
 import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
 import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
@@ -31,6 +30,7 @@ import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
+import io.airbyte.workers.models.ArchitectureConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
@@ -58,6 +58,7 @@ class StateCheckSumCountEventHandler(
   @Named("attemptId") private val attemptNumber: Int,
   @Named("epochMilliSupplier") private val epochMilliSupplier: Supplier<Long>,
   @Named("idSupplier") private val idSupplier: Supplier<UUID>,
+  @Value("\${airbyte.platform-mode}") private val platformMode: String,
 ) {
   private val emitStatsCounterFlag: Boolean by lazy {
     val connectionContext = Multi(listOf(Connection(connectionId), Workspace(workspaceId)))
@@ -81,6 +82,8 @@ class StateCheckSumCountEventHandler(
       stateMessage.type == AirbyteStateMessage.AirbyteStateType.STREAM ||
         stateMessage.type == AirbyteStateMessage.AirbyteStateType.GLOBAL
     )
+
+  private val isBookkeeperMode: Boolean = platformMode == ArchitectureConstants.BOOKKEEPER
 
   @Volatile
   private var noCheckSumError = true
@@ -193,7 +196,7 @@ class StateCheckSumCountEventHandler(
     streamPlatformRecordCounts: Map<AirbyteStreamNameNamespacePair, Long> = emptyMap(),
     filteredOutRecords: Double = 0.0,
   ) {
-    if (!isStateTypeSupported(stateMessage)) {
+    if (isBookkeeperMode || !isStateTypeSupported(stateMessage)) {
       return
     }
     setStateMessageSeenAttributes(origin)

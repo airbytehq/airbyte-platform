@@ -4,17 +4,12 @@
 .text {
   margin: 0;
   padding: 0;
+  font-weight: 400;
+  line-height: 1.2;
 
   &.inverse {
     color: colors.$foreground;
   }
-}
-
-.xs,
-.sm,
-.md {
-  font-weight: 400;
-  line-height: 1.2;
 }
 
 .xs {
@@ -31,14 +26,6 @@
 
 .lg {
   font-size: variables.$font-size-lg;
-  font-weight: 500;
-  line-height: 1.3;
-}
-
-.xl {
-  font-size: 21px;
-  font-weight: 700;
-  line-height: 2em;
 }
 
 .darkBlue {

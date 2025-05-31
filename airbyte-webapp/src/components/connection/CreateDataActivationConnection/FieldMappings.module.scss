@@ -1,6 +1,9 @@
+@use "scss/variables";
+
 .fieldMappings {
   &__leftGutter {
     grid-column: 1;
+    height: variables.$form-input-height;
   }
 
   &__source {
@@ -12,6 +15,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    height: variables.$form-input-height;
   }
 
   &__destination {
@@ -20,5 +24,12 @@
 
   &__addField {
     grid-column: 1 / -1;
+  }
+
+  &__removeField {
+    height: variables.$form-input-height;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 }

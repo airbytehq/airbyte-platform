@@ -1,24 +1,22 @@
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { RbacPermission, RbacQuery, partitionPermissionType, useRbacPermissionsQuery } from "./rbacPermissionsQuery";
 
-jest.mock("core/api", () => {
-  const actual = jest.requireActual("core/api");
-  return {
-    ...actual,
-    useGetWorkspace: jest.fn((workspaceId: string) => {
-      const workspace = { ...mockWorkspace };
+jest.mock("core/api", () => ({
+  useGetWorkspace: jest.fn((workspaceId: string) => {
+    const workspace = { ...mockWorkspace };
 
-      if (workspaceId === "test-workspace") {
-        workspace.organizationId = "org-with-test-workspace";
-      } else if (workspaceId === "workspace-1" || workspaceId === "workspace-2") {
-        workspace.organizationId = "org-with-two-workspaces";
-      }
+    if (workspaceId === "test-workspace") {
+      workspace.organizationId = "org-with-test-workspace";
+    } else if (workspaceId === "workspace-1" || workspaceId === "workspace-2") {
+      workspace.organizationId = "org-with-two-workspaces";
+    }
 
-      return workspace;
-    }),
-  };
-});
+    return workspace;
+  }),
+  getWebappConfig: () => mockWebappConfig,
+}));
 
 describe("partitionPermissionType", () => {
   it("correctly parses permissions", () => {

@@ -47,7 +47,7 @@ const Services: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
 
 const App: React.FC = () => {
   return (
-    <React.StrictMode>
+    <>
       <AirbyteThemeProvider>
         <I18nProvider>
           <QueryProvider>
@@ -69,7 +69,7 @@ const App: React.FC = () => {
         </I18nProvider>
       </AirbyteThemeProvider>
       {isDevelopment() && <DevToolsToggle />}
-    </React.StrictMode>
+    </>
   );
 };
 

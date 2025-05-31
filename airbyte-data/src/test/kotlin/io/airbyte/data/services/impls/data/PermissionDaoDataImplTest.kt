@@ -28,6 +28,7 @@ import java.util.UUID
 
 class PermissionDaoDataImplTest {
   private val testUserId = UUID.randomUUID()
+  private val testServiceAccountId = UUID.randomUUID()
 
   private lateinit var workspaceService: WorkspaceService
   private lateinit var permissionRepository: PermissionRepository
@@ -67,6 +68,28 @@ class PermissionDaoDataImplTest {
       assertEquals(result.toSet(), permissions.toSet())
 
       verify { permissionRepository.findByUserId(testUserId) }
+      confirmVerified(permissionRepository)
+    }
+
+    @Test
+    fun `getPermissionsByServiceAccountId returns permissions based on a service account`() {
+      val permissions =
+        listOf(
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            serviceAccountId = testServiceAccountId
+            workspaceId = UUID.randomUUID()
+            permissionType = PermissionType.DATAPLANE
+          },
+        )
+
+      every { permissionRepository.findByServiceAccountId(testServiceAccountId) } returns permissions.map { it.toEntity() }
+
+      val result = permissionService.getPermissionsByServiceAccountId(testServiceAccountId)
+
+      assertEquals(result.toSet(), permissions.toSet())
+
+      verify { permissionRepository.findByServiceAccountId(eq(testServiceAccountId)) }
       confirmVerified(permissionRepository)
     }
   }

@@ -1,6 +1,5 @@
 @use "scss/colors";
 @use "scss/variables";
-@forward "src/components/ui/Button/Button.module.scss";
 
 .container {
   display: flex;
@@ -9,10 +8,6 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-}
-
-.linkText {
-  text-decoration: none;
 }
 
 .heading {

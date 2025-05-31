@@ -23,7 +23,6 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardSyncState
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
-import io.airbyte.protocol.models.Field
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.AirbyteCatalog
@@ -31,6 +30,7 @@ import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.protocol.models.v0.DestinationSyncMode
+import io.airbyte.protocol.models.v0.Field
 import io.airbyte.protocol.models.v0.SyncMode
 import org.jooq.DSLContext
 import org.jooq.JSONB

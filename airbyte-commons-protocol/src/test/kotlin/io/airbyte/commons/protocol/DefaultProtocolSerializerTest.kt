@@ -12,10 +12,10 @@ import io.airbyte.config.DestinationSyncMode
 import io.airbyte.config.SyncMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import io.airbyte.protocol.models.AirbyteStream as ProtocolAirbyteStream
-import io.airbyte.protocol.models.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
-import io.airbyte.protocol.models.ConfiguredAirbyteStream as ProtocolConfiguredAirbyteStream
-import io.airbyte.protocol.models.DestinationSyncMode as ProtocolDestinationSyncMode
+import io.airbyte.protocol.models.v0.AirbyteStream as ProtocolAirbyteStream
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog as ProtocolConfiguredAirbyteCatalog
+import io.airbyte.protocol.models.v0.ConfiguredAirbyteStream as ProtocolConfiguredAirbyteStream
+import io.airbyte.protocol.models.v0.DestinationSyncMode as ProtocolDestinationSyncMode
 
 class DefaultProtocolSerializerTest {
   @Test
@@ -62,8 +62,8 @@ class DefaultProtocolSerializerTest {
                     .withName(
                       appendStreamName,
                     ).withJsonSchema(Jsons.emptyObject())
-                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                ).withSyncMode(io.airbyte.protocol.models.SyncMode.INCREMENTAL)
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND)
                 .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
@@ -72,8 +72,8 @@ class DefaultProtocolSerializerTest {
                     .withName(
                       overwriteStreamName,
                     ).withJsonSchema(Jsons.emptyObject())
-                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND else ProtocolDestinationSyncMode.OVERWRITE)
                 .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
@@ -82,8 +82,8 @@ class DefaultProtocolSerializerTest {
                     .withName(
                       appendDedupStreamName,
                     ).withJsonSchema(Jsons.emptyObject())
-                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(ProtocolDestinationSyncMode.APPEND_DEDUP)
                 .withIncludeFiles(false),
               ProtocolConfiguredAirbyteStream()
@@ -92,15 +92,15 @@ class DefaultProtocolSerializerTest {
                     .withName(
                       overwriteDedupStreamName,
                     ).withJsonSchema(Jsons.emptyObject())
-                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)),
-                ).withSyncMode(io.airbyte.protocol.models.SyncMode.FULL_REFRESH)
+                    .withSupportedSyncModes(listOf(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)),
+                ).withSyncMode(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH)
                 .withDestinationSyncMode(if (supportRefreshes) ProtocolDestinationSyncMode.APPEND_DEDUP else ProtocolDestinationSyncMode.OVERWRITE)
                 .withIncludeFiles(false),
             ),
           )
 
       val serializedCatalog = serializer.serialize(configuredCatalog, supportRefreshes)
-      val actualCatalog = Jsons.deserialize(serializedCatalog, io.airbyte.protocol.models.ConfiguredAirbyteCatalog::class.java)
+      val actualCatalog = Jsons.deserialize(serializedCatalog, io.airbyte.protocol.models.v0.ConfiguredAirbyteCatalog::class.java)
 
       // Verify we serialized what's expected
       assertEquals(expectedConfiguredCatalog, actualCatalog)

@@ -223,32 +223,4 @@ interface WorkloadRepository : PageableRepository<Workload, String> {
   fun succeed(
     @Id id: String,
   ): Workload?
-
-  fun update(
-    @Id id: String,
-    status: WorkloadStatus,
-    deadline: OffsetDateTime?,
-  )
-
-  fun update(
-    @Id id: String,
-    status: WorkloadStatus,
-    terminationSource: String?,
-    terminationReason: String?,
-    deadline: OffsetDateTime?,
-  )
-
-  fun update(
-    @Id id: String,
-    status: WorkloadStatus,
-    lastHeartbeatAt: OffsetDateTime,
-    deadline: OffsetDateTime,
-  )
-
-  fun update(
-    @Id id: String,
-    dataplaneId: String,
-    status: WorkloadStatus,
-    deadline: OffsetDateTime,
-  )
 }

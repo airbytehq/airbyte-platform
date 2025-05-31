@@ -69,7 +69,7 @@ export const LogSearchInput = React.forwardRef<HTMLInputElement, LogSearchInputP
                 aria-label={formatMessage({ id: "jobHistory.logs.nextMatchLabel" })}
                 disabled={matches.length <= 1}
                 onClick={scrollToNextMatch}
-                type="submit"
+                type="button"
               >
                 <Icon type="chevronRight" color={matches.length > 1 ? "affordance" : "disabled"} />
               </button>

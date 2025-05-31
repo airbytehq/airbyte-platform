@@ -200,8 +200,8 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -3718,7 +3718,7 @@ class ConnectionsHandlerTest {
         throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final var catalogWithDiff =
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
@@ -3776,7 +3776,7 @@ class ConnectionsHandlerTest {
 
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final var catalogWithDiff =
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")

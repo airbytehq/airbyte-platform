@@ -10,6 +10,9 @@ import static io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRI
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
@@ -27,6 +30,7 @@ import io.micronaut.core.order.Ordered;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
+import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory;
 import io.micronaut.security.token.validator.TokenValidator;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -65,16 +69,16 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private final OkHttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final TokenRoleResolver tokenRoleResolver;
+  private final JwtAuthenticationFactory authenticationFactory;
   private final Optional<MetricClient> metricClient;
 
   public KeycloakTokenValidator(@Named("keycloakTokenValidatorHttpClient") final OkHttpClient okHttpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
-                                final TokenRoleResolver tokenRoleResolver,
+                                final JwtAuthenticationFactory authenticationFactory,
                                 final Optional<MetricClient> metricClient) {
     this.client = okHttpClient;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.tokenRoleResolver = tokenRoleResolver;
+    this.authenticationFactory = authenticationFactory;
     this.metricClient = metricClient;
   }
 
@@ -130,14 +134,17 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       log.debug("Performing authentication for auth user '{}'...", authUserId);
 
       if (StringUtils.isNotBlank(authUserId)) {
-        final var roles = tokenRoleResolver.resolveRoles(authUserId, request);
-
-        log.debug("Authenticating user '{}' with roles {}...", authUserId, roles);
         metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
             AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
             new MetricAttribute(MetricTags.USER_TYPE, EXTERNAL_USER),
             new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));
-        return Authentication.build(authUserId, roles, userAttributeMap);
+
+        final JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder().subject(authUserId);
+        for (final Map.Entry<String, Object> entry : userAttributeMap.entrySet()) {
+          builder.claim(entry.getKey(), entry.getValue());
+        }
+        final JWT jwt = new PlainJWT(builder.build());
+        return authenticationFactory.createAuthentication(jwt).orElseThrow();
       } else {
         throw new AuthenticationException("Failed to authenticate the user because the userId was blank.");
       }

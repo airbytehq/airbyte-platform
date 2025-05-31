@@ -11,11 +11,12 @@ import { Switch } from "components/ui/Switch";
 import { Text } from "components/ui/Text";
 
 import { SchemaChangeBackfillPreference } from "core/api/types/AirbyteClient";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 
 export const SimplifiedBackfillFormField: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { control } = useFormContext<FormConnectionFormValues>();
   const [controlId] = useState(`input-control-${uniqueId()}`);
+  const isCloudApp = useIsCloudApp();
 
   return (
     <Controller
@@ -33,7 +34,7 @@ export const SimplifiedBackfillFormField: React.FC<{ disabled?: boolean }> = ({ 
                 <Text size="sm" color="grey">
                   <FormattedMessage
                     id={
-                      isCloudApp()
+                      isCloudApp
                         ? "connectionForm.backfillColumns.descriptionCloud"
                         : "connectionForm.backfillColumns.description"
                     }

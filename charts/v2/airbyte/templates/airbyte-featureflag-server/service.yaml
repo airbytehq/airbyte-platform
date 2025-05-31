@@ -1,4 +1,4 @@
-{{- if and (.Values.featureflagServer.enabled) (eq .Values.global.edition "community") }}
+{{- if (.Values.featureflagServer.enabled) }}
 apiVersion: v1
 kind: Service
 metadata:

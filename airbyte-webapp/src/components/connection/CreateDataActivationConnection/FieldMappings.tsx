@@ -1,13 +1,12 @@
 import { useMemo } from "react";
-import { Controller, useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormControl } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
-import { FlexContainer } from "components/ui/Flex";
+import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { Input } from "components/ui/Input";
-import { ListBox } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
 import { useGetSourceFromSearchParams } from "area/connector/utils";
@@ -30,7 +29,12 @@ export const FieldMappings: React.FC<FieldMappingsProps> = ({ streamIndex }) => 
   return (
     <>
       {fields.map((_field, index) => (
-        <Field streamIndex={streamIndex} fieldIndex={index} removeField={() => remove(index)} />
+        <Field
+          key={_field.id}
+          streamIndex={streamIndex}
+          fieldIndex={index}
+          removeField={fields.length > 1 ? () => remove(index) : undefined}
+        />
       ))}
       <Box py="sm" className={styles.fieldMappings__addField}>
         <Button
@@ -53,15 +57,20 @@ const Field = ({
 }: {
   streamIndex: number;
   fieldIndex: number;
-  removeField: () => void;
+  removeField?: () => void;
 }) => {
-  const { register, control } = useFormContext<StreamMappingsFormValues>();
   const { formatMessage } = useIntl();
   const source = useGetSourceFromSearchParams();
   const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
-  const sourceStreamDescriptor = useWatch({
+  const sourceStreamDescriptor = useWatch<StreamMappingsFormValues, `streams.${number}.sourceStreamDescriptor`>({
     name: `streams.${streamIndex}.sourceStreamDescriptor`,
   });
+  const fields = useWatch<StreamMappingsFormValues, `streams.${number}.fields`>({
+    name: `streams.${streamIndex}.fields`,
+  });
+  const otherSelectedFields = useMemo(() => {
+    return fields?.filter((_, index) => index !== fieldIndex).map((field) => field.sourceFieldName) ?? [];
+  }, [fieldIndex, fields]);
 
   const availableFieldOptions = useMemo(() => {
     const streamFields =
@@ -70,11 +79,20 @@ const Field = ({
           stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace
       )?.stream?.jsonSchema?.properties ?? [];
     return Object.keys(streamFields)
-      .map((key) => ({ label: key, value: key }))
+      .map((key) => ({
+        label: key,
+        value: key,
+        disabled: otherSelectedFields?.includes(key),
+      }))
       .sort((a, b) => {
         return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
       });
-  }, [sourceSchema?.catalog?.streams, sourceStreamDescriptor.name, sourceStreamDescriptor.namespace]);
+  }, [
+    otherSelectedFields,
+    sourceSchema?.catalog?.streams,
+    sourceStreamDescriptor.name,
+    sourceStreamDescriptor.namespace,
+  ]);
 
   return (
     <>
@@ -84,29 +102,39 @@ const Field = ({
         </Text>
       </FlexContainer>
       <div className={styles.fieldMappings__source}>
-        <Controller
+        <FormControl<StreamMappingsFormValues>
+          options={availableFieldOptions}
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
-          control={control}
-          render={({ field }) => (
-            <ListBox options={availableFieldOptions} onSelect={field.onChange} selectedValue={field.value} />
-          )}
+          fieldType="dropdown"
+          reserveSpaceForError={false}
         />
       </div>
       <div className={styles.fieldMappings__arrow}>
         <Icon type="arrowRight" size="lg" color="action" />
       </div>
-      <FlexContainer className={styles.fieldMappings__destination} alignItems="center">
-        <Input
-          {...register(`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`)}
-          placeholder={formatMessage({ id: "connection.destinationFieldName" })}
-        />
-        <Button
-          variant="clear"
-          icon="trash"
-          type="button"
-          onClick={removeField}
-          aria-label={formatMessage({ id: "connection.create.removeField" })}
-        />
+      <FlexContainer className={styles.fieldMappings__destination} alignItems="flex-start">
+        <FlexItem grow>
+          <FlexContainer direction="column">
+            <FormControl<StreamMappingsFormValues>
+              name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
+              fieldType="input"
+              type="text"
+              reserveSpaceForError={false}
+              placeholder={formatMessage({ id: "connection.destinationFieldName" })}
+            />
+          </FlexContainer>
+        </FlexItem>
+        <div className={styles.fieldMappings__removeField}>
+          {removeField && (
+            <Button
+              variant="clear"
+              icon="trash"
+              type="button"
+              onClick={removeField}
+              aria-label={formatMessage({ id: "connection.create.removeField" })}
+            />
+          )}
+        </div>
       </FlexContainer>
     </>
   );

@@ -3,6 +3,7 @@ import React from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormControlErrorMessage } from "components/forms/FormControl";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Option } from "components/ui/ListBox";
@@ -35,42 +36,51 @@ export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ stre
     <Controller
       name={`streams.${streamIndex}.sourceSyncMode`}
       control={control}
-      render={({ field }) => (
-        <Listbox
-          value={field.value}
-          onChange={(value) => {
-            if (value === SyncMode.full_refresh) {
-              setValue(`streams.${streamIndex}.cursorField`, undefined);
-            }
-            field.onChange(value);
-          }}
-        >
-          <FloatLayout adaptiveWidth>
-            <ListboxButton>
-              {field.value ? (
-                <FlexContainer as="span">
-                  <Text>{sourceSyncModeOptions.find((option) => option.value === field.value)?.label}</Text>
+      render={({ field, fieldState }) => (
+        <FlexContainer direction="column" gap="xs">
+          <Listbox
+            value={field.value}
+            onChange={(value) => {
+              if (value === field.value) {
+                return;
+              }
+              if (value === SyncMode.incremental) {
+                setValue(`streams.${streamIndex}.cursorField`, "");
+              }
+              if (value === SyncMode.full_refresh) {
+                setValue(`streams.${streamIndex}.cursorField`, null);
+              }
+              field.onChange(value);
+            }}
+          >
+            <FloatLayout adaptiveWidth>
+              <ListboxButton hasError={!!fieldState.error}>
+                {field.value ? (
+                  <FlexContainer as="span">
+                    <Text>{sourceSyncModeOptions.find((option) => option.value === field.value)?.label}</Text>
+                    <Text color="grey">
+                      <FormattedMessage id="connection.syncMode" />
+                    </Text>
+                  </FlexContainer>
+                ) : (
                   <Text color="grey">
-                    <FormattedMessage id="connection.syncMode" />
+                    <FormattedMessage id="connection.selectSyncMode" />
                   </Text>
-                </FlexContainer>
-              ) : (
-                <Text color="grey">
-                  <FormattedMessage id="connection.selectSyncMode" />
-                </Text>
-              )}
-            </ListboxButton>
-            <ListboxOptions>
-              {sourceSyncModeOptions.map((option) => (
-                <ListboxOption key={option.value} value={option.value}>
-                  <Box p="md" pr="none" as="span">
-                    <Text>{option.label}</Text>
-                  </Box>
-                </ListboxOption>
-              ))}
-            </ListboxOptions>
-          </FloatLayout>
-        </Listbox>
+                )}
+              </ListboxButton>
+              <ListboxOptions>
+                {sourceSyncModeOptions.map((option) => (
+                  <ListboxOption key={option.value} value={option.value}>
+                    <Box p="md" pr="none" as="span">
+                      <Text>{option.label}</Text>
+                    </Box>
+                  </ListboxOption>
+                ))}
+              </ListboxOptions>
+            </FloatLayout>
+          </Listbox>
+          {fieldState.error && <FormControlErrorMessage name={field.name} />}
+        </FlexContainer>
       )}
     />
   );

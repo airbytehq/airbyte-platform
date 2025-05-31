@@ -3,7 +3,7 @@ import { FormattedMessage } from "react-intl";
 
 import { ExternalLink } from "components/ui/Link";
 
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
 interface ShowLoadingMessageProps {
@@ -14,7 +14,7 @@ const TIMEOUT_MS = 10000;
 
 const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) => {
   const [longLoading, setLongLoading] = useState(false);
-
+  const isCloudApp = useIsCloudApp();
   useEffect(() => {
     setLongLoading(false);
     const timer = setTimeout(() => setLongLoading(true), TIMEOUT_MS);
@@ -26,7 +26,7 @@ const ShowLoadingMessage: React.FC<ShowLoadingMessageProps> = ({ connector }) =>
       id="form.tooLong"
       values={{
         lnk: (...lnk: React.ReactNode[]) => (
-          <ExternalLink href={isCloudApp() ? links.supportPortal : links.technicalSupport}>{lnk}</ExternalLink>
+          <ExternalLink href={isCloudApp ? links.supportPortal : links.technicalSupport}>{lnk}</ExternalLink>
         ),
       }}
     />

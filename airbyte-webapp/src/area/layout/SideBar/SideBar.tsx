@@ -13,7 +13,7 @@ import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useAuthService } from "core/services/auth";
 import { FeatureItem, useFeature } from "core/services/features";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useGetConnectorsOutOfDate } from "hooks/services/useConnector";
 import { CloudHelpDropdown } from "packages/cloud/views/layout/CloudMainView/CloudHelpDropdown";
@@ -130,6 +130,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
   const { formatMessage } = useIntl();
   const { pathname } = useLocation();
   const isHidden = HIDDEN_SIDEBAR_PATHS.some((path) => !!matchPath(path, pathname));
+  const isCloudApp = useIsCloudApp();
 
   const organizationId = useCurrentOrganizationId();
   const showOrgNav = Boolean(organizationId);
@@ -152,7 +153,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
         </MenuContent>
         <Box className={styles.sidebar__menuContentSeparator} />
         <MenuContent>
-          {isCloudApp() ? <CloudHelpDropdown /> : <HelpDropdown />}
+          {isCloudApp ? <CloudHelpDropdown /> : <HelpDropdown />}
           <ThemeToggle />
           {logout && user && (
             <NavDropdown

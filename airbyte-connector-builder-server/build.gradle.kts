@@ -33,6 +33,7 @@ dependencies {
   implementation(libs.bundles.micronaut.cache)
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.jakarta.ws.rs.api)

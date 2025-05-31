@@ -280,6 +280,11 @@ class SyncPersistenceImpl(
     syncStatsTracker.updateStats(recordMessage)
   }
 
+  override fun updateStatsFromDestination(recordMessage: AirbyteRecordMessage) {
+    isReceivingStats = true
+    syncStatsTracker.updateStatsFromDestination(recordMessage)
+  }
+
   override fun updateEstimates(estimate: AirbyteEstimateTraceMessage) {
     isReceivingStats = true
     syncStatsTracker.updateEstimates(estimate)

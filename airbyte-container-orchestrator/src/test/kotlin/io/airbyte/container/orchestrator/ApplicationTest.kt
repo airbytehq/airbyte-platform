@@ -4,6 +4,8 @@
 
 package io.airbyte.container.orchestrator
 
+import io.airbyte.commons.logging.LogSource
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.container.orchestrator.worker.ReplicationJobOrchestrator
 import io.mockk.every
 import io.mockk.mockk
@@ -15,17 +17,19 @@ import java.util.Optional
 
 internal class ApplicationTest {
   private lateinit var jobOrchestrator: ReplicationJobOrchestrator
+  private lateinit var replicationLogMdcBuilder: MdcScope.Builder
 
   @BeforeEach
   fun setup() {
     jobOrchestrator = mockk()
+    replicationLogMdcBuilder = MdcScope.Builder().setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
   }
 
   @Test
   @Throws(Exception::class)
   fun testHappyPath() {
     every { jobOrchestrator.runJob() } returns Optional.of("result output")
-    val app = Application(jobOrchestrator = jobOrchestrator)
+    val app = Application(jobOrchestrator = jobOrchestrator, replicationLogMdcBuilder = replicationLogMdcBuilder)
     val code = app.run()
 
     assertEquals(SUCCESS_EXIT_CODE, code)
@@ -36,7 +40,7 @@ internal class ApplicationTest {
   @Throws(Exception::class)
   fun testJobFailedWritesFailedStatus() {
     every { jobOrchestrator.runJob() } throws Exception()
-    val app = Application(jobOrchestrator = jobOrchestrator)
+    val app = Application(jobOrchestrator = jobOrchestrator, replicationLogMdcBuilder = replicationLogMdcBuilder)
     val code = app.run()
 
     assertEquals(FAILURE_EXIT_CODE, code)

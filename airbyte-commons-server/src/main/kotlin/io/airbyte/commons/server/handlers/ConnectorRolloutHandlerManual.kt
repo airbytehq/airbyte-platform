@@ -412,6 +412,8 @@ open class ConnectorRolloutHandlerManual
                 value = listOf(CustomerTier.TIER_2),
               ),
             )
+          } else if (requestFilters.tierFilter?.tier == io.airbyte.api.model.generated.CustomerTier.ALL) {
+            emptyList()
           } else {
             listOf(
               CustomerTierFilter(

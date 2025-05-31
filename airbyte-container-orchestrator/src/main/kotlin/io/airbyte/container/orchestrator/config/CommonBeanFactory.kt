@@ -6,6 +6,8 @@ package io.airbyte.container.orchestrator.config
 
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.LogSource
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.commons.storage.DocumentType
 import io.airbyte.commons.storage.StorageClient
 import io.airbyte.commons.storage.StorageClientFactory
@@ -197,4 +199,11 @@ class CommonBeanFactory {
   @Singleton
   @Named("sourceMessageQueue")
   fun sourceMessageQueue(context: ReplicationWorkerContext) = ClosableChannelQueue<AirbyteMessage>(context.bufferConfiguration.sourceMaxBufferSize)
+
+  @Singleton
+  @Named("replicationMdcScopeBuilder")
+  fun replicationMdcScopeBuilder(): MdcScope.Builder =
+    MdcScope
+      .Builder()
+      .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
 }

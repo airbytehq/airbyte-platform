@@ -12,11 +12,11 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.mappers.helpers.createHashingMapper
-import io.airbyte.protocol.models.Field
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.CatalogHelpers
+import io.airbyte.protocol.models.v0.Field
 import io.airbyte.protocol.models.v0.SyncMode
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject

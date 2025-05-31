@@ -1,7 +1,7 @@
-import classNames from "classnames";
 import { useMemo, useState } from "react";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { Button } from "components/ui/Button";
 import { Heading } from "components/ui/Heading";
 import { Icon } from "components/ui/Icon";
 import { Link } from "components/ui/Link";
@@ -225,18 +225,10 @@ export const ConnectionOnboarding: React.FC<ConnectionOnboardingProps> = () => {
         </div>
       </div>
       <div className={styles.footer}>
-        <Link
-          to={createConnectionPath}
-          data-testid="new-connection-button"
-          className={classNames(
-            styles.button,
-            styles.typePrimary,
-            styles.sizeL,
-            styles.linkText,
-            !canCreateConnection && styles.disabled
-          )}
-        >
-          <FormattedMessage id="connection.onboarding.createFirst" />
+        <Link to={canCreateConnection ? createConnectionPath : "#"} data-testid="new-connection-button">
+          <Button variant="primary" disabled={!canCreateConnection}>
+            <FormattedMessage id="connection.onboarding.createFirst" />
+          </Button>
         </Link>
       </div>
     </div>

@@ -145,16 +145,16 @@ public class JobConverter {
    * @param job - job
    * @return List of the streams associated with the job
    */
-  public static List<io.airbyte.protocol.models.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
+  public static List<io.airbyte.protocol.models.v0.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
     final JobRead jobRead = getJobRead(job);
     switch (job.getConfigType()) {
       case REFRESH -> {
-        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.v0.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
       }
       case CLEAR, RESET_CONNECTION -> {
-        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.v0.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
       }

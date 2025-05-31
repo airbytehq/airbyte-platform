@@ -435,6 +435,10 @@ public class PermissionHandler {
     return permissionDao.getPermissionsByAuthUserId(authUserId);
   }
 
+  public List<Permission> getPermissionsByServiceAccountId(final UUID serviceAccountId) {
+    return permissionDao.getPermissionsByServiceAccountId(serviceAccountId);
+  }
+
   public List<UserPermission> listUsersInOrganization(final UUID organizationId) throws IOException {
     return permissionPersistence.listUsersInOrganization(organizationId);
   }

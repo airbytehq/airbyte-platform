@@ -12,6 +12,7 @@ import io.airbyte.config.ConnectionSummary
 import io.airbyte.config.ConnectionWithLatestJob
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFilters
+import io.airbyte.config.CustomerTier
 import io.airbyte.config.CustomerTierFilter
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
@@ -344,14 +345,20 @@ class RolloutActorFinder(
     } else {
       logger.debug { "RolloutActorFinder.filterByTier: connectorRollout.id=${connectorRollout.id} applying tier filter for filters=$filters" }
       return candidates.filter { candidate ->
-        val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION]
+        val organizationId = candidate.scopeMap[ConfigScopeType.ORGANIZATION] ?: return@filter false
 
-        // Remove if no org ID or no tier
-        val tier = organizationTiers[organizationId] ?: return@filter false
-        if (organizationId == null) return@filter false
-
-        // All filters must match
-        filters.all { it.evaluate(tier) }
+        val tier = organizationTiers[organizationId]
+        filters.all { filter ->
+          // Evaluate the filter based on the organization's tier:
+          // - If the tier is known, evaluate it normally.
+          // - If the tier is unknown but the filter allows TIER_2, treat it as a match.
+          // - Otherwise, the filter fails.
+          when {
+            tier != null -> filter.evaluate(tier)
+            filter.value.contains(CustomerTier.TIER_2) -> true
+            else -> false
+          }
+        }
       }
     }
   }
