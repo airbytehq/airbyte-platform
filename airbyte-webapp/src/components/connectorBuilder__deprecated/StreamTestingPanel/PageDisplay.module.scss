@@ -1,0 +1,23 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.active {
+  color: colors.$dark-blue !important;
+}
+
+.jsonText {
+  color: inherit;
+}
+
+.recordsContainer {
+  height: 100%;
+}
+
+.records {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.importStateButton {
+  width: fit-content;
+}

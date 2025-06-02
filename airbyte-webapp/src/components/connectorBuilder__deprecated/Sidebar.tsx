@@ -10,7 +10,8 @@ import { Text } from "components/ui/Text";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { useLocalStorage } from "core/utils/useLocalStorage";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useExperiment } from "hooks/services/Experiment";
+import { useConnectorBuilderFormState } from "services/connectorBuilder__deprecated/ConnectorBuilderStateService";
 
 import { BaseConnectorInfo } from "./BaseConnectorInfo";
 import { NameInput } from "./NameInput";
@@ -25,6 +26,7 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ className, yamlSelected, children }) => {
   const [advancedMode, setAdvancedMode] = useLocalStorage("airbyte_connector-builder-advanced-mode", false);
+  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
   const analyticsService = useAnalyticsService();
   const { toggleUI, isResolving, currentProject, jsonManifest } = useConnectorBuilderFormState();
   const hasStreams =
@@ -71,19 +73,21 @@ export const Sidebar: React.FC<React.PropsWithChildren<SidebarProps>> = ({ class
         {children}
       </FlexContainer>
 
-      <FlexContainer direction="row" alignItems="center" gap="sm" justifyContent="center">
-        <Switch
-          size="sm"
-          checked={advancedMode}
-          onChange={() => {
-            setAdvancedMode(!advancedMode);
-            window.location.reload();
-          }}
-        />
-        <Text size="sm">
-          <FormattedMessage id="connectorBuilder.advancedMode" />
-        </Text>
-      </FlexContainer>
+      {isSchemaFormEnabled && (
+        <FlexContainer direction="row" alignItems="center" gap="sm" justifyContent="center">
+          <Switch
+            size="sm"
+            checked={advancedMode}
+            onChange={() => {
+              setAdvancedMode(!advancedMode);
+              window.location.reload();
+            }}
+          />
+          <Text size="sm">
+            <FormattedMessage id="connectorBuilder.advancedMode" />
+          </Text>
+        </FlexContainer>
+      )}
     </FlexContainer>
   );
 };

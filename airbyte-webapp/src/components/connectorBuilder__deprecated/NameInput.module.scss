@@ -1,0 +1,52 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "./builderVariables.scss";
+
+.label {
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+
+  // make look like input
+  background: none;
+  border: 1px solid transparent;
+  border-radius: variables.$border-radius-sm;
+  max-width: 500px;
+
+  &.showBorder {
+    border-color: colors.$grey-200;
+  }
+
+  &:hover {
+    border-color: colors.$grey-300;
+  }
+}
+
+.sizeS {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 4px 6px;
+}
+
+.sizeM {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 7px 8px;
+}
+
+.invalid {
+  color: colors.$red;
+}
+
+.inputContainer {
+  min-width: 0;
+  width: 100%;
+  flex-grow: 1;
+  flex-shrink: 1;
+  border-color: colors.$grey-300;
+  border-radius: variables.$border-radius-sm;
+  max-width: 500px;
+}

@@ -1,0 +1,6 @@
+@use "scss/variables";
+
+.collapsible {
+  padding-top: variables.$spacing-md;
+  gap: variables.$spacing-sm;
+}

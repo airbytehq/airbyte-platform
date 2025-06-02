@@ -1,0 +1,22 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.button {
+  padding: variables.$spacing-md;
+  background-color: transparent;
+  border-radius: variables.$border-radius-md;
+  border: none;
+  display: flex;
+  justify-content: flex-start;
+  gap: variables.$spacing-sm;
+}
+
+.label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.caret {
+  flex-shrink: 0;
+}

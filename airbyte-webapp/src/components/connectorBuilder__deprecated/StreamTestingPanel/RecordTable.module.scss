@@ -1,0 +1,28 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.table {
+  padding-bottom: variables.$spacing-md;
+
+  // Improve performance of table when there are many records.
+  // Should be safe since nothing gets rendered outside of the table boundaries.
+  contain: strict;
+}
+
+.content {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-grow: 1;
+}
+
+.button {
+  padding: 0 !important;
+  height: 16px !important;
+  opacity: 0;
+}
+
+.cell:hover .button {
+  opacity: 1;
+}

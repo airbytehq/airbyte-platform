@@ -1,0 +1,16 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.container {
+  padding: variables.$spacing-sm;
+  overflow-y: auto;
+}
+
+.stacktrace {
+  font-size: variables.$font-size-sm;
+  overflow: auto;
+}
+
+.secondaryWarning {
+  opacity: 0.5;
+}

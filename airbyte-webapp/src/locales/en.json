@@ -2248,6 +2248,7 @@
   "connectorBuilder.requestType.confirm.submit.sync": "Yes, switch to Synchronous Request",
   "connectorBuilder.requestType.confirm.submit.async": "Yes, switch to Asynchronous Job",
   "connectorBuilder.requestType.confirm.cancel": "No, keep my progress",
+  "connectorBuilder.advancedMode": "Advanced mode",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

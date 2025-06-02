@@ -1,0 +1,29 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "../builderVariables.scss";
+
+.container {
+  display: flex;
+  height: 100%;
+}
+
+.editorContainer {
+  flex: 1 1 0;
+}
+
+.tabContainer {
+  box-shadow: inset 0 -1px 0 colors.$grey-200;
+}
+
+button.editorTab {
+  padding: variables.$spacing-md variables.$spacing-lg;
+  margin: 0;
+  border: 0;
+  background-color: colors.$grey-100;
+
+  &.activeTab {
+    background-color: colors.$backdrop;
+    border: 1px solid colors.$grey-200;
+    border-bottom: 1px solid colors.$backdrop;
+  }
+}
