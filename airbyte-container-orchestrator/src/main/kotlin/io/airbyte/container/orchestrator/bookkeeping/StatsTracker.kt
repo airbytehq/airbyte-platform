@@ -159,13 +159,13 @@ class StreamStatsTracker(
 
     val emittedStatsToUpdate = emittedStats
     with(emittedStatsToUpdate) {
-      remittedRecordsCount.addAndGet(recordCount)
-      emittedBytesCount.addAndGet(byteCount)
+      remittedRecordsCount.set(recordCount)
+      emittedBytesCount.set(byteCount)
     }
 
     with(streamStats) {
-      emittedRecordsCount.addAndGet(recordCount)
-      emittedBytesCount.addAndGet(byteCount)
+      emittedRecordsCount.set(recordCount)
+      emittedBytesCount.set(byteCount)
     }
   }
 
