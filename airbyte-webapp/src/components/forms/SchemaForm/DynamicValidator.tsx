@@ -200,7 +200,7 @@ const convertJsonSchemaToZodSchema = (
       });
 
       if (schema.type === "integer") {
-        zodNumber = zodNumber.int();
+        zodNumber = zodNumber.int(formatMessage({ id: "form.invalidInteger" }));
       }
 
       // Add number-specific validations with custom error messages
@@ -215,7 +215,10 @@ const convertJsonSchemaToZodSchema = (
         });
       }
 
-      const zodNullableNumber = zodNumber.nullable();
+      const zodNullableNumber = z.preprocess(
+        (val) => (typeof val === "number" && isNaN(val) ? null : val),
+        zodNumber.nullable()
+      );
 
       if (!isRequired) {
         return zodNullableNumber.optional();
