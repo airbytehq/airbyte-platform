@@ -62,7 +62,7 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ReplicationWorkerHelper(
-  private val fieldSelector: FieldSelector,
+  private val fieldSelector: FieldSelector?,
   private val mapper: AirbyteMapper,
   private val messageTracker: AirbyteMessageTracker,
   private val eventPublisher: ReplicationAirbyteMessageEventPublishingHelper,
@@ -163,7 +163,7 @@ class ReplicationWorkerHelper(
     timeTracker.trackSourceReadStartTime()
     val sourceConfig =
       WorkerUtils.syncToWorkerSourceConfig(replicationInput).also {
-        fieldSelector.populateFields(it.catalog)
+        fieldSelector?.populateFields(it.catalog)
       }
     try {
       source.start(sourceConfig, jobRoot, context.replicationContext.connectionId)
@@ -186,7 +186,7 @@ class ReplicationWorkerHelper(
   fun endOfSource() {
     val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
     logger.info { "Total records read: ($bytes)" }
-    fieldSelector.reportMetrics(context.replicationContext.sourceId)
+    fieldSelector?.reportMetrics(context.replicationContext.sourceId)
     timeTracker.trackSourceReadEndTime()
   }
 
@@ -257,8 +257,8 @@ class ReplicationWorkerHelper(
   @VisibleForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
     updateRecordsCount()
-    fieldSelector.filterSelectedFields(sourceRawMessage)
-    fieldSelector.validateSchema(sourceRawMessage)
+    fieldSelector?.filterSelectedFields(sourceRawMessage)
+    fieldSelector?.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
     streamStatusTracker.track(sourceRawMessage)
     return when (sourceRawMessage.type) {
