@@ -1,5 +1,5 @@
 import classNames from "classnames";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useUpdateEffect } from "react-use";
@@ -14,17 +14,19 @@ import { InfoTooltip } from "components/ui/Tooltip";
 import { useCustomComponentsEnabled } from "core/api";
 import {
   AsyncRetrieverType,
-  DeclarativeComponentSchemaStreamsItem,
+  CustomRetrieverType,
   DeclarativeStreamType,
+  SimpleRetrieverType,
+  StateDelegatingStreamType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment";
-import { BuilderView, useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { BuilderView, useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderSidebar.module.scss";
 import { Sidebar } from "../Sidebar";
-import { DEFAULT_DYNAMIC_STREAM, DEFAULT_SYNC_STREAM, StreamId } from "../types";
+import { DEFAULT_DYNAMIC_STREAM, DEFAULT_SYNC_STREAM, StreamId, getStreamFieldPath } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
@@ -69,7 +71,7 @@ interface DynamicStreamViewButtonProps {
   name?: string;
   num: number;
 }
-const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name, num }) => {
+const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = React.memo(({ name, num }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
@@ -153,46 +155,54 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
       )}
     </FlexContainer>
   );
-};
+});
+DynamicStreamViewButton.displayName = "DynamicStreamViewButton";
 
 interface StreamViewButtonProps {
-  stream: DeclarativeComponentSchemaStreamsItem;
   num: number;
 }
-const StreamViewButton: React.FC<StreamViewButtonProps> = ({ stream, num }) => {
+const StreamViewButton: React.FC<StreamViewButtonProps> = React.memo(({ num }) => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
 
-  const { getStreamTestWarnings } = useStreamTestMetadata();
-  const testWarnings = useMemo(
-    () => getStreamTestWarnings({ type: "stream", index: num }, true),
-    [getStreamTestWarnings, num]
-  );
+  const streamId: StreamId = useMemo(() => ({ type: "stream", index: num }), [num]);
+  const streamFieldPath = useCallback((fieldPath?: string) => getStreamFieldPath(streamId, fieldPath), [streamId]);
+  const streamName = useBuilderWatch(streamFieldPath("name")) as string | undefined;
+  const streamType = useBuilderWatch(streamFieldPath("type")) as
+    | DeclarativeStreamType
+    | StateDelegatingStreamType
+    | undefined;
+  const streamRetrieverType = useBuilderWatch(streamFieldPath("retriever.type")) as
+    | SimpleRetrieverType
+    | AsyncRetrieverType
+    | CustomRetrieverType
+    | undefined;
 
-  const viewId: StreamId = { type: "stream", index: num };
+  const { getStreamTestWarnings } = useStreamTestMetadata();
+  const testWarnings = useMemo(() => getStreamTestWarnings(streamId, true), [getStreamTestWarnings, streamId]);
+
   const isAsync =
-    stream.type === DeclarativeStreamType.DeclarativeStream &&
-    stream.retriever.type === AsyncRetrieverType.AsyncRetriever;
+    streamType === DeclarativeStreamType.DeclarativeStream && streamRetrieverType === AsyncRetrieverType.AsyncRetriever;
 
   return (
     <ViewSelectButton
-      data-testid={`navbutton-${String(num)}`}
-      selected={view.type === "stream" && view.index === num}
-      showIndicator={hasErrors([viewId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
+      data-testid={`navbutton-${String(streamId.index)}`}
+      selected={view.type === "stream" && view.index === streamId.index}
+      showIndicator={hasErrors([streamId]) ? "error" : testWarnings.length > 0 ? "warning" : undefined}
       onClick={() => {
         setValue("streamTab", "requester");
-        setValue("view", viewId);
+        setValue("view", streamId);
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_SELECT, {
           actionDescription: "Stream view selected",
-          stream_name: stream.name,
+          stream_name: streamName,
         });
       }}
     >
       <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
-        {stream.name && stream.name.trim() ? (
-          <Text className={styles.streamViewText}>{stream.name}</Text>
+        {streamName && streamName.trim() ? (
+          <Text className={styles.streamViewText}>{streamName}</Text>
         ) : (
           <Text className={styles.emptyStreamViewText}>
             <FormattedMessage id="connectorBuilder.emptyName" />
@@ -206,22 +216,53 @@ const StreamViewButton: React.FC<StreamViewButtonProps> = ({ stream, num }) => {
       </FlexContainer>
     </ViewSelectButton>
   );
-};
+});
+StreamViewButton.displayName = "StreamViewButton";
 
 interface BuilderSidebarProps {
   className?: string;
 }
 
+// Custom hook to extract only the minimal information needed for the sidebar to prevent unnecessary re-renders
+const useStreamsSidebarData = () => {
+  // Watch only the stream names and structure, not all properties
+  const streams = useBuilderWatch("manifest.streams");
+  const dynamicStreams = useBuilderWatch("manifest.dynamic_streams");
+
+  // Extract only the data we need for rendering
+  const streamData = useMemo(() => {
+    return {
+      streams:
+        streams?.map(({ name }, index) => ({
+          name,
+          index,
+        })) || [],
+      dynamicStreams:
+        dynamicStreams?.map(({ name }, index) => ({
+          name,
+          index,
+        })) || [],
+      streamCount: streams?.length || 0,
+      dynamicStreamCount: dynamicStreams?.length || 0,
+    };
+  }, [streams, dynamicStreams]);
+
+  return streamData;
+};
+
 export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
   const analyticsService = useAnalyticsService();
   const { hasErrors } = useBuilderErrors();
-  const { permission } = useConnectorBuilderFormState();
-  const { setValue } = useFormContext();
-  const manifest = useBuilderWatch("manifest");
+  const permission = useConnectorBuilderPermission();
+  const { setValue, getValues } = useFormContext();
   const view = useBuilderWatch("view");
   const handleViewSelect = (selectedView: BuilderView) => {
     setValue("view", selectedView);
   };
+
+  const specProperties = useBuilderWatch("manifest.spec.connection_specification.properties");
+
+  const { streams, dynamicStreams, streamCount, dynamicStreamCount } = useStreamsSidebarData();
 
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
@@ -267,7 +308,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             <FormattedMessage
               id="connectorBuilder.userInputs"
               values={{
-                number: Object.keys(manifest?.spec?.connection_specification?.properties ?? {}).length,
+                number: Object.keys(specProperties ?? {}).length,
               }}
             />
           </Text>
@@ -296,10 +337,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
           <FlexContainer alignItems="center" gap="none">
             <Text className={styles.streamsHeading} size="xs" bold>
-              <FormattedMessage
-                id="connectorBuilder.streamsHeading"
-                values={{ number: manifest?.streams?.length ?? 0 }}
-              />
+              <FormattedMessage id="connectorBuilder.streamsHeading" values={{ number: streamCount }} />
             </Text>
             <InfoTooltip placement="top">
               <FormattedMessage id="connectorBuilder.streamTooltip" />
@@ -310,8 +348,9 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
             type="button"
             className={styles.addStreamButton}
             onClick={() => {
-              setValue("manifest.streams", [...(manifest?.streams ?? []), DEFAULT_SYNC_STREAM]);
-              setValue("view", { type: "stream", index: manifest?.streams?.length ?? 0 });
+              const currentStreams = getValues("manifest.streams") ?? [];
+              setValue("manifest.streams", [...currentStreams, DEFAULT_SYNC_STREAM]);
+              setValue("view", { type: "stream", index: streamCount });
             }}
             icon="plus"
             disabled={permission === "readOnly"}
@@ -319,8 +358,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
         </FlexContainer>
 
         <FlexContainer direction="column" gap="none" className={styles.streamList}>
-          {manifest?.streams?.map((stream, num) => (
-            <StreamViewButton key={`${stream.name}-${num}`} stream={stream} num={num} />
+          {streams.map(({ name, index }) => (
+            <StreamViewButton key={`${name}-${index}`} num={index} />
           ))}
         </FlexContainer>
       </FlexContainer>
@@ -335,10 +374,7 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
           <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
             <FlexContainer alignItems="center" gap="none">
               <Text className={styles.streamsHeading} size="xs" bold>
-                <FormattedMessage
-                  id="connectorBuilder.dynamicStreamsHeading"
-                  values={{ number: manifest?.dynamic_streams?.length ?? 0 }}
-                />
+                <FormattedMessage id="connectorBuilder.dynamicStreamsHeading" values={{ number: dynamicStreamCount }} />
               </Text>
               <InfoTooltip placement="top">
                 <FormattedMessage
@@ -358,8 +394,9 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
               type="button"
               className={styles.addStreamButton}
               onClick={() => {
-                setValue("manifest.dynamic_streams", [...(manifest?.dynamic_streams ?? []), DEFAULT_DYNAMIC_STREAM]);
-                setValue("view", { type: "dynamic_stream", index: manifest?.dynamic_streams?.length ?? 0 });
+                const currentDynamicStreams = getValues("manifest.dynamic_streams") ?? [];
+                setValue("manifest.dynamic_streams", [...currentDynamicStreams, DEFAULT_DYNAMIC_STREAM]);
+                setValue("view", { type: "dynamic_stream", index: dynamicStreamCount });
               }}
               icon="plus"
               disabled={permission === "readOnly"}
@@ -367,8 +404,8 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
           </FlexContainer>
 
           <FlexContainer direction="column" gap="none" className={styles.streamList}>
-            {manifest?.dynamic_streams?.map(({ name }, num) => (
-              <DynamicStreamViewButton key={name} name={name} num={num} />
+            {dynamicStreams.map(({ name, index }) => (
+              <DynamicStreamViewButton key={`${name}-${index}`} name={name} num={index} />
             ))}
           </FlexContainer>
         </FlexContainer>

@@ -740,15 +740,15 @@ export const Test = () => {
         type: "object",
         properties: {
           test: {
-            type: "object",
-            additionalProperties: {
+            type: "array",
+            items: {
               type: "object",
               properties: {
                 name: { type: "string" },
-                age: { type: "number" },
               },
-              required: ["name", "age"],
+              required: ["name"],
             },
+            minItems: 2,
           },
         },
         required: ["test"],

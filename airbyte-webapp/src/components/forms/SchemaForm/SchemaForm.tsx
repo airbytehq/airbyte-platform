@@ -500,7 +500,7 @@ export const getSchemaAtPath = (
     while (optionSchemas && !currentProperty.properties) {
       const selectedOption = getSelectedOptionSchema(optionSchemas, get(data, currentPath), rootSchema);
       if (!selectedOption) {
-        throw new Error(`No matching schema found for path: ${currentPath}`);
+        return currentProperty;
       }
       currentProperty = resolveTopLevelRef(rootSchema, selectedOption);
       optionSchemas = currentProperty.oneOf ?? currentProperty.anyOf;

@@ -21,6 +21,7 @@ import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   useConnectorBuilderFormManagementState,
   useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
@@ -35,8 +36,8 @@ export const TestingValuesMenu: React.FC = () => {
   const mode = useBuilderWatch("mode");
   const {
     jsonManifest: { spec },
-    permission,
   } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const { isTestingValuesInputOpen: isOpen, setTestingValuesInputOpen: setIsOpen } =
     useConnectorBuilderFormManagementState();
   const {

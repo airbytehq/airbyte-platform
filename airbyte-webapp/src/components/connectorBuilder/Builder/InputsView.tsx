@@ -23,7 +23,10 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { Spec, SpecConnectionSpecification } from "core/api/types/ConnectorManifest";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
@@ -38,7 +41,7 @@ export const InputsView: React.FC = () => {
   const spec = useBuilderWatch("manifest.spec");
   const inputs = useMemo(() => convertToBuilderFormInputs(spec), [spec]);
   const { setValue } = useFormContext();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -143,7 +146,7 @@ interface SortableInputProps {
 
 const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEditing }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const canEdit = permission !== "readOnly";
 
   const style = {

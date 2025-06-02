@@ -104,7 +104,6 @@ interface FormStateContext {
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
   savingState: SavingState;
-  permission: ConnectorBuilderPermission;
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
@@ -205,7 +204,7 @@ export const ConnectorBuilderFormManagementStateContext = React.createContext<Fo
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<any, unknown> | null>(null);
 
-export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+export const useConnectorBuilderPermission = () => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
   const { workspaceId } = useCurrentWorkspace();
   const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
@@ -215,6 +214,11 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   if (canUpdateConnector) {
     permission = restrictAdminInForeignWorkspace && isForeignWorkspace ? "adminReadOnly" : "write";
   }
+  return permission;
+};
+
+export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const permission = useConnectorBuilderPermission();
 
   return (
     <InternalConnectorBuilderFormStateProvider permission={permission}>
@@ -647,7 +651,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     yamlEditorIsMounted,
     yamlIsValid,
     savingState,
-    permission,
     blockedOnInvalidState,
     projectId,
     currentProject,
@@ -933,7 +936,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const autoImportSchema = useAutoImportSchema(testStreamId);
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
-  const streamUsesCustomCode = getStreamHasCustomType(streamName);
+  const streamUsesCustomCode = getStreamHasCustomType(testStreamId);
 
   const resolvedManifestInput = useMemo(
     () => ({
@@ -1045,7 +1048,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       updateYamlCdkVersion(jsonManifest);
 
       if (testStreamId.type !== "dynamic_stream") {
-        updateStreamTestResults(result, testStream, testStreamId);
+        updateStreamTestResults(result, testStream);
       }
     }
   );

@@ -1,6 +1,7 @@
+import isEqual from "lodash/isEqual";
 import { Range } from "monaco-editor";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useWatch, useFormContext } from "react-hook-form";
+import { useWatch, useFormContext, get } from "react-hook-form";
 import { useIntl } from "react-intl";
 import { useUpdateEffect } from "react-use";
 
@@ -27,6 +28,7 @@ import { StreamConfigView } from "./StreamConfigView";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 import { BuilderState, DEFAULT_JSON_MANIFEST_VALUES } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useSetStreamToStale } from "../useStreamTestMetadata";
 
 function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
   switch (selectedView.type) {
@@ -145,8 +147,29 @@ export const Builder: React.FC = () => {
 
 const SyncValuesToBuilderState = () => {
   const { updateJsonManifest, setFormValuesValid } = useConnectorBuilderFormState();
-  const { trigger } = useFormContext();
+  const { trigger, watch } = useFormContext();
+  const setStreamToStale = useSetStreamToStale();
   const builderState = useWatch();
+
+  // set stream to stale when it changes
+  useEffect(() => {
+    const subscription = watch((data, { name }) => {
+      if (name?.startsWith("manifest.streams.")) {
+        const oldValue = get(builderState, name);
+        const newValue = get(data, name);
+        if (!isEqual(oldValue, newValue)) {
+          const streamIndexString = name.match(/manifest\.streams\.(\d+)\..*/)?.[1];
+          try {
+            const streamIndex = streamIndexString ? parseInt(streamIndexString, 10) : undefined;
+            if (streamIndex) {
+              setStreamToStale({ type: "stream", index: streamIndex });
+            }
+          } catch (error) {}
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, setStreamToStale, builderState]);
 
   useEffect(() => {
     // The validation logic isn't updated until the next render cycle, so wait for that

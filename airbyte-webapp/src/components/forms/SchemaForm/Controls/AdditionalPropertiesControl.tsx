@@ -79,7 +79,7 @@ const KeyInput: React.FC<KeyInputProps> = ({ formKey, allFormKeys, onKeyChange }
       <FormLabel label={formatMessage({ id: "form.additionalProperties.key" })} htmlFor={formKey} />
       <Input id={formKey} value={inputValue} onChange={handleChange} onBlur={handleBlur} error={!!errorMessage} />
       {errorMessage && (
-        <Text color="red" size="xs">
+        <Text color="red" size="xs" className={styles.keyErrorMessage}>
           {errorMessage}
         </Text>
       )}

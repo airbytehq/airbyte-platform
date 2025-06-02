@@ -12,6 +12,7 @@ import {
   ConnectorBuilderPermission,
   SavingState,
   useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SavingIndicator.module.scss";
@@ -83,7 +84,8 @@ function getMessage(
 }
 
 export const SavingIndicator: React.FC = () => {
-  const { savingState, permission, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
+  const { savingState, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const [pendingUpdate, setPendingUpdate] = useState(false);
   const [changeInProgress, setChangeInProgress] = useState(false);
   const timeoutRef = useRef<number>();

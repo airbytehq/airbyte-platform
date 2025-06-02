@@ -3,7 +3,7 @@ import { useIntl } from "react-intl";
 import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
 
 import { Namespace, Action, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { AuthenticationSection } from "./AuthenticationSection";
 import { BuilderCard } from "./BuilderCard";
@@ -14,7 +14,7 @@ import styles from "./GlobalConfigView.module.scss";
 export const GlobalConfigView: React.FC = () => {
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
 
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>

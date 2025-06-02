@@ -46,12 +46,15 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
 
   const dynamicStreams = declarativeManifest?.manifest?.dynamic_streams;
+  const streams = declarativeManifest?.manifest?.streams;
 
   const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
-  const initialTestStreamId =
-    areDynamicStreamsEnabled && hasDynamicStreams
-      ? { type: "dynamic_stream" as const, index: 0 }
-      : { type: "stream" as const, index: 0 };
+  const hasStreams = Array.isArray(streams) && streams.length > 0;
+  const initialTestStreamId = hasStreams
+    ? { type: "stream" as const, index: 0 }
+    : areDynamicStreamsEnabled && hasDynamicStreams
+    ? { type: "dynamic_stream" as const, index: 0 }
+    : { type: "stream" as const, index: 0 };
 
   const initialView =
     initialTestStreamId.type === "dynamic_stream"

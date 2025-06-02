@@ -342,6 +342,7 @@ export interface BuilderFormValues {
 
 export interface StreamTestResults {
   streamHash: string | null;
+  isStale?: boolean;
   hasResponse?: boolean;
   responsesAreSuccessful?: boolean;
   hasRecords?: boolean;

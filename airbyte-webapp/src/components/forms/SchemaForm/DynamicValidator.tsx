@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { FieldValues, get, useFormContext, useWatch } from "react-hook-form";
 import { IntlShape, useIntl } from "react-intl";
+import { useMount } from "react-use";
 import { z } from "zod";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
@@ -18,62 +19,84 @@ import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, isEmptyObject, resolv
  */
 export const DynamicValidator = ({ nestedUnderPath }: { nestedUnderPath?: string }) => {
   const { formatMessage } = useIntl();
-  const { register, unregister } = useFormContext();
+  const { getValues, watch, register, unregister } = useFormContext();
   const { schema: rootSchema, getSchemaAtPath, isRequired: isPathRequired } = useSchemaForm();
-  const allValues = useWatch();
-  const values = useMemo(() => {
-    if (nestedUnderPath) {
-      return get(allValues, nestedUnderPath);
+  const registeredPaths = useRef(new Set<string>());
+  const values = useWatch();
+
+  const registerValidation = useCallback(
+    (path: string) => {
+      const isRequired = isPathRequired(path);
+      const targetSchema = resolveTopLevelRef(rootSchema, getSchemaAtPath(path, true));
+      if (isEmptyObject(targetSchema)) {
+        return;
+      }
+      register(path, {
+        validate: (value) => {
+          // ~ declarative_component_schema type handling ~
+          if (getDeclarativeSchemaTypeValue(path.split(".").at(-1) ?? path, targetSchema)) {
+            return true;
+          }
+          const zodSchema = convertJsonSchemaToZodSchema(rootSchema, targetSchema, formatMessage, isRequired);
+          const result = zodSchema.safeParse(value);
+          if (result.success === false) {
+            return result.error.issues.at(-1)?.message;
+          }
+          return true;
+        },
+      });
+      registeredPaths.current.add(path);
+    },
+    [rootSchema, getSchemaAtPath, isPathRequired, formatMessage, register]
+  );
+
+  useMount(() => {
+    const allValues = getValues();
+    const values = nestedUnderPath ? get(allValues, nestedUnderPath) : allValues;
+    const paths = getAllFieldPaths(values, nestedUnderPath);
+    for (const path of paths) {
+      registerValidation(path);
     }
-    return allValues;
-  }, [allValues, nestedUnderPath]);
-  const allPaths = useMemo(() => new Set(getAllFieldPaths(values, nestedUnderPath)), [values, nestedUnderPath]);
-  const previouslyRegisteredPaths = useRef(new Set<string>());
+  });
 
   useEffect(() => {
-    const newAndOldPaths = new Set([...previouslyRegisteredPaths.current, ...allPaths]);
-    // By the property of sets |A ∪ B| = |A| = |B| => A = B, then there are no new paths to register or stale paths to unregister
-    if (newAndOldPaths.size === allPaths.size && newAndOldPaths.size === previouslyRegisteredPaths.current.size) {
-      return;
-    }
+    const subscription = watch((data, { name }) => {
+      if (!name) {
+        return;
+      }
+      if (nestedUnderPath && !name.startsWith(nestedUnderPath)) {
+        return;
+      }
 
-    // Register new paths
-    for (const path of newAndOldPaths) {
-      const inPrevious = previouslyRegisteredPaths.current.has(path);
-      const inCurrent = allPaths.has(path);
+      const oldValue = get(values, name);
+      const updatedValue = get(data, name);
+      if (typeof updatedValue === "object" || typeof oldValue === "object") {
+        const oldSubPaths = new Set(getAllFieldPaths(get(values, name), name));
+        const newSubPaths = new Set(getAllFieldPaths(updatedValue, name));
+        const oldAndNewSubPaths = new Set([...oldSubPaths, ...newSubPaths]);
+        for (const path of oldAndNewSubPaths) {
+          const inOld = oldSubPaths.has(path);
+          const inNew = newSubPaths.has(path);
 
-      // new path, should be registered
-      if (!inPrevious && inCurrent) {
-        const isRequired = isPathRequired(path);
-        const targetSchema = resolveTopLevelRef(rootSchema, getSchemaAtPath(path));
-        // Empty schemas are used for json object fields, and we don't need to validate their sub-paths
-        if (isEmptyObject(targetSchema)) {
-          continue;
+          if (!inOld && inNew) {
+            registerValidation(path);
+          }
+          if (inOld && !inNew) {
+            unregister(path, { keepValue: true });
+            registeredPaths.current.delete(path);
+          }
         }
-        register(path, {
-          validate: (value) => {
-            // ~ declarative_component_schema type handling ~
-            if (getDeclarativeSchemaTypeValue(path.split(".").at(-1) ?? path, targetSchema)) {
-              return true;
-            }
-            const zodSchema = convertJsonSchemaToZodSchema(rootSchema, targetSchema, formatMessage, isRequired);
-            const result = zodSchema.safeParse(value);
-            if (result.success === false) {
-              return result.error.issues.at(-1)?.message;
-            }
-            return true;
-          },
-        });
-        previouslyRegisteredPaths.current.add(path);
       }
 
-      // stale paths, should be unregistered
-      if (inPrevious && !inCurrent) {
-        unregister(path);
-        previouslyRegisteredPaths.current.delete(path);
+      if (updatedValue === undefined) {
+        unregister(name, { keepValue: true });
+        registeredPaths.current.delete(name);
+      } else {
+        registerValidation(name);
       }
-    }
-  }, [allPaths, formatMessage, getSchemaAtPath, isPathRequired, register, rootSchema, unregister]);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, registerValidation, unregister, nestedUnderPath, getValues, values]);
 
   return null;
 };

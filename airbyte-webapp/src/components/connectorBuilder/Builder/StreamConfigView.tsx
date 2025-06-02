@@ -20,8 +20,10 @@ import { Text } from "components/ui/Text";
 
 import {
   AsyncRetrieverType,
+  CustomRetrieverType,
   DeclarativeComponentSchemaStreamsItem,
   DeclarativeStream,
+  DeclarativeStreamType,
   DynamicDeclarativeStream,
   InlineSchemaLoaderType,
   SimpleRetrieverType,
@@ -31,7 +33,7 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   BuilderView,
-  useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -45,6 +47,7 @@ import {
   DEFAULT_ASYNC_STREAM,
   DEFAULT_CUSTOM_STREAM,
   DEFAULT_SCHEMA_LOADER_SCHEMA,
+  BuilderStreamTab,
 } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -62,22 +65,34 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, getValues } = useFormContext();
 
-  const currentStream = useBuilderWatch(
-    getStreamFieldPath(streamId, undefined, true)
-  ) as DeclarativeComponentSchemaStreamsItem;
+  const streamFieldPath = useCallback(
+    (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath, true),
+    [streamId]
+  );
+  const streamName = useBuilderWatch(streamFieldPath("name")) as string | undefined;
+  const streamType = useBuilderWatch(streamFieldPath("type")) as
+    | DeclarativeStreamType
+    | StateDelegatingStreamType
+    | undefined;
+  const streamRetrieverType = useBuilderWatch(streamFieldPath("retriever.type")) as
+    | SimpleRetrieverType
+    | AsyncRetrieverType
+    | CustomRetrieverType
+    | undefined;
+
   const metadata = useWatch({ name: "manifest.metadata" });
-  const [prevName, setPrevName] = useState(currentStream.name);
+  const [prevName, setPrevName] = useState(streamName);
 
   const retrievalType: RetrievalType | null = useMemo(() => {
-    if (currentStream.type === StateDelegatingStreamType.StateDelegatingStream) {
+    if (streamType === StateDelegatingStreamType.StateDelegatingStream) {
       return null;
     }
-    return currentStream.retriever.type === SimpleRetrieverType.SimpleRetriever
+    return streamRetrieverType === SimpleRetrieverType.SimpleRetriever
       ? "sync"
-      : currentStream.retriever.type === AsyncRetrieverType.AsyncRetriever
+      : streamRetrieverType === AsyncRetrieverType.AsyncRetriever
       ? "async"
       : "custom";
-  }, [currentStream]);
+  }, [streamType, streamRetrieverType]);
 
   const handleDelete = useCallback(() => {
     openConfirmationModal({
@@ -99,39 +114,31 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_DELETE, {
           actionDescription: "Stream deleted",
           stream_id: streamId.index,
-          stream_name: currentStream.name,
+          stream_name: streamName,
         });
       },
     });
-  }, [
-    analyticsService,
-    closeConfirmationModal,
-    currentStream.name,
-    getValues,
-    openConfirmationModal,
-    setValue,
-    streamId,
-  ]);
+  }, [analyticsService, closeConfirmationModal, streamName, getValues, openConfirmationModal, setValue, streamId]);
 
   // Copy over stream metadata when renaming
   useEffect(() => {
-    if (!currentStream.name || streamId.type !== "stream") {
+    if (!streamName || streamId.type !== "stream") {
       return;
     }
-    if (metadata && prevName && currentStream.name !== prevName) {
+    if (metadata && prevName && streamName !== prevName) {
       const newMetadata = cloneDeep(metadata);
       if (metadata.autoImportSchema && metadata.autoImportSchema[prevName] !== undefined) {
         delete newMetadata.autoImportSchema[prevName];
-        newMetadata.autoImportSchema[currentStream.name] = metadata.autoImportSchema[prevName];
+        newMetadata.autoImportSchema[streamName] = metadata.autoImportSchema[prevName];
       }
       if (metadata.testedStreams && metadata.testedStreams[prevName] !== undefined) {
         delete newMetadata.testedStreams[prevName];
-        newMetadata.testedStreams[currentStream.name] = metadata.testedStreams[prevName];
+        newMetadata.testedStreams[streamName] = metadata.testedStreams[prevName];
       }
       setValue("manifest.metadata", newMetadata);
     }
-    setPrevName(currentStream.name);
-  }, [currentStream.name, prevName, metadata, setValue, streamId.type]);
+    setPrevName(streamName);
+  }, [streamName, prevName, metadata, setValue, streamId.type]);
 
   return (
     <BuilderConfigView className={styles.relative}>
@@ -192,11 +199,10 @@ interface SynchronousStreamProps {
 }
 const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollToTop }) => {
   const { formatMessage } = useIntl();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const streamTab = useBuilderWatch("streamTab");
   const view = useBuilderWatch("view");
   const { setValue } = useFormContext();
-  const { hasErrors } = useBuilderErrors();
 
   const streamFieldPath = useCallback(
     (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath, true),
@@ -216,13 +222,14 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
         <FlexContainer>
           <StreamTab
             data-testid="tag-tab-stream-configuration"
+            streamId={streamId}
+            builderStreamTab="requester"
             label={formatMessage({ id: "connectorBuilder.streamConfiguration" })}
             isSelected={streamTab === "requester"}
             onSelect={() => {
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "requester")}
           />
           <SchemaTab
             streamId={streamId}
@@ -317,11 +324,10 @@ interface AsynchronousStreamProps {
 }
 const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrollToTop }) => {
   const { formatMessage } = useIntl();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const streamTab = useBuilderWatch("streamTab");
   const view = useBuilderWatch("view");
   const { setValue } = useFormContext();
-  const { hasErrors } = useBuilderErrors();
 
   const streamFieldPath = useCallback(
     (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath, true),
@@ -347,33 +353,36 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
         <FlexContainer>
           <StreamTab
             data-testid="tag-tab-async-stream-creation"
+            streamId={streamId}
+            builderStreamTab="requester"
             label={formatMessage({ id: "connectorBuilder.asyncStream.creation" })}
             isSelected={streamTab === "requester"}
             onSelect={() => {
               setValue("streamTab", "requester");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "requester")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-polling"
+            streamId={streamId}
+            builderStreamTab="polling"
             label={formatMessage({ id: "connectorBuilder.asyncStream.polling" })}
             isSelected={streamTab === "polling"}
             onSelect={() => {
               setValue("streamTab", "polling");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "polling")}
           />
           <StreamTab
             data-testid="tag-tab-async-stream-download"
+            streamId={streamId}
+            builderStreamTab="download"
             label={formatMessage({ id: "connectorBuilder.asyncStream.download" })}
             isSelected={streamTab === "download"}
             onSelect={() => {
               setValue("streamTab", "download");
               scrollToTop();
             }}
-            showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "download")}
           />
           <SchemaTab
             streamId={streamId}
@@ -630,33 +639,42 @@ const setUrlOnStream = (url: string, declarativeStream: DeclarativeStream) => {
 };
 
 const StreamTab = ({
+  streamId,
+  builderStreamTab,
   isSelected,
   label,
   onSelect,
-  showErrorIndicator,
   showSchemaConflictIndicator,
   schemaErrors,
   "data-testid": testId,
 }: {
+  streamId: StreamId;
+  builderStreamTab: BuilderStreamTab;
   isSelected: boolean;
   label: string;
   onSelect: () => void;
-  showErrorIndicator?: boolean;
   showSchemaConflictIndicator?: boolean;
   schemaErrors?: string[];
   "data-testid": string;
-}) => (
-  <button
-    data-testid={testId}
-    type="button"
-    className={classNames(styles.tab, { [styles.selectedTab]: isSelected })}
-    onClick={onSelect}
-  >
-    <Text color={isSelected ? "darkBlue" : "grey400"}>{label}</Text>
-    {showErrorIndicator && <Indicator />}
-    {showSchemaConflictIndicator && <SchemaConflictIndicator errors={schemaErrors} />}
-  </button>
-);
+}) => {
+  const { hasErrors } = useBuilderErrors();
+  const showErrorIndicator = useMemo(() => {
+    return hasErrors([streamId], builderStreamTab);
+  }, [hasErrors, streamId, builderStreamTab]);
+
+  return (
+    <button
+      data-testid={testId}
+      type="button"
+      className={classNames(styles.tab, { [styles.selectedTab]: isSelected })}
+      onClick={onSelect}
+    >
+      <Text color={isSelected ? "darkBlue" : "grey400"}>{label}</Text>
+      {showErrorIndicator && <Indicator />}
+      {showSchemaConflictIndicator && <SchemaConflictIndicator errors={schemaErrors} />}
+    </button>
+  );
+};
 
 const SchemaTab = ({
   streamId,
@@ -671,16 +689,16 @@ const SchemaTab = ({
   const {
     schemaWarnings: { incompatibleSchemaErrors, schemaDifferences },
   } = useConnectorBuilderTestRead();
-  const { hasErrors } = useBuilderErrors();
   const autoImportSchema = useAutoImportSchema(streamId);
 
   return (
     <StreamTab
       data-testid="tag-tab-stream-schema"
+      streamId={streamId}
+      builderStreamTab="schema"
       label={formatMessage({ id: "connectorBuilder.streamSchema" })}
       isSelected={isSelected}
       onSelect={() => onSelect()}
-      showErrorIndicator={hasErrors([{ type: "stream", index: streamId.index }], "schema")}
       showSchemaConflictIndicator={schemaDifferences && !autoImportSchema}
       schemaErrors={incompatibleSchemaErrors}
     />
