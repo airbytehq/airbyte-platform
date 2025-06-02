@@ -80,6 +80,11 @@ import {
   SimpleRetriever,
   DynamicDeclarativeStream,
   DynamicDeclarativeStreamType,
+  RecordSelectorType,
+  HttpRequesterHttpMethod,
+  AsyncJobStatusMapType,
+  CustomRetrieverType,
+  HttpComponentsResolverType,
 } from "core/api/types/ConnectorManifest";
 
 import { DecoderTypeConfig } from "./Builder/DecoderConfig";
@@ -117,6 +122,7 @@ export interface BuilderState {
   testStreamId: StreamId;
   testingValues: ConnectorBuilderProjectTestingValues | undefined;
   manifest: ConnectorManifest | null;
+  generatedStreams: Record<string, DeclarativeStream[]>;
 }
 
 export interface AssistData {
@@ -1783,6 +1789,96 @@ export const DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM: ConnectorManifest = {
   streams: [DEFAULT_JSON_MANIFEST_STREAM_WITH_URL_BASE],
 };
 
+export const DEFAULT_SYNC_STREAM: DeclarativeStream = {
+  type: DeclarativeStreamType.DeclarativeStream,
+  retriever: {
+    type: SimpleRetrieverType.SimpleRetriever,
+    record_selector: {
+      type: RecordSelectorType.RecordSelector,
+      extractor: {
+        type: DpathExtractorType.DpathExtractor,
+        field_path: [],
+      },
+    },
+    requester: {
+      type: HttpRequesterType.HttpRequester,
+      http_method: HttpRequesterHttpMethod.GET,
+    },
+  },
+};
+
+export const DEFAULT_ASYNC_STREAM: DeclarativeStream = {
+  type: DeclarativeStreamType.DeclarativeStream,
+  retriever: {
+    type: AsyncRetrieverType.AsyncRetriever,
+    record_selector: {
+      type: RecordSelectorType.RecordSelector,
+      extractor: {
+        type: DpathExtractorType.DpathExtractor,
+        field_path: [],
+      },
+    },
+    creation_requester: {
+      type: HttpRequesterType.HttpRequester,
+      http_method: HttpRequesterHttpMethod.POST,
+    },
+    polling_requester: {
+      type: HttpRequesterType.HttpRequester,
+      http_method: HttpRequesterHttpMethod.GET,
+    },
+    download_requester: {
+      type: HttpRequesterType.HttpRequester,
+      http_method: HttpRequesterHttpMethod.GET,
+    },
+    status_mapping: {
+      type: AsyncJobStatusMapType.AsyncJobStatusMap,
+      running: [],
+      completed: [],
+      failed: [],
+      timeout: [],
+    },
+    status_extractor: {
+      type: DpathExtractorType.DpathExtractor,
+      field_path: [],
+    },
+    download_target_extractor: {
+      type: DpathExtractorType.DpathExtractor,
+      field_path: [],
+    },
+  },
+};
+
+export const DEFAULT_CUSTOM_STREAM: DeclarativeStream = {
+  type: DeclarativeStreamType.DeclarativeStream,
+  retriever: {
+    type: CustomRetrieverType.CustomRetriever,
+    class_name: "",
+  },
+};
+
+export const DEFAULT_DYNAMIC_STREAM: DynamicDeclarativeStream = {
+  type: DynamicDeclarativeStreamType.DynamicDeclarativeStream,
+  stream_template: DEFAULT_SYNC_STREAM,
+  components_resolver: {
+    type: HttpComponentsResolverType.HttpComponentsResolver,
+    retriever: {
+      type: SimpleRetrieverType.SimpleRetriever,
+      record_selector: {
+        type: RecordSelectorType.RecordSelector,
+        extractor: {
+          type: DpathExtractorType.DpathExtractor,
+          field_path: [],
+        },
+      },
+      requester: {
+        type: HttpRequesterType.HttpRequester,
+        http_method: HttpRequesterHttpMethod.GET,
+      },
+    },
+    components_mapping: [],
+  },
+};
+
 export type StreamPathFn = <T extends string>(fieldPath: T) => `formValues.streams.${number}.${T}`;
 
 export type DynamicStreamStreamTemplatePathFn = <T extends string>(
@@ -1811,23 +1907,19 @@ export type DownloadRequesterPathFn = <T extends string>(
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;
 
-type StreamIdToFieldPath<T extends "stream" | "dynamic_stream", K extends string> = T extends "stream"
-  ? `formValues.streams.${number}.${K}`
-  : `formValues.dynamicStreams.${number}.streamTemplate.${K}`;
-export function getStreamFieldPath<T extends "stream" | "dynamic_stream", K extends string>(
-  streamId: StreamId,
-  fieldPath: K
-): StreamIdToFieldPath<T, K> {
-  if (streamId.type === "stream") {
-    return `formValues.streams.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<T, K>;
-  } else if (streamId.type === "generated_stream") {
-    return `formValues.generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.${fieldPath}` as StreamIdToFieldPath<
-      T,
-      K
-    >;
+export const getStreamFieldPath = <T extends string>(streamId: StreamId, fieldPath?: T) => {
+  const basePath =
+    streamId.type === "stream"
+      ? `manifest.streams.${streamId.index}`
+      : streamId.type === "dynamic_stream"
+      ? `manifest.dynamic_streams.${streamId.index}`
+      : `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}`;
+
+  if (fieldPath) {
+    return `${basePath}.${fieldPath}`;
   }
-  return `formValues.dynamicStreams.${streamId.index}.streamTemplate.${fieldPath}` as StreamIdToFieldPath<T, K>;
-}
+  return basePath;
+};
 
 function getRecursiveObjectEntries(obj: object, prefix: string = ""): Array<[string, unknown]> {
   return Object.entries(obj).flatMap(([key, value]) => {
