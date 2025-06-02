@@ -1,10 +1,16 @@
 import { useMemo } from "react";
+import { useWatch } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
+import { Badge } from "components/ui/Badge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { ArrayOfObjectsControl } from "./ArrayOfObjectsControl";
 import { MultiOptionControl } from "./MultiOptionControl";
 import { ObjectControl } from "./ObjectControl";
+import styles from "./SchemaFormControl.module.scss";
 import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
@@ -94,6 +100,8 @@ export const SchemaFormControl = ({
     return !isPathRequired(path);
   }, [isPathRequired, isRequired, nestedUnderPath, path, targetPath]);
 
+  const value = useWatch({ name: targetPath });
+
   // ~ declarative_component_schema type $parameters handling ~
   if (path.includes("$parameters")) {
     return null;
@@ -104,7 +112,7 @@ export const SchemaFormControl = ({
     return overrideByPath[path];
   }
 
-  if (targetSchema.deprecated) {
+  if (targetSchema.deprecated && value === undefined) {
     return null;
   }
 
@@ -116,7 +124,11 @@ export const SchemaFormControl = ({
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
     optional: isOptional,
-    header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
+    header: targetSchema.deprecated ? (
+      <DeprecatedBadge message={targetSchema.deprecation_message} />
+    ) : (
+      <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+    ),
     containerControlClassName: className,
     onlyShowErrorIfTouched,
     placeholder,
@@ -188,4 +200,16 @@ export const SchemaFormControl = ({
   }
 
   return null;
+};
+
+const DeprecatedBadge = ({ message }: { message?: string }) => {
+  return message ? (
+    <Tooltip control={<Badge variant="grey">Deprecated</Badge>} placement="top">
+      <ReactMarkdown className={styles.deprecatedTooltip}>{message}</ReactMarkdown>
+    </Tooltip>
+  ) : (
+    <Badge variant="grey">
+      <FormattedMessage id="form.deprecated" />
+    </Badge>
+  );
 };

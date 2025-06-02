@@ -39,13 +39,16 @@ export const MultiOptionControl = ({
     () =>
       optionSchemas
         ?.map((optionSchema) => resolveTopLevelRef(rootSchema, optionSchema as AirbyteJsonSchema))
-        ?.filter((optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated) as AirbyteJsonSchema[],
+        ?.filter((optionSchema) => !isBoolean(optionSchema)) as AirbyteJsonSchema[],
     [optionSchemas, rootSchema]
   );
   const currentlySelectedOption = useMemo(
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
     [getSelectedOptionSchema, options, value]
   );
+  const displayOptions = useMemo(() => {
+    return options?.filter((option) => currentlySelectedOption === option || !option.deprecated);
+  }, [currentlySelectedOption, options]);
   const displayError = useMemo(() => (value === undefined ? error : undefined), [error, value]);
 
   const getOptionLabel = useCallback(
@@ -77,7 +80,7 @@ export const MultiOptionControl = ({
     [verifyArrayItems]
   );
 
-  if (options.length === 1) {
+  if (displayOptions.length === 1) {
     return (
       <ObjectControl
         baseProps={baseProps}
@@ -117,12 +120,12 @@ export const MultiOptionControl = ({
       control={
         <ListBox
           className={classNames({ [styles.listBoxError]: !!displayError })}
-          options={options.map((option) => ({
-            label: getOptionLabel(option),
+          options={displayOptions.map((option) => ({
+            label: `${getOptionLabel(option)} ${option.deprecated ? " (Deprecated)" : ""}`,
             value: getOptionLabel(option),
           }))}
           onSelect={(selectedValue) => {
-            const selectedOption = options.find((option) => selectedValue === getOptionLabel(option));
+            const selectedOption = displayOptions.find((option) => selectedValue === getOptionLabel(option));
             if (!selectedOption) {
               setValue(baseProps.name, undefined);
               return;

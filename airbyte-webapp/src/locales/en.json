@@ -244,6 +244,7 @@
   "form.enterValidJson": "Enter a valid JSON object",
   "form.invalidJson": "Must be a valid JSON object",
   "form.failedValidation": "Validation failed: {error}",
+  "form.deprecated": "Deprecated",
 
   "setupForm.check.loading": "Checking the security of your installation…",
   "setupForm.check.unsecured.title": "Your Airbyte installation is unsecured",

@@ -504,12 +504,12 @@ export const getSchemaAtPath = (
         ) {
           // For arbitrary keys, use the additionalProperties schema
           nextProperty = currentProperty.additionalProperties;
-        } else if (currentProperty.additionalProperties === true) {
+        } else if (currentProperty.additionalProperties !== false) {
           // Empty schema will cause no validation to be performed as desired
           return {};
         } else {
           throw new Error(
-            `Invalid schema path: ${targetPath}. No properties or additionalProperties found at subpath ${currentPath}`
+            `Invalid schema path: '${targetPath}'. No properties found or additionalProperties not allowed at subpath '${currentPath}'`
           );
         }
       } else {
