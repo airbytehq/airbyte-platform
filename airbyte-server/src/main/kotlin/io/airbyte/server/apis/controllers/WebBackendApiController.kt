@@ -167,7 +167,7 @@ open class WebBackendApiController(
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {
       version = webappConfig.version
-      edition = webappConfig.edition
+      edition = webappConfig.edition.lowercase()
       datadogApplicationId = webappConfig.webApp["datadog-application-id"]
       datadogClientToken = webappConfig.webApp["datadog-client-token"]
       datadogEnv = webappConfig.webApp["datadog-env"]
