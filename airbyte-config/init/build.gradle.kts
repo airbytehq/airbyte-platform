@@ -1,6 +1,5 @@
 plugins {
   id("io.airbyte.gradle.jvm.lib")
-  id("io.airbyte.gradle.docker")
   id("io.airbyte.gradle.publish")
 }
 
@@ -37,22 +36,6 @@ dependencies {
   testImplementation(libs.mockk)
   testImplementation(libs.mockk)
   testImplementation(libs.kotlin.test.runner.junit5)
-}
-
-airbyte {
-  docker {
-    imageName = "init"
-  }
-}
-
-val copyScripts =
-  tasks.register<Copy>("copyScripts") {
-    from("scripts")
-    into("build/airbyte/docker/bin/scripts")
-  }
-
-tasks.named("dockerCopyDistribution") {
-  dependsOn(copyScripts)
 }
 
 tasks.processResources {
