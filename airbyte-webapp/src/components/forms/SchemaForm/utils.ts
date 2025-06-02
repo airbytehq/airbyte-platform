@@ -5,6 +5,7 @@ import { get } from "react-hook-form";
 export class AirbyteJsonSchemaExtention implements JSONSchemaExtension {
   [k: string]: unknown;
   multiline?: boolean;
+  pattern?: string;
   patternDescriptor?: string;
   linkable?: boolean;
   deprecated?: boolean;
@@ -169,4 +170,11 @@ export const nestPath = (path: string, rootPath?: string) => {
 
 export const unnestPath = (path: string, rootPath?: string) => {
   return rootPath && path.startsWith(rootPath) ? path.slice(rootPath.length + 1) : path;
+};
+
+export const scrollFieldIntoView = (path: string) => {
+  const field = document.querySelector(`[data-field-path="${path}"]`);
+  if (field) {
+    field.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 };

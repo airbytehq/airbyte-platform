@@ -26,10 +26,26 @@ interface ControlGroupProps {
     onToggle: (newEnabledState: boolean) => void;
   };
   footer?: string;
+  "data-field-path"?: string;
 }
 
 export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlGroupProps>>(
-  ({ title, path, tooltip, optional, control, header, error, toggleConfig, footer, children }, ref) => {
+  (
+    {
+      title,
+      path,
+      tooltip,
+      optional,
+      control,
+      header,
+      error,
+      toggleConfig,
+      footer,
+      children,
+      "data-field-path": dataFieldPath,
+    },
+    ref
+  ) => {
     const { formatMessage } = useIntl();
 
     const isDisabled = toggleConfig && toggleConfig.isEnabled === false;
@@ -38,7 +54,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
 
     return (
       // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
-      <div ref={ref} className={styles.outer}>
+      <div ref={ref} className={styles.outer} data-field-path={dataFieldPath}>
         <div
           className={classNames(styles.container, {
             [styles["container--noContent"]]: hasNoContent,

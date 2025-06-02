@@ -1,17 +1,19 @@
 import { Range } from "monaco-editor";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWatch, useFormContext } from "react-hook-form";
+import { useIntl } from "react-intl";
 import { useUpdateEffect } from "react-use";
 
 import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
 import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
 
-import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
+import { DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { assertNever } from "core/utils/asserts";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderFormManagementState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
 import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
@@ -22,7 +24,7 @@ import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
-import { BuilderState } from "../types";
+import { BuilderState, DEFAULT_JSON_MANIFEST_VALUES } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
@@ -101,6 +103,7 @@ export const Builder: React.FC = () => {
           onlyShowErrorIfTouched
         >
           <SyncValuesToBuilderState />
+          <ValidateTestingValues />
           <div className={styles.builderView} ref={builderViewRef}>
             {getView(view, scrollToTop)}
           </div>
@@ -141,7 +144,7 @@ export const Builder: React.FC = () => {
 const SyncValuesToBuilderState = () => {
   const { updateJsonManifest, setFormValuesValid } = useConnectorBuilderFormState();
   const { trigger } = useFormContext();
-  const schemaFormValues = useWatch({ name: "manifest" }) as ConnectorManifest;
+  const builderState = useWatch();
 
   useEffect(() => {
     // The validation logic isn't updated until the next render cycle, so wait for that
@@ -149,10 +152,80 @@ const SyncValuesToBuilderState = () => {
     setTimeout(() => {
       trigger().then((isValid) => {
         setFormValuesValid(isValid);
-        updateJsonManifest(schemaFormValues);
+        updateJsonManifest(builderState.manifest ?? DEFAULT_JSON_MANIFEST_VALUES);
       });
     }, 0);
-  }, [schemaFormValues, setFormValuesValid, trigger, updateJsonManifest]);
+  }, [builderState, setFormValuesValid, trigger, updateJsonManifest]);
 
   return null;
 };
+
+const ValidateTestingValues = () => {
+  const { formatMessage } = useIntl();
+  const { register, unregister, clearErrors } = useFormContext();
+  const spec = useBuilderWatch("manifest.spec");
+  const [registeredFields, setRegisteredFields] = useState<Set<string>>(new Set());
+  const specSchema = spec?.connection_specification as AirbyteJsonSchema | undefined;
+
+  useEffect(() => {
+    const properties = specSchema?.properties as Record<string, AirbyteJsonSchema> | undefined;
+    if (specSchema && properties) {
+      const specFields = Object.keys(properties);
+      const required: string[] = isArrayOfStrings(specSchema.required) ? specSchema.required : [];
+
+      const allFields = new Set([...specFields, ...registeredFields]);
+      allFields.forEach((field) => {
+        const path = `testingValues.${field}`;
+        if (!specFields.includes(field)) {
+          unregister(path);
+          // Must wait until next render cycle when field is unregistered to clear errors,
+          // otherwise the errors will return
+          setTimeout(() => {
+            clearErrors(path);
+          }, 0);
+          setRegisteredFields((current) => {
+            current.delete(field);
+            return current;
+          });
+          return;
+        }
+
+        const validatePattern = (value: unknown) => {
+          const pattern = properties[field].pattern;
+          if (pattern && typeof value === "string") {
+            const regex = new RegExp(pattern);
+            if (!regex.test(value)) {
+              return formatMessage({ id: "form.pattern.error" }, { pattern: getPatternDescriptor(properties[field]) });
+            }
+          }
+          return true;
+        };
+
+        if (required.includes(field)) {
+          register(path, {
+            validate: (value) => {
+              if (value === undefined || value === null || value === "") {
+                return formatMessage({ id: "form.empty.error" });
+              }
+              return validatePattern(value);
+            },
+          });
+        } else {
+          register(path, {
+            validate: (value) => validatePattern(value),
+          });
+        }
+        setRegisteredFields((current) => {
+          current.add(field);
+          return current;
+        });
+      });
+    }
+  }, [formatMessage, register, registeredFields, unregister, clearErrors, specSchema]);
+
+  return null;
+};
+
+function isArrayOfStrings(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}

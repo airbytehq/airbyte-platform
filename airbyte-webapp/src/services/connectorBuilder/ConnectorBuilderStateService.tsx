@@ -304,7 +304,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
 
   const workspaceId = useCurrentWorkspaceId();
 
-  const { setValue, getValues } = useFormContext();
+  const { setValue, getValues, unregister } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const name = useBuilderWatch("name");
@@ -401,6 +401,8 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
         setValue("yaml", convertJsonToYaml(jsonManifest));
         setYamlIsValid(true);
         setValue("mode", "yaml");
+        // unregister manifest so that it is not validated by SchemaForm when switching to yaml
+        unregister("manifest");
       } else {
         const confirmDiscard = (errorMessage: string) => {
           if (
@@ -467,6 +469,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     [
       setValue,
       jsonManifest,
+      unregister,
       formValues,
       openNoUiValueModal,
       openConfirmationModal,

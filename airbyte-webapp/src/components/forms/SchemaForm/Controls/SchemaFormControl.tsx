@@ -132,6 +132,7 @@ export const SchemaFormControl = ({
     containerControlClassName: className,
     onlyShowErrorIfTouched,
     placeholder,
+    "data-field-path": path,
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {

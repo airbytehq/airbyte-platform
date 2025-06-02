@@ -236,7 +236,11 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
           //     />
           //   </StreamCard>
           // )} */}
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "requester" })}
+          data-stream-tab="requester"
+        >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.requester.url_base")} />
@@ -282,7 +286,11 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             </CollapsedControls>
           </Card>
         </FlexContainer>
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "schema" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "schema" })}
+          data-stream-tab="schema"
+        >
           <SchemaEditor streamFieldPath={streamFieldPath} />
         </FlexContainer>
         {/* ) : // ) : streamTab === "schema" ? (
@@ -388,7 +396,11 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
         disabled={permission === "readOnly" || streamId.type === "generated_stream"}
         className={styles.fieldset}
       >
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "requester" })}
+          data-stream-tab="requester"
+        >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.http_method")} />
@@ -424,7 +436,11 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             </CollapsedControls>
           </Card>
         </FlexContainer>
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "polling" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "polling" })}
+          data-stream-tab="polling"
+        >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.polling_requester.http_method")} />
@@ -455,7 +471,11 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             </CollapsedControls>
           </Card>
         </FlexContainer>
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "download" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "download" })}
+          data-stream-tab="download"
+        >
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.download_requester.http_method")} />
@@ -490,7 +510,11 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             </CollapsedControls>
           </Card>
         </FlexContainer>
-        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "schema" })}>
+        <FlexContainer
+          direction="column"
+          className={classNames({ [styles.hidden]: streamTab !== "schema" })}
+          data-stream-tab="schema"
+        >
           <SchemaEditor streamFieldPath={streamFieldPath} />
         </FlexContainer>
       </fieldset>

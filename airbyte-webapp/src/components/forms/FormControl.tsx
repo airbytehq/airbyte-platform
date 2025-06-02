@@ -198,6 +198,7 @@ export const FormControl = <T extends FormValues>({
         { [styles["control--inline"]]: inline, [styles["control--reserveSpaceForError"]]: reserveSpaceForError },
         containerControlClassName
       )}
+      data-field-path={props.name}
     >
       {label && (
         <FormLabel

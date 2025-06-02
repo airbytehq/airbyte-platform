@@ -200,6 +200,7 @@ export const AdditionalPropertiesControl = ({
       error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
     >
       {contents}
     </ControlGroup>

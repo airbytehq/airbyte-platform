@@ -139,6 +139,7 @@ export const ObjectControl = ({
       error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
     >
       {contents}
     </ControlGroup>
@@ -173,6 +174,7 @@ const JsonEditor = ({
       error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       footer={!textValue ? formatMessage({ id: "form.enterValidJson" }) : undefined}
+      data-field-path={baseProps["data-field-path"]}
     >
       <FlexContainer className={styles.jsonEditorContainer} direction="column" gap="md">
         <div className={styles.jsonEditor}>

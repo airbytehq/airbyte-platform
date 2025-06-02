@@ -117,6 +117,7 @@ export const MultiOptionControl = ({
       path={baseProps.name}
       error={displayError}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
       control={
         <ListBox
           className={classNames({ [styles.listBoxError]: !!displayError })}

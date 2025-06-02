@@ -53,6 +53,7 @@ export const ArrayOfObjectsControl = ({
       path={baseProps.name}
       error={error}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
     >
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
