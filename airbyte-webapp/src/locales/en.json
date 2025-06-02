@@ -2241,6 +2241,7 @@
   "connectorBuilder.requestType": "Request type",
   "connectorBuilder.requestType.sync": "Synchronous Request",
   "connectorBuilder.requestType.async": "Asynchronous Job",
+  "connectorBuilder.asyncBadge": "async",
   "connectorBuilder.cancel": "Cancel",
   "connectorBuilder.requestType.confirm.title.sync": "Are you sure you want to switch the request type of this stream to Synchronous Request?",
   "connectorBuilder.requestType.confirm.title.async": "Are you sure you want to switch the request type of this stream to Asynchronous Job?",
