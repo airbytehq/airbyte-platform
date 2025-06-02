@@ -1,14 +1,17 @@
 import classNames from "classnames";
-import React, { useCallback, useEffect, useMemo } from "react";
-import { get, useFormContext, useFormState } from "react-hook-form";
+import cloneDeep from "lodash/cloneDeep";
+import isEqual from "lodash/isEqual";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
-import GroupControls from "components/GroupControls";
+import { FormControl } from "components/forms";
+import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
+import { SchemaFormRemainingFields } from "components/forms/SchemaForm/SchemaFormRemainingFields";
 import Indicator from "components/Indicator";
-import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
-import { CodeEditor } from "components/ui/CodeEditor";
+import { Card } from "components/ui/Card";
+import { Collapsible } from "components/ui/Collapsible";
 import { FlexContainer } from "components/ui/Flex";
 import { ListBox } from "components/ui/ListBox";
 import { Message } from "components/ui/Message";
@@ -16,13 +19,13 @@ import { Pre } from "components/ui/Pre";
 import { Text } from "components/ui/Text";
 
 import {
-  CsvDecoderType,
-  GzipDecoderType,
-  IterableDecoderType,
-  JsonDecoderType,
-  JsonlDecoderType,
-  XmlDecoderType,
-  ZipfileDecoderType,
+  AsyncRetrieverType,
+  DeclarativeComponentSchemaStreamsItem,
+  DeclarativeStream,
+  DynamicDeclarativeStream,
+  InlineSchemaLoaderType,
+  SimpleRetrieverType,
+  StateDelegatingStreamType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -32,40 +35,16 @@ import {
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { AuthenticationSection } from "./AuthenticationSection";
-import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
-import { BuilderField } from "./BuilderField";
-import { BuilderOneOf } from "./BuilderOneOf";
-import { DecoderConfig } from "./DecoderConfig";
-import { ErrorHandlerSection } from "./ErrorHandlerSection";
-import { IncrementalSection } from "./IncrementalSection";
-import { getLabelAndTooltip, getOptionsByManifest } from "./manifestHelpers";
-import { PaginationSection } from "./PaginationSection";
-import { ParameterizedRequestsSection } from "./ParameterizedRequestsSection";
-import { ParentStreamsSection } from "./ParentStreamsSection";
-import { RecordSelectorSection } from "./RecordSelectorSection";
-import { RequestOptionSection } from "./RequestOptionSection";
 import styles from "./StreamConfigView.module.scss";
-import { TransformationSection } from "./TransformationSection";
-import { UnknownFieldsSection } from "./UnknownFieldsSection";
 import { SchemaConflictIndicator } from "../SchemaConflictIndicator";
 import {
-  BUILDER_DECODER_TYPES,
-  BuilderStream,
-  DECODER_CONFIGS,
-  CreationRequesterPathFn,
-  DownloadRequesterPathFn,
-  PollingRequesterPathFn,
-  StreamPathFn,
-  isEmptyOrDefault,
-  DEFAULT_BUILDER_STREAM_VALUES,
-  DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
-  BuilderPollingTimeout,
   StreamId,
   getStreamFieldPath,
-  AnyDeclarativeStreamPathFn,
-  BuilderDecoderConfig,
+  DEFAULT_SYNC_STREAM,
+  DEFAULT_ASYNC_STREAM,
+  DEFAULT_CUSTOM_STREAM,
+  DEFAULT_SCHEMA_LOADER_SCHEMA,
 } from "../types";
 import { useAutoImportSchema } from "../useAutoImportSchema";
 import { useBuilderErrors } from "../useBuilderErrors";
@@ -78,32 +57,25 @@ interface StreamConfigViewProps {
 }
 
 export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ streamId, scrollToTop }) => {
+  const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
+  const { setValue, getValues } = useFormContext();
 
-  const streams = useBuilderWatch("formValues.streams");
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const currentStream = useBuilderWatch(getStreamFieldPath(streamId)) as DeclarativeComponentSchemaStreamsItem;
+  const metadata = useWatch({ name: "manifest.metadata" });
+  const [prevName, setPrevName] = useState(currentStream.name);
 
-  const { setValue } = useFormContext();
-
-  const currentStream = useMemo(() => {
-    if (streamId.type === "stream") {
-      return streams[streamId.index];
-    } else if (streamId.type === "generated_stream") {
-      return generatedStreams[streamId.dynamicStreamName][streamId.index];
+  const retrievalType: RetrievalType | null = useMemo(() => {
+    if (currentStream.type === StateDelegatingStreamType.StateDelegatingStream) {
+      return null;
     }
-    return dynamicStreams[streamId.index].streamTemplate;
-  }, [streamId, streams, dynamicStreams, generatedStreams]);
-
-  const otherStreamsWithSameRequestTypeExist = useMemo(() => {
-    if (streamId.type === "stream") {
-      return streams.some(
-        (stream, index) => index !== streamId.index && stream.requestType === currentStream.requestType
-      );
-    }
-    return false;
-  }, [streams, streamId, currentStream.requestType]);
+    return currentStream.retriever.type === SimpleRetrieverType.SimpleRetriever
+      ? "sync"
+      : currentStream.retriever.type === AsyncRetrieverType.AsyncRetriever
+      ? "async"
+      : "custom";
+  }, [currentStream]);
 
   const handleDelete = () => {
     openConfirmationModal({
@@ -114,11 +86,12 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         if (streamId.type !== "stream") {
           return;
         }
-        const updatedStreams: BuilderStream[] = streams.filter((_, index) => index !== streamId.index);
+        const streams: DeclarativeComponentSchemaStreamsItem[] = getValues("manifest.streams");
+        const updatedStreams = streams.filter((_, index) => index !== streamId.index);
         const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
         const viewToSelect: BuilderView =
           updatedStreams.length === 0 ? { type: "global" } : { type: "stream", index: streamToSelect };
-        setValue("formValues.streams", updatedStreams);
+        setValue("manifest.streams", updatedStreams);
         setValue("view", viewToSelect);
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.STREAM_DELETE, {
@@ -130,16 +103,35 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     });
   };
 
+  // Copy over stream metadata when renaming
+  useEffect(() => {
+    if (!currentStream.name) {
+      return;
+    }
+    if (metadata && prevName && currentStream.name !== prevName) {
+      const newMetadata = cloneDeep(metadata);
+      if (metadata.autoImportSchema && metadata.autoImportSchema[prevName] !== undefined) {
+        delete newMetadata.autoImportSchema[prevName];
+        newMetadata.autoImportSchema[currentStream.name] = metadata.autoImportSchema[prevName];
+      }
+      if (metadata.testedStreams && metadata.testedStreams[prevName] !== undefined) {
+        delete newMetadata.testedStreams[prevName];
+        newMetadata.testedStreams[currentStream.name] = metadata.testedStreams[prevName];
+      }
+      setValue("manifest.metadata", newMetadata);
+    }
+    setPrevName(currentStream.name);
+  }, [currentStream.name, prevName, metadata, setValue]);
+
   return (
-    <BuilderConfigView
-      className={classNames(styles.relative, { [styles.multiStreams]: otherStreamsWithSameRequestTypeExist })}
-    >
+    <BuilderConfigView className={styles.relative}>
       {streamId.type === "stream" && (
         <FlexContainer justifyContent="space-between" className={styles.relative} alignItems="center">
-          <BuilderField
-            type="string"
+          <SchemaFormControl
             path={getStreamFieldPath(streamId, "name")}
-            containerClassName={styles.streamNameInput}
+            titleOverride={null}
+            className={styles.streamNameInput}
+            placeholder={formatMessage({ id: "connectorBuilder.streamName.placeholder" })}
           />
 
           <Button variant="danger" onClick={handleDelete}>
@@ -158,20 +150,14 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
                   <Button
                     variant="link"
                     onClick={() => {
+                      const dynamicStreams: DynamicDeclarativeStream[] = getValues("manifest.dynamic_streams");
                       setValue("view", {
                         type: "dynamic_stream",
-                        index: dynamicStreams.findIndex(
-                          (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
-                        ),
+                        index: dynamicStreams.findIndex((stream) => stream.name === streamId.dynamicStreamName),
                       });
                     }}
                   >
-                    <Text bold>
-                      {
-                        dynamicStreams.find((stream) => stream.dynamicStreamName === streamId.dynamicStreamName)
-                          ?.dynamicStreamName
-                      }
-                    </Text>
+                    <Text bold>{streamId.dynamicStreamName}</Text>
                   </Button>
                 ),
               }}
@@ -179,11 +165,11 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
           }
         />
       )}
-      {currentStream.requestType === "sync" ? (
+      {retrievalType === "sync" ? (
         <SynchronousStream streamId={streamId} scrollToTop={scrollToTop} />
-      ) : (
+      ) : retrievalType === "async" ? (
         <AsynchronousStream streamId={streamId} scrollToTop={scrollToTop} />
-      )}
+      ) : null}
     </BuilderConfigView>
   );
 });
@@ -198,20 +184,18 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
   const { formatMessage } = useIntl();
   const { permission } = useConnectorBuilderFormState();
   const streamTab = useBuilderWatch("streamTab");
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
+  const view = useBuilderWatch("view");
   const { setValue } = useFormContext();
   const { hasErrors } = useBuilderErrors();
 
-  const baseUrl = useBuilderWatch("formValues.global.urlBase");
-  const streamFieldPath = ((fieldPath: string) =>
-    getStreamFieldPath(streamId, fieldPath)) as AnyDeclarativeStreamPathFn;
-  const selectedDecoder = useBuilderWatch(streamFieldPath("decoder")) as BuilderDecoderConfig;
+  const streamFieldPath = useCallback((fieldPath?: string) => getStreamFieldPath(streamId, fieldPath), [streamId]);
+  const name = useBuilderWatch(streamFieldPath("name")) as string | undefined;
 
   useEffect(() => {
-    if (streamTab !== "requester" && streamTab !== "schema") {
+    if (isEqual(view, streamId) && streamTab !== "requester" && streamTab !== "schema") {
       setValue("streamTab", "requester");
     }
-  }, [setValue, streamTab]);
+  }, [setValue, streamId, streamTab, view]);
 
   return (
     <>
@@ -236,105 +220,92 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             }}
           />
         </FlexContainer>
-        {streamId.type === "stream" && (
-          <RequestTypeSelector streamId={streamId} streamFieldPath={streamFieldPath} selectedValue="sync" />
-        )}
+        <RetrievalTypeSelector streamFieldPath={streamFieldPath} streamName={name ?? ""} selectedValue="sync" />
       </FlexContainer>
-      {streamTab === "requester" ? (
-        <fieldset
-          disabled={permission === "readOnly" || streamId.type === "generated_stream"}
-          className={styles.fieldset}
-        >
-          {streamId.type === "dynamic_stream" && (
-            <BuilderCard>
-              <BuilderField
-                type="jinja"
-                path={streamFieldPath("name")}
-                manifestPath="DeclarativeStream.properties.name"
-              />
-            </BuilderCard>
-          )}
-          <BuilderCard>
-            <BuilderField
-              type="jinja"
-              path={streamFieldPath("urlPath")}
-              manifestPath="HttpRequester.properties.path"
-              preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
-              labelAction={<AssistButton assistKey="metadata" streamId={streamId} />}
+      <fieldset
+        disabled={permission === "readOnly" || streamId.type === "generated_stream"}
+        className={styles.fieldset}
+      >
+        {/* {streamId.type === "dynamic_stream" && (
+          //   <StreamCard>
+          //     <SchemaFormControl
+          //       path={streamFieldPath("name.stream_template")}
+          //       titleOverride={null}
+          //       className={styles.streamNameInput}
+          //       placeholder="Enter stream name"
+          //     />
+          //   </StreamCard>
+          // )} */}
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.url_base")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.path")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.http_method")} />
+            <SchemaFormControl path={streamFieldPath("retriever.decoder")} />
+            <SchemaFormControl path={streamFieldPath("retriever.record_selector")} nonAdvancedFields={["extractor"]} />
+            <SchemaFormControl path={streamFieldPath("primary_key")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl
+              path={streamFieldPath("retriever.requester.authenticator")}
+              nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
             />
-            <BuilderField
-              type="enum"
-              path={streamFieldPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method")}
-              manifestPath="HttpRequester.properties.http_method"
-            />
-            <BuilderField
-              type="enum"
-              label={formatMessage({ id: "connectorBuilder.decoder.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
-              path={streamFieldPath("decoder.type")}
-              options={[...BUILDER_DECODER_TYPES]}
-              manifestPath="SimpleRetriever.properties.decoder"
-              manifestOptionPaths={[
-                JsonDecoderType.JsonDecoder,
-                XmlDecoderType.XmlDecoder,
-                JsonlDecoderType.JsonlDecoder,
-                IterableDecoderType.IterableDecoder,
-                CsvDecoderType.CsvDecoder,
-                GzipDecoderType.GzipDecoder,
-                ZipfileDecoderType.ZipfileDecoder,
-              ]}
-            />
-            {selectedDecoder.type && DECODER_CONFIGS[selectedDecoder.type] && (
-              <DecoderConfig
-                decoderType={selectedDecoder.type}
-                decoderFieldPath={(fieldPath: string) => `${streamFieldPath("decoder")}.${fieldPath}`}
-              />
-            )}
-            <BuilderField
-              type="array"
-              path={streamFieldPath("primaryKey")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
-              directionalStyle={false}
-              optional
-            />
-          </BuilderCard>
-          <RecordSelectorSection streamFieldPath={streamFieldPath} streamId={streamId} />
-          <RequestOptionSection inline={false} basePath={streamFieldPath("requestOptions")} streamId={streamId} />
-          <PaginationSection streamFieldPath={streamFieldPath} streamId={streamId} />
-          <IncrementalSection streamFieldPath={streamFieldPath} streamId={streamId} />
-          {streamId.type === "stream" && (
-            <ParentStreamsSection
-              streamFieldPath={streamFieldPath as StreamPathFn}
-              currentStreamIndex={streamId.index}
-            />
-          )}
-          <ParameterizedRequestsSection streamFieldPath={streamFieldPath} streamId={streamId} />
-          <ErrorHandlerSection inline={false} basePath={streamFieldPath("errorHandler")} streamId={streamId} />
-          <TransformationSection streamFieldPath={streamFieldPath} streamId={streamId} />
-          <UnknownFieldsSection streamFieldPath={streamFieldPath} />
-        </fieldset>
-      ) : streamTab === "schema" ? (
-        <BuilderCard className={styles.schemaEditor}>
-          <SchemaEditor
-            streamFieldPath={
-              streamId.type === "generated_stream"
-                ? (((field: string) =>
-                    getStreamFieldPath(
-                      {
-                        type: "dynamic_stream",
-                        index: dynamicStreams.findIndex(
-                          (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
-                        ),
-                      },
-                      field
-                    )) as AnyDeclarativeStreamPathFn)
-                : streamFieldPath
-            }
-          />
-        </BuilderCard>
-      ) : null}
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.requester.request_parameters")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.request_headers")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.request_body")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.request_body_json")} />
+            <SchemaFormControl path={streamFieldPath("retriever.requester.request_body_data")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.paginator")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("incremental_sync")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.requester.error_handler")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("transformations")} />
+          </StreamCard>
+          <Card>
+            <CollapsedControls streamId={streamId}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.requester")} />
+              <SchemaFormRemainingFields path={streamFieldPath("retriever")} />
+              <SchemaFormRemainingFields path={streamFieldPath()} />
+            </CollapsedControls>
+          </Card>
+        </FlexContainer>
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "schema" })}>
+          <SchemaEditor streamFieldPath={streamFieldPath} />
+        </FlexContainer>
+        {/* ) : // ) : streamTab === "schema" ? (
+        //   <BuilderCard className={styles.schemaEditor}>
+        //     <SchemaEditor
+        //       streamFieldPath={
+        //         streamId.type === "generated_stream"
+        //           ? (((field: string) =>
+        //               getStreamFieldPath(
+        //                 {
+        //                   type: "dynamic_stream",
+        //                   index: dynamicStreams.findIndex(
+        //                     (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
+        //                   ),
+        //                 },
+        //                 field
+        //               )) as AnyDeclarativeStreamPathFn)
+        //           : streamFieldPath
+        //       }
+        //     />
+        //   </BuilderCard>
+        null} */}
+      </fieldset>
     </>
   );
 };
@@ -345,47 +316,29 @@ interface AsynchronousStreamProps {
 }
 const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrollToTop }) => {
   const { formatMessage } = useIntl();
+  const { permission } = useConnectorBuilderFormState();
   const streamTab = useBuilderWatch("streamTab");
+  const view = useBuilderWatch("view");
   const { setValue } = useFormContext();
   const { hasErrors } = useBuilderErrors();
 
+  const streamFieldPath = useCallback((fieldPath?: string) => getStreamFieldPath(streamId, fieldPath), [streamId]);
+  const name = useBuilderWatch(streamFieldPath("name")) as string | undefined;
+
   useEffect(() => {
-    if (streamTab !== "requester" && streamTab !== "polling" && streamTab !== "download" && streamTab !== "schema") {
+    if (
+      isEqual(view, streamId) &&
+      streamTab !== "requester" &&
+      streamTab !== "polling" &&
+      streamTab !== "download" &&
+      streamTab !== "schema"
+    ) {
       setValue("streamTab", "requester");
     }
-  }, [setValue, streamTab]);
+  }, [setValue, streamId, streamTab, view]);
 
-  const streamFieldPath = useMemo(() => {
-    return ((fieldPath: string) => {
-      return `${
-        streamId.type === "generated_stream"
-          ? (`formValues.generatedStreams.${streamId.dynamicStreamName}` as const)
-          : ("formValues.streams" as const)
-      }.${streamId.index}.${fieldPath}`;
-    }) as AnyDeclarativeStreamPathFn;
-  }, [streamId]);
+  // const tabContentKey = useMemo(() => `${streamId.index}-${streamTab}`, [streamId.index, streamTab]);
 
-  const creationRequesterPath: CreationRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.creationRequester.${fieldPath}` as const,
-    [streamId.index]
-  );
-  const pollingRequesterPath: PollingRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.pollingRequester.${fieldPath}` as const,
-    [streamId.index]
-  );
-  const downloadRequesterPath: DownloadRequesterPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.streams.${streamId.index}.downloadRequester.${fieldPath}` as const,
-    [streamId.index]
-  );
-
-  const selectedCreationDecoder = useBuilderWatch(creationRequesterPath("decoder"));
-  const selectedDownloadDecoder = useBuilderWatch(downloadRequesterPath("decoder"));
-
-  const tabContentKey = useMemo(() => `${streamId.index}-${streamTab}`, [streamId.index, streamTab]);
-
-  if (streamId.type !== "stream") {
-    return null;
-  }
   return (
     <>
       <FlexContainer className={styles.sticky} justifyContent="space-between" alignItems="center">
@@ -429,295 +382,137 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             }}
           />
         </FlexContainer>
-        <RequestTypeSelector streamId={streamId} streamFieldPath={streamFieldPath} selectedValue="async" />
+        <RetrievalTypeSelector streamFieldPath={streamFieldPath} streamName={name ?? ""} selectedValue="async" />
       </FlexContainer>
-      {streamTab === "requester" ? (
-        <FlexContainer key={tabContentKey} direction="column">
-          <BuilderCard>
-            <BuilderField
-              type="jinja"
-              path={creationRequesterPath("url")}
-              label={formatMessage({ id: "connectorBuilder.asyncStream.url.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.asyncStream.url.tooltip" })}
+      <fieldset
+        disabled={permission === "readOnly" || streamId.type === "generated_stream"}
+        className={styles.fieldset}
+      >
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "requester" })}>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.http_method")} />
+            <SchemaFormControl path={streamFieldPath("retriever.decoder")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl
+              path={streamFieldPath("retriever.creation_requester.authenticator")}
+              nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
             />
-            <BuilderField
-              type="enum"
-              path={creationRequesterPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method")}
-              manifestPath="HttpRequester.properties.http_method"
-            />
-            <BuilderField
-              type="enum"
-              path={creationRequesterPath("decoder.type")}
-              label={formatMessage({ id: "connectorBuilder.decoder.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
-              options={[...BUILDER_DECODER_TYPES]}
-              manifestPath="SimpleRetriever.properties.decoder"
-              manifestOptionPaths={[
-                JsonDecoderType.JsonDecoder,
-                XmlDecoderType.XmlDecoder,
-                JsonlDecoderType.JsonlDecoder,
-                IterableDecoderType.IterableDecoder,
-                CsvDecoderType.CsvDecoder,
-              ]}
-            />
-            {selectedCreationDecoder.type && DECODER_CONFIGS[selectedCreationDecoder.type] && (
-              <DecoderConfig
-                decoderType={selectedCreationDecoder.type}
-                decoderFieldPath={(fieldPath: string) => `${creationRequesterPath("decoder")}.${fieldPath}`}
-              />
-            )}
-          </BuilderCard>
-          <AuthenticationSection authPath={creationRequesterPath("authenticator")} />
-          <RequestOptionSection inline={false} basePath={creationRequesterPath("requestOptions")} streamId={streamId} />
-          <IncrementalSection streamFieldPath={creationRequesterPath} streamId={streamId} />
-          {streamId.type === "stream" && (
-            <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamId.index} />
-          )}
-          <ParameterizedRequestsSection streamFieldPath={creationRequesterPath} streamId={streamId} />
-          <ErrorHandlerSection inline={false} basePath={creationRequesterPath("errorHandler")} streamId={streamId} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.request_parameters")} />
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.request_headers")} />
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.request_body")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("incremental_sync")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.creation_requester.error_handler")} />
+          </StreamCard>
+          {/* {streamId.type === "stream" && (
+              <ParentStreamsSection streamFieldPath={creationRequesterPath} currentStreamIndex={streamId.index} />
+            )} */}
+          <Card>
+            <CollapsedControls streamId={streamId}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.creation_requester")} />
+              <SchemaFormRemainingFields path={streamFieldPath()} />
+            </CollapsedControls>
+          </Card>
         </FlexContainer>
-      ) : streamTab === "polling" ? (
-        <FlexContainer key={tabContentKey} direction="column">
-          <BuilderCard>
-            <BuilderField
-              type="jinja"
-              path={pollingRequesterPath("url")}
-              label={formatMessage({ id: "connectorBuilder.asyncStream.url.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.asyncStream.url.tooltip" })}
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "polling" })}>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.http_method")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl
+              path={streamFieldPath("retriever.polling_requester.authenticator")}
+              nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
             />
-            <BuilderField
-              type="enum"
-              path={pollingRequesterPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method")}
-              manifestPath="HttpRequester.properties.http_method"
-            />
-          </BuilderCard>
-          <AuthenticationSection authPath={pollingRequesterPath("authenticator")} />
-          <BuilderCard>
-            <BuilderOneOf<BuilderPollingTimeout>
-              path={pollingRequesterPath("pollingTimeout")}
-              label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.label" })}
-              manifestPath="AsyncRetriever.properties.polling_job_timeout"
-              options={[
-                {
-                  label: formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number" }),
-                  default: {
-                    type: "number",
-                    value: 15,
-                  },
-                  children: (
-                    <BuilderField
-                      type="integer"
-                      path={pollingRequesterPath("pollingTimeout.value")}
-                      label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number.label" })}
-                      tooltip={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.number.tooltip" })}
-                      step={1}
-                      min={1}
-                    />
-                  ),
-                },
-                {
-                  label: formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom" }),
-                  default: {
-                    type: "custom",
-                    value: "{{ }}",
-                  },
-                  children: (
-                    <BuilderField
-                      type="jinja"
-                      path={pollingRequesterPath("pollingTimeout.value")}
-                      label={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.label" })}
-                      tooltip={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.tooltip" })}
-                      pattern={formatMessage({ id: "connectorBuilder.asyncStream.polling.timeout.custom.pattern" })}
-                    />
-                  ),
-                },
-              ]}
-            />
-            <GroupControls
-              label={
-                <ControlLabels
-                  label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusExtractor.label" })}
-                  infoTooltipContent={
-                    getLabelAndTooltip(
-                      formatMessage({ id: "connectorBuilder.asyncStream.polling.statusExtractor.label" }),
-                      undefined,
-                      "AsyncRetriever.properties.status_extractor"
-                    ).tooltip
-                  }
-                />
-              }
-            >
-              <BuilderField
-                type="array"
-                path={pollingRequesterPath("statusExtractor.field_path")}
-                manifestPath="DpathExtractor.properties.field_path"
-              />
-            </GroupControls>
-            <GroupControls
-              label={
-                <ControlLabels
-                  label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.label" })}
-                  infoTooltipContent={
-                    getLabelAndTooltip(
-                      formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.label" }),
-                      formatMessage({
-                        id: "connectorBuilder.asyncStream.polling.statusMapping.tooltip",
-                      }),
-                      undefined
-                    ).tooltip
-                  }
-                />
-              }
-            >
-              <BuilderField
-                type="array"
-                directionalStyle={false}
-                path={pollingRequesterPath("statusMapping.completed")}
-                label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.completed" })}
-              />
-              <BuilderField
-                type="array"
-                directionalStyle={false}
-                path={pollingRequesterPath("statusMapping.failed")}
-                label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.failed" })}
-              />
-              <BuilderField
-                type="array"
-                directionalStyle={false}
-                path={pollingRequesterPath("statusMapping.running")}
-                label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.running" })}
-              />
-              <BuilderField
-                type="array"
-                directionalStyle={false}
-                path={pollingRequesterPath("statusMapping.timeout")}
-                label={formatMessage({ id: "connectorBuilder.asyncStream.polling.statusMapping.timeout" })}
-              />
-            </GroupControls>
-            <GroupControls
-              label={
-                <ControlLabels
-                  label={formatMessage({ id: "connectorBuilder.asyncStream.polling.downloadTargetExtractor.label" })}
-                  infoTooltipContent={
-                    getLabelAndTooltip(
-                      formatMessage({ id: "connectorBuilder.asyncStream.polling.downloadTargetExtractor.label" }),
-                      undefined,
-                      "AsyncRetriever.properties.download_target_extractor"
-                    ).tooltip
-                  }
-                />
-              }
-            >
-              <BuilderField
-                type="array"
-                path={pollingRequesterPath("downloadTargetExtractor.field_path")}
-                manifestPath="DpathExtractor.properties.field_path"
-              />
-            </GroupControls>
-          </BuilderCard>
-          <RequestOptionSection inline={false} basePath={pollingRequesterPath("requestOptions")} streamId={streamId} />
-          <ErrorHandlerSection inline={false} basePath={pollingRequesterPath("errorHandler")} streamId={streamId} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.status_extractor")} />
+            <SchemaFormControl path={streamFieldPath("retriever.status_mapping")} />
+            <SchemaFormControl path={streamFieldPath("retriever.download_target_extractor")} />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_job_timeout")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.request_parameters")} />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.request_headers")} />
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.request_body")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.polling_requester.error_handler")} />
+          </StreamCard>
+          <Card>
+            <CollapsedControls streamId={streamId}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.polling_requester")} />
+            </CollapsedControls>
+          </Card>
         </FlexContainer>
-      ) : streamTab === "download" ? (
-        <FlexContainer key={tabContentKey} direction="column">
-          <BuilderCard>
-            <BuilderField
-              type="jinja"
-              path={downloadRequesterPath("url")}
-              label={formatMessage({ id: "connectorBuilder.asyncStream.url.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.asyncStream.url.tooltip" })}
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "download" })}>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.url")} isRequired />
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.http_method")} />
+            <SchemaFormControl path={streamFieldPath("retriever.download_decoder")} />
+            <SchemaFormControl path={streamFieldPath("retriever.record_selector")} nonAdvancedFields={["extractor"]} />
+            <SchemaFormControl path={streamFieldPath("primary_key")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl
+              path={streamFieldPath("retriever.download_requester.authenticator")}
+              nonAdvancedFields={NON_ADVANCED_AUTH_FIELDS}
             />
-            <BuilderField
-              type="enum"
-              path={downloadRequesterPath("httpMethod")}
-              options={getOptionsByManifest("HttpRequester.properties.http_method")}
-              manifestPath="HttpRequester.properties.http_method"
-            />
-            <BuilderField
-              type="enum"
-              path={downloadRequesterPath("decoder.type")}
-              label={formatMessage({ id: "connectorBuilder.decoder.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.decoder.tooltip" })}
-              options={[...BUILDER_DECODER_TYPES]}
-              manifestPath="SimpleRetriever.properties.decoder"
-              manifestOptionPaths={[
-                JsonDecoderType.JsonDecoder,
-                XmlDecoderType.XmlDecoder,
-                JsonlDecoderType.JsonlDecoder,
-                IterableDecoderType.IterableDecoder,
-                CsvDecoderType.CsvDecoder,
-              ]}
-            />
-            {selectedDownloadDecoder.type && DECODER_CONFIGS[selectedDownloadDecoder.type] && (
-              <DecoderConfig
-                decoderType={selectedDownloadDecoder.type}
-                decoderFieldPath={(fieldPath: string) => `${downloadRequesterPath("decoder")}.${fieldPath}`}
-              />
-            )}
-            <GroupControls
-              label={
-                <ControlLabels
-                  label={formatMessage({ id: "connectorBuilder.asyncStream.download.extractor.label" })}
-                  infoTooltipContent={
-                    getLabelAndTooltip(
-                      formatMessage({ id: "connectorBuilder.asyncStream.download.extractor.label" }),
-                      undefined,
-                      "AsyncRetriever.properties.download_extractor"
-                    ).tooltip
-                  }
-                />
-              }
-            >
-              <BuilderField
-                type="array"
-                path={downloadRequesterPath("downloadExtractor.field_path")}
-                manifestPath="DpathExtractor.properties.field_path"
-                optional
-              />
-            </GroupControls>
-            <BuilderField
-              type="array"
-              path={downloadRequesterPath("primaryKey")}
-              label={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.label" })}
-              tooltip={formatMessage({ id: "connectorBuilder.streamConfigView.primaryKey.tooltip" })}
-              directionalStyle={false}
-              optional
-            />
-          </BuilderCard>
-          <AuthenticationSection authPath={downloadRequesterPath("authenticator")} />
-          <RecordSelectorSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
-          <RequestOptionSection inline={false} basePath={downloadRequesterPath("requestOptions")} streamId={streamId} />
-          <PaginationSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
-          <TransformationSection streamFieldPath={downloadRequesterPath} streamId={streamId} />
-          <ErrorHandlerSection inline={false} basePath={downloadRequesterPath("errorHandler")} streamId={streamId} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.request_parameters")} />
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.request_headers")} />
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.request_body")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.download_paginator")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("transformations")} />
+          </StreamCard>
+          <StreamCard>
+            <SchemaFormControl path={streamFieldPath("retriever.download_requester.error_handler")} />
+          </StreamCard>
+          <Card>
+            <CollapsedControls streamId={streamId}>
+              <SchemaFormRemainingFields path={streamFieldPath("retriever.download_requester")} />
+              <SchemaFormRemainingFields path={streamFieldPath("retriever")} />
+            </CollapsedControls>
+          </Card>
         </FlexContainer>
-      ) : streamTab === "schema" ? (
-        <BuilderCard className={styles.schemaEditor}>
+        <FlexContainer direction="column" className={classNames({ [styles.hidden]: streamTab !== "schema" })}>
           <SchemaEditor streamFieldPath={streamFieldPath} />
-        </BuilderCard>
-      ) : null}
+        </FlexContainer>
+      </fieldset>
     </>
   );
 };
 
-const RequestTypeSelector = ({
-  streamId,
+type RetrievalType = "sync" | "async" | "custom";
+const RetrievalTypeSelector = ({
   streamFieldPath,
+  streamName,
   selectedValue,
 }: {
-  streamId: StreamId;
-  streamFieldPath: AnyDeclarativeStreamPathFn;
-  selectedValue: BuilderStream["requestType"];
+  streamFieldPath: (fieldPath?: string) => string;
+  streamName: string;
+  selectedValue: RetrievalType;
 }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
-  const { setValue } = useFormContext();
-  const id = useBuilderWatch(streamFieldPath("id"));
-  const name = useBuilderWatch(streamFieldPath("name"));
+  const { setValue, getValues } = useFormContext();
 
   const handleSelect = useCallback(
-    (newValue: BuilderStream["requestType"]) => {
+    (newValue: RetrievalType) => {
       if (newValue === selectedValue) {
         return;
       }
@@ -725,52 +520,62 @@ const RequestTypeSelector = ({
       openConfirmationModal({
         title:
           newValue === "sync"
-            ? "connectorBuilder.requestType.confirm.title.sync"
-            : "connectorBuilder.requestType.confirm.title.async",
-        text: "connectorBuilder.requestType.confirm.text",
+            ? "connectorBuilder.retrievalType.confirm.title.sync"
+            : newValue === "async"
+            ? "connectorBuilder.retrievalType.confirm.title.async"
+            : "connectorBuilder.retrievalType.confirm.title.custom",
+        text: "connectorBuilder.retrievalType.confirm.text",
         submitButtonText:
           newValue === "sync"
-            ? "connectorBuilder.requestType.confirm.submit.sync"
-            : "connectorBuilder.requestType.confirm.submit.async",
+            ? "connectorBuilder.retrievalType.confirm.submit.sync"
+            : newValue === "async"
+            ? "connectorBuilder.retrievalType.confirm.submit.async"
+            : "connectorBuilder.retrievalType.confirm.submit.custom",
         submitButtonVariant: "primary",
-        cancelButtonText: "connectorBuilder.requestType.confirm.cancel",
+        cancelButtonText: "connectorBuilder.retrievalType.confirm.cancel",
         onSubmit: () => {
-          if (newValue === "sync") {
-            setValue(`formValues.streams.${streamId.index}`, {
-              ...DEFAULT_BUILDER_STREAM_VALUES,
-              id,
-              name,
-            });
-          } else if (newValue === "async") {
-            setValue(`formValues.streams.${streamId.index}`, {
-              ...DEFAULT_BUILDER_ASYNC_STREAM_VALUES,
-              id,
-              name,
-            });
-          }
+          const newStreamValues: DeclarativeStream = {
+            name: streamName,
+            ...(newValue === "sync"
+              ? DEFAULT_SYNC_STREAM
+              : newValue === "async"
+              ? DEFAULT_ASYNC_STREAM
+              : DEFAULT_CUSTOM_STREAM),
+          };
+          const newStreamValuesWithUrl =
+            selectedValue === "sync"
+              ? setUrlOnStream(getValues(streamFieldPath("retriever.requester.url")), newStreamValues)
+              : selectedValue === "async"
+              ? setUrlOnStream(getValues(streamFieldPath("retriever.creation_requester.url")), newStreamValues)
+              : newStreamValues;
+          setValue(streamFieldPath(), newStreamValuesWithUrl);
           closeConfirmationModal();
         },
       });
     },
-    [selectedValue, openConfirmationModal, closeConfirmationModal, setValue, streamId.index, id, name]
+    [selectedValue, openConfirmationModal, streamName, getValues, streamFieldPath, setValue, closeConfirmationModal]
   );
 
   return (
     <FlexContainer alignItems="center">
       <Text color="grey500" align="right">
-        <FormattedMessage id="connectorBuilder.requestType" />:
+        <FormattedMessage id="connectorBuilder.retrievalType" />:
       </Text>
-      <ListBox<BuilderStream["requestType"]>
+      <ListBox<RetrievalType>
         selectedValue={selectedValue}
         onSelect={handleSelect}
         options={[
           {
-            label: <FormattedMessage id="connectorBuilder.requestType.sync" />,
+            label: <FormattedMessage id="connectorBuilder.retrievalType.sync" />,
             value: "sync",
           },
           {
-            label: <FormattedMessage id="connectorBuilder.requestType.async" />,
+            label: <FormattedMessage id="connectorBuilder.retrievalType.async" />,
             value: "async",
+          },
+          {
+            label: <FormattedMessage id="connectorBuilder.retrievalType.custom" />,
+            value: "custom",
           },
         ]}
         placement="bottom-end"
@@ -780,6 +585,17 @@ const RequestTypeSelector = ({
       />
     </FlexContainer>
   );
+};
+
+const setUrlOnStream = (url: string, declarativeStream: DeclarativeStream) => {
+  if (declarativeStream.retriever.type === SimpleRetrieverType.SimpleRetriever) {
+    declarativeStream.retriever.requester.url = url;
+  } else if (declarativeStream.retriever.type === AsyncRetrieverType.AsyncRetriever) {
+    declarativeStream.retriever.creation_requester.url = url;
+    declarativeStream.retriever.polling_requester.url = url;
+    declarativeStream.retriever.download_requester.url = url;
+  }
+  return declarativeStream;
 };
 
 const StreamTab = ({
@@ -840,90 +656,120 @@ const SchemaTab = ({
   );
 };
 
-const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: AnyDeclarativeStreamPathFn }) => {
+const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath?: string) => string }) => {
   const { formatMessage } = useIntl();
-  const analyticsService = useAnalyticsService();
-  const { permission, streamIdToStreamRepresentation } = useConnectorBuilderFormState();
-  const autoImportSchemaFieldPath = streamFieldPath("autoImportSchema");
-  const autoImportSchema = useBuilderWatch(autoImportSchemaFieldPath);
-  const schemaFieldPath = streamFieldPath("schema");
-  const schema = useBuilderWatch(schemaFieldPath) as BuilderStream["schema"];
-  const testStreamId = useBuilderWatch("testStreamId");
   const { setValue } = useFormContext();
-  const { errors } = useFormState({ name: schemaFieldPath });
-  const error = get(errors, schemaFieldPath);
   const { streamRead } = useConnectorBuilderTestRead();
+  const streamName = useBuilderWatch(streamFieldPath("name")) as string | undefined;
+  const schemaLoaderPath = streamFieldPath("schema_loader");
+  const autoImportSchemaPath = `manifest.metadata.autoImportSchema.${streamName}`;
+  const autoImportSchema = useWatch({ name: autoImportSchemaPath });
+  const inferredSchema = streamRead.data?.inferred_schema ?? DEFAULT_SCHEMA_LOADER_SCHEMA;
 
-  const showImportButton = !autoImportSchema && isEmptyOrDefault(schema) && streamRead.data?.inferred_schema;
-  const formattedSchema = useMemo(() => {
-    try {
-      return schema ? formatJson(JSON.parse(schema)) : undefined;
-    } catch (e) {
-      return undefined;
-    }
-  }, [schema]);
+  if (!streamName) {
+    // Use SchemaFormControl with override so that the schema_loader is not rendered elsewhere
+    return (
+      <SchemaFormControl
+        path={schemaLoaderPath}
+        overrideByPath={{
+          [schemaLoaderPath]: (
+            <Message type="warning" text={formatMessage({ id: "connectorBuilder.streamSchema.noStreamName" })} />
+          ),
+        }}
+      />
+    );
+  }
 
   return (
-    <>
-      <BuilderField
+    <Card className={classNames({ [styles.card]: !autoImportSchema })}>
+      <FormControl
         label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
-        path={autoImportSchemaFieldPath}
-        type="boolean"
-        tooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
-        disabled={
-          (error && !streamRead.data?.inferred_schema) ||
-          permission === "readOnly" ||
-          testStreamId.type === "generated_stream"
-        }
-        disabledTooltip={
-          permission === "readOnly"
-            ? undefined
-            : formatMessage({ id: "connectorBuilder.autoImportSchema.disabledTooltip" })
+        name={autoImportSchemaPath}
+        fieldType="switch"
+        labelTooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
+        onChange={(e) => {
+          if (e.target.checked) {
+            setValue(schemaLoaderPath, {
+              type: InlineSchemaLoaderType.InlineSchemaLoader,
+              schema: inferredSchema,
+            });
+          }
+        }}
+      />
+      <SchemaFormControl
+        path={schemaLoaderPath}
+        overrideByPath={
+          autoImportSchema
+            ? {
+                [schemaLoaderPath]: (
+                  <div className={styles.autoSchemaContainer}>
+                    <Pre>{formatJson(inferredSchema, true)}</Pre>
+                  </div>
+                ),
+              }
+            : undefined
         }
       />
-      {showImportButton && (
-        <Button
-          full
-          type="button"
-          variant="secondary"
-          onClick={() => {
-            const formattedJson = formatJson(streamRead.data?.inferred_schema, true);
-            setValue(schemaFieldPath, formattedJson);
-            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
-              actionDescription: "Declared schema overwritten by detected schema",
-              ...streamIdToStreamRepresentation(testStreamId),
-            });
-          }}
-        >
-          <FormattedMessage id="connectorBuilder.useSchemaButton" />
-        </Button>
-      )}
-      {autoImportSchema ? (
-        <div className={styles.autoSchemaContainer}>
-          <Pre>{formattedSchema}</Pre>
-        </div>
-      ) : (
-        <div className={styles.editorContainer}>
-          <CodeEditor
-            readOnly={permission === "readOnly" || testStreamId.type === "generated_stream"}
-            key={schemaFieldPath}
-            value={schema || ""}
-            language="json"
-            onChange={(val: string | undefined) => {
-              setValue(schemaFieldPath, val, {
-                shouldValidate: true,
-                shouldDirty: true,
-                shouldTouch: true,
-              });
-            }}
-          />
-        </div>
-      )}
-      {error && (
-        <Text className={styles.errorMessage}>
-          <FormattedMessage id={error.message} />
-        </Text>
-      )}
-    </>
+    </Card>
+  );
+};
+
+const StreamCard: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  return <Card className={styles.card}>{children}</Card>;
+};
+
+const NON_ADVANCED_AUTH_FIELDS = [
+  "api_token",
+  "header",
+  "username",
+  "password",
+  "inject_into",
+  "client_id",
+  "client_secret",
+  "refresh_token",
+  "token_refresh_endpoint",
+  "secret_key",
+  "algorithm",
+  "jwt_headers",
+  "jwt_payload",
+  "login_requester.url",
+  "login_requester.http_method",
+  "login_requester.authenticator",
+  "login_requester.request_parameters",
+  "login_requester.request_headers",
+  "login_requester.request_body",
+  "session_token_path",
+  "expiration_duration",
+  "request_authentication",
+  "authenticator_selection_path",
+  "authenticators",
+  "class_name",
+];
+
+interface CollapsedControlsProps {
+  streamId: StreamId;
+}
+const CollapsedControls: React.FC<React.PropsWithChildren<CollapsedControlsProps>> = ({ streamId, children }) => {
+  const { getErrorPaths } = useBuilderErrors();
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const errorPaths = getErrorPaths(streamId);
+  const [hasChildError, setHasChildError] = useState(false);
+
+  useEffect(() => {
+    if (containerRef.current && errorPaths.length > 0) {
+      const selector = errorPaths.map((path) => `[data-field-path="${path}"]`).join(", "); // Combine with commas for "OR" logic
+
+      const target = containerRef.current.querySelector(selector);
+      setHasChildError(!!target);
+    }
+  }, [errorPaths]);
+
+  return (
+    <div ref={containerRef}>
+      <Collapsible label="Advanced" initiallyOpen={hasChildError} showErrorIndicator={hasChildError}>
+        {children}
+      </Collapsible>
+    </div>
   );
 };

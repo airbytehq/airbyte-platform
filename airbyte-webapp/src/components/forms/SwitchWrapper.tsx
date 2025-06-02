@@ -10,6 +10,7 @@ export const SwitchWrapper = <T extends FormValues>({
   controlId,
   name,
   disabled = false,
+  onChange,
 }: Omit<SwitchControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
   // If we don't watch the name explicitly, the switch will not update
@@ -26,7 +27,10 @@ export const SwitchWrapper = <T extends FormValues>({
           name={name}
           id={controlId}
           checked={value}
-          onChange={(value) => field.onChange(value)}
+          onChange={(value) => {
+            field.onChange(value);
+            onChange?.(value);
+          }}
         />
       )}
     />

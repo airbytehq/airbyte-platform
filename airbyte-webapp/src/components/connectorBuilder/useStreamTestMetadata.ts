@@ -15,7 +15,6 @@ import {
 } from "core/api/types/ConnectorManifest";
 import {
   ConnectorBuilderMainRHFContext,
-  convertJsonToYaml,
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -63,13 +62,12 @@ export const getStreamHash = (resolvedStream: DeclarativeComponentSchemaStreamsI
 };
 
 export const useStreamTestMetadata = () => {
-  const { resolvedManifest, jsonManifest, updateJsonManifest } = useConnectorBuilderFormState();
+  const { resolvedManifest, jsonManifest } = useConnectorBuilderFormState();
   const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
   if (!watch) {
     throw new Error("rhf context not available");
   }
   const { setValue } = useFormContext();
-  const mode = useBuilderWatch("mode");
   const dynamicStreams: BuilderDynamicStream[] = watch("formValues.dynamicStreams");
   const generatedStreams: Record<string, GeneratedBuilderStream[]> = watch("formValues.generatedStreams");
   const { formatMessage } = useIntl();
@@ -92,32 +90,12 @@ export const useStreamTestMetadata = () => {
 
       const resolvedStream = resolveStreamFromStreamId(streamId);
       const streamName = resolvedStream?.name ?? "";
-
-      const newManifest = merge({}, jsonManifest, {
-        metadata: { testedStreams: { [streamName]: streamTestResults } },
-      });
-
-      // If in UI mode, the form values are the source of truth defining the connector configuration, so the test results need to be set there.
-      // If in YAML mode, the yaml value is the source of truth defining the connector configuration, so the test results need to be set there.
-      // The underlying jsonManifest that gets saved to the DB and exported gets derived from either of the above depending on which mode is active.
-      if (mode === "ui") {
-        if (streamId.type === "stream") {
-          setValue(`formValues.streams.${streamId.index}.testResults`, streamTestResults);
-        } else {
-          setValue(
-            `formValues.generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.testResults`,
-            streamTestResults
-          );
-        }
-      } else {
-        setValue("yaml", convertJsonToYaml(newManifest));
-      }
-
-      // Update the jsonManifest with the new test results to avoid avoid lag between the setting the form values and the jsonManifest being updated,
-      // which can cause an outdated warning to appear temporarily.
-      updateJsonManifest(newManifest);
+      setValue(
+        "manifest.metadata.testedStreams",
+        merge({}, jsonManifest?.metadata?.testedStreams ?? {}, { [streamName]: streamTestResults })
+      );
     },
-    [jsonManifest, mode, setValue, updateJsonManifest, resolveStreamFromStreamId]
+    [jsonManifest, setValue, resolveStreamFromStreamId]
   );
 
   const getStreamTestMetadataStatus = useCallback(

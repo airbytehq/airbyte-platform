@@ -1,6 +1,7 @@
 import { Range } from "monaco-editor";
-import React, { useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWatch, useFormContext } from "react-hook-form";
+import { useUpdateEffect } from "react-use";
 
 import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
 import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
@@ -51,6 +52,7 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
 export const Builder: React.FC = () => {
   const { newUserInputContext, setNewUserInputContext } = useConnectorBuilderFormManagementState();
   const view = useBuilderWatch("view");
+  const [previousView, setPreviousView] = useState<BuilderState["view"]>(view);
 
   // Create a reference to the builder view div for scrolling
   const builderViewRef = React.useRef<HTMLDivElement>(null);
@@ -58,9 +60,35 @@ export const Builder: React.FC = () => {
   // Function to scroll the builder view to the top
   const scrollToTop = useCallback(() => {
     if (builderViewRef.current) {
-      builderViewRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      builderViewRef.current.scrollTo({ top: 0, behavior: "auto" });
     }
   }, []);
+
+  // Scroll to the top when the view changes
+  useUpdateEffect(() => {
+    if (view.type === "generated_stream") {
+      if (
+        previousView.type === "generated_stream" &&
+        view.dynamicStreamName === previousView.dynamicStreamName &&
+        view.index === previousView.index
+      ) {
+        return;
+      }
+    } else if (view.type === "stream") {
+      if (previousView.type === "stream" && view.index === previousView.index) {
+        return;
+      }
+    } else if (view.type === "dynamic_stream") {
+      if (previousView.type === "dynamic_stream" && view.index === previousView.index) {
+        return;
+      }
+    } else if (previousView.type === view.type) {
+      return;
+    }
+
+    scrollToTop();
+    setPreviousView(view);
+  }, [view]);
 
   return useMemo(
     () => (
@@ -106,7 +134,7 @@ export const Builder: React.FC = () => {
         </SchemaForm>
       </div>
     ),
-    [view, newUserInputContext, setNewUserInputContext, scrollToTop]
+    [newUserInputContext, view, scrollToTop, setNewUserInputContext]
   );
 };
 

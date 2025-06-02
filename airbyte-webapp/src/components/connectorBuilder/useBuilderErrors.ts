@@ -232,7 +232,14 @@ export const useBuilderErrors = () => {
     [getErrorPathAndView, getOauthErrorPathAndView, setScrollToField, setValue, trigger, getValues]
   );
 
-  return { hasErrors, validateAndTouch };
+  const getErrorPaths = useCallback(
+    (view: BuilderView) => {
+      return getErrorPathsForView(getBuilderViewToErrorPaths(errors), view);
+    },
+    [errors]
+  );
+
+  return { hasErrors, validateAndTouch, getErrorPaths };
 };
 
 const getStreamTabFromErrorPath = (errorPath: string): BuilderStreamTab | undefined => {

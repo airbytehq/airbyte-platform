@@ -642,15 +642,14 @@ export const DEFAULT_BUILDER_FORM_VALUES: BuilderFormValues = {
   version: CDK_VERSION,
 };
 
-export const DEFAULT_SCHEMA = formatJson(
-  {
-    $schema: "http://json-schema.org/draft-07/schema#",
-    type: "object",
-    properties: {},
-    additionalProperties: true,
-  },
-  true
-);
+export const DEFAULT_SCHEMA_LOADER_SCHEMA = {
+  $schema: "http://json-schema.org/draft-07/schema#",
+  type: "object",
+  properties: {},
+  additionalProperties: true,
+};
+
+export const DEFAULT_SCHEMA = formatJson(DEFAULT_SCHEMA_LOADER_SCHEMA, true);
 
 export const isEmptyOrDefault = (schema?: string) => {
   return !schema || schema === DEFAULT_SCHEMA;
