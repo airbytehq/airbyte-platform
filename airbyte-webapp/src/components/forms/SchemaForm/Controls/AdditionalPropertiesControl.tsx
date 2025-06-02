@@ -179,7 +179,7 @@ export const AdditionalPropertiesControl = ({
                   // If the additionalPropertiesSchema has no title, show the standard Value title
                   title: additionalPropertiesSchema.title ?? formatMessage({ id: "form.additionalProperties.value" }),
                 }}
-                isRequired={additionalPropertiesSchema.required?.includes(key)}
+                isRequired
               />
             </div>
             <RemoveButton className={styles.removeButton} onClick={() => removePair(key)} />
@@ -201,6 +201,7 @@ export const AdditionalPropertiesControl = ({
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
       data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       {contents}
     </ControlGroup>

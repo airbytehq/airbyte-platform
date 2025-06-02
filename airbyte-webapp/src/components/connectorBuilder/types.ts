@@ -1906,12 +1906,14 @@ export type DownloadRequesterPathFn = <T extends string>(
 export const concatPath = <TBase extends string, TPath extends string>(base: TBase, path: TPath) =>
   `${base}.${path}` as const;
 
-export const getStreamFieldPath = <T extends string>(streamId: StreamId, fieldPath?: T) => {
+export const getStreamFieldPath = <T extends string>(streamId: StreamId, fieldPath?: T, templatePath?: boolean) => {
   const basePath =
     streamId.type === "stream"
       ? `manifest.streams.${streamId.index}`
       : streamId.type === "dynamic_stream"
-      ? `manifest.dynamic_streams.${streamId.index}`
+      ? templatePath
+        ? `manifest.dynamic_streams.${streamId.index}.stream_template`
+        : `manifest.dynamic_streams.${streamId.index}`
       : `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}`;
 
   if (fieldPath) {

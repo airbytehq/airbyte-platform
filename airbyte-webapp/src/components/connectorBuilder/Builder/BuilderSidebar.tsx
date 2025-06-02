@@ -115,7 +115,7 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
         }}
       >
         <FlexContainer className={styles.streamViewButtonContent} alignItems="center">
-          {generatedStreams && (
+          {generatedStreams && generatedStreams.length > 0 && (
             <Icon type={isOpen ? "chevronDown" : "chevronRight"} onClick={() => setIsOpen((isOpen) => !isOpen)} />
           )}
           {name && name.trim() ? (
@@ -127,7 +127,7 @@ const DynamicStreamViewButton: React.FC<DynamicStreamViewButtonProps> = ({ name,
           )}
         </FlexContainer>
       </ViewSelectButton>
-      {generatedStreams && isOpen && (
+      {generatedStreams && generatedStreams.length > 0 && isOpen && (
         <FlexContainer direction="column" gap="none" className={styles.generatedStreamViewContainer}>
           {generatedStreams.map((stream, index) => {
             const streamId: StreamId = { type: "generated_stream", index, dynamicStreamName: name ?? "" };
@@ -326,7 +326,12 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
       </FlexContainer>
 
       {areDynamicStreamsEnabled && (
-        <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
+        <FlexContainer
+          direction="column"
+          alignItems="stretch"
+          gap="sm"
+          className={classNames(styles.streamListContainer, styles.streamTemplateList)}
+        >
           <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
             <FlexContainer alignItems="center" gap="none">
               <Text className={styles.streamsHeading} size="xs" bold>

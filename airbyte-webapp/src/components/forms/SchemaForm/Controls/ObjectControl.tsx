@@ -140,6 +140,7 @@ export const ObjectControl = ({
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
       data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       {contents}
     </ControlGroup>
@@ -175,6 +176,7 @@ const JsonEditor = ({
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       footer={!textValue ? formatMessage({ id: "form.enterValidJson" }) : undefined}
       data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       <FlexContainer className={styles.jsonEditorContainer} direction="column" gap="md">
         <div className={styles.jsonEditor}>
@@ -182,6 +184,7 @@ const JsonEditor = ({
             key={baseProps.name}
             value={textValue}
             language="json"
+            readOnly={baseProps.disabled}
             onChange={(val: string | undefined) => {
               setTextValue(val || "");
               let parsedValue = val;

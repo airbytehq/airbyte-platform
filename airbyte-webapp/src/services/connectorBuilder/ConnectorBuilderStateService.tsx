@@ -15,12 +15,10 @@ import { CDK_VERSION } from "components/connectorBuilder/cdk";
 import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
 import {
   BuilderState,
-  BuilderStream,
   convertToManifest,
   DEFAULT_BUILDER_FORM_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-  GeneratedBuilderStream,
   GeneratedDeclarativeStream,
   isStreamDynamicStream,
   StreamId,
@@ -68,6 +66,9 @@ import {
   DeclarativeStreamType,
   AsyncRetrieverType,
   DeclarativeComponentSchemaStreamsItem,
+  DeclarativeStream,
+  InlineSchemaLoaderType,
+  InlineSchemaLoader,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
@@ -853,7 +854,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -881,7 +882,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       };
     }
   } else if (testStreamId.type === "generated_stream") {
-    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index].declarativeStream;
+    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
   } else {
     testStream = resolvedManifest.streams?.[testStreamId.index];
   }
@@ -953,39 +954,22 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     if (!resolvedManifest.data?.manifest || resolvedManifest.isError) {
       return;
     }
-    const manifestAsBuilderValues = convertToBuilderFormValuesSync(resolvedManifest.data.manifest as ConnectorManifest);
 
-    const originalStreamsByDynamicStreamNameAndName = (
+    const generatedStreamsByDynamicStreamName = (
       (resolvedManifest.data.manifest as ConnectorManifest).streams ?? []
-    ).reduce<Record<string, Record<string, GeneratedDeclarativeStream>>>((acc, stream) => {
-      if (!("dynamic_stream_name" in stream) || stream.name == null) {
+    ).reduce<Record<string, DeclarativeStream[]>>((acc, stream) => {
+      if (!("dynamic_stream_name" in stream)) {
         return acc;
       }
       const dynamicStreamKey = (stream as GeneratedDeclarativeStream).dynamic_stream_name;
       if (acc[dynamicStreamKey] == null) {
-        acc[dynamicStreamKey] = {};
+        acc[dynamicStreamKey] = [];
       }
-      acc[dynamicStreamKey][stream.name] = stream as GeneratedDeclarativeStream;
+      acc[dynamicStreamKey].push(stream);
       return acc;
     }, {});
 
-    const groupedStreams = manifestAsBuilderValues.streams.reduce<Record<string, BuilderStream[]>>((acc, stream) => {
-      if (stream.dynamicStreamName == null) {
-        return acc;
-      }
-
-      const dynamicStreamName = stream.dynamicStreamName;
-      if (!acc[dynamicStreamName]) {
-        acc[dynamicStreamName] = [];
-      }
-
-      (stream as GeneratedBuilderStream).declarativeStream =
-        originalStreamsByDynamicStreamNameAndName[dynamicStreamName][stream.name];
-      acc[dynamicStreamName].push(stream);
-      return acc;
-    }, {});
-
-    setValue("formValues.generatedStreams", groupedStreams);
+    setValue("generatedStreams", generatedStreamsByDynamicStreamName);
 
     registerNotification({
       id: "connectorBuilder.generateStreamsSuccess",
@@ -1020,13 +1004,15 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       }
 
       if (mode === "ui" && autoImportSchema && result.inferred_schema) {
-        // additionalProperties is automatically set to true on the schema when saving it to the manifest,
-        // so set it to true on the inferred schema as well to avoid unnecessary diffs
         result.inferred_schema.additionalProperties = true;
+        const schemaLoader: InlineSchemaLoader = {
+          type: "InlineSchemaLoader",
+          schema: result.inferred_schema,
+        };
 
-        // Set the inferred schema in the form values when autoImportSchema is enabled
+        // Set the inferred schema on the manifest when autoImportSchema is enabled
         if (testStreamId.type === "stream") {
-          setValue(`formValues.streams.${testStreamId.index}.schema`, formatJson(result.inferred_schema, true), {
+          setValue(`manifest.streams.${testStreamId.index}.schema_loader`, schemaLoader, {
             shouldValidate: true,
             shouldTouch: true,
             shouldDirty: true,
@@ -1045,16 +1031,12 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
           const dynamicStreamIndex = resolvedManifest.dynamic_streams?.findIndex(
             (stream) => stream.name === testStreamId.dynamicStreamName
           );
-          if (dynamicStreamIndex !== undefined) {
-            setValue(
-              `formValues.dynamicStreams.${dynamicStreamIndex}.streamTemplate.schema`,
-              formatJson(result.inferred_schema, true),
-              {
-                shouldValidate: true,
-                shouldTouch: true,
-                shouldDirty: true,
-              }
-            );
+          if (dynamicStreamIndex !== undefined && dynamicStreamIndex >= 0) {
+            setValue(`manifest.dynamic_streams.${dynamicStreamIndex}.stream_template.schema_loader`, schemaLoader, {
+              shouldValidate: true,
+              shouldTouch: true,
+              shouldDirty: true,
+            });
           }
         }
       }
@@ -1129,20 +1111,29 @@ export function useSchemaWarnings(
   streamNumber: number,
   streamName: string
 ) {
-  const streams = useBuilderWatch("formValues.streams");
-  const schema = streams[streamNumber]?.schema;
+  const stream = useBuilderWatch(`manifest.streams.${streamNumber}`);
+  const schema =
+    stream?.type === DeclarativeStreamType.DeclarativeStream
+      ? !Array.isArray(stream.schema_loader) && stream.schema_loader?.type === InlineSchemaLoaderType.InlineSchemaLoader
+        ? stream.schema_loader.schema
+        : undefined
+      : undefined;
 
-  const formattedDetectedSchema = useMemo(
-    () => streamRead.data?.inferred_schema && formatJson(streamRead.data?.inferred_schema, true),
-    [streamRead.data?.inferred_schema]
-  );
+  const formattedDetectedSchema = useMemo(() => {
+    const inferredSchema = streamRead.data?.inferred_schema;
+    if (!inferredSchema) {
+      return undefined;
+    }
+    inferredSchema.additionalProperties = true;
+    return formatJson(inferredSchema, true);
+  }, [streamRead.data?.inferred_schema]);
 
   const formattedDeclaredSchema = useMemo(() => {
     if (!schema) {
       return undefined;
     }
     try {
-      return formatJson(JSON.parse(schema), true);
+      return formatJson(schema, true);
     } catch {}
     return undefined;
   }, [schema]);

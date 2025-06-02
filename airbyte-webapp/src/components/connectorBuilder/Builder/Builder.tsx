@@ -19,6 +19,7 @@ import styles from "./Builder.module.scss";
 import { BuilderSidebar } from "./BuilderSidebar";
 import { ComponentsView } from "./ComponentsView";
 import { DynamicStreamConfigView } from "./DynamicStreamConfigView";
+import { GeneratedStreamView } from "./GeneratedStreamView";
 import { GlobalConfigView } from "./GlobalConfigView";
 import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
@@ -36,9 +37,8 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
     case "components":
       return <ComponentsView />;
     case "dynamic_stream":
-      return <DynamicStreamConfigView key={selectedView.index} streamId={selectedView} scrollToTop={scrollToTop} />;
+      return <DynamicStreamConfigView key={selectedView.index} streamId={selectedView} />;
     case "stream":
-    case "generated_stream":
       return (
         <StreamConfigView
           streamId={selectedView}
@@ -46,6 +46,8 @@ function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
           scrollToTop={scrollToTop}
         />
       );
+    case "generated_stream":
+      return <GeneratedStreamView streamId={selectedView} scrollToTop={scrollToTop} />;
     default:
       assertNever(selectedView);
   }

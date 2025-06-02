@@ -54,6 +54,7 @@ export const ArrayOfObjectsControl = ({
       error={error}
       header={baseProps.header}
       data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       {items.map((item, index) => (
         <FlexContainer key={item.id} alignItems="flex-start">
@@ -68,6 +69,7 @@ export const ArrayOfObjectsControl = ({
           <RemoveButton
             className={classNames({ [styles.removeButtonPadding]: hasGroupedItems(itemSchema) })}
             onClick={() => remove(index)}
+            disabled={baseProps.disabled}
           />
         </FlexContainer>
       ))}
@@ -78,6 +80,7 @@ export const ArrayOfObjectsControl = ({
           type="button"
           icon="plus"
           data-testid={`add-item-_${baseProps.name}`}
+          disabled={baseProps.disabled}
         >
           {itemSchema.title ? (
             <FormattedMessage id="form.addItem" values={{ itemName: itemSchema.title }} />

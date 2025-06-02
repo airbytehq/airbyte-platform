@@ -12,6 +12,7 @@ export interface BaseControlProps {
   onlyShowErrorIfTouched?: boolean;
   placeholder?: string;
   "data-field-path"?: string;
+  disabled?: boolean;
 }
 
 export type OverrideByPath = Record<string, ReactElement | null>;

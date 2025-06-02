@@ -62,7 +62,9 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, getValues } = useFormContext();
 
-  const currentStream = useBuilderWatch(getStreamFieldPath(streamId)) as DeclarativeComponentSchemaStreamsItem;
+  const currentStream = useBuilderWatch(
+    getStreamFieldPath(streamId, undefined, true)
+  ) as DeclarativeComponentSchemaStreamsItem;
   const metadata = useWatch({ name: "manifest.metadata" });
   const [prevName, setPrevName] = useState(currentStream.name);
 
@@ -77,7 +79,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       : "custom";
   }, [currentStream]);
 
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     openConfirmationModal({
       text: "connectorBuilder.deleteStreamModal.text",
       title: "connectorBuilder.deleteStreamModal.title",
@@ -101,11 +103,19 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
         });
       },
     });
-  };
+  }, [
+    analyticsService,
+    closeConfirmationModal,
+    currentStream.name,
+    getValues,
+    openConfirmationModal,
+    setValue,
+    streamId,
+  ]);
 
   // Copy over stream metadata when renaming
   useEffect(() => {
-    if (!currentStream.name) {
+    if (!currentStream.name || streamId.type !== "stream") {
       return;
     }
     if (metadata && prevName && currentStream.name !== prevName) {
@@ -121,7 +131,7 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
       setValue("manifest.metadata", newMetadata);
     }
     setPrevName(currentStream.name);
-  }, [currentStream.name, prevName, metadata, setValue]);
+  }, [currentStream.name, prevName, metadata, setValue, streamId.type]);
 
   return (
     <BuilderConfigView className={styles.relative}>
@@ -188,7 +198,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
   const { setValue } = useFormContext();
   const { hasErrors } = useBuilderErrors();
 
-  const streamFieldPath = useCallback((fieldPath?: string) => getStreamFieldPath(streamId, fieldPath), [streamId]);
+  const streamFieldPath = useCallback(
+    (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath, true),
+    [streamId]
+  );
   const name = useBuilderWatch(streamFieldPath("name")) as string | undefined;
 
   useEffect(() => {
@@ -220,27 +233,24 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             }}
           />
         </FlexContainer>
-        <RetrievalTypeSelector streamFieldPath={streamFieldPath} streamName={name ?? ""} selectedValue="sync" />
+        <RetrievalTypeSelector
+          streamFieldPath={streamFieldPath}
+          streamName={name ?? ""}
+          selectedValue="sync"
+          disabled={streamId.type === "generated_stream"}
+        />
       </FlexContainer>
-      <fieldset
-        disabled={permission === "readOnly" || streamId.type === "generated_stream"}
-        className={styles.fieldset}
-      >
-        {/* {streamId.type === "dynamic_stream" && (
-          //   <StreamCard>
-          //     <SchemaFormControl
-          //       path={streamFieldPath("name.stream_template")}
-          //       titleOverride={null}
-          //       className={styles.streamNameInput}
-          //       placeholder="Enter stream name"
-          //     />
-          //   </StreamCard>
-          // )} */}
+      <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
         <FlexContainer
           direction="column"
           className={classNames({ [styles.hidden]: streamTab !== "requester" })}
           data-stream-tab="requester"
         >
+          {streamId.type === "dynamic_stream" && (
+            <StreamCard>
+              <SchemaFormControl path={streamFieldPath("name")} isRequired />
+            </StreamCard>
+          )}
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.requester.url_base")} />
@@ -267,7 +277,10 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
             <SchemaFormControl path={streamFieldPath("retriever.paginator")} />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("incremental_sync")} />
+            <SchemaFormControl
+              path={streamFieldPath("incremental_sync")}
+              nonAdvancedFields={NON_ADVANCED_INCREMENTAL_FIELDS}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
@@ -291,28 +304,8 @@ const SynchronousStream: React.FC<SynchronousStreamProps> = ({ streamId, scrollT
           className={classNames({ [styles.hidden]: streamTab !== "schema" })}
           data-stream-tab="schema"
         >
-          <SchemaEditor streamFieldPath={streamFieldPath} />
+          <SchemaEditor streamId={streamId} streamFieldPath={streamFieldPath} />
         </FlexContainer>
-        {/* ) : // ) : streamTab === "schema" ? (
-        //   <BuilderCard className={styles.schemaEditor}>
-        //     <SchemaEditor
-        //       streamFieldPath={
-        //         streamId.type === "generated_stream"
-        //           ? (((field: string) =>
-        //               getStreamFieldPath(
-        //                 {
-        //                   type: "dynamic_stream",
-        //                   index: dynamicStreams.findIndex(
-        //                     (stream) => stream.dynamicStreamName === streamId.dynamicStreamName
-        //                   ),
-        //                 },
-        //                 field
-        //               )) as AnyDeclarativeStreamPathFn)
-        //           : streamFieldPath
-        //       }
-        //     />
-        //   </BuilderCard>
-        null} */}
       </fieldset>
     </>
   );
@@ -330,7 +323,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
   const { setValue } = useFormContext();
   const { hasErrors } = useBuilderErrors();
 
-  const streamFieldPath = useCallback((fieldPath?: string) => getStreamFieldPath(streamId, fieldPath), [streamId]);
+  const streamFieldPath = useCallback(
+    (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath, true),
+    [streamId]
+  );
   const name = useBuilderWatch(streamFieldPath("name")) as string | undefined;
 
   useEffect(() => {
@@ -344,8 +340,6 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
       setValue("streamTab", "requester");
     }
   }, [setValue, streamId, streamTab, view]);
-
-  // const tabContentKey = useMemo(() => `${streamId.index}-${streamTab}`, [streamId.index, streamTab]);
 
   return (
     <>
@@ -390,17 +384,24 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             }}
           />
         </FlexContainer>
-        <RetrievalTypeSelector streamFieldPath={streamFieldPath} streamName={name ?? ""} selectedValue="async" />
+        <RetrievalTypeSelector
+          streamFieldPath={streamFieldPath}
+          streamName={name ?? ""}
+          selectedValue="async"
+          disabled={streamId.type === "generated_stream"}
+        />
       </FlexContainer>
-      <fieldset
-        disabled={permission === "readOnly" || streamId.type === "generated_stream"}
-        className={styles.fieldset}
-      >
+      <fieldset disabled={permission === "readOnly"} className={styles.fieldset}>
         <FlexContainer
           direction="column"
           className={classNames({ [styles.hidden]: streamTab !== "requester" })}
           data-stream-tab="requester"
         >
+          {streamId.type === "dynamic_stream" && (
+            <StreamCard>
+              <SchemaFormControl path={streamFieldPath("name")} isRequired />
+            </StreamCard>
+          )}
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.url")} isRequired />
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.http_method")} />
@@ -418,7 +419,10 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
             <SchemaFormControl path={streamFieldPath("retriever.creation_requester.request_body")} />
           </StreamCard>
           <StreamCard>
-            <SchemaFormControl path={streamFieldPath("incremental_sync")} />
+            <SchemaFormControl
+              path={streamFieldPath("incremental_sync")}
+              nonAdvancedFields={NON_ADVANCED_INCREMENTAL_FIELDS}
+            />
           </StreamCard>
           <StreamCard>
             <SchemaFormControl path={streamFieldPath("retriever.partition_router")} />
@@ -515,7 +519,7 @@ const AsynchronousStream: React.FC<AsynchronousStreamProps> = ({ streamId, scrol
           className={classNames({ [styles.hidden]: streamTab !== "schema" })}
           data-stream-tab="schema"
         >
-          <SchemaEditor streamFieldPath={streamFieldPath} />
+          <SchemaEditor streamId={streamId} streamFieldPath={streamFieldPath} />
         </FlexContainer>
       </fieldset>
     </>
@@ -527,10 +531,12 @@ const RetrievalTypeSelector = ({
   streamFieldPath,
   streamName,
   selectedValue,
+  disabled,
 }: {
   streamFieldPath: (fieldPath?: string) => string;
   streamName: string;
   selectedValue: RetrievalType;
+  disabled?: boolean;
 }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { setValue, getValues } = useFormContext();
@@ -606,6 +612,7 @@ const RetrievalTypeSelector = ({
         adaptiveWidth={false}
         flip={false}
         buttonClassName={styles.requestTypeButton}
+        isDisabled={disabled}
       />
     </FlexContainer>
   );
@@ -680,7 +687,13 @@ const SchemaTab = ({
   );
 };
 
-const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath?: string) => string }) => {
+const SchemaEditor = ({
+  streamId,
+  streamFieldPath,
+}: {
+  streamId: StreamId;
+  streamFieldPath: (fieldPath?: string) => string;
+}) => {
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const { streamRead } = useConnectorBuilderTestRead();
@@ -706,24 +719,28 @@ const SchemaEditor = ({ streamFieldPath }: { streamFieldPath: (fieldPath?: strin
 
   return (
     <Card className={classNames({ [styles.card]: !autoImportSchema })}>
-      <FormControl
-        label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
-        name={autoImportSchemaPath}
-        fieldType="switch"
-        labelTooltip={<FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />}
-        onChange={(e) => {
-          if (e.target.checked) {
-            setValue(schemaLoaderPath, {
-              type: InlineSchemaLoaderType.InlineSchemaLoader,
-              schema: inferredSchema,
-            });
+      {streamId.type !== "generated_stream" && (
+        <FormControl
+          label={formatMessage({ id: "connectorBuilder.autoImportSchema.label" })}
+          name={autoImportSchemaPath}
+          fieldType="switch"
+          labelTooltip={
+            <FormattedMessage id="connectorBuilder.autoImportSchema.tooltip" values={{ br: () => <br /> }} />
           }
-        }}
-      />
+          onChange={(e) => {
+            if (e.target.checked) {
+              setValue(schemaLoaderPath, {
+                type: InlineSchemaLoaderType.InlineSchemaLoader,
+                schema: inferredSchema,
+              });
+            }
+          }}
+        />
+      )}
       <SchemaFormControl
         path={schemaLoaderPath}
         overrideByPath={
-          autoImportSchema
+          streamId.type !== "generated_stream" && autoImportSchema
             ? {
                 [schemaLoaderPath]: (
                   <div className={styles.autoSchemaContainer}>
@@ -768,6 +785,21 @@ const NON_ADVANCED_AUTH_FIELDS = [
   "authenticator_selection_path",
   "authenticators",
   "class_name",
+];
+
+const NON_ADVANCED_INCREMENTAL_FIELDS = [
+  "cursor_field",
+  "cursor_datetime_formats",
+  "datetime_format",
+  "start_datetime.datetime",
+  "start_datetime.datetime_format",
+  "start_time_option",
+  "end_datetime.datetime",
+  "end_datetime.datetime_format",
+  "end_time_option",
+  "datetime_format",
+  "cursor_granularity",
+  "step",
 ];
 
 interface CollapsedControlsProps {

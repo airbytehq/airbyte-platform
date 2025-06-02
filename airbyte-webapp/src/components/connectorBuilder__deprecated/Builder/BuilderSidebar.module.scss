@@ -101,3 +101,7 @@
   padding: variables.$spacing-xs variables.$spacing-sm;
   border-radius: variables.$border-radius-md;
 }
+
+.streamTemplateList {
+  min-height: 70px;
+}

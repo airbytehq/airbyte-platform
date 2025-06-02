@@ -39,7 +39,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const analyticsService = useAnalyticsService();
   const [openModal, setOpenModal] = useState<PublishType | false>(false);
   const mode = useBuilderWatch("mode");
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
+  const dynamicStreams = useBuilderWatch("manifest.dynamic_streams");
 
   let buttonDisabled = permission === "readOnly";
   let tooltipContent = undefined;
@@ -76,9 +76,12 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
       .map((streamName) => streamName);
   }, [getStreamTestWarnings, streamNames]);
   const dynamicStreamsWithWarnings = useMemo(() => {
+    if (!dynamicStreams) {
+      return [];
+    }
     return dynamicStreams
       .filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
-      .map(({ dynamicStreamName }) => dynamicStreamName);
+      .map(({ name }) => name);
   }, [getStreamTestWarnings, dynamicStreams]);
   const namesWithWarnings = useMemo(() => {
     return [...dynamicStreamsWithWarnings, ...streamsWithWarnings];

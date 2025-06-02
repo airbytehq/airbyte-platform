@@ -33,6 +33,8 @@ interface BaseSchemaFormProps<JsonSchema extends AirbyteJsonSchema> {
   schema: JsonSchema;
   refTargetPath?: string;
   onlyShowErrorIfTouched?: boolean;
+  disableFormControls?: boolean;
+  disableValidation?: boolean;
 }
 
 type RootSchemaFormProps<
@@ -54,6 +56,8 @@ const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends F
   initialValues,
   refTargetPath,
   onlyShowErrorIfTouched,
+  disableFormControls,
+  disableValidation,
 }: React.PropsWithChildren<RootSchemaFormProps<JsonSchema, TsSchema>>) => {
   const rawStartingValues = useMemo(
     () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(schema, schema),
@@ -89,8 +93,12 @@ const RootSchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extends F
 
   return (
     <FormProvider {...methods}>
-      <SchemaFormProvider schema={schema} onlyShowErrorIfTouched={onlyShowErrorIfTouched}>
-        <DynamicValidator />
+      <SchemaFormProvider
+        schema={schema}
+        onlyShowErrorIfTouched={onlyShowErrorIfTouched}
+        disableFormControls={disableFormControls}
+      >
+        {!disableValidation && <DynamicValidator />}
         <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
           <form onSubmit={methods.handleSubmit(processSubmission)}>{children}</form>
         </RefsHandlerProvider>
@@ -109,6 +117,8 @@ const NestedSchemaForm = <JsonSchema extends AirbyteJsonSchema>({
   nestedUnderPath,
   refTargetPath,
   onlyShowErrorIfTouched,
+  disableFormControls,
+  disableValidation,
 }: React.PropsWithChildren<NestedSchemaFormProps<JsonSchema>>) => {
   const { getValues } = useFormContext();
   const rawStartingValues = useMemo(() => getValues(nestedUnderPath), [getValues, nestedUnderPath]);
@@ -118,8 +128,9 @@ const NestedSchemaForm = <JsonSchema extends AirbyteJsonSchema>({
       schema={schema}
       nestedUnderPath={nestedUnderPath}
       onlyShowErrorIfTouched={onlyShowErrorIfTouched}
+      disableFormControls={disableFormControls}
     >
-      <DynamicValidator nestedUnderPath={nestedUnderPath} />
+      {!disableValidation && <DynamicValidator nestedUnderPath={nestedUnderPath} />}
       <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
         {children}
       </RefsHandlerProvider>
@@ -147,6 +158,7 @@ interface SchemaFormContextValue {
   registerRenderedPath: (path: string) => void;
   isPathRendered: (path: string) => boolean;
   isRequired: (path: string) => boolean;
+  disableFormControls?: boolean;
 }
 const SchemaFormContext = createContext<SchemaFormContextValue | undefined>(undefined);
 export const useSchemaForm = () => {
@@ -161,12 +173,14 @@ interface SchemaFormProviderProps {
   schema: AirbyteJsonSchema;
   onlyShowErrorIfTouched?: boolean;
   nestedUnderPath?: string;
+  disableFormControls?: boolean;
 }
 const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderProps>> = ({
   children,
   schema,
   onlyShowErrorIfTouched,
   nestedUnderPath,
+  disableFormControls,
 }) => {
   const { getValues } = useFormContext();
   // Use a ref instead of state for rendered paths to prevent temporarily rendering fields twice
@@ -258,6 +272,7 @@ const SchemaFormProvider: React.FC<React.PropsWithChildren<SchemaFormProviderPro
         registerRenderedPath,
         isPathRendered,
         isRequired,
+        disableFormControls,
       }}
     >
       {children}

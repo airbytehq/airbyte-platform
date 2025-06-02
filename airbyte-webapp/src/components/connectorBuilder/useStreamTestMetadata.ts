@@ -11,6 +11,7 @@ import { ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem } from 
 import {
   DeclarativeComponentSchemaStreamsItem,
   DeclarativeStreamType,
+  DynamicDeclarativeStream,
   PrimaryKey,
 } from "core/api/types/ConnectorManifest";
 import {
@@ -18,15 +19,7 @@ import {
   useConnectorBuilderFormState,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import {
-  BuilderDynamicStream,
-  BuilderMetadata,
-  GeneratedBuilderStream,
-  GeneratedStreamId,
-  StaticStreamId,
-  StreamId,
-  StreamTestResults,
-} from "./types";
+import { BuilderMetadata, BuilderState, GeneratedStreamId, StaticStreamId, StreamId, StreamTestResults } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
 import { formatJson } from "./utils";
 
@@ -41,16 +34,12 @@ export interface TestWarning {
 
 function useResolveStreamFromStreamId() {
   const { resolvedManifest } = useConnectorBuilderFormState();
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
 
   return (streamId: StaticStreamId | GeneratedStreamId) => {
     const resolvedStream =
       streamId.type === "generated_stream"
-        ? generatedStreams?.[
-            dynamicStreams?.find((dynamicStream) => dynamicStream.dynamicStreamName === streamId.dynamicStreamName)
-              ?.dynamicStreamName ?? ""
-          ]?.at(streamId.index)?.declarativeStream
+        ? generatedStreams?.[streamId.dynamicStreamName]?.at(streamId.index)
         : resolvedManifest?.streams?.[streamId.index];
 
     return resolvedStream;
@@ -68,8 +57,8 @@ export const useStreamTestMetadata = () => {
     throw new Error("rhf context not available");
   }
   const { setValue } = useFormContext();
-  const dynamicStreams: BuilderDynamicStream[] = watch("formValues.dynamicStreams");
-  const generatedStreams: Record<string, GeneratedBuilderStream[]> = watch("formValues.generatedStreams");
+  const dynamicStreams: DynamicDeclarativeStream[] = watch("manifest.dynamic_streams");
+  const generatedStreams: BuilderState["generatedStreams"] = watch("generatedStreams");
   const { formatMessage } = useIntl();
 
   const getStreamNameFromIndex = useCallback(
@@ -140,7 +129,7 @@ export const useStreamTestMetadata = () => {
     (streamId: StreamId, ignoreStale: boolean = false): TestWarning[] => {
       if (streamId.type === "dynamic_stream") {
         const dynamicStream = dynamicStreams?.find((_, index) => index === streamId.index);
-        const thisGeneratedStreams = generatedStreams?.[dynamicStream?.dynamicStreamName ?? ""] ?? [];
+        const thisGeneratedStreams = generatedStreams?.[dynamicStream?.name ?? ""] ?? [];
 
         // if the dynamic stream has no generated streams
         if (thisGeneratedStreams.length === 0) {
@@ -153,7 +142,16 @@ export const useStreamTestMetadata = () => {
         }
 
         // if all generated streams are untested
-        if (thisGeneratedStreams.every((stream) => stream.testResults == null)) {
+        if (
+          thisGeneratedStreams.every(
+            (_, index) =>
+              getStreamTestMetadataStatus({
+                type: "generated_stream",
+                dynamicStreamName: dynamicStream?.name ?? "",
+                index,
+              }) === null
+          )
+        ) {
           return [
             {
               message: formatMessage({ id: "connectorBuilder.warnings.untestedDynamicStream" }),
@@ -165,7 +163,7 @@ export const useStreamTestMetadata = () => {
         const generatedStreamIds: GeneratedStreamId[] = thisGeneratedStreams.map((_stream, index) => {
           return {
             type: "generated_stream",
-            dynamicStreamName: dynamicStream?.dynamicStreamName ?? "",
+            dynamicStreamName: dynamicStream?.name ?? "",
             index,
           };
         });

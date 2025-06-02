@@ -77,6 +77,7 @@ export const SchemaFormControl = ({
     nestedUnderPath,
     verifyArrayItems,
     isRequired: isPathRequired,
+    disableFormControls,
   } = useSchemaForm();
 
   const targetPath = useMemo(() => nestPath(path, nestedUnderPath), [nestedUnderPath, path]);
@@ -133,6 +134,7 @@ export const SchemaFormControl = ({
     onlyShowErrorIfTouched,
     placeholder,
     "data-field-path": path,
+    disabled: disableFormControls,
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {

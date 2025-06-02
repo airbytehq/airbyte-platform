@@ -121,6 +121,7 @@ export const MultiOptionControl = ({
       control={
         <ListBox
           className={classNames({ [styles.listBoxError]: !!displayError })}
+          isDisabled={baseProps.disabled}
           options={displayOptions.map((option) => ({
             label: `${getOptionLabel(option)} ${option.deprecated ? " (Deprecated)" : ""}`,
             value: getOptionLabel(option),
@@ -143,6 +144,7 @@ export const MultiOptionControl = ({
         />
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
+      disabled={baseProps.disabled}
     >
       {renderOptionContents(
         baseProps,

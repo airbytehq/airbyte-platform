@@ -307,7 +307,12 @@ export const BuilderSidebar: React.FC<BuilderSidebarProps> = () => {
       </FlexContainer>
 
       {areDynamicStreamsEnabled && (
-        <FlexContainer direction="column" alignItems="stretch" gap="sm" className={styles.streamListContainer}>
+        <FlexContainer
+          direction="column"
+          alignItems="stretch"
+          gap="sm"
+          className={classNames(styles.streamListContainer, styles.streamTemplateList)}
+        >
           <FlexContainer className={styles.streamsHeader} alignItems="center" justifyContent="space-between">
             <FlexContainer alignItems="center" gap="none">
               <Text className={styles.streamsHeading} size="xs" bold>
