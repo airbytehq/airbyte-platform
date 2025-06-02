@@ -6,6 +6,8 @@ package io.airbyte.container.orchestrator.config
 
 import io.airbyte.commons.concurrency.VoidCallable
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.logging.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogMdcHelper
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.commons.storage.DocumentType
@@ -202,8 +204,16 @@ class CommonBeanFactory {
 
   @Singleton
   @Named("replicationMdcScopeBuilder")
-  fun replicationMdcScopeBuilder(): MdcScope.Builder =
+  fun replicationMdcScopeBuilder(
+    @Named("jobRoot") jobRoot: Path,
+    logMdcHelper: LogMdcHelper,
+  ): MdcScope.Builder =
     MdcScope
       .Builder()
-      .setExtraMdcEntries(LogSource.REPLICATION_ORCHESTRATOR.toMdc())
+      .setExtraMdcEntries(
+        mapOf(
+          LOG_SOURCE_MDC_KEY to LogSource.REPLICATION_ORCHESTRATOR.displayName,
+          logMdcHelper.getJobLogPathMdcKey() to logMdcHelper.fullLogPath(jobRoot),
+        ),
+      )
 }

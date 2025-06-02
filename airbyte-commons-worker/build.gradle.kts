@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.s3)
   implementation(libs.sts)
   implementation(libs.kotlin.coroutines)
+  implementation(libs.kotlin.coroutines.sl4j)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))

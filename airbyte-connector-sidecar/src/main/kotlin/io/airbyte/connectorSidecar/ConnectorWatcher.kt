@@ -216,14 +216,14 @@ class ConnectorWatcher(
       integrationLauncherConfig.protocolVersion
         ?: AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION
     return VersionedAirbyteStreamFactory<Any>(
-      serDeProvider,
-      airbyteProtocolVersionedMigratorFactory,
-      protocolVersion,
-      Optional.empty(),
-      Optional.empty(),
-      InvalidLineFailureConfiguration(false),
-      gsonPksExtractor,
-      metricClient,
+      serDeProvider = serDeProvider,
+      migratorFactory = airbyteProtocolVersionedMigratorFactory,
+      protocolVersion = protocolVersion,
+      connectionId = Optional.empty(),
+      configuredAirbyteCatalog = Optional.empty(),
+      invalidLineFailureConfiguration = InvalidLineFailureConfiguration(false),
+      gsonPksExtractor = gsonPksExtractor,
+      metricClient = metricClient,
     )
   }
 

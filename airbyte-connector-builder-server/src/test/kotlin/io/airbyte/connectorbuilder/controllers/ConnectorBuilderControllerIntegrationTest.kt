@@ -6,6 +6,13 @@ package io.airbyte.connectorbuilder.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.protocol.AirbyteMessageMigrator
+import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
+import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
+import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer
+import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.commandrunner.MockSynchronousPythonCdkCommandRunner
@@ -23,6 +30,7 @@ import io.airbyte.connectorbuilder.handlers.ResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.StreamHandler
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequesterImpl
 import io.airbyte.connectorbuilder.templates.ContributionTemplates
+import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.mockk.mockk
@@ -39,6 +47,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.Optional
 
 internal class ConnectorBuilderControllerIntegrationTest {
   private lateinit var healthHandler: HealthHandler
@@ -51,7 +60,26 @@ internal class ConnectorBuilderControllerIntegrationTest {
   fun setup() {
     healthHandler = mockk()
     writer = MockAirbyteFileWriterImpl()
-    streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(mockk(relaxed = true))
+
+    val serDeProvider = AirbyteMessageSerDeProvider(listOf(AirbyteMessageV0Deserializer()), listOf(AirbyteMessageV0Serializer()))
+    serDeProvider.initialize()
+    val airbyteMessageMigrator = AirbyteMessageMigrator(listOf())
+    airbyteMessageMigrator.initialize()
+    val configuredAirbyteCatalogMigrator = ConfiguredAirbyteCatalogMigrator(listOf())
+    configuredAirbyteCatalogMigrator.initialize()
+    val migratorFactory = AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator)
+
+    streamFactory =
+      VersionedAirbyteStreamFactory<Any>(
+        serDeProvider = serDeProvider,
+        migratorFactory = migratorFactory,
+        protocolVersion = AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
+        connectionId = Optional.empty(),
+        configuredAirbyteCatalog = Optional.empty(),
+        invalidLineFailureConfiguration = VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
+        gsonPksExtractor = GsonPksExtractor(),
+        metricClient = mockk(relaxed = true),
+      )
     contributionTemplates = ContributionTemplates()
     assistProxyHandler = mockk()
   }

@@ -4,6 +4,8 @@
 
 package io.airbyte.container.orchestrator.config
 
+import io.airbyte.commons.logging.LOG_SOURCE_MDC_KEY
+import io.airbyte.commons.logging.LogMdcHelper
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
@@ -31,6 +33,7 @@ import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.micronaut.context.annotation.Factory
 import jakarta.inject.Named
 import jakarta.inject.Singleton
+import java.nio.file.Path
 import java.util.Optional
 
 /**
@@ -50,15 +53,15 @@ class ConnectorBeanFactory {
     serDeProvider: AirbyteMessageSerDeProvider,
   ): AirbyteStreamFactory =
     VersionedAirbyteStreamFactory<Any>(
-      serDeProvider,
-      migratorFactory,
-      replicationInput.destinationLauncherConfig.protocolVersion ?: AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
-      Optional.of(replicationInput.destinationLauncherConfig.connectionId),
-      Optional.of(replicationInput.catalog),
-      mdcScopeBuilder,
-      invalidLineFailureConfiguration,
-      gsonPksExtractor,
-      metricClient,
+      serDeProvider = serDeProvider,
+      migratorFactory = migratorFactory,
+      protocolVersion = replicationInput.destinationLauncherConfig.protocolVersion ?: AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
+      connectionId = Optional.of(replicationInput.destinationLauncherConfig.connectionId),
+      configuredAirbyteCatalog = Optional.of(replicationInput.catalog),
+      containerLogMdcBuilder = mdcScopeBuilder,
+      invalidLineFailureConfiguration = invalidLineFailureConfiguration,
+      gsonPksExtractor = gsonPksExtractor,
+      metricClient = metricClient,
     )
 
   @Singleton
@@ -102,10 +105,18 @@ class ConnectorBeanFactory {
 
   @Singleton
   @Named("destinationMdcScopeBuilder")
-  fun destinationMdcScopeBuilder(): MdcScope.Builder =
+  fun destinationMdcScopeBuilder(
+    @Named("jobRoot") jobRoot: Path,
+    logMdcHelper: LogMdcHelper,
+  ): MdcScope.Builder =
     MdcScope
       .Builder()
-      .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
+      .setExtraMdcEntries(
+        mapOf(
+          LOG_SOURCE_MDC_KEY to LogSource.DESTINATION.displayName,
+          logMdcHelper.getJobLogPathMdcKey() to logMdcHelper.fullLogPath(jobRoot),
+        ),
+      )
 
   @Singleton
   fun invalidLineFailureConfiguration(replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader) =
@@ -115,10 +126,18 @@ class ConnectorBeanFactory {
 
   @Singleton
   @Named("sourceMdcScopeBuilder")
-  fun sourceMdcScopeBuilder(): MdcScope.Builder =
+  fun sourceMdcScopeBuilder(
+    @Named("jobRoot") jobRoot: Path,
+    logMdcHelper: LogMdcHelper,
+  ): MdcScope.Builder =
     MdcScope
       .Builder()
-      .setExtraMdcEntries(LogSource.SOURCE.toMdc())
+      .setExtraMdcEntries(
+        mapOf(
+          LOG_SOURCE_MDC_KEY to LogSource.SOURCE.displayName,
+          logMdcHelper.getJobLogPathMdcKey() to logMdcHelper.fullLogPath(jobRoot),
+        ),
+      )
 
   @Singleton
   @Named("sourceStreamFactory")
@@ -132,14 +151,14 @@ class ConnectorBeanFactory {
     serDeProvider: AirbyteMessageSerDeProvider,
   ): AirbyteStreamFactory =
     VersionedAirbyteStreamFactory<Any>(
-      serDeProvider,
-      migratorFactory,
-      replicationInput.sourceLauncherConfig.protocolVersion ?: AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
-      Optional.of(replicationInput.sourceLauncherConfig.connectionId),
-      Optional.of(replicationInput.catalog),
-      mdcScopeBuilder,
-      invalidLineFailureConfiguration,
-      gsonPksExtractor,
-      metricClient,
+      serDeProvider = serDeProvider,
+      migratorFactory = migratorFactory,
+      protocolVersion = replicationInput.sourceLauncherConfig.protocolVersion ?: AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
+      connectionId = Optional.of(replicationInput.sourceLauncherConfig.connectionId),
+      configuredAirbyteCatalog = Optional.of(replicationInput.catalog),
+      containerLogMdcBuilder = mdcScopeBuilder,
+      invalidLineFailureConfiguration = invalidLineFailureConfiguration,
+      gsonPksExtractor = gsonPksExtractor,
+      metricClient = metricClient,
     )
 }
