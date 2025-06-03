@@ -90,7 +90,6 @@ export default defineConfig(() => {
     envPrefix: ["REACT_APP_"],
     clearScreen: false,
     build: {
-      sourcemap: true,
       outDir: "build/app",
       rollupOptions: {
         input: {
