@@ -10,5 +10,5 @@ export const signOut = async (page: Page) => {
     await page.locator('[data-testid="sidebar.signout"]').click();
   }
 
-  await expect(page).toHaveTitle(/Airbyte | Log in/);
+  expect(page.url()).not.toContain("workspaces");
 };

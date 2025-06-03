@@ -11,13 +11,15 @@ import { Message } from "components/ui/Message";
 import { Modal, ModalBody, ModalFooter } from "components/ui/Modal";
 
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderField } from "./BuilderField";
 import styles from "./InputsForm.module.scss";
-import { BuilderFormInput, BuilderFormValues } from "../types";
+import { convertToBuilderFormInputs, convertToConnectionSpecification } from "./InputsView";
+import { BuilderFormInput } from "../types";
 
 export const supportedTypes = ["string", "integer", "number", "array", "boolean", "enum", "date", "date-time"] as const;
 
@@ -84,9 +86,16 @@ export const InputForm = ({
   if (!setValue || !watch) {
     throw new Error("rhf context not available");
   }
-  const formValues: BuilderFormValues = watch("formValues");
+  const manifest: ConnectorManifest | null = watch("manifest");
+  const builderFormInputs: BuilderFormInput[] = useMemo(
+    () => convertToBuilderFormInputs(manifest?.spec),
+    [manifest?.spec]
+  );
   const testingValues: ConnectorBuilderProjectTestingValues = watch("testingValues");
-  const usedKeys = useMemo(() => formValues.inputs.map((input) => input.key), [formValues.inputs]);
+  const usedKeys = useMemo(
+    () => (builderFormInputs ? builderFormInputs.map((input) => input.key) : []),
+    [builderFormInputs]
+  );
   const inputInEditValidation = useMemo(
     () =>
       yup.object().shape({
@@ -116,9 +125,9 @@ export const InputForm = ({
     mode: "onChange",
   });
   const onSubmit = async (inputInEditing: InputInEditing) => {
-    const previousInput = formValues.inputs.find((input) => input.key === inputInEditing.previousKey);
+    const previousInput = builderFormInputs.find((input) => input.key === inputInEditing.previousKey);
     const newInput = inputInEditingToFormInput(inputInEditing);
-    await adjustBuilderInputs(inputInEditing, setValue, formValues, newInput);
+    await adjustBuilderInputs(inputInEditing, setValue, newInput, builderFormInputs, manifest);
     adjustTestingValues(newInput, previousInput, setValue, testingValues);
 
     onClose(newInput);
@@ -147,8 +156,8 @@ export const InputForm = ({
         inputInEditing={inputInEditing}
         onDelete={() => {
           setValue(
-            "formValues.inputs",
-            formValues.inputs.filter((input) => input.key !== inputInEditing.key)
+            "manifest.spec.connection_specification",
+            convertToConnectionSpecification(builderFormInputs.filter((input) => input.key !== inputInEditing.key))
           );
           setValue(
             "testingValues",
@@ -214,30 +223,47 @@ function adjustTestingValues(
 async function adjustBuilderInputs(
   inputInEditing: InputInEditing,
   setValue: UseFormSetValue<FieldValues>,
-  formValues: BuilderFormValues,
-  newInput: BuilderFormInput
+  newInput: BuilderFormInput,
+  currentBuilderFormInputs: BuilderFormInput[],
+  manifest: ConnectorManifest | null
 ) {
   if (inputInEditing.isNew) {
-    setValue("formValues.inputs", [...formValues.inputs, newInput]);
+    setValue(
+      "manifest.spec.connection_specification",
+      convertToConnectionSpecification([...currentBuilderFormInputs, newInput])
+    );
   } else if (inputInEditing.key === inputInEditing.previousKey) {
     setValue(
-      "formValues.inputs",
-      formValues.inputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
+      "manifest.spec.connection_specification",
+      convertToConnectionSpecification(
+        currentBuilderFormInputs.map((input) => (input.key === inputInEditing.key ? newInput : input))
+      )
     );
   } else {
-    await updateInputKeyAndReferences(inputInEditing.previousKey!, newInput, formValues, setValue);
+    await updateInputKeyAndReferences(
+      inputInEditing.previousKey!,
+      newInput,
+      currentBuilderFormInputs,
+      setValue,
+      manifest
+    );
   }
 }
 
 async function updateInputKeyAndReferences(
   previousKey: string,
   newInput: BuilderFormInput,
-  formValues: BuilderFormValues,
-  setValue: UseFormSetValue<FieldValues>
+  currentBuilderFormInputs: BuilderFormInput[],
+  setValue: UseFormSetValue<FieldValues>,
+  manifest: ConnectorManifest | null
 ) {
-  const newInputs = formValues.inputs.map((input) => (input.key === previousKey ? newInput : input));
+  if (!manifest) {
+    return;
+  }
+  const newInputs = currentBuilderFormInputs.map((input) => (input.key === previousKey ? newInput : input));
+  const newConnectionSpecification = convertToConnectionSpecification(newInputs);
 
-  const stringifiedFormValues = JSON.stringify(formValues);
+  const stringifiedManifest = JSON.stringify(manifest);
   const escapedPreviousKey = escapeStringRegexp(previousKey);
 
   // replace {{ ... config.key ... }} style references
@@ -245,7 +271,7 @@ async function updateInputKeyAndReferences(
     `(?<prefix>{{[^}]*?config\\.)(${escapedPreviousKey})(?<suffix>((\\s|\\.).*?)?}})`,
     "g"
   );
-  const dotReferencesReplaced = stringifiedFormValues.replaceAll(
+  const dotReferencesReplaced = stringifiedManifest.replaceAll(
     interpolatedConfigReferenceRegexDot,
     `$<prefix>${newInput.key}$<suffix>`
   );
@@ -260,10 +286,15 @@ async function updateInputKeyAndReferences(
     `$<prefix>${newInput.key}$<suffix>`
   );
 
+  // TODO: update advanced_auth as well
+
   const parsedUpdatedFormValues = JSON.parse(bracketReferencesReplaced);
-  setValue("formValues", {
+  setValue("manifest", {
     ...parsedUpdatedFormValues,
-    inputs: newInputs,
+    spec: {
+      ...parsedUpdatedFormValues.spec,
+      connection_specification: newConnectionSpecification,
+    },
   });
 }
 

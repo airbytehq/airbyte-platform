@@ -51,7 +51,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {

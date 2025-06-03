@@ -12,6 +12,8 @@ import React, { useMemo, useState, useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { FormControl } from "components/forms";
+import { FormControlErrorMessage, FormControlFooter } from "components/forms/FormControl";
 import { ControlLabels } from "components/LabeledControl";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -20,21 +22,26 @@ import { Icon } from "components/ui/Icon";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { Spec, SpecConnectionSpecification } from "core/api/types/ConnectorManifest";
+import {
+  useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
+} from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
-import { BuilderField } from "./BuilderField";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
 import { InputForm, InputInEditing, newInputInEditing, supportedTypes } from "./InputsForm";
 import styles from "./InputsView.module.scss";
+import { SecretField } from "./SecretField";
 import { BuilderFormInput } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 
 export const InputsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const inputs = useBuilderWatch("formValues.inputs");
+  const spec = useBuilderWatch("manifest.spec");
+  const inputs = useMemo(() => convertToBuilderFormInputs(spec), [spec]);
   const { setValue } = useFormContext();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const [inputInEditing, setInputInEditing] = useState<InputInEditing | undefined>(undefined);
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -54,7 +61,10 @@ export const InputsView: React.FC = () => {
     if (over !== null && active.id !== over.id) {
       const oldIndex = inputs.findIndex((input) => input.key === active.id.toString());
       const newIndex = inputs.findIndex((input) => input.key === over.id.toString());
-      setValue("formValues.inputs", arrayMove(inputs, oldIndex, newIndex));
+      setValue(
+        "manifest.spec.connection_specification",
+        convertToConnectionSpecification(arrayMove(inputs, oldIndex, newIndex))
+      );
     }
   };
 
@@ -136,7 +146,7 @@ interface SortableInputProps {
 
 const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEditing }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const canEdit = permission !== "readOnly";
 
   const style = {
@@ -197,32 +207,49 @@ const InputFormControl = ({
   openInputForm: () => void;
 }) => {
   const { toggleUI } = useConnectorBuilderFormState();
+  const { setValue } = useFormContext();
   const { definition } = builderInput;
   const fieldPath = `testingValues.${builderInput.key}`;
-
+  const value = useBuilderWatch(fieldPath);
   switch (definition.type) {
     case "string": {
       if (definition.enum) {
         const options = definition.enum.map((val) => ({ label: String(val), value: String(val) }));
-        return <BuilderField type="enum" options={options} path={fieldPath} />;
+        return <FormControl fieldType="dropdown" options={options} name={fieldPath} />;
       }
 
       if (definition.format === "date" || definition.format === "date-time") {
-        return <BuilderField type={definition.format} path={fieldPath} />;
+        return <FormControl fieldType="date" format={definition.format} name={fieldPath} />;
       }
 
       if (definition.airbyte_secret) {
-        return <BuilderField type="secret" path={fieldPath} />;
+        return (
+          <FlexContainer direction="column" className={styles.secretField}>
+            <SecretField
+              name={fieldPath}
+              value={value as string}
+              onUpdate={(val) => {
+                // Remove the value instead of setting it to the empty string, as secret persistence
+                // gets mad at empty secrets
+                setValue(fieldPath, val || undefined);
+              }}
+            />
+            <FormControlFooter>
+              <FormControlErrorMessage name={fieldPath} />
+            </FormControlFooter>
+          </FlexContainer>
+        );
       }
 
-      return <BuilderField type="string" path={fieldPath} />;
+      return <FormControl fieldType="input" name={fieldPath} />;
     }
     case "integer":
     case "number":
+      return <FormControl fieldType="input" type={definition.type} name={fieldPath} />;
     case "boolean":
-      return <BuilderField type={definition.type} path={fieldPath} />;
+      return <FormControl fieldType="switch" name={fieldPath} />;
     case "array":
-      return <BuilderField type="array" path={fieldPath} />;
+      return <FormControl fieldType="array" itemType="string" name={fieldPath} />;
     default:
       return (
         <Message
@@ -253,4 +280,55 @@ const InputFormControl = ({
         />
       );
   }
+};
+
+export const convertToBuilderFormInputs = (spec: Spec | undefined): BuilderFormInput[] => {
+  if (!spec || !("properties" in spec.connection_specification)) {
+    return [];
+  }
+  if (
+    typeof spec.connection_specification.properties !== "object" ||
+    spec.connection_specification.properties === null
+  ) {
+    return [];
+  }
+  const properties = spec.connection_specification.properties;
+
+  const required: string[] =
+    spec.connection_specification.required &&
+    Array.isArray(spec.connection_specification.required) &&
+    spec.connection_specification.required.every((value) => typeof value === "string")
+      ? spec.connection_specification.required
+      : [];
+
+  return Object.entries(properties)
+    .sort(([_keyA, valueA], [_keyB, valueB]) => {
+      if (valueA.order !== undefined && valueB.order !== undefined) {
+        return valueA.order - valueB.order;
+      }
+      if (valueA.order !== undefined && valueB.order === undefined) {
+        return -1;
+      }
+      if (valueA.order === undefined && valueB.order !== undefined) {
+        return 1;
+      }
+      return 0;
+    })
+    .map(([specKey, specDefinition]) => {
+      return {
+        key: specKey,
+        definition: specDefinition,
+        required: required?.includes(specKey) || false,
+      };
+    });
+};
+
+export const convertToConnectionSpecification = (inputs: BuilderFormInput[]): SpecConnectionSpecification => {
+  return {
+    $schema: "http://json-schema.org/draft-07/schema#",
+    type: "object",
+    required: inputs.filter((input) => input.required).map((input) => input.key),
+    properties: Object.fromEntries(inputs.map((input, index) => [input.key, { ...input.definition, order: index }])),
+    additionalProperties: true,
+  };
 };

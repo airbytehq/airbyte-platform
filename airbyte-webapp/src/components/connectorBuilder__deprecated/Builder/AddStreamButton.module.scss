@@ -1,0 +1,47 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+$buttonWidth: 26px;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-xl;
+  overflow: visible;
+}
+
+.buttonContainer {
+  position: relative;
+}
+
+.addButton {
+  width: $buttonWidth;
+  height: $buttonWidth !important;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px !important;
+  z-index: 3;
+  position: relative;
+}
+
+.disableable:disabled {
+  cursor: not-allowed !important;
+}
+
+$animation-length: 3s;
+$animation-size: -20px;
+
+.buttonContainer--pulse {
+  @include mixins.pulsate(variables.$spacing-xl, 50%);
+}
+
+.buttonContainer--pulse::before {
+  z-index: 2;
+}
+
+.buttonContainer--pulse::after {
+  z-index: 1;
+}

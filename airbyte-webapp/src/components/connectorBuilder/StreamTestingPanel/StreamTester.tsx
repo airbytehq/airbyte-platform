@@ -94,7 +94,7 @@ export const StreamTester: React.FC<{
     () => getStreamTestMetadataStatus(testStreamId),
     [getStreamTestMetadataStatus, testStreamId]
   );
-  const streamHasCustomType = getStreamHasCustomType(streamName);
+  const streamHasCustomType = getStreamHasCustomType(testStreamId);
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 

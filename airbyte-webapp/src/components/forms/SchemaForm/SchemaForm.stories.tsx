@@ -740,15 +740,15 @@ export const Test = () => {
         type: "object",
         properties: {
           test: {
-            type: "object",
-            additionalProperties: {
+            type: "array",
+            items: {
               type: "object",
               properties: {
                 name: { type: "string" },
-                age: { type: "number" },
               },
-              required: ["name", "age"],
+              required: ["name"],
             },
+            minItems: 2,
           },
         },
         required: ["test"],
@@ -847,6 +847,85 @@ export const AdditionalPropertiesTrue = () => {
         <SchemaFormControl />
         <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
         <ShowFormValues />
+      </Card>
+    </SchemaForm>
+  );
+};
+
+export const DeprecatedFields = () => {
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          new_field: {
+            type: "string",
+            title: "New Field",
+          },
+          old_field: {
+            type: "string",
+            title: "Old Field",
+            deprecated: true,
+            deprecated_message: "Use New Field instead",
+          },
+          multi_option: {
+            type: "object",
+            oneOf: [
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option1"],
+                  },
+                  name: {
+                    type: "string",
+                  },
+                },
+                title: "Option 1",
+              },
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option2"],
+                  },
+                  age: {
+                    type: "number",
+                  },
+                },
+                title: "Option 2",
+                deprecated: true,
+                deprecated_message: "Use Option 1 or Option 3 instead",
+              },
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option3"],
+                  },
+                  height: {
+                    type: "number",
+                  },
+                },
+                title: "Option 3",
+              },
+            ],
+          },
+        },
+      }}
+      initialValues={{
+        old_field: "old value",
+        multi_option: {
+          type: "Option2",
+        },
+      }}
+    >
+      <Card>
+        <SchemaFormControl />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
       </Card>
     </SchemaForm>
   );

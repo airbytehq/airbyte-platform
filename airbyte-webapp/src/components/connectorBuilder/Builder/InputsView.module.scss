@@ -79,3 +79,10 @@
 .unsupportedInputTypeAction {
   color: colors.$dark-blue;
 }
+
+$spaceBelow: 30px;
+
+.secretField {
+  padding-bottom: $spaceBelow;
+  position: relative;
+}

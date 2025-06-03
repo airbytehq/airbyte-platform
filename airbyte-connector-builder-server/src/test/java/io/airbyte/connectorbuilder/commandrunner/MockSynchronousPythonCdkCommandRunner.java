@@ -7,7 +7,6 @@ package io.airbyte.connectorbuilder.commandrunner;
 import io.airbyte.connectorbuilder.exceptions.AirbyteCdkInvalidInputException;
 import io.airbyte.connectorbuilder.filewriter.AirbyteFileWriter;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
-import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -15,7 +14,6 @@ import java.io.OutputStream;
 /**
  * Mocks the creation of a synchronous python CDK command.
  */
-@Singleton
 public class MockSynchronousPythonCdkCommandRunner extends SynchronousPythonCdkCommandRunner {
 
   public boolean shouldThrow;

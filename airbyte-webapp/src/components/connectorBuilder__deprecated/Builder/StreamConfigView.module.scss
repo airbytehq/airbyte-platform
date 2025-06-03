@@ -1,0 +1,130 @@
+@use "scss/variables";
+@use "scss/colors";
+
+$controlButtonWidth: 24px;
+
+.controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: variables.$spacing-md;
+}
+
+.controlButton {
+  border: none;
+  background-color: transparent;
+  color: colors.$grey-400;
+  border-radius: variables.$border-radius-xs;
+  width: $controlButtonWidth;
+  height: $controlButtonWidth;
+  padding: variables.$spacing-xs;
+  padding: 0;
+  cursor: pointer;
+  transition: variables.$transition;
+
+  &:hover {
+    color: colors.$foreground;
+    background-color: colors.$grey-800;
+  }
+}
+
+.deleteButton {
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:hover {
+    background-color: colors.$red;
+  }
+}
+
+.tab {
+  background: none;
+  border: none;
+  padding: variables.$spacing-md;
+  border-bottom: variables.$border-thick solid transparent;
+  cursor: pointer;
+  display: flex;
+  gap: variables.$spacing-md;
+  align-items: center;
+}
+
+.selectedTab {
+  border-bottom-color: colors.$dark-blue;
+}
+
+.errorMessage {
+  color: colors.$red;
+}
+
+.schemaEditor {
+  display: flex;
+  flex-grow: 1;
+  flex-direction: column;
+
+  // Needs to be set so the element is not overflowing its container due to the fixed Monaco height but respecting the flex flow.
+  // Monaco will remeasure its container to relayout itself correctly according to the changed height.
+  min-height: 0;
+}
+
+.editorContainer {
+  // Needs to be set so the element is not overflowing its container due to the fixed Monaco height but respecting the flex flow.
+  // Monaco will remeasure its container to relayout itself correctly according to the changed height.
+  min-height: 0;
+  flex: 1 1 0;
+}
+
+.autoSchemaContainer {
+  overflow-y: auto;
+  flex: 1 1 0;
+  font-size: variables.$font-size-md;
+}
+
+.multiStreams {
+  padding: 0 50px;
+}
+
+.fieldset {
+  all: unset;
+  width: inherit;
+  display: inherit;
+  flex-direction: inherit;
+  gap: inherit;
+  height: inherit;
+  min-height: inherit;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
+}
+%streamNameInput,
+.streamNameInput {
+  & input {
+    font-weight: bold;
+    font-size: 15px;
+  }
+
+  width: auto;
+}
+
+.sticky {
+  position: sticky;
+  top: calc(-1 * variables.$spacing-xl);
+  z-index: 1;
+  background-color: colors.$backdrop;
+  padding: variables.$spacing-sm 0;
+}
+
+.relative {
+  position: relative;
+}
+
+.requestTypeOptions {
+  width: 50px;
+}
+
+.requestTypeButton {
+  background-color: colors.$foreground;
+}

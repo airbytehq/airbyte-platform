@@ -31,6 +31,7 @@ import {
   useUpdateBuilderProject,
 } from "core/api";
 import { CheckContributionRead } from "core/api/types/ConnectorBuilderClient";
+import { DynamicDeclarativeStream } from "core/api/types/ConnectorManifest";
 import { useFormatError } from "core/errors";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { NON_I18N_ERROR_TYPE } from "core/utils/form";
@@ -46,7 +47,6 @@ import {
 
 import styles from "./PublishModal.module.scss";
 import { useExperiment } from "../../../hooks/services/Experiment";
-import { BuilderDynamicStream } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -82,7 +82,7 @@ const PublishTypeSwitcher: React.FC<{
   if (!watch) {
     throw new Error("rhf context not available");
   }
-  const dynamicStreams: BuilderDynamicStream[] = watch("formValues.dynamicStreams");
+  const dynamicStreams: DynamicDeclarativeStream[] | undefined = watch("manifest.dynamic_streams");
 
   const streamsWithWarnings = useMemo(() => {
     return streamNames
@@ -90,9 +90,12 @@ const PublishTypeSwitcher: React.FC<{
       .map((streamName) => streamName);
   }, [getStreamTestWarnings, streamNames]);
   const dynamicStreamsWithWarnings = useMemo(() => {
+    if (!dynamicStreams) {
+      return [];
+    }
     return dynamicStreams
       .filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
-      .map(({ dynamicStreamName }) => dynamicStreamName);
+      .map(({ name }) => name);
   }, [getStreamTestWarnings, dynamicStreams]);
 
   const namesWithWarnings = useMemo(() => {

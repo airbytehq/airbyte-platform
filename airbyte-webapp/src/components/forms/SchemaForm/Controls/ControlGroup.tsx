@@ -26,19 +26,37 @@ interface ControlGroupProps {
     onToggle: (newEnabledState: boolean) => void;
   };
   footer?: string;
+  "data-field-path"?: string;
+  disabled?: boolean;
 }
 
 export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChildren<ControlGroupProps>>(
-  ({ title, path, tooltip, optional, control, header, error, toggleConfig, footer, children }, ref) => {
+  (
+    {
+      title,
+      path,
+      tooltip,
+      optional,
+      control,
+      header,
+      error,
+      toggleConfig,
+      footer,
+      children,
+      "data-field-path": dataFieldPath,
+      disabled,
+    },
+    ref
+  ) => {
     const { formatMessage } = useIntl();
 
-    const isDisabled = toggleConfig && toggleConfig.isEnabled === false;
-    const hasTitleBar = Boolean(title || (control && !isDisabled) || header);
-    const hasNoContent = isDisabled || isEmpty(children);
+    const isUntoggled = toggleConfig && toggleConfig.isEnabled === false;
+    const hasTitleBar = Boolean(title || (control && !isUntoggled) || header);
+    const hasNoContent = isUntoggled || isEmpty(children);
 
     return (
       // This outer div is necessary for .content > :first-child padding to be properly applied in the case of nested GroupControls
-      <div ref={ref} className={styles.outer}>
+      <div ref={ref} className={styles.outer} data-field-path={dataFieldPath}>
         <div
           className={classNames(styles.container, {
             [styles["container--noContent"]]: hasNoContent,
@@ -48,10 +66,10 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
             className={classNames(styles.content, {
               [styles["content--error"]]: error,
               [styles["content--title"]]: hasTitleBar,
-              [styles["content--borderless"]]: isDisabled,
+              [styles["content--borderless"]]: isUntoggled,
             })}
           >
-            {isDisabled ? null : children}
+            {isUntoggled ? null : children}
           </div>
           <div className={styles.titleBar}>
             {title && (
@@ -63,6 +81,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
                   <CheckBox
                     id={path}
                     checked={toggleConfig.isEnabled}
+                    disabled={disabled}
                     onChange={(event) => {
                       if (event.target.checked) {
                         toggleConfig.onToggle(true);
@@ -77,7 +96,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
               </FlexContainer>
             )}
             <FlexContainer alignItems="center" justifyContent="flex-end" gap="xs">
-              {control && !isDisabled && <div className={styles.control}>{control}</div>}
+              {control && !isUntoggled && <div className={styles.control}>{control}</div>}
             </FlexContainer>
           </div>
         </div>
@@ -87,7 +106,7 @@ export const ControlGroup = React.forwardRef<HTMLDivElement, React.PropsWithChil
               ? error.message
               : formatMessage({ id: error.message })}
           </Text>
-        ) : footer && !isDisabled ? (
+        ) : footer && !isUntoggled ? (
           <Text color="grey300" size="xs" className={styles.footer}>
             {footer}
           </Text>

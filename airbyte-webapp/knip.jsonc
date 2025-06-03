@@ -24,7 +24,9 @@
     "src/core/utils/useMemoDebug.ts",
 
     // Ignore schema form files, as it is still under development
-    "src/components/forms/SchemaForm/**"
+    "src/components/forms/SchemaForm/**",
+    // Ignore unused Builder file as it will likely come back
+    "src/components/connectorBuilder/Builder/AddStreamButton.tsx"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file

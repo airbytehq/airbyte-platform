@@ -1,0 +1,29 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.button {
+  padding: variables.$spacing-sm variables.$spacing-md;
+  background-color: transparent;
+  border: variables.$border-thin solid colors.$grey-200;
+  border-radius: variables.$border-radius-xs;
+  display: flex;
+  align-items: center;
+}
+
+.buttonText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-clamp: 2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  flex: 1;
+  min-width: 0;
+}
+
+.arrow {
+  margin-left: auto;
+  font-size: 10px;
+  flex-shrink: 0;
+}

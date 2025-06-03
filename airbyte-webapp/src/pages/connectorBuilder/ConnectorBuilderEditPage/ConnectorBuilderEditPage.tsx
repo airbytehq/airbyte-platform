@@ -6,7 +6,6 @@ import { AnyObjectSchema } from "yup";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
-import SchemaFormBuilder from "components/connectorBuilder/SchemaFormBuilder";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
 import { BuilderState } from "components/connectorBuilder/types";
 import { useBuilderValidationSchema } from "components/connectorBuilder/useBuilderValidationSchema";
@@ -35,7 +34,6 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
     projectId,
     initialFormValues,
-    failedInitialFormValueConversion,
     initialYaml,
     builderProject: {
       builderProject: { name, componentsFileContent },
@@ -46,28 +44,25 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   } = useInitializedBuilderProject();
   const { getStoredMode } = useConnectorBuilderLocalStorage();
   const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   const dynamicStreams = declarativeManifest?.manifest?.dynamic_streams;
+  const streams = declarativeManifest?.manifest?.streams;
 
   const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
-  const initialTestStreamId =
-    areDynamicStreamsEnabled && hasDynamicStreams
-      ? { type: "dynamic_stream" as const, index: 0 }
-      : { type: "stream" as const, index: 0 };
-
-  const initialView = !isSchemaFormEnabled
-    ? { type: "global" as const }
-    : initialTestStreamId.type === "dynamic_stream"
+  const hasStreams = Array.isArray(streams) && streams.length > 0;
+  const initialTestStreamId = hasStreams
+    ? { type: "stream" as const, index: 0 }
+    : areDynamicStreamsEnabled && hasDynamicStreams
     ? { type: "dynamic_stream" as const, index: 0 }
     : { type: "stream" as const, index: 0 };
 
+  const initialView =
+    initialTestStreamId.type === "dynamic_stream"
+      ? { type: "dynamic_stream" as const, index: 0 }
+      : { type: "stream" as const, index: 0 };
+
   const values: BuilderState = {
-    mode: failedInitialFormValueConversion
-      ? isSchemaFormEnabled && resolvedManifest !== null
-        ? getStoredMode(projectId)
-        : "yaml"
-      : getStoredMode(projectId),
+    mode: resolvedManifest !== null ? getStoredMode(projectId) : "yaml",
     formValues: initialFormValues,
     yaml: initialYaml,
     customComponentsCode: componentsFileContent,
@@ -77,6 +72,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     testStreamId: initialTestStreamId,
     testingValues: initialTestingValues,
     manifest: resolvedManifest,
+    generatedStreams: {},
   };
   const initialValues = useRef(values);
   initialValues.current = values;
@@ -127,7 +123,6 @@ BaseForm.displayName = "BaseForm";
 const Panels = React.memo(() => {
   const mode = useBuilderWatch("mode");
   const { stateKey } = useConnectorBuilderFormManagementState();
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
 
   return useMemo(
     () => (
@@ -140,8 +135,7 @@ const Panels = React.memo(() => {
         })}
         panels={[
           {
-            children:
-              mode === "yaml" ? <YamlManifestEditor /> : isSchemaFormEnabled ? <SchemaFormBuilder /> : <Builder />,
+            children: mode === "yaml" ? <YamlManifestEditor /> : <Builder />,
             className: styles.leftPanel,
             minWidth: 350,
           },
@@ -154,7 +148,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [isSchemaFormEnabled, mode, stateKey]
+    [mode, stateKey]
   );
 });
 Panels.displayName = "Panels";

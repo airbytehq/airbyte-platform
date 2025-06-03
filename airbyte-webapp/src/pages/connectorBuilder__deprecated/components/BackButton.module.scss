@@ -1,0 +1,8 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.button {
+  position: absolute;
+  margin: variables.$spacing-xl;
+}

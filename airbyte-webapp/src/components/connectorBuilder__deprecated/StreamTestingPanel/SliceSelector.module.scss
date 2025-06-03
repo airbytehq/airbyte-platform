@@ -1,0 +1,17 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.sliceDescriptor {
+  background-color: colors.$grey-50;
+  border-radius: variables.$border-radius-md;
+  display: grid;
+  grid-template-columns: minmax(auto, max-content) auto;
+  column-gap: variables.$spacing-md;
+  row-gap: variables.$spacing-md;
+  padding: variables.$spacing-md;
+}
+
+.overflowText {
+  text-overflow: ellipsis;
+  overflow: hidden;
+}

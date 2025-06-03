@@ -1,0 +1,12 @@
+@use "scss/variables";
+
+.fieldset {
+  all: unset;
+  width: 100%;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
+}

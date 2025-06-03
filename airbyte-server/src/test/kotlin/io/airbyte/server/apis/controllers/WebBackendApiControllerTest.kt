@@ -33,12 +33,13 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @MicronautTest(rebuildContext = true)
-@Property(name = "AIRBYTE_EDITION", value = "community")
+@Property(name = "AIRBYTE_EDITION", value = "CoMMuniTY")
 internal class WebBackendApiControllerTest {
   @Inject
   lateinit var roleResolver: RoleResolver
@@ -161,6 +162,9 @@ internal class WebBackendApiControllerTest {
   @Test
   fun `test config`() {
     val path = "/api/v1/web_backend/config"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.GET<WebappConfigResponse>(path)))
+    val response = client.toBlocking().exchange(HttpRequest.GET<Any>(path), WebappConfigResponse::class.java)
+    assertStatus(HttpStatus.OK, response.status)
+    // verify casing of edition is lowercase
+    assertEquals("community", response.body.get().edition)
   }
 }
