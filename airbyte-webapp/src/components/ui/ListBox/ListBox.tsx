@@ -90,12 +90,6 @@ export interface ListBoxProps<T> {
    * If false, the width of the ListBox menu will have max-width of 200px.
    */
   adaptiveWidth?: FloatProps["adaptiveWidth"];
-  /**
-   * DEPRECATED. This is a way to hack in a custom button at the bottom of the ListBox, but this is not the right way to do this.
-   * We should be using a headlessui Menu for this instead of a ListBox: https://github.com/airbytehq/airbyte/issues/24394
-   * @deprecated
-   */
-  footerOption?: React.ReactNode;
   onFocus?: () => void;
   "data-testid"?: string;
 }
@@ -124,7 +118,6 @@ export const ListBox = <T,>({
   placement,
   flip = true,
   adaptiveWidth = true,
-  footerOption,
   onFocus,
 }: ListBoxProps<T>) => {
   const virtuosoRef = useRef<VirtuosoHandle | null>(null);
@@ -250,11 +243,6 @@ export const ListBox = <T,>({
               />
             ) : (
               options.map(ListBoxOption)
-            )}
-            {footerOption && (
-              <OriginalListboxOption value={undefined} className={classNames(styles.option, optionClassName)}>
-                {footerOption}
-              </OriginalListboxOption>
             )}
           </OriginalListboxOptions>
         </FloatLayout>
