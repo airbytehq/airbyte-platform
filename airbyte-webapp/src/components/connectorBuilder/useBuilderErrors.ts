@@ -2,13 +2,12 @@ import isObject from "lodash/isObject";
 import { useCallback } from "react";
 import { FieldErrors, useFormContext, useFormState } from "react-hook-form";
 
-import { scrollFieldIntoView } from "components/forms/SchemaForm/utils";
-
 import { assertNever } from "core/utils/asserts";
 import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderState, BuilderStreamTab } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
+import { useFocusField } from "./useFocusField";
 
 const EMPTY_ERROR_REPORT: ErrorReport = {
   global: [],
@@ -88,6 +87,7 @@ export const useBuilderErrors = () => {
   const { errors } = useFormState<BuilderState>();
   const view = useBuilderWatch("view");
   const { setValue, getValues } = useFormContext();
+  const focusField = useFocusField();
 
   // Returns true if the react hook form has errors, and false otherwise.
   // If limitToViews is provided, the error check is limited to only those views.
@@ -160,22 +160,13 @@ export const useBuilderErrors = () => {
   );
 
   const highlightErrorField = useCallback(
-    (errorPathAndView: { view: BuilderView; errorPath: string }) => {
-      // Update the view and stream tab to the ones containing the erroring field
-      setValue("view", errorPathAndView.view);
-      const streamTab = getStreamTabFromErrorPath(errorPathAndView.errorPath);
-      if (streamTab) {
-        setValue("streamTab", streamTab);
-      }
-      // Wait until the next render cycle when the view and streamTab are updated,
-      // so that the field is actually visible and able to be scrolled into view.
-      setTimeout(() => {
-        scrollFieldIntoView(errorPathAndView.errorPath);
-      }, 0);
+    (errorPath: string) => {
+      focusField(errorPath);
+
       // Mark the field as touched to show error message
-      setValue(errorPathAndView.errorPath, getValues(errorPathAndView.errorPath), { shouldTouch: true });
+      setValue(errorPath, getValues(errorPath), { shouldTouch: true });
     },
-    [getValues, setValue]
+    [focusField, getValues, setValue]
   );
 
   const validateAndTouch = useCallback(
@@ -188,7 +179,7 @@ export const useBuilderErrors = () => {
 
         const errorPathAndView = getErrorPathAndView(limitToViews);
         if (errorPathAndView) {
-          highlightErrorField(errorPathAndView);
+          highlightErrorField(errorPathAndView.errorPath);
           return;
         }
 
