@@ -21,6 +21,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -288,6 +289,7 @@ public class CatalogServiceJooqImpl implements CatalogService {
         .set(ACTOR_CATALOG.ID, catalogId)
         .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(airbyteCatalog)))
         .set(ACTOR_CATALOG.CATALOG_HASH, catalogHash)
+        .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.source_catalog)
         .set(ACTOR_CATALOG.CREATED_AT, timestamp)
         .set(ACTOR_CATALOG.MODIFIED_AT, timestamp).execute();
     return catalogId;

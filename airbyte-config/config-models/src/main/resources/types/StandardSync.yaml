@@ -118,6 +118,9 @@ properties:
   source_catalog_id:
     type: string
     format: uuid
+  destinationCatalogId:
+    type: string
+    format: uuid
   resourceRequirements:
     "$ref": ResourceRequirements.yaml
   dataplaneGroupId:

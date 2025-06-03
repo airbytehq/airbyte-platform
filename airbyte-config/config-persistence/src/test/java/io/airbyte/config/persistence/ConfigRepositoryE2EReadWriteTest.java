@@ -68,6 +68,7 @@ import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.db.Database;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -1018,6 +1019,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         ctx.update(ACTOR_CATALOG)
             .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(actorCatalog.getCatalog())))
             .set(ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
+            .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()))
             .set(ACTOR_CATALOG.MODIFIED_AT, timestamp)
             .where(ACTOR_CATALOG.ID.eq(actorCatalog.getId()))
             .execute();
@@ -1026,6 +1028,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
             .set(ACTOR_CATALOG.ID, actorCatalog.getId())
             .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(actorCatalog.getCatalog())))
             .set(ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
+            .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()))
             .set(ACTOR_CATALOG.CREATED_AT, timestamp)
             .set(ACTOR_CATALOG.MODIFIED_AT, timestamp)
             .execute();

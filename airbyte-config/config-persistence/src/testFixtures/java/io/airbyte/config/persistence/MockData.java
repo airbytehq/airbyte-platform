@@ -14,6 +14,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorCatalog.CatalogType;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
@@ -849,14 +850,17 @@ public class MockData {
     final ActorCatalog actorCatalog1 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_1)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("TESTHASH");
     final ActorCatalog actorCatalog2 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_2)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("12345");
     final ActorCatalog actorCatalog3 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_3)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("SomeOtherHash");
     return Arrays.asList(actorCatalog1, actorCatalog2, actorCatalog3);
   }
