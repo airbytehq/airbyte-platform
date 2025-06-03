@@ -25,6 +25,7 @@ import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.workers.WorkerUtils
+import io.airbyte.workers.internal.NamespacingMapper
 import io.airbyte.workers.models.ArchitectureConstants.ORCHESTRATOR
 import io.airbyte.workers.models.ArchitectureConstants.PLATFORM_MODE
 import io.micronaut.context.annotation.Factory
@@ -55,6 +56,14 @@ class OrchestratorBeanFactory {
     replicationInput = replicationInput,
     replicationInputFeatureFlagReader = replicationInputFeatureFlagReader,
   )
+
+  @Singleton
+  fun namespaceMapper(replicationInput: ReplicationInput) =
+    NamespacingMapper(
+      replicationInput.namespaceDefinition,
+      replicationInput.namespaceFormat,
+      replicationInput.prefix,
+    )
 
   @Singleton
   @Named("streamNamesToSchemas")
