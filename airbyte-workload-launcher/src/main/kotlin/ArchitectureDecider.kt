@@ -10,6 +10,7 @@ import io.airbyte.api.client.model.generated.ConnectionRead
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.SocketCount
+import io.airbyte.featureflag.SocketFormat
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.Jsons
@@ -131,6 +132,15 @@ class ArchitectureDecider(
     transport: String,
     platformMode: String,
   ): ArchitectureEnvironmentVariables {
+    // 0. Decide serialisation format
+    val serialisationOverride = featureFlags.stringVariation(SocketFormat, Connection(input.connectionId)).trim()
+    val finalSerialisation: String =
+      runCatching {
+        Serialization.valueOf(serialisationOverride)
+        serialisationOverride
+      }.getOrElse {
+        serialisation
+      }
     // 1. Decide socket‑count (override flag > CPU‑based heuristic)
     val overrideCnt = featureFlags.intVariation(SocketCount, Connection(input.connectionId))
     val defaultCnt =
@@ -147,7 +157,7 @@ class ArchitectureDecider(
 
     // 3. Assembling ENV lists
     val baseEnv =
-      envList(serialisation, transport) +
+      envList(finalSerialisation, transport) +
         EnvVar(DATA_CHANNEL_SOCKET_PATHS, socketPaths, null)
 
     return ArchitectureEnvironmentVariables(
