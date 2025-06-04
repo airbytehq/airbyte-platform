@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "airbyte.fullname" . }}-test-connection"
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  {{- if .Values.global.imagePullSecrets }}
+  imagePullSecrets:
+    {{- range .Values.global.imagePullSecrets }}
+      {{- printf "- name: %s" .name | nindent 8 }}
+    {{- end }}
+  {{- end }}
+  containers:
+  - name: webapp-test
+    image: {{ include "imageUrl" (list .Values.testWebapp.image $) }}
+    command: ['curl']
+    args: ['-s', '{{ .Release.Name }}-airbyte-webapp-svc:{{ .Values.webapp.service.port }}', '>', '/dev/null']
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "100m"
+      limits:
+        memory: "128Mi"
+        cpu: "200m"
+  restartPolicy: Never

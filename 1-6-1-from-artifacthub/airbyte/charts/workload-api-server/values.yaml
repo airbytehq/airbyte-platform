@@ -1,0 +1,280 @@
+global:
+  serviceAccountName: placeholderServiceAccount
+  edition: community
+  configMapName: ""
+  secretName: ""
+  credVolumeOverride: ""
+  extraContainers: []
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
+  extraSelectorLabels: {}
+  ## extraLabels [object] - use to specify own additional labels for deployment
+  extraLabels: {}
+  database:
+    secretName: ""
+    secretValue: ""
+
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as temporal, minio, etc.
+    tag: ""
+
+  logs:
+    ##  logs.accessKey.password Logs Access Key
+    ##  logs.accessKey.existingSecret
+    ##  logs.accessKey.existingSecretKey
+    accessKey:
+      password: minio
+      existingSecret: ""
+      existingSecretKey: ""
+    ##  logs.secretKey.password Logs Secret Key
+    ##  logs.secretKey.existingSecret
+    ##  logs.secretKey.existingSecretKey
+    secretKey:
+      password: minio123
+      existingSecret: ""
+      existingSecretKey: ""
+
+    ##  logs.minio.enabled Switch to enable or disable the Minio helm chart
+    minio:
+      enabled: true
+
+    ##  logs.s3.enabled Switch to enable or disable custom S3 Log location
+    ##  logs.s3.bucket Bucket name where logs should be stored
+    ##  logs.s3.bucketRegion Region of the bucket (must be empty if using minio)
+    s3:
+      enabled: false
+      bucket: airbyte-dev-logs
+      bucketRegion: ""
+
+    ## Google Cloud Storage (GCS) Log Location Configuration
+    ##  logs.gcs.bucket GCS bucket name
+    ##  logs.gcs.credentials The path the GCS creds are written to
+    ##  logs.gcs.credentialsJson Base64 encoded json GCP credentials file contents
+    gcs:
+      bucket: ""
+      # If you are mounting an existing secret to extraVolumes on scheduler, server and worker
+      # deployments, then set credentials to the path of the mounted JSON file
+      credentials: ""
+      # If credentialsJson is set then credentials auto resolves (to /secrets/gcs-log-creds/gcp.json)
+      credentialsJson: ""
+
+enabled: true
+##  replicaCount Number of server replicas
+replicaCount: 1
+
+##  image.repository The repository to use for the airbyte workload api server image.
+##  image.pullPolicy the pull policy to use for the airbyte workload api server image
+##  image.tag The airbyte workload api server image tag. Defaults to the chart's AppVersion
+image:
+  repository: airbyte/workload-api-server
+  pullPolicy: IfNotPresent
+
+##  podAnnotations [object] Add extra annotations to the server pod
+##
+podAnnotations: {}
+
+##  podLabels [object] Add extra labels to the server pod
+##
+podLabels: {}
+
+##  containerSecurityContext Security context for the container
+## Examples:
+## containerSecurityContext:
+##    runAsNonRoot: true
+##    runAsUser: 1000
+##    readOnlyRootFilesystem: true
+containerSecurityContext: {}
+
+## Configure extra options for the server containers' liveness and readiness probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+##  livenessProbe.enabled Enable livenessProbe on the server
+##  livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+##  livenessProbe.periodSeconds Period seconds for livenessProbe
+##  livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+##  livenessProbe.failureThreshold Failure threshold for livenessProbe
+##  livenessProbe.successThreshold Success threshold for livenessProbe
+##
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+
+##  readinessProbe.enabled Enable readinessProbe on the server
+##  readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+##  readinessProbe.periodSeconds Period seconds for readinessProbe
+##  readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+##  readinessProbe.failureThreshold Failure threshold for readinessProbe
+##  readinessProbe.successThreshold Success threshold for readinessProbe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+
+## Server app resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+##  resources.limits [object] The resources limits for the server container
+##  resources.requests [object] The requested resources for the server container
+resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 200m
+  ##    memory: 1Gi
+  limits: {}
+  ## Examples:
+  ## requests:
+  ##    memory: 256Mi
+  ##    cpu: 250m
+  requests: {}
+
+##  service.type The service type to use for the API server
+##  service.port The service port to expose the API server on
+service:
+  type: ClusterIP
+  port: 8007
+  annotations: {}
+
+##  nodeSelector [object] Node labels for pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+
+##  tolerations [array] Tolerations for server pod assignment.
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+
+##  affinity [object] Affinity and anti-affinity for server pod assignment.
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+
+## Configure the ingress resource that allows you to access the Airbyte API.
+## ref: http://kubernetes.io/docs/user-guide/ingress/
+##  webapp.ingress.enabled Set to true to enable ingress record generation
+##  webapp.ingress.className Specifies ingressClassName for clusters >= 1.18+
+##  webapp.ingress.annotations [object] Ingress annotations done as key:value pairs
+##  webapp.ingress.hosts The list of hostnames to be covered with this ingress record.
+##  webapp.ingress.tls [array] Custom ingress TLS configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # kubernetes.io/ingress.class: nginx
+  # kubernetes.io/tls-acme: "true"
+  hosts: []
+  # - host: chart-example.local
+  #   paths:
+  #   - path: /
+  #     pathType: ImplementationSpecific
+
+  tls: []
+  # - secretName: chart-example-tls
+  #   hosts:
+  #   - chart-example.local
+
+##  log.level The log level to log at
+log:
+  level: "INFO"
+
+##  extraVolumeMounts [array] Additional volumeMounts for server container(s).
+## Examples (when using `containerSecurityContext.readOnlyRootFilesystem=true`):
+## extraVolumeMounts:
+##   - name: tmpdir
+##     mountPath: /tmp
+##
+extraVolumeMounts: []
+
+##  extraVolumes [array] Additional volumes for server pod(s).
+## Examples (when using `containerSecurityContext.readOnlyRootFilesystem=true`):
+## extraVolumes:
+##   - name: tmpdir
+##     emptyDir: {}
+##
+extraVolumes: []
+
+##  extraContainer [array] Additional container for server pod(s)
+## Example:
+# extraContainers:
+#   - name: otel_collector
+#     image: somerepo/someimage:sometag
+#     args: [
+#         "--important-args"
+#     ]
+#     ports:
+#       - containerPort: 443
+#     volumeMounts:
+#       - name: volumeMountCool
+#         mountPath: /some/path
+#         readOnly: true
+extraContainers: []
+
+##  extraInitContainers [array] Additional init containers for server pod(s)
+## Example:
+# extraInitContainers:
+#   - name: sleepy
+#     image: alpine
+#     command: ['sleep', '60']
+
+extraInitContainers: []
+
+##  extraEnv [array] Supply extra env variables to main container using full notation
+## Example: (With default env vars and values taken from generated config map)
+# extraEnv:
+#   - name: AIRBYTE_VERSION
+#     valueFrom:
+#       configMapKeyRef:
+#         name: airbyte-env
+#         key: AIRBYTE_VERSION
+##
+extraEnv: []
+##  secrets [object] Supply additional secrets to container
+## Example:
+## secrets:
+##   DATABASE_PASSWORD: strong-password
+##   DATABASE_USER: my-db-user
+secrets: {}
+
+##  env_vars [object] Supply extra env variables to main container using simplified notation
+## Example:
+# env_vars:
+#   AIRBYTE_VERSION: 0.40.4
+
+#   # Airbyte Internal Database, see https://docs.airbyte.io/operator-guides/configuring-airbyte-db
+#   DATABASE_HOST: airbyte-db-svc
+#   DATABASE_PORT: 5432
+#   DATABASE_DB: airbyte
+#   # translate manually DATABASE_URL:jdbc:postgresql://${DATABASE_HOST}:${DATABASE_PORT/${DATABASE_DB}
+#   DATABASE_URL: jdbc:postgresql://airbyte-db-svc:5432/airbyte
+#   JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.29.15.001
+#   CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION: 0.35.15.001
+env_vars: {}
+
+
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
+extraSelectorLabels: {}
+## extraLabels [object] - use to specify own additional labels for deployment
+extraLabels: {}
+
+
+## workloadApi:
+##   bearerTokenSecretName: workload-api-bearer-token-name kubernetes secret name where bearer token is stored
+##   bearerTokenSecretKey: workload-api-bearer-token-key kubernetes secret key where bearer token is stored
+workloadApi: {}
+
+debug:
+  enabled: false
+  remoteDebugPort: 5005

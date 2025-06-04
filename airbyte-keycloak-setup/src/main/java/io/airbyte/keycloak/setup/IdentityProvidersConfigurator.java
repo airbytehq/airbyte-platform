@@ -105,9 +105,26 @@ public class IdentityProvidersConfigurator {
   private void updateExistingIdp(final RealmResource keycloakRealm,
                                  final IdentityProviderRepresentation existingIdp,
                                  final IdentityProviderRepresentation updatedIdp) {
+    log.debug("Before update - Existing IDP fields:");
+    log.debug("InternalId: {}", existingIdp.getInternalId());
+    log.debug("Alias: {}", existingIdp.getAlias());
+    log.debug("ProviderId: {}", existingIdp.getProviderId());
+    log.debug("Enabled: {}", existingIdp.isEnabled());
+    log.debug("DisplayName: {}", existingIdp.getDisplayName());
+    log.debug("Config: {}", existingIdp.getConfig());
+
     // In order to apply the updated IDP configuration to the existing IDP within Keycloak, we need to
     // set the internal ID of the existing IDP.
     updatedIdp.setInternalId(existingIdp.getInternalId());
+
+    log.debug("After update - Updated IDP fields:");
+    log.debug("InternalId: {}", updatedIdp.getInternalId());
+    log.debug("Alias: {}", updatedIdp.getAlias());
+    log.debug("ProviderId: {}", updatedIdp.getProviderId());
+    log.debug("Enabled: {}", updatedIdp.isEnabled());
+    log.debug("DisplayName: {}", updatedIdp.getDisplayName());
+    log.debug("Config: {}", updatedIdp.getConfig());
+
     keycloakRealm.identityProviders().get(existingIdp.getAlias()).update(updatedIdp);
   }
 

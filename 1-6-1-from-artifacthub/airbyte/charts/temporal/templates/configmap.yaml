@@ -1,0 +1,65 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "airbyte.fullname" . }}-dynamicconfig
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+data:
+  "development.yaml": |
+    frontend.namespaceCount:
+      - value: 4096
+        constraints: {}
+    frontend.namespaceRPS.visibility:
+      - value: 100
+        constraints: {}
+    frontend.namespaceBurst.visibility:
+      - value: 150
+        constraints: {}
+    frontend.namespaceRPS:
+      - value: 76800
+        constraints: {}
+    frontend.enableClientVersionCheck:
+      - value: true
+        constraints: {}
+    history.persistenceMaxQPS:
+      - value: 3000
+        constraints: {}
+    frontend.persistenceMaxQPS:
+      - value: 5000
+        constraints: {}
+    frontend.historyMgrNumConns:
+      - value: 30
+        constraints: {}
+    frontend.throttledLogRPS:
+      - value: 200
+        constraints: {}
+    frontend.enableUpdateWorkflowExecution:
+      - value: true
+    frontend.enableUpdateWorkflowExecutionAsyncAccepted:
+      - value: true
+    history.historyMgrNumConns:
+      - value: 50
+        constraints: {}
+    system.advancedVisibilityWritingMode:
+      - value: "off"
+        constraints: {}
+    history.defaultActivityRetryPolicy:
+      - value:
+          InitialIntervalInSeconds: 1
+          MaximumIntervalCoefficient: 100.0
+          BackoffCoefficient: 2.0
+          MaximumAttempts: 0
+    history.defaultWorkflowRetryPolicy:
+      - value:
+          InitialIntervalInSeconds: 1
+          MaximumIntervalCoefficient: 100.0
+          BackoffCoefficient: 2.0
+          MaximumAttempts: 0
+    # Limit for responses. This mostly impacts discovery jobs since they have the largest responses.
+    limit.blobSize.error:
+      - value: 15728640 # 15MB
+        constraints: {}
+    limit.blobSize.warn:
+      - value: 10485760 # 10MB
+        constraints: {}

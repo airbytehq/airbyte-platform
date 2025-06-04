@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 1.6.1
+description: Helm chart to deploy airbyte-temporal
+name: temporal
+type: application
+version: 1.6.1

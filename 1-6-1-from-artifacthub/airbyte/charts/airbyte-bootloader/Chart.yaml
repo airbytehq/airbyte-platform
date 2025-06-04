@@ -1,0 +1,6 @@
+apiVersion: v2
+appVersion: 1.6.1
+description: Helm chart to deploy airbyte-bootloader
+name: airbyte-bootloader
+type: application
+version: 1.6.1

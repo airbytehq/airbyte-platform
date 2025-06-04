@@ -1,0 +1,259 @@
+global:
+
+  serviceAccountName: &service-account-name "airbyte-admin"
+  edition: community
+  credVolumeOverride: ""
+  secretName: ""
+  extraContainers: []
+  ## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
+  extraSelectorLabels: {}
+  ## extraLabels [object] - use to specify own additional labels for deployment
+  extraLabels: {}
+  database:
+    secretName: ""
+    secretValue: ""
+
+  # Docker image config that will apply to all images.
+  image:
+    # Docker registry to pull platform images from, e.g. http://my-registry:8000/
+    registry: ""
+    # Image tag to use for airbyte images. 
+    # Does not include non-airbyte images such as temporal, minio, etc.
+    tag: ""
+
+  enterprise:
+    connectorRolloutOptIn: false
+
+  jobs:
+    ## Jobs resource requests and limits
+    ## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    ## We usually recommend not to specify default resources and to leave this as a conscious
+    ## choice for the user. This also increases chances charts run on environments with little
+    ## resources, such as Minikube. If you do want to specify resources, uncomment the following
+    ## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    ##  jobs.resources.limits [object] The resources limits for jobs
+    ##  jobs.resources.requests [object] The requested resources for jobs
+    resources:
+      ## Example:
+      ## requests:
+      ##    memory: 256Mi
+      ##    cpu: 250m
+      requests: {}
+      ## Example:
+      ## limits:
+      ##    cpu: 200m
+      ##    memory: 1Gi
+      limits: {}
+
+    kube:
+      ## JOB_KUBE_ANNOTATIONS
+      ## pod annotations of the sync job and the default pod annotations fallback for others jobs
+      ##  jobs.kube.annotations [object] key/value annotations applied to kube jobs
+      annotations: {}
+
+      ## JOB_KUBE_LABELS
+      ## pod labels of the sync job and the default pod labels fallback for others jobs
+      ##  jobs.kube.labels [object] key/value labels applied to kube jobs
+      labels: {}
+
+      ## JOB_KUBE_NODE_SELECTORS
+      ## pod node selector of the sync job and the default pod node selector fallback for others jobs
+      ##  jobs.kube.nodeSelector [object] key/value node selector applied to kube jobs
+      nodeSelector: {}
+
+      ## JOB_KUBE_TOLERATIONS
+      ##  jobs.kube.tolerations [array] Tolerations for jobs.kube pod assignment.
+      ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+      ## any boolean values should be quoted to ensure the value is passed through as a string, eg:
+      ## - key: airbyte-server
+      ##   operator: Equal
+      ##   value: "true"
+      ##   effect: NoSchedule
+      tolerations: []
+
+      ## JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
+      ## image pull secret to use for job pod
+      ##  jobs.kube.main_container_image_pull_secret [string]  image pull secret to use for job pod
+      main_container_image_pull_secret: ""
+
+enabled: true
+##  connector-rollout-worker.replicaCount Number of connector-rollout-worker replicas
+replicaCount: 1
+
+##  connector-rollout-worker.image.repository The repository to use for the airbyte connector-rollout-worker image.
+##  connector-rollout-worker.image.pullPolicy the pull policy to use for the airbyte connector-rollout-worker image
+##  connector-rollout-worker.image.tag The airbyte connector-rollout-worker image tag. Defaults to the chart's AppVersion
+image:
+  repository: airbyte/connector-rollout-worker
+  pullPolicy: IfNotPresent
+
+##  connector-rollout-worker.podAnnotations [object] Add extra annotations to the connector-rollout-worker pod(s)
+##
+podAnnotations: {}
+
+##  connector-rollout-worker.podLabels [object] Add extra labels to the connector-rollout-worker pod(s)
+##
+podLabels: {}
+
+##  connector-rollout-worker.containerSecurityContext Security context for the container
+## Examples:
+## containerSecurityContext:
+##    runAsNonRoot: true
+##    runAsUser: 1000
+##    readOnlyRootFilesystem: true
+containerSecurityContext: {}
+
+## Configure extra options for the connector-rollout-worker containers' liveness and readiness probes
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/#configure-probes
+##  connector-rollout-worker.livenessProbe.enabled Enable livenessProbe on the connector-rollout-worker
+##  connector-rollout-worker.livenessProbe.initialDelaySeconds Initial delay seconds for livenessProbe
+##  connector-rollout-worker.livenessProbe.periodSeconds Period seconds for livenessProbe
+##  connector-rollout-worker.livenessProbe.timeoutSeconds Timeout seconds for livenessProbe
+##  connector-rollout-worker.livenessProbe.failureThreshold Failure threshold for livenessProbe
+##  connector-rollout-worker.livenessProbe.successThreshold Success threshold for livenessProbe
+##
+livenessProbe:
+  enabled: true
+  initialDelaySeconds: 50
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+
+##  connector-rollout-worker.readinessProbe.enabled Enable readinessProbe on the connector-rollout-worker
+##  connector-rollout-worker.readinessProbe.initialDelaySeconds Initial delay seconds for readinessProbe
+##  connector-rollout-worker.readinessProbe.periodSeconds Period seconds for readinessProbe
+##  connector-rollout-worker.readinessProbe.timeoutSeconds Timeout seconds for readinessProbe
+##  connector-rollout-worker.readinessProbe.failureThreshold Failure threshold for readinessProbe
+##  connector-rollout-worker.readinessProbe.successThreshold Success threshold for readinessProbe
+##
+readinessProbe:
+  enabled: true
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 3
+  successThreshold: 1
+
+## connector-rollout-worker resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+## We usually recommend not to specify default resources and to leave this as a conscious
+## choice for the user. This also increases chances charts run on environments with little
+## resources, such as Minikube. If you do want to specify resources, uncomment the following
+## lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+##  connector-rollout-worker.resources.limits [object] The resources limits for the connector-rollout-worker container
+##  connector-rollout-worker.resources.requests [object] The requested resources for the connector-rollout-worker container
+resources:
+  ## Example:
+  ## limits:
+  ##    cpu: 200m
+  ##    memory: 1Gi
+  limits: {}
+  ## Examples:
+  ## requests:
+  ##    memory: 256Mi
+  ##    cpu: 250m
+  requests: {}
+
+##  connector-rollout-worker.nodeSelector [object] Node labels for pod assignment
+## Ref: https://kubernetes.io/docs/user-guide/node-selection/
+##
+nodeSelector: {}
+
+##  connector-rollout-worker.tolerations [array] Tolerations for connector-rollout-worker pod assignment.
+## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
+##
+tolerations: []
+
+##  connector-rollout-worker.affinity [object] Affinity and anti-affinity for connector-rollout-worker pod assignment.
+## ref: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity
+##
+affinity: {}
+
+##  connector-rollout-worker.log.level The log level to log at.
+log:
+  level: "INFO"
+
+
+
+##  connector-rollout-worker.extraVolumeMounts [array] Additional volumeMounts for connector-rollout-worker container(s).
+## Examples (when using `connector-rollout-worker.containerSecurityContext.readOnlyRootFilesystem=true`):
+## extraVolumeMounts:
+##   - name: tmpdir
+##     mountPath: /tmp
+##
+extraVolumeMounts: []
+
+##  connector-rollout-worker.extraVolumes [array] Additional volumes for connector-rollout-worker pod(s).
+## Examples (when using `connector-rollout-worker.containerSecurityContext.readOnlyRootFilesystem=true`):
+## extraVolumes:
+##   - name: tmpdir
+##     emptyDir: {}
+##
+extraVolumes: []
+
+##  extraContainer [array] Additional container for server pod(s)
+## Example:
+# extraContainers:
+#   - name: otel_collector
+#     image: somerepo/someimage:sometag
+#     args: [
+#         "--important-args"
+#     ]
+#     ports:
+#       - containerPort: 443
+#     volumeMounts:
+#       - name: volumeMountCool
+#         mountPath: /some/path
+#         readOnly: true
+extraContainers: []
+
+##  extraInitContainers [array] Additional init containers for server pod(s)
+## Example:
+# extraInitContainers:
+#   - name: sleepy
+#     image: alpine
+#     command: ['sleep', '60']
+
+extraInitContainers: []
+
+##  extraEnv [array] Supply extra env variables to main container using full notation
+## Example: (With default env vars and values taken from generated config map)
+# extraEnv:
+#   - name: AIRBYTE_VERSION
+#     valueFrom:
+#       configMapKeyRef:
+#         name: airbyte-env
+#         key: AIRBYTE_VERSION
+##
+extraEnv: []
+##  secrets [object] Supply additional secrets to container
+## Example:
+## secrets:
+##   DATABASE_PASSWORD: strong-password
+##   DATABASE_USER: my-db-user
+secrets: {}
+
+##  env_vars [object] Supply extra env variables to main container using simplified notation
+## Example with default values for connector-rollout-worker:
+# env_vars:
+#   AIRBYTE_VERSION: 0.40.4
+
+#   # Workspace storage for running jobs (logs, etc)
+#   WORKSPACE_ROOT: /workspace
+#   WORKSPACE_DOCKER_MOUNT: airbyte_workspace
+
+#   # Miscellaneous
+#   TRACKING_STRATEGY: segment
+#   WEBAPP_URL: airbyte-webapp-svc:80
+#   INTERNAL_API_HOST: http://airbyte-server-svc:8001
+env_vars: {}
+
+## extraSelectorLabels [object] - use to specify own additional selector labels for deployment
+extraSelectorLabels: {}
+## extraLabels [object] - use to specify own additional labels for deployment
+extraLabels: {}
+
+debug:
+  enabled: true
+  remoteDebugPort: 5005

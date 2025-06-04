@@ -1,0 +1,599 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "airbyte.fullname" . }}
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+    {{- if .Values.extraLabels }}
+    {{ toYaml (mergeOverwrite .Values.extraLabels .Values.global.extraLabels) | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "airbyte.selectorLabels" . | nindent 6 }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 6 }}
+      {{- end }}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        {{- include "airbyte.selectorLabels" . | nindent 8 }}
+        {{- if .Values.extraSelectorLabels }}
+        {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 8 }}
+        {{- end }}
+        {{- if .Values.podLabels }}
+          {{- include "airbyte.tplvalues.render" (dict "value" .Values.podLabels "context" $) | nindent 8 }}
+        {{- end }}
+      {{- if .Values.podAnnotations }}
+      annotations:
+        {{- include "airbyte.tplvalues.render" (dict "value" .Values.podAnnotations "context" $) | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ .Values.global.serviceAccountName }}
+      automountServiceAccountToken: true
+      {{- if .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range .Values.global.imagePullSecrets }}
+          {{- printf "- name: %s" .name | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector: {{- include "airbyte.tplvalues.render" (dict "value" .Values.nodeSelector "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations: {{- include "airbyte.tplvalues.render" (dict "value" .Values.tolerations "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity: {{- include "airbyte.tplvalues.render" (dict "value" .Values.affinity "context" $) | nindent 8 }}
+      {{- end }}
+      {{- if .Values.extraInitContainers }}
+      initContainers:
+      {{- toYaml .Values.extraInitContainers | nindent 6 }}
+      {{- end }}
+      containers:
+      - name: airbyte-workload-launcher-container
+        image: {{ include "imageUrl" (list .Values.image $) }}
+        imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+        env:
+        - name: RUNNING_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.running }}"
+        - name: SUCCEEDED_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.succeeded }}"
+        - name: UNSUCCESSFUL_TTL_MINUTES
+          value: "{{ .Values.timeToDeletePods.unsuccessful }}"
+        {{- if .Values.debug.enabled }}
+        - name: JAVA_TOOL_OPTIONS
+          value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.debug.remoteDebugPort }},server=y,suspend=n"
+        {{- end}}
+        {{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")  }}
+        - name: AIRBYTE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_VERSION
+        - name: AIRBYTE_EDITION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: AIRBYTE_EDITION
+        - name: DATA_PLANE_ID
+          value: "local"
+        - name: PUB_SUB_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_ENABLED
+        - name: PUB_SUB_TOPIC_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: PUB_SUB_TOPIC_NAME
+        - name: CONFIG_ROOT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONFIG_ROOT
+        {{- if eq (lower (default "" .Values.global.storage.type)) "gcs" }}
+        - name: CONTAINER_ORCHESTRATOR_SECRET_MOUNT_PATH
+          value: "/secrets/gcs-log-creds"
+        - name: CONTAINER_ORCHESTRATOR_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.storage.storageSecretName }}
+        {{- end }}
+
+        {{- include "airbyte.database.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
+        - name: MICROMETER_METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_ENABLED
+        - name: MICROMETER_METRICS_STEP
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STEP
+        - name: MICROMETER_METRICS_OTLP_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_OTLP_ENABLED
+        - name: OTEL_COLLECTOR_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: OTEL_COLLECTOR_ENDPOINT
+        - name: MICROMETER_METRICS_STATSD_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_ENABLED
+        - name: MICROMETER_METRICS_STATSD_FLAVOR
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: MICROMETER_METRICS_STATSD_FLAVOR
+        - name: SEGMENT_WRITE_KEY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SEGMENT_WRITE_KEY
+        - name: STATSD_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_HOST
+        - name: STATSD_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: STATSD_PORT
+        - name: TRACKING_STRATEGY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TRACKING_STRATEGY
+        - name: WORKSPACE_DOCKER_MOUNT
+          value: workspace
+        - name: WORKSPACE_ROOT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKSPACE_ROOT
+        - name: WEBAPP_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WEBAPP_URL
+        - name: WORKLOAD_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_API_HOST
+        - name: TEMPORAL_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TEMPORAL_HOST
+        - name: TEMPORAL_WORKER_PORTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: TEMPORAL_WORKER_PORTS
+        - name: JOB_KUBE_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: JOB_KUBE_SERVICEACCOUNT
+          value: {{ .Values.global.jobs.kube.serviceAccountName }}
+        {{- if $.Values.global.jobs.kube.annotations }}
+        - name: JOB_KUBE_ANNOTATIONS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_ANNOTATIONS
+        {{- end }}
+        {{- if $.Values.global.jobs.kube.labels }}
+        - name: JOB_KUBE_LABELS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_LABELS
+        {{- end }}
+        {{- if $.Values.global.jobs.kube.nodeSelector }}
+        - name: JOB_KUBE_NODE_SELECTORS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_NODE_SELECTORS
+        {{- end }}
+        {{- if $.Values.global.jobs.kube.tolerations }}
+        - name: JOB_KUBE_TOLERATIONS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_TOLERATIONS
+        {{- end }}
+        - name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+        - name: CONNECTOR_SIDECAR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_SIDECAR_IMAGE
+        - name: WORKLOAD_INIT_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_INIT_IMAGE
+        - name: CONNECTOR_PROFILER_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONNECTOR_PROFILER_IMAGE
+        - name: CONTAINER_ORCHESTRATOR_IMAGE
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTAINER_ORCHESTRATOR_IMAGE
+        - name: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_MAIN_CONTAINER_IMAGE_PULL_SECRET
+        - name: JOB_MAIN_CONTAINER_CPU_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_MAIN_CONTAINER_CPU_REQUEST
+        - name: JOB_MAIN_CONTAINER_CPU_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_MAIN_CONTAINER_CPU_LIMIT
+        - name: JOB_MAIN_CONTAINER_MEMORY_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_MAIN_CONTAINER_MEMORY_REQUEST
+        - name: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_MAIN_CONTAINER_MEMORY_LIMIT
+        - name: JOB_KUBE_LOCAL_VOLUME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOB_KUBE_LOCAL_VOLUME_ENABLED
+        - name: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: KUBERNETES_CLIENT_MAX_IDLE_CONNECTIONS
+        - name: WORKLOAD_API_BEARER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+              key: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_NAME
+          value: {{ index .Values "workloadApi" "bearerTokenSecretName" | default (printf "%s-airbyte-secrets" .Release.Name ) }}
+        - name: WORKLOAD_API_BEARER_TOKEN_SECRET_KEY
+          value: {{ index .Values "workloadApi" "bearerTokenSecretKey" | default "WORKLOAD_API_BEARER_TOKEN" }}
+        - name: INTERNAL_API_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: INTERNAL_API_HOST
+        - name: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONFIGS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+        - name: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: JOBS_DATABASE_MINIMUM_FLYWAY_MIGRATION_VERSION
+        - name: ACTIVITY_MAX_ATTEMPT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: ACTIVITY_MAX_ATTEMPT
+        - name: ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS
+        - name: ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS
+        - name: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKFLOW_FAILURE_RESTART_DELAY_SECONDS
+        - name: SHOULD_RUN_NOTIFY_WORKFLOWS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: SHOULD_RUN_NOTIFY_WORKFLOWS
+        - name: CONTROL_PLANE_TOKEN_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: CONTROL_PLANE_TOKEN_ENDPOINT
+        - name: DATAPLANE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.dataplaneClientIdSecretKey | default "dataplane-client-id" | quote }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_NAME
+          value: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+        - name: DATAPLANE_CLIENT_ID_SECRET_KEY
+          value: {{ .Values.global.auth.dataplaneClientIdSecretKey | default "dataplane-client-id" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+              key: {{ .Values.global.auth.dataplaneClientSecretSecretKey | default "dataplane-client-secret" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_NAME
+          value: {{ .Values.global.auth.secretName | default "airbyte-auth-secrets" | quote }}
+        - name: DATAPLANE_CLIENT_SECRET_SECRET_KEY
+          value: {{ .Values.global.auth.dataplaneClientSecretSecretKey | default "dataplane-client-secret" | quote }}
+        - name: MICRONAUT_ENVIRONMENTS
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: LAUNCHER_MICRONAUT_ENVIRONMENTS
+        - name: WORKLOAD_LAUNCHER_PARALLELISM
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: WORKLOAD_LAUNCHER_PARALLELISM
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_LIMIT
+        - name: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+          valueFrom:
+            configMapKeyRef:
+              name: {{ .Release.Name }}-airbyte-env
+              key: FILE_TRANSFER_EPHEMERAL_STORAGE_REQUEST
+        {{- if or (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- else if and (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) .Values.global.auth.enabled }}
+        # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
+        # splitting into two separate blocks for readability.
+        - name: AIRBYTE_API_AUTH_HEADER_NAME
+          value: "X-Airbyte-Auth"
+        - name: AIRBYTE_API_AUTH_HEADER_VALUE
+          value: "Internal worker"
+        {{- end }}
+
+        # SECRETS MANAGER
+        - name: SECRET_PERSISTENCE
+          value: {{ include "airbyte.secretPersistence" . }}
+        # Values for AwsSecretsManager
+        {{- if eq ((((.Values.global).secretsManager).awsSecretManager).authenticationType) "credentials" }}
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID_REF_KEY
+          value: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY_REF_KEY
+          value: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+
+        {{- end }}
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).region) }}
+        - name: AWS_SECRET_MANAGER_REGION
+          value: {{ (((.Values.global).secretsManager).awsSecretManager).region }}
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).tags) }}
+        - name: AWS_SECRET_MANAGER_SECRET_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.awsSecretManager.tags }}
+        {{- end }}
+        {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
+        - name: AWS_KMS_KEY_ARN
+          value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+        {{- end }}
+
+        # Values for Azure Key Vault
+        {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+        - name: AB_AZURE_KEY_VAULT_VAULT_URL
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+        - name: AB_AZURE_KEY_VAULT_TENANT_ID
+          value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_ID_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET_REF_REF_KEY
+          value: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+        {{- end }}
+
+        {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+        - name: AB_AZURE_KEY_VAULT_TAGS
+          value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
+        {{- end }}
+
+        # Values for googleSecretManager secrets
+        {{- if (((.Values.global).secretsManager).googleSecretManager) }}
+        - name: SECRET_STORE_GCP_PROJECT_ID
+          value: {{ .Values.global.secretsManager.googleSecretManager.projectId }}
+        - name: SECRET_STORE_GCP_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        - name: SECRET_STORE_GCP_SECRET_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: SECRET_STORE_GCP_SECRET_KEY
+          value: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+        {{- end }}
+
+        # Values for vault secrets
+        {{- if (((.Values.global).secretsManager).vault) }}
+        - name: VAULT_ADDRESS
+          value: {{ (((.Values.global).secretsManager).vault).address }}
+        - name: VAULT_PREFIX
+          value: {{ (((.Values.global).secretsManager).vault).prefix }}
+        - name: VAULT_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+              key: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+        - name: VAULT_AUTH_TOKEN_REF_NAME
+          value: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+        - name: VAULT_AUTH_TOKEN_REF_KEY
+          value: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+        {{- end }}
+
+        # Storage
+        {{- include "airbyte.storage.envs" . | nindent 8 }}
+
+        {{- end }}
+
+        # Values from secret
+        {{- if .Values.secrets }}
+        {{- range $k, $v := .Values.secrets }}
+        - name: {{ $k }}
+          valueFrom:
+            secretKeyRef:
+              name: workload-launcher-secrets
+              key: {{ $k }}
+        {{- end }}
+        {{- end }}
+
+        # Values from env
+        {{- if or .Values.env_vars .Values.global.env_vars }}
+        {{- range $k, $v := mergeOverwrite .Values.env_vars .Values.global.env_vars }}
+        - name: {{ $k }}
+          value: {{ $v | quote }}
+        {{- end }}
+        {{- end }}
+
+        # Values from extraEnv for more compability(if you want to use external secret source or other stuff)
+        {{- if .Values.extraEnv }}
+        {{- toYaml .Values.extraEnv | nindent 8 }}
+        {{- end }}
+
+        {{- if .Values.livenessProbe.enabled }}
+        livenessProbe:
+          httpGet:
+            path: /health/liveness
+            port: heartbeat
+          initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.livenessProbe.successThreshold }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+        {{- end }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: /health/readiness
+            port: heartbeat
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          successThreshold: {{ .Values.readinessProbe.successThreshold }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- end }}
+        ports:
+        {{- if .Values.debug.enabled }}
+        - name: debug
+          containerPort: {{ .Values.debug.remoteDebugPort }}
+          protocol: TCP
+        {{- end}}
+        - name: heartbeat
+          containerPort: 8016 # for heartbeat server
+        {{- if .Values.resources }}
+        resources: {{- toYaml .Values.resources | nindent 10 }}
+        {{- end }}
+        {{- if .Values.containerSecurityContext }}
+        securityContext: {{- toYaml .Values.containerSecurityContext | nindent 10 }}
+        {{- end }}
+        volumeMounts:
+        {{- if eq (lower .Values.global.storage.type) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
+        {{- end }}
+        {{- if and (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+        - name: gcs-log-creds-volume
+          mountPath: /secrets/gcs-log-creds
+          readOnly: true
+        {{- end }}
+        {{- if .Values.extraVolumeMounts }}
+{{- toYaml .Values.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+        {{- if .Values.global.extraVolumeMounts }}
+{{- toYaml .Values.global.extraVolumeMounts | nindent 8 }}
+        {{- end }}
+      {{- if .Values.extraContainers }}
+      {{ toYaml .Values.extraContainers | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraContainers }}
+      {{ toYaml .Values.global.extraContainers | nindent 6 }}
+      {{- end }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      volumes:
+      {{- if eq (lower .Values.global.storage.type) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
+      {{- end }}
+      {{- if and (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) (eq (lower (default "" .Values.global.storage.type)) "gcs") }}
+      - name: gcs-log-creds-volume
+        secret:
+          secretName: {{ ternary (printf "%s-gcs-log-creds" ( .Release.Name )) .Values.global.storage.storageSecretName (not ((.Values.global.storage).storageSecretName)) }}
+      {{- end }}
+      {{- if .Values.extraVolumes }}
+{{- toYaml .Values.extraVolumes | nindent 6 }}
+      {{- end }}
+      {{- if .Values.global.extraVolumes }}
+{{- toYaml .Values.global.extraVolumes | nindent 6 }}
+      {{- end }}

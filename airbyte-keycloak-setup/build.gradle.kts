@@ -42,6 +42,9 @@ airbyte {
   docker {
     imageName = "keycloak-setup"
   }
+  spotless {
+    excludes = listOf("src/main/resources/application.yml")
+  }
 }
 
 val copyScripts = tasks.register<Copy>("copyScripts") {

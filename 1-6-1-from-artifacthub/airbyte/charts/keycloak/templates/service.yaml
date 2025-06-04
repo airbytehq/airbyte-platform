@@ -1,0 +1,60 @@
+# If Cloud or Pro/Enterprise, render the keycloak service template.
+{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise") }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Release.Name }}-airbyte-keycloak-svc
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+      {{ if and (eq .Values.service.type "NodePort") (.Values.service.nodePort)  }}
+      nodePort: {{ .Values.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include "airbyte.selectorLabels" . | nindent 4 }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
+      {{- end }}
+---
+# This headless service sets ClusterIp: None so that it can be
+# used for internal DNS resolution of all individual keycloak
+# pods. Port 7800 is the default jgroups port that Keycloak
+# expects to be open to enable Infinispan cache synchronization.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Release.Name }}-airbyte-keycloak-headless-svc
+  {{- with .Values.headlessService.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "airbyte.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  ports:
+    - name: jgroups
+      port: 7800
+      targetPort: 7800
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "airbyte.selectorLabels" . | nindent 4 }}
+      {{- if .Values.extraSelectorLabels }}
+      {{ toYaml (mergeOverwrite .Values.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
+      {{- end }}
+{{- end }}

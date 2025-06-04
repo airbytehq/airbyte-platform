@@ -27,6 +27,7 @@ airbyte:
         app-name: ${OIDC_APP_NAME:}
         client-id: ${OIDC_CLIENT_ID:}
         client-secret: ${OIDC_CLIENT_SECRET:}
+        display-name: ${OIDC_DISPLAY_NAME:}
     initial-user:
       email: ${INITIAL_USER_EMAIL:}
       first-name: ${INITIAL_USER_FIRST_NAME:}
