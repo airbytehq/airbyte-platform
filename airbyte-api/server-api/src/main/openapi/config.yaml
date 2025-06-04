@@ -2033,6 +2033,52 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/discover_schema:
+    post:
+      tags:
+        - destination
+      summary: Discover the catalog for a destination
+      operationId: discoverCatalogForDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/get_catalog_for_connection:
+    post:
+      tags:
+        - destination
+      summary: Get the destination catalog for a connection
+      operationId: getCatalogForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/destinations/search:
     post:
       tags:
@@ -11752,6 +11798,15 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+    DestinationDiscoverSchemaRequestBody:
+      type: object
+      required:
+        - destinationId
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        disableCache:
+          type: boolean
     PostprocessDiscoveredCatalogRequestBody:
       type: object
       required:
@@ -11915,6 +11970,43 @@ components:
           type: boolean
         connectionStatus:
           $ref: "#/components/schemas/ConnectionStatus"
+    DestinationDiscoverRead:
+      type: object
+      required:
+        - catalog
+        - catalogId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        catalogId:
+          type: string
+          format: uuid
+    DestinationCatalog:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationOperation"
+    DestinationOperation:
+      type: object
+      required:
+        - objectName
+        - syncMode
+        - schema
+      properties:
+        objectName:
+          type: string
+        syncMode:
+          $ref: "#/components/schemas/DestinationSyncMode"
+        schema:
+          $ref: "#/components/schemas/StreamJsonSchema"
+        matchingKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
     SourceAutoPropagateChange:
       description:
         Input of the source propagation, it contains the discovered catalog and a list of diff that need to be applied
@@ -12600,6 +12692,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
+        destinationCatalogId:
+          type: string
+          format: uuid
         dataplaneGroupId:
           type: string
           format: uuid
@@ -12660,6 +12755,9 @@ components:
           items:
             $ref: "#/components/schemas/OperationCreate"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         dataplaneGroupId:
@@ -12724,6 +12822,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         dataplaneGroupId:
@@ -12799,6 +12900,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
+        destinationCatalogId:
+          type: string
+          format: uuid
         dataplaneGroupId:
           type: string
           format: uuid
@@ -12861,6 +12965,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         breakingChange:
@@ -16442,6 +16549,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         catalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         catalogDiff:

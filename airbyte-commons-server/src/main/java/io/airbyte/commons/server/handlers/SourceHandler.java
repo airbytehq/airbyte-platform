@@ -449,7 +449,7 @@ public class SourceHandler {
   }
 
   private UUID writeActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request) throws IOException {
-    return catalogService.writeActorCatalogFetchEvent(
+    return catalogService.writeActorCatalogWithFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
         request.getConnectorVersion(),

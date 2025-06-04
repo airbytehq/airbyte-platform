@@ -910,7 +910,7 @@ class SchedulerHandlerTest {
     assertTrue(actual.getJobInfo().getSucceeded());
     verify(sourceService).getSourceConnection(source.getSourceId());
     verify(catalogService).getActorCatalog(eq(request.getSourceId()), any(), any());
-    verify(catalogService, never()).writeActorCatalogFetchEvent(any(), any(), any(), any());
+    verify(catalogService, never()).writeActorCatalogWithFetchEvent((AirbyteCatalog) any(), any(), any(), any());
     verify(actorDefinitionVersionHelper).getSourceVersion(sourceDefinition, source.getWorkspaceId(), source.getSourceId());
     verify(synchronousSchedulerClient, never()).createDiscoverSchemaJob(any(), any(), anyBoolean(), any(), any());
   }

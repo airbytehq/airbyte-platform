@@ -1068,6 +1068,7 @@ class ConnectionsHandlerTest {
                 .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest())
                 .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit()))
             .sourceCatalogId(standardSync.getSourceCatalogId())
+            .destinationCatalogId(standardSync.getDestinationCatalogId())
             .dataplaneGroupId(standardSync.getDataplaneGroupId())
             .notifySchemaChanges(standardSync.getNotifySchemaChanges())
             .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
@@ -1247,6 +1248,29 @@ class ConnectionsHandlerTest {
         assertEquals(expectedConnectionRead, actualConnectionRead);
 
         standardSync.getCatalog().getStreams().getFirst().setMappers(List.of(hashingMapper));
+        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
+      }
+
+      @Test
+      void testCreateConnectionWithDestinationCatalog()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId)
+            .withDataplaneGroupId(dataplaneGroupId3);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final UUID destinationCatalogId = UUID.randomUUID();
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+            .destinationCatalogId(destinationCatalogId);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
+
+        final ConnectionRead expectedConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+        assertEquals(expectedConnectionRead, actualConnectionRead);
+
+        standardSync.withDestinationCatalogId(destinationCatalogId);
         verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
@@ -1996,6 +2020,29 @@ class ConnectionsHandlerTest {
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate));
+
+        when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
+        verify(connectionService).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchDestinationCatalogId()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final UUID newDestinationCatalogId = UUID.randomUUID();
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .destinationCatalogId(newDestinationCatalogId);
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .destinationCatalogId(newDestinationCatalogId);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withDestinationCatalogId(newDestinationCatalogId);
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 

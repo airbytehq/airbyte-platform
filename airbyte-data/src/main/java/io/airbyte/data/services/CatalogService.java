@@ -7,6 +7,7 @@ package io.airbyte.data.services;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
+import io.airbyte.config.DestinationCatalog;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import java.io.IOException;
@@ -30,7 +31,10 @@ public interface CatalogService {
 
   Optional<ActorCatalogFetchEvent> getMostRecentActorCatalogFetchEventForSource(UUID sourceId) throws IOException;
 
-  UUID writeActorCatalogFetchEvent(AirbyteCatalog catalog, UUID actorId, String connectorVersion, String configurationHash) throws IOException;
+  UUID writeActorCatalogWithFetchEvent(AirbyteCatalog catalog, UUID actorId, String connectorVersion, String configurationHash) throws IOException;
+
+  UUID writeActorCatalogWithFetchEvent(DestinationCatalog catalog, UUID actorId, String connectorVersion, String configurationHash)
+      throws IOException;
 
   Map<UUID, ActorCatalogFetchEvent> getMostRecentActorCatalogFetchEventForSources(final List<UUID> sourceIds) throws IOException;
 

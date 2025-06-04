@@ -285,6 +285,7 @@ public class ConnectorBuilderTests {
             null,
             null,
             null,
+            null,
             null));
   }
 

@@ -408,6 +408,7 @@ public class WebBackendConnectionsHandler {
         .namespaceFormat(connectionRead.getNamespaceFormat())
         .prefix(connectionRead.getPrefix())
         .syncCatalog(connectionRead.getSyncCatalog())
+        .destinationCatalogId(connectionRead.getDestinationCatalogId())
         .status(connectionRead.getStatus())
         .schedule(connectionRead.getSchedule())
         .scheduleType(connectionRead.getScheduleType())
@@ -869,6 +870,7 @@ public class WebBackendConnectionsHandler {
     connectionCreate.status(webBackendConnectionCreate.getStatus());
     connectionCreate.resourceRequirements(webBackendConnectionCreate.getResourceRequirements());
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
+    connectionCreate.destinationCatalogId(webBackendConnectionCreate.getDestinationCatalogId());
     connectionCreate.dataplaneGroupId(webBackendConnectionCreate.getDataplaneGroupId());
     connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
@@ -904,6 +906,7 @@ public class WebBackendConnectionsHandler {
     connectionPatch.status(webBackendConnectionPatch.getStatus());
     connectionPatch.resourceRequirements(webBackendConnectionPatch.getResourceRequirements());
     connectionPatch.sourceCatalogId(webBackendConnectionPatch.getSourceCatalogId());
+    connectionPatch.destinationCatalogId(webBackendConnectionPatch.getDestinationCatalogId());
     connectionPatch.dataplaneGroupId(webBackendConnectionPatch.getDataplaneGroupId());
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
     connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());

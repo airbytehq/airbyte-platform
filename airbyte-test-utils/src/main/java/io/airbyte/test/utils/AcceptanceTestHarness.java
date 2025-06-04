@@ -678,6 +678,7 @@ public class AcceptanceTestHarness {
         create.getScheduleData(),
         null,
         create.getCatalogId(),
+        null,
         create.getDataplaneGroupId(),
         null,
         null,
@@ -714,6 +715,7 @@ public class AcceptanceTestHarness {
             create.getScheduleData(),
             null,
             create.getCatalogId(),
+            null,
             create.getDataplaneGroupId(),
             null,
             null,
@@ -758,6 +760,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -771,6 +774,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -803,6 +807,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -1175,6 +1180,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null);
     updateConnection(connectionUpdate);
   }
@@ -1393,6 +1399,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             nonBreakingChangesPreference,
             backfillPreference,
             null,
@@ -1479,6 +1486,7 @@ public class AcceptanceTestHarness {
             operation.getOperatorConfiguration(),
             operation.getOperationId())),
         connection.getSourceCatalogId(),
+        null,
         null,
         null,
         null,

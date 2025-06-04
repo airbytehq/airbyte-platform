@@ -884,7 +884,7 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
-            "status", "resourceRequirements", "sourceCatalogId", "dataplaneGroupId",
+            "status", "resourceRequirements", "sourceCatalogId", "destinationCatalogId", "dataplaneGroupId",
             "nonBreakingChangesPreference", "notifySchemaChanges", "notifySchemaChangesByEmail", "backfillPreference",
             "tags", "addTagsItem", "removeTagsItem");
 
@@ -908,7 +908,7 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
-            "sourceCatalogId", "scheduleType", "scheduleData", "dataplaneGroupId", "breakingChange",
+            "sourceCatalogId", "destinationCatalogId", "scheduleType", "scheduleData", "dataplaneGroupId", "breakingChange",
             "notifySchemaChanges", "notifySchemaChangesByEmail", "nonBreakingChangesPreference", "backfillPreference",
             "tags", "addTagsItem", "removeTagsItem");
 

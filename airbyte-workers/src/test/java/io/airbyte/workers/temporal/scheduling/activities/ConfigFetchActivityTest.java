@@ -104,39 +104,39 @@ class ConfigFetchActivityTest {
 
   private static final ConnectionRead connectionReadWithLegacySchedule = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
-      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null, null,
       null);
 
   private static final ConnectionRead connectionReadWithManualScheduleType = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
-      null, null, ConnectionScheduleType.MANUAL, null, null, null, null, null, null, null, null, null, null, null);
+      null, null, ConnectionScheduleType.MANUAL, null, null, null, null, null, null, null, null, null, null, null, null);
 
   private static final ConnectionRead connectionReadWithBasicScheduleType = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
       null,
       null, ConnectionScheduleType.BASIC,
       new ConnectionScheduleData(new ConnectionScheduleDataBasicSchedule(ConnectionScheduleDataBasicSchedule.TimeUnit.MINUTES, 5L), null), null, null,
-      null, null, null, null, null, null, null, null);
+      null, null, null, null, null, null, null, null, null);
 
   public static final String UTC = "UTC";
   private static final ConnectionRead connectionReadWithCronScheduleType = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.ACTIVE, false, null, null, null,
       null, null, ConnectionScheduleType.CRON, new ConnectionScheduleData(null, new ConnectionScheduleDataCron("0 0 12 * * ?", UTC)), null, null,
-      null, null, null, null, null, null, null, null);
+      null, null, null, null, null, null, null, null, null);
 
   private static final ConnectionRead connectionReadWithScheduleDisable = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.INACTIVE, false, null, null, null,
-      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null, null,
       null);
 
   private static final ConnectionRead connectionReadWithScheduleDeleted = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.DEPRECATED, false, null, null, null,
-      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null,
+      null, new ConnectionSchedule(5L, ConnectionSchedule.TimeUnit.MINUTES), null, null, null, null, null, null, null, null, null, null, null, null,
       null);
 
   private static final ConnectionRead connectionReadWithoutSchedule = new ConnectionRead(
       CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, new AirbyteCatalog(List.of()), ConnectionStatus.DEPRECATED, false, null, null, null,
-      null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+      null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
   @BeforeEach
   void setup() {
