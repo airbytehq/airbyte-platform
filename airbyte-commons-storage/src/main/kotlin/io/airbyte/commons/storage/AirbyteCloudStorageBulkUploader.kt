@@ -50,11 +50,9 @@ open class AirbyteCloudStorageBulkUploader<T>(
    * Stops the upload task.
    */
   open fun stop() {
-    try {
-      uploadTask.cancel(false)
-    } finally {
-      upload()
-    }
+    // Perform one final flush before canceling the upload task
+    upload()
+    uploadTask.cancel(false)
   }
 
   /**
@@ -75,10 +73,14 @@ open class AirbyteCloudStorageBulkUploader<T>(
       buffer.drainTo(events)
 
       if (events.isNotEmpty()) {
-        val logs = Jsons.serialize(events)
-        storageClient.write(currentStorageId, logs)
-
-        this.currentStorageId = createFileId(baseStorageId)
+        try {
+          val logs = Jsons.serialize(events)
+          storageClient.write(currentStorageId, logs)
+          this.currentStorageId = createFileId(baseStorageId)
+        } catch (e: Exception) {
+          // Log any failures to serialize or upload to cloud storage for debugging purposes
+          e.printStackTrace()
+        }
       }
     }
   }

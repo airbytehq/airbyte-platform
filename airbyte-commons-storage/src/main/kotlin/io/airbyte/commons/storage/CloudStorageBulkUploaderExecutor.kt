@@ -12,6 +12,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 object CloudStorageBulkUploaderExecutor {
+  private val shutdownLock = Any()
+
   /**
    * Shared executor service used to reduce the number of threads created to handle
    * uploading log data to remote storage.
@@ -43,8 +45,19 @@ object CloudStorageBulkUploaderExecutor {
    * to ensure that the thread pool is stopped prior to exit/stopping the appenders.
    */
   fun stopAirbyteCloudStorageAppenderExecutorService() {
-    executorService.shutdownNow()
-    executorService.awaitTermination(30, TimeUnit.SECONDS)
+    /*
+     * Ensure that only one thread is attempting to shut down the executor service at a time.  This is
+     * to protect against shutdown hooks getting registered/called multiple times.
+     */
+    synchronized(shutdownLock) {
+      if (!executorService.isShutdown) {
+        executorService.shutdown()
+        val terminated = executorService.awaitTermination(30, TimeUnit.SECONDS)
+        if (!terminated) {
+          executorService.shutdownNow()
+        }
+      }
+    }
   }
 
   init {

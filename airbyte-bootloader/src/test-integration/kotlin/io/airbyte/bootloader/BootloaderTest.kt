@@ -137,7 +137,10 @@ internal class BootloaderTest {
 
     val connectionService = ConnectionServiceJooqImpl(configDatabase)
     val actorDefinitionService = ActorDefinitionServiceJooqImpl(configDatabase)
-    val scopedConfigurationService: ScopedConfigurationService = mockk()
+    val scopedConfigurationService: ScopedConfigurationService =
+      mockk {
+        every { listScopedConfigurationsWithOrigins(any(), any(), any(), any(), any()) } returns emptyList()
+      }
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
