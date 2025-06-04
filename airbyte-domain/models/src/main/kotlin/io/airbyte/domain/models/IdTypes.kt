@@ -17,11 +17,6 @@ value class ActorDefinitionId(
 )
 
 @JvmInline
-value class CommandId(
-  val value: String,
-)
-
-@JvmInline
 value class ConnectionId(
   val value: UUID,
 )
