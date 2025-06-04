@@ -144,7 +144,7 @@ internal class BootloaderTest {
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
@@ -153,7 +153,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -161,7 +161,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         secretPersistenceConfigService,
         connectionService,
         actorDefinitionVersionUpdater,
@@ -207,7 +207,7 @@ internal class BootloaderTest {
     val breakingChangeNotificationHelper =
       BreakingChangeNotificationHelper(
         workspaceService,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val breakingChangeHelper = BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService)
     val supportStateUpdater =
@@ -218,7 +218,7 @@ internal class BootloaderTest {
         airbyteEdition,
         breakingChangeHelper,
         breakingChangeNotificationHelper,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val actorDefinitionVersionResolver: ActorDefinitionVersionResolver = mockk()
     val airbyteCompatibleConnectorsValidator: AirbyteCompatibleConnectorsValidator =
@@ -248,7 +248,7 @@ internal class BootloaderTest {
         mockk(relaxed = true),
         actorDefinitionService,
         airbyteCompatibleConnectorsValidator,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
@@ -330,7 +330,7 @@ internal class BootloaderTest {
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
@@ -339,7 +339,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
@@ -348,7 +348,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,
@@ -384,7 +384,7 @@ internal class BootloaderTest {
     val breakingChangeNotificationHelper =
       BreakingChangeNotificationHelper(
         workspaceService,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val breakingChangesHelper = BreakingChangesHelper(scopedConfigurationService, workspaceService, destinationService, sourceService)
     val supportStateUpdater =
@@ -395,7 +395,7 @@ internal class BootloaderTest {
         airbyteEdition,
         breakingChangesHelper,
         breakingChangeNotificationHelper,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val protocolVersionChecker =
       ProtocolVersionChecker(
@@ -430,7 +430,7 @@ internal class BootloaderTest {
         mockk(relaxed = true),
         actorDefinitionService,
         airbyteCompatibleConnectorsValidator,
-        featureFlagClient!!,
+        featureFlagClient,
       )
     val authKubeSecretInitializer: AuthKubernetesSecretInitializer = mockk(relaxed = true)
     val postLoadExecutor = DefaultPostLoadExecutor(applyDefinitionsHelper, declarativeSourceUpdater)
@@ -638,7 +638,7 @@ internal class BootloaderTest {
     val connectionTimelineService: ConnectionTimelineEventService = mockk()
     val actorDefinitionVersionUpdater =
       ActorDefinitionVersionUpdater(
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionService,
         scopedConfigurationService,
@@ -659,7 +659,7 @@ internal class BootloaderTest {
     val sourceService =
       SourceServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         mockk(),
         connectionService,
         actorDefinitionVersionUpdater,
@@ -668,7 +668,7 @@ internal class BootloaderTest {
     val destinationService =
       DestinationServiceJooqImpl(
         configDatabase,
-        featureFlagClient!!,
+        featureFlagClient,
         connectionService,
         actorDefinitionVersionUpdater,
         metricClient,

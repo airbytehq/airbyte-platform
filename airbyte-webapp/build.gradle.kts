@@ -20,14 +20,9 @@ ext {
  * Utility function to parse a .gitignore file into a list of ignore pattern entries
  */
 fun parseIgnoreFile(f: File): List<String> {
-    val ignores = mutableListOf<String>()
-    f.forEachLine { line ->
-        // ignore comments and empty lines
-        if (!line.startsWith('#') && line.isNotEmpty()) {
-            ignores.add(line)
-        }
-    }
-    return ignores
+    return f.readLines()
+        .filter { !it.startsWith('#') && it.isNotEmpty() }
+        .toList()
 }
 
 // Use the node version that's defined in the .nvmrc file
