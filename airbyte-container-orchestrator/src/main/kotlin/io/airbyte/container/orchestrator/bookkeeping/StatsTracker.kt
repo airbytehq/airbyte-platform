@@ -138,36 +138,25 @@ class StreamStatsTracker(
       return
     }
     val byteCount =
-      if (recordMessage.additionalProperties.contains(
-          DEST_EMITTED_BYTES_COUNT,
-        )
-      ) {
-        recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT] as Long
-      } else {
-        0
-      }
+      recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT]
+        .asLongOrZero()
 
     val recordCount =
-      if (recordMessage.additionalProperties.contains(
-          DEST_EMITTED_RECORDS_COUNT,
-        )
-      ) {
-        recordMessage.additionalProperties[DEST_EMITTED_RECORDS_COUNT] as Long
-      } else {
-        0
-      }
+      recordMessage.additionalProperties[DEST_EMITTED_RECORDS_COUNT]
+        .asLongOrZero()
 
-    val emittedStatsToUpdate = emittedStats
-    with(emittedStatsToUpdate) {
+    emittedStats.apply {
       remittedRecordsCount.set(recordCount)
       emittedBytesCount.set(byteCount)
     }
 
-    with(streamStats) {
+    streamStats.apply {
       emittedRecordsCount.set(recordCount)
       emittedBytesCount.set(byteCount)
     }
   }
+
+  private fun Any?.asLongOrZero(): Long = (this as? Number)?.toLong() ?: 0L
 
   /**
    * Bookkeeping for when a record message is read.
@@ -362,22 +351,30 @@ class StreamStatsTracker(
     stateMessage: AirbyteStateMessage,
     stagedStats: StagedStats,
   ) {
-    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_RECORDS_COUNT)) {
-      val committedRecordsCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as Long
-      if (stagedStats.emittedStatsCounters.remittedRecordsCount.get() != committedRecordsCountFromState) {
-        stagedStats.emittedStatsCounters.remittedRecordsCount.set(committedRecordsCountFromState)
-      }
-
+    updateCounter(
+      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT],
+      counter = stagedStats.emittedStatsCounters.remittedRecordsCount,
+    ) {
       stagedStats.emittedStatsCounters.filteredOutRecords.set(0)
     }
 
-    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_BYTES_COUNT)) {
-      val committedBytesCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as Long
-      if (stagedStats.emittedStatsCounters.emittedBytesCount.get() != committedBytesCountFromState) {
-        stagedStats.emittedStatsCounters.emittedBytesCount.set(committedBytesCountFromState)
-      }
-
+    updateCounter(
+      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT],
+      counter = stagedStats.emittedStatsCounters.emittedBytesCount,
+    ) {
       stagedStats.emittedStatsCounters.filteredOutBytesCount.set(0)
+    }
+  }
+
+  private inline fun updateCounter(
+    rawValue: Any?,
+    counter: AtomicLong,
+    crossinline afterUpdate: () -> Unit = {},
+  ) {
+    val newValue = (rawValue as? Number)?.toLong() ?: return
+    if (counter.get() != newValue) {
+      counter.set(newValue)
+      afterUpdate()
     }
   }
 
