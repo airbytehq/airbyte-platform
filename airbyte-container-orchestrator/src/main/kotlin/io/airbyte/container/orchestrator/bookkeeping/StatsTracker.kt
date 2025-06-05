@@ -137,6 +137,7 @@ class StreamStatsTracker(
     if (!isBookkeeperMode) {
       return
     }
+    logger.info { "Dummy stats message from destination $recordMessage" }
     val byteCount =
       recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT]
         .asLongOrZero()
@@ -213,6 +214,9 @@ class StreamStatsTracker(
    * to keep on tracking incoming messages.
    */
   fun trackStateFromSource(stateMessage: AirbyteStateMessage) {
+    if (isBookkeeperMode) {
+      logger.info { "State message from source $stateMessage" }
+    }
     val currentTime = LocalDateTime.now()
     streamStats.sourceStateCount.incrementAndGet()
 
@@ -272,6 +276,9 @@ class StreamStatsTracker(
    * said acked state.
    */
   fun trackStateFromDestination(stateMessage: AirbyteStateMessage) {
+    if (isBookkeeperMode) {
+      logger.info { "State message from destination : $stateMessage" }
+    }
     val currentTime = LocalDateTime.now()
     streamStats.destinationStateCount.incrementAndGet()
 
