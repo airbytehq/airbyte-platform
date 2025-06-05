@@ -45,7 +45,7 @@ const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ se
   );
 };
 
-export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => {
+export const StreamSelector: React.FC<StreamSelectorProps> = () => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
@@ -142,7 +142,6 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   return (
     <ListBox
-      className={className}
       options={options}
       selectedValue={selectedValue}
       onSelect={handleStreamSelect}

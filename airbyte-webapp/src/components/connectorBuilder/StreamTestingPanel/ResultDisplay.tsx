@@ -28,12 +28,7 @@ export const ResultDisplay: React.FC<ResultDisplayProps> = ({ slices, className,
   return (
     <div className={classNames(className, styles.container)}>
       {slices.length > 1 && (
-        <SliceSelector
-          className={styles.sliceSelector}
-          slices={slices}
-          selectedSliceIndex={selectedSlice}
-          onSelect={setSelectedSlice}
-        />
+        <SliceSelector slices={slices} selectedSliceIndex={selectedSlice} onSelect={setSelectedSlice} />
       )}
       {page && <PageDisplay className={styles.pageDisplay} page={page} inferredSchema={inferredSchema} />}
       {slice.pages.length > 1 && (

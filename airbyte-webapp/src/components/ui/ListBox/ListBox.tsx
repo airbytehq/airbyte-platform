@@ -54,7 +54,6 @@ const DefaultControlButton = <T,>({ placeholder, selectedOption, isDisabled }: L
 };
 
 export interface ListBoxProps<T> {
-  className?: string;
   optionClassName?: string;
   optionTextAs?: ComponentPropsWithoutRef<typeof Text>["as"];
   selectedOptionClassName?: string;
@@ -97,7 +96,6 @@ export interface ListBoxProps<T> {
 export const MIN_OPTIONS_FOR_VIRTUALIZATION = 30;
 
 export const ListBox = <T,>({
-  className,
   options,
   selectedValue,
   onSelect,
@@ -197,56 +195,49 @@ export const ListBox = <T,>({
   );
 
   return (
-    <div
-      className={className}
-      {...(testId && {
-        "data-testid": testId,
-      })}
-    >
-      <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
-        <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
-          <OriginalListboxButton
-            /**
-             * TODO:
-             * 1. place butttonClassName to the end of the classNames list to allow overriding styles
-             * 2. consider ability to pass Button component props to the ListBoxControlButtonProps
-             * (type="clear" for example)
-             * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
-             * */
-            className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
-            onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
-            {...(testId && {
-              "data-testid": `${testId}-listbox-button`,
-            })}
-            id={id}
-            as={controlButtonAs}
-            onFocus={onFocus}
-          >
-            <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
-          </OriginalListboxButton>
-          <OriginalListboxOptions
-            as="ul"
-            onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
-            className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth })}
-            {...(testId && {
-              "data-testid": `${testId}-listbox-options`,
-            })}
-          >
-            {options.length && isVirtualized ? (
-              <Virtuoso<Option<T>>
-                style={{ height: "300px" }} // $height-long-listbox-options-list
-                data={options}
-                ref={virtuosoRef}
-                increaseViewportBy={{ top: 100, bottom: 100 }}
-                itemContent={(index, option) => <ListBoxOption key={index} {...option} />}
-                {...(initialTopMostItemIndex && { initialTopMostItemIndex })} // scroll to selected value
-              />
-            ) : (
-              options.map(ListBoxOption)
-            )}
-          </OriginalListboxOptions>
-        </FloatLayout>
-      </Listbox>
-    </div>
+    <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
+      <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
+        <OriginalListboxButton
+          /**
+           * TODO:
+           * 1. place butttonClassName to the end of the classNames list to allow overriding styles
+           * 2. consider ability to pass Button component props to the ListBoxControlButtonProps
+           * (type="clear" for example)
+           * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
+           * */
+          className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
+          onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+          {...(testId && {
+            "data-testid": `${testId}-listbox-button`,
+          })}
+          id={id}
+          as={controlButtonAs}
+          onFocus={onFocus}
+        >
+          <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
+        </OriginalListboxButton>
+        <OriginalListboxOptions
+          as="ul"
+          onKeyDown={isVirtualized ? handleKeydownForVirtualizedList : undefined}
+          className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth })}
+          {...(testId && {
+            "data-testid": `${testId}-listbox-options`,
+          })}
+        >
+          {options.length && isVirtualized ? (
+            <Virtuoso<Option<T>>
+              style={{ height: "300px" }} // $height-long-listbox-options-list
+              data={options}
+              ref={virtuosoRef}
+              increaseViewportBy={{ top: 100, bottom: 100 }}
+              itemContent={(index, option) => <ListBoxOption key={index} {...option} />}
+              {...(initialTopMostItemIndex && { initialTopMostItemIndex })} // scroll to selected value
+            />
+          ) : (
+            options.map(ListBoxOption)
+          )}
+        </OriginalListboxOptions>
+      </FloatLayout>
+    </Listbox>
   );
 };

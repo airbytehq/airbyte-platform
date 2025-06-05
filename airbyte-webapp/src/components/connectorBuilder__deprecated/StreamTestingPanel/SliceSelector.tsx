@@ -39,7 +39,7 @@ const getSliceLabel = (slice: StreamReadSlicesItem) => {
   );
 };
 
-export const SliceSelector: React.FC<SliceSelectorProps> = ({ className, slices, selectedSliceIndex, onSelect }) => {
+export const SliceSelector: React.FC<SliceSelectorProps> = ({ slices, selectedSliceIndex, onSelect }) => {
   const { formatMessage } = useIntl();
 
   const options = useMemo(
@@ -57,7 +57,7 @@ export const SliceSelector: React.FC<SliceSelectorProps> = ({ className, slices,
     <FlexContainer>
       <InnerListBox
         data-testid="tag-select-slice"
-        className={className}
+        buttonClassName={styles.innerListBoxButton}
         options={options}
         selectedValue={selectedSliceIndex}
         onSelect={(selected) => onSelect(selected)}

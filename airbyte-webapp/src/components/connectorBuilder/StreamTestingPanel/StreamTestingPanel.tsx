@@ -45,7 +45,7 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
       {hasStreams || mode === "yaml" ? (
         <>
           <FlexContainer justifyContent="space-between" gap="sm" className={styles.testingValues}>
-            <StreamSelector className={styles.streamSelector} />
+            <StreamSelector />
             <AdvancedTestSettings
               className={styles.advancedSettings}
               isOpen={isTestReadSettingsOpen}

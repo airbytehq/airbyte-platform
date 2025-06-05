@@ -1,3 +1,5 @@
+import classNames from "classnames";
+
 import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, ListBoxProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
@@ -17,8 +19,14 @@ const ControlButton = <T,>(props: ListBoxControlButtonProps<T>) => {
   );
 };
 
-type InnerListBoxProps<T> = Omit<ListBoxProps<T>, "controlButton" | "buttonClassName">;
+type InnerListBoxProps<T> = Omit<ListBoxProps<T>, "controlButton">;
 
-export const InnerListBox = <T,>(props: InnerListBoxProps<T>) => {
-  return <ListBox {...props} buttonClassName={styles.button} controlButton={ControlButton} />;
+export const InnerListBox = <T,>({ buttonClassName, ...restProps }: InnerListBoxProps<T>) => {
+  return (
+    <ListBox
+      buttonClassName={classNames(styles.button, buttonClassName)}
+      {...restProps}
+      controlButton={ControlButton}
+    />
+  );
 };
