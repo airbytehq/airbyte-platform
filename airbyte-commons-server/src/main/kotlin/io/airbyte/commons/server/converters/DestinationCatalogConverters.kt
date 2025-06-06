@@ -28,3 +28,16 @@ fun DestinationOperationModel.toApi(): ApiDestinationOperation =
     .syncMode(Enums.convertTo(this.syncMode, DestinationSyncMode::class.java))
     .schema(this.jsonSchema)
     .matchingKeys(this.matchingKeys)
+
+fun ApiDestinationOperation.toModel(): DestinationOperationModel =
+  DestinationOperationModel(
+    objectName = objectName,
+    syncMode = Enums.convertTo(syncMode, io.airbyte.config.DestinationSyncMode::class.java),
+    jsonSchema = schema,
+    matchingKeys = matchingKeys,
+  )
+
+fun ApiDestinationCatalog.toModel(): DestinationCatalogModel =
+  DestinationCatalogModel(
+    operations = operations.map { it.toModel() },
+  )

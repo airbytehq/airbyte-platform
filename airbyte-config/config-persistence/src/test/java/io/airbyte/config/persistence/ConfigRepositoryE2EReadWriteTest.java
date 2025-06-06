@@ -26,11 +26,8 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
-import io.airbyte.config.DestinationCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
-import io.airbyte.config.DestinationOperation;
-import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.SourceOAuthParameter;
@@ -80,6 +77,9 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.DestinationCatalog;
+import io.airbyte.protocol.models.v0.DestinationOperation;
+import io.airbyte.protocol.models.v0.DestinationSyncMode;
 import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
@@ -322,7 +322,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final Optional<ActorCatalog> catalogResult = catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
     assertTrue(catalogResult.isPresent());
-    assertEquals(expectedCatalog, Jsons.serialize(catalogResult.get().getCatalog()));
+    assertEquals(Jsons.deserialize(expectedCatalog, AirbyteCatalog.class), Jsons.object(catalogResult.get().getCatalog(), AirbyteCatalog.class));
   }
 
   @Test
@@ -467,8 +467,8 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         .withConfiguration(Jsons.deserialize("{}"));
     destinationService.writeDestinationConnectionNoSecrets(destination);
 
-    final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of(
-        new DestinationOperation("test_object", DestinationSyncMode.APPEND, Jsons.emptyObject(), null)));
+    final DestinationCatalog destinationCatalog = new DestinationCatalog().withOperations(List.of(
+        new DestinationOperation().withObjectName("test_object").withSyncMode(DestinationSyncMode.APPEND).withJsonSchema(Jsons.emptyObject())));
     catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final Optional<ActorCatalog> catalog =

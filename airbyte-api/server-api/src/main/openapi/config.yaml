@@ -1563,13 +1563,33 @@ paths:
       tags:
         - source
         - internal
-      summary: Should only called from worker, to write result from discover activity back to DB.
+      summary: Should only be called from job pods, to write result from discover activity back to DB.
       operationId: writeDiscoverCatalogResult
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/SourceDiscoverSchemaWriteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverCatalogResult"
+  /v1/destinations/write_discover_catalog_result:
+    post:
+      tags:
+        - destination
+        - internal
+      summary: Should only be called from job pods, to write result from destination discover activity back to DB.
+      operationId: writeDestinationDiscoverCatalogResult
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaWriteRequestBody"
         required: true
       responses:
         "200":
@@ -11950,7 +11970,20 @@ components:
           type: string
         configurationHash:
           type: string
-
+    DestinationDiscoverSchemaWriteRequestBody:
+      description: write this requested object to the database
+      type: object
+      required:
+        - catalog
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectorVersion:
+          type: string
+        configurationHash:
+          type: string
     SourceDiscoverSchemaRead:
       description: Returns the results of a discover catalog job. If the job was not successful, the catalog field will not be present. jobInfo will aways be present and its status be used to determine if the job was successful or not.
       type: object

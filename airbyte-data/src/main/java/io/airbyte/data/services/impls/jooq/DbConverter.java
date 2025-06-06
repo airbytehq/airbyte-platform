@@ -361,7 +361,8 @@ public class DbConverter {
   public static ActorCatalog buildActorCatalog(final Record record) {
     return new ActorCatalog()
         .withId(record.get(ACTOR_CATALOG.ID))
-        .withCatalog(Jsons.jsonNode(parseAirbyteCatalog(record.get(ACTOR_CATALOG.CATALOG).toString())))
+        .withCatalog(record.get(ACTOR_CATALOG.CATALOG) == null ? null
+            : Jsons.deserialize(record.get(ACTOR_CATALOG.CATALOG).toString()))
         .withCatalogType(record.get(ACTOR_CATALOG.CATALOG_TYPE) != null
             ? Enums.toEnum(record.get(ACTOR_CATALOG.CATALOG_TYPE, String.class), ActorCatalog.CatalogType.class).orElseThrow()
             : null)

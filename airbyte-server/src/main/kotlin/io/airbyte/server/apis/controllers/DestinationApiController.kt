@@ -10,11 +10,13 @@ import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.DestinationCreate
 import io.airbyte.api.model.generated.DestinationDiscoverRead
 import io.airbyte.api.model.generated.DestinationDiscoverSchemaRequestBody
+import io.airbyte.api.model.generated.DestinationDiscoverSchemaWriteRequestBody
 import io.airbyte.api.model.generated.DestinationIdRequestBody
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.DestinationReadList
 import io.airbyte.api.model.generated.DestinationSearch
 import io.airbyte.api.model.generated.DestinationUpdate
+import io.airbyte.api.model.generated.DiscoverCatalogResult
 import io.airbyte.api.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
@@ -22,6 +24,7 @@ import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.converters.toApi
+import io.airbyte.commons.server.converters.toModel
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -104,6 +107,24 @@ open class DestinationApiController(
           ActorId(destinationDiscoverReqBody.destinationId),
           destinationDiscoverReqBody.disableCache,
         ).toApi()
+    }
+
+  @Post(uri = "/write_discover_catalog_result")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun writeDestinationDiscoverCatalogResult(
+    @Body discoverWriteRequestBody: DestinationDiscoverSchemaWriteRequestBody,
+  ): DiscoverCatalogResult? =
+    execute {
+      DiscoverCatalogResult().catalogId(
+        destinationDiscoverService
+          .writeDiscoverCatalogResult(
+            destinationId = ActorId(discoverWriteRequestBody.destinationId),
+            catalog = discoverWriteRequestBody.catalog.toModel(),
+            configHash = discoverWriteRequestBody.configurationHash,
+            destinationVersion = discoverWriteRequestBody.connectorVersion,
+          ).value,
+      )
     }
 
   @Post(uri = "/get_catalog_for_connection")
