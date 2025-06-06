@@ -123,13 +123,14 @@ class SecretConfigServiceDataImplTest {
     val entity1 = createEntityModel(descriptor = "config1", airbyteManaged = true)
     val entity2 = createEntityModel(descriptor = "config2", airbyteManaged = true)
     val expectedDomains = listOf(entity1.toConfigModel(), entity2.toConfigModel())
+    val timeFilter = OffsetDateTime.now()
 
-    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(null) } returns listOf(entity1, entity2)
+    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000) } returns listOf(entity1, entity2)
 
-    val result = service.findAirbyteManagedConfigsWithoutReferences()
+    val result = service.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000)
 
     assertEquals(expectedDomains, result)
-    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(null) }
+    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000) }
   }
 
   @Test
@@ -138,22 +139,24 @@ class SecretConfigServiceDataImplTest {
     val entity1 = createEntityModel(descriptor = "old-config", airbyteManaged = true)
     val expectedDomains = listOf(entity1.toConfigModel())
 
-    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(dateFilter) } returns listOf(entity1)
+    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(dateFilter, 500) } returns listOf(entity1)
 
-    val result = service.findAirbyteManagedConfigsWithoutReferences(dateFilter)
+    val result = service.findAirbyteManagedConfigsWithoutReferences(dateFilter, 500)
 
     assertEquals(expectedDomains, result)
-    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(dateFilter) }
+    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(dateFilter, 500) }
   }
 
   @Test
   fun `test findAirbyteManagedConfigsWithoutReferences returns empty list when none found`() {
-    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(any()) } returns emptyList()
+    val timeFilter = OffsetDateTime.now()
 
-    val result = service.findAirbyteManagedConfigsWithoutReferences()
+    every { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000) } returns emptyList()
+
+    val result = service.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000)
 
     assertEquals(emptyList<SecretConfig>(), result)
-    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(null) }
+    verify { secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(timeFilter, 1000) }
   }
 
   @Test

@@ -29,9 +29,12 @@ class SecretConfigServiceDataImpl(
     coordinate: String,
   ): SecretConfig? = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(storageId.value, coordinate)?.toConfigModel()
 
-  override fun findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter: OffsetDateTime?): List<SecretConfig> =
+  override fun findAirbyteManagedConfigsWithoutReferences(
+    excludeCreatedAfter: OffsetDateTime,
+    limit: Int,
+  ): List<SecretConfig> =
     secretConfigRepository
-      .findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter)
+      .findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter, limit)
       .map { it.toConfigModel() }
 
   override fun deleteByIds(ids: List<SecretConfigId>) {

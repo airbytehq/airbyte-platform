@@ -39,7 +39,7 @@ class OrphanedSecretConfigCleanup(
   }
 
   @Trace(operationName = SCHEDULED_TRACE_OPERATION_NAME)
-  @Scheduled(fixedRate = "1h", initialDelay = "5m")
+  @Scheduled(fixedRate = "30m", initialDelay = "5m")
   fun cleanupOrphanedSecrets() {
     log.info { "Starting orphaned secret config cleanup" }
 
@@ -51,7 +51,7 @@ class OrphanedSecretConfigCleanup(
     // Find orphaned configs that were created more than 1 hour ago
     // This gives a grace period for recently created configs that might not have references yet
     val oneHourAgo = OffsetDateTime.now().minusHours(1)
-    val orphanedConfigs = secretConfigService.findAirbyteManagedConfigsWithoutReferences(oneHourAgo)
+    val orphanedConfigs = secretConfigService.findAirbyteManagedConfigsWithoutReferences(oneHourAgo, 10000)
 
     if (orphanedConfigs.isEmpty()) {
       log.info { "No orphaned secret configs found" }
@@ -65,22 +65,22 @@ class OrphanedSecretConfigCleanup(
 
     // Delete secrets from secret storage
     for (secretConfig in orphanedConfigs) {
-      if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretConfig.secretStorageId.toString()))) {
-        continue
-      }
-
-      val secretPersistence =
-        secretPersistenceMap.getOrPut(secretConfig.secretStorageId) {
-          secretPersistenceService.getPersistenceByStorageId(SecretStorageId(secretConfig.secretStorageId))
+      try {
+        if (!featureFlagClient.boolVariation(CleanupDanglingSecretConfigs, SecretStorage(secretConfig.secretStorageId.toString()))) {
+          continue
         }
 
-      val coordinate = SecretCoordinate.AirbyteManagedSecretCoordinate.fromFullCoordinate(secretConfig.externalCoordinate)
-      if (coordinate == null) {
-        log.warn { "Skipping deletion for invalid coordinate ${secretConfig.externalCoordinate} in storage ${secretConfig.secretStorageId}" }
-        continue
-      }
+        val secretPersistence =
+          secretPersistenceMap.getOrPut(secretConfig.secretStorageId) {
+            secretPersistenceService.getPersistenceByStorageId(SecretStorageId(secretConfig.secretStorageId))
+          }
 
-      try {
+        val coordinate = SecretCoordinate.AirbyteManagedSecretCoordinate.fromFullCoordinate(secretConfig.externalCoordinate)
+        if (coordinate == null) {
+          log.warn { "Skipping deletion for invalid coordinate ${secretConfig.externalCoordinate} in storage ${secretConfig.secretStorageId}" }
+          continue
+        }
+
         log.info { "Deleting: ${coordinate.fullCoordinate}" }
         secretPersistence.delete(coordinate)
         deletedIds.add(secretConfig.id)

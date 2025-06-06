@@ -20,7 +20,10 @@ interface SecretConfigService {
     coordinate: String,
   ): SecretConfig?
 
-  fun findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter: OffsetDateTime? = null): List<SecretConfig>
+  fun findAirbyteManagedConfigsWithoutReferences(
+    excludeCreatedAfter: OffsetDateTime,
+    limit: Int,
+  ): List<SecretConfig>
 
   fun deleteByIds(ids: List<SecretConfigId>)
 }

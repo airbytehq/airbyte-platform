@@ -210,7 +210,7 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
         ),
       )
 
-      val result = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences()
+      val result = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(OffsetDateTime.now(), 1000)
 
       // Should only return the airbyte-managed config without reference
       assertEquals(1, result.size)
@@ -280,12 +280,12 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
         ).execute()
 
       // Test without date filter - should return both
-      val allResults = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences()
+      val allResults = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(OffsetDateTime.now(), 1000)
       assertEquals(2, allResults.size)
 
       // Test with date filter excluding configs created after oneHourAgo
       // This should only return the old config (created 2 hours ago)
-      val filteredResults = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(oneHourAgo)
+      val filteredResults = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(oneHourAgo, 1000)
 
       assertEquals(1, filteredResults.size)
       assertEquals(oldConfig.id, filteredResults[0].id)
@@ -295,6 +295,7 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
       val veryRestrictiveResults =
         secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(
           OffsetDateTime.now().minusHours(3),
+          1000,
         )
       assertEquals(0, veryRestrictiveResults.size)
     }
@@ -334,7 +335,7 @@ internal class SecretConfigRepositoryTest : AbstractConfigRepositoryTest() {
         ),
       )
 
-      val result = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences()
+      val result = secretConfigRepository.findAirbyteManagedConfigsWithoutReferences(OffsetDateTime.now(), 1000)
 
       assertEquals(0, result.size)
     }
