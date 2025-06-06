@@ -137,6 +137,7 @@ class StreamStatsTracker(
     if (!isBookkeeperMode) {
       return
     }
+    // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
     logger.info { "Dummy stats message from destination $recordMessage" }
     val byteCount =
       recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT]
@@ -215,6 +216,7 @@ class StreamStatsTracker(
    */
   fun trackStateFromSource(stateMessage: AirbyteStateMessage) {
     if (isBookkeeperMode) {
+      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
       logger.info { "State message from source $stateMessage" }
     }
     val currentTime = LocalDateTime.now()
@@ -277,6 +279,7 @@ class StreamStatsTracker(
    */
   fun trackStateFromDestination(stateMessage: AirbyteStateMessage) {
     if (isBookkeeperMode) {
+      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
       logger.info { "State message from destination : $stateMessage" }
     }
     val currentTime = LocalDateTime.now()
@@ -321,20 +324,37 @@ class StreamStatsTracker(
       stateIds.remove(stagedStats.stateId)
 
       if (isBookkeeperMode) {
-        handleStateStatsBookkeeperMode(stateMessage, stagedStats)
+        val totalCommittedRecords = (stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
+        val totalCommittedBytes = (stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as? Number)?.toLong() ?: 0
+        // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
+        logger.info { "TOTAL_COMMITTED_RECORDS $totalCommittedRecords" }
+        logger.info { "TOTAL_COMMITTED_BYTES $totalCommittedBytes" }
+        streamStats.apply {
+          if (emittedRecordsCount.get() < totalCommittedRecords) {
+            emittedRecordsCount.set(totalCommittedRecords)
+          }
+          if (emittedBytesCount.get() < totalCommittedBytes) {
+            emittedBytesCount.set(totalCommittedBytes)
+          }
+          committedRecordsCount.set(totalCommittedRecords)
+          committedBytesCount.set(totalCommittedBytes)
+          // TODO(Subodh): Once destination starts applying mappers, channel the filtered records count` as well
+          filteredOutRecords.set(0)
+          filteredOutBytesCount.set(0)
+        }
+      } else {
+        // Increment committed stats as we are un-staging stats
+        streamStats.committedBytesCount.addAndGet(
+          stagedStats.emittedStatsCounters.emittedBytesCount
+            .get()
+            .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+        )
+        streamStats.committedRecordsCount.addAndGet(
+          stagedStats.emittedStatsCounters.remittedRecordsCount
+            .get()
+            .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
+        )
       }
-
-      // Increment committed stats as we are un-staging stats
-      streamStats.committedBytesCount.addAndGet(
-        stagedStats.emittedStatsCounters.emittedBytesCount
-          .get()
-          .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
-      )
-      streamStats.committedRecordsCount.addAndGet(
-        stagedStats.emittedStatsCounters.remittedRecordsCount
-          .get()
-          .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
-      )
 
       if (stagedStats.stateId == stateId) {
         break
