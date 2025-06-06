@@ -584,6 +584,7 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setIncludeFiles(originalConfiguredStream.getConfig().getIncludeFiles());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
         outputStreamConfig.setMappers(originalStreamConfig.getMappers());
+        outputStreamConfig.setDestinationObjectName(originalStreamConfig.getDestinationObjectName());
 
         // TODO(pedro): Handle other mappers that are no longer valid
         // Add hashed field configs that are still present in the schema

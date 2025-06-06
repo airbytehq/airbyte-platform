@@ -14652,6 +14652,9 @@ components:
         suggested:
           description: Does the connector suggest that this stream be enabled by default?
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to. This is used for data activation destinations.
+          type: string
         includeFiles:
           description: Should the sync move raw files from the source to the destination?
           type: boolean
@@ -19052,6 +19055,9 @@ components:
         includeFiles:
           description: Whether to move raw files from the source to the destination during the sync.
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to, used for data activation destinations.
+          type: string
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"

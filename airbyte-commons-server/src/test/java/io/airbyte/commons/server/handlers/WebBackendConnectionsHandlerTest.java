@@ -1511,6 +1511,19 @@ class WebBackendConnectionsHandlerTest {
     assertEquals(includeFiles, actual.getStreams().getFirst().getConfig().getIncludeFiles());
   }
 
+  @Test
+  void testUpdateSchemaWithDestinationObjectName() {
+    final AirbyteCatalog configured = ConnectionHelpers.generateBasicApiCatalog();
+    configured.getStreams().getFirst().getConfig()
+        .destinationObjectName("configured_object_name");
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(configured, discovered, discovered);
+
+    assertEquals("configured_object_name", actual.getStreams().getFirst().getConfig().getDestinationObjectName());
+  }
+
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testUpdateSchemaWithDiscoveryWithFileBased(final boolean isFileBased) {

@@ -213,7 +213,7 @@ internal class AirbyteCatalogHelperTest {
 
   @ParameterizedTest
   @EnumSource(ConnectionSyncModeEnum::class)
-  internal fun `test that when a stream configuration is updated, the corret sync modes are set based on the stream configuration`(
+  internal fun `test that when a stream configuration is updated, the correct sync modes are set based on the stream configuration`(
     connectionSyncMode: ConnectionSyncModeEnum,
   ) {
     val cursorField = "cursor"
@@ -581,6 +581,24 @@ internal class AirbyteCatalogHelperTest {
       )
     assertEquals(1, combinedSyncModes.size)
     assertEquals(listOf(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE).first(), combinedSyncModes.first())
+  }
+
+  @Test
+  internal fun `test that the updated configuration includes destination object names`() {
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name1",
+        destinationObjectName = "destination_object_name",
+      )
+
+    val configuredStreams =
+      AirbyteCatalogHelper.getValidConfiguredStreams(
+        createAirbyteCatalog(true, jsonSchema = cursorPrimaryKeyJsonSchema()),
+        StreamConfigurations(listOf(streamConfiguration)),
+        listOf(DestinationSyncMode.APPEND_DEDUP),
+      )
+
+    assertEquals("destination_object_name", configuredStreams.first().config.destinationObjectName)
   }
 
   @Test

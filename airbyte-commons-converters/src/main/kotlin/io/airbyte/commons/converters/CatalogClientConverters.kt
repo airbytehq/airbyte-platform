@@ -143,6 +143,7 @@ class CatalogClientConverters(
       .minimumGenerationId(config.minimumGenerationId)
       .syncId(config.syncId)
       .includeFiles(config.includeFiles ?: false)
+      .destinationObjectName(config.destinationObjectName)
       .fields(fieldGenerator.getFieldsFromSchema(convertedStream.jsonSchema))
       .mappers(toConfiguredMappers(config.mappers))
       .build()
