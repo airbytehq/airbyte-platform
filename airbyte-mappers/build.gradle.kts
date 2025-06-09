@@ -15,7 +15,6 @@ dependencies {
   implementation(libs.victools.json.schema.jackson.module)
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))
-  implementation(project(":oss:airbyte-metrics:metrics-lib"))
 
   implementation(libs.bundles.jackson)
   implementation(libs.guava)

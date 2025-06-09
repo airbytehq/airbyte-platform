@@ -63,7 +63,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 class ReplicationWorkerHelper(
   private val fieldSelector: FieldSelector?,
-  private val mapper: AirbyteMapper,
+  private val mapper: AirbyteMapper?,
   private val messageTracker: AirbyteMessageTracker,
   private val eventPublisher: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
@@ -124,7 +124,7 @@ class ReplicationWorkerHelper(
     streamMappers = catalogWithoutInvalidMappers.catalog.streams.associate { stream -> stream.streamDescriptor to stream.mappers }
     destinationConfig =
       WorkerUtils.syncToWorkerDestinationConfig(context.replicationInput).apply {
-        catalog = mapper.mapCatalog(catalog)
+        catalog = mapper?.mapCatalog(catalog) ?: catalog
         supportRefreshes = context.supportRefreshes
       }
     mappersConfigured = streamMappers.isNotEmpty()
@@ -195,7 +195,7 @@ class ReplicationWorkerHelper(
   }
 
   fun processMessageFromDestination(destinationRawMessage: AirbyteMessage) {
-    val message = mapper.revertMap(destinationRawMessage)
+    val message = mapper?.revertMap(destinationRawMessage) ?: destinationRawMessage
     internalProcessMessageFromDestination(message)
   }
 
@@ -320,7 +320,7 @@ class ReplicationWorkerHelper(
 
   fun processMessageFromSource(sourceRawMessage: AirbyteMessage): Optional<AirbyteMessage> =
     internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
-      ?.let { mapper.mapMessage(it) }
+      ?.let { mapper?.mapMessage(it) ?: it }
       ?.let { Optional.of(it) } ?: Optional.empty()
 
   internal fun applyTransformationMappers(message: AirbyteRecord) {

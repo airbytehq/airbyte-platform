@@ -146,6 +146,7 @@ public class DbConverter {
         .withResourceRequirements(
             Jsons.deserialize(record.get(CONNECTION.RESOURCE_REQUIREMENTS).data(), ResourceRequirements.class))
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
+        .withDestinationCatalogId(record.get(CONNECTION.DESTINATION_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
         .withDataplaneGroupId(record.get(CONNECTION.DATAPLANE_GROUP_ID))
         .withNonBreakingChangesPreference(
@@ -360,7 +361,11 @@ public class DbConverter {
   public static ActorCatalog buildActorCatalog(final Record record) {
     return new ActorCatalog()
         .withId(record.get(ACTOR_CATALOG.ID))
-        .withCatalog(Jsons.jsonNode(parseAirbyteCatalog(record.get(ACTOR_CATALOG.CATALOG).toString())))
+        .withCatalog(record.get(ACTOR_CATALOG.CATALOG) == null ? null
+            : Jsons.deserialize(record.get(ACTOR_CATALOG.CATALOG).toString()))
+        .withCatalogType(record.get(ACTOR_CATALOG.CATALOG_TYPE) != null
+            ? Enums.toEnum(record.get(ACTOR_CATALOG.CATALOG_TYPE, String.class), ActorCatalog.CatalogType.class).orElseThrow()
+            : null)
         .withCatalogHash(record.get(ACTOR_CATALOG.CATALOG_HASH));
   }
 

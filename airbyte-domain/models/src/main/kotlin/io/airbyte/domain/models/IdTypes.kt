@@ -55,3 +55,8 @@ value class UserId(
 value class ActorId(
   val value: UUID,
 )
+
+@JvmInline
+value class DestinationCatalogId(
+  val value: UUID,
+)

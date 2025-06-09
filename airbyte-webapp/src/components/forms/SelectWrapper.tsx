@@ -29,7 +29,7 @@ export const SelectWrapper = <T extends FormValues>({
           hasError={hasError}
           onSelect={(value) => field.onChange(value)}
           selectedValue={value}
-          className={styles.select}
+          buttonClassName={styles.select}
           {...rest}
         />
       )}

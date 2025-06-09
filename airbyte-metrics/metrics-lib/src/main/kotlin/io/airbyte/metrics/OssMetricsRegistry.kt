@@ -587,6 +587,10 @@ enum class OssMetricsRegistry(
     metricName = "delete_secret_default_store",
     metricDescription = "A secret was created in the default configured secret store.",
   ),
+  DELETE_SECRET(
+    metricName = "delete_secret",
+    metricDescription = "A secret was deleted from a secrets manager.",
+  ),
   CATALOG_SIZE_VALIDATION_ERROR(
     metricName = "catalog_size_validation_error",
     metricDescription = "The catalog provided by the user was larger than our limit and rejected.",

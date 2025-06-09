@@ -5,7 +5,7 @@ export const scheduleTypeDropdown = getTestId("schedule-type-listbox-button");
 export const basicScheduleDataDropdown = getTestId("basic-schedule-listbox-button");
 export const getListBoxDropdownOption = (option: string) => `${getTestId(`${option.toLowerCase()}-option`)}`;
 
-export const destinationNamespaceListBox = `${getTestId("namespace-definition")} button`;
+export const destinationNamespaceListBox = `${getTestId("namespace-definition-listbox-button")}`;
 export const destinationNamespaceListBoxOptionCustom = getTestId("custom-option");
 export const destinationNamespaceListBoxOptionSource = getTestId("source-option");
 export const destinationNamespaceListBoxOptionDestination = getTestId("destination-option");

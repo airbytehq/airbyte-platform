@@ -121,6 +121,7 @@ class CatalogClientConvertersTest {
         null,
         null,
         null,
+        null,
         listOf(
           ConfiguredStreamMapper(
             StreamMapperType.HASHING,

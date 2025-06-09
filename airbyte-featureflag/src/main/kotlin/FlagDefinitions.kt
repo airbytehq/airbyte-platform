@@ -69,6 +69,8 @@ object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.pro
 
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
 
+object SocketFormat : Temporary<String>(key = "platform.socket-format", default = "")
+
 object SocketCount : Temporary<Int>(key = "platform.socket-count", default = -1)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
@@ -197,6 +199,8 @@ object PersistSecretConfigsAndReferences : Temporary<Boolean>(key = "platform.pe
 object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read-secret-reference-ids-in-configs", default = false)
 
 object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-default-secret-storage", default = false)
+
+object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
 
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
 

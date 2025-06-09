@@ -24,7 +24,7 @@ class EmbeddedWorkspacesHandler(
     workspaceName: String,
   ): WorkspaceId {
     val existingWorkspaces =
-      workspaceRepository.findByNameAndOrganizationId(
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(
         name = workspaceName,
         organizationId = organizationId.value,
       )

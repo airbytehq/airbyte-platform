@@ -2,28 +2,29 @@ import { diff, Diff, revertChange, applyChange } from "deep-diff";
 import cloneDeep from "lodash/cloneDeep";
 import forEachRight from "lodash/forEachRight";
 import isEqual from "lodash/isEqual";
-import { useCallback, useLayoutEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
 
-import { useConnectorBuilderFormManagementState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorManifest } from "core/api/types/ConnectorManifest";
 
-import { BuilderFormValues } from "./types";
+import { useFocusField } from "./useFocusField";
 
 export interface UndoRedo {
   canUndo: boolean;
   canRedo: boolean;
   undo: () => void;
   redo: () => void;
-  registerChange: (newFormValues: BuilderFormValues) => void;
+  registerChange: (newManifest: ConnectorManifest) => void;
   clearHistory: () => void;
 }
 
 export const useUndoRedo = (): UndoRedo => {
   const [state, dispatch] = useReducer(diffReducer, initialState);
-  const { storedFormValues, diffHistory, diffHistoryIndex, modifiedPath } = state;
+  const { storedManifest, diffHistory, diffHistoryIndex, modifiedPath } = state;
+  const focusField = useFocusField();
 
-  const registerChange = useCallback((newFormValues: BuilderFormValues) => {
-    dispatch({ type: "REGISTER_CHANGE", newFormValues });
+  const registerChange = useCallback((newManifest: ConnectorManifest) => {
+    dispatch({ type: "REGISTER_CHANGE", newManifest });
   }, []);
 
   const { setValue, trigger } = useFormContext();
@@ -33,81 +34,117 @@ export const useUndoRedo = (): UndoRedo => {
     [diffHistory.length, diffHistoryIndex]
   );
   const undo = useCallback(() => {
-    if (!canUndo || !storedFormValues) {
+    if (!canUndo || !storedManifest) {
       return;
     }
     dispatch({ type: "UNDO" });
-  }, [canUndo, storedFormValues]);
+  }, [canUndo, storedManifest]);
 
   const canRedo = useMemo(
     () => diffHistoryIndex < diffHistory.length - 1 && diffHistoryIndex >= -1,
     [diffHistory.length, diffHistoryIndex]
   );
   const redo = useCallback(() => {
-    if (!canRedo || !storedFormValues) {
+    if (!canRedo || !storedManifest) {
       return;
     }
     dispatch({ type: "REDO" });
-  }, [canRedo, storedFormValues]);
+  }, [canRedo, storedManifest]);
 
   const clearHistory = useCallback(() => {
     dispatch({ type: "CLEAR_HISTORY" });
   }, []);
 
-  const { setScrollToField } = useConnectorBuilderFormManagementState();
-  // Update the actual form values when storedFormValues changes, to apply undos and redos.
-  // Use a ref for formValues comparison so that effect is only triggered when storedFormValues
-  // changes, and formValues are only set if there is a difference to avoid infinite loops.
+  // Update the actual manifest when there is a modifiedPath to update, to apply undos and redos.
+  // Use a ref for manifest comparison so that effect is only triggered when storedManifest
+  // changes, and manifest are only set if there is a difference to avoid infinite loops.
   const builderState = useWatch();
   const builderStateRef = useRef(builderState);
   builderStateRef.current = builderState;
-  // There is a potential race condition here which useLayoutEffect helps to avoid:
-  // If the user performs consecutive undos/redos with a delay between them that is close to the debounce
-  // time for triggering registerChange from a formValues update in Builder.tsx, then the first undo/redo
-  // could trigger a registerChange call in between when the second undo/redo action updates storedFormValues,
-  // and when this effect hook runs.
-  // This causes the registerChange to compare the updated form values from the first undo/redo with the
-  // storedFormValues from the second undo/redo, which results in an inaccurate diff being computed, which
-  // wipes out the future redo history.
-  // Using useLayoutEffect here instead of useEffect makes the time between the second undo/redo updating
-  // storedFormValues and this effect hook running so small that it is virtually impossible for the user to
-  // run into this scenario. It could not be reproduced while testing.
-  useLayoutEffect(() => {
-    if (storedFormValues && !isEqual(storedFormValues, builderStateRef.current.formValues)) {
-      setValue("formValues", storedFormValues);
-      // Must manually trigger validation after setting form values, because setValue doesn't trigger
+  useEffect(() => {
+    if (!modifiedPath) {
+      return;
+    }
+    if (storedManifest && !isEqual(storedManifest, builderStateRef.current.manifest)) {
+      setValue("manifest", storedManifest);
+      // Must manually trigger validation after setting manifest, because setValue doesn't trigger
       // validation on fields that are set directly to undefined even if shouldValidate is set to true.
       trigger();
 
-      if (modifiedPath) {
-        setScrollToField(modifiedPath);
-      }
-      if (modifiedPath === "formValues.streams") {
+      if (modifiedPath === "manifest.streams") {
         // stream was removed, switch view to last stream if view is currently set to the deleted stream
         if (
-          storedFormValues.streams.length < builderStateRef.current.formValues.streams.length &&
-          builderStateRef.current.view >= storedFormValues.streams.length
+          storedManifest.streams &&
+          builderStateRef.current.manifest.streams &&
+          storedManifest.streams.length < builderStateRef.current.manifest.streams.length &&
+          builderStateRef.current.view.type === "stream" &&
+          builderStateRef.current.view.index >= storedManifest.streams.length
         ) {
-          setValue("view", { type: "stream", index: storedFormValues.streams.length - 1 });
+          if (storedManifest.streams.length > 0) {
+            setValue("view", { type: "stream", index: storedManifest.streams?.length - 1 });
+          } else {
+            setValue("view", { type: "global" });
+          }
         }
 
         // stream was added, switch view to last stream
-        if (storedFormValues.streams.length > builderStateRef.current.formValues.streams.length) {
-          setValue("view", { type: "stream", index: storedFormValues.streams.length - 1 });
+        if (
+          storedManifest.streams &&
+          builderStateRef.current.manifest.streams &&
+          storedManifest.streams.length > builderStateRef.current.manifest.streams.length
+        ) {
+          // Find the newly added stream by comparing with current manifest
+          const newStreamIndex = storedManifest.streams.findIndex(
+            (stream, i) =>
+              !builderStateRef.current.manifest.streams[i] ||
+              !isEqual(stream, builderStateRef.current.manifest.streams[i])
+          );
+          if (newStreamIndex !== -1) {
+            setValue("view", { type: "stream", index: newStreamIndex });
+          } else {
+            setValue("view", { type: "stream", index: storedManifest.streams.length - 1 });
+          }
         }
-      } else if (modifiedPath?.startsWith("formValues.streams.")) {
-        const streamPathRegex = /^formValues\.streams\.(\d+)\..*$/;
-        const match = modifiedPath.match(streamPathRegex);
-        if (match) {
-          setValue("view", { type: "stream", index: Number(match[1]) });
+      } else if (modifiedPath === "manifest.dynamic_streams") {
+        // dynamic stream was removed, switch view to last dynamic stream if view is currently set to the deleted dynamic stream
+        if (
+          storedManifest.dynamic_streams &&
+          builderStateRef.current.manifest.dynamic_streams &&
+          storedManifest.dynamic_streams.length < builderStateRef.current.manifest.dynamic_streams.length &&
+          builderStateRef.current.view.type === "dynamic_stream" &&
+          builderStateRef.current.view.index >= storedManifest.dynamic_streams.length
+        ) {
+          if (storedManifest.dynamic_streams.length > 0) {
+            setValue("view", { type: "dynamic_stream", index: storedManifest.dynamic_streams?.length - 1 });
+          } else {
+            setValue("view", { type: "global" });
+          }
         }
-      } else if (modifiedPath?.startsWith("formValues.inputs")) {
-        setValue("view", { type: "inputs" });
-      } else if (modifiedPath?.startsWith("formValues.global")) {
-        setValue("view", { type: "global" });
+
+        // dynamic stream was added, switch view to last dynamic stream
+        if (
+          storedManifest.dynamic_streams &&
+          builderStateRef.current.manifest.dynamic_streams &&
+          storedManifest.dynamic_streams.length > builderStateRef.current.manifest.dynamic_streams.length
+        ) {
+          // Find the newly added dynamic stream by comparing with current manifest
+          const newDynamicStreamIndex = storedManifest.dynamic_streams.findIndex(
+            (stream, i) =>
+              !builderStateRef.current.manifest.dynamic_streams[i] ||
+              !isEqual(stream, builderStateRef.current.manifest.dynamic_streams[i])
+          );
+          if (newDynamicStreamIndex !== -1) {
+            setValue("view", { type: "dynamic_stream", index: newDynamicStreamIndex });
+          } else {
+            setValue("view", { type: "dynamic_stream", index: storedManifest.dynamic_streams.length - 1 });
+          }
+        }
       }
+
+      focusField(modifiedPath);
+      dispatch({ type: "MARK_UNDO_REDO_COMPLETED" });
     }
-  }, [modifiedPath, setScrollToField, setValue, storedFormValues, trigger]);
+  }, [focusField, modifiedPath, setValue, storedManifest, trigger]);
 
   return {
     canUndo,
@@ -120,48 +157,69 @@ export const useUndoRedo = (): UndoRedo => {
 };
 
 interface DiffState {
-  storedFormValues: BuilderFormValues | undefined;
-  diffHistory: Array<Array<Diff<BuilderFormValues>>>;
+  storedManifest: ConnectorManifest | undefined;
+  diffHistory: Array<Array<Diff<ConnectorManifest>>>;
   diffHistoryIndex: number;
   modifiedPath: string | undefined;
 }
 
 const initialState: DiffState = {
-  storedFormValues: undefined,
+  storedManifest: undefined,
   diffHistory: [],
   diffHistoryIndex: -1,
   modifiedPath: undefined,
 };
 
 type DiffAction =
-  | { type: "REGISTER_CHANGE"; newFormValues: BuilderFormValues }
+  | { type: "REGISTER_CHANGE"; newManifest: ConnectorManifest }
   | { type: "UNDO" }
   | { type: "REDO" }
-  | { type: "CLEAR_HISTORY" };
+  | { type: "CLEAR_HISTORY" }
+  | { type: "MARK_UNDO_REDO_COMPLETED" };
 
 const DIFF_HISTORY_LIMIT = 200;
 
 function diffReducer(state: DiffState, action: DiffAction) {
-  const { storedFormValues, diffHistory, diffHistoryIndex } = state;
+  const { storedManifest, diffHistory, diffHistoryIndex } = state;
 
   switch (action.type) {
     case "REGISTER_CHANGE":
-      const { newFormValues } = action;
-      if (storedFormValues === undefined) {
+      const { newManifest } = action;
+      if (storedManifest === undefined) {
         return {
           ...state,
-          storedFormValues: newFormValues,
+          storedManifest: cloneDeep(newManifest),
         };
       }
 
-      const diffs = sortArrayDiffs(diff(storedFormValues, newFormValues));
-      if (diffs === undefined) {
+      const diffs = sortArrayDiffs(diff(storedManifest, newManifest))?.filter((diff) => {
+        // ignore metadata diffs, since the user doesn't interact with the metadata
+        if (diff.path && diff.path.length >= 1 && diff.path[0] === "metadata") {
+          return false;
+        }
+        // Ignore diffs where a field is added or removed and the value is empty, since this
+        // happens as a quirk of react-hook-form but is not a change that must be able to be undone
+        if (
+          (diff.kind === "N" &&
+            (diff.rhs === undefined ||
+              (diff.rhs as unknown as string) === "" ||
+              (Array.isArray(diff.rhs) && diff.rhs.length === 0))) ||
+          (diff.kind === "D" &&
+            (diff.lhs === undefined ||
+              (diff.lhs as unknown as string) === "" ||
+              (Array.isArray(diff.lhs) && diff.lhs.length === 0)))
+        ) {
+          return false;
+        }
+        return true;
+      });
+      if (diffs === undefined || diffs.length === 0) {
         return state;
       }
 
       const newState = {
         ...state,
-        storedFormValues: newFormValues,
+        storedManifest: cloneDeep(newManifest),
         modifiedPath: undefined,
       };
 
@@ -180,37 +238,43 @@ function diffReducer(state: DiffState, action: DiffAction) {
       };
 
     case "UNDO":
-      if (!storedFormValues) {
+      if (!storedManifest) {
         return state;
       }
-      const revertedFormValues = cloneDeep(storedFormValues);
+      const revertedManifest = cloneDeep(storedManifest);
       // revert diffs in reverse order to properly undo changes
-      forEachRight(diffHistory[diffHistoryIndex], (diff) => revertChange(revertedFormValues, revertedFormValues, diff));
+      forEachRight(diffHistory[diffHistoryIndex], (diff) => revertChange(revertedManifest, revertedManifest, diff));
       return {
         ...state,
-        storedFormValues: revertedFormValues,
+        storedManifest: revertedManifest,
         diffHistoryIndex: diffHistoryIndex - 1,
         modifiedPath: diffPathToFormPath(diffHistory[diffHistoryIndex][0]?.path),
       };
 
     case "REDO":
-      if (!storedFormValues) {
+      if (!storedManifest) {
         return state;
       }
-      const updatedFormValues = cloneDeep(storedFormValues);
-      diffHistory[diffHistoryIndex + 1].forEach((diff) => applyChange(updatedFormValues, updatedFormValues, diff));
+      const updatedManifest = cloneDeep(storedManifest);
+      diffHistory[diffHistoryIndex + 1].forEach((diff) => applyChange(updatedManifest, updatedManifest, diff));
       return {
         ...state,
-        storedFormValues: updatedFormValues,
+        storedManifest: updatedManifest,
         diffHistoryIndex: diffHistoryIndex + 1,
         modifiedPath: diffPathToFormPath(diffHistory[diffHistoryIndex + 1][0]?.path),
       };
 
     case "CLEAR_HISTORY":
       return {
-        storedFormValues: undefined,
+        storedManifest: undefined,
         diffHistory: [],
         diffHistoryIndex: -1,
+        modifiedPath: undefined,
+      };
+
+    case "MARK_UNDO_REDO_COMPLETED":
+      return {
+        ...state,
         modifiedPath: undefined,
       };
 
@@ -219,17 +283,17 @@ function diffReducer(state: DiffState, action: DiffAction) {
   }
 }
 
-function diffPathToFormPath(diffPath: Diff<BuilderFormValues>["path"]): string | undefined {
+function diffPathToFormPath(diffPath: Diff<ConnectorManifest>["path"]): string | undefined {
   if (diffPath === undefined) {
     return undefined;
   }
-  return `formValues.${diffPath.join(".")}`;
+  return `manifest.${diffPath.join(".")}`;
 }
 
 // The deep-diff library doesn't always return diffs in the correct order for array diffs,
 // so this function sorts the diffs by index to ensure that they are applied in the correct order
 // when performing undos and redos.
-function sortArrayDiffs(diffs: Array<Diff<BuilderFormValues>> | undefined) {
+function sortArrayDiffs(diffs: Array<Diff<ConnectorManifest>> | undefined) {
   if (diffs === undefined) {
     return undefined;
   }

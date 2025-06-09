@@ -28,6 +28,7 @@ create table "public"."actor_catalog" (
   "catalog_hash" varchar(32) not null,
   "created_at" timestamp(6) with time zone not null,
   "modified_at" timestamp(6) with time zone not null default current_timestamp,
+  "catalog_type" "public"."actor_catalog_type" not null,
   constraint "actor_catalog_pkey" primary key ("id")
 );
 create table "public"."actor_catalog_fetch_event" (
@@ -212,6 +213,7 @@ create table "public"."connection" (
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
   "dataplane_group_id" uuid not null,
+  "destination_catalog_id" uuid,
   constraint "connection_pkey" primary key ("id")
 );
 create table "public"."connection_operation" (
@@ -771,6 +773,7 @@ alter table "public"."commands" add constraint "commands_workspace_id_fkey" fore
 alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."config_template" add constraint "config_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection" add constraint "connection_actor_catalog_id_fk" foreign key ("source_catalog_id") references "public"."actor_catalog" ("id");
+alter table "public"."connection" add constraint "connection_destination_catalog_id_fkey" foreign key ("destination_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."connection" add constraint "connection_destination_id_fkey" foreign key ("destination_id") references "public"."actor" ("id");
 alter table "public"."connection" add constraint "connection_source_id_fkey" foreign key ("source_id") references "public"."actor" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");

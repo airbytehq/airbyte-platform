@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
@@ -329,12 +330,12 @@ class JobTrackerTest {
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
 
     assertDiscoverCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, ActorType.SOURCE, jobState, output),
         metadata,
         true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertDiscoverCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, jobState, output),
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, null, jobState, output),
         metadata,
         false);
   }

@@ -323,6 +323,7 @@ public class AcceptanceTestHarness {
         true,
         null,
         null,
+        null,
         List.of(),
         List.of(),
         List.of(),
@@ -678,6 +679,7 @@ public class AcceptanceTestHarness {
         create.getScheduleData(),
         null,
         create.getCatalogId(),
+        null,
         create.getDataplaneGroupId(),
         null,
         null,
@@ -714,6 +716,7 @@ public class AcceptanceTestHarness {
             create.getScheduleData(),
             null,
             create.getCatalogId(),
+            null,
             create.getDataplaneGroupId(),
             null,
             null,
@@ -758,6 +761,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -771,6 +775,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -803,6 +808,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -1175,6 +1181,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null);
     updateConnection(connectionUpdate);
   }
@@ -1393,6 +1400,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             nonBreakingChangesPreference,
             backfillPreference,
             null,
@@ -1446,6 +1454,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getAliasName(),
             stream.getConfig().getSelected(),
             stream.getConfig().getSuggested(),
+            stream.getConfig().getDestinationObjectName(),
             stream.getConfig().getIncludeFiles(),
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
@@ -1479,6 +1488,7 @@ public class AcceptanceTestHarness {
             operation.getOperatorConfiguration(),
             operation.getOperationId())),
         connection.getSourceCatalogId(),
+        null,
         null,
         null,
         null,

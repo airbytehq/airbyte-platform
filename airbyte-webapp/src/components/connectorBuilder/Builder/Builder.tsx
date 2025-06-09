@@ -8,7 +8,7 @@ import { useUpdateEffect } from "react-use";
 import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
 import { AirbyteJsonSchema } from "components/forms/SchemaForm/utils";
 
-import { DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
+import { ConnectorManifest, DeclarativeComponentSchema } from "core/api/types/ConnectorManifest";
 import { assertNever } from "core/utils/asserts";
 import {
   useConnectorBuilderFormState,
@@ -146,14 +146,20 @@ export const Builder: React.FC = () => {
 };
 
 const SyncValuesToBuilderState = () => {
-  const { updateJsonManifest, setFormValuesValid } = useConnectorBuilderFormState();
+  const {
+    updateJsonManifest,
+    setFormValuesValid,
+    undoRedo: { registerChange },
+  } = useConnectorBuilderFormState();
   const { trigger, watch } = useFormContext();
   const setStreamToStale = useSetStreamToStale();
   const builderState = useWatch();
-
   // set stream to stale when it changes
   useEffect(() => {
     const subscription = watch((data, { name }) => {
+      if (data?.manifest) {
+        registerChange(data.manifest as ConnectorManifest);
+      }
       if (name?.startsWith("manifest.streams.")) {
         const oldValue = get(builderState, name);
         const newValue = get(data, name);
@@ -169,7 +175,7 @@ const SyncValuesToBuilderState = () => {
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, setStreamToStale, builderState]);
+  }, [watch, setStreamToStale, builderState, registerChange]);
 
   useEffect(() => {
     // The validation logic isn't updated until the next render cycle, so wait for that

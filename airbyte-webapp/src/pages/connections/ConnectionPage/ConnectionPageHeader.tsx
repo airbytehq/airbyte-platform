@@ -8,6 +8,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
 import { Tabs, LinkTab } from "components/ui/Tabs";
 
+import { useIsDataActivationConnection } from "area/connection/utils/useIsDataActivationConnection";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useExperiment } from "hooks/services/Experiment";
@@ -22,6 +23,8 @@ export const ConnectionPageHeader = () => {
   const currentTab = params["*"] || ConnectionRoutePaths.Status;
   const supportsDbtCloud = useFeature(FeatureItem.AllowDBTCloudIntegration);
   const mappingsUIEnabled = useExperiment("connection.mappingsUI");
+  const isDataActivationConnection = useIsDataActivationConnection();
+  const isStandardConnection = !isDataActivationConnection;
 
   const { connection, schemaRefreshing } = useConnectionEditService();
   const breadcrumbsData = [
@@ -31,6 +34,8 @@ export const ConnectionPageHeader = () => {
     },
     { label: connection.name },
   ];
+
+  const showMappingsTab = mappingsUIEnabled || isDataActivationConnection;
 
   const tabsData = useMemo(() => {
     const tabs = [
@@ -47,18 +52,22 @@ export const ConnectionPageHeader = () => {
         to: `${basePath}/${ConnectionRoutePaths.Timeline}`,
         disabled: schemaRefreshing,
       },
-      {
-        id: ConnectionRoutePaths.Replication,
-        name: (
-          <FlexContainer gap="sm" as="span">
-            <FormattedMessage id="connection.schema" />
-            <ChangesStatusIcon schemaChange={connection.schemaChange} />
-          </FlexContainer>
-        ),
-        to: `${basePath}/${ConnectionRoutePaths.Replication}`,
-        disabled: schemaRefreshing,
-      },
-      ...(mappingsUIEnabled
+      ...(isStandardConnection
+        ? [
+            {
+              id: ConnectionRoutePaths.Replication,
+              name: (
+                <FlexContainer gap="sm" as="span">
+                  <FormattedMessage id="connection.schema" />
+                  <ChangesStatusIcon schemaChange={connection.schemaChange} />
+                </FlexContainer>
+              ),
+              to: `${basePath}/${ConnectionRoutePaths.Replication}`,
+              disabled: schemaRefreshing,
+            },
+          ]
+        : []),
+      ...(showMappingsTab
         ? [
             {
               id: ConnectionRoutePaths.Mappings,
@@ -87,7 +96,7 @@ export const ConnectionPageHeader = () => {
     ];
 
     return tabs;
-  }, [basePath, schemaRefreshing, connection.schemaChange, mappingsUIEnabled, supportsDbtCloud]);
+  }, [basePath, schemaRefreshing, isStandardConnection, connection.schemaChange, showMappingsTab, supportsDbtCloud]);
 
   return (
     <PageHeaderWithNavigation breadcrumbsData={breadcrumbsData}>

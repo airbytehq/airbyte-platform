@@ -1,4 +1,4 @@
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import io.airbyte.gradle.tasks.DockerBuildxTask
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
@@ -185,7 +185,7 @@ val copyPythonDeps =
     into("${project.layout.buildDirectory.get()}/airbyte/docker/")
   }
 //
-tasks.named<DockerBuildImage>("dockerBuildImage") {
+tasks.named<DockerBuildxTask>("dockerBuildImage") {
   // Set build args
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
   val cdkVersion: String = File((ext["ossRootProject"] as Project).projectDir, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()

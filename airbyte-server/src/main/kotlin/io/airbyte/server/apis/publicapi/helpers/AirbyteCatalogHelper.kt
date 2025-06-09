@@ -542,6 +542,8 @@ object AirbyteCatalogHelper {
         namespace = streamConfiguration.namespace
       }
 
+      destinationObjectName = streamConfiguration.destinationObjectName ?: sourceSchemaStreamConfiguration.destinationObjectName
+
       mappers = sourceSchemaStreamConfiguration.mappers
       if (streamConfiguration.mappers != null) {
         mappers = streamConfiguration.mappers!!.map { configuredMapperConverter(it) }

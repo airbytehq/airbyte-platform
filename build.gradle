@@ -26,12 +26,12 @@ plugins {
     id "base"
     id "com.dorongold.task-tree" version "2.1.1"
 
-    id "io.airbyte.gradle.jvm" version "0.64.0" apply false
-    id "io.airbyte.gradle.jvm.app" version "0.64.0" apply false
-    id "io.airbyte.gradle.jvm.lib" version "0.64.0" apply false
-    id "io.airbyte.gradle.docker" version "0.64.0" apply false
-    id "io.airbyte.gradle.publish" version "0.64.0" apply false
-    id "io.airbyte.gradle.kube-reload" version "0.64.0" apply false
+    id "io.airbyte.gradle.jvm" version "0.65.0" apply false
+    id "io.airbyte.gradle.jvm.app" version "0.65.0" apply false
+    id "io.airbyte.gradle.jvm.lib" version "0.65.0" apply false
+    id "io.airbyte.gradle.docker" version "0.65.0" apply false
+    id "io.airbyte.gradle.publish" version "0.65.0" apply false
+    id "io.airbyte.gradle.kube-reload" version "0.65.0" apply false
     // uncomment for testing plugin locally
     // id "io.airbyte.gradle.jvm" version "local-test" apply false
     // id "io.airbyte.gradle.jvm.app" version "local-test" apply false

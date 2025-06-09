@@ -375,6 +375,12 @@ data class CloudProviderRegion(
   }
 }
 
+data class SecretStorage(
+  override val key: String,
+) : Context {
+  override val kind: String = "secret-storage"
+}
+
 /**
  * Combines two contexts.
  */

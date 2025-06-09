@@ -833,6 +833,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
               JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
           .set(CONNECTION.UPDATED_AT, timestamp)
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
+          .set(CONNECTION.DESTINATION_CATALOG_ID, standardSync.getDestinationCatalogId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.DATAPLANE_GROUP_ID, standardSync.getDataplaneGroupId())
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
@@ -883,6 +884,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.RESOURCE_REQUIREMENTS,
               JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
+          .set(CONNECTION.DESTINATION_CATALOG_ID, standardSync.getDestinationCatalogId())
           .set(CONNECTION.DATAPLANE_GROUP_ID, standardSync.getDataplaneGroupId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)

@@ -33,6 +33,11 @@ micronaut:
     webhook:
       type: fixed
       n-threads: ${WEBHOOK_TASK_EXECUTOR_THREADS:3}
+  http:
+    client:
+      read-timeout: ${READ_TIMEOUT:10m}
+      max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:
@@ -59,9 +64,25 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
+    # these urls need to match the micronaut.router.static-resources, otherwise the webapp isn't going to work
+    intercept-url-map:
+      - pattern: /assets/**
+        access:
+          - isAnonymous()
+      - pattern: /fonts/**
+        access:
+          - isAnonymous()
+      - pattern: /*
+        access:
+          - isAnonymous()
     token:
       jwt:
         enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -69,6 +90,22 @@ micronaut:
           secret:
             generator:
               secret: ${AB_JWT_SIGNATURE_SECRET:}
+  # These static resources are what allow the frontend code to work.
+  router:
+    static-resources:
+      assets:
+        mapping: /assets/**
+        paths:
+          - classpath:webapp/assets
+      fonts:
+        mapping: /fonts/**
+        paths:
+          - classpath:webapp/fonts
+      default:
+        mapping: /**
+        paths:
+          - classpath:webapp
+
   server:
     port: 8001
     cors:

@@ -137,37 +137,28 @@ class StreamStatsTracker(
     if (!isBookkeeperMode) {
       return
     }
+    // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
+    logger.info { "Dummy stats message from destination $recordMessage" }
     val byteCount =
-      if (recordMessage.additionalProperties.contains(
-          DEST_EMITTED_BYTES_COUNT,
-        )
-      ) {
-        recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT] as Long
-      } else {
-        0
-      }
+      recordMessage.additionalProperties[DEST_EMITTED_BYTES_COUNT]
+        .asLongOrZero()
 
     val recordCount =
-      if (recordMessage.additionalProperties.contains(
-          DEST_EMITTED_RECORDS_COUNT,
-        )
-      ) {
-        recordMessage.additionalProperties[DEST_EMITTED_RECORDS_COUNT] as Long
-      } else {
-        0
-      }
+      recordMessage.additionalProperties[DEST_EMITTED_RECORDS_COUNT]
+        .asLongOrZero()
 
-    val emittedStatsToUpdate = emittedStats
-    with(emittedStatsToUpdate) {
+    emittedStats.apply {
       remittedRecordsCount.set(recordCount)
       emittedBytesCount.set(byteCount)
     }
 
-    with(streamStats) {
+    streamStats.apply {
       emittedRecordsCount.set(recordCount)
       emittedBytesCount.set(byteCount)
     }
   }
+
+  private fun Any?.asLongOrZero(): Long = (this as? Number)?.toLong() ?: 0L
 
   /**
    * Bookkeeping for when a record message is read.
@@ -224,6 +215,10 @@ class StreamStatsTracker(
    * to keep on tracking incoming messages.
    */
   fun trackStateFromSource(stateMessage: AirbyteStateMessage) {
+    if (isBookkeeperMode) {
+      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
+      logger.info { "State message from source $stateMessage" }
+    }
     val currentTime = LocalDateTime.now()
     streamStats.sourceStateCount.incrementAndGet()
 
@@ -283,6 +278,10 @@ class StreamStatsTracker(
    * said acked state.
    */
   fun trackStateFromDestination(stateMessage: AirbyteStateMessage) {
+    if (isBookkeeperMode) {
+      // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
+      logger.info { "State message from destination : $stateMessage" }
+    }
     val currentTime = LocalDateTime.now()
     streamStats.destinationStateCount.incrementAndGet()
 
@@ -325,20 +324,37 @@ class StreamStatsTracker(
       stateIds.remove(stagedStats.stateId)
 
       if (isBookkeeperMode) {
-        handleStateStatsBookkeeperMode(stateMessage, stagedStats)
+        val totalCommittedRecords = (stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as? Number)?.toLong() ?: 0
+        val totalCommittedBytes = (stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as? Number)?.toLong() ?: 0
+        // TODO(Subodh): Remove these logs once testing is complete for Bookkeeper mode
+        logger.info { "TOTAL_COMMITTED_RECORDS $totalCommittedRecords" }
+        logger.info { "TOTAL_COMMITTED_BYTES $totalCommittedBytes" }
+        streamStats.apply {
+          if (emittedRecordsCount.get() < totalCommittedRecords) {
+            emittedRecordsCount.set(totalCommittedRecords)
+          }
+          if (emittedBytesCount.get() < totalCommittedBytes) {
+            emittedBytesCount.set(totalCommittedBytes)
+          }
+          committedRecordsCount.set(totalCommittedRecords)
+          committedBytesCount.set(totalCommittedBytes)
+          // TODO(Subodh): Once destination starts applying mappers, channel the filtered records count` as well
+          filteredOutRecords.set(0)
+          filteredOutBytesCount.set(0)
+        }
+      } else {
+        // Increment committed stats as we are un-staging stats
+        streamStats.committedBytesCount.addAndGet(
+          stagedStats.emittedStatsCounters.emittedBytesCount
+            .get()
+            .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
+        )
+        streamStats.committedRecordsCount.addAndGet(
+          stagedStats.emittedStatsCounters.remittedRecordsCount
+            .get()
+            .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
+        )
       }
-
-      // Increment committed stats as we are un-staging stats
-      streamStats.committedBytesCount.addAndGet(
-        stagedStats.emittedStatsCounters.emittedBytesCount
-          .get()
-          .minus(stagedStats.emittedStatsCounters.filteredOutBytesCount.get()),
-      )
-      streamStats.committedRecordsCount.addAndGet(
-        stagedStats.emittedStatsCounters.remittedRecordsCount
-          .get()
-          .minus(stagedStats.emittedStatsCounters.filteredOutRecords.get()),
-      )
 
       if (stagedStats.stateId == stateId) {
         break
@@ -362,22 +378,30 @@ class StreamStatsTracker(
     stateMessage: AirbyteStateMessage,
     stagedStats: StagedStats,
   ) {
-    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_RECORDS_COUNT)) {
-      val committedRecordsCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT] as Long
-      if (stagedStats.emittedStatsCounters.remittedRecordsCount.get() != committedRecordsCountFromState) {
-        stagedStats.emittedStatsCounters.remittedRecordsCount.set(committedRecordsCountFromState)
-      }
-
+    updateCounter(
+      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_RECORDS_COUNT],
+      counter = stagedStats.emittedStatsCounters.remittedRecordsCount,
+    ) {
       stagedStats.emittedStatsCounters.filteredOutRecords.set(0)
     }
 
-    if (stateMessage.additionalProperties.contains(DEST_COMMITTED_BYTES_COUNT)) {
-      val committedBytesCountFromState = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT] as Long
-      if (stagedStats.emittedStatsCounters.emittedBytesCount.get() != committedBytesCountFromState) {
-        stagedStats.emittedStatsCounters.emittedBytesCount.set(committedBytesCountFromState)
-      }
-
+    updateCounter(
+      rawValue = stateMessage.additionalProperties[DEST_COMMITTED_BYTES_COUNT],
+      counter = stagedStats.emittedStatsCounters.emittedBytesCount,
+    ) {
       stagedStats.emittedStatsCounters.filteredOutBytesCount.set(0)
+    }
+  }
+
+  private inline fun updateCounter(
+    rawValue: Any?,
+    counter: AtomicLong,
+    crossinline afterUpdate: () -> Unit = {},
+  ) {
+    val newValue = (rawValue as? Number)?.toLong() ?: return
+    if (counter.get() != newValue) {
+      counter.set(newValue)
+      afterUpdate()
     }
   }
 

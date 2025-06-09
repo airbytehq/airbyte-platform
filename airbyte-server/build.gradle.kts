@@ -127,10 +127,27 @@ val copySeed =
     dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
   }
 
+val copyWebapp =
+  tasks.register<Copy>("copyWebapp") {
+    from("${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app")
+    into("${project.layout.projectDirectory}/src/main/resources/webapp")
+    dependsOn(
+      project(":oss:airbyte-webapp").tasks.named("build"),
+      "spotlessStyling",
+    )
+  }
+
+tasks.named("dockerBuildImage") {
+  dependsOn(copyWebapp)
+}
+
 // need to make sure that the files are in the resource directory before copying.)
 // tests require the seed to exist.)
 tasks.named("test") {
   dependsOn(copySeed)
+}
+tasks.named("processResources") {
+  dependsOn(copyWebapp)
 }
 tasks.named("assemble") {
   dependsOn(copySeed)

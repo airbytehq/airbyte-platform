@@ -822,10 +822,10 @@ class SourceHandlerTest {
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(catalogService.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(catalogService.writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(catalogService).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
+    verify(catalogService).writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

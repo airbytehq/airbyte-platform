@@ -29,7 +29,6 @@ import io.airbyte.featureflag.ReplicationBufferOverride
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.internal.NamespacingMapper
 import io.airbyte.workers.pod.FileConstants
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
@@ -155,14 +154,6 @@ class CommonBeanFactory {
     val bufferSize = replicationInputFeatureFlagReader.read(ReplicationBufferOverride)
     return if (bufferSize > 0) withBufferSize(bufferSize) else withDefaultConfiguration()
   }
-
-  @Singleton
-  fun namespaceMapper(replicationInput: ReplicationInput) =
-    NamespacingMapper(
-      replicationInput.namespaceDefinition,
-      replicationInput.namespaceFormat,
-      replicationInput.prefix,
-    )
 
   @Singleton
   fun replicationContext(

@@ -8,7 +8,7 @@ export const submitButtonClick = (force = false) => {
 
 export const updateField = (field: string, value: string, isDropdown = false) => {
   if (isDropdown) {
-    selectFromDropdown(`[data-testid="${field}"]`, value);
+    selectFromDropdown(field, value);
   } else {
     setInputValue(field, value);
   }
@@ -19,10 +19,11 @@ const setInputValue = (name: string, value: string) => {
   cy.get(`input[name='${name}']`).type(value);
 };
 
-export const selectFromDropdown = (dropdownContainer: string, value: string) => {
-  cy.get(dropdownContainer).within(() => {
-    cy.get("button").click();
-    cy.get(`li[role="option"]`).contains(value).click({ force: true });
+export const selectFromDropdown = (dropdownTestIdName: string, value: string) => {
+  cy.get(`[data-testid$="${dropdownTestIdName}-listbox-button"]`).click();
+
+  cy.get(`[data-testid$="${dropdownTestIdName}-listbox-options"]`).within(() => {
+    cy.get("li[role='option']").contains(value).click({ force: true });
   });
 };
 

@@ -67,11 +67,12 @@ const connectorDefinition = {
 } as ConnectorDefinition;
 
 const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: string, option: string) => {
-  const dropdownContainer = getByTestId(container, dropdownContainerTestId);
-  const selectButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
-  fireEvent.click(selectButton);
+  const dropdownControlButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
+  fireEvent.click(dropdownControlButton);
 
-  const listBoxOption = getByRole(dropdownContainer, "option", { name: option });
+  const dropdownOptionsMenu = getByTestId(container, `${dropdownContainerTestId}-listbox-options`);
+
+  const listBoxOption = getByRole(dropdownOptionsMenu, "option", { name: option });
   fireEvent.click(listBoxOption);
 };
 

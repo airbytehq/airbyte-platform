@@ -380,6 +380,10 @@ public class ConnectionsHandler {
       sync.setSourceCatalogId(patch.getSourceCatalogId());
     }
 
+    if (patch.getDestinationCatalogId() != null) {
+      sync.setDestinationCatalogId(patch.getDestinationCatalogId());
+    }
+
     if (patch.getResourceRequirements() != null) {
       sync.setResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(patch.getResourceRequirements()));
     }
@@ -577,6 +581,7 @@ public class ConnectionsHandler {
         .withOperationIds(operationIds)
         .withStatus(apiPojoConverters.toPersistenceStatus(connectionCreate.getStatus()))
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
+        .withDestinationCatalogId(connectionCreate.getDestinationCatalogId())
         .withDataplaneGroupId(getDataplaneGroupIdFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())

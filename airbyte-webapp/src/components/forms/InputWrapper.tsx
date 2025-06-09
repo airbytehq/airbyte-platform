@@ -33,9 +33,9 @@ export const InputWrapper = <T extends FormValues>({
       if (!isNaN(formValueNumber) && !isNaN(inputValueNumber) && formValueNumber === inputValueNumber) {
         return;
       }
-      setInputValue(formValue);
+      setInputValue(formValue ?? "");
     } else {
-      setInputValue(formValue);
+      setInputValue(formValue ?? "");
     }
   }, [formValue]);
 

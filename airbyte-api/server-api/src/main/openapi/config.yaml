@@ -1563,13 +1563,33 @@ paths:
       tags:
         - source
         - internal
-      summary: Should only called from worker, to write result from discover activity back to DB.
+      summary: Should only be called from job pods, to write result from discover activity back to DB.
       operationId: writeDiscoverCatalogResult
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/SourceDiscoverSchemaWriteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverCatalogResult"
+  /v1/destinations/write_discover_catalog_result:
+    post:
+      tags:
+        - destination
+        - internal
+      summary: Should only be called from job pods, to write result from destination discover activity back to DB.
+      operationId: writeDestinationDiscoverCatalogResult
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaWriteRequestBody"
         required: true
       responses:
         "200":
@@ -2029,6 +2049,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DestinationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/discover_schema:
+    post:
+      tags:
+        - destination
+      summary: Discover the catalog for a destination
+      operationId: discoverCatalogForDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/get_catalog_for_connection:
+    post:
+      tags:
+        - destination
+      summary: Get the destination catalog for a connection
+      operationId: getCatalogForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -11752,6 +11818,15 @@ components:
           type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+    DestinationDiscoverSchemaRequestBody:
+      type: object
+      required:
+        - destinationId
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        disableCache:
+          type: boolean
     PostprocessDiscoveredCatalogRequestBody:
       type: object
       required:
@@ -11895,7 +11970,20 @@ components:
           type: string
         configurationHash:
           type: string
-
+    DestinationDiscoverSchemaWriteRequestBody:
+      description: write this requested object to the database
+      type: object
+      required:
+        - catalog
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectorVersion:
+          type: string
+        configurationHash:
+          type: string
     SourceDiscoverSchemaRead:
       description: Returns the results of a discover catalog job. If the job was not successful, the catalog field will not be present. jobInfo will aways be present and its status be used to determine if the job was successful or not.
       type: object
@@ -11915,6 +12003,43 @@ components:
           type: boolean
         connectionStatus:
           $ref: "#/components/schemas/ConnectionStatus"
+    DestinationDiscoverRead:
+      type: object
+      required:
+        - catalog
+        - catalogId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        catalogId:
+          type: string
+          format: uuid
+    DestinationCatalog:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationOperation"
+    DestinationOperation:
+      type: object
+      required:
+        - objectName
+        - syncMode
+        - schema
+      properties:
+        objectName:
+          type: string
+        syncMode:
+          $ref: "#/components/schemas/DestinationSyncMode"
+        schema:
+          $ref: "#/components/schemas/StreamJsonSchema"
+        matchingKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
     SourceAutoPropagateChange:
       description:
         Input of the source propagation, it contains the discovered catalog and a list of diff that need to be applied
@@ -12600,6 +12725,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
+        destinationCatalogId:
+          type: string
+          format: uuid
         dataplaneGroupId:
           type: string
           format: uuid
@@ -12660,6 +12788,9 @@ components:
           items:
             $ref: "#/components/schemas/OperationCreate"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         dataplaneGroupId:
@@ -12724,6 +12855,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         dataplaneGroupId:
@@ -12799,6 +12933,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
+        destinationCatalogId:
+          type: string
+          format: uuid
         dataplaneGroupId:
           type: string
           format: uuid
@@ -12861,6 +12998,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         sourceCatalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         breakingChange:
@@ -14512,6 +14652,9 @@ components:
         suggested:
           description: Does the connector suggest that this stream be enabled by default?
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to. This is used for data activation destinations.
+          type: string
         includeFiles:
           description: Should the sync move raw files from the source to the destination?
           type: boolean
@@ -16442,6 +16585,9 @@ components:
         resourceRequirements:
           $ref: "#/components/schemas/ResourceRequirements"
         catalogId:
+          type: string
+          format: uuid
+        destinationCatalogId:
           type: string
           format: uuid
         catalogDiff:
@@ -18909,6 +19055,9 @@ components:
         includeFiles:
           description: Whether to move raw files from the source to the destination during the sync.
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to, used for data activation destinations.
+          type: string
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"

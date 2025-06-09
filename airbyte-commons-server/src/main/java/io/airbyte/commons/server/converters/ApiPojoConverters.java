@@ -162,6 +162,7 @@ public class ApiPojoConverters {
         .prefix(standardSync.getPrefix())
         .syncCatalog(this.catalogConverter.toApi(standardSync.getCatalog(), standardSync.getFieldSelectionData()))
         .sourceCatalogId(standardSync.getSourceCatalogId())
+        .destinationCatalogId(standardSync.getDestinationCatalogId())
         .breakingChange(standardSync.getBreakingChange())
         .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .dataplaneGroupId(standardSync.getDataplaneGroupId())

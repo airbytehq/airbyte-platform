@@ -69,6 +69,7 @@ public class DefaultProtocolSerializer implements ProtocolSerializer {
         .withGenerationId(stream.getGenerationId())
         .withMinimumGenerationId(stream.getMinimumGenerationId())
         .withIncludeFiles(stream.getIncludeFiles())
+        .withDestinationObjectName(stream.getDestinationObjectName())
         .withSyncId(stream.getSyncId());
   }
 

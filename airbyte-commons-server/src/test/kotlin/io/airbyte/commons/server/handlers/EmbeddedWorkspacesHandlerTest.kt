@@ -95,7 +95,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test create`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns emptyList()
 
     every {
@@ -125,7 +125,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test get existing workspace`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns listOf(existingWorkspace)
 
     val returnedWorkspaceId = handler.getOrCreate(OrganizationId(organizationId), externalUserId)
@@ -136,7 +136,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test error if multiple workspaces with externalId`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns listOf(existingWorkspace, anotherExistingWorkspace)
 
     org.junit.jupiter.api.assertThrows<IllegalStateException> {

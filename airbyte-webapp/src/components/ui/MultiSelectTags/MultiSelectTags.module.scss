@@ -4,6 +4,8 @@
 .multiSelect {
   &__button {
     padding: variables.$spacing-sm;
+    min-height: variables.$form-input-height;
+    height: auto;
   }
 
   &__item {

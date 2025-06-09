@@ -884,7 +884,7 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
-            "status", "resourceRequirements", "sourceCatalogId", "dataplaneGroupId",
+            "status", "resourceRequirements", "sourceCatalogId", "destinationCatalogId", "dataplaneGroupId",
             "nonBreakingChangesPreference", "notifySchemaChanges", "notifySchemaChangesByEmail", "backfillPreference",
             "tags", "addTagsItem", "removeTagsItem");
 
@@ -908,7 +908,7 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
-            "sourceCatalogId", "scheduleType", "scheduleData", "dataplaneGroupId", "breakingChange",
+            "sourceCatalogId", "destinationCatalogId", "scheduleType", "scheduleData", "dataplaneGroupId", "breakingChange",
             "notifySchemaChanges", "notifySchemaChangesByEmail", "nonBreakingChangesPreference", "backfillPreference",
             "tags", "addTagsItem", "removeTagsItem");
 
@@ -1509,6 +1509,19 @@ class WebBackendConnectionsHandlerTest {
 
     // Use new value for include files
     assertEquals(includeFiles, actual.getStreams().getFirst().getConfig().getIncludeFiles());
+  }
+
+  @Test
+  void testUpdateSchemaWithDestinationObjectName() {
+    final AirbyteCatalog configured = ConnectionHelpers.generateBasicApiCatalog();
+    configured.getStreams().getFirst().getConfig()
+        .destinationObjectName("configured_object_name");
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(configured, discovered, discovered);
+
+    assertEquals("configured_object_name", actual.getStreams().getFirst().getConfig().getDestinationObjectName());
   }
 
   @ParameterizedTest
