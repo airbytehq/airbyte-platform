@@ -13,7 +13,7 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
+object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = true)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
