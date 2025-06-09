@@ -105,12 +105,24 @@ global:
 
   api:
     authHeaderName: X-Airbyte-Auth
-    
+
+  aws: 
+    assumeRole:
+      accessKeyId: ""
+      accessKeyIdSecretKey: ""
+      secretAcessKey: ""
+      secretAccessKeySecretKey: ""
+
   # -- Environment variables
   env_vars: {}
 
   # -- Secrets
   secrets: {}
+
+  # -- CloudSQLProxy configuration
+
+  cloudSqlProxy:
+    enabled: false
 
   # -- Database configuration
   database:
@@ -737,7 +749,25 @@ server:
 
   deploymentStrategyType: Recreate
 
-  applications: ""
+  configDbMaxPoolSize: ""
+  connectorDatadogSupportNames: ""
+  httpIdleTimeout: ""
+
+  openai:
+    syncAssistantApiKey: ""
+    syncAssistantApiKeySecretKey: ""
+
+  publicApiExecutor:
+    numThreads: ""
+
+  scheduler:
+    numThreads: ""
+
+  warehouseExports:
+    projectId: ""
+    bucketName: ""
+
+  data: {}
 
   image:
     # -- The repository to use for the airbyte server image.
@@ -1415,6 +1445,10 @@ connectorRolloutWorker:
   activityMaxAttempt: ""
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
+
+  githubToken: ""
+  githubTokenSecretKey: ""
+
 
 ## @section Metrics parameters
 metrics:
@@ -2353,6 +2387,9 @@ connectorBuilderServer:
     remoteDebugPort: 5005
 
   aiAssistUrlBase: ""
+
+  githubToken: ""
+  githubTokenSecretKey: ""
 
 keycloak:
   enabled: false

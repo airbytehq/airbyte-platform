@@ -13,6 +13,7 @@ data:
   {{- include "airbyte.auth.identityProvider.configVars" . | nindent 2 }}
   {{- include "airbyte.auth.instanceAdmin.enterprise.configVars" . | nindent 2 }}
   {{- include "airbyte.auth.security.configVars" . | nindent 2 }}
+  {{- include "airbyte.aws.configVars" . | nindent 2 }}
   {{- include "airbyte.cluster.configVars" . | nindent 2 }}
   {{- include "airbyte.common.configVars" . | nindent 2 }}
   {{- include "airbyte.connector.configVars" . | nindent 2 }}

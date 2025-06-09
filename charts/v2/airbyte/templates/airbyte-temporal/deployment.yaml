@@ -1,4 +1,4 @@
-{{- if .Values.temporal.enabled }}
+{{- if and (.Values.temporal.enabled) (not (include "airbyte.temporal.cloud.enabled" .)) }}
 ---
 apiVersion: apps/v1
 kind: Deployment
