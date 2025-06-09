@@ -2,31 +2,26 @@ import { mockSourceDiscoverSchemaRead } from "test-utils/mock-data/mockSource";
 
 import { DestinationSyncMode, SyncMode } from "core/api/types/AirbyteClient";
 
-import { createSyncCatalogFromMappedStreams } from "./createSyncCatalogFromMappedStreams";
-import { StreamMappingsFormValuesType } from "./StreamMappings";
+import { createSyncCatalogFromFormValues } from "./createSyncCatalogFromFormValues";
+import { DataActivationConnectionFormOutput } from "./DataActivationConnectionFormSchema";
 
-describe(`${createSyncCatalogFromMappedStreams.name}`, () => {
+describe(`${createSyncCatalogFromFormValues.name}`, () => {
   it("should select no streams when mapped streams are empty", () => {
-    const result = createSyncCatalogFromMappedStreams({ streams: [] }, mockSourceDiscoverSchemaRead);
+    if (!mockSourceDiscoverSchemaRead.catalog) {
+      throw new Error("This test relies on the mock source discover catalog being defined");
+    }
+    const result = createSyncCatalogFromFormValues({ streams: [] }, mockSourceDiscoverSchemaRead.catalog);
 
-    expect(result).toEqual({
-      streams: [
-        {
-          config: {
-            ...mockSourceDiscoverSchemaRead.catalog?.streams[0].config,
-            fieldSelectionEnabled: false,
-            mappers: undefined,
-            selected: false,
-            selectedFields: undefined,
-          },
-          stream: mockSourceDiscoverSchemaRead.catalog?.streams[0].stream,
-        },
-      ],
+    result.streams.forEach((stream) => {
+      expect(stream?.config?.selected).toBe(false);
     });
   });
 
   it("should select appropriate streams and fields given mapped streams", () => {
-    const mappedStreams: StreamMappingsFormValuesType = {
+    if (!mockSourceDiscoverSchemaRead.catalog) {
+      throw new Error("This test relies on the mock source discover catalog being defined");
+    }
+    const mappedStreams: DataActivationConnectionFormOutput = {
       streams: [
         {
           sourceStreamDescriptor: {
@@ -36,17 +31,13 @@ describe(`${createSyncCatalogFromMappedStreams.name}`, () => {
           destinationObjectName: "destination_stream_1",
           sourceSyncMode: SyncMode.incremental,
           destinationSyncMode: DestinationSyncMode.append_dedup,
-          fields: [
-            { sourceFieldName: "id", destinationFieldName: "dest_id" },
-            { sourceFieldName: "name", destinationFieldName: "dest_name" },
-          ],
+          fields: [{ sourceFieldName: "name", destinationFieldName: "dest_name" }],
           cursorField: "created_at",
           primaryKey: "id",
         },
       ],
     };
-
-    const result = createSyncCatalogFromMappedStreams(mappedStreams, mockSourceDiscoverSchemaRead);
+    const result = createSyncCatalogFromFormValues(mappedStreams, mockSourceDiscoverSchemaRead.catalog);
 
     expect(result).toEqual({
       streams: [
@@ -61,18 +52,13 @@ describe(`${createSyncCatalogFromMappedStreams.name}`, () => {
             fieldSelectionEnabled: true,
             destinationObjectName: "destination_stream_1",
             selectedFields: [
-              { fieldPath: ["id"], selected: true },
-              { fieldPath: ["name"], selected: true },
+              { fieldPath: ["name"] },
+              // The primary key field must be selected
+              { fieldPath: ["id"] },
+              // The cursor field must be selected
+              { fieldPath: ["created_at"] },
             ],
             mappers: [
-              {
-                id: expect.any(String),
-                type: "field-renaming",
-                mapperConfiguration: {
-                  newFieldName: "dest_id",
-                  originalFieldName: "id",
-                },
-              },
               {
                 id: expect.any(String),
                 type: "field-renaming",

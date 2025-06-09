@@ -4,6 +4,8 @@ import { FormProvider, useForm, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
+import { SOURCE_ID_PARAM } from "components/connection/CreateConnection/DefineSource";
+import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
 import LoadingSchema from "components/LoadingSchema";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -14,22 +16,17 @@ import { ExternalLink, Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
+import { StreamMappings } from "area/dataActivation/components/ConnectionForm/StreamMappings";
+import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { EMPTY_STREAM, DataActivationConnectionFormSchema } from "area/dataActivation/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useDestinationDefinitionList, useDiscoverSchemaQuery } from "core/api";
 import { links } from "core/utils/links";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
-import styles from "./MapFieldsRoute.module.scss";
-import {
-  EMPTY_STREAM,
-  StreamMappingsFormValues,
-  StreamMappings,
-  StreamMappingsFormValuesSchema,
-} from "./StreamMappings";
-import { SOURCE_ID_PARAM } from "../CreateConnection/DefineSource";
-import { CreateConnectionFlowLayout } from "../CreateConnectionFlowLayout";
+import styles from "./DataActivationMappingPage.module.scss";
 
-export const MapFieldsRoute = () => {
+export const DataActivationMappingPage = () => {
   const navigate = useNavigate();
   const source = useGetSourceFromSearchParams();
   const destination = useGetDestinationFromSearchParams();
@@ -43,15 +40,15 @@ export const MapFieldsRoute = () => {
     throw new Error("Source ID and Destination ID are required");
   }
 
-  const methods = useForm<StreamMappingsFormValues>({
+  const methods = useForm<DataActivationConnectionFormValues>({
     defaultValues: {
       streams: location.state?.streams || [EMPTY_STREAM],
     },
     mode: "onChange",
-    resolver: zodResolver(StreamMappingsFormValuesSchema),
+    resolver: zodResolver(DataActivationConnectionFormSchema),
   });
 
-  const onSubmit = (values: StreamMappingsFormValues) => {
+  const onSubmit = (values: DataActivationConnectionFormValues) => {
     navigate(`${ConnectionRoutePaths.ConfigureContinued}?${searchParams.toString()}`, {
       state: {
         streams: values.streams,
@@ -72,7 +69,7 @@ export const MapFieldsRoute = () => {
           setShowGlobalValidationMessage(true);
           return methods.handleSubmit(onSubmit)(event);
         }}
-        className={styles.form}
+        className={styles.dataActivationMappingPage}
       >
         <CreateConnectionFlowLayout.Main>
           <Box p="xl">
@@ -99,9 +96,9 @@ export const MapFieldsRoute = () => {
               </FlexContainer>
               {!sourceSchema && <LoadingSchema />}
 
-              {sourceSchema && (
+              {sourceSchema?.catalog && (
                 <FlexContainer direction="column" gap="lg">
-                  <StreamMappings />
+                  <StreamMappings sourceCatalog={sourceSchema.catalog} source={source} destination={destination} />
                 </FlexContainer>
               )}
             </FlexContainer>
@@ -133,7 +130,7 @@ export const MapFieldsRoute = () => {
 };
 
 const GlobalValidationMessage = () => {
-  const { formState } = useFormContext<StreamMappingsFormValues>();
+  const { formState } = useFormContext<DataActivationConnectionFormValues>();
   const { isValid } = formState;
 
   if (isValid) {

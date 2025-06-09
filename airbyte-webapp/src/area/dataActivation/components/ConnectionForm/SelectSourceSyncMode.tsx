@@ -1,6 +1,6 @@
 import { Listbox } from "@headlessui/react";
 import React from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControlErrorMessage } from "components/forms/FormControl";
@@ -13,23 +13,39 @@ import { ListboxOption } from "components/ui/ListBox/ListboxOption";
 import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
-import { SyncMode } from "core/api/types/AirbyteClient";
-
-import { StreamMappingsFormValues } from "./StreamMappings";
+import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { AirbyteCatalog, SyncMode } from "core/api/types/AirbyteClient";
 
 interface SelectSourceSyncModeProps {
   streamIndex: number;
+  sourceCatalog: AirbyteCatalog;
 }
 
-const SUPPORTED_SOURCE_SYNC_MODES = [SyncMode.incremental, SyncMode.full_refresh];
+const DATA_ACTIVATION_SUPPORTED_SYNC_MODES = [SyncMode.incremental, SyncMode.full_refresh];
 
-export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ streamIndex }) => {
-  const { control, setValue } = useFormContext<StreamMappingsFormValues>();
+export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ streamIndex, sourceCatalog }) => {
+  const sourceStreamDescriptor = useWatch<
+    DataActivationConnectionFormValues,
+    `streams.${number}.sourceStreamDescriptor`
+  >({
+    name: `streams.${streamIndex}.sourceStreamDescriptor`,
+  });
+  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
 
-  const sourceSyncModeOptions: Array<Option<SyncMode>> = SUPPORTED_SOURCE_SYNC_MODES.map((mode) => ({
+  const sourceStreamSupportedSyncModes: SyncMode[] =
+    sourceCatalog.streams.find(
+      (stream) =>
+        stream.stream?.name === sourceStreamDescriptor?.name &&
+        stream.stream?.namespace === sourceStreamDescriptor?.namespace
+    )?.stream?.supportedSyncModes ?? [];
+
+  console.log({ sourceStreamDescriptor, sourceStreamSupportedSyncModes });
+
+  const sourceSyncModeOptions: Array<Option<SyncMode>> = DATA_ACTIVATION_SUPPORTED_SYNC_MODES.map((mode) => ({
     label: formatMessage({ id: `syncMode.${mode}` }),
     value: mode,
+    disabled: !sourceStreamSupportedSyncModes.includes(mode),
   }));
 
   return (
@@ -70,7 +86,7 @@ export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ stre
               </ListboxButton>
               <ListboxOptions>
                 {sourceSyncModeOptions.map((option) => (
-                  <ListboxOption key={option.value} value={option.value}>
+                  <ListboxOption key={option.value} value={option.value} disabled={option.disabled}>
                     <Box p="md" pr="none" as="span">
                       <Text>{option.label}</Text>
                     </Box>

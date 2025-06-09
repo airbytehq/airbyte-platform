@@ -9,18 +9,18 @@ import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useGetSourceFromSearchParams } from "area/connector/utils";
-import { useDiscoverSchemaQuery } from "core/api";
+import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { AirbyteCatalog } from "core/api/types/AirbyteClient";
 
 import styles from "./FieldMappings.module.scss";
-import { StreamMappingsFormValues } from "./StreamMappings";
 
 interface FieldMappingsProps {
+  sourceCatalog: AirbyteCatalog;
   streamIndex: number;
 }
 
-export const FieldMappings: React.FC<FieldMappingsProps> = ({ streamIndex }) => {
-  const { control } = useFormContext<StreamMappingsFormValues>();
+export const FieldMappings: React.FC<FieldMappingsProps> = ({ sourceCatalog, streamIndex }) => {
+  const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
     name: `streams.${streamIndex}.fields`,
@@ -30,6 +30,7 @@ export const FieldMappings: React.FC<FieldMappingsProps> = ({ streamIndex }) => 
     <>
       {fields.map((_field, index) => (
         <Field
+          sourceCatalog={sourceCatalog}
           key={_field.id}
           streamIndex={streamIndex}
           fieldIndex={index}
@@ -50,22 +51,22 @@ export const FieldMappings: React.FC<FieldMappingsProps> = ({ streamIndex }) => 
   );
 };
 
-const Field = ({
-  streamIndex,
-  fieldIndex,
-  removeField,
-}: {
+interface FieldProps {
+  sourceCatalog: AirbyteCatalog;
   streamIndex: number;
   fieldIndex: number;
   removeField?: () => void;
-}) => {
+}
+
+const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sourceCatalog }) => {
   const { formatMessage } = useIntl();
-  const source = useGetSourceFromSearchParams();
-  const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
-  const sourceStreamDescriptor = useWatch<StreamMappingsFormValues, `streams.${number}.sourceStreamDescriptor`>({
+  const sourceStreamDescriptor = useWatch<
+    DataActivationConnectionFormValues,
+    `streams.${number}.sourceStreamDescriptor`
+  >({
     name: `streams.${streamIndex}.sourceStreamDescriptor`,
   });
-  const fields = useWatch<StreamMappingsFormValues, `streams.${number}.fields`>({
+  const fields = useWatch<DataActivationConnectionFormValues, `streams.${number}.fields`>({
     name: `streams.${streamIndex}.fields`,
   });
   const otherSelectedFields = useMemo(() => {
@@ -74,10 +75,9 @@ const Field = ({
 
   const availableFieldOptions = useMemo(() => {
     const streamFields =
-      sourceSchema?.catalog?.streams.find(
-        ({ stream }) =>
-          stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace
-      )?.stream?.jsonSchema?.properties ?? [];
+      sourceCatalog.streams.find(({ stream }) => {
+        return stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace;
+      })?.stream?.jsonSchema?.properties ?? [];
     return Object.keys(streamFields)
       .map((key) => ({
         label: key,
@@ -87,12 +87,7 @@ const Field = ({
       .sort((a, b) => {
         return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
       });
-  }, [
-    otherSelectedFields,
-    sourceSchema?.catalog?.streams,
-    sourceStreamDescriptor.name,
-    sourceStreamDescriptor.namespace,
-  ]);
+  }, [otherSelectedFields, sourceCatalog, sourceStreamDescriptor.name, sourceStreamDescriptor.namespace]);
 
   return (
     <>
@@ -102,7 +97,7 @@ const Field = ({
         </Text>
       </FlexContainer>
       <div className={styles.fieldMappings__source}>
-        <FormControl<StreamMappingsFormValues>
+        <FormControl<DataActivationConnectionFormValues>
           options={availableFieldOptions}
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
           fieldType="dropdown"
@@ -115,7 +110,7 @@ const Field = ({
       <FlexContainer className={styles.fieldMappings__destination} alignItems="flex-start">
         <FlexItem grow>
           <FlexContainer direction="column">
-            <FormControl<StreamMappingsFormValues>
+            <FormControl<DataActivationConnectionFormValues>
               name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
               fieldType="input"
               type="text"

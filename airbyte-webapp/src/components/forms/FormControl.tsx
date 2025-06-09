@@ -316,7 +316,7 @@ export const FormControlErrorMessage = <TFormValues extends FormValues>({
         // "validate" type means the error came from the react-hook-form validate() method.
         (error.type === NON_I18N_ERROR_TYPE || error.type === "validate"
           ? error.message
-          : formatMessage({ id: error.message }))}
+          : formatMessage({ id: error.message ?? "form.empty.error" }))}
       {message && message}
     </Text>
   );

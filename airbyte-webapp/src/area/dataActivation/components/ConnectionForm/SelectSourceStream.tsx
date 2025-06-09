@@ -13,18 +13,22 @@ import { ListboxOption } from "components/ui/ListBox/ListboxOption";
 import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
-import { useGetSourceFromSearchParams } from "area/connector/utils";
-import { useDiscoverSchemaQuery } from "core/api";
+import { DataActivationConnectionFormValues } from "area/dataActivation/types";
+import { EMPTY_FIELD } from "area/dataActivation/utils";
+import { AirbyteCatalog, SourceRead } from "core/api/types/AirbyteClient";
 
 import styles from "./SelectSourceStream.module.scss";
-import { EMPTY_FIELD, StreamMappingsFormValues } from "./StreamMappings";
 
-export const SelectSourceStream = ({ index }: { index: number }) => {
-  const { control, setValue } = useFormContext<StreamMappingsFormValues>();
-  const source = useGetSourceFromSearchParams();
-  const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
+interface SelectSourceStreamProps {
+  index: number;
+  source: SourceRead;
+  sourceCatalog: AirbyteCatalog;
+}
 
-  const sourceStreams = useMemo(() => sourceSchema?.catalog?.streams ?? [], [sourceSchema]);
+export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCatalog, source, index }) => {
+  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
+
+  const sourceStreams = useMemo(() => sourceCatalog.streams ?? [], [sourceCatalog]);
 
   const showNamespace = useMemo(
     () => new Set(sourceStreams.map((stream) => stream.stream?.namespace)).size > 1,

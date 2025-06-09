@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { useIntl } from "react-intl";
 import { Outlet } from "react-router-dom";
 
+import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
 import { HeadTitle } from "components/HeadTitle";
 import LoadingPage from "components/LoadingPage";
 import { PageHeaderWithNavigation } from "components/ui/PageHeader";
@@ -12,9 +13,7 @@ import { CreateConnectionTitleBlock } from "pages/connections/CreateConnectionPa
 import { RoutePaths } from "pages/routePaths";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 
-import { CreateConnectionFlowLayout } from "../CreateConnectionFlowLayout";
-
-export const CreateDataActivationConnectionRouteWrapper = () => {
+export const CreateConnectionRouteWrapper = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_NEW_DATA_ACTIVATION);
   const { formatMessage } = useIntl();
   const workspaceId = useCurrentWorkspaceId();

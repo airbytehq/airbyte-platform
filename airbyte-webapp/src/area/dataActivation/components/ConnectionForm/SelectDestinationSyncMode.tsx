@@ -13,16 +13,15 @@ import { ListboxOption } from "components/ui/ListBox/ListboxOption";
 import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
+import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { DestinationSyncMode } from "core/api/types/AirbyteClient";
-
-import { StreamMappingsFormValues } from "./StreamMappings";
 
 interface SelectDestinationSyncModeProps {
   streamIndex: number;
 }
 
 export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps> = ({ streamIndex }) => {
-  const { control, setValue } = useFormContext<StreamMappingsFormValues>();
+  const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
 
   // TODO: Update this to support update and soft_delete once they're available https://github.com/airbytehq/airbyte-internal-issues/issues/12920

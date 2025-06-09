@@ -4,6 +4,10 @@ import { FormattedMessage, useIntl } from "react-intl";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 
+import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
+import { BASIC_FREQUENCY_DEFAULT_VALUE } from "components/connection/ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
+import { CreateConnectionFlowLayout } from "components/connection/CreateConnectionFlowLayout";
+import { SimplifiedConnectionsSettingsCard } from "components/connection/CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 import { FormDevTools } from "components/forms/FormDevTools";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
@@ -11,6 +15,8 @@ import { Link } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
+import { DataActivationConnectionFormSchema } from "area/dataActivation/utils";
+import { createSyncCatalogFromFormValues } from "area/dataActivation/utils/createSyncCatalogFromFormValues";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { CreateConnectionProps, useCreateConnection, useDiscoverSchemaQuery } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
@@ -24,14 +30,8 @@ import { useNotificationService } from "hooks/services/Notification";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./ConfigureConnectionRoute.module.scss";
-import { createSyncCatalogFromMappedStreams } from "./createSyncCatalogFromMappedStreams";
-import { StreamMappingsFormValuesSchema } from "./StreamMappings";
-import { FormConnectionFormValues } from "../ConnectionForm/formConfig";
-import { BASIC_FREQUENCY_DEFAULT_VALUE } from "../ConnectionForm/ScheduleFormField/useBasicFrequencyDropdownData";
-import { CreateConnectionFlowLayout } from "../CreateConnectionFlowLayout";
-import { SimplifiedConnectionsSettingsCard } from "../CreateConnectionForm/SimplifiedConnectionCreation/SimplifiedConnectionSettingsCard";
 
-export const ConfigureConnectionRoute = () => {
+export const ConfigureDataActivationConnectionPage = () => {
   const location = useLocation();
   const createLink = useCurrentWorkspaceLink();
   const navigate = useNavigate();
@@ -46,13 +46,16 @@ export const ConfigureConnectionRoute = () => {
     if (!sourceSchema) {
       throw new Error("Source schema missing when trying to create connection");
     }
+    if (!sourceSchema.catalog) {
+      throw new Error("Source schema catalog missing when trying to create connection");
+    }
 
-    const mappedStreams = StreamMappingsFormValuesSchema.parse({ streams: location.state.streams });
+    const mappedStreams = DataActivationConnectionFormSchema.parse({ streams: location.state.streams });
 
     const webBackendConnectionCreate: CreateConnectionProps = {
       values: {
         ...formValues,
-        syncCatalog: createSyncCatalogFromMappedStreams(mappedStreams, sourceSchema),
+        syncCatalog: createSyncCatalogFromFormValues(mappedStreams, sourceSchema.catalog),
       },
       source,
       destination,

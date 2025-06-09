@@ -782,6 +782,7 @@
   "connection.dataActivation.destinationSyncMode": "insertion method",
   "connection.dataActivation.append": "Insert",
   "connection.dataActivation.append_dedup": "Upsert",
+  "connection.dataActivation.save": "Save",
   "connection.selectSyncMode": "Select sync mode",
   "connection.syncMode": "sync mode",
   "connection.sourceFieldName": "Source field name",

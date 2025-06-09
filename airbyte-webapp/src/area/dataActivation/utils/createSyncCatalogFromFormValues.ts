@@ -1,26 +1,55 @@
 import { v4 as uuid } from "uuid";
 
-import { AirbyteCatalog, SourceDiscoverSchemaRead } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, StreamMapperType } from "core/api/types/AirbyteClient";
 
-import { StreamMappingsFormValuesType } from "./StreamMappings";
+import { DataActivationConnectionFormOutput } from "./DataActivationConnectionFormSchema";
 
-export function createSyncCatalogFromMappedStreams(
-  mappedStreams: StreamMappingsFormValuesType,
-  sourceSchema: SourceDiscoverSchemaRead
+export function createSyncCatalogFromFormValues(
+  mappedStreams: DataActivationConnectionFormOutput,
+  catalog: AirbyteCatalog
 ): AirbyteCatalog {
   return {
     streams:
-      sourceSchema.catalog?.streams.map((stream) => {
-        const mappedStream = mappedStreams.streams.find((s) => s.sourceStreamDescriptor.name === stream.stream?.name);
+      catalog.streams.map((stream) => {
+        if (!stream.stream || !stream.config) {
+          throw new Error("Stream or stream config is unexpectedly undefined");
+        }
+
+        const mappedStream = mappedStreams.streams.find(
+          (s) =>
+            s.sourceStreamDescriptor.name === stream.stream?.name &&
+            s.sourceStreamDescriptor.namespace === stream.stream?.namespace
+        );
+
+        if (!mappedStream) {
+          return {
+            config: {
+              ...stream.config,
+              selected: false,
+            },
+            stream: stream.stream,
+          };
+        }
+
         const selectedFields =
           mappedStream?.fields.map((field) => ({
             fieldPath: field.sourceFieldName.split("."),
-            selected: true,
-          })) ?? undefined;
+          })) ?? [];
 
         const primaryKey =
           mappedStream?.destinationSyncMode === "append_dedup" ? [mappedStream.primaryKey.split(".")] : undefined;
+        if (primaryKey) {
+          selectedFields.push({
+            fieldPath: primaryKey[0],
+          });
+        }
+
         const cursorField = mappedStream?.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
+        if (cursorField) {
+          selectedFields.push({
+            fieldPath: cursorField,
+          });
+        }
 
         return {
           config: {
@@ -33,15 +62,15 @@ export function createSyncCatalogFromMappedStreams(
             mappers:
               mappedStream?.fields.map(({ sourceFieldName, destinationFieldName }) => ({
                 id: uuid(),
-                type: "field-renaming",
+                type: StreamMapperType["field-renaming"],
                 mapperConfiguration: {
                   newFieldName: destinationFieldName,
                   originalFieldName: sourceFieldName,
                 },
               })) ?? stream.config?.mappers,
-            selected: !!mappedStream,
-            selectedFields,
-            fieldSelectionEnabled: !!selectedFields,
+            selected: true,
+            selectedFields: selectedFields.length ? selectedFields : undefined,
+            fieldSelectionEnabled: selectedFields.length > 0,
           },
           stream: {
             ...stream.stream,
