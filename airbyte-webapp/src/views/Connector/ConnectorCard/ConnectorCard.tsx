@@ -12,7 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
-import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
+import { ErrorWithJobInfo, useCreateConfigTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -47,7 +47,6 @@ interface ConnectorCardBaseProps {
   onSubmit: (values: ConnectorCardValues) => Promise<void> | void;
   reloadConfig?: () => void;
   onDeleteClick?: () => void;
-  onConnectorDefinitionSelect?: (id: string) => void;
   availableConnectorDefinitions: ConnectorDefinition[];
   supportLevel?: SupportLevel;
 
@@ -65,6 +64,8 @@ interface ConnectorCardBaseProps {
   fetchingConnectorError?: Error | null;
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
+  hideCopyConfig?: boolean;
+  skipCheckConnection?: boolean;
 }
 
 interface ConnectorCardCreateProps extends ConnectorCardBaseProps {
@@ -93,22 +94,6 @@ const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: 
   };
 };
 
-/**
- * Prepares the configuration for creating a destination config template
- */
-const prepareDestinationConfigTemplate = (
-  values: ConnectorFormValues,
-  definitionId: string,
-  organizationId: string
-) => {
-  return {
-    organizationId,
-    destinationName: values.name,
-    destinationConfiguration: values.connectionConfiguration,
-    destinationActorDefinitionId: definitionId,
-  };
-};
-
 export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEditProps> = ({
   onSubmit,
   onDeleteClick,
@@ -118,6 +103,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   headerBlock,
   supportLevel,
   leftFooterSlot = null,
+  hideCopyConfig = false,
+  skipCheckConnection = false,
   ...props
 }) => {
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
@@ -125,12 +112,12 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const { formatMessage } = useIntl();
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { mutate: createConfigTemplate } = useCreateConfigTemplate();
-  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
   const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
   const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
   const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
+
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -215,11 +202,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     };
 
     try {
-      const response = await testConnectorWithTracking(connectorCardValues);
-      if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
-        reloadConfig();
-      } else {
+      if (skipCheckConnection) {
         await onSubmit(connectorCardValues);
+      } else {
+        const response = await testConnectorWithTracking(connectorCardValues);
+        if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
+          reloadConfig();
+        } else {
+          await onSubmit(connectorCardValues);
+        }
       }
     } catch (e) {
       setErrorStatusRequest(e);
@@ -316,36 +307,28 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               }}
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
-              onCopyConfig={() => {
-                const values = getValues();
-                const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
-                return {
-                  name: values.name,
-                  workspaceId,
-                  definitionId,
-                  config: values.connectionConfiguration as Record<string, unknown>,
-                  schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
-                };
-              }}
+              onCopyConfig={
+                hideCopyConfig
+                  ? undefined
+                  : () => {
+                      const values = getValues();
+                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
+                      return {
+                        name: values.name,
+                        workspaceId,
+                        definitionId,
+                        config: values.connectionConfiguration as Record<string, unknown>,
+                        schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
+                      };
+                    }
+              }
               onCreateConfigTemplate={
-                showCreateTemplateButton
-                  ? props.formType === "source"
-                    ? () => {
-                        const values = getValues();
-                        const definitionId = selectedConnectorDefinition
-                          ? Connector.id(selectedConnectorDefinition)
-                          : "";
-                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
-                      }
-                    : () => {
-                        const values = getValues();
-                        const definitionId = selectedConnectorDefinition
-                          ? Connector.id(selectedConnectorDefinition)
-                          : "";
-                        createConnectionTemplate(
-                          prepareDestinationConfigTemplate(values, definitionId, organizationId)
-                        );
-                      }
+                showCreateTemplateButton && props.formType === "source"
+                  ? () => {
+                      const values = getValues();
+                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
+                      createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
+                    }
                   : undefined
               }
             />

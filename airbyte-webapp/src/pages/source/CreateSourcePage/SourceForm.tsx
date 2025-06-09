@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useLocation } from "react-router-dom";
 
@@ -38,9 +38,8 @@ const hasSourceDefinitionId = (state: unknown): state is { sourceDefinitionId: s
 export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefinitions, selectedSourceDefinitionId }) => {
   const location = useLocation();
 
-  const [sourceDefinitionId, setSourceDefinitionId] = useState<string | null>(
-    selectedSourceDefinitionId ?? (hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null)
-  );
+  const sourceDefinitionId =
+    selectedSourceDefinitionId ?? (hasSourceDefinitionId(location.state) ? location.state.sourceDefinitionId : null);
 
   const {
     data: sourceDefinitionSpecification,
@@ -52,10 +51,6 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
     () => sourceDefinitions.find((s) => Connector.id(s) === selectedSourceDefinitionId),
     [sourceDefinitions, selectedSourceDefinitionId]
   );
-
-  const onDropDownSelect = (sourceDefinitionId: string) => {
-    setSourceDefinitionId(sourceDefinitionId);
-  };
 
   const onSubmitForm = (values: ConnectorCardValues) =>
     onSubmit({
@@ -82,7 +77,6 @@ export const SourceForm: React.FC<SourceFormProps> = ({ onSubmit, sourceDefiniti
       isLoading={isLoading}
       fetchingConnectorError={sourceDefinitionError instanceof Error ? sourceDefinitionError : null}
       availableConnectorDefinitions={sourceDefinitions}
-      onConnectorDefinitionSelect={onDropDownSelect}
       selectedConnectorDefinitionSpecification={sourceDefinitionSpecification}
       selectedConnectorDefinitionId={sourceDefinitionId}
       onSubmit={onSubmitForm}

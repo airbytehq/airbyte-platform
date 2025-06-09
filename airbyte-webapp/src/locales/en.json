@@ -2535,5 +2535,23 @@
   "embedded.envVariables.clientId": "AIRBYTE_CLIENT_ID: ",
   "embedded.envVariables.clientSecret": "AIRBYTE_CLIENT_SECRET: ",
   "settings.embedded": "Embedded",
-  "settings.embedded.templateCreateButton": "Create Config Template"
+  "settings.embedded.templateCreateButton": "Create Config Template",
+
+  "embedded.onboarding.next": "Next",
+  "embedded.onboarding.selectDestination": "Select destination",
+  "embedded.onboarding.backToSelectDestination": "Back to select destination",
+  "embedded.onboarding.backToSetup": "Back to set up",
+  "embedded.onboarding.selectDestination.title": "Where are you sending your data?",
+  "embedded.onboarding.setupDestination": "Set up",
+  "embedded.onboarding.selectDestination.talkToUs": "Need to push your data somewhere else? <lnk>Talk to us.</lnk>",
+  "embedded.destinations.emptyStateTitle": "No destinations match your search",
+  "embedded.onboarding.setupDestination.searchPlaceholder": "Search destinations",
+  "embedded.onboarding.embedCode": "Embed code",
+  "embedded.onboarding.embedCodeTitle": "Embed your code",
+  "embedded.onboarding.finish": "Finish",
+  "embedded.onboarding.finish.allSet": "All set!",
+  "embedded.onboarding.finish.description": "Check back for your first customer's sync...",
+  "embedded.onboarding.finish.cta": "Go to dashboard",
+  "embedded.onboarding.embedCode.description": "Copy & paste this snippet into your env file.",
+  "embedded.onboarding.embedCode.copy": "Copy to clipboard"
 }

@@ -15,6 +15,10 @@ import { storeUtmFromQuery } from "core/utils/utmStorage";
 import { useExperiment } from "hooks/services/Experiment";
 import { useBuildUpdateCheck } from "hooks/services/useBuildUpdateCheck";
 import { useQuery } from "hooks/useQuery";
+import {
+  EmbeddedOnboardingPage,
+  EmbeddedOnboardingRedirect,
+} from "pages/embedded/EmbeddedOnboardingPage/EmbeddedOnboardingPage";
 import { EmbeddedSourceCreatePage } from "pages/embedded/EmbeddedSourceCreatePage/EmbeddedSourcePage";
 import { OrganizationRoutes } from "pages/organization/OrganizationRoutes";
 import { RoutePaths } from "pages/routePaths";
@@ -37,6 +41,8 @@ const DefaultView = React.lazy(() => import("pages/DefaultView"));
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
+  const isEmbeddedOnboardingEnabled = useExperiment("embedded.operatorOnboarding");
+  const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;
@@ -45,6 +51,20 @@ const CloudMainViewRoutes = () => {
   return (
     <Routes>
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
+
+      {isEmbedded && isEmbeddedOnboardingEnabled && (
+        <>
+          {/* embedded onboarding occurs within an organization, hence the `/organizations` routing here.
+              HOWEVER, we do not want it to show the org picker, org sidebar, etc., so it lives outside
+              of the `MainLayout` 
+          */}
+          <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedOnboardingRedirect />} />
+          <Route
+            path={`${RoutePaths.Organization}/:organizationId/${RoutePaths.EmbeddedOnboarding}`}
+            element={<EmbeddedOnboardingPage />}
+          />
+        </>
+      )}
 
       {isOrgPickerEnabled ? (
         <Route element={<MainLayout />}>

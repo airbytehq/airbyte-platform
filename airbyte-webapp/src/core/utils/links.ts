@@ -65,6 +65,7 @@ export const links = {
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
   dataActivationDocs: `${BASE_DOCS_LINK}`, // Does not exist yet - this is a placeholder
   ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
+  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/embedded/develop-your-app`,
 } as const;
 
 export type OutboundLinks = typeof links;

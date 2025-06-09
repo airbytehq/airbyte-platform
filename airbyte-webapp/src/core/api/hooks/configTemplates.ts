@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useNotificationService } from "hooks/services/Notification";
+import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import {
   listConfigTemplates,
@@ -74,7 +75,22 @@ export const useCreateConnectionTemplate = () => {
   const { registerNotification } = useNotificationService();
 
   return useMutation(
-    (connectionTemplate: ConnectionTemplateCreateRequestBody) => {
+    ({
+      values,
+      definitionId,
+      organizationId,
+    }: {
+      values: ConnectorFormValues;
+      definitionId: string;
+      organizationId: string;
+    }) => {
+      const connectionTemplate: ConnectionTemplateCreateRequestBody = {
+        organizationId,
+        destinationName: values.name,
+        destinationConfiguration: values.connectionConfiguration,
+        destinationActorDefinitionId: definitionId,
+      };
+
       return publicCreateConnectionTemplate(connectionTemplate, requestOptions);
     },
     {
