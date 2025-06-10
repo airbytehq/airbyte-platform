@@ -21,19 +21,15 @@ import io.airbyte.api.client.model.generated.ConnectionRead;
 import io.airbyte.api.client.model.generated.ConnectionState;
 import io.airbyte.api.client.model.generated.ConnectionStateCreateOrUpdate;
 import io.airbyte.api.client.model.generated.ConnectionStateType;
-import io.airbyte.api.client.model.generated.DestinationIdRequestBody;
 import io.airbyte.api.client.model.generated.JobOptionalRead;
-import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionRequestBody;
 import io.airbyte.api.client.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
 import io.airbyte.api.client.model.generated.SyncInput;
 import io.airbyte.commons.converters.ApiClientConverters;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.converters.StateConverter;
-import io.airbyte.commons.helper.DockerImageName;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
-import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.StandardSyncInput;
 import io.airbyte.config.State;
 import io.airbyte.config.StateWrapper;
@@ -47,7 +43,6 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
 import io.airbyte.metrics.lib.ApmTraceUtils;
 import io.airbyte.persistence.job.models.ReplicationInput;
-import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.MapperSecretHydrationHelper;
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper;
@@ -83,8 +78,6 @@ public class ReplicationInputHydrator {
   private final BackfillHelper backfillHelper;
   private final CatalogClientConverters catalogClientConverters;
   private final MetricClient metricClient;
-
-  static final String FILE_TRANSFER_DELIVERY_TYPE = "use_file_transfer";
 
   public ReplicationInputHydrator(final AirbyteApiClient airbyteApiClient,
                                   final ResumableFullRefreshStatsHelper resumableFullRefreshStatsHelper,
@@ -150,27 +143,10 @@ public class ReplicationInputHydrator {
   public ReplicationInput getHydratedReplicationInput(final ReplicationActivityInput replicationActivityInput) throws Exception {
     ApmTraceUtils.addTagsToTrace(Map.of("api_base_url", airbyteApiClient.getDestinationApi().getBaseUrl()));
     refreshSecretsReferences(replicationActivityInput);
-    final var destination =
-        airbyteApiClient.getDestinationApi().getDestination(new DestinationIdRequestBody(replicationActivityInput.getDestinationId()));
-    final var tag = DockerImageName.INSTANCE.extractTag(replicationActivityInput.getDestinationLauncherConfig().getDockerImage());
-    final var resolvedDestinationVersion = airbyteApiClient.getActorDefinitionVersionApi().resolveActorDefinitionVersionByTag(
-        new ResolveActorDefinitionVersionRequestBody(destination.getDestinationDefinitionId(), ActorType.DESTINATION, tag));
-
-    final SourceActorConfig sourceActorConfig = Jsons.object(replicationActivityInput.getSourceConfiguration(), SourceActorConfig.class);
-    final boolean useFileTransfer =
-        sourceActorConfig != null && (sourceActorConfig.getUseFileTransfer() || (sourceActorConfig.getDeliveryMethod() != null
-            && FILE_TRANSFER_DELIVERY_TYPE.equals(sourceActorConfig.getDeliveryMethod().getDeliveryType())));
-
-    if (useFileTransfer && !resolvedDestinationVersion.getSupportFileTransfer()) {
-      final String errorMessage = "Destination does not support file transfers, but source requires it. The destination version is: "
-          + resolvedDestinationVersion.getDockerImageTag();
-      LOGGER.error(errorMessage);
-      throw new WorkerException(errorMessage);
-    }
 
     // Retrieve the connection, which we need in a few places.
     final long jobId = Long.parseLong(replicationActivityInput.getJobRunConfig().getJobId());
-    final ConnectionRead connectionInfo = resolvedDestinationVersion.getSupportRefreshes()
+    final ConnectionRead connectionInfo = replicationActivityInput.getSupportsRefreshes()
         ? airbyteApiClient.getConnectionApi()
             .getConnectionForJob(new ConnectionAndJobIdRequestBody(replicationActivityInput.getConnectionId(), jobId))
         : airbyteApiClient.getConnectionApi().getConnection(new ConnectionIdRequestBody(replicationActivityInput.getConnectionId()));
@@ -243,7 +219,7 @@ public class ReplicationInputHydrator {
         .withDestinationConfiguration(fullDestinationConfig)
         .withCatalog(hydratedCatalog)
         .withState(state)
-        .withDestinationSupportsRefreshes(resolvedDestinationVersion.getSupportRefreshes());
+        .withDestinationSupportsRefreshes(replicationActivityInput.getSupportsRefreshes());
   }
 
   @VisibleForTesting

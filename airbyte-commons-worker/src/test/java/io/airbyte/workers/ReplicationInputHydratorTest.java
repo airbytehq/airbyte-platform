@@ -4,9 +4,7 @@
 
 package io.airbyte.workers;
 
-import static io.airbyte.workers.ReplicationInputHydrator.FILE_TRANSFER_DELIVERY_TYPE;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -41,7 +39,6 @@ import io.airbyte.api.client.model.generated.JobOptionalRead;
 import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.client.model.generated.JobStatus;
 import io.airbyte.api.client.model.generated.ResetConfig;
-import io.airbyte.api.client.model.generated.ResolveActorDefinitionVersionResponse;
 import io.airbyte.api.client.model.generated.SaveStreamAttemptMetadataRequestBody;
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference;
 import io.airbyte.api.client.model.generated.StreamAttemptMetadata;
@@ -52,9 +49,7 @@ import io.airbyte.api.client.model.generated.SyncMode;
 import io.airbyte.commons.converters.CatalogClientConverters;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectionContext;
-import io.airbyte.config.DeliveryMethod;
 import io.airbyte.config.JobSyncConfig;
-import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.State;
 import io.airbyte.config.SyncResourceRequirements;
 import io.airbyte.config.helpers.FieldGenerator;
@@ -62,7 +57,6 @@ import io.airbyte.config.helpers.StateMessageHelper;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
-import io.airbyte.workers.exception.WorkerException;
 import io.airbyte.workers.helper.BackfillHelper;
 import io.airbyte.workers.helper.CatalogDiffConverter;
 import io.airbyte.workers.helper.MapperSecretHydrationHelper;
@@ -254,7 +248,7 @@ class ReplicationInputHydratorTest {
         useRuntimePersistence);
   }
 
-  private ReplicationActivityInput getDefaultReplicationActivityInputForTest() {
+  private ReplicationActivityInput getDefaultReplicationActivityInputForTest(final boolean supportsRefresh) {
     return new ReplicationActivityInput(
         SOURCE_ID,
         DESTINATION_ID,
@@ -279,7 +273,7 @@ class ReplicationInputHydratorTest {
         false,
         Map.of(),
         null,
-        false,
+        supportsRefresh,
         null,
         null);
   }
@@ -295,12 +289,11 @@ class ReplicationInputHydratorTest {
     // Verify that we get the state and catalog from the API.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
 
-    final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
+    final var replicationActivityInput = getDefaultReplicationActivityInputForTest(withRefresh);
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput);
     assertEquals(EXPECTED_STATE, replicationInput.getState());
     assertEquals(1, replicationInput.getCatalog().getStreams().size());
     assertEquals(TEST_STREAM_NAME, replicationInput.getCatalog().getStreams().get(0).getStream().getName());
-    assertEquals(withRefresh, replicationInput.getDestinationSupportsRefreshes());
   }
 
   @ParameterizedTest
@@ -313,7 +306,7 @@ class ReplicationInputHydratorTest {
     }
     // Verify that if the sync is a reset, we retrieve the job info and handle the streams accordingly.
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
-    final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
+    final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest(withRefresh);
     input.setReset(true);
     when(jobsApi.getLastReplicationJob(new ConnectionIdRequestBody(CONNECTION_ID))).thenReturn(
         new JobOptionalRead(new JobRead(
@@ -346,27 +339,12 @@ class ReplicationInputHydratorTest {
     // the affected streams.
     mockEnableBackfillForConnection(withRefresh);
     final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
-    final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest();
+    final ReplicationActivityInput input = getDefaultReplicationActivityInputForTest(withRefresh);
+
     input.setSchemaRefreshOutput(new RefreshSchemaActivityOutput(CatalogDiffConverter.toDomain(CATALOG_DIFF)));
     final var replicationInput = replicationInputHydrator.getHydratedReplicationInput(input);
     final var typedState = StateMessageHelper.getTypedState(replicationInput.getState().getState());
     assertEquals(JsonNodeFactory.instance.nullNode(), typedState.get().getStateMessages().get(0).getStream().getStreamState());
-  }
-
-  @Test
-  void testGenerateReplicationFailsIfNonCompatibleFileTransfer() throws Exception {
-    mockNonRefresh();
-
-    // Verify that we get the state and catalog from the API.
-    final ReplicationInputHydrator replicationInputHydrator = getReplicationInputHydrator();
-
-    final var replicationActivityInput = getDefaultReplicationActivityInputForTest();
-    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(true)));
-    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
-
-    replicationActivityInput.setSourceConfiguration(Jsons.jsonNode(new SourceActorConfig().withUseFileTransfer(false)
-        .withDeliveryMethod(new DeliveryMethod().withDeliveryType(FILE_TRANSFER_DELIVERY_TYPE))));
-    assertThrows(WorkerException.class, () -> replicationInputHydrator.getHydratedReplicationInput(replicationActivityInput));
   }
 
   @Test
@@ -473,29 +451,12 @@ class ReplicationInputHydratorTest {
     when(connectionApi.getConnectionForJob(new ConnectionAndJobIdRequestBody(CONNECTION_ID, JOB_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
-
-    when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
-        UUID.randomUUID(),
-        "dockerRepo",
-        "dockerTag",
-        true,
-        false,
-        false, null));
   }
 
   private void mockNonRefresh() throws IOException {
     when(connectionApi.getConnection(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new ConnectionRead(CONNECTION_ID, CONNECTION_NAME, SOURCE_ID, DESTINATION_ID, SYNC_CATALOG, ConnectionStatus.ACTIVE, false, null,
             null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null));
-
-    when(actorDefinitionVersionApi.resolveActorDefinitionVersionByTag(any())).thenReturn(new ResolveActorDefinitionVersionResponse(
-        UUID.randomUUID(),
-        "dockerRepo",
-        "dockerTag",
-        false,
-        false,
-        false,
-        null));
   }
 
 }
