@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.commons.auth.config.TokenExpirationConfig
+import io.airbyte.data.TokenType
 import io.airbyte.data.repositories.ServiceAccountsRepository
 import io.airbyte.domain.models.ServiceAccount
 import io.micronaut.context.annotation.Property
@@ -26,11 +27,6 @@ class ServiceAccountsService internal constructor(
   private val tokenExpirationConfig: TokenExpirationConfig,
 ) {
   var clock: Clock = Clock.systemUTC()
-
-  companion object {
-    // TOKEN_TYPE is the value used to identity a token as a service account.
-    const val SERVICE_ACCOUNT_TOKEN_TYPE = "io.airbyte.auth.service_account"
-  }
 
   fun create(
     name: String,
@@ -67,7 +63,7 @@ class ServiceAccountsService internal constructor(
           "iss" to tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to id.toString(),
-          "typ" to SERVICE_ACCOUNT_TOKEN_TYPE,
+          TokenType.SERVICE_ACCOUNT.toClaim(),
           "exp" to clock.instant().plus(tokenExpirationConfig.serviceAccountTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {

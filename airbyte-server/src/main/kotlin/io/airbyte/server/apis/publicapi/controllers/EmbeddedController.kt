@@ -12,6 +12,7 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.data.TokenType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
@@ -112,7 +113,7 @@ class EmbeddedController(
           "iss" to tokenIssuer,
           "aud" to "airbyte-server",
           "sub" to currentUserId,
-          "typ" to "io.airbyte.embedded.v1",
+          TokenType.EMBEDDED_V1.toClaim(),
           "act" to mapOf("sub" to externalUserId),
           TokenScopeClaim.CLAIM_ID to TokenScopeClaim(workspaceId),
           "roles" to listOf(AuthRoleConstants.EMBEDDED_END_USER),

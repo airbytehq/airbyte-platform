@@ -77,7 +77,7 @@ class EmbeddedControllerTest {
         "iss" to "test-token-issuer",
         "aud" to "airbyte-server",
         "sub" to "user-id-1",
-        "typ" to "io.airbyte.embedded.v1",
+        "typ" to "io.airbyte.auth.embedded_v1",
         "act" to
           mapOf(
             "sub" to externalId,
