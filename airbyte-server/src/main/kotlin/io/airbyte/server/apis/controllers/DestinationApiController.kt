@@ -98,6 +98,7 @@ open class DestinationApiController(
 
   @Post(uri = "/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun discoverCatalogForDestination(
     @Body destinationDiscoverReqBody: DestinationDiscoverSchemaRequestBody,
   ): DestinationDiscoverRead? =
