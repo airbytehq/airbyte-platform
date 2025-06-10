@@ -12,7 +12,7 @@ import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
 import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
-import { ErrorWithJobInfo, useCreateConfigTemplate, useCurrentWorkspace } from "core/api";
+import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
   Connector,
@@ -115,6 +115,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
   const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
   const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
+  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
 
@@ -324,12 +325,22 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                     }
               }
               onCreateConfigTemplate={
-                showCreateTemplateButton && props.formType === "source"
-                  ? () => {
-                      const values = getValues();
-                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
-                      createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
-                    }
+                showCreateTemplateButton
+                  ? props.formType === "source"
+                    ? () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
+                      }
+                    : () => {
+                        const values = getValues();
+                        const definitionId = selectedConnectorDefinition
+                          ? Connector.id(selectedConnectorDefinition)
+                          : "";
+                        createConnectionTemplate({ values, definitionId, organizationId });
+                      }
                   : undefined
               }
             />

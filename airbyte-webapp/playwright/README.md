@@ -15,8 +15,13 @@ This directory contains end-to-end (E2E) tests for the Airbyte webapp, using [Pl
 You can use the helper script to point the e2e tests against a specific server and webapp. For example, if you are running cloud locally and would like to run the cloud e2e tests against that, you can run:
 
 ```bash
-pnpm test --cloud --serverEnv=https://local.airbyte.dev
+pnpm test -- --cloud --serverHost=https://local.airbyte.dev
 ```
+
+> **Note:**  
+> When using `pnpm`, you must use `--` before any options you want to pass to the underlying script.  
+> For example, use `pnpm test -- --cloud --serverHost=...` instead of `pnpm test --cloud --serverHost=...`.  
+> Otherwise, you may see errors like `ERROR  Unknown options: 'cloud', 'serverHost'`.
 
 ### Options
 
