@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.DataplaneGroupDeleteRequestBody
 import io.airbyte.api.model.generated.DataplaneGroupListRequestBody
 import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService

@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.validation;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.persistence.OrganizationPersistence;
 import io.micronaut.context.annotation.Replaces;
 import io.micronaut.security.utils.SecurityService;
 import jakarta.inject.Singleton;
@@ -55,7 +55,7 @@ public class EnterpriseActorDefinitionAccessValidator implements ActorDefinition
       // are explicitly scoped by organization within the configDb, we can replace this with a more
       // conventional RBAC check via @Secured annotations.
       final PermissionType defaultOrgPermissionType =
-          permissionHandler.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, authId);
+          permissionHandler.findPermissionTypeForUserAndOrganization(DEFAULT_ORGANIZATION_ID, authId);
 
       if (defaultOrgPermissionType.equals(PermissionType.ORGANIZATION_ADMIN)) {
         return;

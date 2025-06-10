@@ -13,9 +13,9 @@ import io.airbyte.api.model.generated.SlackNotificationConfiguration
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceUpdate
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.publicApi.server.generated.models.EmailNotificationConfig
 import io.airbyte.publicApi.server.generated.models.NotificationConfig

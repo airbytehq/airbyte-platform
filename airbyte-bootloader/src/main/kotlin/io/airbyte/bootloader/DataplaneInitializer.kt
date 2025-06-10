@@ -4,8 +4,8 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneClientCredentials

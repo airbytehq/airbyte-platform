@@ -102,7 +102,6 @@ import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
@@ -162,7 +161,7 @@ public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
-  private static final UUID DEFAULT_ORGANIZATION_ID = OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+  private static final UUID DEFAULT_ORGANIZATION_ID = io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")

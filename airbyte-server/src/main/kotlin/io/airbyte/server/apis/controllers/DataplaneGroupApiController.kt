@@ -13,8 +13,8 @@ import io.airbyte.api.model.generated.DataplaneGroupRead
 import io.airbyte.api.model.generated.DataplaneGroupUpdateRequestBody
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.problems.throwable.generated.DataplaneGroupNameAlreadyExistsProblem
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.auth.AuthRoleConstants
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService

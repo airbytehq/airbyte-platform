@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
@@ -297,7 +298,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }
@@ -736,7 +737,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }

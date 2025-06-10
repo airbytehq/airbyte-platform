@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.config.persistence.OrganizationPersistence
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -54,7 +54,7 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
         "default",
         "default",
         true,
-        OrganizationPersistence.DEFAULT_ORGANIZATION_ID,
+        DEFAULT_ORGANIZATION_ID,
       ).execute()
   }
 

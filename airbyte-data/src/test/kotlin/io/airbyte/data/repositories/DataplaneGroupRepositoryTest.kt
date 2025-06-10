@@ -4,9 +4,9 @@
 
 package io.airbyte.data.repositories
 
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
-import io.airbyte.commons.constants.EU_DATAPLANE_GROUP
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.EU_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables

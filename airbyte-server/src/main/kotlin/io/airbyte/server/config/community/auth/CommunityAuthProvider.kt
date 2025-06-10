@@ -6,11 +6,11 @@ package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
+import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.config.InstanceAdminConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.AuthenticationRequest
@@ -46,7 +46,7 @@ class CommunityAuthProvider<B>(
       val sessionId = UUID.randomUUID()
       val authenticationResponse =
         AuthenticationResponse.success(
-          UserPersistence.DEFAULT_USER_ID.toString(),
+          DEFAULT_USER_ID.toString(),
           AuthRole.getInstanceAdminRoles(),
           mapOf(SESSION_ID to sessionId.toString()),
         )

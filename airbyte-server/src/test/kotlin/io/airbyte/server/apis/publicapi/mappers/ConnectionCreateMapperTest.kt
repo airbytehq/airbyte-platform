@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum

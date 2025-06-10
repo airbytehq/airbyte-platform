@@ -4,10 +4,10 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.commons.annotation.InternalForTesting
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
@@ -169,7 +169,7 @@ class Bootloader(
 
   private fun createSsoConfigForDefaultOrgIfNoneExists(organizationPersistence: OrganizationPersistence) {
     organizationPersistence
-      .getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+      .getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID)
       .getOrNull()
       ?.let {
         if (it.keycloakRealm != defaultRealm) {
@@ -186,7 +186,7 @@ class Bootloader(
     organizationPersistence.createSsoConfig(
       SsoConfig()
         .withSsoConfigId(UUID.randomUUID())
-        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
         .withKeycloakRealm(defaultRealm),
     )
   }
@@ -214,7 +214,7 @@ class Bootloader(
         .withTombstone(false)
         .withDataplaneGroupId(dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id)
         // attach this new workspace to the Default Organization which should always exist at this point.
-        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
     // NOTE: it's safe to use the NoSecrets version since we know that the user hasn't supplied any
     // secrets yet.
     workspaceService.writeStandardWorkspaceNoSecrets(workspace)
@@ -235,7 +235,7 @@ class Bootloader(
         val dataplaneGroup =
           DataplaneGroup()
             .withId(dataplaneGroupId)
-            .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+            .withOrganizationId(DEFAULT_ORGANIZATION_ID)
             .withName(US_DATAPLANE_GROUP)
             .withEnabled(true)
             .withTombstone(false)
@@ -251,7 +251,7 @@ class Bootloader(
     val dataplaneGroup =
       DataplaneGroup()
         .withId(dataplaneGroupId)
-        .withOrganizationId(OrganizationPersistence.DEFAULT_ORGANIZATION_ID)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
         .withName(AUTO_DATAPLANE_GROUP)
         .withEnabled(true)
         .withTombstone(false)

@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;

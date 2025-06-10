@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;

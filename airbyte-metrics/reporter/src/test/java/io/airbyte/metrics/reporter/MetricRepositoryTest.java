@@ -4,7 +4,7 @@
 
 package io.airbyte.metrics.reporter;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;

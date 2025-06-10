@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService

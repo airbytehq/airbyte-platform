@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.validation;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.Permission.PermissionType;
-import io.airbyte.config.persistence.OrganizationPersistence;
 import io.micronaut.security.utils.SecurityService;
 import java.io.IOException;
 import java.util.UUID;
@@ -53,7 +53,7 @@ class EnterpriseActorDefinitionAccessValidatorTest {
     @Test
     void defaultOrgAdminAllowed() throws IOException {
       when(mSecurityService.username()).thenReturn(java.util.Optional.of(USERNAME));
-      when(permissionHandler.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, USERNAME))
+      when(permissionHandler.findPermissionTypeForUserAndOrganization(DEFAULT_ORGANIZATION_ID, USERNAME))
           .thenReturn(PermissionType.ORGANIZATION_ADMIN);
 
       // an org admin of the instance's default org should have write access to any actor definition.
@@ -66,7 +66,7 @@ class EnterpriseActorDefinitionAccessValidatorTest {
   void otherwiseThrows() throws IOException {
     when(mSecurityService.username()).thenReturn(java.util.Optional.of(USERNAME));
     when(mSecurityService.hasRole(ADMIN)).thenReturn(false);
-    when(permissionHandler.findPermissionTypeForUserAndOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID, USERNAME))
+    when(permissionHandler.findPermissionTypeForUserAndOrganization(DEFAULT_ORGANIZATION_ID, USERNAME))
         .thenReturn(PermissionType.ORGANIZATION_EDITOR);
 
     // any other permission type should throw an exception.

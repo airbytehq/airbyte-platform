@@ -4,11 +4,11 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
-import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.publicApi.server.generated.apis.PublicWorkspacesApi
 import io.airbyte.publicApi.server.generated.models.WorkspaceCreateRequest
 import io.airbyte.publicApi.server.generated.models.WorkspaceOAuthCredentialsRequest

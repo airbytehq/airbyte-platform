@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;

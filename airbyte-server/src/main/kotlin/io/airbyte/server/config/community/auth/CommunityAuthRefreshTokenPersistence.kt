@@ -7,8 +7,8 @@ package io.airbyte.server.config.community.auth
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.problems.throwable.generated.UnprocessableEntityProblem
+import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.AuthRole
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.AuthRefreshTokenService
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.token.event.RefreshTokenGeneratedEvent
@@ -54,7 +54,7 @@ class CommunityAuthRefreshTokenPersistence(
         it
           .next(
             Authentication.build(
-              UserPersistence.DEFAULT_USER_ID.toString(),
+              DEFAULT_USER_ID.toString(),
               AuthRole.getInstanceAdminRoles(),
               mapOf(SESSION_ID to token.sessionId),
             ),

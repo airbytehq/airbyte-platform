@@ -4,9 +4,9 @@
 
 package io.airbyte.server.pro
 
+import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.AirbyteAuthConstants
 import io.airbyte.commons.auth.AuthRole
-import io.airbyte.config.persistence.UserPersistence
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
@@ -47,7 +47,7 @@ class AirbyteAuthInternalTokenValidator : TokenValidator<HttpRequest<*>?> {
     get() = // set the Authentication username to the token value, which must be a valid internal service name.
       // for now, all internal services get instance admin roles.
       Authentication.build(
-        UserPersistence.DEFAULT_USER_ID.toString(),
+        DEFAULT_USER_ID.toString(),
         AuthRole.getInstanceAdminRoles(),
       )
 }
