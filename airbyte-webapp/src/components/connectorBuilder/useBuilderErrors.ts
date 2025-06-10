@@ -237,7 +237,6 @@ const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>): ErrorRep
       const value = obj[key];
 
       if (isError(value)) {
-        // "global" or stream number if under formValues, or "inputs" if under testingValues
         const view: BuilderView | { type: "unknown" } =
           currentPath[0] === "testingValues"
             ? { type: "inputs" }

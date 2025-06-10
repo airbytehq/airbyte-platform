@@ -83,6 +83,7 @@ export const enum Action {
   MERGE_SCHEMA = "MergeSchema",
   UI_INCOMPATIBLE_YAML_IMPORTED = "UiIncompatibleYamlImported",
   UI_COMPATIBLE_YAML_IMPORTED = "UiCompatibleYamlImported",
+  YAML_IMPORTED = "YamlImported",
   INVALID_YAML_UPLOADED = "InvalidYamlUploaded",
   START_FROM_SCRATCH = "StartFromScratch",
   CHANGE_PROJECT_VERSION = "ChangeProjectVersion",

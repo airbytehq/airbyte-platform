@@ -1,6 +1,7 @@
 import classNames from "classnames";
 import debounce from "lodash/debounce";
-import React, { useMemo, useState } from "react";
+import isEqual from "lodash/isEqual";
+import React, { useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
@@ -11,6 +12,7 @@ import { InfoTooltip } from "components/ui/Tooltip";
 
 import { useCustomComponentsEnabled } from "core/api";
 import { ConnectorManifest } from "core/api/types/ConnectorManifest";
+import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
 import { links } from "core/utils/links";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -33,13 +35,20 @@ export const YamlManifestEditor: React.FC = () => {
   const {
     setYamlEditorIsMounted,
     setYamlIsValid,
-    updateJsonManifest,
     undoRedo: { clearHistory },
   } = useConnectorBuilderFormState();
+  const { resolveManifest } = useConnectorBuilderResolve();
   const { setValue } = useFormContext();
   const yamlManifestValue = useBuilderWatch("yaml");
-  // debounce the setJsonManifest calls so that it doesnt result in a network call for every keystroke
-  const debouncedUpdateJsonManifest = useMemo(() => debounce(updateJsonManifest, 200), [updateJsonManifest]);
+  const debouncedResolveAndUpdateManifest: (newManifest: ConnectorManifest) => void = useMemo(
+    () =>
+      debounce(async (newManifest: ConnectorManifest) => {
+        resolveManifest(newManifest).then((resolvedManifest) => {
+          setValue("manifest", resolvedManifest.manifest);
+        });
+      }, 500),
+    [resolveManifest, setValue]
+  );
 
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const customComponentsCodeValue = useBuilderWatch("customComponentsCode");
@@ -49,6 +58,7 @@ export const YamlManifestEditor: React.FC = () => {
   const showCustomComponentsTab = areCustomComponentsEnabled || customComponentsCodeValue;
 
   const [selectedTab, setSelectedTab] = useState(TAB_MANIFEST);
+  const lastResolvedManifest = useRef<ConnectorManifest | null>(null);
 
   return (
     <div className={styles.container}>
@@ -99,7 +109,13 @@ export const YamlManifestEditor: React.FC = () => {
             }}
             onSuccessfulLoad={(json: unknown) => {
               setYamlIsValid(true);
-              debouncedUpdateJsonManifest(json as ConnectorManifest);
+              const newManifest = json as ConnectorManifest;
+              if (!lastResolvedManifest.current) {
+                lastResolvedManifest.current = newManifest;
+              } else if (!isEqual(lastResolvedManifest.current, newManifest)) {
+                lastResolvedManifest.current = newManifest;
+                debouncedResolveAndUpdateManifest(newManifest);
+              }
             }}
             onYamlException={(_) => setYamlIsValid(false)}
             onMount={(_) => {

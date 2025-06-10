@@ -125,6 +125,17 @@ export const StreamConfigView: React.FC<StreamConfigViewProps> = React.memo(({ s
     if (!streamName || streamId.type !== "stream") {
       return;
     }
+    if (!prevName) {
+      const metadataClone = cloneDeep(metadata);
+      const newMetadata = {
+        ...metadataClone,
+        autoImportSchema: {
+          ...metadataClone.autoImportSchema,
+          [streamName]: true,
+        },
+      };
+      setValue("manifest.metadata", newMetadata);
+    }
     if (metadata && prevName && streamName !== prevName) {
       const newMetadata = cloneDeep(metadata);
       if (metadata.autoImportSchema && metadata.autoImportSchema[prevName] !== undefined) {

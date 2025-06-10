@@ -21,7 +21,7 @@ import { VersionModal } from "./VersionModal";
 function getMessage(
   savingState: SavingState,
   permission: ConnectorBuilderPermission,
-  displayedVersion: number | undefined,
+  displayedVersion: number | "draft",
   triggerUpdate: () => void
 ) {
   if (savingState === "invalid") {
@@ -77,7 +77,11 @@ function getMessage(
     <FlexContainer gap="sm" alignItems="center">
       <Icon type="check" />
       <FlexItem>
-        {displayedVersion ? <>v{displayedVersion}</> : <FormattedMessage id="connectorBuilder.loadingState.saved" />}
+        {displayedVersion !== "draft" ? (
+          <>v{displayedVersion}</>
+        ) : (
+          <FormattedMessage id="connectorBuilder.loadingState.saved" />
+        )}
       </FlexItem>
     </FlexContainer>
   );

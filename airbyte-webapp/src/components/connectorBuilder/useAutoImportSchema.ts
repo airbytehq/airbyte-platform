@@ -11,7 +11,7 @@ export const useAutoImportSchema = (streamId: StreamId) => {
   const streamName = useBuilderWatch(namePath) as string | undefined;
   const autoImportSchema = useBuilderWatch(`manifest.metadata.autoImportSchema.${streamName}`) as boolean | undefined;
 
-  if (displayedVersion !== undefined) {
+  if (displayedVersion !== "draft") {
     return false;
   }
 

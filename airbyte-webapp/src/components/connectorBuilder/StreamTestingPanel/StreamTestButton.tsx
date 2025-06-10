@@ -86,7 +86,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   let showWarningIcon = false;
   let tooltipContent = getTooltipContent();
 
-  if (mode === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && (!yamlIsValid || hasResolveErrors)) {
     buttonDisabled = true;
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;

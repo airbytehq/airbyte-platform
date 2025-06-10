@@ -121,6 +121,32 @@ export const useBuilderResolvedManifestSuspense = (manifest?: ConnectorManifest,
   });
 };
 
+export const useResolveManifest = () => {
+  const workspaceId = useCurrentWorkspaceId();
+  const requestOptions = useRequestOptions();
+
+  const mutation = useMutation(
+    ({ manifestToResolve, projectId }: { manifestToResolve: DeclarativeComponentSchema; projectId?: string }) => {
+      return resolveManifest(
+        {
+          manifest: manifestToResolve,
+          workspace_id: workspaceId,
+          project_id: projectId,
+          form_generated_manifest: false,
+        },
+        requestOptions
+      );
+    }
+  );
+
+  return {
+    resolveManifest: mutation.mutateAsync, // Returns a promise that resolves with the result or rejects with error
+    isResolving: mutation.isLoading,
+    resolveError: mutation.error as HttpError<KnownExceptionInfo> | null,
+    resetResolveState: mutation.reset,
+  };
+};
+
 export const explicitlyCastedAssistV1Process = <T>(
   controller: string,
   params: AssistV1ProcessRequestBody,

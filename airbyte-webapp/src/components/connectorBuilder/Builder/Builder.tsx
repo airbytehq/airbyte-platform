@@ -26,7 +26,7 @@ import { InputForm, newInputInEditing } from "./InputsForm";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
-import { BuilderState, DEFAULT_JSON_MANIFEST_VALUES } from "../types";
+import { BuilderState } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useSetStreamToStale } from "../useStreamTestMetadata";
 
@@ -147,16 +147,20 @@ export const Builder: React.FC = () => {
 
 const SyncValuesToBuilderState = () => {
   const {
-    updateJsonManifest,
-    setFormValuesValid,
     undoRedo: { registerChange },
   } = useConnectorBuilderFormState();
-  const { trigger, watch } = useFormContext();
+  const { watch, trigger } = useFormContext();
   const setStreamToStale = useSetStreamToStale();
   const builderState = useWatch();
   // set stream to stale when it changes
   useEffect(() => {
     const subscription = watch((data, { name }) => {
+      // TODO(lmossman): check if setTimeout is needed after changing validation approach
+      if (name) {
+        setTimeout(() => {
+          trigger(name);
+        }, 0);
+      }
       if (data?.manifest) {
         registerChange(data.manifest as ConnectorManifest);
       }
@@ -175,18 +179,7 @@ const SyncValuesToBuilderState = () => {
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, setStreamToStale, builderState, registerChange]);
-
-  useEffect(() => {
-    // The validation logic isn't updated until the next render cycle, so wait for that
-    // before triggering validation and updating the builder state
-    setTimeout(() => {
-      trigger().then((isValid) => {
-        setFormValuesValid(isValid);
-        updateJsonManifest(builderState.manifest ?? DEFAULT_JSON_MANIFEST_VALUES);
-      });
-    }, 0);
-  }, [builderState, setFormValuesValid, trigger, updateJsonManifest]);
+  }, [watch, setStreamToStale, builderState, registerChange, trigger]);
 
   return null;
 };
