@@ -339,7 +339,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                         const definitionId = selectedConnectorDefinition
                           ? Connector.id(selectedConnectorDefinition)
                           : "";
-                        createConnectionTemplate({ values, definitionId, organizationId });
+                        createConnectionTemplate({ values, destinationDefinitionId: definitionId, organizationId });
                       }
                   : undefined
               }
