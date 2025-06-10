@@ -37,12 +37,13 @@ const SignupPage = React.lazy(() => import("./views/auth/SignupPage"));
 const CloudMainView = React.lazy(() => import("packages/cloud/views/layout/CloudMainView"));
 const AuthLayout = React.lazy(() => import("packages/cloud/views/auth"));
 const DefaultView = React.lazy(() => import("pages/DefaultView"));
+const EmbeddedLoginPage = React.lazy(() => import("./views/auth/LoginPage/EmbeddedLoginPage"));
+const EmbeddedSignupPage = React.lazy(() => import("./views/auth/SignupPage/EmbeddedSignUpPage"));
 
 const CloudMainViewRoutes = () => {
   const { loginRedirect } = useQuery<{ loginRedirect: string }>();
   const isOrgPickerEnabled = useExperiment("sidebar.showOrgPicker");
   const isEmbeddedOnboardingEnabled = useExperiment("embedded.operatorOnboarding");
-  const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
 
   if (loginRedirect) {
     return <Navigate to={loginRedirect} replace />;
@@ -52,7 +53,7 @@ const CloudMainViewRoutes = () => {
     <Routes>
       <Route path={CloudRoutes.AcceptInvitation} element={<AcceptInvitation />} />
 
-      {isEmbedded && isEmbeddedOnboardingEnabled && (
+      {isEmbeddedOnboardingEnabled && (
         <>
           {/* embedded onboarding occurs within an organization, hence the `/organizations` routing here.
               HOWEVER, we do not want it to show the org picker, org sidebar, etc., so it lives outside
@@ -102,6 +103,8 @@ export const Routing: React.FC = () => {
     loggedOut && originalPathname === "/"
       ? { pathname: CloudRoutes.Login }
       : { pathname: CloudRoutes.Login, search: loginRedirectSearchParam };
+
+  const showEmbeddedContent = loginRedirectTo?.search?.includes(RoutePaths.EmbeddedOnboarding);
 
   useBuildUpdateCheck();
 
@@ -159,8 +162,17 @@ export const Routing: React.FC = () => {
                       <Routes>
                         <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
                         <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
-                        <Route path={CloudRoutes.Login} element={<LoginPage />} />
-                        <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+                        {showEmbeddedContent ? (
+                          <>
+                            <Route path={CloudRoutes.Login} element={<EmbeddedLoginPage />} />
+                            <Route path={CloudRoutes.Signup} element={<EmbeddedSignupPage />} />
+                          </>
+                        ) : (
+                          <>
+                            <Route path={CloudRoutes.Login} element={<LoginPage />} />
+                            <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+                          </>
+                        )}
                         {/* In case a not logged in user tries to access anything else navigate them to login */}
                         <Route path="*" element={<Navigate to={loginRedirectTo} />} />
                       </Routes>

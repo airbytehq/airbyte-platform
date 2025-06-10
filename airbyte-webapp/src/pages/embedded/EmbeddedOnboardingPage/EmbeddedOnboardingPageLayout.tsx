@@ -98,7 +98,7 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
     <>
       <HeadTitle titles={[{ id: "settings.embedded" }]} />
       <FlexContainer alignItems="center" justifyContent="space-between" className={styles.header}>
-        <AirbyteLogo className={styles.workspacesPage__logo} />
+        <AirbyteLogo className={styles.logo} />
         <div className={styles.steps}>
           <StepsIndicators steps={steps} />
         </div>

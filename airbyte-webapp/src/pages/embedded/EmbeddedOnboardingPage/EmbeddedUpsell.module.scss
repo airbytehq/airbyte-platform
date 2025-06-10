@@ -1,9 +1,14 @@
 @use "scss/variables";
 @use "scss/colors";
-@use "scss/mixins";
 
 .logo {
   height: 28px;
+}
+
+.upsellContainer {
+  width: 800px;
+  margin: auto;
+  margin-top: variables.$spacing-2xl;
 }
 
 .header {
@@ -13,17 +18,4 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-}
-
-.headerSection {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.steps {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
 }

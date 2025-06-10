@@ -72,7 +72,7 @@ AIRBYTE_CLIENT_SECRET=${applications[0]?.clientSecret}`;
           <Button variant="secondary" onClick={onClickBack}>
             <FormattedMessage id="embedded.onboarding.backToSetup" />
           </Button>
-          <Button variant="primary" onClick={onClickNext}>
+          <Button variant="primary" onClick={onClickNext} data-testid="copy-embed-code-next">
             <FormattedMessage id="embedded.onboarding.next" />
           </Button>
         </FlexContainer>

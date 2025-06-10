@@ -2554,5 +2554,13 @@
   "embedded.onboarding.finish.description": "Check back for your first customer's sync...",
   "embedded.onboarding.finish.cta": "Go to dashboard",
   "embedded.onboarding.embedCode.description": "Copy & paste this snippet into your env file.",
-  "embedded.onboarding.embedCode.copy": "Copy to clipboard"
+  "embedded.onboarding.embedCode.copy": "Copy to clipboard",
+  "embedded.signup": "Sign up for Airbyte Embedded",
+  "embedded.signup.description": "Airbyte Embedded enables you to add hundreds of integrations into your product instantly. Your end-users can authenticate into their data sources and begin syncing data to your product instantly.",
+  "embedded.loginToAirbyteEmbedded": "Log in to Airbyte Embedded",
+  "embedded.onoarding.upsell.pageTitle": "You do not have any organizations with Airbyte Embedded.",
+  "embedded.onboarding.upsell.orReturnToAirbyteCloud": "Or return to <lnk>Airbyte Cloud</lnk>",
+  "embedded.onboarding.upsell.header": "Unlock the full power of Airbyte Embedded",
+  "embedded.onboarding.upsell.description": "Harness the power of Airbyte Embedded and add hundreds of integrations into your product instantly.",
+  "embedded.onboarding.talkToSales": "Talk to sales"
 }

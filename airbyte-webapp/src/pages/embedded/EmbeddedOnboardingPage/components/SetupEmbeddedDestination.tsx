@@ -1,5 +1,6 @@
 import { FormattedMessage } from "react-intl";
 import { useParams, useSearchParams } from "react-router-dom";
+import { useEffectOnce } from "react-use";
 
 import { DESTINATION_DEFINITION_PARAM } from "components/connection/CreateConnection/CreateNewDestination";
 import { FormPageContent } from "components/ConnectorBlocks";
@@ -15,7 +16,8 @@ import {
   useGetDestinationDefinitionSpecificationAsync,
   useGlobalDestinationDefinitionList,
 } from "core/api";
-import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { Action, Namespace, PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
+import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
 import { ConnectorCard } from "views/Connector/ConnectorCard";
 import { ConnectorDocumentationWrapper } from "views/Connector/ConnectorDocumentationLayout";
 import { ConnectorFormValues } from "views/Connector/ConnectorForm";
@@ -28,6 +30,8 @@ import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../Embed
 
 export const SetupEmbeddedDestination: React.FC = () => {
   useTrackPage(PageTrackingCodes.EMBEDDED_ONBOARDING_SET_UP_DESTINATION);
+  const { getDirtyFormIds } = useFormChangeTrackerService();
+  const analyticsService = useAnalyticsService();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const destinationDefinitionId = searchParams.get(DESTINATION_DEFINITION_PARAM) || "";
@@ -42,33 +46,51 @@ export const SetupEmbeddedDestination: React.FC = () => {
     isLoading,
   } = useGetDestinationDefinitionSpecificationAsync(destinationDefinitionId);
 
+  useEffectOnce(() => {
+    if (!selectedDestinationDefinition || !organizationId) {
+      // redirect back to select destination... this should not happen ever
+      searchParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.SelectDestination);
+      setSearchParams(searchParams);
+    }
+  });
+
   if (!selectedDestinationDefinition || !organizationId) {
-    // redirect back to select destination... this should not happen ever
-    searchParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.SelectDestination);
-    setSearchParams(searchParams);
-    // redirect happens before return, but TS needs to know that it won't hit the blocks below :)
+    // redirect happens in useEffect, so just render nothing
     return null;
   }
 
   const onBackClick = () => {
-    searchParams.delete(DESTINATION_DEFINITION_PARAM);
-    searchParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.SelectDestination);
-    setSearchParams(searchParams);
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete(DESTINATION_DEFINITION_PARAM);
+    newParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.SelectDestination);
+
+    const hadChanges = getDirtyFormIds().includes("embedded-destination-setup");
+
+    analyticsService.track(Namespace.EMBEDDED, Action.BACK_TO_SELECT_DESTINATION, {
+      actionDescription: "User clicked back to select destination",
+      destinationId: destinationDefinitionId,
+      hadChanges,
+    });
+
+    setSearchParams(newParams);
   };
 
   const onSubmitDestinationForm = async (values: DestinationFormValues) => {
-    const definitionId = destinationDefinitionId;
-
     const connectorFormValues: ConnectorFormValues = {
       name: values.name,
       connectionConfiguration: values.connectionConfiguration,
       resourceAllocation: {},
     };
 
-    await createConnectionTemplate({ values: connectorFormValues, definitionId, organizationId });
-
-    searchParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.EmbedCode);
-    setSearchParams(searchParams);
+    await createConnectionTemplate({ values: connectorFormValues, destinationDefinitionId, organizationId });
+    // Defer navigation until JS callstack clears.
+    // This prevents the navigation from firing prior to the form registering the successful submission.
+    setTimeout(() => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete(DESTINATION_DEFINITION_PARAM);
+      newParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.EmbedCode);
+      setSearchParams(newParams);
+    }, 0);
   };
 
   return (
@@ -83,6 +105,7 @@ export const SetupEmbeddedDestination: React.FC = () => {
           </Box>
         </FlexContainer>
         <ConnectorCard
+          formId="embedded-destination-setup"
           formType="destination"
           headerBlock={<ConnectorDefinitionBranding destinationDefinitionId={destinationDefinitionId} />}
           description={<FormattedMessage id="destinations.description" />}

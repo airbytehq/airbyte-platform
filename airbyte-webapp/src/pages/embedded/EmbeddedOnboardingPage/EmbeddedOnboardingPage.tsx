@@ -3,10 +3,10 @@ import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useListOrganizationsByUser, useListWorkspacesInfinite } from "core/api";
 import { useCurrentUser } from "core/services/auth";
-import { useExperiment } from "hooks/services/Experiment";
 import { RoutePaths } from "pages/routePaths";
 
 import { EmbeddedOnboardingPageLayout } from "./EmbeddedOnboardingPageLayout";
+import { EmbeddedUpsell } from "./EmbeddedUpsell";
 import { WORKSPACE_ID_PARAM } from "../EmbeddedSourceCreatePage/hooks/useEmbeddedSourceParams";
 
 /**
@@ -41,8 +41,6 @@ export const EmbeddedOnboardingPage: React.FC = () => {
 };
 
 export const EmbeddedOnboardingRedirect: React.FC = () => {
-  const showOperatorOnboarding = useExperiment("embedded.operatorOnboarding");
-
   /**
    * Note: This is set of flag + org id checks a hacky start for how to fetch the organization id and check
    * onboarding status. This will be replaced with an endpoint that does the smart parts for us prior to
@@ -52,16 +50,16 @@ export const EmbeddedOnboardingRedirect: React.FC = () => {
    * I repeat: this is for development + testing and will NOT work reliably in production :)
    */
 
-  const isEmbedded = useExperiment("platform.allow-config-template-endpoints");
   const { userId } = useCurrentUser();
   const { organizations } = useListOrganizationsByUser({ userId });
-  if (!isEmbedded || !showOperatorOnboarding) {
-    return <Navigate to={RoutePaths.Workspaces} replace />;
-  }
 
-  if (!organizations || organizations.length === 0) {
+  if (organizations.length === 0) {
     // If no organizations are found, redirect to the workspaces page
-    return <Navigate to={RoutePaths.Workspaces} replace />;
+    return (
+      <div>
+        <EmbeddedUpsell />
+      </div>
+    );
   }
 
   return (

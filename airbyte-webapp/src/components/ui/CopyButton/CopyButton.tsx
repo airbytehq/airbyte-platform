@@ -53,6 +53,7 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       iconPosition={iconPosition}
       full={full}
       type="button"
+      data-testid="copy-button"
     >
       {copied && <Icon className={styles.success} type="successFilled" color="success" />}
       {children ? undefined : <Icon type="copy" />}

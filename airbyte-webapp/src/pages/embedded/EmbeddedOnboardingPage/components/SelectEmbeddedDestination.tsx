@@ -15,7 +15,7 @@ import { Text } from "components/ui/Text";
 import { useGlobalDestinationDefinitionList } from "core/api";
 import { ConnectorDefinitionOrEnterpriseStub } from "core/domain/connector";
 import { isSourceDefinition } from "core/domain/connector/source";
-import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { Action, Namespace, PageTrackingCodes, useAnalyticsService, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useExperiment } from "hooks/services/Experiment/ExperimentService";
 
@@ -23,6 +23,7 @@ import { EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep } from "../Embed
 
 export const SelectEmbeddedDestination: React.FC = () => {
   useTrackPage(PageTrackingCodes.EMBEDDED_ONBOARDING_SELECT_DESTINATION);
+  const analyticsService = useAnalyticsService();
 
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -37,6 +38,10 @@ export const SelectEmbeddedDestination: React.FC = () => {
     if ("isEnterprise" in definition || isSourceDefinition(definition)) {
       throw new Error("This flow is only configured for Airbyte destination connectors.");
     }
+
+    analyticsService.track(Namespace.EMBEDDED, Action.DESTINATION_SELECTED, {
+      destinationId: definition.destinationDefinitionId,
+    });
 
     searchParams.set(DESTINATION_DEFINITION_PARAM, definition.destinationDefinitionId);
     searchParams.set(EMBEDDED_ONBOARDING_STEP_PARAM, EmbeddedOnboardingStep.SetupDestination);
@@ -73,7 +78,11 @@ export const SelectEmbeddedDestination: React.FC = () => {
                 <FormattedMessage
                   id="embedded.onboarding.selectDestination.talkToUs"
                   values={{
-                    lnk: (children) => <ExternalLink href={links.featureTalkToSales}>{children}</ExternalLink>,
+                    lnk: (children) => (
+                      <ExternalLink data-testid="embedded-destinations-talk-to-sales" href={links.featureTalkToSales}>
+                        {children}
+                      </ExternalLink>
+                    ),
                   }}
                 />
               </Text>

@@ -7,6 +7,7 @@
  */
 
 export interface Experiments {
+  "authPage.embedded.rightSideUrl": string | undefined;
   "authPage.rightSideUrl": string | undefined;
   "billing.early-sync-enabled": boolean;
   "connection.allowToSupportAllSyncModes": boolean;
@@ -43,6 +44,7 @@ export interface Experiments {
 }
 
 export const defaultExperimentValues: Experiments = {
+  "authPage.embedded.rightSideUrl": undefined,
   "authPage.rightSideUrl": undefined,
   "billing.early-sync-enabled": false,
   "connection.allowToSupportAllSyncModes": false,

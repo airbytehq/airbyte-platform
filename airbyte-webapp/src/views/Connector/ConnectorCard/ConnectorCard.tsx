@@ -238,6 +238,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     <ConnectorForm
       canEdit={canEditConnector && (isConnectorEntitled || !connector)}
       trackDirtyChanges
+      formId={props.formId}
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
