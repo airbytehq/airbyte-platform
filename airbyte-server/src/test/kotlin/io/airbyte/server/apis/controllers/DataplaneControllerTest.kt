@@ -118,7 +118,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneHeartbeatRequestBody()
@@ -143,7 +143,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneInitRequestBody()
@@ -180,7 +180,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneInitRequestBody()
@@ -210,7 +210,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneHeartbeatRequestBody()

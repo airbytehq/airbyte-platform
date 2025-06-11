@@ -7,9 +7,8 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.TokenType
-import io.airbyte.data.helpers.DataplanePasswordEncoder
-import io.airbyte.data.repositories.DataplaneClientCredentialsRepository
 import io.airbyte.data.services.DataplaneTokenService
+import io.airbyte.data.services.ServiceAccountsService
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
@@ -17,16 +16,16 @@ import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import java.util.UUID
 
 @Singleton
 @Requires(property = "micronaut.security.enabled", value = "true")
 @Requires(property = "micronaut.security.token.jwt.enabled", value = "true")
 @Replaces(DataplaneTokenServiceNoAuthImpl::class)
 class DataplaneTokenServiceDataImpl(
-  private val dataplaneClientCredentialsRepository: DataplaneClientCredentialsRepository,
   private val jwtTokenGenerator: JwtTokenGenerator,
-  private val dataplanePasswordEncoder: DataplanePasswordEncoder,
   private val tokenExpirationConfig: TokenExpirationConfig,
+  private val serviceAccountsService: ServiceAccountsService,
   @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : DataplaneTokenService {
   /**
@@ -39,19 +38,14 @@ class DataplaneTokenServiceDataImpl(
     clientId: String,
     clientSecret: String,
   ): String {
-    val dataplaneClientCredentials =
-      dataplaneClientCredentialsRepository.findByClientId(clientId)
-        ?: throw IllegalArgumentException("Credentials were not found with the clientId provided. clientId: $clientId")
+    val serviceAccount = serviceAccountsService.getAndVerify(UUID.fromString(clientId), clientSecret)
 
-    if (!dataplanePasswordEncoder.matches(clientSecret, dataplaneClientCredentials.clientSecret)) {
-      throw IllegalArgumentException("Invalid clientSecret provided.")
-    }
     return jwtTokenGenerator
       .generateToken(
         mapOf(
           "iss" to tokenIssuer,
+          "sub" to serviceAccount.id,
           TokenType.DATAPLANE_V1.toClaim(),
-          "sub" to dataplaneClientCredentials.dataplaneId,
           "roles" to AuthRole.getInstanceAdminRoles(),
           "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),

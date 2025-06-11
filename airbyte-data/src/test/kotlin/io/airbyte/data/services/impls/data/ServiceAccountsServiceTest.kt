@@ -5,10 +5,12 @@
 package io.airbyte.data.services.impls.data
 
 import com.nimbusds.jwt.JWTParser
+import io.airbyte.data.TokenType
 import io.airbyte.data.repositories.AbstractConfigRepositoryTest
 import io.airbyte.data.services.ServiceAccountsService
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.time.Clock
@@ -30,7 +32,7 @@ class ServiceAccountsServiceTest : AbstractConfigRepositoryTest() {
 
   @Test
   fun basic() {
-    val a = svc.create("test")
+    val a = svc.create(name = "test")
     assertEquals("test", a.name)
 
     val b = svc.get(a.id)
@@ -41,18 +43,30 @@ class ServiceAccountsServiceTest : AbstractConfigRepositoryTest() {
 
     assertEquals(null, svc.get(UUID.randomUUID()))
 
-    val c = svc.create("test-managed", managed = true)
+    val c = svc.create(name = "test-managed", managed = true)
     val d = svc.getManagedByName("test-managed")
     assertEquals(c.id, d!!.id)
   }
 
   @Test
   fun token() {
-    val a = svc.create("test")
+    val a = svc.create(name = "test")
     val tok = svc.generateToken(a.id, a.secret)
     val parsed = JWTParser.parse(tok)
+
     assertEquals(a.id.toString(), parsed.jwtClaimsSet.subject)
-    assertEquals("io.airbyte.auth.service_account", parsed.jwtClaimsSet.getClaimAsString("typ"))
+    assertEquals(TokenType.SERVICE_ACCOUNT.toString(), parsed.jwtClaimsSet.getClaimAsString("typ"))
     assertEquals(clock.instant().plus(15, ChronoUnit.MINUTES).truncatedTo(ChronoUnit.SECONDS), parsed.jwtClaimsSet.expirationTime.toInstant())
+  }
+
+  @Test
+  fun getAndVerifyTest() {
+    val account = svc.create(name = "test")
+
+    val retrieved = svc.getAndVerify(account.id, account.secret)
+    assertNotNull(retrieved)
+    assertEquals(account.id, retrieved.id)
+    // the account secret should not equal the retrieved secret, since the db secret is encoded
+    assert(account.secret != retrieved.secret)
   }
 }

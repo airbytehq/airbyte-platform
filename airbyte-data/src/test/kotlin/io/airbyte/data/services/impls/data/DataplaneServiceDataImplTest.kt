@@ -4,10 +4,15 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.repositories.entities.Dataplane
+import io.airbyte.data.services.PermissionDao
+import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
+import io.airbyte.data.services.shared.DataplaneWithServiceAccount
+import io.airbyte.domain.models.ServiceAccount
 import io.mockk.clearAllMocks
 import io.mockk.every
 import io.mockk.mockk
@@ -21,10 +26,14 @@ import java.util.Optional
 import java.util.UUID
 
 private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
+private const val MOCK_DATAPLANE_NAME = "Test Dataplane"
+private const val MOCK_SERVICE_ACCOUNT_SECRET = "secret"
 
 class DataplaneServiceDataImplTest {
   private val dataplaneRepository = mockk<DataplaneRepository>()
-  private var dataplaneServiceDataImpl = DataplaneServiceDataImpl(dataplaneRepository)
+  private val serviceAccountsService = mockk<ServiceAccountsService>()
+  private val permissionDao = mockk<PermissionDao>()
+  private var dataplaneServiceDataImpl = DataplaneServiceDataImpl(dataplaneRepository, serviceAccountsService, permissionDao)
 
   @BeforeEach
   fun reset() {
@@ -54,14 +63,19 @@ class DataplaneServiceDataImplTest {
   }
 
   @Test
-  fun `test write new dataplane`() {
-    val dataplane = createDataplane(UUID.randomUUID())
+  fun `test create new dataplane`() {
+    val dataplaneId = UUID.randomUUID()
+    val dataplane = createDataplane(dataplaneId)
+    val dataplaneWithServiceAccount = createDataplaneWithServiceAccount(dataplaneId)
+    val serviceAccount = createServiceAccount(dataplaneId)
 
     every { dataplaneRepository.existsById(dataplane.id) } returns false
     every { dataplaneRepository.save(any()) } returns dataplane
+    every { serviceAccountsService.create(any(), any(), any()) } returns serviceAccount
+    every { permissionDao.createServiceAccountPermission(any()) } returns mockk<Permission>()
 
-    val retrievedDataplane = dataplaneServiceDataImpl.writeDataplane(dataplane.toConfigModel())
-    assertEquals(dataplane.toConfigModel(), retrievedDataplane)
+    val retrievedDataplane = dataplaneServiceDataImpl.createDataplaneAndServiceAccount(dataplane.toConfigModel())
+    assertEquals(dataplaneWithServiceAccount, retrievedDataplane)
 
     verify { dataplaneRepository.existsById(dataplane.id) }
     verify { dataplaneRepository.save(any()) }
@@ -74,7 +88,7 @@ class DataplaneServiceDataImplTest {
     every { dataplaneRepository.existsById(dataplane.id) } returns true
     every { dataplaneRepository.update(any()) } returns dataplane
 
-    val retrievedDataplane = dataplaneServiceDataImpl.writeDataplane(dataplane.toConfigModel())
+    val retrievedDataplane = dataplaneServiceDataImpl.updateDataplane(dataplane.toConfigModel())
     assertEquals(dataplane.toConfigModel(), retrievedDataplane)
 
     verify { dataplaneRepository.existsById(dataplane.id) }
@@ -117,10 +131,24 @@ class DataplaneServiceDataImplTest {
     Dataplane(
       id = id,
       dataplaneGroupId = MOCK_DATAPLANE_GROUP_ID,
-      name = "Test Dataplane ",
+      name = MOCK_DATAPLANE_NAME,
       enabled = true,
       tombstone = false,
       createdAt = OffsetDateTime.now(),
       updatedAt = OffsetDateTime.now(),
+    )
+
+  private fun createDataplaneWithServiceAccount(id: UUID): DataplaneWithServiceAccount =
+    DataplaneWithServiceAccount(
+      dataplane = createDataplane(id).toConfigModel(),
+      serviceAccount = createServiceAccount(id),
+    )
+
+  private fun createServiceAccount(dataplaneId: UUID): ServiceAccount =
+    ServiceAccount(
+      id = dataplaneId,
+      name = "service-account-name",
+      managed = true,
+      secret = MOCK_SERVICE_ACCOUNT_SECRET,
     )
 }

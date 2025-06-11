@@ -5,10 +5,11 @@
 package io.airbyte.data.auth
 
 import io.airbyte.commons.json.Jsons
+import io.airbyte.data.TokenType
 import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.time.Clock
-import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.Base64
 
 @Singleton
@@ -18,17 +19,16 @@ class AirbyteJwtGeneratorNoAuthImpl : AirbyteJwtGenerator {
 
   override fun generateToken(
     tokenSubject: String,
-    tokenType: String,
+    tokenType: TokenType,
     tokenExpirationLength: Long,
     additionalClaims: Map<String, Any>,
   ): String {
     val header = """{"alg":"none"}"""
-    val exp = Instant.now(clock).plusSeconds(tokenExpirationLength).epochSecond
     val claims =
       mutableMapOf<String, Any>(
         "sub" to tokenSubject,
         "typ" to tokenType,
-        "exp" to exp,
+        "exp" to clock.instant().plus(tokenExpirationLength, ChronoUnit.MINUTES).epochSecond,
       )
 
     for ((key, value) in additionalClaims) {

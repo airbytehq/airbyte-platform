@@ -55,6 +55,11 @@ interface PermissionDao {
   fun createPermission(permission: Permission): Permission
 
   /**
+   * Create a permission for a service account.
+   */
+  fun createServiceAccountPermission(permission: Permission): Permission
+
+  /**
    * Update a permission
    */
   @Throws(RemoveLastOrgAdminPermissionException::class)
@@ -72,5 +77,9 @@ class PermissionRedundantException(
  * Exception thrown when attempting an operation on a permission that would result in an organization without any org-admin.
  */
 class RemoveLastOrgAdminPermissionException(
+  message: String,
+) : Exception(message)
+
+class InvalidServiceAccountPermissionRequestException(
   message: String,
 ) : Exception(message)

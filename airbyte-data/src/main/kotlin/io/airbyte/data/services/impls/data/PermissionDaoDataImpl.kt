@@ -10,6 +10,7 @@ import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
+import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
 import io.airbyte.data.services.PermissionDao
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
@@ -102,6 +103,23 @@ open class PermissionDaoDataImpl(
 
     // remove any permissions that would be made redundant by adding in the new permission
     deletePermissionsMadeRedundantByPermission(permission, existingUserPermissions)
+
+    return permissionRepository.save(permission.toEntity()).toConfigModel()
+  }
+
+  @Transactional("config")
+  override fun createServiceAccountPermission(permission: Permission): Permission {
+    if (permission.userId != null) {
+      throw InvalidServiceAccountPermissionRequestException(
+        "Service account permission can not be created when given a user id. Provide a service account id instead.",
+      )
+    }
+
+    if (permission.serviceAccountId == null) {
+      throw InvalidServiceAccountPermissionRequestException(
+        "Missing service account id from request: $permission",
+      )
+    }
 
     return permissionRepository.save(permission.toEntity()).toConfigModel()
   }

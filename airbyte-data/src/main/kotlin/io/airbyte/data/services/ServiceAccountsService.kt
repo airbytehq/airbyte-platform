@@ -6,40 +6,60 @@ package io.airbyte.data.services
 
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.TokenType
+import io.airbyte.data.auth.AirbyteJwtGenerator
 import io.airbyte.data.repositories.ServiceAccountsRepository
 import io.airbyte.domain.models.ServiceAccount
-import io.micronaut.context.annotation.Property
-import io.micronaut.security.token.jwt.generator.JwtTokenGenerator
 import jakarta.inject.Singleton
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Clock
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 import io.airbyte.data.repositories.entities.ServiceAccount as ServiceAccountEntity
 
 @Singleton
 class ServiceAccountsService internal constructor(
-  private val jwtTokenGenerator: JwtTokenGenerator,
+  private val jwtTokenGenerator: AirbyteJwtGenerator,
   private val repo: ServiceAccountsRepository,
-  @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String = "airbyte",
   private val tokenExpirationConfig: TokenExpirationConfig,
 ) {
   var clock: Clock = Clock.systemUTC()
 
   fun create(
+    id: UUID = UUID.randomUUID(),
     name: String,
     managed: Boolean = false,
-  ): ServiceAccount =
-    repo
-      .save(
-        ServiceAccountEntity(
-          name = name,
-          secret = SecretUtil.generate(),
-          managed = managed,
-        ),
-      ).toModel()
+  ): ServiceAccount {
+    val (secret, encodedSecret) = SecretUtil.generate()
+
+    repo.save(
+      ServiceAccountEntity(
+        id = id,
+        name = name,
+        secret = encodedSecret,
+        managed = managed,
+      ),
+    )
+
+    return ServiceAccount(
+      id = id,
+      name = name,
+      secret = secret,
+      managed = managed,
+    )
+  }
+
+  fun getAndVerify(
+    id: UUID,
+    secret: String,
+  ): ServiceAccount {
+    val serviceAccount = get(id) ?: throw ServiceAccountNotFound(id)
+    if (!SecretUtil.matches(secret, serviceAccount.secret)) {
+      throw ServiceAccountNotFound(id)
+    }
+
+    return serviceAccount
+  }
 
   fun get(id: UUID): ServiceAccount? = repo.findById(id).orElse(null)?.toModel()
 
@@ -55,28 +75,20 @@ class ServiceAccountsService internal constructor(
     id: UUID,
     secret: String,
   ): String {
-    repo.findOne(id, secret) ?: throw ServiceAccountNotFound(id)
+    getAndVerify(id, secret)
 
     return jwtTokenGenerator
       .generateToken(
-        mapOf(
-          "iss" to tokenIssuer,
-          "aud" to "airbyte-server",
-          "sub" to id.toString(),
-          TokenType.SERVICE_ACCOUNT.toClaim(),
-          "exp" to clock.instant().plus(tokenExpirationConfig.serviceAccountTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
-        ),
-      ).orElseThrow {
-        ServiceAccountTokenGenerationError()
-      }
+        tokenSubject = id.toString(),
+        tokenType = TokenType.SERVICE_ACCOUNT,
+        tokenExpirationLength = tokenExpirationConfig.serviceAccountTokenExpirationInMinutes,
+      )
   }
 
   fun delete(id: UUID) {
     repo.deleteById(id)
   }
 }
-
-class ServiceAccountTokenGenerationError : Exception("Unknown error while generating token")
 
 class ServiceAccountNotFound(
   id: UUID,
@@ -99,7 +111,7 @@ private object SecretUtil {
    * Generates a client secret and returns it.
    */
   @OptIn(ExperimentalStdlibApi::class)
-  fun generate(): String {
+  fun generate(): Pair<String, String> {
     val bytes = ByteArray(SECRET_LENGTH)
     random.nextBytes(bytes)
 
@@ -109,6 +121,11 @@ private object SecretUtil {
         .digest(bytes)
         .toHexString()
 
-    return encoder.encode(digest)
+    return Pair(digest, encoder.encode(digest))
   }
+
+  fun matches(
+    clientSecret: String,
+    encodedSecret: String,
+  ): Boolean = encoder.matches(clientSecret, encodedSecret)
 }
