@@ -36,7 +36,7 @@ export const hasFields = <T extends object>(object: T | {}): object is T => {
 };
 
 export const isEmptyObject = (object: object): boolean => {
-  return typeof object === "object" && !Array.isArray(object) && Object.keys(object).length === 0;
+  return typeof object === "object" && object !== null && !Array.isArray(object) && Object.keys(object).length === 0;
 };
 
 // Convert a $ref of the form "#/path/to/field" to a path of the form "path.to.field"

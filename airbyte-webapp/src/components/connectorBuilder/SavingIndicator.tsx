@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -94,6 +94,10 @@ export const SavingIndicator: React.FC = () => {
   const [changeInProgress, setChangeInProgress] = useState(false);
   const timeoutRef = useRef<number>();
 
+  const handleClose = useCallback(() => {
+    setChangeInProgress(false);
+  }, []);
+
   useEffect(
     () => () => {
       if (timeoutRef.current) {
@@ -139,7 +143,7 @@ export const SavingIndicator: React.FC = () => {
       >
         {message}
       </Button>
-      {changeInProgress && <VersionModal onClose={() => setChangeInProgress(false)} project={currentProject} />}
+      {changeInProgress && <VersionModal onClose={handleClose} project={currentProject} />}
     </>
   );
 };

@@ -1,17 +1,26 @@
-import { useIntl } from "react-intl";
+import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
+import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderConfigView } from "./BuilderConfigView";
 import styles from "./GlobalConfigView.module.scss";
 export const GlobalConfigView: React.FC = () => {
-  const { formatMessage } = useIntl();
   const permission = useConnectorBuilderPermission();
 
-  // TODO(lmossman): implement global view in follow-up PR
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>
-      <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })} />
+      <FlexContainer direction="column">
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.check" />
+        </Card>
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.concurrency_level" />
+        </Card>
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.api_budget" />
+        </Card>
+      </FlexContainer>
     </fieldset>
   );
 };

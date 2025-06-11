@@ -88,6 +88,7 @@ interface FormStateContext {
   customComponentsCode: string | undefined;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
+  yamlIsDirty: boolean;
   savingState: SavingState;
   blockedOnInvalidState: boolean;
   projectId: string;
@@ -103,6 +104,7 @@ interface FormStateContext {
     customComponentsCode: string | undefined
   ) => void;
   setYamlIsValid: (value: boolean) => void;
+  setYamlIsDirty: (value: boolean) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
   triggerUpdate: () => void;
   publishProject: (options: BuilderProjectPublishBody) => Promise<SourceDefinitionIdBody>;
@@ -233,13 +235,14 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   >(undefined);
 
   const [yamlIsValid, setYamlIsValid] = useState(true);
+  const [yamlIsDirty, setYamlIsDirty] = useState(false);
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
 
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const name = useBuilderWatch("name");
   const yaml = useBuilderWatch("yaml");
-  const manifest = removeEmptyProperties(useBuilderWatch("manifest"));
+  const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const customComponentsCode = useBuilderWatch("customComponentsCode");
   const { hasErrors } = useBuilderErrors();
 
@@ -419,6 +422,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     customComponentsCode,
     yamlEditorIsMounted,
     yamlIsValid,
+    yamlIsDirty,
     savingState,
     blockedOnInvalidState,
     projectId,
@@ -428,6 +432,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     undoRedo,
     setDisplayedVersion: setToVersion,
     setYamlIsValid,
+    setYamlIsDirty,
     setYamlEditorIsMounted,
     triggerUpdate,
     publishProject,
@@ -529,10 +534,10 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const { updateYamlCdkVersion } = useConnectorBuilderFormState();
+  const { updateYamlCdkVersion, yamlIsDirty } = useConnectorBuilderFormState();
   const { projectId, isResolving, resolveError } = useConnectorBuilderResolve();
   const { setValue } = useFormContext();
-  const manifest = removeEmptyProperties(useBuilderWatch("manifest"));
+  const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
   const generatedStreams = useBuilderWatch("generatedStreams");
@@ -736,7 +741,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { refetch } = streamRead;
   // trigger a stream read if a stream read is queued and form is in a ready state to be tested
   useEffect(() => {
-    if (isResolving || testingValuesDirty || !queuedStreamRead) {
+    if (isResolving || testingValuesDirty || yamlIsDirty || !queuedStreamRead) {
       return;
     }
 
@@ -747,7 +752,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
     setQueuedStreamRead(false);
     refetch();
-  }, [isResolving, queuedStreamRead, refetch, resolveError, testingValuesDirty]);
+  }, [isResolving, queuedStreamRead, refetch, resolveError, testingValuesDirty, yamlIsDirty]);
 
   const queueStreamRead = useCallback(() => {
     setQueuedStreamRead(true);

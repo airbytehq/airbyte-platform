@@ -287,7 +287,7 @@ const extractDefaultValuesFromSchema = <T extends FieldValues>(
     }
 
     const nestedDefaultValue = extractDefaultValuesFromSchema(resolvedProperty, rootSchema);
-    if (nestedDefaultValue !== undefined && nestedDefaultValue !== null && !isEmptyObject(nestedDefaultValue)) {
+    if (nestedDefaultValue !== undefined && !isEmptyObject(nestedDefaultValue)) {
       defaultValues[key] = nestedDefaultValue;
     }
   });

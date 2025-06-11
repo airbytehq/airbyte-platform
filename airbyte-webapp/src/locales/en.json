@@ -1862,6 +1862,7 @@
   "connectorBuilder.setInUserInput": "This setting is configured as part of the user inputs in the testing panel",
   "connectorBuilder.optionalFieldsLabel": "Optional fields",
   "connectorBuilder.duplicateFieldID": "Make sure no field ID is used multiple times",
+  "connectorBuilder.enumDuplicate": "All enum options must be unique",
   "connectorBuilder.addNewParentStream": "Add new parent stream",
   "connectorBuilder.streamConfiguration": "Configuration",
   "connectorBuilder.streamSchema": "Schema",

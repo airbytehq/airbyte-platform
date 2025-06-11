@@ -36,18 +36,32 @@ export const YamlManifestEditor: React.FC = () => {
     setYamlEditorIsMounted,
     setYamlIsValid,
     undoRedo: { clearHistory },
+    setYamlIsDirty,
   } = useConnectorBuilderFormState();
   const { resolveManifest } = useConnectorBuilderResolve();
   const { setValue } = useFormContext();
   const yamlManifestValue = useBuilderWatch("yaml");
+
+  // Add a simple counter reference to track the latest call
+  const lastCallIdRef = useRef(0);
+
   const debouncedResolveAndUpdateManifest: (newManifest: ConnectorManifest) => void = useMemo(
     () =>
       debounce(async (newManifest: ConnectorManifest) => {
+        // Increment counter to track this call
+        const thisCallId = ++lastCallIdRef.current;
+
         resolveManifest(newManifest).then((resolvedManifest) => {
-          setValue("manifest", resolvedManifest.manifest);
+          // Only update state if this is still the latest call
+          // This prevents yamlIsDirty from being set back to false when subsequent YAML changes are made
+          // while previous resolve calls are still in progress.
+          if (thisCallId === lastCallIdRef.current) {
+            setValue("manifest", resolvedManifest.manifest);
+            setYamlIsDirty(false);
+          }
         });
       }, 500),
-    [resolveManifest, setValue]
+    [resolveManifest, setValue, setYamlIsDirty]
   );
 
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
@@ -58,7 +72,7 @@ export const YamlManifestEditor: React.FC = () => {
   const showCustomComponentsTab = areCustomComponentsEnabled || customComponentsCodeValue;
 
   const [selectedTab, setSelectedTab] = useState(TAB_MANIFEST);
-  const lastResolvedManifest = useRef<ConnectorManifest | null>(null);
+  const lastLoadedManifest = useRef<ConnectorManifest | null>(null);
 
   return (
     <div className={styles.container}>
@@ -110,10 +124,11 @@ export const YamlManifestEditor: React.FC = () => {
             onSuccessfulLoad={(json: unknown) => {
               setYamlIsValid(true);
               const newManifest = json as ConnectorManifest;
-              if (!lastResolvedManifest.current) {
-                lastResolvedManifest.current = newManifest;
-              } else if (!isEqual(lastResolvedManifest.current, newManifest)) {
-                lastResolvedManifest.current = newManifest;
+              if (!lastLoadedManifest.current) {
+                lastLoadedManifest.current = newManifest;
+              } else if (!isEqual(lastLoadedManifest.current, newManifest)) {
+                setYamlIsDirty(true);
+                lastLoadedManifest.current = newManifest;
                 debouncedResolveAndUpdateManifest(newManifest);
               }
             }}

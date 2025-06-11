@@ -4,7 +4,12 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useWatch, useFormContext, get } from "react-hook-form";
 import { useUpdateEffect } from "react-use";
 
-import { ConnectorManifest } from "core/api/types/ConnectorManifest";
+import {
+  CheckDynamicStreamType,
+  CheckStreamType,
+  ConnectorManifest,
+  DynamicStreamCheckConfigType,
+} from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderSchema } from "core/services/connectorBuilder/ConnectorBuilderSchemaContext";
 import { assertNever } from "core/utils/asserts";
 import {
@@ -17,11 +22,12 @@ import { BuilderSidebar } from "./BuilderSidebar";
 import { ComponentsView } from "./ComponentsView";
 import { DynamicStreamConfigView } from "./DynamicStreamConfigView";
 import { GlobalConfigView } from "./GlobalConfigView";
-import { InputForm, newInputInEditing } from "./InputsForm";
+import { InputModal, newInputInEditing } from "./InputModal";
 import { InputsView } from "./InputsView";
 import { StreamConfigView } from "./StreamConfigView";
-import { BuilderState } from "../types";
+import { BuilderFormInput, BuilderState } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useStreamNames } from "../useStreamNames";
 import { useSetStreamToStale } from "../useStreamTestMetadata";
 
 function getView(selectedView: BuilderState["view"], scrollToTop: () => void) {
@@ -102,13 +108,14 @@ export const Builder: React.FC = () => {
         <BuilderSidebar />
         <TriggerStateEffects />
         <UpdateSchemaForTestingValues />
+        <UpdateCheckStreams />
         <div className={styles.builderView} ref={builderViewRef}>
           {getView(view, scrollToTop)}
         </div>
         {newUserInputContext && (
-          <InputForm
+          <InputModal
             inputInEditing={newInputInEditing()}
-            onClose={(newInput) => {
+            onClose={(newInput: BuilderFormInput | undefined) => {
               const { model, position } = newUserInputContext;
               setNewUserInputContext(undefined);
               if (!newInput) {
@@ -200,6 +207,65 @@ const UpdateSchemaForTestingValues = () => {
   useUpdateEffect(() => {
     trigger("testingValues");
   }, [builderStateSchema]);
+
+  return null;
+};
+
+/**
+ * Updates the `check` field in the manifest to keep it in sync with the
+ * current stream names in the manifest.
+ */
+const UpdateCheckStreams = () => {
+  const { streamNames, dynamicStreamNames } = useStreamNames();
+  const checkStreams = useBuilderWatch("manifest.check");
+  const { setValue } = useFormContext();
+  useUpdateEffect(() => {
+    console.log("checkStreams", checkStreams);
+    if (checkStreams.type === CheckDynamicStreamType.CheckDynamicStream) {
+      if (dynamicStreamNames.length > 0) {
+        return;
+      }
+      if (streamNames.length === 0) {
+        return;
+      }
+      setValue("manifest.check", {
+        type: CheckStreamType.CheckStream,
+        stream_names: [streamNames[0]],
+      });
+      return;
+    }
+
+    const filteredCheckStaticStreamNames =
+      checkStreams.stream_names?.filter((streamName) => streamNames.includes(streamName)) ?? [];
+    const filteredCheckDynamicStreams =
+      checkStreams.dynamic_streams_check_configs?.filter((config) =>
+        dynamicStreamNames.includes(config.dynamic_stream_name)
+      ) ?? [];
+
+    if (
+      filteredCheckStaticStreamNames.length > 0 &&
+      filteredCheckStaticStreamNames.length !== checkStreams.stream_names?.length
+    ) {
+      setValue("manifest.check.stream_names", filteredCheckStaticStreamNames);
+    } else if (filteredCheckStaticStreamNames.length === 0 && streamNames.length > 0) {
+      setValue("manifest.check.stream_names", [streamNames[0]]);
+    }
+
+    if (
+      filteredCheckDynamicStreams.length > 0 &&
+      filteredCheckDynamicStreams.length !== checkStreams.dynamic_streams_check_configs?.length
+    ) {
+      setValue("manifest.check.dynamic_streams_check_configs", filteredCheckDynamicStreams);
+    } else if (filteredCheckDynamicStreams.length === 0 && dynamicStreamNames.length > 0) {
+      setValue("manifest.check.dynamic_streams_check_configs", [
+        {
+          type: DynamicStreamCheckConfigType.DynamicStreamCheckConfig,
+          dynamic_stream_name: dynamicStreamNames[0],
+          stream_count: 1,
+        },
+      ]);
+    }
+  }, [streamNames, dynamicStreamNames]);
 
   return null;
 };

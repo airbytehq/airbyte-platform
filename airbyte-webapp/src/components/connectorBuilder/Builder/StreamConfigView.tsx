@@ -23,6 +23,7 @@ import {
   CustomRetrieverType,
   DeclarativeComponentSchemaStreamsItem,
   DeclarativeStream,
+  DeclarativeStreamSchemaLoader,
   DeclarativeStreamType,
   DynamicDeclarativeStream,
   InlineSchemaLoaderType,
@@ -738,8 +739,9 @@ const SchemaEditor = ({
   const streamName = useBuilderWatch(streamFieldPath("name")) as string | undefined;
   const schemaLoaderPath = streamFieldPath("schema_loader");
   const autoImportSchemaPath = `manifest.metadata.autoImportSchema.${streamName}`;
-  const autoImportSchema = useWatch({ name: autoImportSchemaPath });
+  const autoImportSchema = useBuilderWatch(autoImportSchemaPath);
   const inferredSchema = streamRead.data?.inferred_schema ?? DEFAULT_SCHEMA_LOADER_SCHEMA;
+  const schemaLoader = useBuilderWatch(schemaLoaderPath) as DeclarativeStreamSchemaLoader | undefined;
 
   if (!streamName) {
     // Use SchemaFormControl with override so that the schema_loader is not rendered elsewhere
@@ -778,11 +780,14 @@ const SchemaEditor = ({
       <SchemaFormControl
         path={schemaLoaderPath}
         overrideByPath={
-          streamId.type !== "generated_stream" && autoImportSchema
+          streamId.type !== "generated_stream" &&
+          autoImportSchema &&
+          !Array.isArray(schemaLoader) &&
+          schemaLoader?.type === InlineSchemaLoaderType.InlineSchemaLoader
             ? {
                 [schemaLoaderPath]: (
                   <div className={styles.autoSchemaContainer}>
-                    <Pre>{formatJson(inferredSchema, true)}</Pre>
+                    <Pre>{formatJson(schemaLoader.schema, true)}</Pre>
                   </div>
                 ),
               }

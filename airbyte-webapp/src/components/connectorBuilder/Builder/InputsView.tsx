@@ -9,7 +9,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import classNames from "classnames";
 import React, { useMemo, useState, useCallback } from "react";
-import { useFormContext } from "react-hook-form";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms";
@@ -23,6 +23,7 @@ import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
 import { Spec, SpecConnectionSpecification } from "core/api/types/ConnectorManifest";
+import { AirbyteJSONSchema } from "core/jsonSchema/types";
 import {
   useConnectorBuilderFormState,
   useConnectorBuilderPermission,
@@ -30,7 +31,7 @@ import {
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import { KeyboardSensor, PointerSensor } from "./dndSensors";
-import { InputForm, InputInEditing, newInputInEditing, supportedTypes } from "./InputsForm";
+import { InputModal, InputInEditing, newInputInEditing, supportedTypes } from "./InputModal";
 import styles from "./InputsView.module.scss";
 import { SecretField } from "./SecretField";
 import { BuilderFormInput } from "../types";
@@ -98,7 +99,7 @@ export const InputsView: React.FC = () => {
         </Button>
 
         {inputInEditing && (
-          <InputForm
+          <InputModal
             inputInEditing={inputInEditing}
             onClose={() => {
               setInputInEditing(undefined);
@@ -207,78 +208,104 @@ const InputFormControl = ({
   openInputForm: () => void;
 }) => {
   const { toggleUI } = useConnectorBuilderFormState();
-  const { setValue } = useFormContext();
   const { definition } = builderInput;
+  const unrecognizedTypeElement = useMemo(
+    () => (
+      <Message
+        type="error"
+        text={
+          <FormattedMessage
+            id="connectorBuilder.unsupportedInputType.primary"
+            values={{ type: definition.type ?? "undefined" }}
+          />
+        }
+        secondaryText={
+          <FormattedMessage
+            id="connectorBuilder.unsupportedInputType.secondary"
+            values={{
+              openInputButton: (children: React.ReactNode) => (
+                <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={openInputForm}>
+                  {children}
+                </Button>
+              ),
+              switchToYamlButton: (children: React.ReactNode) => (
+                <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={() => toggleUI("yaml")}>
+                  {children}
+                </Button>
+              ),
+            }}
+          />
+        }
+      />
+    ),
+    [definition.type, openInputForm, toggleUI]
+  );
   const fieldPath = `testingValues.${builderInput.key}`;
-  const value = useBuilderWatch(fieldPath);
+
+  return (
+    <DefinitionFormControl name={fieldPath} definition={definition} unrecognizedTypeElement={unrecognizedTypeElement} />
+  );
+};
+
+export const DefinitionFormControl = ({
+  name,
+  definition,
+  unrecognizedTypeElement,
+  label,
+}: {
+  name: string;
+  definition: AirbyteJSONSchema;
+  unrecognizedTypeElement: JSX.Element | null;
+  label?: string;
+}) => {
+  const value = useWatch({ name });
+  const { setValue } = useFormContext();
+
   switch (definition.type) {
     case "string": {
       if (definition.enum) {
+        if (definition.enum.length === 0) {
+          return null;
+        }
         const options = definition.enum.map((val) => ({ label: String(val), value: String(val) }));
-        return <FormControl fieldType="dropdown" options={options} name={fieldPath} />;
+        return <FormControl fieldType="dropdown" options={options} name={name} label={label} />;
       }
 
       if (definition.format === "date" || definition.format === "date-time") {
-        return <FormControl fieldType="date" format={definition.format} name={fieldPath} />;
+        return <FormControl fieldType="date" format={definition.format} name={name} label={label} />;
       }
 
       if (definition.airbyte_secret) {
         return (
           <FlexContainer direction="column" className={styles.secretField}>
             <SecretField
-              name={fieldPath}
+              label={label}
+              name={name}
               value={value as string}
               onUpdate={(val) => {
                 // Remove the value instead of setting it to the empty string, as secret persistence
                 // gets mad at empty secrets
-                setValue(fieldPath, val || undefined);
+                setValue(name, val || undefined);
               }}
             />
             <FormControlFooter>
-              <FormControlErrorMessage name={fieldPath} />
+              <FormControlErrorMessage name={name} />
             </FormControlFooter>
           </FlexContainer>
         );
       }
 
-      return <FormControl fieldType="input" name={fieldPath} />;
+      return <FormControl fieldType="input" name={name} label={label} />;
     }
     case "integer":
     case "number":
-      return <FormControl fieldType="input" type={definition.type} name={fieldPath} />;
+      return <FormControl fieldType="input" type="number" name={name} label={label} />;
     case "boolean":
-      return <FormControl fieldType="switch" name={fieldPath} />;
+      return <FormControl fieldType="switch" name={name} label={label} />;
     case "array":
-      return <FormControl fieldType="array" itemType="string" name={fieldPath} />;
+      return <FormControl fieldType="array" itemType="string" name={name} label={label} />;
     default:
-      return (
-        <Message
-          type="error"
-          text={
-            <FormattedMessage
-              id="connectorBuilder.unsupportedInputType.primary"
-              values={{ type: definition.type ?? "undefined" }}
-            />
-          }
-          secondaryText={
-            <FormattedMessage
-              id="connectorBuilder.unsupportedInputType.secondary"
-              values={{
-                openInputButton: (children: React.ReactNode) => (
-                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={openInputForm}>
-                    {children}
-                  </Button>
-                ),
-                switchToYamlButton: (children: React.ReactNode) => (
-                  <Button className={styles.unsupportedInputTypeAction} variant="link" onClick={() => toggleUI("yaml")}>
-                    {children}
-                  </Button>
-                ),
-              }}
-            />
-          }
-        />
-      );
+      return unrecognizedTypeElement;
   }
 };
 
