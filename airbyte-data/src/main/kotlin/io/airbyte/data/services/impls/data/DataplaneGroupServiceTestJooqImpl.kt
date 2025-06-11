@@ -100,4 +100,14 @@ class DataplaneGroupServiceTestJooqImpl(
     } else {
       getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
     }
+
+  override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID =
+    database.query { ctx: DSLContext ->
+      ctx
+        .select(Tables.DATAPLANE_GROUP.ORGANIZATION_ID)
+        .from(Tables.DATAPLANE_GROUP)
+        .where(Tables.DATAPLANE_GROUP.ID.eq(dataplaneGroupId))
+        .fetchOneInto(UUID::class.java)
+        ?: throw ConfigNotFoundException(DataplaneGroup::class.toString(), dataplaneGroupId.toString())
+    }
 }

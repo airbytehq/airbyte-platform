@@ -39,4 +39,6 @@ interface DataplaneGroupService {
    * Get the default dataplane group
    */
   fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup
+
+  fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID
 }

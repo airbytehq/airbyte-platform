@@ -90,6 +90,8 @@ open class DataplaneGroupServiceDataImpl(
       getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
     }
 
+  override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID = repository.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)
+
   fun validateDataplaneGroupName(dataplaneGroup: DataplaneGroup) {
     if (dataplaneGroup.organizationId != DEFAULT_ORGANIZATION_ID) {
       val defaultGroups = listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false)
