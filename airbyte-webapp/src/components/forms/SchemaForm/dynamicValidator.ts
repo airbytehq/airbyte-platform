@@ -1,109 +1,73 @@
-import { useCallback, useEffect, useRef } from "react";
-import { FieldValues, get, useFormContext, useWatch } from "react-hook-form";
-import { IntlShape, useIntl } from "react-intl";
-import { useMount } from "react-use";
+import { zodResolver } from "@hookform/resolvers/zod";
+import isBoolean from "lodash/isBoolean";
+import { FieldErrors, FieldValues, ResolverOptions, ResolverResult } from "react-hook-form";
+import { IntlShape } from "react-intl";
 import { z } from "zod";
 
 import { FORM_PATTERN_ERROR } from "core/form/types";
+import { NON_I18N_ERROR_TYPE } from "core/utils/form";
 import { getPatternDescriptor } from "views/Connector/ConnectorForm/utils";
 
-import { getSelectedOptionSchema, useSchemaForm } from "./SchemaForm";
-import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, isEmptyObject, resolveTopLevelRef } from "./utils";
+import { getSelectedOptionSchema, verifyArrayItems } from "./SchemaForm";
+import { AirbyteJsonSchema, resolveTopLevelRef } from "./utils";
 
-/**
- * Dynamically determines all paths that need to be validated based on the form values.
- *
- * When a new path is added, its validation function is registered.
- *
- * When a path is removed, its validation function is unregistered.
- */
-export const DynamicValidator = ({ nestedUnderPath }: { nestedUnderPath?: string }) => {
-  const { formatMessage } = useIntl();
-  const { getValues, watch, register, unregister } = useFormContext();
-  const { schema: rootSchema, getSchemaAtPath, isRequired: isPathRequired } = useSchemaForm();
-  const registeredPaths = useRef(new Set<string>());
-  const values = useWatch();
+// Produces a dynamic zod schema that resolves $refs only as far as needed to validate the current values.
+export const dynamicValidator = <TSchema extends FieldValues>(
+  rootSchema: AirbyteJsonSchema,
+  formatMessage: IntlShape["formatMessage"]
+) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (data: TSchema, context: any, options: ResolverOptions<TSchema>): Promise<ResolverResult<TSchema>> => {
+    try {
+      // Convert JSON schema to a usable Zod schema with preset error messages
+      const zodSchema = convertJsonSchemaToZodSchema(rootSchema, rootSchema, formatMessage, false);
 
-  const registerValidation = useCallback(
-    (path: string) => {
-      const isRequired = isPathRequired(path);
-      const targetSchema = resolveTopLevelRef(rootSchema, getSchemaAtPath(path, true));
-      if (isEmptyObject(targetSchema)) {
-        return;
+      // Use zodResolver which is CSP-compliant
+      const resolver = zodResolver(zodSchema);
+      const result = await resolver(data, context, options);
+
+      // Add NON_I18N_ERROR_TYPE to all errors to avoid missing translation console errors
+      if (result.errors) {
+        // Traverse all errors and set their type to NON_I18N_ERROR_TYPE
+        const traverseErrors = (obj: Record<string, unknown>) => {
+          Object.keys(obj).forEach((key) => {
+            const value = obj[key];
+            if (value && typeof value === "object") {
+              if ("type" in value && "message" in value) {
+                // This is an error object, set its type
+                (value as { type: string }).type = NON_I18N_ERROR_TYPE;
+              } else {
+                // This is a nested object, traverse it
+                traverseErrors(value as Record<string, unknown>);
+              }
+            }
+          });
+        };
+
+        traverseErrors(result.errors as Record<string, unknown>);
       }
-      register(path, {
-        validate: (value) => {
-          // ~ declarative_component_schema type handling ~
-          if (getDeclarativeSchemaTypeValue(path.split(".").at(-1) ?? path, targetSchema)) {
-            return true;
-          }
-          const zodSchema = convertJsonSchemaToZodSchema(rootSchema, targetSchema, formatMessage, isRequired);
-          const result = zodSchema.safeParse(value);
-          if (result.success === false) {
-            return result.error.issues.at(-1)?.message;
-          }
-          return true;
-        },
-      });
-      registeredPaths.current.add(path);
-    },
-    [rootSchema, getSchemaAtPath, isPathRequired, formatMessage, register]
-  );
 
-  useMount(() => {
-    const allValues = getValues();
-    const values = nestedUnderPath ? get(allValues, nestedUnderPath) : allValues;
-    const paths = getAllFieldPaths(values, nestedUnderPath);
-    for (const path of paths) {
-      registerValidation(path);
+      return result;
+    } catch (error) {
+      console.error("Error in schema validation:", error);
+
+      // Return empty errors if schema conversion or validation fails
+      return {
+        values: {} as TSchema,
+        errors: {
+          _form: {
+            type: "validation",
+            message: "Validation failed due to internal error. Please check console for details.",
+          },
+        } as unknown as FieldErrors<TSchema>,
+      };
     }
-  });
-
-  useEffect(() => {
-    const subscription = watch((data, { name }) => {
-      if (!name) {
-        return;
-      }
-      if (nestedUnderPath && !name.startsWith(nestedUnderPath)) {
-        return;
-      }
-
-      const oldValue = get(values, name);
-      const updatedValue = get(data, name);
-      if (typeof updatedValue === "object" || typeof oldValue === "object") {
-        const oldSubPaths = new Set(getAllFieldPaths(get(values, name), name));
-        const newSubPaths = new Set(getAllFieldPaths(updatedValue, name));
-        const oldAndNewSubPaths = new Set([...oldSubPaths, ...newSubPaths]);
-        for (const path of oldAndNewSubPaths) {
-          const inOld = oldSubPaths.has(path);
-          const inNew = newSubPaths.has(path);
-
-          if (!inOld && inNew) {
-            registerValidation(path);
-          }
-          if (inOld && !inNew) {
-            unregister(path, { keepValue: true });
-            registeredPaths.current.delete(path);
-          }
-        }
-      }
-
-      if (updatedValue === undefined) {
-        unregister(name, { keepValue: true });
-        registeredPaths.current.delete(name);
-      } else {
-        registerValidation(name);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, registerValidation, unregister, nestedUnderPath, getValues, values]);
-
-  return null;
+  };
 };
 
 const REQUIRED_ERROR = "form.empty.error";
 const INVALID_TYPE_ERROR = "form.invalid_type.error";
-const convertJsonSchemaToZodSchema = (
+export const convertJsonSchemaToZodSchema = (
   rootSchema: AirbyteJsonSchema,
   schema: AirbyteJsonSchema,
   formatMessage: IntlShape["formatMessage"],
@@ -138,21 +102,19 @@ const convertJsonSchemaToZodSchema = (
           }
           return;
         }
-        if (selectedSchema.type !== "object" && selectedSchema.type !== "array") {
-          const zodSchema = convertJsonSchemaToZodSchema(rootSchema, selectedSchema, formatMessage, isRequired);
-          try {
-            const result = zodSchema.safeParse(value);
-            if (!result.success) {
-              result.error.issues.forEach((issue) => {
-                ctx.addIssue(issue);
-              });
-            }
-          } catch (error) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: formatMessage({ id: "form.failedValidation" }, { error: String(error) }),
+        const zodSchema = convertJsonSchemaToZodSchema(rootSchema, selectedSchema, formatMessage, isRequired);
+        try {
+          const result = zodSchema.safeParse(value);
+          if (!result.success) {
+            result.error.issues.forEach((issue) => {
+              ctx.addIssue(issue);
             });
           }
+        } catch (error) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: formatMessage({ id: "form.failedValidation" }, { error: String(error) }),
+          });
         }
       });
     }
@@ -170,6 +132,68 @@ const convertJsonSchemaToZodSchema = (
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             message: formatMessage({ id: "form.invalidJson" }),
+          });
+        }
+      });
+    }
+
+    const properties = schema.properties;
+    if (properties && (!schema.type || schema.type === "object")) {
+      return z.any().superRefine((value, ctx) => {
+        if (isRequired && !value) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: formatMessage({ id: REQUIRED_ERROR }),
+          });
+        }
+
+        if (typeof value !== "object" || value === null || Array.isArray(value)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: formatMessage({ id: INVALID_TYPE_ERROR }),
+          });
+        }
+
+        const required = schema.required ?? [];
+
+        const zodProperties = Object.fromEntries(
+          Object.entries(properties).map(([propertyKey, propertyValue]) => {
+            if (isBoolean(propertyValue)) {
+              return [propertyKey, z.any()];
+            }
+            const isFieldRequired = required.includes(propertyKey);
+            if (value[propertyKey] === undefined || value[propertyKey] === null || value[propertyKey] === "") {
+              return [
+                propertyKey,
+                z.any().refine((_value) => (isFieldRequired ? false : true), {
+                  message: formatMessage({ id: REQUIRED_ERROR }),
+                }),
+              ];
+            }
+            return [
+              propertyKey,
+              convertJsonSchemaToZodSchema(
+                rootSchema,
+                resolveTopLevelRef(rootSchema, propertyValue),
+                formatMessage,
+                isFieldRequired
+              ),
+            ];
+          })
+        );
+
+        const zodObject = z.object(zodProperties);
+        try {
+          const result = zodObject.safeParse(value);
+          if (!result.success) {
+            result.error.issues.forEach((issue) => {
+              ctx.addIssue(issue);
+            });
+          }
+        } catch (error) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: formatMessage({ id: "form.failedValidation" }, { error: String(error) }),
           });
         }
       });
@@ -267,7 +291,11 @@ const convertJsonSchemaToZodSchema = (
       }
       return zodNull;
     } else if (schema.type === "array" && schema.items) {
-      const arraySchema = z.array(z.any());
+      const itemsSchema = verifyArrayItems(schema.items, rootSchema);
+      const arraySchema = z.array(convertJsonSchemaToZodSchema(rootSchema, itemsSchema, formatMessage, isRequired), {
+        required_error: formatMessage({ id: REQUIRED_ERROR }),
+        invalid_type_error: formatMessage({ id: INVALID_TYPE_ERROR }),
+      });
 
       // Add array-specific validations with custom error messages
       if (schema.minItems) {
@@ -302,6 +330,21 @@ const convertJsonSchemaToZodSchema = (
       }
     }
 
+    if (
+      schema.additionalProperties &&
+      typeof schema.additionalProperties === "object" &&
+      !Array.isArray(schema.additionalProperties)
+    ) {
+      // Use the additionalProperties schema for validation of arbitrary fields
+      const additionalPropSchema = convertJsonSchemaToZodSchema(
+        rootSchema,
+        resolveTopLevelRef(rootSchema, schema.additionalProperties),
+        formatMessage,
+        true
+      );
+      return z.object({}).catchall(additionalPropSchema);
+    }
+
     // Fall back to a passthrough schema for anything we couldn't convert
     return z.any();
   } catch (error) {
@@ -309,28 +352,4 @@ const convertJsonSchemaToZodSchema = (
     // Default to accepting any value if conversion fails
     return z.any();
   }
-};
-
-const getAllFieldPaths = (values: FieldValues, prefix = ""): string[] => {
-  const paths: string[] = [];
-
-  for (const key in values) {
-    const value = values[key];
-    const path = prefix ? `${prefix}.${key}` : key;
-    paths.push(path);
-
-    if (Array.isArray(value)) {
-      value.forEach((item, index) => {
-        const itemPath = `${path}.${index}`;
-        if (typeof item === "object" && item !== null) {
-          paths.push(itemPath);
-          paths.push(...getAllFieldPaths(item, itemPath));
-        }
-      });
-    } else if (typeof value === "object" && value !== null) {
-      paths.push(...getAllFieldPaths(value, path));
-    }
-  }
-
-  return paths;
 };

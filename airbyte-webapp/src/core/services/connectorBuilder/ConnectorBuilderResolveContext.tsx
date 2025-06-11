@@ -5,7 +5,7 @@ import { useParams } from "react-router-dom";
 import { useMount } from "react-use";
 
 import { LoadingPage } from "components";
-import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/types";
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { getStreamHash } from "components/connectorBuilder/useStreamTestMetadata";
 import { convertJsonToYaml, streamNameOrDefault } from "components/connectorBuilder/utils";
 

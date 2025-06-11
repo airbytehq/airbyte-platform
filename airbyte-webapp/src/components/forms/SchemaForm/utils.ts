@@ -164,14 +164,6 @@ export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAd
   return !nonAdvancedFullPaths.includes(fullFieldPath);
 };
 
-export const nestPath = (path: string, rootPath?: string) => {
-  return rootPath && !path.startsWith(rootPath) ? `${rootPath}${path ? `.${path}` : ""}` : path;
-};
-
-export const unnestPath = (path: string, rootPath?: string) => {
-  return rootPath && path.startsWith(rootPath) ? path.slice(rootPath.length + 1) : path;
-};
-
 export const scrollFieldIntoView = (path: string) => {
   const field = document.querySelector(`[data-field-path="${path}"]`);
   if (field) {

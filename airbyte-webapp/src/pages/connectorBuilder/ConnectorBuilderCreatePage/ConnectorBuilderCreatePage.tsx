@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/types";
+import { DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/constants";
 import { HeadTitle } from "components/HeadTitle";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";

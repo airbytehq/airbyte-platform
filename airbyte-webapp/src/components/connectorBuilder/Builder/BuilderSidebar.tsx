@@ -25,11 +25,13 @@ import { useExperiment } from "hooks/services/Experiment";
 import { BuilderView, useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./BuilderSidebar.module.scss";
+import { DEFAULT_DYNAMIC_STREAM, DEFAULT_SYNC_STREAM } from "../constants";
 import { Sidebar } from "../Sidebar";
-import { DEFAULT_DYNAMIC_STREAM, DEFAULT_SYNC_STREAM, StreamId, getStreamFieldPath } from "../types";
+import { StreamId } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
+import { getStreamFieldPath } from "../utils";
 
 interface ViewSelectButtonProps {
   className?: string;

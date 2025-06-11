@@ -15,7 +15,7 @@ import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, displayName, nestPath, resolveTopLevelRef } from "../utils";
+import { AirbyteJsonSchema, displayName, resolveTopLevelRef } from "../utils";
 
 interface SchemaFormControlProps {
   /**
@@ -74,13 +74,10 @@ export const SchemaFormControl = ({
     getSchemaAtPath,
     registerRenderedPath,
     onlyShowErrorIfTouched,
-    nestedUnderPath,
     verifyArrayItems,
     isRequired: isPathRequired,
-    disableFormControls,
+    disableFormControlsUnderPath,
   } = useSchemaForm();
-
-  const targetPath = useMemo(() => nestPath(path, nestedUnderPath), [nestedUnderPath, path]);
 
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
@@ -94,14 +91,14 @@ export const SchemaFormControl = ({
       return !isRequired;
     }
 
-    if (!path || targetPath === nestedUnderPath) {
+    if (!path) {
       return false;
     }
 
     return !isPathRequired(path);
-  }, [isPathRequired, isRequired, nestedUnderPath, path, targetPath]);
+  }, [isPathRequired, isRequired, path]);
 
-  const value = useWatch({ name: targetPath });
+  const value = useWatch({ name: path });
 
   // ~ declarative_component_schema type $parameters handling ~
   if (path.includes("$parameters")) {
@@ -118,7 +115,7 @@ export const SchemaFormControl = ({
   }
 
   const baseProps: BaseControlProps = {
-    name: targetPath,
+    name: path,
     label: titleOverride ? titleOverride : titleOverride === null ? undefined : displayName(path, targetSchema.title),
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (
@@ -134,7 +131,7 @@ export const SchemaFormControl = ({
     onlyShowErrorIfTouched,
     placeholder,
     "data-field-path": path,
-    disabled: disableFormControls,
+    disabled: !!disableFormControlsUnderPath && path.startsWith(disableFormControlsUnderPath),
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {

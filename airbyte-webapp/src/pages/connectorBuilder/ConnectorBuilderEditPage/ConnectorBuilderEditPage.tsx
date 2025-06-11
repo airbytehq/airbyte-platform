@@ -1,13 +1,15 @@
 import classnames from "classnames";
-import React, { useMemo, useRef } from "react";
-import { FormProvider, useForm } from "react-hook-form";
+import React, { useMemo } from "react";
+import { DefaultValues, useFormContext } from "react-hook-form";
 
 import { Builder } from "components/connectorBuilder/Builder/Builder";
+import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { MenuBar } from "components/connectorBuilder/MenuBar";
 import { StreamTestingPanel } from "components/connectorBuilder/StreamTestingPanel";
-import { BuilderState, DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/types";
+import { BuilderState } from "components/connectorBuilder/types";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { YamlManifestEditor } from "components/connectorBuilder/YamlEditor";
+import { SchemaForm } from "components/forms/SchemaForm/SchemaForm";
 import { HeadTitle } from "components/HeadTitle";
 import { FlexContainer } from "components/ui/Flex";
 import { ResizablePanels } from "components/ui/ResizablePanels";
@@ -16,6 +18,10 @@ import {
   ConnectorBuilderResolveProvider,
   useConnectorBuilderResolve,
 } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
+import {
+  ConnectorBuilderSchemaProvider,
+  useConnectorBuilderSchema,
+} from "core/services/connectorBuilder/ConnectorBuilderSchemaContext";
 import { useExperiment } from "hooks/services/Experiment";
 import {
   ConnectorBuilderLocalStorageProvider,
@@ -29,6 +35,7 @@ import {
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./ConnectorBuilderEditPage.module.scss";
+
 const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
   const {
     projectId,
@@ -71,49 +78,58 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
     manifest: initialResolvedManifest ?? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
     generatedStreams: {},
   };
-  const initialValues = useRef(values);
-  initialValues.current = values;
 
-  return <BaseForm defaultValues={initialValues} />;
+  const { builderStateSchema } = useConnectorBuilderSchema();
+
+  return (
+    <SchemaForm
+      schema={builderStateSchema}
+      initialValues={values as unknown as DefaultValues<BuilderState>}
+      formClassName={styles.form}
+      refTargetPath="manifest.definitions.linked"
+      disableFormControlsUnderPath="generatedStreams"
+      onlyShowErrorIfTouched
+    >
+      <BaseForm />
+    </SchemaForm>
+  );
 });
 ConnectorBuilderEditPageInner.displayName = "ConnectorBuilderEditPageInner";
 
 export const ConnectorBuilderEditPage: React.FC = () => (
+  // Handles the state of modals being open, e.g. testing values input and test read settings
   <ConnectorBuilderFormManagementStateProvider>
+    {/* Handles local storage flags specific to the builder */}
     <ConnectorBuilderLocalStorageProvider>
+      {/* Handles calls to resolve the manifest, so that resolve state is shared across the app */}
       <ConnectorBuilderResolveProvider>
-        <ConnectorBuilderEditPageInner />
+        {/* Contains the schema for the Builder form, so that it can be updated when user inputs are modified */}
+        <ConnectorBuilderSchemaProvider>
+          <ConnectorBuilderEditPageInner />
+        </ConnectorBuilderSchemaProvider>
       </ConnectorBuilderResolveProvider>
     </ConnectorBuilderLocalStorageProvider>
   </ConnectorBuilderFormManagementStateProvider>
 );
 
-const BaseForm = React.memo(({ defaultValues }: { defaultValues: React.MutableRefObject<BuilderState> }) => {
-  // if this component re-renders, everything subscribed to rhf rerenders because the context object is a new one
-  // To prevent this, the hook is placed in its own memoized component which only re-renders when necessary
-  const methods = useForm({
-    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
-    defaultValues: defaultValues.current,
-    mode: "onChange",
-  });
-
+const BaseForm = () => {
+  const methods = useFormContext<BuilderState>();
   return (
-    <FormProvider {...methods}>
-      <ConnectorBuilderMainRHFContext.Provider value={methods}>
-        <ConnectorBuilderFormStateProvider>
-          <ConnectorBuilderTestReadProvider>
-            <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
-            <FlexContainer direction="column" gap="none" className={styles.container}>
-              <MenuBar />
-              <Panels />
-            </FlexContainer>
-          </ConnectorBuilderTestReadProvider>
-        </ConnectorBuilderFormStateProvider>
-      </ConnectorBuilderMainRHFContext.Provider>
-    </FormProvider>
+    <ConnectorBuilderMainRHFContext.Provider value={methods}>
+      {/* The main state context for the Builder */}
+      <ConnectorBuilderFormStateProvider>
+        {/* Handles the state of the test reads for streams */}
+        <ConnectorBuilderTestReadProvider>
+          <HeadTitle titles={[{ id: "connectorBuilder.title" }]} />
+          <FlexContainer direction="column" gap="none" className={styles.container}>
+            <MenuBar />
+            <Panels />
+          </FlexContainer>
+        </ConnectorBuilderTestReadProvider>
+      </ConnectorBuilderFormStateProvider>
+    </ConnectorBuilderMainRHFContext.Provider>
   );
-});
-BaseForm.displayName = "BaseForm";
+};
 
 const Panels = React.memo(() => {
   const mode = useBuilderWatch("mode");

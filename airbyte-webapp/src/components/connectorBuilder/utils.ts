@@ -9,6 +9,8 @@ import {
   SimpleRetrieverPartitionRouterAnyOfItem,
 } from "core/api/types/ConnectorManifest";
 
+import { StreamId } from "./types";
+
 export function formatJson(json: unknown, order?: boolean): string {
   return JSON.stringify(order ? orderKeys(json) : json, null, 2);
 }
@@ -147,3 +149,19 @@ export function convertJsonToYaml(json: ConnectorManifest): string {
     return offset > 0 ? `\n${match}` : match;
   });
 }
+
+export const getStreamFieldPath = <T extends string>(streamId: StreamId, fieldPath?: T, templatePath?: boolean) => {
+  const basePath =
+    streamId.type === "stream"
+      ? `manifest.streams.${streamId.index}`
+      : streamId.type === "dynamic_stream"
+      ? templatePath
+        ? `manifest.dynamic_streams.${streamId.index}.stream_template`
+        : `manifest.dynamic_streams.${streamId.index}`
+      : `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}`;
+
+  if (fieldPath) {
+    return `${basePath}.${fieldPath}`;
+  }
+  return basePath;
+};

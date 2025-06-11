@@ -6,7 +6,7 @@ import { useCallback } from "react";
 import {
   DEFAULT_JSON_MANIFEST_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-} from "components/connectorBuilder/types";
+} from "components/connectorBuilder/constants";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError } from "core/api";

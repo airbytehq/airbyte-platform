@@ -19,10 +19,9 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
-import { getStreamFieldPath } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamName } from "../useStreamNames";
-import { formatJson } from "../utils";
+import { getStreamFieldPath, formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
   inferredSchema: StreamReadInferredSchema;

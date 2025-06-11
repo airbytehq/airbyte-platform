@@ -17,8 +17,8 @@ import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateServ
 import { BuilderConfigView } from "./BuilderConfigView";
 import styles from "./DynamicStreamConfigView.module.scss";
 import { StreamConfigView } from "./StreamConfigView";
-import { getStreamFieldPath, StreamId } from "../types";
-
+import { StreamId } from "../types";
+import { getStreamFieldPath } from "../utils";
 interface DynamicStreamConfigViewProps {
   streamId: StreamId;
 }
