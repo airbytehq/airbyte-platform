@@ -1,14 +1,17 @@
 import { useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 
+import { LoadingPage } from "components";
 import { HeadTitle } from "components/HeadTitle";
 import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { StepStatus, StepsIndicators } from "components/ui/StepsIndicators/StepsIndicators";
 
+import { useCreateApplication, useNonblockingListApplications } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { useAuthService } from "core/services/auth";
 
 import { EmbedCodeStep } from "./components/EmbedCodeStep";
@@ -31,17 +34,40 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
   const { isLoading: isLogoutLoading, mutateAsync: handleLogout } = useMutation(() => logout?.() ?? Promise.resolve());
   const [searchParams, setSearchParams] = useSearchParams();
   const stepSearchParam = searchParams.get(EMBEDDED_ONBOARDING_STEP_PARAM);
+  const applicationsData = useNonblockingListApplications();
+  const { mutate: createApplication } = useCreateApplication();
+
+  useEffect(() => {
+    if (
+      applicationsData.data !== undefined &&
+      !applicationsData.isLoading &&
+      Array.isArray(applicationsData.data.applications) &&
+      applicationsData.data.applications.length === 0
+    ) {
+      // Only create application if not already present
+      createApplication({ name: "Embedded Application" });
+    }
+  }, [applicationsData.data, applicationsData.isLoading, createApplication]);
 
   type StepKey = EmbeddedOnboardingStep;
-  const stepOrder: StepKey[] = [
-    EmbeddedOnboardingStep.SelectDestination,
-    EmbeddedOnboardingStep.SetupDestination,
-    EmbeddedOnboardingStep.EmbedCode,
-    EmbeddedOnboardingStep.Finish,
-  ];
-  const currentStep = stepOrder.includes(stepSearchParam as StepKey)
-    ? (stepSearchParam as StepKey)
-    : EmbeddedOnboardingStep.SelectDestination;
+  const stepOrder = useMemo<StepKey[]>(
+    () => [
+      EmbeddedOnboardingStep.SelectDestination,
+      EmbeddedOnboardingStep.SetupDestination,
+      EmbeddedOnboardingStep.EmbedCode,
+      EmbeddedOnboardingStep.Finish,
+    ],
+    []
+  );
+
+  // Memoize currentStep and onboardingSteps for efficiency
+  const currentStep = useMemo(
+    () =>
+      stepOrder.includes(stepSearchParam as StepKey)
+        ? (stepSearchParam as StepKey)
+        : EmbeddedOnboardingStep.SelectDestination,
+    [stepSearchParam, stepOrder]
+  );
 
   // If no step is specified, redirect to the first step
   useEffect(() => {
@@ -51,30 +77,40 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
     }
   }, [stepSearchParam, setSearchParams]);
 
-  const onboardingSteps: Record<StepKey, StepStatus> = {} as Record<StepKey, StepStatus>;
-  let foundCurrent = false;
-  for (const step of stepOrder) {
-    if (step === currentStep) {
-      onboardingSteps[step] = StepStatus.ACTIVE;
-      foundCurrent = true;
-    } else if (!foundCurrent) {
-      onboardingSteps[step] = StepStatus.COMPLETE;
-    } else {
-      onboardingSteps[step] = StepStatus.INCOMPLETE;
+  const onboardingSteps = useMemo(() => {
+    const steps: Record<StepKey, StepStatus> = {} as Record<StepKey, StepStatus>;
+    let foundCurrent = false;
+    for (const step of stepOrder) {
+      if (step === currentStep) {
+        steps[step] = StepStatus.ACTIVE;
+        foundCurrent = true;
+      } else if (!foundCurrent) {
+        steps[step] = StepStatus.COMPLETE;
+      } else {
+        steps[step] = StepStatus.INCOMPLETE;
+      }
     }
-  }
+    return steps;
+  }, [currentStep, stepOrder]);
 
-  const onboardingStepsLabels: Record<StepKey, React.ReactElement> = {
-    [EmbeddedOnboardingStep.SelectDestination]: <FormattedMessage id="embedded.onboarding.selectDestination" />,
-    [EmbeddedOnboardingStep.SetupDestination]: <FormattedMessage id="embedded.onboarding.setupDestination" />,
-    [EmbeddedOnboardingStep.EmbedCode]: <FormattedMessage id="embedded.onboarding.embedCode" />,
-    [EmbeddedOnboardingStep.Finish]: <FormattedMessage id="embedded.onboarding.finish" />,
-  };
+  const onboardingStepsLabels = useMemo<Record<StepKey, React.ReactElement>>(
+    () => ({
+      [EmbeddedOnboardingStep.SelectDestination]: <FormattedMessage id="embedded.onboarding.selectDestination" />,
+      [EmbeddedOnboardingStep.SetupDestination]: <FormattedMessage id="embedded.onboarding.setupDestination" />,
+      [EmbeddedOnboardingStep.EmbedCode]: <FormattedMessage id="embedded.onboarding.embedCode" />,
+      [EmbeddedOnboardingStep.Finish]: <FormattedMessage id="embedded.onboarding.finish" />,
+    }),
+    []
+  );
 
-  const steps = stepOrder.map((step) => ({
-    state: onboardingSteps[step],
-    label: onboardingStepsLabels[step],
-  }));
+  const steps = useMemo(
+    () =>
+      stepOrder.map((step) => ({
+        state: onboardingSteps[step],
+        label: onboardingStepsLabels[step],
+      })),
+    [stepOrder, onboardingSteps, onboardingStepsLabels]
+  );
 
   let StepComponent: React.ReactElement | null = null;
   switch (currentStep) {
@@ -108,7 +144,9 @@ export const EmbeddedOnboardingPageLayout: React.FC = () => {
           </Button>
         )}
       </FlexContainer>
-      {StepComponent}
+      <DefaultErrorBoundary>
+        <Suspense fallback={<LoadingPage />}>{StepComponent}</Suspense>
+      </DefaultErrorBoundary>
     </>
   );
 };

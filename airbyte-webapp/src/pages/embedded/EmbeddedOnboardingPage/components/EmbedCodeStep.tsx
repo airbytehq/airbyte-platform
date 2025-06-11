@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { FormattedMessage } from "react-intl";
 import { useSearchParams } from "react-router-dom";
 import { useEffectOnce } from "react-use";
@@ -27,9 +28,14 @@ export const EmbedCodeStep: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
   const { applications } = useListApplications();
 
-  const envContent = `AIRBYTE_ORGANIZATION_ID=${organizationId}
+  const envContent = useMemo(() => {
+    if (!organizationId || !applications[0]?.clientId || !applications[0]?.clientSecret) {
+      return "Missing application credentials. Please contact support.";
+    }
+    return `AIRBYTE_ORGANIZATION_ID=${organizationId}
 AIRBYTE_CLIENT_ID=${applications[0]?.clientId}
 AIRBYTE_CLIENT_SECRET=${applications[0]?.clientSecret}`;
+  }, [organizationId, applications]);
 
   useEffectOnce(() => searchParams.delete(DESTINATION_DEFINITION_PARAM));
 
@@ -45,7 +51,7 @@ AIRBYTE_CLIENT_SECRET=${applications[0]?.clientSecret}`;
     <Box py="2xl" mt="2xl" className={styles.content}>
       <FlexContainer direction="column" gap="xl">
         <Text as="h2" size="xl" bold>
-          <FormattedMessage id="embedded.embedCodeTitle" />
+          <FormattedMessage id="embedded.onboarding.embedCodeTitle" />
         </Text>
         <Text color="grey400">
           <FormattedMessage id="embedded.onboarding.embedCode.description" />

@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useListOrganizationsByUser, useListWorkspacesInfinite } from "core/api";
+import { DefaultErrorBoundary } from "core/errors";
 import { useCurrentUser } from "core/services/auth";
 import { RoutePaths } from "pages/routePaths";
 
@@ -22,22 +23,34 @@ export const EmbeddedOnboardingPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const organizationId = useParams<{ organizationId: string }>().organizationId;
 
-  // Set workspaceId in search params if missing, after data is loaded
-  useEffect(() => {
-    if (!searchParams.has(WORKSPACE_ID_PARAM) && workspacesData && organizationId) {
-      for (const page of workspacesData.pages ?? []) {
-        for (const workspace of page.data.workspaces) {
-          if (workspace.organizationId === organizationId) {
-            const newSearchParams = new URLSearchParams(searchParams.toString());
-            newSearchParams.set(WORKSPACE_ID_PARAM, workspace.workspaceId);
-            setSearchParams(newSearchParams);
-            break;
-          }
+  // Only compute matchingWorkspaceId if workspaceId param is missing
+  const matchingWorkspaceId = useMemo(() => {
+    if (searchParams.has(WORKSPACE_ID_PARAM) || !workspacesData || !organizationId) {
+      return undefined;
+    }
+    for (const page of workspacesData.pages ?? []) {
+      for (const workspace of page.data.workspaces) {
+        if (workspace.organizationId === organizationId) {
+          return workspace.workspaceId;
         }
       }
     }
-  }, [searchParams, workspacesData, organizationId, setSearchParams]);
-  return <EmbeddedOnboardingPageLayout />;
+    return undefined;
+  }, [searchParams, workspacesData, organizationId]);
+
+  // Set workspaceId in search params if missing, after data is loaded
+  useEffect(() => {
+    if (!searchParams.has(WORKSPACE_ID_PARAM) && matchingWorkspaceId) {
+      const newSearchParams = new URLSearchParams(searchParams.toString());
+      newSearchParams.set(WORKSPACE_ID_PARAM, matchingWorkspaceId);
+      setSearchParams(newSearchParams);
+    }
+  }, [searchParams, matchingWorkspaceId, setSearchParams]);
+  return (
+    <DefaultErrorBoundary>
+      <EmbeddedOnboardingPageLayout />
+    </DefaultErrorBoundary>
+  );
 };
 
 export const EmbeddedOnboardingRedirect: React.FC = () => {
@@ -56,9 +69,9 @@ export const EmbeddedOnboardingRedirect: React.FC = () => {
   if (organizations.length === 0) {
     // If no organizations are found, redirect to the workspaces page
     return (
-      <div>
+      <DefaultErrorBoundary>
         <EmbeddedUpsell />
-      </div>
+      </DefaultErrorBoundary>
     );
   }
 
