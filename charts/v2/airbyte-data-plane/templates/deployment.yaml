@@ -42,23 +42,15 @@ spec:
               value: "-Xdebug -agentlib:jdwp=transport=dt_socket,address=0.0.0.0:{{ .Values.workloadLauncher.debug.remoteDebugPort }},server=y,suspend=n"
             {{- end}}
 
-            {{- if (or (eq .Values.edition "community") (eq .Values.edition "enterprise")) }}
-            - name: AIRBYTE_API_AUTH_HEADER_VALUE
-              value: "Internal worker"
-            {{- end }}
-
             {{- include "airbyte-data-plane.common.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.dataPlane.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.jobs.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.jobs.errors.envs" . | nindent 12 }}
-            {{- include "airbyte-data-plane.keycloak.client.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.logging.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.metrics.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.micronaut.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.storage.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.secretsManager.envs" . | nindent 12 }}
-            {{- include "airbyte-data-plane.temporal.envs" . | nindent 12 }}
-            {{- include "airbyte-data-plane.temporal.worker.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.tracking.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.worker.envs" . | nindent 12 }}
             {{- include "airbyte-data-plane.workloadApiServer.envs" . | nindent 12 }}
@@ -70,10 +62,6 @@ spec:
 
             {{- if (eq .Values.edition "enterprise") }}
             {{- include "airbyte-data-plane.enterprise.envs" . | nindent 12 }}
-            {{- end }}
-
-            {{- if (eq .Values.edition "cloud") }}
-            {{- include "airbyte-data-plane.temporal.cloud.envs" . | nindent 12 }}
             {{- end }}
 
             {{- if .Values.workloadLauncher.extraEnv }}
