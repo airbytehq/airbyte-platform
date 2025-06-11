@@ -38,7 +38,6 @@ object ConnectionReadMapper {
   fun from(
     connectionRead: ConnectionRead,
     workspaceId: UUID?,
-    dataplaneGroupName: String,
   ): ConnectionResponse {
     val streamConfigurations =
       connectionRead.syncCatalog?.let { catalog ->
@@ -92,7 +91,6 @@ object ConnectionReadMapper {
       workspaceId = workspaceId.toString(),
       status = ConnectionStatusEnum.valueOf(connectionRead.status.toString().uppercase()),
       schedule = connectionScheduleResponse,
-      dataResidency = dataplaneGroupName.lowercase(),
       configurations = streamConfigurations,
       nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },

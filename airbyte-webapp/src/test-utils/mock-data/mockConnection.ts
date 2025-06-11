@@ -13,7 +13,6 @@ export const mockConnection: WebBackendConnectionRead = {
   prefix: "",
   sourceId: "a3295ed7-4acf-4c0b-b16b-07a00e624a52",
   destinationId: "083a53bc-8bc2-4dc0-b05a-4273a96f3b93",
-  dataplaneGroupId: "0237b411-8027-476c-bef5-f300eeb6ed44",
   syncCatalog: {
     streams: [
       {

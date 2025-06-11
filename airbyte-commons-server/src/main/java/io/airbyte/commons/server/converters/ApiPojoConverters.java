@@ -164,8 +164,6 @@ public class ApiPojoConverters {
         .sourceCatalogId(standardSync.getSourceCatalogId())
         .destinationCatalogId(standardSync.getDestinationCatalogId())
         .breakingChange(standardSync.getBreakingChange())
-        .dataplaneGroupId(standardSync.getDataplaneGroupId())
-        .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .nonBreakingChangesPreference(Enums.convertTo(standardSync.getNonBreakingChangesPreference(), NonBreakingChangesPreference.class))
         .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class))
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())

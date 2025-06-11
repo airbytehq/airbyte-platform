@@ -148,7 +148,6 @@ public class DbConverter {
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
         .withDestinationCatalogId(record.get(CONNECTION.DESTINATION_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
-        .withDataplaneGroupId(record.get(CONNECTION.DATAPLANE_GROUP_ID))
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())

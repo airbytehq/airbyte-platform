@@ -228,8 +228,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withDataplaneGroupId(dataplaneGroupId);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 
@@ -318,8 +317,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withDataplaneGroupId(dataplaneGroupId);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 

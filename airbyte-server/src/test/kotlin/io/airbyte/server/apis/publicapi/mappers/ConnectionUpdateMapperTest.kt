@@ -26,7 +26,6 @@ class ConnectionUpdateMapperTest {
   fun testConnectionUpdateMapper() {
     val connectionId = UUID.randomUUID()
     val catalogId = UUID.randomUUID()
-    val dataplaneGroupId = UUID.randomUUID()
 
     val catalog =
       AirbyteCatalog().apply {
@@ -71,11 +70,10 @@ class ConnectionUpdateMapperTest {
           }
         this.scheduleData = connectionScheduleData
         this.connectionId = connectionId
-        this.dataplaneGroupId = dataplaneGroupId
       }
     Assertions.assertEquals(
       expectedOssConnectionUpdateRequest,
-      ConnectionUpdateMapper.from(connectionId, connectionPatchRequest, catalogId, catalog, dataplaneGroupId),
+      ConnectionUpdateMapper.from(connectionId, connectionPatchRequest, catalogId, catalog),
     )
   }
 }

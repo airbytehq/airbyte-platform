@@ -17888,7 +17888,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -17924,7 +17924,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
@@ -18158,7 +18158,6 @@ components:
         - workspaceId
         - status
         - schedule
-        - dataResidency
         - configurations
         - createdAt
         - tags
@@ -18181,8 +18180,6 @@ components:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
-        dataResidency:
-          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -18780,7 +18777,6 @@ components:
           - schedule:
               scheduleType: manual
           - status: active
-          - dataResidency: auto
       x-sdk-component: true
     SourcesResponse:
       title: Root Type for SourcesResponse

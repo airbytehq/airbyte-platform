@@ -106,7 +106,6 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
-import io.airbyte.config.Configs;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.FieldSelectionData;
@@ -123,7 +122,6 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
-import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.StreamSyncStats;
 import io.airbyte.config.helpers.CatalogHelpers;
@@ -139,7 +137,6 @@ import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
-import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
@@ -237,7 +234,6 @@ public class ConnectionsHandler {
   private final DestinationService destinationService;
   private final ConnectionService connectionService;
   private final WorkspaceService workspaceService;
-  private final DataplaneGroupService dataplaneGroupService;
   private final LicenseEntitlementChecker licenseEntitlementChecker;
   private final DestinationCatalogGenerator destinationCatalogGenerator;
   private final CatalogConverter catalogConverter;
@@ -246,7 +242,6 @@ public class ConnectionsHandler {
 
   private final ConnectionScheduleHelper connectionScheduleHelper;
   private final MetricClient metricClient;
-  private final Configs.AirbyteEdition airbyteEdition;
 
   // TODO: Worth considering how we might refactor this. The arguments list feels a little long.
   @Inject
@@ -273,7 +268,6 @@ public class ConnectionsHandler {
                             final DestinationService destinationService,
                             final ConnectionService connectionService,
                             final WorkspaceService workspaceService,
-                            final DataplaneGroupService dataplaneGroupService,
                             final DestinationCatalogGenerator destinationCatalogGenerator,
                             final CatalogConverter catalogConverter,
                             final ApplySchemaChangeHelper applySchemaChangeHelper,
@@ -282,8 +276,7 @@ public class ConnectionsHandler {
                             final MapperSecretHelper mapperSecretHelper,
                             final MetricClient metricClient,
                             final LicenseEntitlementChecker licenseEntitlementChecker,
-                            final ContextBuilder contextBuilder,
-                            final Configs.AirbyteEdition airbyteEdition) {
+                            final ContextBuilder contextBuilder) {
     this.jobPersistence = jobPersistence;
     this.catalogService = catalogService;
     this.uuidGenerator = uuidGenerator;
@@ -307,7 +300,6 @@ public class ConnectionsHandler {
     this.destinationService = destinationService;
     this.connectionService = connectionService;
     this.workspaceService = workspaceService;
-    this.dataplaneGroupService = dataplaneGroupService;
     this.destinationCatalogGenerator = destinationCatalogGenerator;
     this.catalogConverter = catalogConverter;
     this.applySchemaChangeHelper = applySchemaChangeHelper;
@@ -317,7 +309,6 @@ public class ConnectionsHandler {
     this.metricClient = metricClient;
     this.licenseEntitlementChecker = licenseEntitlementChecker;
     this.contextBuilder = contextBuilder;
-    this.airbyteEdition = airbyteEdition;
   }
 
   /**
@@ -410,10 +401,6 @@ public class ConnectionsHandler {
 
     if (patch.getTags() != null) {
       sync.setTags(patch.getTags().stream().map(apiPojoConverters::toInternalTag).toList());
-    }
-
-    if (patch.getDataplaneGroupId() != null) {
-      sync.setDataplaneGroupId(patch.getDataplaneGroupId());
     }
   }
 
@@ -582,7 +569,6 @@ public class ConnectionsHandler {
         .withStatus(apiPojoConverters.toPersistenceStatus(connectionCreate.getStatus()))
         .withSourceCatalogId(connectionCreate.getSourceCatalogId())
         .withDestinationCatalogId(connectionCreate.getDestinationCatalogId())
-        .withDataplaneGroupId(getDataplaneGroupIdFromConnectionCreateOrWorkspace(connectionCreate))
         .withBreakingChange(false)
         .withNotifySchemaChanges(connectionCreate.getNotifySchemaChanges())
         .withNonBreakingChangesPreference(
@@ -661,24 +647,6 @@ public class ConnectionsHandler {
     }
 
     return buildConnectionRead(connectionId);
-  }
-
-  @VisibleForTesting
-  UUID getDataplaneGroupIdFromConnectionCreateOrWorkspace(final ConnectionCreate connectionCreate)
-      throws JsonValidationException, ConfigNotFoundException, IOException {
-
-    if (connectionCreate.getDataplaneGroupId() != null) {
-      return connectionCreate.getDataplaneGroupId();
-    } else {
-      // connectionCreate didn't specify a dataplane group ID, so use the workspace default if one exists
-      final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(connectionCreate.getSourceId());
-      final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
-
-      if (workspace.getDataplaneGroupId() != null) {
-        return workspace.getDataplaneGroupId();
-      }
-    }
-    return dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).getId();
   }
 
   private void populateSyncFromLegacySchedule(final StandardSync standardSync, final ConnectionCreate connectionCreate) {

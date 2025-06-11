@@ -173,7 +173,6 @@ public class ConnectionHelpers {
                                                               final UUID destinationId,
                                                               final List<UUID> operationIds,
                                                               final UUID sourceCatalogId,
-                                                              final UUID dataplaneGroupId,
                                                               final boolean breaking,
                                                               final Boolean notifySchemaChange,
                                                               final Boolean notifySchemaChangeByEmail,
@@ -199,7 +198,6 @@ public class ConnectionHelpers {
             .memoryRequest(TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
             .memoryLimit(TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
         .sourceCatalogId(sourceCatalogId)
-        .dataplaneGroupId(dataplaneGroupId)
         .breakingChange(breaking)
         .notifySchemaChanges(notifySchemaChange)
         .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
@@ -214,7 +212,6 @@ public class ConnectionHelpers {
         standardSync.getDestinationId(),
         standardSync.getOperationIds(),
         standardSync.getSourceCatalogId(),
-        standardSync.getDataplaneGroupId(),
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
         standardSync.getNotifySchemaChangesByEmail(),
@@ -251,7 +248,6 @@ public class ConnectionHelpers {
         .namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceCatalogId(standardSync.getSourceCatalogId())
-        .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .breakingChange(standardSync.getBreakingChange())
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());

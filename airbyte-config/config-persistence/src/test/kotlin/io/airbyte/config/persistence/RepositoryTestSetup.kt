@@ -203,7 +203,6 @@ open class RepositoryTestSetup {
       connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
-          .withDataplaneGroupId(dataplaneGroupId)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
@@ -213,7 +212,6 @@ open class RepositoryTestSetup {
       connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
-          .withDataplaneGroupId(dataplaneGroupId)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
