@@ -131,13 +131,21 @@ val copyWebapp =
   tasks.register<Copy>("copyWebapp") {
     from("${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app")
     into("${project.layout.projectDirectory}/src/main/resources/webapp")
+
+    doFirst {
+      val src = "${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app"
+      if (!file(src).exists()) {
+        throw GradleException("source file $src does not exist")
+      }
+    }
+
     dependsOn(
-      project(":oss:airbyte-webapp").tasks.named("build"),
+      project(":oss:airbyte-webapp").tasks.named("assemble"),
       "spotlessStyling",
     )
   }
 
-tasks.named("dockerBuildImage") {
+tasks.named("assemble") {
   dependsOn(copyWebapp)
 }
 
