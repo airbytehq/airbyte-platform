@@ -4,9 +4,11 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Dataplane
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.data.services.PermissionDao
@@ -24,6 +26,7 @@ private val logger = KotlinLogging.logger {}
 @Singleton
 open class DataplaneServiceDataImpl(
   private val repository: DataplaneRepository,
+  private val groupRepository: DataplaneGroupRepository,
   private val serviceAccountsService: ServiceAccountsService,
   private val permissionDao: PermissionDao,
 ) : DataplaneService {
@@ -46,7 +49,10 @@ open class DataplaneServiceDataImpl(
   }
 
   @Transactional("config")
-  override fun createDataplaneAndServiceAccount(dataplane: Dataplane): DataplaneWithServiceAccount {
+  override fun createDataplaneAndServiceAccount(
+    dataplane: Dataplane,
+    instanceScope: Boolean,
+  ): DataplaneWithServiceAccount {
     if (dataplane.id == null) {
       throw DataplaneIdMissingException("Dataplane is missing an id, cannot create")
     }
@@ -54,6 +60,11 @@ open class DataplaneServiceDataImpl(
     if (repository.existsById(dataplane.id)) {
       throw DataplaneAlreadyExistsException("Dataplane with id ${dataplane.id} already exists, cannot create")
     }
+
+    val group =
+      groupRepository.findById(dataplane.dataplaneGroupId).orElseThrow {
+        ConfigNotFoundException(ConfigSchema.DATAPLANE_GROUP, dataplane.dataplaneGroupId.toString())
+      }
 
     val serviceAccountName = "dataplane-${dataplane.id}"
     logger.info { "Creating dataplane service account: name=$serviceAccountName" }
@@ -65,12 +76,16 @@ open class DataplaneServiceDataImpl(
     val dataplaneConfigModel = repository.save(entity).toConfigModel()
 
     // we must grant the newly created service account the dataplane permission as well
-    permissionDao.createServiceAccountPermission(
+    val perm =
       Permission()
         .withPermissionId(UUID.randomUUID())
         .withServiceAccountId(serviceAccount.id)
-        .withPermissionType(Permission.PermissionType.DATAPLANE),
-    )
+        .withPermissionType(Permission.PermissionType.DATAPLANE)
+
+    if (!instanceScope) {
+      perm.withOrganizationId(group.organizationId)
+    }
+    permissionDao.createServiceAccountPermission(perm)
 
     return DataplaneWithServiceAccount(dataplaneConfigModel, serviceAccount)
   }

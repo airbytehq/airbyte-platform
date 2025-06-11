@@ -84,12 +84,14 @@ class DataplaneInitializer(
     // If we're here, then we have one dataplane group and no dataplanes associated with it
     val dataplaneAndServiceAccount =
       service.createDataplaneAndServiceAccount(
-        Dataplane().apply {
-          id = UUID.randomUUID()
-          dataplaneGroupId = group.id
-          name = group.name
-          enabled = true
-        },
+        dataplane =
+          Dataplane().apply {
+            id = UUID.randomUUID()
+            dataplaneGroupId = group.id
+            name = group.name
+            enabled = true
+          },
+        instanceScope = true,
       )
     log.info { "Successfully created dataplane ${dataplaneAndServiceAccount.dataplane.name} (${dataplaneAndServiceAccount.dataplane.id})" }
 

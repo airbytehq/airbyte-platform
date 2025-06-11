@@ -95,7 +95,7 @@ class DataplaneInitializerTest {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
     every { service.listDataplanes(dpg.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
-    every { service.createDataplaneAndServiceAccount(capture(dpSlot)) } answers { dataplaneWithServiceAccount }
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
 
     val initializer =
       DataplaneInitializer(
@@ -112,7 +112,7 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify {
-      service.createDataplaneAndServiceAccount(dpSlot.captured)
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
       K8sSecretHelper.createOrUpdateSecret(
         k8sClient,
         SECRET_NAME,
@@ -143,7 +143,7 @@ class DataplaneInitializerTest {
 
     initializer.createDataplaneIfNotExists()
 
-    verify(exactly = 0) { service.createDataplaneAndServiceAccount(any()) }
+    verify(exactly = 0) { service.createDataplaneAndServiceAccount(any(), any()) }
     verify {
       k8sClient wasNot Called
     }
@@ -154,7 +154,7 @@ class DataplaneInitializerTest {
     every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
-    every { service.createDataplaneAndServiceAccount(capture(dpSlot)) } answers { dataplaneWithServiceAccount }
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
     every { k8sClient.namespace } returns "ab"
 
     val initializer =
@@ -172,7 +172,7 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify {
-      service.createDataplaneAndServiceAccount(dpSlot.captured)
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
       K8sSecretHelper.createOrUpdateSecret(
         k8sClient,
         SECRET_NAME,

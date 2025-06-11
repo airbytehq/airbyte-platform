@@ -61,7 +61,7 @@ open class DataplaneController(
 
     // this function will also create a service account
     // for the dataplane and grant that account the appropriate permissions.
-    val dataplaneWithServiceAccount = dataplaneService.createNewDataplane(dataplane)
+    val dataplaneWithServiceAccount = dataplaneService.createNewDataplane(dataplane, dataplaneCreateRequestBody.instanceScope)
 
     return DataplaneCreateResponse()
       .dataplaneId(dataplaneWithServiceAccount.dataplane.id)

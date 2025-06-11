@@ -23,7 +23,10 @@ interface DataplaneService {
    * Create a new dataplane. This also creates a service account for the dataplane
    * and returns the account's credentials.
    */
-  fun createDataplaneAndServiceAccount(dataplane: Dataplane): DataplaneWithServiceAccount
+  fun createDataplaneAndServiceAccount(
+    dataplane: Dataplane,
+    instanceScope: Boolean = false,
+  ): DataplaneWithServiceAccount
 
   /**
    * List all dataplanes matching the provided dataplane group ID

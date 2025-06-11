@@ -6,8 +6,10 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.repositories.entities.Dataplane
+import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.data.services.PermissionDao
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
@@ -31,9 +33,11 @@ private const val MOCK_SERVICE_ACCOUNT_SECRET = "secret"
 
 class DataplaneServiceDataImplTest {
   private val dataplaneRepository = mockk<DataplaneRepository>()
+  private val dataplaneGroupRepository = mockk<DataplaneGroupRepository>()
   private val serviceAccountsService = mockk<ServiceAccountsService>()
   private val permissionDao = mockk<PermissionDao>()
-  private var dataplaneServiceDataImpl = DataplaneServiceDataImpl(dataplaneRepository, serviceAccountsService, permissionDao)
+  private var dataplaneServiceDataImpl =
+    DataplaneServiceDataImpl(dataplaneRepository, dataplaneGroupRepository, serviceAccountsService, permissionDao)
 
   @BeforeEach
   fun reset() {
@@ -68,8 +72,10 @@ class DataplaneServiceDataImplTest {
     val dataplane = createDataplane(dataplaneId)
     val dataplaneWithServiceAccount = createDataplaneWithServiceAccount(dataplaneId)
     val serviceAccount = createServiceAccount(dataplaneId)
+    val group = DataplaneGroup(organizationId = UUID.randomUUID(), name = "org", enabled = true, tombstone = false)
 
     every { dataplaneRepository.existsById(dataplane.id) } returns false
+    every { dataplaneGroupRepository.findById(dataplane.dataplaneGroupId) } returns Optional.of(group)
     every { dataplaneRepository.save(any()) } returns dataplane
     every { serviceAccountsService.create(any(), any(), any()) } returns serviceAccount
     every { permissionDao.createServiceAccountPermission(any()) } returns mockk<Permission>()

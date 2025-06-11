@@ -19234,6 +19234,9 @@ components:
           type: string
         enabled:
           type: boolean
+        instanceScope:
+          type: boolean
+          default: false
     DataplaneCreateResponse:
       type: object
       required:

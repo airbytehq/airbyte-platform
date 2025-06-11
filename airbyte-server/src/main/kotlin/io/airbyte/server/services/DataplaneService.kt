@@ -71,7 +71,10 @@ open class DataplaneService(
     }
   }
 
-  fun createNewDataplane(dataplane: Dataplane): DataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(dataplane)
+  fun createNewDataplane(
+    dataplane: Dataplane,
+    instanceScope: Boolean,
+  ): DataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(dataplane, instanceScope)
 
   fun getDataplaneByServiceAccountId(serviceAccountId: String) = dataplaneDataService.getDataplaneByServiceAccountId(serviceAccountId)
 }
