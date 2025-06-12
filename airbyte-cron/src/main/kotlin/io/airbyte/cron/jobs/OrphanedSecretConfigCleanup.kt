@@ -72,7 +72,12 @@ class OrphanedSecretConfigCleanup(
 
         val secretPersistence =
           secretPersistenceMap.getOrPut(secretConfig.secretStorageId) {
-            secretPersistenceService.getPersistenceByStorageId(SecretStorageId(secretConfig.secretStorageId))
+            log.info { "Fetching persistence for storage ID: ${secretConfig.secretStorageId}" }
+            val persistence = secretPersistenceService.getPersistenceByStorageId(SecretStorageId(secretConfig.secretStorageId))
+            log.info {
+              "Got persistence for storage ID ${secretConfig.secretStorageId};  Persistence type: ${persistence::class.simpleName}"
+            }
+            persistence
           }
 
         val coordinate = SecretCoordinate.AirbyteManagedSecretCoordinate.fromFullCoordinate(secretConfig.externalCoordinate)
@@ -81,7 +86,9 @@ class OrphanedSecretConfigCleanup(
           continue
         }
 
-        log.info { "Deleting: ${coordinate.fullCoordinate}" }
+        log.info {
+          "Deleting: ${coordinate.fullCoordinate} from storage ID ${secretConfig.secretStorageId} (persistence: ${secretPersistence::class.simpleName})"
+        }
         secretPersistence.delete(coordinate)
         deletedIds.add(secretConfig.id)
 
