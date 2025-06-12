@@ -339,6 +339,10 @@ enum class OssMetricsRegistry(
     metricName = "state_buffering",
     metricDescription = "number of state messages being buffered before a flush",
   ),
+  STATE_CHECKSUM_COUNT_ERROR(
+    metricName = "state_checksum_error",
+    metricDescription = "number of state checksum errors for a given connection",
+  ),
   STATE_COMMIT_ATTEMPT(
     metricName = "state_commit_attempt",
     metricDescription = "number of attempts to commit states from the orchestrator/workers",
