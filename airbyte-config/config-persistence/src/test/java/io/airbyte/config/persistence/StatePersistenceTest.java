@@ -87,7 +87,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws DatabaseInitializationException, IOException, JsonValidationException, SQLException {
     truncateAllTables();
 
-    statePersistence = new StatePersistence(database);
+    statePersistence = new StatePersistence(database, new ConnectionServiceJooqImpl(database));
 
     final var featureFlagClient = mock(TestClient.class);
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
