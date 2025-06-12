@@ -53,6 +53,21 @@ micronaut:
           enabled: false
       web:
         enabled: ${MICROMETER_METRICS_ENABLED:false}
+  http:
+    services:
+      tracing:
+        enabled: ${HTTP_TRACING_ENABLED:true}  # Enable HTTP request tracing
+    client:
+      tracing:
+        enabled: ${HTTP_CLIENT_TRACING_ENABLED:true}  # Enable HTTP client tracing
+  tracing:
+    opentelemetry:
+      enabled: ${MICRONAUT_TRACING_ENABLED:true}
+      http:
+        server:
+          enabled: ${HTTP_SERVER_TRACING_ENABLED:true}
+        client:
+          enabled: ${HTTP_CLIENT_TRACING_ENABLED:true}
     export:
       otlp:
         enabled: ${MICROMETER_METRICS_OTLP_ENABLED:false}

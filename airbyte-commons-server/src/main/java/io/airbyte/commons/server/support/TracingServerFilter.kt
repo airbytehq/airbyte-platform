@@ -4,21 +4,21 @@
 
 package io.airbyte.commons.server.support
 
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micrometer.core.instrument.Timer
-import io.micronaut.context.annotation.Requires
 import io.micronaut.http.BasicHttpAttributes
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.annotation.RequestFilter
 import io.micronaut.http.annotation.ResponseFilter
 import io.micronaut.http.annotation.ServerFilter
+import io.opentelemetry.api.trace.Span
 import kotlin.jvm.optionals.getOrNull
+import org.slf4j.MDC
 
 private val logger = KotlinLogging.logger {}
 private const val TRACE_ATTR = "io.airbyte.trace"
@@ -34,13 +34,8 @@ private const val TRACE_ATTR = "io.airbyte.trace"
  *    - http details (e.g. method, route, status)
  *    - referenced Airbyte IDs (e.g. workspace ID, org ID, source ID, etc)
  *    - error details
- *
- *  Note: This filter will only be available if the [UserPersistence] bean is also available.  The reason for this dependency
- *  is that both implementations of the [CurrentUserService] have a dependency on [UserPersistence] but not every `/api/` endpoint
- *  (i.e. connector-builder) has access to the database, which [UserPersistence] requires. A better solution should be sought here.
  */
 @ServerFilter("/api/**")
-@Requires(beans = [UserPersistence::class])
 class TracingServerFilter(
   val currentUserService: CurrentUserService,
   val authenticationHeaderResolver: AuthenticationHeaderResolver,
@@ -54,6 +49,15 @@ class TracingServerFilter(
     // the trace in the response handler traceResponse() below.
     req.setAttribute(TRACE_ATTR, trace)
 
+
+    // ADD THE OPENTELEMETRY CODE HERE (after line 46):
+    // Get current OpenTelemetry span
+    val currentSpan = Span.current()
+    if (currentSpan.spanContext.isValid) {
+        MDC.put("trace_id", currentSpan.spanContext.traceId)
+        MDC.put("span_id", currentSpan.spanContext.spanId)
+    }
+
     // This should never be allowed to fail, as it could cause all API traffic to fail,
     // so be extra cautious here and surround everything with try/catch.
     try {
@@ -66,11 +70,7 @@ class TracingServerFilter(
           trace.user["companyName"] = it.companyName
         }
       } catch (e: Exception) {
-        // This leads to super noisy logs currently,
-        // because some endpoints (such as health) never have a user.
-        // The CurrentUserService should probably return an Optional (or kotlin nullable)
-        // instead of throwing an exception to distinguish between expected + no user vs unexpected error.
-        // logger.debug(e) { "failed to get current user" }
+        logger.error(e) { "failed to get current user" }
       }
 
       // trace http details
@@ -140,17 +140,18 @@ class TracingServerFilter(
 
       trace.http["status"] = resp.code().toString()
 
-      ApmTraceUtils.addTagsToTrace(trace.user.toMap(), "user")
-      ApmTraceUtils.addTagsToTrace(trace.http.toMap(), "http")
-      ApmTraceUtils.addTagsToTrace(trace.refs.toMap(), "refs")
+      ApmTraceUtils.addTagsToTrace(trace.user as Map<String, Any>, "user")
+      ApmTraceUtils.addTagsToTrace(trace.http as Map<String, Any>, "http")
+      ApmTraceUtils.addTagsToTrace(trace.refs as Map<String, Any>, "refs")
 
       val metricAttrs = mutableListOf<MetricAttribute>()
+      metricAttrs.add("user", trace.user)
+      metricAttrs.add("http", trace.http)
+      metricAttrs.add("refs", trace.refs)
 
-      // Only record a subset of attributes to the metric,
-      // because each unique tag value costs money in Datadog.
-      metricAttrs.add("user", trace.user, listOf("userId", "authUserId"))
-      metricAttrs.add("http", trace.http, listOf("route"))
-      metricAttrs.add("refs", trace.refs, listOf("workspaceId", "organizationId"))
+      if (trace.traceError != null) {
+        metricAttrs.add(MetricAttribute("trace_error", "true"))
+      }
 
       if (throwable != null) {
         metricAttrs.add(MetricAttribute("error", "true"))
@@ -163,6 +164,10 @@ class TracingServerFilter(
         ?.also { trace.start.stop(it) }
     } catch (e: Exception) {
       logger.error(e) { "failed to trace response" }
+    } finally {
+      // Clean up MDC to prevent memory leaks
+      MDC.remove("trace_id")
+      MDC.remove("span_id")
     }
   }
 }
@@ -184,11 +189,9 @@ private fun getRouteVariables(req: HttpRequest<*>): Map<String, Any> =
 private fun MutableList<MetricAttribute>.add(
   prefix: String,
   attrs: Map<String, String?>,
-  keys: List<String>,
 ) {
   attrs
     .filterValues { it != null }
-    .filterKeys { keys.contains(it) }
     .forEach { (k, v) ->
       this.add(MetricAttribute("$prefix.$k", v!!))
     }

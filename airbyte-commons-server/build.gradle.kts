@@ -13,6 +13,7 @@ dependencies {
   ksp(libs.micronaut.jaxrs.processor)
 
   implementation(platform(libs.micronaut.platform))
+  implementation("io.opentelemetry:opentelemetry-api")
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.datadog)
   implementation(libs.micronaut.cache.caffeine)
