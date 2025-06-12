@@ -2242,4 +2242,4 @@ featureflag-server:
 testWebapp:
   image:
     repository: airbyte/airbyte-base-java-image
-    tag: 3.3.5
+    tag: 3.3.6
