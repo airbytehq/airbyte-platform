@@ -2455,7 +2455,7 @@
   "billing.banners.gracePeriodPaymentStatus": "Please update your payment method to keep using Airbyte. Otherwise your syncs will be disabled {days, plural, =0 {very soon} one {in # day} other {in # days}}.",
   "billing.banners.gracePeriodPaymentStatusWithLink": "Please <lnk>update your payment method</lnk> to keep using Airbyte. Otherwise your syncs will be disabled {days, plural, =0 {very soon} one {in # day} other {in # days}}.",
   "billing.banners.preTrial": "Your 14-day trial of Airbyte will start once your first sync has succeeded.",
-  "billing.banners.inTrial": "Your trial ends in {days, plural, =0 {today} one {# day} other {# days}}. Subscribe today to keep using Airbyte after your trial ends.",
+  "billing.banners.inTrial": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}. Subscribe today to keep using Airbyte after your trial ends.",
   "billing.banners.inTrialWithLink": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}. <lnk>Subscribe today</lnk> to keep using Airbyte after your trial ends.",
   "billing.banners.inTrialWithPaymentMethod": "Your trial ends {days, plural, =0 {today} one {in # day} other {in # days}}.",
   "billing.banners.postTrial": "Subscribe to Airbyte today to keep your syncs running.",
