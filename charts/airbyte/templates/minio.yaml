@@ -22,6 +22,9 @@ spec:
           resources:
             requests:
               storage: {{ .Values.minio.storage.volumeClaimValue  }}
+          {{- with .Values.minio.storage.storageClassName }}
+          storageClassName: {{ . }}
+          {{- end }}
   template:
     metadata:
       labels:
