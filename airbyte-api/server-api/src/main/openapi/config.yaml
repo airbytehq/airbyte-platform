@@ -19220,9 +19220,6 @@ components:
         - name
         - enabled
       properties:
-        organization_id:
-          type: string
-          format: UUID
         dataplane_group_id:
           type: string
           format: UUID
