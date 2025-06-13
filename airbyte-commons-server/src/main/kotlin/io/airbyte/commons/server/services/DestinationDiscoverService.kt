@@ -131,9 +131,18 @@ class DestinationDiscoverService(
       ),
     )
 
-  fun actorCatalogToDestinationCatalog(actorCatalog: ActorCatalog): DestinationCatalogWithId =
-    DestinationCatalogWithId(
-      catalogId = DestinationCatalogId(actorCatalog.id),
-      catalog = Jsons.`object`(actorCatalog.catalog, ProtocolDestinationCatalog::class.java).toModel(),
-    )
+  companion object {
+    /**
+     * Converts an ActorCatalog to a DestinationCatalogWithId.
+     *
+     * @param actorCatalog the ActorCatalog to convert.
+     * @return the converted DestinationCatalogWithId.
+     */
+    @JvmStatic
+    fun actorCatalogToDestinationCatalog(actorCatalog: ActorCatalog): DestinationCatalogWithId =
+      DestinationCatalogWithId(
+        catalogId = DestinationCatalogId(actorCatalog.id),
+        catalog = Jsons.`object`(actorCatalog.catalog, ProtocolDestinationCatalog::class.java).toModel(),
+      )
+  }
 }

@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers;
 import static io.airbyte.commons.converters.ConnectionHelper.validateCatalogDoesntContainDuplicateStreamNames;
 import static io.airbyte.config.Job.REPLICATION_TYPES;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
@@ -66,6 +67,11 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem;
 import io.airbyte.api.problems.model.generated.ProblemConnectionUnsupportedFileTransfersData;
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogAdditionalFieldData;
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogOperationData;
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogRequiredData;
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogRequiredFieldData;
+import io.airbyte.api.problems.model.generated.ProblemDestinationCatalogStreamData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorsData;
@@ -73,6 +79,11 @@ import io.airbyte.api.problems.model.generated.ProblemMessageData;
 import io.airbyte.api.problems.model.generated.ProblemStreamDataItem;
 import io.airbyte.api.problems.throwable.generated.ConnectionConflictingStreamProblem;
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingObjectNameProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequiredFieldProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem;
@@ -82,6 +93,7 @@ import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.json.JsonSchemas;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.protocol.CatalogDiffHelpers;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
@@ -99,6 +111,7 @@ import io.airbyte.commons.server.handlers.helpers.NotificationHelper;
 import io.airbyte.commons.server.handlers.helpers.PaginationHelper;
 import io.airbyte.commons.server.handlers.helpers.StatsAggregationHelper;
 import io.airbyte.commons.server.scheduler.EventRunner;
+import io.airbyte.commons.server.services.DestinationDiscoverService;
 import io.airbyte.commons.server.validation.CatalogValidator;
 import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
@@ -107,7 +120,11 @@ import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptWithJobInfo;
 import io.airbyte.config.BasicSchedule;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
+import io.airbyte.config.ConfiguredAirbyteStream;
+import io.airbyte.config.DestinationCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationOperation;
+import io.airbyte.config.Field;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig.ConfigType;
@@ -147,7 +164,10 @@ import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
 import io.airbyte.featureflag.CheckWithCatalog;
+import io.airbyte.featureflag.Connection;
+import io.airbyte.featureflag.EnableDestinationCatalogValidation;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
@@ -228,7 +248,6 @@ public class ConnectionsHandler {
   private final StatePersistence statePersistence;
   private final MapperSecretHelper mapperSecretHelper;
   private final ContextBuilder contextBuilder;
-
   private final CatalogService catalogService;
   private final SourceService sourceService;
   private final DestinationService destinationService;
@@ -604,6 +623,20 @@ public class ConnectionsHandler {
             null);
       }
 
+      if (featureFlagClient.boolVariation(EnableDestinationCatalogValidation.INSTANCE, new Workspace(workspaceId))) {
+        final boolean hasDestinationCatalog = connectionCreate.getDestinationCatalogId() != null;
+        if (destinationVersion.getSupportsDataActivation() && !hasDestinationCatalog) {
+          throw new DestinationCatalogRequiredProblem(new ProblemDestinationCatalogRequiredData()
+              .destinationId(connectionCreate.getDestinationId()));
+        }
+
+        if (hasDestinationCatalog) {
+          final DestinationCatalog destinationCatalog = DestinationDiscoverService
+              .actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(connectionCreate.getDestinationCatalogId())).getCatalog();
+          validateCatalogWithDestinationCatalog(connectionCreate.getSyncCatalog(), destinationCatalog);
+        }
+      }
+
       applyDefaultIncludeFiles(connectionCreate.getSyncCatalog(), sourceVersion, destinationVersion);
       assignIdsToIncomingMappers(connectionCreate.getSyncCatalog());
       final ConfiguredAirbyteCatalog configuredCatalog =
@@ -760,6 +793,25 @@ public class ConnectionsHandler {
           .getDestinationVersion(destinationDefinition, workspaceId, sync.getDestinationId());
       validateCatalogIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
       applyDefaultIncludeFiles(connectionPatch.getSyncCatalog(), sourceVersion, destinationVersion);
+
+      if (featureFlagClient.boolVariation(EnableDestinationCatalogValidation.INSTANCE,
+          new Multi(List.of(new Workspace(workspaceId), new Connection(sync.getConnectionId()))))) {
+        final UUID destCatalogId = connectionPatch.getDestinationCatalogId() != null
+            ? connectionPatch.getDestinationCatalogId()
+            : sync.getDestinationCatalogId();
+        final boolean hasDestinationCatalog = destCatalogId != null;
+
+        if (destinationVersion.getSupportsDataActivation() && !hasDestinationCatalog) {
+          throw new DestinationCatalogRequiredProblem(new ProblemDestinationCatalogRequiredData()
+              .destinationId(sync.getDestinationId()));
+        }
+
+        if (hasDestinationCatalog) {
+          final DestinationCatalog destinationCatalog =
+              DestinationDiscoverService.actorCatalogToDestinationCatalog(catalogService.getActorCatalogById(destCatalogId)).getCatalog();
+          validateCatalogWithDestinationCatalog(connectionPatch.getSyncCatalog(), destinationCatalog);
+        }
+      }
     }
 
     if (isPatchRelevantForDestinationValidation(connectionPatch)
@@ -843,6 +895,71 @@ public class ConnectionsHandler {
             new ProblemStreamDataItem()
                 .streamName(stream.getStream().getName())
                 .streamNamespace(stream.getStream().getNamespace())));
+      }
+    }
+  }
+
+  @VisibleForTesting
+  void validateCatalogWithDestinationCatalog(final AirbyteCatalog catalog, final DestinationCatalog destinationCatalog)
+      throws JsonValidationException {
+    final List<DestinationOperation> destinationOperations = destinationCatalog.getOperations();
+
+    // Apply mappers and use generated catalog for validation
+    final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+    final CatalogGenerationResult result = destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog);
+    final List<ConfiguredAirbyteStream> configuredStreams = result.getCatalog().getStreams();
+
+    for (final ConfiguredAirbyteStream configuredStream : configuredStreams) {
+      final String configuredObjectName = configuredStream.getDestinationObjectName();
+      if (configuredObjectName == null) {
+        throw new DestinationCatalogMissingObjectNameProblem(
+            new ProblemDestinationCatalogStreamData()
+                .streamName(configuredStream.getStream().getName())
+                .streamNamespace(configuredStream.getStream().getNamespace()));
+      }
+
+      final DestinationOperation destinationOperation = destinationOperations.stream()
+          .filter(op -> op.getObjectName().equals(configuredObjectName) && op.getSyncMode().equals(configuredStream.getDestinationSyncMode()))
+          .findFirst()
+          .orElseThrow(() -> new DestinationCatalogInvalidOperationProblem(
+              new ProblemDestinationCatalogOperationData()
+                  .streamName(configuredStream.getStream().getName())
+                  .streamNamespace(configuredStream.getStream().getNamespace())
+                  .destinationObjectName(configuredObjectName)
+                  .syncMode(configuredStream.getDestinationSyncMode().toString())));
+
+      final List<Field> destinationFields = destinationOperation.getFields();
+
+      // Required fields must be present
+      final List<Field> requiredFields = destinationFields.stream().filter(Field::getRequired).toList();
+      requiredFields.forEach(field -> {
+        if (configuredStream.getFields().stream().noneMatch(f -> f.getName().equals(field.getName()))) {
+          throw new DestinationCatalogMissingRequiredFieldProblem(
+              new ProblemDestinationCatalogRequiredFieldData()
+                  .streamName(configuredStream.getStream().getName())
+                  .streamNamespace(configuredStream.getStream().getNamespace())
+                  .fieldName(field.getName())
+                  .destinationOperationName(destinationOperation.getObjectName()));
+        }
+      });
+
+      // Check if schema allows additional properties
+      final JsonNode schemaNode = destinationOperation.getJsonSchema();
+      final boolean allowsAdditionalProperties = JsonSchemas.allowsAdditionalProperties(schemaNode);
+
+      // If additional properties are not allowed, ensure all source fields are present in destination
+      if (!allowsAdditionalProperties) {
+        final List<String> destinationFieldNames = destinationFields.stream().map(Field::getName).toList();
+        configuredStream.getFields().forEach(sourceField -> {
+          if (!destinationFieldNames.contains(sourceField.getName())) {
+            throw new DestinationCatalogInvalidAdditionalFieldProblem(
+                new ProblemDestinationCatalogAdditionalFieldData()
+                    .streamName(configuredStream.getStream().getName())
+                    .streamNamespace(configuredStream.getStream().getNamespace())
+                    .fieldName(sourceField.getName())
+                    .destinationOperationName(destinationOperation.getObjectName()));
+          }
+        });
       }
     }
   }

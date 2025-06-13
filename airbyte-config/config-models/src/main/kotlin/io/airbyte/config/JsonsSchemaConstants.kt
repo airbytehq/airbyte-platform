@@ -9,6 +9,8 @@ object JsonsSchemaConstants {
   const val FORMAT = "format"
   const val AIRBYTE_TYPE = "airbyte_type"
   const val PROPERTIES = "properties"
+  const val REQUIRED = "required"
+  const val ADDITIONAL_PROPERTIES = "additionalProperties"
 
   const val TYPE_STRING = "string"
   const val TYPE_BOOLEAN = "boolean"

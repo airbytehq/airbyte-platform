@@ -352,7 +352,7 @@ public class ConnectionHelpers {
         .syncMode(io.airbyte.config.SyncMode.INCREMENTAL)
         .destinationSyncMode(DestinationSyncMode.APPEND)
         .cursorField(List.of(FIELD_NAME))
-        .fields(List.of(new io.airbyte.config.Field(FIELD_NAME, FieldType.STRING)))
+        .fields(List.of(new io.airbyte.config.Field(FIELD_NAME, FieldType.STRING, false)))
         .build();
   }
 

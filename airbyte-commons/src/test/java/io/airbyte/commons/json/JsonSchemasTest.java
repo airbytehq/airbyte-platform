@@ -14,8 +14,11 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.BiConsumer;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
@@ -148,6 +151,38 @@ class JsonSchemasTest {
     final BiConsumer<JsonNode, List<FieldNameOrList>> mock = mock(BiConsumer.class);
 
     JsonSchemas.traverseJsonSchema(jsonWithAllTypes, mock);
+  }
+
+  private static Stream<Arguments> allowsAdditionalPropertiesTestCases() {
+    return Stream.of(
+        // When additionalProperties is not specified, should default to true
+        Arguments.of("{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}}}", true, "missing additionalProperties"),
+
+        // When additionalProperties is explicitly true
+        Arguments.of("{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}}, \"additionalProperties\": true}", true,
+            "additionalProperties: true"),
+
+        // When additionalProperties is explicitly false
+        Arguments.of("{\"type\": \"object\", \"properties\": {\"name\": {\"type\": \"string\"}}, \"additionalProperties\": false}", false,
+            "additionalProperties: false"),
+
+        // Test with minimal schema
+        Arguments.of("{}", true, "empty schema"),
+
+        // Test with nested object that has additionalProperties: true (testing root level)
+        Arguments.of("{\"type\": \"object\", \"properties\": {\"nested\": {\"type\": \"object\", \"additionalProperties\": true}}}", true,
+            "nested object with additionalProperties: true"),
+
+        // Test with nested object that has additionalProperties: false (testing root level)
+        Arguments.of("{\"type\": \"object\", \"properties\": {\"nested\": {\"type\": \"object\", \"additionalProperties\": false}}}", true,
+            "nested object with additionalProperties: false"));
+  }
+
+  @ParameterizedTest(name = "{2}")
+  @MethodSource("allowsAdditionalPropertiesTestCases")
+  void testAllowsAdditionalProperties(final String schemaJson, final boolean expected, final String description) {
+    final JsonNode schema = Jsons.deserialize(schemaJson);
+    assertEquals(expected, JsonSchemas.allowsAdditionalProperties(schema));
   }
 
 }

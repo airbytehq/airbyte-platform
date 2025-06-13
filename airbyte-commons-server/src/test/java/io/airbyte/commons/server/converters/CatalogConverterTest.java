@@ -155,7 +155,7 @@ class CatalogConverterTest {
     assertNotNull(fields);
     assertEquals(1, fields.size());
 
-    final var expectedField = new Field(FIELD_NAME, FieldType.STRING);
+    final var expectedField = new Field(FIELD_NAME, FieldType.STRING, false);
     assertEquals(expectedField, fields.getFirst());
   }
 
