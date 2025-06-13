@@ -51,6 +51,11 @@ components:
     DeclarativeManifest:
       x-speakeasy-component: true
       x-speakeasy-type-override: "any"
+      x-speakeasy-terraform-custom-type:
+        imports:
+          - "github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes"
+        schemaType: "jsontypes.NormalizedType{}"
+        valueType: "jsontypes.Normalized"
       description: "Low code CDK manifest JSON object"
       type: "object"
     ManifestVersion:
@@ -65,6 +70,14 @@ components:
       example:
         user:
           type: "string"
+      x-speakeasy-component: true
+    NamespaceDefinitionType:
+      type: "string"
+      description: "Method used for computing final namespace in destination"
+      enum:
+        - "source"
+        - "destination"
+        - "customformat"
       x-speakeasy-component: true
     TagId:
       type: "string"
@@ -456,6 +469,14 @@ components:
     OAuthInputConfiguration:
       $ref: "#/components/schemas/OAuthConfiguration"
       x-speakeasy-component: true
+    NonBreakingChangesPreference:
+      enum:
+        - "ignore"
+        - "disable"
+        - "propagate_columns"
+        - "propagate_fully"
+      type: "string"
+      x-speakeasy-component: true
     ApplicationCreate:
       required:
         - "name"
@@ -625,9 +646,8 @@ components:
           deprecated: true
           x-speakeasy-deprecation-message:
             "We no longer support modifying dataResidency\
-            \ on Community and Enterprise connections. This will be supported on Cloud\
-            \ until May 31, at which time all connections will use the dataResidency\
-            \ of their associated workspace."
+            \ on Community and Enterprise connections. All connections will use the\
+            \ dataResidency of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -671,9 +691,8 @@ components:
           deprecated: true
           x-speakeasy-deprecation-message:
             "We no longer support modifying dataResidency\
-            \ on Community and Enterprise connections. This will be supported on Cloud\
-            \ until May 31, at which time all connections will use the dataResidency\
-            \ of their associated workspace."
+            \ on Community and Enterprise connections. All connections will use the\
+            \ dataResidency of their associated workspace."
           type: "string"
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
@@ -864,7 +883,6 @@ components:
         - "workspaceId"
         - "status"
         - "schedule"
-        - "dataResidency"
         - "configurations"
         - "createdAt"
         - "tags"
@@ -887,8 +905,6 @@ components:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
-        dataResidency:
-          type: "string"
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -1482,7 +1498,6 @@ components:
           - schedule:
               scheduleType: "manual"
           - status: "active"
-          - dataResidency: "auto"
       x-speakeasy-component: true
     SourcesResponse:
       title: "Root Type for SourcesResponse"
@@ -1554,19 +1569,14 @@ components:
       properties:
         name:
           type: "string"
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     UpdateDeclarativeSourceDefinitionRequest:
       type: "object"
       x-speakeasy-component: true
       required:
-        - "name"
         - "manifest"
       properties:
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
     DeclarativeSourceDefinitionsResponse:
@@ -1602,6 +1612,7 @@ components:
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
         version:
+          x-speakeasy-terraform-ignore: true
           $ref: "#/components/schemas/ManifestVersion"
     CreateDefinitionRequest:
       type: "object"
@@ -1740,6 +1751,11 @@ components:
             "Whether to move raw files from the source to the destination\
             \ during the sync."
           type: "boolean"
+        destinationObjectName:
+          description:
+            "The name of the destination object that this stream will be\
+            \ written to, used for data activation destinations."
+          type: "string"
         selectedFields:
           description:
             "By default (if not provided in the request) all fields will\
@@ -1997,7 +2013,6 @@ components:
       required:
         - "actorDefinitionId"
         - "partialDefaultConfig"
-        - "partialUserConfigSpec"
         - "organizationId"
       properties:
         organizationId:
@@ -2044,16 +2059,17 @@ components:
     EmbeddedWidgetRequest:
       type: "object"
       required:
-        - "workspaceId"
         - "allowedOrigin"
+        - "externalUserId"
+        - "organizationId"
       properties:
-        workspaceId:
-          type: "string"
-          format: "uuid"
         allowedOrigin:
           type: "string"
         externalUserId:
           type: "string"
+        organizationId:
+          type: "string"
+          format: "uuid"
       x-speakeasy-component: true
     EmbeddedWidgetResponse:
       type: "object"
@@ -2062,6 +2078,56 @@ components:
       properties:
         token:
           type: "string"
+      x-speakeasy-component: true
+    ConnectionTemplateCreateRequestBody:
+      type: "object"
+      required:
+        - "destinationConfiguration"
+        - "organizationId"
+        - "destinationName"
+        - "destinationActorDefinitionId"
+      properties:
+        organizationId:
+          type: "string"
+          format: "uuid"
+        destinationName:
+          type: "string"
+        destinationConfiguration:
+          $ref: "#/components/schemas/DestinationConfiguration"
+        destinationActorDefinitionId:
+          $ref: "#/components/schemas/ActorDefinitionId"
+        namespaceDefinitionType:
+          $ref: "#/components/schemas/NamespaceDefinitionType"
+          description:
+            "The namespace definition type for the connection. This is\
+            \ used to determine how the namespace is defined for the connection. If\
+            \ none is provided, the namespace will be set to ${WORKSPACE_NAME}."
+        namespaceFormat:
+          type: "string"
+          default: null
+        prefix:
+          type: "string"
+        schedule:
+          $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
+          description:
+            "The schedule for connections. If none is provided, syncs will\
+            \ run every hour."
+        resourceRequirements:
+          $ref: "#/components/schemas/ResourceRequirements"
+        nonBreakingChangesPreference:
+          $ref: "#/components/schemas/NonBreakingChangesPreference"
+        syncOnCreate:
+          type: "boolean"
+          default: true
+      x-speakeasy-component: true
+    ConnectionTemplateCreateResponse:
+      type: "object"
+      required:
+        - "id"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
       x-speakeasy-component: true
 
     SourceConfiguration:

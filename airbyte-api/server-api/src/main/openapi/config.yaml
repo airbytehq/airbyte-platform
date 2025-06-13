@@ -13619,6 +13619,7 @@ components:
         - source
         - destination
         - customformat
+      x-sdk-component: true
     ConnectionAutoPropagateSchemaChange:
       description: Input of the schema propagation, with the catalog to be propagated and the connection to propagate to
       type: object
@@ -16629,6 +16630,7 @@ components:
         - propagate_columns # automatically propagate the changes on selected streams and continue syncing
         - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
+      x-sdk-component: true
     SchemaChangeBackfillPreference:
       enum:
         - enabled # when a column is added or changed via auto-propagation, the stream will be backfilled
