@@ -9562,6 +9562,25 @@ paths:
         - public
         - embedded_widget
 
+  /public/v1/embedded/organizations:
+    get:
+      summary: List organizations that a user has access to that have embedded enabled.
+      tags:
+        - public
+        - embedded_widget
+      operationId: listEmbeddedOrganizationsByUser
+      x-sdk-alias: listEmbeddedOrganizationsByUser
+      x-sdk-group: EmbeddedWidget
+      responses:
+        "200":
+          description: Successfully retrieved organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbeddedOrganizationsList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+
   /v1/service_accounts/token:
     post:
       summary: Get an access token for a service account.
@@ -19893,6 +19912,32 @@ components:
           format: uuid
         secret:
           type: string
+
+    EmbeddedOrganizationsList:
+      required:
+        - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-sdk-component: true
+
+    EmbeddedOrganizationListItem:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - permission
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        permission:
+          $ref: "#/components/schemas/PermissionType"
+      x-sdk-component: true
 
   responses:
     NotFoundResponse:

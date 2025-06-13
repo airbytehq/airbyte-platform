@@ -4,18 +4,24 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.EmbeddedWorkspacesHandler
+import io.airbyte.commons.server.handlers.OrganizationsHandler
+import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.data.TokenType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
+import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationListItem
+import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationsList
 import io.airbyte.publicApi.server.generated.models.EmbeddedWidgetRequest
+import io.airbyte.publicApi.server.generated.models.PermissionType
 import io.airbyte.server.auth.TokenScopeClaim
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Requires
@@ -43,12 +49,56 @@ class EmbeddedController(
   val jwtTokenGenerator: JwtTokenGenerator,
   val tokenExpirationConfig: TokenExpirationConfig,
   val currentUserService: CurrentUserService,
+  private val organizationsHandler: OrganizationsHandler,
+  val permissionHandler: PermissionHandler,
   val embeddedWorkspacesHandler: EmbeddedWorkspacesHandler,
   val licenseEntitlementChecker: LicenseEntitlementChecker,
   @Named("airbyteUrl") val airbyteUrl: String,
   @Property(name = "airbyte.auth.token-issuer") private val tokenIssuer: String,
 ) : EmbeddedWidgetApi {
   var clock: Clock = Clock.systemUTC()
+
+  override fun listEmbeddedOrganizationsByUser(): Response {
+    val currentUserId = currentUserService.getCurrentUser().userId
+    val organizations =
+      organizationsHandler
+        .listOrganizationsByUser(
+          ListOrganizationsByUserRequestBody().userId(currentUserId),
+        )
+
+    val permissions = permissionHandler.listPermissionsForUser(currentUserId)
+
+    // First filter organizations by entitlement
+    val entitledOrganizations =
+      organizations.organizations.filter { organization ->
+        val organizationId = OrganizationId(organization.organizationId)
+        licenseEntitlementChecker.checkEntitlements(
+          organizationId.value,
+          Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
+        )
+      }
+
+    // Then map the filtered organizations to the desired output format
+    val organizationsListItems =
+      entitledOrganizations.map { organization ->
+        val organizationId = OrganizationId(organization.organizationId)
+        val permissionForOrg = permissions.find { OrganizationId(it.organizationId) == organizationId }
+
+        if (permissionForOrg == null) {
+          throw IllegalStateException(
+            "No permission found for user $currentUserId in organization ${organization.organizationName} (${organization.organizationId})",
+          )
+        }
+
+        EmbeddedOrganizationListItem(
+          organizationId = organizationId.value,
+          organizationName = organization.organizationName,
+          permission = PermissionType.valueOf(permissionForOrg.permissionType.name),
+        )
+      }
+
+    return EmbeddedOrganizationsList(organizations = organizationsListItems).ok()
+  }
 
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
