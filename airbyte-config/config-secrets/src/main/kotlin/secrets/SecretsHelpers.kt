@@ -234,7 +234,7 @@ object SecretsHelpers {
       return JsonNodeFactory.instance.objectNode()
     }
 
-    var config = configWithRefs.config
+    var config = configWithRefs.originalConfig
     for ((hydrationPath, secretRefConfig) in configWithRefs.referencedSecrets) {
       val secretPersistence = resolvePersistence(secretRefConfig.secretStorageId)
       val secretValue = getOrThrowSecretValue(secretPersistence, secretRefConfig.secretCoordinate)

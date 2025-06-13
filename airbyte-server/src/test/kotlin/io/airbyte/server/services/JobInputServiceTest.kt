@@ -31,6 +31,7 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.SyncResourceRequirements
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
+import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.data.repositories.ActorDefinitionRepository
 import io.airbyte.data.repositories.ActorRepository
 import io.airbyte.data.repositories.entities.ActorDefinition
@@ -167,7 +168,8 @@ class JobInputServiceTest {
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromSource(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
@@ -243,7 +245,8 @@ class JobInputServiceTest {
       mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromDestination(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
@@ -314,7 +317,8 @@ class JobInputServiceTest {
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.maskSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      mockk { every { originalConfig } returns configuration }
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
     val actorContext: ActorContext = mockk()
@@ -383,7 +387,8 @@ class JobInputServiceTest {
     every { actorDefinitionVersionHelper.getDestinationVersion(mockDestinationDefinition, workspaceId, null) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.maskDestinationOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      mockk { every { originalConfig } returns configuration }
     every { contextBuilder.fromActorDefinitionId(any(), any(), any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
@@ -456,7 +461,7 @@ class JobInputServiceTest {
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
     every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
-      mockk { every { config } returns configurationWithSecretRef }
+      ConfigWithSecretReferences(configurationWithSecretRef, mapOf())
     every { contextBuilder.fromSource(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
@@ -511,7 +516,8 @@ class JobInputServiceTest {
     every { actorDefinitionVersionHelper.getSourceVersion(mockSourceDefinition, workspaceId, sourceId) } returns mockActorDefinitionVersion
     every { oAuthConfigSupplier.injectSourceOAuthParameters(any(), any(), any(), any()) } returns configuration
     every { configInjector.injectConfig(any(), any()) } returns configuration
-    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns mockk { every { config } returns configuration }
+    every { secretReferenceService.getConfigWithSecretReferences(any(), any(), any()) } returns
+      ConfigWithSecretReferences(configuration, mapOf())
     every { contextBuilder.fromSource(any()) } returns mockk()
     every { scopedConfigurationService.getScopedConfigurations(any(), any()) } returns emptyList()
 
