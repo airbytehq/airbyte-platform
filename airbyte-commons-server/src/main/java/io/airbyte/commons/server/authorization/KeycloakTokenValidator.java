@@ -54,8 +54,16 @@ import reactor.core.publisher.Mono;
 @Singleton
 @Primary
 @RequiresAuthMode(AuthMode.OIDC)
+// We're not confident about what the identity-provider.type will be when keycloak *should* be
+// enabled,
+// (we think it's usually "oidc" or "keycloak"). We're more confident about when we definitely
+// *don't* want it enabled,
+// so here we rule out "generic-oidc" and "simple" explicitly. Otherwise, for now, keycloak is
+// enabled.
 @Requires(property = "airbyte.auth.identity-provider.type",
           notEquals = "generic-oidc")
+@Requires(property = "airbyte.auth.identity-provider.type",
+          notEquals = "simple")
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
   "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {

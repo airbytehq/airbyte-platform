@@ -6,7 +6,13 @@ package io.airbyte.workload.api
 
 import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.authorization.RoleResolver
+import io.airbyte.commons.server.handlers.PermissionHandler
+import io.airbyte.commons.server.support.AuthenticationHeaderResolver
+import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.config.Permission
 import io.airbyte.config.WorkloadPriority
+import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.workload.api.domain.KnownExceptionInfo
 import io.airbyte.workload.api.domain.WorkloadCancelRequest
 import io.airbyte.workload.api.domain.WorkloadClaimRequest
@@ -45,6 +51,7 @@ import jakarta.inject.Singleton
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.UUID
 
 @Property(name = "airbyte.workload-api.workload-redelivery-window", value = "PT30M")
 @MicronautTest(environments = [Environment.TEST])
@@ -72,6 +79,24 @@ class WorkloadApiTest(
   @Replaces(AirbyteApiClient::class)
   fun airbyteApiClient(): AirbyteApiClient = airbyteApiClient
 
+  private val authenticationHeaderResolver = mockk<AuthenticationHeaderResolver>(relaxed = true)
+  private val currentUserService = mockk<CurrentUserService>()
+  private val permissionHandler =
+    mockk<PermissionHandler>(relaxed = true) {
+      every { getPermissionsByAuthUserId(any()) } returns listOf(Permission().withPermissionType(Permission.PermissionType.DATAPLANE))
+    }
+  private val roleResolver = RoleResolver(authenticationHeaderResolver, currentUserService, null, permissionHandler)
+
+  @Singleton
+  @Replaces(RoleResolver::class)
+  fun roleResolver(): RoleResolver = roleResolver
+
+  private val dataplaneGroupService = mockk<DataplaneGroupService>()
+
+  @MockBean(DataplaneGroupService::class)
+  @Replaces(DataplaneGroupService::class)
+  fun dataplaneGroupService(): DataplaneGroupService = dataplaneGroupService
+
   @Test
   fun `test create success`() {
     every { workloadHandler.workloadAlreadyExists(any()) } returns false
@@ -94,6 +119,7 @@ class WorkloadApiTest(
   @Test
   fun `test claim success`() {
     every { workloadHandler.claimWorkload(any(), any(), any()) }.returns(true)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/claim", Jsons.serialize(WorkloadClaimRequest())), HttpStatus.OK)
   }
 
@@ -101,6 +127,7 @@ class WorkloadApiTest(
   fun `test claim workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.claimWorkload(any(), any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/claim", WorkloadClaimRequest()),
       HttpStatus.NOT_FOUND,
@@ -112,6 +139,7 @@ class WorkloadApiTest(
   fun `test claim workload has already been claimed`() {
     val exceptionMessage = "workload has already been claimed"
     every { workloadHandler.claimWorkload(any(), any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/claim", WorkloadClaimRequest()),
       HttpStatus.GONE,
@@ -139,6 +167,7 @@ class WorkloadApiTest(
   @Test
   fun `test heartbeat success`() {
     every { workloadHandler.heartbeat(any(), any()) }.returns(Unit)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/heartbeat", Jsons.serialize(WorkloadHeartbeatRequest())), HttpStatus.NO_CONTENT)
   }
 
@@ -146,6 +175,7 @@ class WorkloadApiTest(
   fun `test heartbeat workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.heartbeat(any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/heartbeat", WorkloadHeartbeatRequest()),
       HttpStatus.NOT_FOUND,
@@ -157,6 +187,7 @@ class WorkloadApiTest(
   fun `test heartbeat workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
     every { workloadHandler.heartbeat(any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/heartbeat", WorkloadHeartbeatRequest()),
       HttpStatus.GONE,
@@ -173,6 +204,7 @@ class WorkloadApiTest(
   @Test
   fun `test cancel success`() {
     every { workloadHandler.cancelWorkload(any(), any(), any()) } just Runs
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/cancel", WorkloadCancelRequest()), HttpStatus.NO_CONTENT)
   }
 
@@ -180,6 +212,7 @@ class WorkloadApiTest(
   fun `test cancel workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.cancelWorkload(any(), any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/cancel", WorkloadCancelRequest()),
       HttpStatus.NOT_FOUND,
@@ -191,6 +224,7 @@ class WorkloadApiTest(
   fun `test cancel workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
     every { workloadHandler.cancelWorkload(any(), any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/cancel", WorkloadCancelRequest()),
       HttpStatus.GONE,
@@ -201,6 +235,7 @@ class WorkloadApiTest(
   @Test
   fun `test failure success`() {
     every { workloadHandler.failWorkload(any(), any(), any()) } just Runs
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/failure", WorkloadFailureRequest()), HttpStatus.NO_CONTENT)
   }
 
@@ -208,6 +243,7 @@ class WorkloadApiTest(
   fun `test failure workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.failWorkload(any(), any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/failure", WorkloadFailureRequest()),
       HttpStatus.NOT_FOUND,
@@ -219,6 +255,7 @@ class WorkloadApiTest(
   fun `test failure workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
     every { workloadHandler.failWorkload(any(), any(), any()) } throws InvalidStatusTransitionException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/failure", WorkloadFailureRequest()),
       HttpStatus.GONE,
@@ -229,6 +266,7 @@ class WorkloadApiTest(
   @Test
   fun `test success succeeded`() {
     every { workloadHandler.succeedWorkload(any()) } just Runs
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/success", WorkloadSuccessRequest()), HttpStatus.NO_CONTENT)
   }
 
@@ -236,6 +274,7 @@ class WorkloadApiTest(
   fun `test success workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.succeedWorkload(any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/success", WorkloadSuccessRequest()),
       HttpStatus.NOT_FOUND,
@@ -246,6 +285,7 @@ class WorkloadApiTest(
   @Test
   fun `test success workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     every { workloadHandler.succeedWorkload(any()) } throws InvalidStatusTransitionException(exceptionMessage)
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/success", WorkloadSuccessRequest()),
@@ -257,6 +297,7 @@ class WorkloadApiTest(
   @Test
   fun `test running succeeded`() {
     every { workloadHandler.setWorkloadStatusToRunning(any(), any()) } just Runs
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testEndpointStatus(HttpRequest.PUT("/api/v1/workload/running", Jsons.serialize(WorkloadRunningRequest())), HttpStatus.NO_CONTENT)
   }
 
@@ -264,6 +305,7 @@ class WorkloadApiTest(
   fun `test running workload id not found`() {
     val exceptionMessage = "workload id not found"
     every { workloadHandler.setWorkloadStatusToRunning(any(), any()) } throws NotFoundException(exceptionMessage)
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/running", WorkloadRunningRequest()),
       HttpStatus.NOT_FOUND,
@@ -275,6 +317,7 @@ class WorkloadApiTest(
   fun `test running workload in invalid status`() {
     val exceptionMessage = "workload in invalid status"
     every { workloadHandler.setWorkloadStatusToRunning(any(), any()) } throws InvalidStatusTransitionException("workload in invalid status")
+    every { workloadHandler.getWorkload(any()) } returns ApiWorkload()
     testErrorEndpointResponse(
       HttpRequest.PUT("/api/v1/workload/running", WorkloadRunningRequest()),
       HttpStatus.GONE,
@@ -286,11 +329,12 @@ class WorkloadApiTest(
   fun `poll workloads happy path`() {
     val req =
       WorkloadQueuePollRequest(
-        dataplaneGroup = "dataplane-group-1",
+        dataplaneGroup = UUID.randomUUID().toString(),
         priority = WorkloadPriority.DEFAULT,
         10,
       )
 
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(any()) } returns UUID.randomUUID()
     every { workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, 10) }.returns(emptyList())
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/poll", req), HttpStatus.OK)
   }
@@ -299,10 +343,11 @@ class WorkloadApiTest(
   fun `count queue depth happy path`() {
     val req =
       WorkloadQueueQueryRequest(
-        dataplaneGroup = "dataplane-group-1",
+        dataplaneGroup = UUID.randomUUID().toString(),
         priority = WorkloadPriority.DEFAULT,
       )
 
+    every { dataplaneGroupService.getOrganizationIdFromDataplaneGroup(any()) } returns UUID.randomUUID()
     every { workloadHandler.countWorkloadQueueDepth(req.dataplaneGroup, req.priority) }.returns(1)
     testEndpointStatus(HttpRequest.POST("/api/v1/workload/queue/depth", req), HttpStatus.OK)
   }

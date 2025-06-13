@@ -4,6 +4,7 @@
 
 package io.airbyte.test.utils;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -161,7 +162,6 @@ public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
-  private static final UUID DEFAULT_ORGANIZATION_ID = io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
