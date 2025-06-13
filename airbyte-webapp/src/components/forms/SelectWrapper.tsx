@@ -7,6 +7,7 @@ import { SelectControlProps, OmittableProperties } from "./FormControl";
 import styles from "./SelectWrapper.module.scss";
 
 export const SelectWrapper = <T extends FormValues>({
+  controlId,
   hasError,
   name,
   disabled = false,
@@ -31,6 +32,7 @@ export const SelectWrapper = <T extends FormValues>({
           selectedValue={value}
           buttonClassName={styles.select}
           {...rest}
+          id={controlId}
         />
       )}
     />

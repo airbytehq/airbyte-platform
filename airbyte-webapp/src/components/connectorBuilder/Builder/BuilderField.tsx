@@ -347,6 +347,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       {props.type === "secret" && (
         <SecretField
           name={path}
+          id={`secret-input-${path}`}
           value={fieldValue as string}
           onUpdate={(val) => {
             // Remove the value instead of setting it to the empty string, as secret persistence

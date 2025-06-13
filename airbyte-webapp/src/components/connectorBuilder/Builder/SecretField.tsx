@@ -10,16 +10,16 @@ import styles from "./SecretField.module.scss";
 
 interface SecretFieldProps {
   name: string;
+  id: string;
   value: string;
   onUpdate: (value: string) => void;
   disabled?: boolean;
   error?: boolean;
   label?: string;
 }
-export const SecretField: React.FC<SecretFieldProps> = ({ name, value, onUpdate, disabled, error, label }) => {
+export const SecretField: React.FC<SecretFieldProps> = ({ name, id, value, onUpdate, disabled, error, label }) => {
   const [editingValue, setEditingValue] = useState<string | undefined>(undefined);
   const inputRef = useRef<HTMLInputElement>(null);
-  const inputId = `secret-input-${name}`;
 
   const pushUpdate = useCallback(() => {
     onUpdate(editingValue ?? "");
@@ -32,11 +32,11 @@ export const SecretField: React.FC<SecretFieldProps> = ({ name, value, onUpdate,
   const isDisabled = disabled || (!!value && editingValue === undefined);
   return (
     <FlexContainer direction="column" gap="sm">
-      {label && <FormLabel label={label} htmlFor={inputId} />}
+      {label && <FormLabel label={label} htmlFor={id} />}
       <FlexContainer gap="sm">
         <Input
           ref={inputRef}
-          id={inputId}
+          id={id}
           name={name}
           onChange={(e) => {
             setEditingValue(e.target.value);

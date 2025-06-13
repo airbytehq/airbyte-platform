@@ -162,6 +162,8 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
     [input, setInputInEditing]
   );
 
+  const inputId = `testing-value-${input.key}`;
+
   return (
     <div ref={setNodeRef} style={style} className={classNames({ [styles.dragging]: isDragging })}>
       <Card bodyClassName={styles.inputCard}>
@@ -181,6 +183,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
               label={input.definition.title || input.key}
               optional={!input.required}
               infoTooltipContent={input.definition.description}
+              htmlFor={inputId}
             />
             <Button
               className={styles.itemButton}
@@ -193,7 +196,7 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
               <Icon type="gear" color="action" />
             </Button>
           </FlexContainer>
-          <InputFormControl builderInput={input} openInputForm={openInputForm} />
+          <InputFormControl builderInput={input} openInputForm={openInputForm} id={inputId} />
         </FlexContainer>
       </Card>
     </div>
@@ -203,9 +206,11 @@ const SortableInput: React.FC<SortableInputProps> = ({ input, id, setInputInEdit
 const InputFormControl = ({
   builderInput,
   openInputForm,
+  id,
 }: {
   builderInput: BuilderFormInput;
   openInputForm: () => void;
+  id: string;
 }) => {
   const { toggleUI } = useConnectorBuilderFormState();
   const { definition } = builderInput;
@@ -243,17 +248,24 @@ const InputFormControl = ({
   const fieldPath = `testingValues.${builderInput.key}`;
 
   return (
-    <DefinitionFormControl name={fieldPath} definition={definition} unrecognizedTypeElement={unrecognizedTypeElement} />
+    <DefinitionFormControl
+      name={fieldPath}
+      id={id}
+      definition={definition}
+      unrecognizedTypeElement={unrecognizedTypeElement}
+    />
   );
 };
 
 export const DefinitionFormControl = ({
   name,
+  id,
   definition,
   unrecognizedTypeElement,
   label,
 }: {
   name: string;
+  id: string;
   definition: AirbyteJSONSchema;
   unrecognizedTypeElement: JSX.Element | null;
   label?: string;
@@ -268,17 +280,18 @@ export const DefinitionFormControl = ({
           return null;
         }
         const options = definition.enum.map((val) => ({ label: String(val), value: String(val) }));
-        return <FormControl fieldType="dropdown" options={options} name={name} label={label} />;
+        return <FormControl fieldType="dropdown" options={options} name={name} label={label} id={id} />;
       }
 
       if (definition.format === "date" || definition.format === "date-time") {
-        return <FormControl fieldType="date" format={definition.format} name={name} label={label} />;
+        return <FormControl fieldType="date" format={definition.format} name={name} label={label} id={id} />;
       }
 
       if (definition.airbyte_secret) {
         return (
           <FlexContainer direction="column" className={styles.secretField}>
             <SecretField
+              id={id}
               label={label}
               name={name}
               value={value as string}
@@ -295,15 +308,15 @@ export const DefinitionFormControl = ({
         );
       }
 
-      return <FormControl fieldType="input" name={name} label={label} />;
+      return <FormControl fieldType="input" name={name} label={label} id={id} />;
     }
     case "integer":
     case "number":
-      return <FormControl fieldType="input" type="number" name={name} label={label} />;
+      return <FormControl fieldType="input" type="number" name={name} label={label} id={id} />;
     case "boolean":
-      return <FormControl fieldType="switch" name={name} label={label} />;
+      return <FormControl fieldType="switch" name={name} label={label} id={id} />;
     case "array":
-      return <FormControl fieldType="array" itemType="string" name={name} label={label} />;
+      return <FormControl fieldType="array" itemType="string" name={name} label={label} id={id} />;
     default:
       return unrecognizedTypeElement;
   }

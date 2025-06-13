@@ -447,6 +447,7 @@ const InputModalContents = ({ onDelete, onClose }: { onDelete: () => void; onClo
         {values.showDefaultValueField && (
           <DefinitionFormControl
             key={`${values?.definition?.type}-default`}
+            id={`${values?.definition?.type}-default`}
             name="definition.default"
             definition={values.definition as AirbyteJSONSchema}
             unrecognizedTypeElement={null}

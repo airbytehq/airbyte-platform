@@ -145,7 +145,7 @@ export const FormControl = <T extends FormValues>({
   // only retrieve new form state if form state of current field has changed
   const { errors, touchedFields } = useFormState<T>({ name: props.name });
   const error = !!get(errors, props.name) && (onlyShowErrorIfTouched ? !!get(touchedFields, props.name) : true);
-  const [controlId] = useState(`input-control-${uniqueId()}`);
+  const [controlId] = useState(props.id ?? `input-control-${uniqueId()}`);
 
   // Properties to pass to the underlying control
   const controlProps = {
