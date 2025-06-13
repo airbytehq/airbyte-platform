@@ -1,6 +1,6 @@
 import { Listbox } from "@headlessui/react";
-import React from "react";
-import { Controller, useFormContext } from "react-hook-form";
+import React, { useMemo } from "react";
+import { Controller, useFormContext, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControlErrorMessage } from "components/forms/FormControl";
@@ -14,15 +14,29 @@ import { ListboxOptions } from "components/ui/ListBox/ListboxOptions";
 import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { DestinationSyncMode } from "core/api/types/AirbyteClient";
+import { DestinationCatalog, DestinationSyncMode } from "core/api/types/AirbyteClient";
 
 interface SelectDestinationSyncModeProps {
   streamIndex: number;
+  destinationCatalog: DestinationCatalog;
 }
 
-export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps> = ({ streamIndex }) => {
+export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps> = ({
+  destinationCatalog,
+  streamIndex,
+}) => {
   const { control, setValue } = useFormContext<DataActivationConnectionFormValues>();
   const { formatMessage } = useIntl();
+
+  const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
+    {
+      name: `streams.${streamIndex}.destinationObjectName`,
+    }
+  );
+
+  const availableOperations = useMemo(() => {
+    return destinationCatalog.operations.filter((operation) => operation.objectName === destinationObjectName);
+  }, [destinationObjectName, destinationCatalog]);
 
   // TODO: Update this to support update and soft_delete once they're available https://github.com/airbytehq/airbyte-internal-issues/issues/12920
   const destinationSyncModeOptions: Array<Option<DestinationSyncMode>> = [
@@ -31,7 +45,10 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
       label: formatMessage({ id: "connection.dataActivation.append_dedup" }),
       value: DestinationSyncMode.append_dedup,
     },
-  ];
+  ].map((option) => ({
+    ...option,
+    disabled: !availableOperations.some((operation) => operation.syncMode === option.value),
+  }));
 
   return (
     <Controller
@@ -71,7 +88,7 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
               </ListboxButton>
               <ListboxOptions>
                 {destinationSyncModeOptions.map((option) => (
-                  <ListboxOption key={option.value} value={option.value}>
+                  <ListboxOption key={option.value} value={option.value} disabled={option.disabled}>
                     <Box p="md" pr="none" as="span">
                       <Text>{option.label}</Text>
                     </Box>

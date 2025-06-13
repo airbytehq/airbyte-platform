@@ -10,9 +10,10 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { AirbyteCatalog, DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, DestinationCatalog, DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 
 import { FieldMappings } from "./FieldMappings";
+import { SelectDestinationObjectName } from "./SelectDestinationObjectName";
 import { SelectDestinationSyncMode } from "./SelectDestinationSyncMode";
 import { SelectSourceStream } from "./SelectSourceStream";
 import { SelectSourceSyncMode } from "./SelectSourceSyncMode";
@@ -20,11 +21,17 @@ import styles from "./StreamMappings.module.scss";
 
 interface StreamMappingsProps {
   destination: DestinationRead;
+  destinationCatalog: DestinationCatalog;
   source: SourceRead;
   sourceCatalog: AirbyteCatalog;
 }
 
-export const StreamMappings: React.FC<StreamMappingsProps> = ({ source, sourceCatalog }) => {
+export const StreamMappings: React.FC<StreamMappingsProps> = ({
+  destination,
+  destinationCatalog,
+  source,
+  sourceCatalog,
+}) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { fields: streams } = useFieldArray<DataActivationConnectionFormValues>({
     control,
@@ -38,7 +45,13 @@ export const StreamMappings: React.FC<StreamMappingsProps> = ({ source, sourceCa
           <Box key={field.id} mb="lg">
             <FlexContainer gap="lg">
               <FlexItem grow>
-                <StreamMapping index={index} source={source} sourceCatalog={sourceCatalog} />
+                <StreamMapping
+                  index={index}
+                  destination={destination}
+                  destinationCatalog={destinationCatalog}
+                  source={source}
+                  sourceCatalog={sourceCatalog}
+                />
               </FlexItem>
             </FlexContainer>
           </Box>
@@ -51,11 +64,19 @@ export const StreamMappings: React.FC<StreamMappingsProps> = ({ source, sourceCa
 
 interface StreamMappingProps {
   index: number;
+  destination: DestinationRead;
+  destinationCatalog: DestinationCatalog;
   source: SourceRead;
   sourceCatalog: AirbyteCatalog;
 }
 
-const StreamMapping: React.FC<StreamMappingProps> = ({ index, source, sourceCatalog }) => {
+const StreamMapping: React.FC<StreamMappingProps> = ({
+  index,
+  destination,
+  destinationCatalog,
+  source,
+  sourceCatalog,
+}) => {
   const { formatMessage } = useIntl();
 
   const selectedSourceStream = useWatch<DataActivationConnectionFormValues, `streams.${number}.sourceStreamDescriptor`>(
@@ -91,12 +112,10 @@ const StreamMapping: React.FC<StreamMappingProps> = ({ index, source, sourceCata
         <div className={styles.streamMappings__arrow}>
           <Icon type="arrowRight" size="lg" color="action" />
         </div>
-        <FormControl<DataActivationConnectionFormValues>
-          name={`streams.${index}.destinationObjectName`}
-          placeholder={formatMessage({ id: "connection.destinationObjectName" })}
-          type="text"
-          fieldType="input"
-          reserveSpaceForError={false}
+        <SelectDestinationObjectName
+          destination={destination}
+          destinationCatalog={destinationCatalog}
+          streamIndex={index}
         />
 
         {isSourceStreamSelected && (
@@ -116,7 +135,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({ index, source, sourceCata
 
         {isDestinationObjectSelected && (
           <div className={styles.streamMappings__destinationSettings}>
-            <SelectDestinationSyncMode streamIndex={index} />
+            <SelectDestinationSyncMode streamIndex={index} destinationCatalog={destinationCatalog} />
             {destinationSyncMode === "append_dedup" && (
               <FormControl<DataActivationConnectionFormValues>
                 name={`streams.${index}.primaryKey`}
@@ -132,7 +151,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({ index, source, sourceCata
         {isSourceStreamSelected && (
           <>
             <div className={styles.streamMappings__divider} />
-            <FieldMappings sourceCatalog={sourceCatalog} streamIndex={index} />
+            <FieldMappings destinationCatalog={destinationCatalog} sourceCatalog={sourceCatalog} streamIndex={index} />
           </>
         )}
       </div>

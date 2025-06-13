@@ -40,8 +40,6 @@ export const SelectSourceSyncMode: React.FC<SelectSourceSyncModeProps> = ({ stre
         stream.stream?.namespace === sourceStreamDescriptor?.namespace
     )?.stream?.supportedSyncModes ?? [];
 
-  console.log({ sourceStreamDescriptor, sourceStreamSupportedSyncModes });
-
   const sourceSyncModeOptions: Array<Option<SyncMode>> = DATA_ACTIVATION_SUPPORTED_SYNC_MODES.map((mode) => ({
     label: formatMessage({ id: `syncMode.${mode}` }),
     value: mode,

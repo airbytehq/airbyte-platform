@@ -27,7 +27,7 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
             name: stream.stream.name,
             namespace: stream.stream.namespace,
           },
-          destinationObjectName: "", // TODO: blocked by https://github.com/airbytehq/airbyte-platform-internal/pull/16580
+          destinationObjectName: stream.config.destinationObjectName || "",
           sourceSyncMode: stream.config.syncMode,
           destinationSyncMode: stream.config.destinationSyncMode,
           fields: inferFieldsFromConfig(stream.config),

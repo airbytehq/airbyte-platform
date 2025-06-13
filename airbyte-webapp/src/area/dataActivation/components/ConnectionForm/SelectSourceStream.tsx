@@ -1,4 +1,5 @@
 import { Listbox } from "@headlessui/react";
+import isEqual from "lodash/isEqual";
 import { useMemo } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
@@ -56,10 +57,20 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
         render={({ field, fieldState }) => (
           <FlexContainer direction="column" gap="xs">
             <Listbox
+              by={isEqual}
               onChange={(value) => {
+                if (isEqual(value, field.value)) {
+                  return;
+                }
                 field.onChange(value);
-                // Changing the stream resets the sync mode and selected fieldss
-                setValue(`streams.${index}.sourceSyncMode`, null);
+                const stream = getStreamByDescriptor(sourceStreams, value);
+                // If the stream only supports one sync mode, set it automatically
+                if (stream?.stream?.supportedSyncModes?.length === 1) {
+                  setValue(`streams.${index}.sourceSyncMode`, stream.stream.supportedSyncModes[0]);
+                } else {
+                  setValue(`streams.${index}.sourceSyncMode`, null);
+                }
+                // Changing the stream resets the sync mode and selected fields
                 setValue(`streams.${index}.fields`, [EMPTY_FIELD]);
               }}
               value={field.value}
@@ -101,3 +112,11 @@ export const SelectSourceStream: React.FC<SelectSourceStreamProps> = ({ sourceCa
     </div>
   );
 };
+
+function getStreamByDescriptor(streams: AirbyteCatalog["streams"], descriptor: { name: string; namespace?: string }) {
+  return streams.find(
+    (stream) =>
+      stream.stream?.name === descriptor.name &&
+      (descriptor.namespace ? stream.stream?.namespace === descriptor.namespace : true)
+  );
+}

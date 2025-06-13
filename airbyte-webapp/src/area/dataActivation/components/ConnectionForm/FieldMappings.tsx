@@ -8,18 +8,20 @@ import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
-import { AirbyteCatalog } from "core/api/types/AirbyteClient";
+import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
 
 import styles from "./FieldMappings.module.scss";
 
 interface FieldMappingsProps {
+  destinationCatalog: DestinationCatalog;
   sourceCatalog: AirbyteCatalog;
   streamIndex: number;
 }
 
-export const FieldMappings: React.FC<FieldMappingsProps> = ({ sourceCatalog, streamIndex }) => {
+export const FieldMappings: React.FC<FieldMappingsProps> = ({ destinationCatalog, sourceCatalog, streamIndex }) => {
   const { control } = useFormContext<DataActivationConnectionFormValues>();
   const { fields, append, remove } = useFieldArray({
     control,
@@ -30,6 +32,7 @@ export const FieldMappings: React.FC<FieldMappingsProps> = ({ sourceCatalog, str
     <>
       {fields.map((_field, index) => (
         <Field
+          destinationCatalog={destinationCatalog}
           sourceCatalog={sourceCatalog}
           key={_field.id}
           streamIndex={streamIndex}
@@ -52,13 +55,14 @@ export const FieldMappings: React.FC<FieldMappingsProps> = ({ sourceCatalog, str
 };
 
 interface FieldProps {
-  sourceCatalog: AirbyteCatalog;
-  streamIndex: number;
+  destinationCatalog: DestinationCatalog;
   fieldIndex: number;
   removeField?: () => void;
+  sourceCatalog: AirbyteCatalog;
+  streamIndex: number;
 }
 
-const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sourceCatalog }) => {
+const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sourceCatalog, destinationCatalog }) => {
   const { formatMessage } = useIntl();
   const sourceStreamDescriptor = useWatch<
     DataActivationConnectionFormValues,
@@ -66,28 +70,73 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
   >({
     name: `streams.${streamIndex}.sourceStreamDescriptor`,
   });
+  const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
+    {
+      name: `streams.${streamIndex}.destinationObjectName`,
+    }
+  );
+  const destinationSyncMode = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationSyncMode`>({
+    name: `streams.${streamIndex}.destinationSyncMode`,
+  });
   const fields = useWatch<DataActivationConnectionFormValues, `streams.${number}.fields`>({
     name: `streams.${streamIndex}.fields`,
   });
-  const otherSelectedFields = useMemo(() => {
-    return fields?.filter((_, index) => index !== fieldIndex).map((field) => field.sourceFieldName) ?? [];
+  const selectedFieldNames = useMemo(() => {
+    const sourceFields = new Set<string>();
+    const destinationFields = new Set<string>();
+    fields
+      ?.filter((_, index) => index !== fieldIndex)
+      .forEach((field) => {
+        if (field.sourceFieldName) {
+          sourceFields.add(field.sourceFieldName);
+        }
+        if (field.destinationFieldName) {
+          destinationFields.add(field.destinationFieldName);
+        }
+      });
+    return { sourceFields, destinationFields };
   }, [fieldIndex, fields]);
 
-  const availableFieldOptions = useMemo(() => {
-    const streamFields =
+  const availableSourceFieldOptions = useMemo(() => {
+    const topLevelFields =
       sourceCatalog.streams.find(({ stream }) => {
         return stream?.name === sourceStreamDescriptor.name && stream?.namespace === sourceStreamDescriptor.namespace;
       })?.stream?.jsonSchema?.properties ?? [];
-    return Object.keys(streamFields)
+    return Object.keys(topLevelFields)
       .map((key) => ({
         label: key,
         value: key,
-        disabled: otherSelectedFields?.includes(key),
+        disabled: selectedFieldNames.sourceFields.has(key),
       }))
       .sort((a, b) => {
         return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
       });
-  }, [otherSelectedFields, sourceCatalog, sourceStreamDescriptor.name, sourceStreamDescriptor.namespace]);
+  }, [
+    selectedFieldNames.sourceFields,
+    sourceCatalog.streams,
+    sourceStreamDescriptor.name,
+    sourceStreamDescriptor.namespace,
+  ]);
+
+  const selectedDestinationOperation = useMemo(() => {
+    // An operation is identifiable by the combination of its objectName and syncMode.
+    return destinationCatalog.operations.find(
+      (operation) => operation.objectName === destinationObjectName && operation.syncMode === destinationSyncMode
+    );
+  }, [destinationCatalog, destinationObjectName, destinationSyncMode]);
+
+  const availableDestinationFieldOptions = useMemo(() => {
+    const topLevelFields = selectedDestinationOperation?.schema?.properties ?? [];
+    return Object.keys(topLevelFields)
+      .map((key) => ({
+        label: key,
+        value: key,
+        disabled: selectedFieldNames.destinationFields.has(key),
+      }))
+      .sort((a, b) => {
+        return a.label?.localeCompare(b.label ?? "", undefined, { numeric: true }) ?? 0;
+      });
+  }, [selectedDestinationOperation?.schema?.properties, selectedFieldNames.destinationFields]);
 
   return (
     <>
@@ -98,7 +147,7 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
       </FlexContainer>
       <div className={styles.fieldMappings__source}>
         <FormControl<DataActivationConnectionFormValues>
-          options={availableFieldOptions}
+          options={availableSourceFieldOptions}
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
           fieldType="dropdown"
           reserveSpaceForError={false}
@@ -110,17 +159,28 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
       <FlexContainer className={styles.fieldMappings__destination} alignItems="flex-start">
         <FlexItem grow>
           <FlexContainer direction="column">
-            <FormControl<DataActivationConnectionFormValues>
-              name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
-              fieldType="input"
-              type="text"
-              reserveSpaceForError={false}
-              placeholder={formatMessage({ id: "connection.destinationFieldName" })}
-            />
+            <Tooltip
+              disabled={!!destinationSyncMode}
+              control={
+                <FlexItem grow>
+                  <FormControl<DataActivationConnectionFormValues>
+                    options={availableDestinationFieldOptions}
+                    name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
+                    disabled={!destinationSyncMode}
+                    fieldType="dropdown"
+                    reserveSpaceForError={false}
+                  />
+                </FlexItem>
+              }
+            >
+              {!destinationSyncMode && (
+                <FormattedMessage id="connection.dataActivation.selectDestinationSyncModeFirst" />
+              )}
+            </Tooltip>
           </FlexContainer>
         </FlexItem>
-        <div className={styles.fieldMappings__removeField}>
-          {removeField && (
+        {removeField && (
+          <div className={styles.fieldMappings__removeField}>
             <Button
               variant="clear"
               icon="trash"
@@ -128,8 +188,8 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
               onClick={removeField}
               aria-label={formatMessage({ id: "connection.create.removeField" })}
             />
-          )}
-        </div>
+          </div>
+        )}
       </FlexContainer>
     </>
   );

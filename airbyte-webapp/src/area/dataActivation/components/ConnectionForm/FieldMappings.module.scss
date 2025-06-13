@@ -22,6 +22,10 @@
     grid-column: 4;
   }
 
+  &__destinationField {
+    display: block;
+  }
+
   &__addField {
     grid-column: 1 / -1;
   }

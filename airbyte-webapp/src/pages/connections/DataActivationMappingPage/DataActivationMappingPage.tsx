@@ -20,7 +20,7 @@ import { StreamMappings } from "area/dataActivation/components/ConnectionForm/St
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { EMPTY_STREAM, DataActivationConnectionFormSchema } from "area/dataActivation/utils";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { useDestinationDefinitionList, useDiscoverSchemaQuery } from "core/api";
+import { useDestinationDefinitionList, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { links } from "core/utils/links";
 import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
@@ -33,7 +33,8 @@ export const DataActivationMappingPage = () => {
   const createLink = useCurrentWorkspaceLink();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
+  const { data: discoveredSource } = useDiscoverSchemaQuery(source.sourceId);
+  const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
   const [showGlobalValidationMessage, setShowGlobalValidationMessage] = useState(false);
 
   if (!source || !destination) {
@@ -61,6 +62,8 @@ export const DataActivationMappingPage = () => {
   if (!destinationDefinition) {
     throw new Error("Destination definition not found");
   }
+
+  const schemasLoaded = discoveredSource && discoveredDestination;
 
   return (
     <FormProvider {...methods}>
@@ -94,17 +97,22 @@ export const DataActivationMappingPage = () => {
                   </div>
                 </FlexContainer>
               </FlexContainer>
-              {!sourceSchema && <LoadingSchema />}
+              {!schemasLoaded && <LoadingSchema />}
 
-              {sourceSchema?.catalog && (
+              {schemasLoaded && discoveredSource?.catalog && (
                 <FlexContainer direction="column" gap="lg">
-                  <StreamMappings sourceCatalog={sourceSchema.catalog} source={source} destination={destination} />
+                  <StreamMappings
+                    sourceCatalog={discoveredSource.catalog}
+                    source={source}
+                    destination={destination}
+                    destinationCatalog={discoveredDestination.catalog}
+                  />
                 </FlexContainer>
               )}
             </FlexContainer>
           </Box>
         </CreateConnectionFlowLayout.Main>
-        {sourceSchema && (
+        {schemasLoaded && (
           <CreateConnectionFlowLayout.Footer>
             <Link
               to={{

@@ -17,7 +17,7 @@ import {
   createFormDefaultValues,
 } from "area/dataActivation/utils";
 import { createSyncCatalogFromFormValues } from "area/dataActivation/utils/createSyncCatalogFromFormValues";
-import { useCurrentConnection, useUpdateConnection } from "core/api";
+import { useCachedDestinationCatalog, useCurrentConnection, useUpdateConnection } from "core/api";
 import { links } from "core/utils/links";
 import { useNotificationService } from "hooks/services/Notification";
 
@@ -31,6 +31,7 @@ export const EditDataActivationMappingsPage = () => {
   const { mutateAsync: updateConnection } = useUpdateConnection();
   const { registerNotification } = useNotificationService();
   const { formatMessage } = useIntl();
+  const destinationCatalog = useCachedDestinationCatalog(connection.destination.destinationId);
 
   const onSubmit = async (values: DataActivationConnectionFormOutput) => {
     const mappedStreams = DataActivationConnectionFormSchema.parse({ streams: values.streams });
@@ -87,6 +88,7 @@ export const EditDataActivationMappingsPage = () => {
           </FlexContainer>
           <StreamMappings
             destination={connection.destination}
+            destinationCatalog={destinationCatalog.catalog}
             source={connection.source}
             sourceCatalog={connection.syncCatalog}
           />
