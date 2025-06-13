@@ -84,7 +84,7 @@ open class ConnectorRolloutHelper
         val actorSyncInfo = getActorSyncInfo(connectorRollout.id).mapKeys { (uuidKey, _) -> uuidKey.toString() }
 
         logger.info {
-          "buildConnectorRolloutRead withActorSyncAndSelectionInfo \n" +
+          "buildConnectorRolloutRead withActorSyncAndSelectionInfo " +
             "rolloutId=${connectorRollout.id} " +
             "numPinnedToConnectorRollout=${pinnedActorInfo.numPinnedToConnectorRollout} " +
             "actorSyncInfo=${actorSyncInfo.entries.associate { it.key to it.value.toString() }}"
