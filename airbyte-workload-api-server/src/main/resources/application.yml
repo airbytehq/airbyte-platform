@@ -41,7 +41,6 @@ micronaut:
     token:
       enabled: ${API_AUTHORIZATION_ENABLED:false}
       jwt:
-        enabled: ${API_AUTHORIZATION_ENABLED:false}
         signatures:
           secret:
             generator:
@@ -83,11 +82,6 @@ airbyte:
     retries:
       delay-seconds: ${AIRBYTE_API_RETRY_DELAY_SECONDS:2}
       max: ${AIRBYTE_API_MAX_RETRIES:5}
-  secret:
-    persistence: "no_op"
-  auth:
-    identity-provider:
-      type: simple
   workload-api:
     workload-redelivery-window: ${WORKLOAD_REDELIVERY_WINDOW:PT5M}
     bearer-token:

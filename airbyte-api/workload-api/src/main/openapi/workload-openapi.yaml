@@ -248,7 +248,7 @@ paths:
               $ref: "#/components/schemas/WorkloadQueueCleanLimit"
       responses:
         "204":
-          description: Cleaning workload queue successful
+          description: Cleaning workload queue successfull
   /api/v1/workload/queue/depth:
     post:
       tags:

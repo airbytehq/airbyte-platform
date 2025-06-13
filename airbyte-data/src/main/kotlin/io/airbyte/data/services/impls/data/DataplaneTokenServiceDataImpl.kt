@@ -4,6 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.data.TokenType
 import io.airbyte.data.services.DataplaneTokenService
@@ -45,6 +46,7 @@ class DataplaneTokenServiceDataImpl(
           "iss" to tokenIssuer,
           "sub" to serviceAccount.id,
           TokenType.DATAPLANE_V1.toClaim(),
+          "roles" to AuthRole.getInstanceAdminRoles(),
           "exp" to Instant.now().plus(tokenExpirationConfig.dataplaneTokenExpirationInMinutes, ChronoUnit.MINUTES).epochSecond,
         ),
       ).orElseThrow {

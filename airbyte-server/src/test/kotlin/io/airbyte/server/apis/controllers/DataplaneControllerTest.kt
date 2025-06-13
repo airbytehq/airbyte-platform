@@ -12,7 +12,6 @@ import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -20,10 +19,8 @@ import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfig
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
@@ -35,20 +32,12 @@ class DataplaneControllerTest {
   companion object {
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
-    private val roleResolver = mockk<RoleResolver>()
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
-        roleResolver,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
-  }
-
-  @BeforeEach
-  fun setup() {
-    mockkConstructor(RoleResolver.Request::class)
-    every { anyConstructed<RoleResolver.Request>().requireRole("DATAPLANE") } returns Unit
   }
 
   @Test

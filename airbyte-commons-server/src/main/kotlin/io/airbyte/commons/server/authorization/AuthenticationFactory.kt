@@ -29,18 +29,21 @@ class AuthenticationFactory(
   }
 
   private fun createAuth(
-    subject: String,
-    claims: Map<String, Any>,
+    authUserId: String,
+    attrs: Map<String, Any>,
   ): Authentication {
-    logger.debug { "Creating auth for $subject" }
+    // Some tokens already have roles assigned. If the token contains roles, use those,
+    // otherwise resolve the roles for the current identity + request.
+    val tokenRoles = (attrs["roles"] as? List<*>)?.filterIsInstance<String>()
+    val roles = tokenRoles ?: resolveRoles(authUserId)
 
-    val roles =
-      roleResolver
-        .Request()
-        .withClaims(subject, claims)
-        .withRefsFromCurrentHttpRequest()
-        .roles()
-
-    return Authentication.build(subject, roles, claims)
+    return Authentication.build(authUserId, roles, attrs)
   }
+
+  private fun resolveRoles(authUserId: String): Set<String> =
+    roleResolver
+      .Request()
+      .withAuthUserId(authUserId)
+      .withCurrentHttpRequest()
+      .roles()
 }
