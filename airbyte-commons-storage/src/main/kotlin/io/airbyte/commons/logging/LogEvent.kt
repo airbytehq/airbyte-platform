@@ -35,6 +35,8 @@ fun ILoggingEvent.toLogEvent(): LogEvent {
     logSource = LogSource.find(this.mdcPropertyMap.getOrDefault(LOG_SOURCE_MDC_KEY, LogSource.PLATFORM.displayName)) ?: LogSource.PLATFORM,
     caller = caller,
     throwable = throwable,
+    traceId = this.mdcPropertyMap["trace_id"] ?: this.mdcPropertyMap["traceId"], // OpenTelemetry trace ID from MDC (snake_case preferred)
+    spanId = this.mdcPropertyMap["span_id"] ?: this.mdcPropertyMap["spanId"],   // OpenTelemetry span ID from MDC (snake_case preferred)
   )
 }
 
@@ -78,6 +80,8 @@ data class LogEvent(
   val logSource: LogSource = LogSource.PLATFORM,
   val caller: LogCaller? = null,
   val throwable: Throwable? = null,
+  val traceId: String? = null,
+  val spanId: String? = null,
 )
 
 /**
