@@ -179,6 +179,12 @@ class StreamsController(
       if (destinationSyncModes.contains(DestinationSyncMode.OVERWRITE)) {
         connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE)
       }
+      if (destinationSyncModes.contains(DestinationSyncMode.UPDATE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_UPDATE)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.SOFT_DELETE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE)
+      }
     }
     if (sourceSyncModes.contains(SyncMode.INCREMENTAL)) {
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND)) {
@@ -186,6 +192,12 @@ class StreamsController(
       }
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND_DEDUP)) {
         connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.UPDATE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_UPDATE)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.SOFT_DELETE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE)
       }
     }
     return connectionSyncModes

@@ -16656,6 +16656,8 @@ components:
         #- upsert_dedup # TODO chris: SCD Type 1 can be implemented later
         - append_dedup # SCD Type 1 & 2
         - overwrite_dedup
+        - update
+        - soft_delete
     AirbyteArchive:
       type: string
       format: binary
@@ -19096,8 +19098,12 @@ components:
         - full_refresh_overwrite
         - full_refresh_overwrite_deduped
         - full_refresh_append
+        - full_refresh_update
+        - full_refresh_soft_delete
         - incremental_append
         - incremental_deduped_history
+        - incremental_update
+        - incremental_soft_delete
       x-sdk-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
