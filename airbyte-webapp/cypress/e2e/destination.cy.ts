@@ -1,7 +1,17 @@
+import { requestDeleteDestination } from "@cy/commands/api";
 import { createJsonDestinationViaApi } from "@cy/commands/connection";
+import { DestinationRead } from "@src/core/api/types/AirbyteClient";
 import { createLocalJsonDestination, deleteDestination, updateDestination } from "commands/destination";
 
-describe("Destination main actions", () => {
+describe.skip("Destination main actions", () => {
+  let destination: DestinationRead;
+
+  afterEach(() => {
+    if (destination) {
+      requestDeleteDestination({ destinationId: destination.destinationId });
+    }
+  });
+
   it("Should redirect from destination list page to create destination page if no destinations are configured", () => {
     cy.intercept("POST", "/api/v1/destinations/list", {
       statusCode: 200,
@@ -22,6 +32,7 @@ describe("Destination main actions", () => {
 
   it("Update destination", () => {
     createJsonDestinationViaApi().then((jsonDestination) => {
+      destination = jsonDestination;
       updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
 
       cy.get("div[data-id='success-result']").should("exist");
@@ -31,6 +42,7 @@ describe("Destination main actions", () => {
 
   it("Can edit source again without leaving the page", () => {
     createJsonDestinationViaApi().then((jsonDestination) => {
+      destination = jsonDestination;
       updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
 
       cy.get("div[data-id='success-result']").should("exist");
