@@ -342,6 +342,9 @@ webapp:
     # -- The webapp API url
     url: /api/v1/
 
+  ##  webapp.url Define the url the Airbyte Webapp is hosted at. Used in notification links.
+  url: ""
+
   fullstory:
     # -- Whether to enable fullstory
     enabled: false
