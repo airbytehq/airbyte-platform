@@ -9,3 +9,10 @@ the `build.gradle` of `airbyte-commons` should always be empty.
 
 For other common java code that needs to be shared across modules that requires additional dependencies, we follow this
 convention: `airbyte-commons-<name of lib>`. See for example `airbyte-commons-micronaut`.
+
+# Updating the secrets mask
+
+This module contains a secrets mask configuration file, which is baked into the JAR.
+This is used by logging systems to mask secrets from log messages.
+
+Run ./gradlew :downloadSpecSecretMask to manually update this file.
