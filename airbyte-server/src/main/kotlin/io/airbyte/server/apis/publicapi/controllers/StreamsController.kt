@@ -58,7 +58,7 @@ class StreamsController(
 
     val authReq =
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.SOURCE_ID, sourceId)
 

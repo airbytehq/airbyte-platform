@@ -176,7 +176,7 @@ open class SourceApiController(
   ): SourceRead? = execute { sourceHandler.updateSourceWithOptionalSecret(partialSourceUpdate) }
 
   @Post("/write_discover_catalog_result")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
+  @Secured(AuthRoleConstants.AUTHENTICATED_USER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun writeDiscoverCatalogResult(
     @Body request: SourceDiscoverSchemaWriteRequestBody,

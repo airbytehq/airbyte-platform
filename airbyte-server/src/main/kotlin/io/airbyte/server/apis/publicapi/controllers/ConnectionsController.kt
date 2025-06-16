@@ -157,7 +157,7 @@ open class ConnectionsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, connectionId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -190,7 +190,7 @@ open class ConnectionsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, connectionId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -226,7 +226,7 @@ open class ConnectionsController(
     // If none were given, then the ConnectionService will determine the workspaces for the current user.
     if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -266,7 +266,7 @@ open class ConnectionsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, connectionId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

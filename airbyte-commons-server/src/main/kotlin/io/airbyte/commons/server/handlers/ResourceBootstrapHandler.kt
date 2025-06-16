@@ -65,7 +65,7 @@ open class ResourceBootstrapHandler(
 
     // Ensure user has the required permissions to create a workspace
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.ORGANIZATION_ID, organization.organizationId)
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)

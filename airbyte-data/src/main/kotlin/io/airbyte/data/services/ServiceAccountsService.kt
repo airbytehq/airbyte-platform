@@ -13,7 +13,6 @@ import jakarta.inject.Singleton
 import org.springframework.security.crypto.password.Pbkdf2PasswordEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.time.Clock
 import java.util.UUID
 import io.airbyte.data.repositories.entities.ServiceAccount as ServiceAccountEntity
 
@@ -23,8 +22,6 @@ class ServiceAccountsService internal constructor(
   private val repo: ServiceAccountsRepository,
   private val tokenExpirationConfig: TokenExpirationConfig,
 ) {
-  var clock: Clock = Clock.systemUTC()
-
   fun create(
     id: UUID = UUID.randomUUID(),
     name: String,

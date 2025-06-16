@@ -445,7 +445,7 @@ class DefinitionsController(
 
   private fun ensureUserCanRead(workspaceId: UUID) {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -462,7 +462,7 @@ class DefinitionsController(
     }
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

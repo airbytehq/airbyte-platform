@@ -41,7 +41,7 @@ open class WorkspacesController(
     workspaceOAuthCredentialsRequest: WorkspaceOAuthCredentialsRequest,
   ): Response {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -58,7 +58,7 @@ open class WorkspacesController(
     // because there's only one organization in OSS/SME.
     // This controller is overridden in Airbyte Cloud to allow multiple workspaces.
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.ORGANIZATION_ID, DEFAULT_ORGANIZATION_ID)
       .requireRole(AuthRoleConstants.ORGANIZATION_EDITOR)
@@ -70,7 +70,7 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeleteWorkspace(workspaceId: String): Response {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -82,7 +82,7 @@ open class WorkspacesController(
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetWorkspace(workspaceId: String): Response {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -100,7 +100,7 @@ open class WorkspacesController(
     // If none were given, then the WorkspaceService will determine the workspaces for the current user.
     if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -122,7 +122,7 @@ open class WorkspacesController(
     workspaceUpdateRequest: WorkspaceUpdateRequest,
   ): Response {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

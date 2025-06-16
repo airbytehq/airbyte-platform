@@ -51,7 +51,7 @@ open class TagsController(
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -70,7 +70,7 @@ open class TagsController(
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -92,7 +92,7 @@ open class TagsController(
     // If none were given, then the TagService will determine the workspaces for the current user.
     if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -117,7 +117,7 @@ open class TagsController(
     val workspaceId: UUID = tagService.getTag(tagId).workspaceId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

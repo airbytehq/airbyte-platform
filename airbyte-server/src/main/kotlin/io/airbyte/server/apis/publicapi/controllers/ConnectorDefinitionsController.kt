@@ -40,7 +40,7 @@ class ConnectorDefinitionsController(
     }
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)

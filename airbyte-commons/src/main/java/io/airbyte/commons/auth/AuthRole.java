@@ -99,6 +99,7 @@ public enum AuthRole implements AuthRoleInterface {
     Set<String> roles = buildAuthRolesSet(AuthRole.ADMIN);
     roles.addAll(OrganizationAuthRole.buildOrganizationAuthRolesSet(OrganizationAuthRole.ORGANIZATION_ADMIN));
     roles.addAll(WorkspaceAuthRole.buildWorkspaceAuthRolesSet(WorkspaceAuthRole.WORKSPACE_ADMIN));
+    roles.add(AuthRoleConstants.DATAPLANE);
     return roles;
   }
 

@@ -11,12 +11,16 @@ import io.airbyte.api.model.generated.SecretStorageIdRequestBody
 import io.airbyte.api.model.generated.SecretStorageListRequestBody
 import io.airbyte.api.model.generated.SecretStorageRead
 import io.airbyte.api.model.generated.SecretStorageReadList
+import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.SecretStorageCreate
 import io.airbyte.domain.models.SecretStorageId
+import io.airbyte.domain.models.SecretStorageScopeType
 import io.airbyte.domain.models.SecretStorageType
 import io.airbyte.domain.models.SecretStorageWithConfig
 import io.airbyte.domain.models.UserId
@@ -25,6 +29,8 @@ import io.airbyte.domain.services.secrets.SecretStorageService
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.scheduling.annotation.ExecuteOn
+import io.micronaut.security.annotation.Secured
+import io.micronaut.security.rules.SecurityRule.IS_AUTHENTICATED
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotNull
 
@@ -34,6 +40,7 @@ class SecretStorageApiController(
   private val secretStorageService: SecretStorageService,
   private val secretMigrationService: SecretMigrationService,
   private val currentUserService: CurrentUserService,
+  private val roleResolver: RoleResolver,
 ) : SecretStorageApi {
   @RequiresIntent(Intent.ManageSecretStorages)
   override fun createSecretStorage(
@@ -79,11 +86,19 @@ class SecretStorageApiController(
     )
   }
 
-  @RequiresIntent(Intent.ManageSecretStorages)
+  @Secured(IS_AUTHENTICATED)
   override fun getSecretStorage(
     @Body secretStorageIdRequestBody: SecretStorageIdRequestBody,
   ): SecretStorageRead {
     val secretStorage = secretStorageService.getById(SecretStorageId(secretStorageIdRequestBody.secretStorageId))
+
+    val roleReq = roleResolver.newRequest().withCurrentAuthentication()
+    when (secretStorage.scopeType) {
+      SecretStorageScopeType.ORGANIZATION -> roleReq.withOrg(secretStorage.scopeId)
+      SecretStorageScopeType.WORKSPACE -> roleReq.withRef(AuthenticationId.WORKSPACE_ID, secretStorage.scopeId)
+    }
+    roleReq.requireRole(AuthRoleConstants.DATAPLANE)
+
     return if (secretStorage.configuredFromEnvironment) {
       SecretStorageWithConfig(secretStorage, null).toApiModel()
     } else {

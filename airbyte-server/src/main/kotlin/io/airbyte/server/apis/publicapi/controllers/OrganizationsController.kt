@@ -43,7 +43,7 @@ open class OrganizationsController(
     organizationOAuthCredentialsRequest: OrganizationOAuthCredentialsRequest,
   ): Response {
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)

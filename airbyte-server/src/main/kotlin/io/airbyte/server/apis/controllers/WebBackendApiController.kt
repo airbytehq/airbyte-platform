@@ -95,7 +95,7 @@ open class WebBackendApiController(
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
         roleResolver
-          .Request()
+          .newRequest()
           .withCurrentUser()
           .withRef(AuthenticationId.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString())
           .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

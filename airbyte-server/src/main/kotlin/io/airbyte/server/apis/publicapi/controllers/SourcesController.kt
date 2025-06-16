@@ -111,7 +111,7 @@ open class SourcesController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -147,7 +147,7 @@ open class SourcesController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -193,7 +193,7 @@ open class SourcesController(
     // If none were given, then the SourceService determine the workspaces for the current user.
     if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -231,7 +231,7 @@ open class SourcesController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -273,7 +273,7 @@ open class SourcesController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.SOURCE_ID, sourceId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

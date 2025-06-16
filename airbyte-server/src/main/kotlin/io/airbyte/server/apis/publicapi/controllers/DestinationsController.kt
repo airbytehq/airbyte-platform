@@ -111,7 +111,7 @@ open class DestinationsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -146,7 +146,7 @@ open class DestinationsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -187,7 +187,7 @@ open class DestinationsController(
     // If none were given, then the DestinationService will determine the workspaces for the current user.
     if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -224,7 +224,7 @@ open class DestinationsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
@@ -262,7 +262,7 @@ open class DestinationsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.DESTINATION_ID_, destinationId)
       .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)

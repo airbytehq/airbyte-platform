@@ -18,8 +18,9 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
+import io.airbyte.commons.auth.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
 import io.airbyte.data.services.DataplaneGroupService
@@ -44,6 +45,7 @@ import java.util.stream.Collectors
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val roleResolver: RoleResolver,
 ) : DataplaneApi {
   @Post("/create")
   @Secured(ADMIN)
@@ -140,7 +142,6 @@ open class DataplaneController(
   }
 
   @Post("/initialize")
-  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
@@ -154,6 +155,12 @@ open class DataplaneController(
     }
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
 
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withOrg(dataplaneGroup.organizationId)
+      .requireRole(DATAPLANE)
+
     val resp = DataplaneInitResponse()
     resp.dataplaneName = dataplane.name
     resp.dataplaneId = dataplane.id
@@ -165,7 +172,6 @@ open class DataplaneController(
   }
 
   @Post("/heartbeat")
-  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
@@ -176,6 +182,12 @@ open class DataplaneController(
     }
 
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withOrg(dataplaneGroup.organizationId)
+      .requireRole(DATAPLANE)
 
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name

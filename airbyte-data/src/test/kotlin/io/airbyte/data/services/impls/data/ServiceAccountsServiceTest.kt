@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import com.nimbusds.jwt.JWTParser
 import io.airbyte.data.TokenType
+import io.airbyte.data.auth.AirbyteJwtGeneratorNoAuthImpl
 import io.airbyte.data.repositories.AbstractConfigRepositoryTest
 import io.airbyte.data.services.ServiceAccountsService
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -21,13 +22,14 @@ import java.util.UUID
 
 @MicronautTest
 class ServiceAccountsServiceTest : AbstractConfigRepositoryTest() {
-  var clock = Clock.fixed(Instant.now(), ZoneId.of("UTC"))
+  var clock = Clock.fixed(Instant.ofEpochMilli(1749850369), ZoneId.of("UTC"))
   lateinit var svc: ServiceAccountsService
 
   @BeforeEach
   fun setup() {
     svc = context.getBean(ServiceAccountsService::class.java)
-    svc.clock
+    val gen = context.getBean(AirbyteJwtGeneratorNoAuthImpl::class.java)
+    gen.clock = clock
   }
 
   @Test

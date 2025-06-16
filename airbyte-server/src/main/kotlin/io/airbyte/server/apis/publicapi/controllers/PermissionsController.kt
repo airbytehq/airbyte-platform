@@ -61,14 +61,14 @@ open class PermissionsController(
     if (workspaceId != null) { // adding a workspace level permission
       // current user should have workspace_admin or a higher role
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.WORKSPACE_ID, workspaceId.toString())
         .requireRole(AuthRoleConstants.WORKSPACE_ADMIN)
     } else if (organizationId != null) { // adding an organization level permission
       // current user should have organization_admin or a higher role
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString())
         .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
@@ -108,7 +108,7 @@ open class PermissionsController(
     // current user should have at least a workspace_admin role to delete a workspace level permission
     // or at least an organization_admin role to delete an organization level permission
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.PERMISSION_ID, permissionId)
       .requireRole(
@@ -141,7 +141,7 @@ open class PermissionsController(
     // current user should have either at least a workspace_reader role to get a workspace level permission
     // or at least an organization_read role to read an organization level permission
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.PERMISSION_ID, permissionId)
       .requireRole(
@@ -191,7 +191,7 @@ open class PermissionsController(
 
       // Make sure current user has to be organization_admin to access another user's permissions.
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
         .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
@@ -235,7 +235,7 @@ open class PermissionsController(
     // current user should have either at least a workspace_admin role to update a workspace level permission
     // or at least an organization_admin role to update an organization level permission
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.PERMISSION_ID, permissionId)
       .requireRole(

@@ -58,7 +58,7 @@ open class JobsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.JOB_ID, jobId.toString())
       .requireRole(AuthRoleConstants.WORKSPACE_RUNNER)
@@ -92,7 +92,7 @@ open class JobsController(
 
     // Only Editor and above should be able to run a Clear.
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.CONNECTION_ID, jobCreateRequest.connectionId)
       .requireRole(
@@ -206,7 +206,7 @@ open class JobsController(
     val userId: UUID = currentUserService.currentUser.userId
 
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.JOB_ID, jobId.toString())
       .requireRole(AuthRoleConstants.WORKSPACE_READER)
@@ -251,13 +251,13 @@ open class JobsController(
     val userId: UUID = currentUserService.currentUser.userId
     if (connectionId != null) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.CONNECTION_ID, connectionId)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)
     } else if (!workspaceIds.isNullOrEmpty()) {
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withWorkspaces(workspaceIds)
         .requireRole(AuthRoleConstants.WORKSPACE_READER)

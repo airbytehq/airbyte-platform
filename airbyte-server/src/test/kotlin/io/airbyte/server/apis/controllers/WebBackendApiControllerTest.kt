@@ -54,9 +54,6 @@ internal class WebBackendApiControllerTest {
   @Client("/")
   lateinit var client: HttpClient
 
-  @MockBean(RoleResolver::class)
-  fun roleResolver(): RoleResolver = mockk(relaxed = true)
-
   @MockBean(WebBackendConnectionsHandler::class)
   fun webBackendConnectionsHandler(): WebBackendConnectionsHandler = mockk()
 

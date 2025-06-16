@@ -211,3 +211,5 @@ object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", 
 object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = false)
 
 object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
+
+object IgnoreTokenRoleClaims : Temporary<Boolean>(key = "platform.ignore-token-role-claims", default = false)
