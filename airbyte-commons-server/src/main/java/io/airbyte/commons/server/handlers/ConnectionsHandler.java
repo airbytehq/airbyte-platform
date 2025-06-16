@@ -63,6 +63,7 @@ import io.airbyte.api.model.generated.StreamDescriptor;
 import io.airbyte.api.model.generated.StreamStats;
 import io.airbyte.api.model.generated.StreamTransform;
 import io.airbyte.api.model.generated.StreamTransform.TransformTypeEnum;
+import io.airbyte.api.model.generated.SyncMode;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsData;
 import io.airbyte.api.problems.model.generated.ProblemConnectionConflictingStreamsDataItem;
@@ -846,6 +847,9 @@ public class ConnectionsHandler {
       statePersistence.bulkDelete(connectionId,
           deactivatedStreams.stream().map(ApiConverters::toInternal).collect(Collectors.toSet()));
     }
+
+    deleteStateForStreamsWithSyncModeChanged(connectionPatch, sync, connectionId);
+
     applyPatchToStandardSync(sync, connectionPatch, workspaceId);
 
     LOGGER.debug("patched StandardSync before persisting: {}", sync);
@@ -863,6 +867,45 @@ public class ConnectionsHandler {
         updateReason, autoUpdate);
 
     return updatedRead;
+  }
+
+  private void deleteStateForStreamsWithSyncModeChanged(final ConnectionUpdate connectionPatch,
+                                                        final StandardSync sync,
+                                                        final UUID connectionId)
+      throws IOException {
+    if (connectionPatch.getSyncCatalog() != null) {
+      validateCatalogDoesntContainDuplicateStreamNames(connectionPatch.getSyncCatalog());
+      final Map<StreamDescriptor, SyncMode> activeStreams = connectionPatch.getSyncCatalog().getStreams().stream()
+          .filter(streamAndConfig -> streamAndConfig.getConfig() != null && streamAndConfig.getConfig().getSelected())
+          .collect(Collectors.toMap(
+              streamAndConfig -> new StreamDescriptor().name(streamAndConfig.getStream().getName())
+                  .namespace(streamAndConfig.getStream().getNamespace()),
+              streamAndConfig -> streamAndConfig.getConfig().getSyncMode()));
+
+      final Map<StreamDescriptor, SyncMode> existingStreams = sync.getCatalog().getStreams().stream()
+          .collect(Collectors.toMap(
+              streamAndConfig -> new StreamDescriptor().name(streamAndConfig.getStream().getName())
+                  .namespace(streamAndConfig.getStream().getNamespace()),
+              streamAndConfig -> Enums.convertTo(streamAndConfig.getSyncMode(), SyncMode.class)));
+      final Set<StreamDescriptor> streamsWithChangedSyncMode = activeStreams.entrySet().stream()
+          .filter(entry -> {
+            final StreamDescriptor streamDescriptor = entry.getKey();
+            final SyncMode newSyncMode = entry.getValue();
+            final SyncMode existingSyncMode = existingStreams.get(streamDescriptor);
+
+            // Stream has changed sync mode if:
+            // 1. It exists in both maps AND
+            // 2. The sync modes are different
+            return existingSyncMode != null && !newSyncMode.equals(existingSyncMode);
+          })
+          .map(Entry::getKey)
+          .collect(Collectors.toSet());
+
+      if (!streamsWithChangedSyncMode.isEmpty()) {
+        statePersistence.bulkDelete(connectionId,
+            streamsWithChangedSyncMode.stream().map(ApiConverters::toInternal).collect(Collectors.toSet()));
+      }
+    }
   }
 
   private void validateCatalogIncludeFiles(final AirbyteCatalog newCatalog,
