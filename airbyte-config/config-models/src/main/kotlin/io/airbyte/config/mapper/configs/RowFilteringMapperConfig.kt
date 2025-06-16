@@ -10,7 +10,6 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.MapperOperationName
-import io.airbyte.config.adapters.AirbyteRecord
 import java.util.UUID
 
 @JsonTypeInfo(
@@ -26,8 +25,6 @@ import java.util.UUID
 )
 sealed class Operation {
   abstract val type: String
-
-  abstract fun eval(record: AirbyteRecord): Boolean
 }
 
 data class NotOperation(
@@ -40,9 +37,7 @@ data class NotOperation(
   @field:SchemaTitle("Sub-Conditions (NOT)")
   @field:SchemaDescription("Conditions to evaluate with the NOT operator.")
   val conditions: List<Operation>,
-) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean = conditions.none { it.eval(record) }
-}
+) : Operation()
 
 data class EqualOperation(
   @JsonProperty("type")
@@ -59,14 +54,7 @@ data class EqualOperation(
   @field:SchemaTitle("Comparison Value")
   @field:SchemaDescription("The value to compare the field against.")
   val comparisonValue: String,
-) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean {
-    if (record.has(fieldName)) {
-      return record.get(fieldName).asString() == comparisonValue
-    }
-    return false
-  }
-}
+) : Operation()
 
 data class OrOperation(
   @JsonProperty("type")
@@ -78,9 +66,7 @@ data class OrOperation(
   @field:SchemaTitle("Sub-Conditions (OR)")
   @field:SchemaDescription("Conditions to evaluate with the OR operator.")
   val conditions: List<Operation>,
-) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean = conditions.any { it.eval(record) }
-}
+) : Operation()
 
 data class AndOperation(
   @JsonProperty("type")
@@ -92,9 +78,7 @@ data class AndOperation(
   @field:SchemaTitle("Sub-Conditions (AND)")
   @field:SchemaDescription("Conditions to evaluate with the AND operator.")
   val conditions: List<Operation>,
-) : Operation() {
-  override fun eval(record: AirbyteRecord): Boolean = conditions.all { it.eval(record) }
-}
+) : Operation()
 
 data class RowFilteringConfig(
   @JsonProperty("conditions")

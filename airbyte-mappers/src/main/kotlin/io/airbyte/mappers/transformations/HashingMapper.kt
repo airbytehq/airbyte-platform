@@ -4,10 +4,11 @@
 
 package io.airbyte.mappers.transformations
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.HashingMapperConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.security.MessageDigest
@@ -15,7 +16,9 @@ import java.util.HexFormat
 
 @Singleton
 @Named("HashingMapper")
-class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
+class HashingMapper(
+  private val objectMapper: ObjectMapper,
+) : FilteredRecordsMapper<HashingMapperConfig>() {
   companion object {
     // Needed configuration keys
     const val TARGET_FIELD_CONFIG_KEY = "targetField"
@@ -34,7 +37,7 @@ class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
     val supportedMethods = listOf(MD2, MD5, SHA1, SHA224, SHA256, SHA384, SHA512)
   }
 
-  private val hashingMapperSpec = HashingMapperSpec()
+  private val hashingMapperSpec = HashingMapperSpec(objectMapper)
 
   override val name: String
     get() = MapperOperationName.HASHING
@@ -64,7 +67,7 @@ class HashingMapper : FilteredRecordsMapper<HashingMapperConfig>() {
 
         val hashedAndEncodeValue: String = hashAndEncodeData(config.config.method.value, data)
         record.set(outputFieldName, hashedAndEncodeValue)
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         // TODO We should use a more precise Reason once available in the protocol
         record.trackFieldError(outputFieldName, AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
       } finally {

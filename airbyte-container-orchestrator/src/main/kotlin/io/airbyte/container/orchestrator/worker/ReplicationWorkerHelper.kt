@@ -17,8 +17,6 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
-import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
@@ -34,6 +32,7 @@ import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
 import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
@@ -323,7 +322,7 @@ class ReplicationWorkerHelper(
       ?.let { mapper?.mapMessage(it) ?: it }
       ?.let { Optional.of(it) } ?: Optional.empty()
 
-  internal fun applyTransformationMappers(message: AirbyteRecord) {
+  internal fun applyTransformationMappers(message: AirbyteJsonRecordAdapter) {
     streamMappers[message.streamDescriptor]?.takeIf { it.isNotEmpty() }?.let { mappers ->
       recordMapper.applyMappers(message, mappers)
     }

@@ -2,10 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.adapters
-
-import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.v0.AirbyteMessage
+package io.airbyte.mappers.adapters
 
 interface AirbyteRecord {
   enum class Change {
@@ -16,9 +13,6 @@ interface AirbyteRecord {
   enum class Reason {
     PLATFORM_SERIALIZATION_ERROR,
   }
-
-  val streamDescriptor: StreamDescriptor
-  val asProtocol: AirbyteMessage
 
   fun has(fieldName: String): Boolean
 

@@ -5,16 +5,16 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.AesEncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import jakarta.inject.Singleton
 import java.security.KeyFactory
 import java.security.SecureRandom
@@ -37,10 +37,14 @@ class MissingSecretValueException(
 ) : IllegalArgumentException(msg)
 
 @Singleton
-class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
-  class EncryptionMapperSpec : ConfigValidatingSpec<EncryptionMapperConfig>() {
+class EncryptionMapper(
+  private val objectMapper: ObjectMapper,
+) : FilteredRecordsMapper<EncryptionMapperConfig>() {
+  class EncryptionMapperSpec(
+    objectMapper: ObjectMapper,
+  ) : ConfigValidatingSpec<EncryptionMapperConfig>(objectMapper) {
     override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): EncryptionMapperConfig =
-      Jsons.convertValue(configuredMapper, EncryptionMapperConfig::class.java)
+      objectMapper().convertValue(configuredMapper, EncryptionMapperConfig::class.java)
 
     override fun jsonSchema(): JsonNode = simpleJsonSchemaGenerator.generateJsonSchema(specType())
 
@@ -50,7 +54,7 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
   override val name: String
     get() = MapperOperationName.ENCRYPTION
 
-  override fun spec(): MapperSpec<EncryptionMapperConfig> = EncryptionMapperSpec()
+  override fun spec(): MapperSpec<EncryptionMapperConfig> = EncryptionMapperSpec(objectMapper = objectMapper)
 
   override fun schema(
     config: EncryptionMapperConfig,
@@ -78,7 +82,7 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
         val data = record.get(config.config.targetField).asString()
         val encryptedData = encrypt(data.toByteArray(Charsets.UTF_8), config.config)
         record.set(outputFieldName, encryptedData)
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         // TODO We should use a more precise Reason once available in the protocol
         record.trackFieldError(outputFieldName, AirbyteRecord.Change.NULLED, AirbyteRecord.Reason.PLATFORM_SERIALIZATION_ERROR)
         failed = true
@@ -105,7 +109,7 @@ class EncryptionMapper : FilteredRecordsMapper<EncryptionMapperConfig>() {
     val sampleData = "sample data"
     try {
       encrypt(sampleData.toByteArray(Charsets.UTF_8), config)
-    } catch (e: MissingSecretValueException) {
+    } catch (_: MissingSecretValueException) {
       // ignore if key is not hydrated
     } catch (e: Exception) {
       throw EncryptionConfigException("Encryption key or parameters are invalid", e)

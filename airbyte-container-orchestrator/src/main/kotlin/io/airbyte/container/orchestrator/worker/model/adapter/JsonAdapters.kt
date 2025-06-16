@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.adapters
+package io.airbyte.container.orchestrator.worker.model.adapter
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.BooleanNode
@@ -11,6 +11,8 @@ import com.fasterxml.jackson.databind.node.IntNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.mappers.adapters.AirbyteRecord
+import io.airbyte.mappers.adapters.Value
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessageMeta
 import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
@@ -28,8 +30,8 @@ class JsonValueAdapter(
 data class AirbyteJsonRecordAdapter(
   private val message: AirbyteMessage,
 ) : AirbyteRecord {
-  override val asProtocol: AirbyteMessage = message
-  override val streamDescriptor: StreamDescriptor =
+  val asProtocol: AirbyteMessage = message
+  val streamDescriptor: StreamDescriptor =
     StreamDescriptor()
       .withNamespace(message.record.namespace)
       .withName(message.record.stream)

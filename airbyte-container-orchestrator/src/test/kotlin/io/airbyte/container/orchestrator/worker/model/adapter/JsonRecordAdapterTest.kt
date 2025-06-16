@@ -2,16 +2,17 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.config.adapters
+package io.airbyte.container.orchestrator.worker.model.adapter
 
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
-import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 
-class JsonRecordAdapterTest {
+internal class JsonRecordAdapterTest {
   companion object {
     const val BOOLEAN_FIELD = "boolean-field"
     const val INT_FIELD = "int-field"
@@ -41,17 +42,20 @@ class JsonRecordAdapterTest {
   fun `basic read`() {
     val adapter = getAdapterFromRecord(jsonRecordString)
 
-    assertEquals(StreamDescriptor().withName("stream-name").withNamespace("stream-namespace"), adapter.streamDescriptor)
+    Assertions.assertEquals(
+      StreamDescriptor().withName("stream-name").withNamespace("stream-namespace"),
+      adapter.streamDescriptor,
+    )
 
-    assertEquals("bar", adapter.get(STRING_FIELD).asString())
-    assertEquals(false, adapter.get(STRING_FIELD).asBoolean())
+    Assertions.assertEquals("bar", adapter.get(STRING_FIELD).asString())
+    Assertions.assertEquals(false, adapter.get(STRING_FIELD).asBoolean())
 
-    assertEquals(true, adapter.get(BOOLEAN_FIELD).asBoolean())
-    assertEquals("true", adapter.get(BOOLEAN_FIELD).asString())
+    Assertions.assertEquals(true, adapter.get(BOOLEAN_FIELD).asBoolean())
+    Assertions.assertEquals("true", adapter.get(BOOLEAN_FIELD).asString())
 
-    assertEquals("42", adapter.get(INT_FIELD).asString())
+    Assertions.assertEquals("42", adapter.get(INT_FIELD).asString())
 
-    assertEquals("4.2", adapter.get(NUMBER_FIELD).asString())
+    Assertions.assertEquals("4.2", adapter.get(NUMBER_FIELD).asString())
   }
 
   @Test
@@ -65,7 +69,7 @@ class JsonRecordAdapterTest {
         .withField("test")
         .withChange(AirbyteRecordMessageMetaChange.Change.TRUNCATED)
         .withReason(AirbyteRecordMessageMetaChange.Reason.PLATFORM_SERIALIZATION_ERROR)
-    assertEquals(listOf(expectedMetaChange), adapter.asProtocol.record.meta.changes)
+    Assertions.assertEquals(listOf(expectedMetaChange), adapter.asProtocol.record.meta.changes)
   }
 
   @Test
@@ -75,7 +79,7 @@ class JsonRecordAdapterTest {
 
     val serialized = Jsons.serialize(adapter.asProtocol)
     val deserialized = Jsons.deserialize(serialized, AirbyteMessage::class.java)
-    assertEquals(adapter.asProtocol, deserialized)
+    Assertions.assertEquals(adapter.asProtocol, deserialized)
   }
 
   @Test
@@ -83,10 +87,10 @@ class JsonRecordAdapterTest {
     val adapter = getAdapterFromRecord(jsonRecordString)
 
     adapter.set(STRING_FIELD, true)
-    assertEquals(true, adapter.get(STRING_FIELD).asBoolean())
+    Assertions.assertEquals(true, adapter.get(STRING_FIELD).asBoolean())
 
     adapter.set(BOOLEAN_FIELD, false)
-    assertEquals(false, adapter.get(BOOLEAN_FIELD).asBoolean())
+    Assertions.assertEquals(false, adapter.get(BOOLEAN_FIELD).asBoolean())
   }
 
   @Test
@@ -94,10 +98,10 @@ class JsonRecordAdapterTest {
     val adapter = getAdapterFromRecord(jsonRecordString)
 
     adapter.set(NUMBER_FIELD, 1.1)
-    assertEquals(1.1, adapter.get(NUMBER_FIELD).asNumber())
+    Assertions.assertEquals(1.1, adapter.get(NUMBER_FIELD).asNumber())
 
     adapter.set(STRING_FIELD, 2)
-    assertEquals(2.0, adapter.get(STRING_FIELD).asNumber())
+    Assertions.assertEquals(2.0, adapter.get(STRING_FIELD).asNumber())
   }
 
   @Test
@@ -105,10 +109,10 @@ class JsonRecordAdapterTest {
     val adapter = getAdapterFromRecord(jsonRecordString)
 
     adapter.set(NUMBER_FIELD, 1)
-    assertEquals(1.0, adapter.get(NUMBER_FIELD).asNumber())
+    Assertions.assertEquals(1.0, adapter.get(NUMBER_FIELD).asNumber())
 
     adapter.set(STRING_FIELD, 2)
-    assertEquals(2.0, adapter.get(STRING_FIELD).asNumber())
+    Assertions.assertEquals(2.0, adapter.get(STRING_FIELD).asNumber())
   }
 
   @Test
@@ -116,10 +120,10 @@ class JsonRecordAdapterTest {
     val adapter = getAdapterFromRecord(jsonRecordString)
 
     adapter.set(STRING_FIELD, "updated")
-    assertEquals("updated", adapter.get(STRING_FIELD).asString())
+    Assertions.assertEquals("updated", adapter.get(STRING_FIELD).asString())
 
     adapter.set(BOOLEAN_FIELD, "overridden")
-    assertEquals("overridden", adapter.get(BOOLEAN_FIELD).asString())
+    Assertions.assertEquals("overridden", adapter.get(BOOLEAN_FIELD).asString())
   }
 
   fun getAdapterFromRecord(jsonString: String) = AirbyteJsonRecordAdapter(getRecord(jsonString))
