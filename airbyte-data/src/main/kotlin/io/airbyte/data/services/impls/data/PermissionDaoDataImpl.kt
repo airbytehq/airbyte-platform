@@ -4,8 +4,8 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
+import io.airbyte.commons.auth.roles.OrganizationAuthRole
+import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
@@ -252,15 +252,15 @@ open class PermissionDaoDataImpl(
     when (permissionType) {
       Permission.PermissionType.INSTANCE_ADMIN -> throw IllegalArgumentException("INSTANCE_ADMIN permissions are not supported")
       Permission.PermissionType.DATAPLANE -> throw IllegalArgumentException("DATAPLANE permissions are not supported")
-      Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.authority
-      Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.authority
-      Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.authority
-      Permission.PermissionType.ORGANIZATION_READER -> OrganizationAuthRole.ORGANIZATION_READER.authority
-      Permission.PermissionType.ORGANIZATION_MEMBER -> OrganizationAuthRole.ORGANIZATION_MEMBER.authority
-      Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
-      Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
-      Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.authority
-      Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.authority
-      Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.authority
+      Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.getAuthority()
+      Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.getAuthority()
+      Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.getAuthority()
+      Permission.PermissionType.ORGANIZATION_READER -> OrganizationAuthRole.ORGANIZATION_READER.getAuthority()
+      Permission.PermissionType.ORGANIZATION_MEMBER -> OrganizationAuthRole.ORGANIZATION_MEMBER.getAuthority()
+      Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
+      Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
+      Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.getAuthority()
+      Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.getAuthority()
+      Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.getAuthority()
     }
 }

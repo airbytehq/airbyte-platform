@@ -6,7 +6,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.DeploymentMetadataApi
 import io.airbyte.api.model.generated.DeploymentMetadataRead
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler
 import io.airbyte.server.apis.execute
 import io.micronaut.context.annotation.Context

@@ -6,7 +6,7 @@ package io.airbyte.connectorbuilder.authorization
 
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.PlainJWT
-import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.roles.AuthRole
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

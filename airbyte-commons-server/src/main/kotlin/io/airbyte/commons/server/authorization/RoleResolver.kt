@@ -7,10 +7,10 @@ package io.airbyte.commons.server.authorization
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.commons.auth.AuthRole
-import io.airbyte.commons.auth.AuthRoleConstants
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
+import io.airbyte.commons.auth.roles.AuthRole
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.roles.OrganizationAuthRole
+import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -332,7 +332,7 @@ private fun determineWorkspaceRole(
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, WorkspaceAuthRole::class.java)
-        ?.authority
+        ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType
 }
@@ -357,7 +357,7 @@ private fun determineOrganizationRole(
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, OrganizationAuthRole::class.java)
-        ?.authority
+        ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType
 }

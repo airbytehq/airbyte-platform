@@ -17,9 +17,9 @@ import io.airbyte.api.model.generated.SourceDefinitionRead
 import io.airbyte.api.model.generated.SourceDefinitionReadList
 import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.EnterpriseSourceStubsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors

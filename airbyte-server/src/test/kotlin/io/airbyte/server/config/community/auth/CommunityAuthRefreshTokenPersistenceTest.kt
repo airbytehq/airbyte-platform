@@ -6,7 +6,7 @@ package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.DEFAULT_USER_ID
-import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.AuthRefreshToken
 import io.airbyte.data.services.AuthRefreshTokenService
 import io.micronaut.security.authentication.Authentication

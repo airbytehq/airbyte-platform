@@ -18,8 +18,8 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
-import io.airbyte.commons.auth.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.auth.roles.AuthRoleConstants.ADMIN
+import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane

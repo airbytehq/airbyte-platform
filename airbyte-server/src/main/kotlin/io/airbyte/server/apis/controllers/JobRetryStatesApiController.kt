@@ -8,7 +8,7 @@ import io.airbyte.api.generated.JobRetryStatesApi
 import io.airbyte.api.model.generated.JobIdRequestBody
 import io.airbyte.api.model.generated.JobRetryStateRequestBody
 import io.airbyte.api.model.generated.RetryStateRead
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.IdNotFoundKnownException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.handlers.RetryStatesHandler

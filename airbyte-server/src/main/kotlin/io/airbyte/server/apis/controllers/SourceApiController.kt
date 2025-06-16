@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.SourceUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.SchedulerHandler
 import io.airbyte.commons.server.handlers.SourceHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors

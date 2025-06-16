@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.CreateOrUpdateSecretsPersistenceConfigRequ
 import io.airbyte.api.model.generated.ScopeType
 import io.airbyte.api.model.generated.SecretPersistenceConfig
 import io.airbyte.api.model.generated.SecretPersistenceConfigGetRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException

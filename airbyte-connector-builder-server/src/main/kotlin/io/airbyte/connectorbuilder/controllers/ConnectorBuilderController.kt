@@ -4,7 +4,7 @@
 
 package io.airbyte.connectorbuilder.controllers
 
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.connectorbuilder.api.generated.ApiApi
 import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRead
 import io.airbyte.connectorbuilder.api.model.generated.CheckContributionRequestBody

@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WebappConfigResponse
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.lang.MoreBooleans
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler

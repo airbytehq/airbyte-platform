@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.authorization.RoleResolver

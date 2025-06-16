@@ -29,9 +29,9 @@ import io.airbyte.api.model.generated.PersistCancelJobRequestBody
 import io.airbyte.api.model.generated.ReportJobStartRequest
 import io.airbyte.api.model.generated.SyncInput
 import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.JobInputHandler

@@ -35,6 +35,7 @@ dependencies {
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-server"))
   implementation(project(":oss:airbyte-data"))
   implementation(project(":oss:airbyte-commons-micronaut"))

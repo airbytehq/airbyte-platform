@@ -6,7 +6,7 @@ package io.airbyte.server.pro
 
 import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.AirbyteAuthConstants
-import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.roles.AuthRole
 import io.micronaut.context.annotation.Requires
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication

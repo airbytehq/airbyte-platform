@@ -25,7 +25,7 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.authorization.RoleResolver

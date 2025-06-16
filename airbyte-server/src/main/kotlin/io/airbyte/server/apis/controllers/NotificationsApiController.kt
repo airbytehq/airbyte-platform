@@ -8,7 +8,7 @@ import io.airbyte.api.generated.NotificationsApi
 import io.airbyte.api.model.generated.Notification
 import io.airbyte.api.model.generated.NotificationRead
 import io.airbyte.api.model.generated.NotificationWebhookConfigValidationRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.NotificationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

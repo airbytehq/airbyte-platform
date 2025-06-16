@@ -7,8 +7,8 @@ package io.airbyte.server.apis.publicapi.controllers
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.config.TokenExpirationConfig
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AuthenticatedUser

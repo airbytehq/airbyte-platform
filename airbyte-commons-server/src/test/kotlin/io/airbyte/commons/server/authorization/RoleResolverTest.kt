@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.support.AuthenticationHeaderResolver
 import io.airbyte.commons.server.support.AuthenticationId

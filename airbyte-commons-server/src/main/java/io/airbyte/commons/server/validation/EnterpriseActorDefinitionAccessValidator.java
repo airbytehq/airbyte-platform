@@ -5,7 +5,7 @@
 package io.airbyte.commons.server.validation;
 
 import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
-import static io.airbyte.commons.auth.AuthRoleConstants.ADMIN;
+import static io.airbyte.commons.auth.roles.AuthRoleConstants.ADMIN;
 
 import io.airbyte.commons.license.annotation.RequiresAirbyteProEnabled;
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException;

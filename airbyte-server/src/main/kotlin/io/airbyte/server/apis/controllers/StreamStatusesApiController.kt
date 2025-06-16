@@ -14,7 +14,7 @@ import io.airbyte.api.model.generated.StreamStatusRead
 import io.airbyte.api.model.generated.StreamStatusReadList
 import io.airbyte.api.model.generated.StreamStatusRunState
 import io.airbyte.api.model.generated.StreamStatusUpdateRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.handlers.StreamStatusesHandler

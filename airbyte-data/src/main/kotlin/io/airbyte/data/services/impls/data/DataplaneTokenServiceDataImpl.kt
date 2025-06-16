@@ -4,8 +4,8 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.config.TokenExpirationConfig
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.data.TokenType
 import io.airbyte.data.services.DataplaneTokenService
 import io.airbyte.data.services.ServiceAccountsService

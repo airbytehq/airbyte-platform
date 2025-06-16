@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.api
 
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.WorkloadType
 import io.airbyte.data.services.DataplaneGroupService

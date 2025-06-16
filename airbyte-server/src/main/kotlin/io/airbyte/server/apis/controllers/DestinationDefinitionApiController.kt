@@ -16,9 +16,9 @@ import io.airbyte.api.model.generated.PrivateDestinationDefinitionRead
 import io.airbyte.api.model.generated.PrivateDestinationDefinitionReadList
 import io.airbyte.api.model.generated.ScopeType
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
