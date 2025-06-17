@@ -72,6 +72,7 @@ spec:
         {{- end }}
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
+        {{- include "airbyte.connectorRolloutWorker.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}

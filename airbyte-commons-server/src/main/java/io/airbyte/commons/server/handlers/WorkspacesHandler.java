@@ -233,23 +233,8 @@ public class WorkspacesHandler {
     persistStandardWorkspace(persistedWorkspace);
   }
 
-  public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
+  public WorkspaceReadList listWorkspaces() throws IOException {
     final List<WorkspaceRead> reads = workspaceService.listStandardWorkspaces(false).stream()
-        .map(WorkspaceConverter::domainToApiModel)
-        .collect(Collectors.toList());
-    return new WorkspaceReadList().workspaces(reads);
-  }
-
-  public WorkspaceReadList listAllWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
-      throws IOException {
-    final List<WorkspaceRead> reads = workspaceService.listAllWorkspacesPaginated(
-        new ResourcesQueryPaginated(
-            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
-            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
-            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
-            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(),
-            listResourcesForWorkspacesRequestBody.getNameContains()))
-        .stream()
         .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);

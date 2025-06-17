@@ -4,15 +4,15 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs
 import io.airbyte.config.Dataplane
-import io.airbyte.config.DataplaneClientCredentials
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.DataplaneService
+import io.airbyte.data.services.shared.DataplaneWithServiceAccount
+import io.airbyte.domain.models.ServiceAccount
 import io.fabric8.kubernetes.client.KubernetesClient
 import io.kotest.assertions.throwables.shouldThrow
 import io.mockk.Called
@@ -27,6 +27,9 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.UUID
+
+private val DATAPLANE_ID = UUID.randomUUID()
+private const val DATAPLANE_SECRET = "secret"
 
 private val dpg =
   DataplaneGroup().apply {
@@ -44,20 +47,25 @@ private val dpgUS =
     enabled = true
   }
 
-private val dpc =
-  DataplaneClientCredentials(
-    id = UUID.randomUUID(),
-    dataplaneId = dpg.id,
-    clientId = "client id",
-    clientSecret = "client secret",
-  )
-
 private val dp =
   Dataplane().apply {
     id = UUID.randomUUID()
-    dataplaneGroupId = dpc.id
+    dataplaneGroupId = dpg.id
     name = "dp name"
   }
+
+private val serviceAccount =
+  ServiceAccount(
+    id = DATAPLANE_ID,
+    name = "service-account",
+    secret = DATAPLANE_SECRET,
+  )
+
+private val dataplaneWithServiceAccount =
+  DataplaneWithServiceAccount(
+    dataplane = dp,
+    serviceAccount = serviceAccount,
+  )
 
 private const val SECRET_NAME = "secret name"
 private const val CLIENT_ID_SECRET_KEY = "client-id-key"
@@ -67,7 +75,6 @@ private const val JOBS_NAMESPACE = "jobs"
 class DataplaneInitializerTest {
   private val service = mockk<DataplaneService>()
   private val groupService = mockk<DataplaneGroupService>()
-  private val credsService = mockk<DataplaneCredentialsService>()
   private val k8sClient = mockk<KubernetesClient>()
 
   @BeforeEach
@@ -88,14 +95,12 @@ class DataplaneInitializerTest {
     every { groupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID), false) } returns listOf(dpg)
     every { service.listDataplanes(dpg.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
-    every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }
-    every { credsService.createCredentials(any()) } returns dpc
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
 
     val initializer =
       DataplaneInitializer(
         service = service,
         groupService = groupService,
-        dataplaneCredentialsService = credsService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
         secretName = SECRET_NAME,
@@ -107,14 +112,13 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify {
-      service.writeDataplane(dpSlot.captured)
-      credsService.createCredentials(dpSlot.captured.id)
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
       K8sSecretHelper.createOrUpdateSecret(
         k8sClient,
         SECRET_NAME,
         mapOf(
-          CLIENT_ID_SECRET_KEY to dpc.clientId,
-          CLIENT_SECRET_SECRET_KEY to dpc.clientSecret,
+          CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+          CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
         ),
       )
     }
@@ -129,7 +133,6 @@ class DataplaneInitializerTest {
       DataplaneInitializer(
         service = service,
         groupService = groupService,
-        dataplaneCredentialsService = credsService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
         secretName = SECRET_NAME,
@@ -140,9 +143,8 @@ class DataplaneInitializerTest {
 
     initializer.createDataplaneIfNotExists()
 
-    verify(exactly = 0) { service.writeDataplane(any()) }
+    verify(exactly = 0) { service.createDataplaneAndServiceAccount(any(), any()) }
     verify {
-      credsService wasNot Called
       k8sClient wasNot Called
     }
   }
@@ -152,15 +154,13 @@ class DataplaneInitializerTest {
     every { groupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns dpgUS
     every { service.listDataplanes(dpgUS.id, false) } returns emptyList()
     val dpSlot = slot<Dataplane>()
-    every { service.writeDataplane(capture(dpSlot)) } answers { dpSlot.captured }
-    every { credsService.createCredentials(any()) } returns dpc
+    every { service.createDataplaneAndServiceAccount(capture(dpSlot), true) } answers { dataplaneWithServiceAccount }
     every { k8sClient.namespace } returns "ab"
 
     val initializer =
       DataplaneInitializer(
         service = service,
         groupService = groupService,
-        dataplaneCredentialsService = credsService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.CLOUD,
         secretName = SECRET_NAME,
@@ -172,14 +172,13 @@ class DataplaneInitializerTest {
     initializer.createDataplaneIfNotExists()
 
     verify {
-      service.writeDataplane(dpSlot.captured)
-      credsService.createCredentials(dpSlot.captured.id)
+      service.createDataplaneAndServiceAccount(dpSlot.captured, true)
       K8sSecretHelper.createOrUpdateSecret(
         k8sClient,
         SECRET_NAME,
         mapOf(
-          CLIENT_ID_SECRET_KEY to dpc.clientId,
-          CLIENT_SECRET_SECRET_KEY to dpc.clientSecret,
+          CLIENT_ID_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.id.toString(),
+          CLIENT_SECRET_SECRET_KEY to dataplaneWithServiceAccount.serviceAccount.secret,
         ),
       )
       K8sSecretHelper.copySecretToNamespace(
@@ -199,7 +198,6 @@ class DataplaneInitializerTest {
       DataplaneInitializer(
         service = service,
         groupService = groupService,
-        dataplaneCredentialsService = credsService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
         secretName = SECRET_NAME,
@@ -212,7 +210,6 @@ class DataplaneInitializerTest {
 
     verify {
       service wasNot Called
-      credsService wasNot Called
       k8sClient wasNot Called
     }
   }
@@ -225,7 +222,6 @@ class DataplaneInitializerTest {
       DataplaneInitializer(
         service = service,
         groupService = groupService,
-        dataplaneCredentialsService = credsService,
         k8sClient = k8sClient,
         edition = Configs.AirbyteEdition.COMMUNITY,
         secretName = SECRET_NAME,
@@ -238,7 +234,6 @@ class DataplaneInitializerTest {
 
     verify {
       service wasNot Called
-      credsService wasNot Called
       k8sClient wasNot Called
     }
   }

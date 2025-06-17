@@ -13,7 +13,7 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
+object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = true)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
@@ -209,3 +209,7 @@ object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", de
 object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)
 
 object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = false)
+
+object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
+
+object IgnoreTokenRoleClaims : Temporary<Boolean>(key = "platform.ignore-token-role-claims", default = false)

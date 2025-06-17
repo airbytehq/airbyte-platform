@@ -26,6 +26,11 @@ common:
       key: api.authHeaderName
       defaultValue: "X-Airbyte-Auth"
 
+    - env: AIRBYTE_API_AUTH_HEADER_VALUE
+      key: api.authHeaderValue
+      sensitive: true
+      includeIf: (eq (include "airbyte.common.api.authHeaderName" .) "X-Endpoint-API-UserInfo")
+
     # NOTE: this must NOT include the scheme (http://)
     - env: AIRBYTE_SERVER_HOST
       key: server.host
@@ -247,7 +252,22 @@ auth.security:
     - env: AB_COOKIE_SAME_SITE
       key: cookieSameSiteSetting
       defaultValue: strict
-    
+
+aws:
+  keyBasePath: global.aws
+  config:
+    - env: AWS_ASSUME_ROLE_ACCESS_KEY_ID
+      key: assumeRole.accessKeyId
+      sensitive: true
+
+    - env: AWS_ASSUME_ROLE_SECRET_ACCESS_KEY
+      key: assumeRole.secretAccessKey
+      sensitive: true
+
+    - env: AWS_ASSUME_ROLE_SECRET_NAME
+      key: assumeRole.secretName
+      defaultValueExp: (include "airbyte.common.secretName" .)
+
 cluster:
   keyBasePath: global.cluster
   discriminatorField: type
@@ -283,15 +303,21 @@ connectorBuilder:
     - env: AI_ASSIST_URL_BASE
       key: aiAssistUrlBase
 
+    - env: BUILDER_GITHUB_AIRBYTE_PAT_TOKEN
+      key: githubToken
+      sensitive: true
+
 connectorRollout:
   keyBasePath: global.connectorRollout
   config:
     - env: CONNECTOR_ROLLOUT_EXPIRATION_SECONDS
       key: expirationSeconds
       defaultValue: 7200
+
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS
       key: waitBetweenRolloutSeconds
       defaultValue: 60
+
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS
       key: waitBetweenSyncResultsQueriesSeconds
       defaultValue: 10
@@ -307,6 +333,13 @@ connectorRollout.temporal:
     - env: TEMPORAL_CLOUD_NAMESPACE_CONNECTOR_ROLLOUT
       consumedAs: TEMPORAL_CLOUD_NAMESPACE
       key: namespace
+
+connectorRolloutWorker: 
+  keyBasePath: connectorRolloutWorker
+  config:
+    - env: CONNECTOR_ROLLOUT_GITHUB_AIRBYTE_PAT
+      key: githubToken
+      sensitive: true
 
 cron:
   config:
@@ -339,15 +372,24 @@ database:
       key: user
       sensitive: true
       defaultValue: airbyte
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
 
     - env: DATABASE_PASSWORD
       key: password
       sensitive: true
       defaultValue: airbyte
+      includeIf: (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false")
 
     - env: DATABASE_DB
       key: name
       defaultValue: db-airbyte
+
+database.cloudSqlProxy:
+  keyBasePath: global.cloudSqlProxy
+  config:
+    - env: USE_CLOUD_SQL_PROXY
+      key: enabled
+      defaultValue: false
 
 database.migrations:
   keyBasePath: global.migrations
@@ -899,7 +941,43 @@ secretsManager:
 
 server:
   keybasePath: server
-  config:
+  config:  
+    - env: AUDIT_LOGGING_ENABLED
+      key: auditLoggingEnabled
+      defaultValue: false
+  
+    - env: CONFIG_DB_MAX_POOL_SIZE
+      key: configDbMaxPoolSize
+      defaultValue: 20
+
+    - env: CONNECTOR_DATADOG_SUPPORT_NAMES
+      key: connectorDatadogSupportNames
+      defaultValue: source-postgres-strict-encrypt=2.0.5
+      includeIf: (eq (include "airbyte.common.edition" .) "cloud")
+
+    - env: GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID
+      key: warehouseExports.projectId
+
+    - env: GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME
+      key: warehouseExports.bucketName
+
+    - env: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+      key: data.salesCustomerAttributesObjectPrefix
+      defaultValue: data/sales_customer_attributes
+
+    - env: HTTP_IDLE_TIMEOUT
+      key: httpIdleTimeout
+
+    - env: OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT
+      key: openai.syncAssistantApiKey
+      sensitive: true
+
+    - env: PUBLIC_API_EXECUTOR_THREADS
+      key: publicApiExecutor.numThreads
+
+    - env: SCHEDULER_TASK_EXECUTOR_THREADS
+      key: scheduler.numThreads
+
     - env: WEBAPP_DATADOG_APPLICATION_ID
       key: webapp.datadogApplicationId
 
@@ -931,7 +1009,6 @@ server:
 
     - env: WEBAPP_ZENDESK_KEY
       key: webapp.zendeskKey
-
 
 shopify:
   keyBasePath: global.shopify
@@ -1253,6 +1330,9 @@ worker:
       key: configRoot
       defaultValue: /configs
 
+    - env: DISCOVER_REFRESH_WINDOW_MINUTES
+      key: discoverRefreshWindowMinutes
+
     - env: MAX_CHECK_WORKERS
       key: maxCheckWorkers
       defaultValue: 30
@@ -1452,10 +1532,6 @@ workloads:
     - env: KUBERNETES_CLIENT_MAX_RETRIES
       key: kuberentesClientMaxRetries
       defaultValue: ""
-
-    - env: WORKLOADS_NAMESPACE
-      key: namespace
-      defaultValueExp: .Release.Namespace
 
     - env: PUB_SUB_ENABLED
       key: pubSub.enabled

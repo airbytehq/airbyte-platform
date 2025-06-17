@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.config.Dataplane
+import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import java.util.UUID
 
 interface DataplaneService {
@@ -14,9 +15,18 @@ interface DataplaneService {
   fun getDataplane(id: UUID): Dataplane
 
   /**
-   * Write (create or update) a dataplane.
+   * Update a dataplane.
    */
-  fun writeDataplane(dataplane: Dataplane): Dataplane
+  fun updateDataplane(dataplane: Dataplane): Dataplane
+
+  /**
+   * Create a new dataplane. This also creates a service account for the dataplane
+   * and returns the account's credentials.
+   */
+  fun createDataplaneAndServiceAccount(
+    dataplane: Dataplane,
+    instanceScope: Boolean = false,
+  ): DataplaneWithServiceAccount
 
   /**
    * List all dataplanes matching the provided dataplane group ID
@@ -30,4 +40,9 @@ interface DataplaneService {
    * List all dataplanes
    */
   fun listDataplanes(withTombstone: Boolean): List<Dataplane>
+
+  /**
+   * Get a dataplane by its service account.
+   */
+  fun getDataplaneByServiceAccountId(serviceAccountId: String): Dataplane?
 }

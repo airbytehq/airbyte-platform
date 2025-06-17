@@ -1,4 +1,4 @@
-ARG NGINX_IMAGE=airbyte/airbyte-base-nginx-image:1.27.3-2
+ARG NGINX_IMAGE=airbyte/airbyte-base-nginx-image:1.27.3-3
 FROM ${NGINX_IMAGE}
 
 ARG BUILD_DIR=bin/build

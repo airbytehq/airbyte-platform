@@ -4,6 +4,7 @@
 
 package io.airbyte.workload.auth
 
+import io.airbyte.data.TokenType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.order.Ordered
@@ -27,10 +28,10 @@ class WorkloadTokenValidator(
   ): Publisher<Authentication> =
     try {
       if (authenticateRequest(token)) {
-        LOGGER.debug { "Request authorized." }
-        Mono.just(Authentication.build(WORKLOAD_API_USER))
+        LOGGER.debug { "Request validated." }
+        Mono.just(Authentication.build(WORKLOAD_API_USER, mapOf(TokenType.WORKLOAD_API.toClaim())))
       } else {
-        LOGGER.debug { "Request denied." }
+        LOGGER.debug { "Request not recognized. Continuing with other validators." }
         Mono.empty()
       }
     } catch (exception: Exception) {

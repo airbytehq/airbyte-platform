@@ -4,8 +4,10 @@
 
 package io.airbyte.metrics.reporter;
 
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
+import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.ATTEMPTS;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.jooq.impl.DSL.asterisk;
@@ -55,12 +57,17 @@ class MetricRepository {
   Map<String, Integer> numberOfPendingJobsByDataplaneGroupName() {
     final String dataplaneGroupNameResultAlias = "data_plane_group_name";
     final String countResultAlias = "result";
+
     final var result = ctx.select(DATAPLANE_GROUP.NAME.cast(String.class).as(dataplaneGroupNameResultAlias), count(asterisk()).as(countResultAlias))
         .from(JOBS)
         .join(CONNECTION)
         .on(CONNECTION.ID.cast(VARCHAR(255)).eq(JOBS.SCOPE))
+        .join(ACTOR)
+        .on(CONNECTION.SOURCE_ID.eq(ACTOR.ID))
+        .join(WORKSPACE)
+        .on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
         .join(DATAPLANE_GROUP)
-        .on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
+        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(JOBS.STATUS.eq(JobStatus.pending))
         .groupBy(DATAPLANE_GROUP.NAME);
     final Field<String> dataplaneGroupNameResultField = DSL.field(name(dataplaneGroupNameResultAlias), String.class);
@@ -116,8 +123,12 @@ class MetricRepository {
         FROM jobs
         JOIN connection
         ON jobs.scope::uuid = connection.id
+        JOIN actor
+        ON actor.id = connection.source_id
+        JOIN workspace
+        on actor.workspace_id = workspace.id
         JOIN dataplane_group
-        ON connection.dataplane_group_id::UUID = dataplane_group.id
+        ON workspace.dataplane_group_id::UUID = dataplane_group.id
         WHERE jobs.status = 'pending'
         GROUP BY dataplane_group.name;
         """;

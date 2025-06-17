@@ -25,6 +25,13 @@ class FieldGeneratorTest {
       """
       {
         "type": "object",
+        "required": [
+          "key1",
+          "key2",
+          "key3",
+          "key4",
+          "key5"
+        ],
         "properties": {
           "key1": {
             "type": "boolean"
@@ -105,6 +112,13 @@ class FieldGeneratorTest {
       """
       {
         "type": ["object"],
+        "required": [
+          "key1",
+          "key2",
+          "key3",
+          "key4",
+          "key5"
+        ],
         "properties": {
           "key1": {
             "type": ["boolean"]
@@ -165,6 +179,13 @@ class FieldGeneratorTest {
       """
       {
         "type": ["null", "object"],
+        "required": [
+          "key1",
+          "key2",
+          "key3",
+          "key4",
+          "key5"
+        ],
         "properties": {
           "key1": {
             "type": ["null", "boolean"]
@@ -231,11 +252,11 @@ class FieldGeneratorTest {
 
     fields.forEach {
       when (it.name) {
-        "key1" -> assertEquals(Field("key1", FieldType.BOOLEAN), it)
-        "key2" -> assertEquals(Field("key2", FieldType.INTEGER), it)
-        "key3" -> assertEquals(Field("key3", FieldType.INTEGER), it)
-        "key4" -> assertEquals(Field("key4", FieldType.NUMBER), it)
-        "key5" -> assertEquals(Field("key5", FieldType.DATE), it)
+        "key1" -> assertEquals(Field("key1", FieldType.BOOLEAN, true), it)
+        "key2" -> assertEquals(Field("key2", FieldType.INTEGER, true), it)
+        "key3" -> assertEquals(Field("key3", FieldType.INTEGER, true), it)
+        "key4" -> assertEquals(Field("key4", FieldType.NUMBER, true), it)
+        "key5" -> assertEquals(Field("key5", FieldType.DATE, true), it)
         "key6" -> assertEquals(Field("key6", FieldType.TIME_WITHOUT_TIMEZONE), it)
         "key7" -> assertEquals(Field("key7", FieldType.TIME_WITH_TIMEZONE), it)
         "key8" -> assertEquals(Field("key8", FieldType.TIMESTAMP_WITHOUT_TIMEZONE), it)

@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
@@ -24,7 +23,6 @@ import io.airbyte.server.apis.publicapi.apiTracking.TrackingHelper
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -62,7 +60,6 @@ class ConfigTemplatesPublicControllerTest {
     every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
     every { organizationHandler.listOrganizationsByUser(any()) } returns organizationReadList
     every { licenseEntitlementChecker.checkEntitlements(any(), any()) } returns true
-    mockkConstructor(RoleResolver.Request::class)
   }
 
   @Test

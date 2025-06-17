@@ -106,13 +106,6 @@ public class PermissionHandler {
         .withPermissionType(Permission.PermissionType.INSTANCE_ADMIN));
   }
 
-  public void createDataplane(final UUID userId) throws PermissionRedundantException {
-    permissionDao.createPermission(new Permission()
-        .withPermissionId(uuidGenerator.get())
-        .withUserId(userId)
-        .withPermissionType(Permission.PermissionType.DATAPLANE));
-  }
-
   public Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
     final Optional<Permission> permission =
         permissionPersistence.getPermission(permissionId);

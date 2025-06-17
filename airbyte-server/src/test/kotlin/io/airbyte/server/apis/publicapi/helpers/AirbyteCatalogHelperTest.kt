@@ -230,7 +230,14 @@ internal class AirbyteCatalogHelperTest {
       AirbyteCatalogHelper.getValidConfiguredStreams(
         createAirbyteCatalog(jsonSchema = cursorPrimaryKeyJsonSchema()),
         StreamConfigurations(listOf(streamConfiguration)),
-        listOf(DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE_DEDUP, DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE),
+        listOf(
+          DestinationSyncMode.APPEND_DEDUP,
+          DestinationSyncMode.OVERWRITE_DEDUP,
+          DestinationSyncMode.APPEND,
+          DestinationSyncMode.OVERWRITE,
+          DestinationSyncMode.UPDATE,
+          DestinationSyncMode.SOFT_DELETE,
+        ),
       )
 
     assertEquals(true, configuredStreams.first().config.selected)
@@ -1088,6 +1095,10 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> SyncMode.FULL_REFRESH
+      ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.FULL_REFRESH_UPDATE -> SyncMode.FULL_REFRESH
+      ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE -> SyncMode.FULL_REFRESH
     }
 
   private fun getDestinationSyncMode(connectionSyncMode: ConnectionSyncModeEnum): DestinationSyncMode =
@@ -1097,5 +1108,9 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> DestinationSyncMode.APPEND_DEDUP
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> DestinationSyncMode.OVERWRITE_DEDUP
+      ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> DestinationSyncMode.UPDATE
+      ConnectionSyncModeEnum.FULL_REFRESH_UPDATE -> DestinationSyncMode.UPDATE
+      ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE -> DestinationSyncMode.SOFT_DELETE
+      ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE -> DestinationSyncMode.SOFT_DELETE
     }
 }

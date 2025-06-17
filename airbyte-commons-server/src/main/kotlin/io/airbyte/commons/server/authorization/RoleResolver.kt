@@ -6,10 +6,11 @@ package io.airbyte.commons.server.authorization
 
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.commons.auth.AuthRole
-import io.airbyte.commons.auth.AuthRoleConstants
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
+import io.airbyte.commons.DEFAULT_USER_ID
+import io.airbyte.commons.auth.roles.AuthRole
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.auth.roles.OrganizationAuthRole
+import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.PermissionHandler
@@ -19,9 +20,14 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.helpers.PermissionHelper
+import io.airbyte.data.TokenType
+import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.IgnoreTokenRoleClaims
+import io.airbyte.featureflag.TokenSubject
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
+import io.micronaut.security.utils.SecurityService
 import jakarta.inject.Singleton
 import java.util.UUID
 
@@ -60,31 +66,79 @@ private val logger = KotlinLogging.logger {}
 open class RoleResolver(
   private val authenticationHeaderResolver: AuthenticationHeaderResolver,
   private val currentUserService: CurrentUserService,
+  private val securityService: SecurityService?,
   private val permissionHandler: PermissionHandler,
+  private val featureFlags: FeatureFlagClient,
 ) {
-  inner class Request {
-    var authUserId: String? = null
+  data class Subject(
+    val id: String,
+    val type: TokenType,
+  )
+
+  fun newRequest() = Request()
+
+  inner class Request internal constructor() {
+    var subject: Subject? = null
+    var claimedRoles: Set<String>? = null
     val props: MutableMap<String, String> = mutableMapOf()
+    val orgs: MutableSet<UUID> = mutableSetOf()
 
     fun withCurrentUser() =
       apply {
-        authUserId = currentUserService.currentUser.authUserId
+        subject = Subject(currentUserService.currentUser.authUserId, TokenType.USER)
       }
 
-    fun withAuthUserId(authUserId: String) =
+    fun withSubject(
+      id: String,
+      type: TokenType,
+    ) = apply {
+      this.subject = Subject(id, type)
+    }
+
+    fun withCurrentAuthentication() =
       apply {
-        this.authUserId = authUserId
+        // In community auth, where micronaut auth is disabled, the security service isn't available,
+        // so we need to manually fall back to the default user.
+        if (securityService == null) {
+          withSubject(DEFAULT_USER_ID.toString(), TokenType.USER)
+        }
+
+        securityService?.authentication?.map { auth ->
+          logger.debug { "Using current authentication object ${auth.name} ${auth.roles} ${auth.attributes}" }
+          withClaims(auth.name, auth.attributes)
+        }
       }
 
-    fun withCurrentHttpRequest() =
+    fun withClaims(
+      sub: String,
+      claims: Map<String, Any>,
+    ) = apply {
+      // Figure out the subject type and ID.
+      subject = Subject(sub, TokenType.fromClaims(claims))
+
+      // Some tokens have roles in the claims.
+      // If the token does have roles in the claims, then those are the only roles
+      // resolved by Request.roles().
+      val roles = (claims["roles"] as? List<*>)?.filterIsInstance<String>()
+      if (roles != null) {
+        claimedRoles = roles.toSet()
+      }
+    }
+
+    fun withRefsFromCurrentHttpRequest() =
       apply {
-        ServerRequestContext.currentRequest<Any>().map { withHttpRequest(it) }
+        ServerRequestContext.currentRequest<Any>().map { withRefsFromHttpRequest(it) }
       }
 
-    fun withHttpRequest(req: HttpRequest<*>) =
+    fun withRefsFromHttpRequest(req: HttpRequest<*>) =
       apply {
         val headers = req.headers.asMap(String::class.java, String::class.java)
         props.putAll(headers)
+      }
+
+    fun withOrg(organizationId: UUID) =
+      apply {
+        orgs.add(organizationId)
       }
 
     fun withRef(
@@ -110,24 +164,76 @@ open class RoleResolver(
      * roles() resolves the request details into a set of available roles.
      */
     fun roles(): Set<String> {
-      logger.debug { "Resolving roles for authUserId $authUserId" }
+      // these make null-checking cleaner
+      val subject = subject
+      var claimedRoles = claimedRoles
 
-      try {
-        val user = authUserId
-        if (user.isNullOrBlank()) {
-          logger.debug { "Provided authUserId is null or blank, returning empty role set" }
-          return emptySet()
-        }
+      // We'd like to transition away from tokens that hard-code roles in the claims,
+      // and look them up per-request instead. This will allow for more centralized,
+      // more consistent code for determining roles, and prevents bugs with having
+      // changing the set of roles needed by a token.
+      if (featureFlags.boolVariation(IgnoreTokenRoleClaims, TokenSubject(subject?.id ?: "unknown"))) {
+        claimedRoles = null
+      }
 
-        val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
-        val organizationIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
-        val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props) ?: emptySet()
-        val perms = permissionHandler.getPermissionsByAuthUserId(authUserId)
-        return resolveRoles(perms, user, workspaceIds, organizationIds, authUserIds)
-      } catch (e: Exception) {
-        logger.error(e) { "Failed to resolve roles for authUserId $authUserId" }
+      // This helps when new roles are added to the set of admin roles.
+      // "ADMIN" implies a set of other roles (see AuthRole.getInstanceAdminRoles()).
+      // When a new role is added to that set, any existing tokens in the wild that
+      // contain hard-coded roles will not have this new role. To deal with that,
+      // we regenerate the set of admin roles here.
+      //
+      // TODO Hopefully, in the near future, we'll move away from having hard-coded roles
+      //      in tokens and *always* generate the roles dynamically during the request processing,
+      //      so that this is no longer needed.
+      if (claimedRoles?.contains(AuthRoleConstants.ADMIN) == true) {
+        claimedRoles = AuthRole.getInstanceAdminRoles()
+      }
+
+      logger.debug { "Resolving roles for $subject" }
+
+      if (subject == null) {
+        logger.debug { "subject is null, returning empty role set" }
         return emptySet()
       }
+      if (subject.id.isBlank()) {
+        logger.debug { "subject.id is blank, returning empty role set" }
+        return emptySet()
+      }
+      if (!claimedRoles.isNullOrEmpty()) {
+        return claimedRoles
+      }
+
+      return try {
+        when (subject.type) {
+          // Certain token types have a hard-coded list of roles.
+          TokenType.WORKLOAD_API -> setOf(AuthRoleConstants.DATAPLANE)
+          TokenType.EMBEDDED_V1 -> setOf(AuthRoleConstants.EMBEDDED_END_USER)
+          // Everything else resolves roles via the "permissions" table.
+          TokenType.DATAPLANE_V1, TokenType.SERVICE_ACCOUNT ->
+            resolvePermissions(
+              subject.id,
+              permissionHandler.getPermissionsByServiceAccountId(UUID.fromString(subject.id)),
+            )
+          TokenType.USER -> resolvePermissions(subject.id, permissionHandler.getPermissionsByAuthUserId(subject.id))
+        }
+      } catch (e: Exception) {
+        logger.error(e) { "Failed to resolve roles for $subject" }
+        return emptySet()
+      }
+    }
+
+    private fun resolvePermissions(
+      subjectId: String,
+      perms: List<Permission>,
+    ): Set<String> {
+      logger.debug { "Resolving permissions for $subject and $perms" }
+
+      val workspaceIds = authenticationHeaderResolver.resolveWorkspace(props)?.toSet() ?: emptySet()
+      val resolvedOrgIds = authenticationHeaderResolver.resolveOrganization(props)?.toSet() ?: emptySet()
+      val authUserIds = authenticationHeaderResolver.resolveAuthUserIds(props) ?: emptySet()
+      val allOrgIds = orgs + resolvedOrgIds
+
+      return resolveRoles(perms, subjectId, workspaceIds, allOrgIds, authUserIds)
     }
 
     /**
@@ -137,7 +243,7 @@ open class RoleResolver(
     fun requireRole(role: String) {
       if (!roles().contains(role)) {
         throw ForbiddenProblem(
-          ProblemMessageData().message("User does not have the required $role permissions to access the resource(s)."),
+          ProblemMessageData().message("Caller does not have the required $role permissions to access the resource(s)."),
         )
       }
     }
@@ -155,11 +261,15 @@ open class RoleResolver(
    */
   fun resolveRoles(
     perms: List<Permission>,
-    currentAuthUserId: String,
+    subjectId: String,
     workspaceIds: Set<UUID>,
     organizationIds: Set<UUID>,
     authUserIds: Set<String>,
   ): Set<String> {
+    logger.debug {
+      "Resolving roles for $subjectId with perms=$perms workspaceIds=$workspaceIds organizationIds=$organizationIds authUserIds=$authUserIds"
+    }
+
     val roles = mutableSetOf(AuthRoleConstants.AUTHENTICATED_USER)
 
     // The SELF role denotes that request refers to the current request's identity.
@@ -167,12 +277,18 @@ open class RoleResolver(
     // This relies on the assumption that the AuthenticationHeaderResolver will only
     // ever resolve authUserIds for one user (who can have multiple authUserIds).
     // TODO Technically, that's a weak assumption and we should make that interface clearer.
-    if (authUserIds.contains(currentAuthUserId)) {
+    if (authUserIds.contains(subjectId)) {
       roles.add(AuthRoleConstants.SELF)
     }
 
     if (perms.any { it.permissionType == PermissionType.INSTANCE_ADMIN }) {
       roles.addAll(AuthRole.getInstanceAdminRoles())
+    }
+
+    perms.filter { it.permissionType == PermissionType.DATAPLANE }.forEach {
+      if (it.workspaceId == null && it.organizationId == null) {
+        roles.add(AuthRoleConstants.DATAPLANE)
+      }
     }
 
     determineWorkspaceRole(perms, workspaceIds)?.let {
@@ -182,6 +298,9 @@ open class RoleResolver(
       roles.addAll(impliedRoles(it))
     }
 
+    logger.debug {
+      "Resolved roles for $subjectId with perms=$perms workspaceIds=$workspaceIds organizationIds=$organizationIds authUserIds=$authUserIds to $roles"
+    }
     return roles
   }
 }
@@ -213,7 +332,7 @@ private fun determineWorkspaceRole(
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, WorkspaceAuthRole::class.java)
-        ?.authority
+        ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType
 }
@@ -238,7 +357,7 @@ private fun determineOrganizationRole(
     .minByOrNull {
       Enums
         .convertTo(it.permissionType, OrganizationAuthRole::class.java)
-        ?.authority
+        ?.getAuthority()
         ?: Integer.MAX_VALUE
     }?.permissionType
 }

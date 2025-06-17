@@ -4,7 +4,7 @@
 
 package io.airbyte.server.pro
 
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.Authentication
 import org.junit.jupiter.api.Test

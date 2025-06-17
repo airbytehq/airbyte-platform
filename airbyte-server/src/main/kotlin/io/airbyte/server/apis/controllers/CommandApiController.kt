@@ -23,7 +23,7 @@ import io.airbyte.api.model.generated.RunDiscoverCommandRequest
 import io.airbyte.api.model.generated.RunDiscoverCommandResponse
 import io.airbyte.api.model.generated.RunReplicateCommandRequest
 import io.airbyte.api.model.generated.RunReplicateCommandResponse
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.commons.enums.toEnum
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter

@@ -6,6 +6,17 @@
 */}}
 
 {{/*
+Renders the common secret name
+*/}}
+{{- define "airbyte.common.secretName" }}
+{{- if .Values.global.secretName }}
+    {{- .Values.global.secretName }}
+{{- else }}
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+{{- end }}
+{{- end }}
+
+{{/*
 Renders the global.edition value
 */}}
 {{- define "airbyte.common.edition" }}
@@ -129,6 +140,31 @@ Renders the common.api.authHeaderName environment variable
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
       key: AIRBYTE_API_AUTH_HEADER_NAME
+{{- end }}
+
+{{/*
+Renders the global.api.authHeaderValue value
+*/}}
+{{- define "airbyte.common.api.authHeaderValue" }}
+    {{- .Values.global.api.authHeaderValue }}
+{{- end }}
+
+{{/*
+Renders the common.api.authHeaderValue secret key
+*/}}
+{{- define "airbyte.common.api.authHeaderValue.secretKey" }}
+	{{- .Values.global.api.authHeaderValueSecretKey | default "AIRBYTE_API_AUTH_HEADER_VALUE" }}
+{{- end }}
+
+{{/*
+Renders the common.api.authHeaderValue environment variable
+*/}}
+{{- define "airbyte.common.api.authHeaderValue.env" }}
+- name: AIRBYTE_API_AUTH_HEADER_VALUE
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.common.secretName" . }}
+      key: {{ include "airbyte.common.api.authHeaderValue.secretKey" . }}
 {{- end }}
 
 {{/*
@@ -276,6 +312,9 @@ Renders the set of all common environment variables
 {{- include "airbyte.common.airbyteUrl.env" . }}
 {{- include "airbyte.common.api.host.env" . }}
 {{- include "airbyte.common.api.authHeaderName.env" . }}
+{{- if (eq (include "airbyte.common.api.authHeaderName" .) "X-Endpoint-API-UserInfo") }}
+{{- include "airbyte.common.api.authHeaderValue.env" . }}
+{{- end }}
 {{- include "airbyte.common.server.host.env" . }}
 {{- include "airbyte.common.auth.enabled.env" . }}
 {{- include "airbyte.common.connectorBuilderServer.apiHost.env" . }}
@@ -303,4 +342,13 @@ DEPLOYMENT_ENV: {{ include "airbyte.common.deploymentEnv" . | quote }}
 INTERNAL_API_HOST: {{ include "airbyte.common.api.internalHost" . | quote }}
 LOCAL: {{ include "airbyte.common.local" . | quote }}
 WEBAPP_URL: {{ include "airbyte.common.webapp.url" . | quote }}
+{{- end }}
+
+{{/*
+Renders the set of all common secret variables
+*/}}
+{{- define "airbyte.common.secrets" }}
+{{- if (eq (include "airbyte.common.api.authHeaderName" .) "X-Endpoint-API-UserInfo") }}
+AIRBYTE_API_AUTH_HEADER_VALUE: {{ include "airbyte.common.api.authHeaderValue" . | quote }}
+{{- end }}
 {{- end }}

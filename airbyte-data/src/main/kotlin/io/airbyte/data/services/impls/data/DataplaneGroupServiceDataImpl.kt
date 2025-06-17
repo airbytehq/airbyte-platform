@@ -4,9 +4,9 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
@@ -89,6 +89,8 @@ open class DataplaneGroupServiceDataImpl(
     } else {
       getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, AUTO_DATAPLANE_GROUP)
     }
+
+  override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID = repository.getOrganizationIdFromDataplaneGroup(dataplaneGroupId)
 
   fun validateDataplaneGroupName(dataplaneGroup: DataplaneGroup) {
     if (dataplaneGroup.organizationId != DEFAULT_ORGANIZATION_ID) {

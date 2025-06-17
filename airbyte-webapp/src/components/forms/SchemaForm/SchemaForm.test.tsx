@@ -1430,4 +1430,43 @@ describe("SchemaForm", () => {
       });
     });
   });
+
+  it("validates fields that are not actively rendered", async () => {
+    const schema = {
+      type: "object",
+      properties: {
+        streams: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", title: "Name" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+    } as const;
+
+    const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+    await render(
+      <SchemaForm
+        schema={schema}
+        initialValues={{ streams: [{ name: "Stream 0" }, { name: "" }] }}
+        onSubmit={mockOnSubmit}
+      >
+        <SchemaFormControl path="streams.0" />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+      </SchemaForm>
+    );
+
+    const submitButton = screen.getByRole("button", { name: "Submit" });
+    await userEvent.click(submitButton);
+
+    // should not submit because the unrendered second stream has an error
+    await waitFor(() => {
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+  });
 });

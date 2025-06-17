@@ -8,7 +8,7 @@ import io.airbyte.api.generated.SourceDefinitionSpecificationApi
 import io.airbyte.api.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.SourceDefinitionSpecificationRead
 import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

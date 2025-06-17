@@ -4,8 +4,8 @@
 
 package io.airbyte
 
+import TEST_OBJECT_MAPPER
 import com.fasterxml.jackson.core.type.TypeReference
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperConfig
 import io.airbyte.mappers.transformations.Mapper
@@ -54,8 +54,8 @@ class MapperConfigDeserializationTest {
     }
 
     val listMapperConfig =
-      Jsons.deserialize(
-        Jsons.serialize(mapOf("mappers" to mixedMappers)),
+      TEST_OBJECT_MAPPER.readValue(
+        TEST_OBJECT_MAPPER.writeValueAsString(mapOf("mappers" to mixedMappers)),
         TestListMapperConfig::class.java,
       )
 
@@ -64,7 +64,11 @@ class MapperConfigDeserializationTest {
 
     for (i in mixedMappers.indices) {
       assertEquals(mixedMappers[i].name, listMapperConfig.mappers[i].name(), "The mapper name at index $i are not equal.")
-      assertEquals(mixedMappers[i].config, Jsons.jsonNode(listMapperConfig.mappers[i].config()), "The mapper config at index $i are not equal.")
+      assertEquals(
+        mixedMappers[i].config,
+        TEST_OBJECT_MAPPER.valueToTree(listMapperConfig.mappers[i].config()),
+        "The mapper config at index $i are not equal.",
+      )
     }
   }
 
@@ -72,7 +76,7 @@ class MapperConfigDeserializationTest {
     javaClass.classLoader.getResource(resourceName)
       ?: throw IllegalArgumentException("File not found: $resourceName")
 
-  private fun URL.toConfig() = Jsons.deserialize(File(this.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
+  private fun URL.toConfig() = TEST_OBJECT_MAPPER.readValue(File(this.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
 
   data class TestListMapperConfig(
     var mappers: List<MapperConfig> = listOf(),

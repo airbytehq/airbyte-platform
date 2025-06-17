@@ -130,6 +130,7 @@ data class ConfiguredAirbyteStream
       // Because this was introduced with a typo
       @JsonAlias("includesFiles")
       var includeFiles: Boolean? = null,
+      @JsonProperty("destination_object_name")
       var destinationObjectName: String? = null,
     ) {
       fun stream(stream: AirbyteStream) = apply { this.stream = stream }

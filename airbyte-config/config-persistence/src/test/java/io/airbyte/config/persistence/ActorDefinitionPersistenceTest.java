@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -228,8 +228,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withDataplaneGroupId(dataplaneGroupId);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 
@@ -318,8 +317,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withDataplaneGroupId(dataplaneGroupId);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 

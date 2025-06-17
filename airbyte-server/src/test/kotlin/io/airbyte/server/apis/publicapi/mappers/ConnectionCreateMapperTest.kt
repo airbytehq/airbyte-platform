@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -24,7 +24,6 @@ class ConnectionCreateMapperTest {
   @Test
   fun testConnectionCreateMapper() {
     val catalogId = UUID.randomUUID()
-    val dataplaneGroupId = UUID.randomUUID()
 
     val catalog =
       AirbyteCatalog().apply {
@@ -58,7 +57,6 @@ class ConnectionCreateMapperTest {
         this.namespaceDefinition = NamespaceDefinitionType.DESTINATION
         this.namespaceFormat = "test"
         this.prefix = "test"
-        this.dataplaneGroupId = dataplaneGroupId
         this.scheduleType = ConnectionScheduleType.CRON
         this.sourceCatalogId = catalogId
         this.syncCatalog = catalog
@@ -74,6 +72,6 @@ class ConnectionCreateMapperTest {
           }
         this.scheduleData = connectionScheduleData
       }
-    assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, catalog, dataplaneGroupId))
+    assertEquals(expectedOssConnectionCreateRequest, ConnectionCreateMapper.from(connectionCreateRequest, catalogId, catalog))
   }
 }

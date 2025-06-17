@@ -4,13 +4,9 @@
 
 package io.airbyte.config.adapters
 
-import io.airbyte.commons.enums.Enums
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.protocol.models.v0.AirbyteRecordMessage
-import io.airbyte.protocol.models.v0.AirbyteRecordMessageMeta
-import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
+import io.airbyte.mappers.adapters.AirbyteRecord
+import io.airbyte.mappers.adapters.Value
 
 class TestValueAdapter(
   private val value: Any,
@@ -23,8 +19,8 @@ class TestValueAdapter(
 }
 
 class TestRecordAdapter(
-  override val streamDescriptor: StreamDescriptor,
-  data: Map<String, Any>,
+  val streamDescriptor: StreamDescriptor,
+  val data: MutableMap<String, Any>,
 ) : AirbyteRecord {
   private var shouldInclude = true
 
@@ -34,31 +30,10 @@ class TestRecordAdapter(
     val reason: AirbyteRecord.Reason,
   )
 
-  private val data: MutableMap<String, Any> = data.toMutableMap()
   private val _changes: MutableList<Change> = mutableListOf()
 
   val changes: List<Change>
     get(): List<Change> = _changes.toList()
-
-  override val asProtocol: AirbyteMessage
-    get() =
-      AirbyteMessage()
-        .withRecord(
-          AirbyteRecordMessage()
-            .withStream(streamDescriptor.name)
-            .withNamespace(streamDescriptor.namespace)
-            .withData(Jsons.jsonNode(data))
-            .withMeta(
-              AirbyteRecordMessageMeta().withChanges(
-                _changes.map {
-                  AirbyteRecordMessageMetaChange()
-                    .withChange(Enums.convertTo(it.change, AirbyteRecordMessageMetaChange.Change::class.java))
-                    .withField(it.fieldName)
-                    .withReason(Enums.convertTo(it.reason, AirbyteRecordMessageMetaChange.Reason::class.java))
-                },
-              ),
-            ),
-        )
 
   override fun has(fieldName: String): Boolean = fieldName in data
 

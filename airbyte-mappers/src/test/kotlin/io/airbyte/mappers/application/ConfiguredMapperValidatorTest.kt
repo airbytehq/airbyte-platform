@@ -4,7 +4,7 @@
 
 package io.airbyte.mappers.application
 
-import io.airbyte.commons.json.Jsons
+import TEST_OBJECT_MAPPER
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
 import io.airbyte.mappers.mocks.TestMapper
@@ -29,20 +29,20 @@ class ConfiguredMapperValidatorTest {
   @Test
   fun `test validateMapperConfig with valid config`() {
     val validConfiguredMapper =
-      ConfiguredMapper(TEST_MAPPER_NAME, Jsons.jsonNode(mapOf("field1" to "value1", "field2" to "value2", "enumField" to "ONE")))
+      ConfiguredMapper(TEST_MAPPER_NAME, TEST_OBJECT_MAPPER.valueToTree(mapOf("field1" to "value1", "field2" to "value2", "enumField" to "ONE")))
 
     assertDoesNotThrow {
-      configuredMapperValidator.validateMapperConfig(testMapper.spec().jsonSchema(), validConfiguredMapper)
+      configuredMapperValidator.validateMapperConfig(testMapper.spec().jsonSchema(), validConfiguredMapper, TEST_OBJECT_MAPPER)
     }
   }
 
   @Test
   fun `test validateMapperConfig with invalid config`() {
-    val invalidConfiguredMapper = ConfiguredMapper(TEST_MAPPER_NAME, Jsons.jsonNode(mapOf("key1" to 123)))
+    val invalidConfiguredMapper = ConfiguredMapper(TEST_MAPPER_NAME, TEST_OBJECT_MAPPER.valueToTree(mapOf("key1" to 123)))
 
     val exception =
       assertThrows<IllegalArgumentException> {
-        configuredMapperValidator.validateMapperConfig(testMapper.spec().jsonSchema(), invalidConfiguredMapper)
+        configuredMapperValidator.validateMapperConfig(testMapper.spec().jsonSchema(), invalidConfiguredMapper, TEST_OBJECT_MAPPER)
       }
     assertEquals(
       "Mapper Config not valid: \$.config: required property 'enumField' not found,\$.config: " +

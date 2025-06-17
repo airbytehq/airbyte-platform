@@ -131,6 +131,15 @@ open class DataplaneAccessTokenInterceptor(
       logger.error(e) { "Failed to obtain or add dataplane access token" }
       return chain.proceed(originalRequest)
     }
-    return chain.proceed(builder.build())
+    val resp = chain.proceed(builder.build())
+
+    // If the request failed with http 403 forbidden, then the current token is invalid
+    // and should be cleared. The caller is expected to retry.
+    if (resp.code == 403) {
+      synchronized(this) {
+        this.cachedToken = null
+      }
+    }
+    return resp
   }
 }

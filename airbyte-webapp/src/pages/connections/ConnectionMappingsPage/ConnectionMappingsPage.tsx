@@ -26,7 +26,9 @@ export const ConnectionMappingsRoute = () => {
   const isDataActivationConnection = useIsDataActivationConnection();
 
   return isDataActivationConnection ? (
-    <EditDataActivationMappingsPage />
+    <ScrollParent>
+      <EditDataActivationMappingsPage />
+    </ScrollParent>
   ) : (
     <ScrollParent>
       <PageContainer centered>

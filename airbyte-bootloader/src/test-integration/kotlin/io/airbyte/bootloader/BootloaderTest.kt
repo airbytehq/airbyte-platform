@@ -4,6 +4,7 @@
 
 package io.airbyte.bootloader
 
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.resources.MoreResources
 import io.airbyte.commons.version.AirbyteProtocolVersionRange
 import io.airbyte.commons.version.AirbyteVersion
@@ -44,7 +45,7 @@ import io.airbyte.db.factory.FlywayFactory
 import io.airbyte.db.instance.DatabaseConstants
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
 import io.airbyte.db.instance.configs.ConfigsDatabaseTestProvider
-import io.airbyte.db.instance.configs.migrations.V1_6_0_016__AddDestinationCatalogToConnection
+import io.airbyte.db.instance.configs.migrations.V1_6_0_018__DropDataplaneGroupIdNotNullConstraintFromConnection
 import io.airbyte.db.instance.jobs.JobsDatabaseMigrator
 import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import io.airbyte.db.instance.jobs.migrations.V1_1_0_002__AddJobsCoveringIndex
@@ -297,7 +298,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }
@@ -736,7 +737,7 @@ internal class BootloaderTest {
     if (airbyteEdition != AirbyteEdition.CLOUD) {
       Assertions.assertEquals(
         DEFAULT_REALM,
-        organizationPersistence.getSsoConfigForOrganization(OrganizationPersistence.DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
+        organizationPersistence.getSsoConfigForOrganization(DEFAULT_ORGANIZATION_ID).get().keycloakRealm,
       )
     }
   }
@@ -777,7 +778,7 @@ internal class BootloaderTest {
 
     // ⚠️ This line should change with every new migration to show that you meant to make a new
     // migration to the prod database
-    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_016__AddDestinationCatalogToConnection::class.java
+    private val CURRENT_CONFIGS_MIGRATION = V1_6_0_018__DropDataplaneGroupIdNotNullConstraintFromConnection::class.java
     private val CURRENT_JOBS_MIGRATION = V1_1_0_002__AddJobsCoveringIndex::class.java
 
     private fun getMigrationVersion(cls: Class<*>): String =

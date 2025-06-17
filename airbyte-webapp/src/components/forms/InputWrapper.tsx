@@ -13,17 +13,33 @@ export const InputWrapper = <T extends FormValues>({
   name,
   type,
   hasError,
+  onBlur,
   ...rest
 }: Omit<InputControlProps<T>, OmittableProperties>) => {
   const { register } = useFormContext<T>();
-  const { onChange, ...restRegister } = register(name, {
-    setValueAs: (v) => (type !== "number" ? v : String(v).trim() === "" ? null : isNaN(Number(v)) ? v : Number(v)),
+  const {
+    onChange,
+    onBlur: onBlurRegister,
+    ...restRegister
+  } = register(name, {
+    setValueAs: (v) => {
+      if (type !== "number") {
+        return v;
+      }
+      if (v === null) {
+        return null;
+      }
+      if (typeof v === "string" && v.trim() === "") {
+        return null;
+      }
+      return isNaN(Number(v)) ? v : Number(v);
+    },
   });
 
   // If we don't watch the name explicitly, the input will not update
   // when its value is changed as a result of setting a parent object value.
   const formValue = useWatch({ name });
-  const [inputValue, setInputValue] = useState<string | undefined>(formValue);
+  const [inputValue, setInputValue] = useState<string | undefined>(formValue ?? "");
 
   useUpdateEffect(() => {
     if (type === "number") {
@@ -46,6 +62,10 @@ export const InputWrapper = <T extends FormValues>({
       onChange={(e) => {
         setInputValue(e.target.value);
         onChange(e);
+      }}
+      onBlur={(e) => {
+        onBlurRegister(e);
+        onBlur?.(e);
       }}
       value={inputValue}
       name={name}

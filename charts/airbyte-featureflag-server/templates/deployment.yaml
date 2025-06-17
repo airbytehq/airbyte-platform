@@ -1,4 +1,4 @@
-{{- if eq .Values.global.edition "community"}}
+{{- if or (eq .Values.global.edition "community") (eq .Values.global.edition "cloud") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

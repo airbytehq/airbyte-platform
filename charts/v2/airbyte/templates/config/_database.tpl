@@ -145,8 +145,12 @@ Renders the set of all database environment variables
 {{- include "airbyte.database.host.env" . }}
 {{- include "airbyte.database.port.env" . }}
 {{- include "airbyte.database.url.env" . }}
+{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
 {{- include "airbyte.database.user.env" . }}
+{{- end }}
+{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
 {{- include "airbyte.database.password.env" . }}
+{{- end }}
 {{- include "airbyte.database.name.env" . }}
 {{- end }}
 
@@ -164,8 +168,48 @@ DATABASE_DB: {{ include "airbyte.database.name" . | quote }}
 Renders the set of all database secret variables
 */}}
 {{- define "airbyte.database.secrets" }}
+{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
 DATABASE_USER: {{ include "airbyte.database.user" . | quote }}
+{{- end }}
+{{- if (eq (include "airbyte.database.cloudSqlProxy.enabled" .) "false") }}
 DATABASE_PASSWORD: {{ include "airbyte.database.password" . | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+Renders the global.cloudSqlProxy.enabled value
+*/}}
+{{- define "airbyte.database.cloudSqlProxy.enabled" }}
+	{{- if eq .Values.global.cloudSqlProxy.enabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.global.cloudSqlProxy.enabled }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the database.cloudSqlProxy.enabled environment variable
+*/}}
+{{- define "airbyte.database.cloudSqlProxy.enabled.env" }}
+- name: USE_CLOUD_SQL_PROXY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: USE_CLOUD_SQL_PROXY
+{{- end }}
+
+{{/*
+Renders the set of all database.cloudSqlProxy environment variables
+*/}}
+{{- define "airbyte.database.cloudSqlProxy.envs" }}
+{{- include "airbyte.database.cloudSqlProxy.enabled.env" . }}
+{{- end }}
+
+{{/*
+Renders the set of all database.cloudSqlProxy config map variables
+*/}}
+{{- define "airbyte.database.cloudSqlProxy.configVars" }}
+USE_CLOUD_SQL_PROXY: {{ include "airbyte.database.cloudSqlProxy.enabled" . | quote }}
 {{- end }}
 
 {{/*

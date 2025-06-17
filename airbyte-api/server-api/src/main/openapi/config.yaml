@@ -171,25 +171,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/workspaces/list_all_paginated:
-    post:
-      tags:
-        - workspace
-      summary: List all workspaces registered in the current Airbyte deployment. This function also supports searching by keyword and pagination.
-      operationId: listAllWorkspacesPaginated
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ListResourcesForWorkspacesRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_paginated:
     post:
       tags:
@@ -9581,6 +9562,25 @@ paths:
         - public
         - embedded_widget
 
+  /public/v1/embedded/organizations:
+    get:
+      summary: List organizations that a user has access to that have embedded enabled.
+      tags:
+        - public
+        - embedded_widget
+      operationId: listEmbeddedOrganizationsByUser
+      x-sdk-alias: listEmbeddedOrganizationsByUser
+      x-sdk-group: EmbeddedWidget
+      responses:
+        "200":
+          description: Successfully retrieved organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbeddedOrganizationsList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+
   /v1/service_accounts/token:
     post:
       summary: Get an access token for a service account.
@@ -13638,6 +13638,7 @@ components:
         - source
         - destination
         - customformat
+      x-sdk-component: true
     ConnectionAutoPropagateSchemaChange:
       description: Input of the schema propagation, with the catalog to be propagated and the connection to propagate to
       type: object
@@ -16648,6 +16649,7 @@ components:
         - propagate_columns # automatically propagate the changes on selected streams and continue syncing
         - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
+      x-sdk-component: true
     SchemaChangeBackfillPreference:
       enum:
         - enabled # when a column is added or changed via auto-propagation, the stream will be backfilled
@@ -16675,6 +16677,8 @@ components:
         #- upsert_dedup # TODO chris: SCD Type 1 can be implemented later
         - append_dedup # SCD Type 1 & 2
         - overwrite_dedup
+        - update
+        - soft_delete
     AirbyteArchive:
       type: string
       format: binary
@@ -17907,7 +17911,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -17943,7 +17947,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
@@ -18177,7 +18181,6 @@ components:
         - workspaceId
         - status
         - schedule
-        - dataResidency
         - configurations
         - createdAt
         - tags
@@ -18200,8 +18203,6 @@ components:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
-        dataResidency:
-          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -18799,7 +18800,6 @@ components:
           - schedule:
               scheduleType: manual
           - status: active
-          - dataResidency: auto
       x-sdk-component: true
     SourcesResponse:
       title: Root Type for SourcesResponse
@@ -19119,8 +19119,12 @@ components:
         - full_refresh_overwrite
         - full_refresh_overwrite_deduped
         - full_refresh_append
+        - full_refresh_update
+        - full_refresh_soft_delete
         - incremental_append
         - incremental_deduped_history
+        - incremental_update
+        - incremental_soft_delete
       x-sdk-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
@@ -19243,9 +19247,6 @@ components:
         - name
         - enabled
       properties:
-        organization_id:
-          type: string
-          format: UUID
         dataplane_group_id:
           type: string
           format: UUID
@@ -19253,6 +19254,9 @@ components:
           type: string
         enabled:
           type: boolean
+        instanceScope:
+          type: boolean
+          default: false
     DataplaneCreateResponse:
       type: object
       required:
@@ -19908,6 +19912,32 @@ components:
           format: uuid
         secret:
           type: string
+
+    EmbeddedOrganizationsList:
+      required:
+        - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-sdk-component: true
+
+    EmbeddedOrganizationListItem:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - permission
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        permission:
+          $ref: "#/components/schemas/PermissionType"
+      x-sdk-component: true
 
   responses:
     NotFoundResponse:

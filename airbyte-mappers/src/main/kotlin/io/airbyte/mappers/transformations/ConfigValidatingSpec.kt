@@ -4,15 +4,18 @@
 
 package io.airbyte.mappers.transformations
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperConfig
 
-abstract class ConfigValidatingSpec<T : MapperConfig> : MapperSpec<T> {
+abstract class ConfigValidatingSpec<T : MapperConfig>(
+  private val objectMapper: ObjectMapper,
+) : MapperSpec<T> {
   private val configuredMapperValidator: ConfiguredMapperValidator = ConfiguredMapperValidator()
   protected val simpleJsonSchemaGenerator: SimpleJsonSchemaGeneratorFromSpec = SimpleJsonSchemaGeneratorFromSpec()
 
   private fun validateConfig(configuredMapper: ConfiguredMapper) {
-    configuredMapperValidator.validateMapperConfig(jsonSchema(), configuredMapper)
+    configuredMapperValidator.validateMapperConfig(jsonSchema(), configuredMapper, objectMapper())
   }
 
   final override fun deserialize(configuredMapper: ConfiguredMapper): T {
@@ -21,4 +24,6 @@ abstract class ConfigValidatingSpec<T : MapperConfig> : MapperSpec<T> {
   }
 
   abstract fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): T
+
+  final override fun objectMapper(): ObjectMapper = objectMapper
 }

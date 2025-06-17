@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
@@ -87,7 +87,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws DatabaseInitializationException, IOException, JsonValidationException, SQLException {
     truncateAllTables();
 
-    statePersistence = new StatePersistence(database);
+    statePersistence = new StatePersistence(database, new ConnectionServiceJooqImpl(database));
 
     final var featureFlagClient = mock(TestClient.class);
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);

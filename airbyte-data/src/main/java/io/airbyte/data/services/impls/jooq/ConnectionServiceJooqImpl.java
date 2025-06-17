@@ -583,9 +583,10 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   @Override
   public String getDataplaneGroupNameForConnection(final UUID connectionId) throws IOException {
     final List<String> nameString = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
-        .from(CONNECTION)
-        .leftJoin(DATAPLANE_GROUP)
-        .on(CONNECTION.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID)))
+        .from(CONNECTION))
+        .join(ACTOR).on(ACTOR.ID.eq(CONNECTION.SOURCE_ID).or(ACTOR.ID.eq(CONNECTION.DESTINATION_ID)))
+        .join(WORKSPACE).on(ACTOR.WORKSPACE_ID.eq(WORKSPACE.ID))
+        .join(DATAPLANE_GROUP).on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID))
         .where(CONNECTION.ID.eq(connectionId))
         .fetchInto(String.class);
 
@@ -835,7 +836,6 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
           .set(CONNECTION.DESTINATION_CATALOG_ID, standardSync.getDestinationCatalogId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
-          .set(CONNECTION.DATAPLANE_GROUP_ID, standardSync.getDataplaneGroupId())
           .where(CONNECTION.ID.eq(standardSync.getConnectionId()))
           .execute();
 
@@ -885,7 +885,6 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
               JSONB.valueOf(Jsons.serialize(standardSync.getResourceRequirements())))
           .set(CONNECTION.SOURCE_CATALOG_ID, standardSync.getSourceCatalogId())
           .set(CONNECTION.DESTINATION_CATALOG_ID, standardSync.getDestinationCatalogId())
-          .set(CONNECTION.DATAPLANE_GROUP_ID, standardSync.getDataplaneGroupId())
           .set(CONNECTION.BREAKING_CHANGE, standardSync.getBreakingChange())
           .set(CONNECTION.CREATED_AT, timestamp)
           .set(CONNECTION.UPDATED_AT, timestamp)

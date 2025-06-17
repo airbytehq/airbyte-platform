@@ -5,7 +5,7 @@
 package io.airbyte.connectorbuilder.authorization
 
 import com.nimbusds.jwt.JWT
-import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.commons.server.authorization.AuthenticationFactory
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.security.authentication.Authentication

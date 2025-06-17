@@ -19,3 +19,7 @@
 .grow {
   flex-grow: 1;
 }
+
+.noShrink {
+  flex-shrink: 0;
+}

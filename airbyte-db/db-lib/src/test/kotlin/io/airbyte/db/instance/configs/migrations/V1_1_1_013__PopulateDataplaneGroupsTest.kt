@@ -4,9 +4,9 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
-import io.airbyte.commons.constants.EU_DATAPLANE_GROUP
-import io.airbyte.commons.constants.US_DATAPLANE_GROUP
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.EU_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator

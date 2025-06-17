@@ -4,7 +4,6 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -13,7 +12,6 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.jooq.DSLContext
 import org.jooq.Field
 import org.jooq.JSONB
-import org.jooq.Record
 import org.jooq.Record2
 import org.jooq.Table
 import org.jooq.impl.DSL
@@ -28,6 +26,7 @@ import java.util.UUID
 internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
+    val currentEnv = System.getenv("AIRBYTE_EDITION")
     val flyway =
       create(
         dataSource,
@@ -45,16 +44,25 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
     dropConstraintsFromConnection(ctx)
     dropOrganizationIdFKFromDataplanegroup(ctx)
     dropUpdatedByFKFromDataplanegroup(ctx)
+    ctx.deleteFrom(DSL.table("dataplane_group")).execute()
+    ctx.deleteFrom(DSL.table("connection")).execute()
+    try {
+      dropNotNullConstraintFromConnection(ctx)
+    } catch (e: Exception) {
+      // ignore
+    }
+    setEnv("AIRBYTE_EDITION", currentEnv)
   }
 
   @Test
-  fun testDataplaneGroupIdIsPopulated() {
+  fun testDataplaneGroupIdIsPopulatedCloud() {
+    setEnv("AIRBYTE_EDITION", "CLOUD")
+
     val ctx = getDslContext()
     val usDataplaneGroupId = UUID.randomUUID()
     val euDataplaneGroupId = UUID.randomUUID()
     val usConnectionId = UUID.randomUUID()
     val euConnectionId = UUID.randomUUID()
-    val autoConnectionId = UUID.randomUUID()
 
     ctx
       .insertInto(DATAPLANE_GROUP, ID, ORGANIZATION_ID, NAME)
@@ -111,29 +119,6 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
         OffsetDateTime.now(),
         DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
       ).execute()
-    ctx
-      .insertInto<Record, UUID, Any, UUID, UUID, String, JSONB, OffsetDateTime, OffsetDateTime, Any>(
-        CONNECTION,
-        ID,
-        NAMESPACE_DEFINITION,
-        SOURCE_ID,
-        DESTINATION_ID,
-        NAME,
-        CATALOG,
-        CREATED_AT,
-        UPDATED_AT,
-        GEOGRAPHY,
-      ).values(
-        autoConnectionId,
-        DSL.field<Any>(NAMESPACE_DEFINITION_TYPE, NAMESPACE_DEFINITION.dataType, "source"),
-        UUID.randomUUID(),
-        UUID.randomUUID(),
-        "test",
-        JSONB.valueOf("{}"),
-        OffsetDateTime.now(),
-        OffsetDateTime.now(),
-        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, AUTO_DATAPLANE_GROUP),
-      ).execute()
 
     V1_1_1_016__AddDataplaneGroupIdToConnection.doMigration(ctx)
 
@@ -148,6 +133,178 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
 
     Assertions.assertEquals(usDataplaneGroupId, connectionDataplaneMappings[usConnectionId])
     Assertions.assertEquals(euDataplaneGroupId, connectionDataplaneMappings[euConnectionId])
+
+    val isNullable =
+      ctx
+        .meta()
+        .getTables(CONNECTION.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .filter { field: Field<*> -> "dataplane_group_id" == field.name }
+        .anyMatch { field: Field<*> -> field.dataType.nullable() }
+    Assertions.assertFalse(isNullable)
+  }
+
+  @Test
+  fun testDataplaneGroupIdIsPopulatedNullAirbyteEdition() {
+    setEnv("AIRBYTE_EDITION", null)
+
+    val ctx = getDslContext()
+    val autoDataplaneGroupId = UUID.randomUUID()
+    val usConnectionId = UUID.randomUUID()
+    val euConnectionId = UUID.randomUUID()
+
+    ctx
+      .insertInto(DATAPLANE_GROUP, ID, ORGANIZATION_ID, NAME)
+      .values(autoDataplaneGroupId, DEFAULT_ORGANIZATION_ID, "AUTO")
+      .execute()
+
+    ctx
+      .insertInto(
+        CONNECTION,
+        ID,
+        NAMESPACE_DEFINITION,
+        SOURCE_ID,
+        DESTINATION_ID,
+        NAME,
+        CATALOG,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+      ).values(
+        usConnectionId,
+        DSL.field(NAMESPACE_DEFINITION_TYPE, NAMESPACE_DEFINITION.dataType, "source"),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "test",
+        JSONB.valueOf("{}"),
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "US"),
+      ).execute()
+    ctx
+      .insertInto(
+        CONNECTION,
+        ID,
+        NAMESPACE_DEFINITION,
+        SOURCE_ID,
+        DESTINATION_ID,
+        NAME,
+        CATALOG,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+      ).values(
+        euConnectionId,
+        DSL.field(NAMESPACE_DEFINITION_TYPE, NAMESPACE_DEFINITION.dataType, "source"),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "test",
+        JSONB.valueOf("{}"),
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
+      ).execute()
+
+    V1_1_1_016__AddDataplaneGroupIdToConnection.doMigration(ctx)
+
+    val connectionDataplaneMappings =
+      ctx
+        .select(ID, DATAPLANE_GROUP_ID)
+        .from(CONNECTION)
+        .fetchMap(
+          { r: Record2<UUID, UUID> -> r.get(ID) },
+          { r: Record2<UUID, UUID?> -> r.get(DATAPLANE_GROUP_ID) },
+        )
+
+    Assertions.assertEquals(autoDataplaneGroupId, connectionDataplaneMappings[usConnectionId])
+    Assertions.assertEquals(autoDataplaneGroupId, connectionDataplaneMappings[euConnectionId])
+
+    val isNullable =
+      ctx
+        .meta()
+        .getTables(CONNECTION.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .filter { field: Field<*> -> "dataplane_group_id" == field.name }
+        .anyMatch { field: Field<*> -> field.dataType.nullable() }
+    Assertions.assertFalse(isNullable)
+  }
+
+  @Test
+  fun testDataplaneGroupIdIsPopulatedNonCloud() {
+    setEnv("AIRBYTE_EDITION", "asdf")
+
+    val ctx = getDslContext()
+    val autoDataplaneGroupId = UUID.randomUUID()
+    val usConnectionId = UUID.randomUUID()
+    val euConnectionId = UUID.randomUUID()
+
+    ctx
+      .insertInto(DATAPLANE_GROUP, ID, ORGANIZATION_ID, NAME)
+      .values(autoDataplaneGroupId, DEFAULT_ORGANIZATION_ID, "AUTO")
+      .execute()
+
+    ctx
+      .insertInto(
+        CONNECTION,
+        ID,
+        NAMESPACE_DEFINITION,
+        SOURCE_ID,
+        DESTINATION_ID,
+        NAME,
+        CATALOG,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+      ).values(
+        usConnectionId,
+        DSL.field(NAMESPACE_DEFINITION_TYPE, NAMESPACE_DEFINITION.dataType, "source"),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "test",
+        JSONB.valueOf("{}"),
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "US"),
+      ).execute()
+    ctx
+      .insertInto(
+        CONNECTION,
+        ID,
+        NAMESPACE_DEFINITION,
+        SOURCE_ID,
+        DESTINATION_ID,
+        NAME,
+        CATALOG,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+      ).values(
+        euConnectionId,
+        DSL.field(NAMESPACE_DEFINITION_TYPE, NAMESPACE_DEFINITION.dataType, "source"),
+        UUID.randomUUID(),
+        UUID.randomUUID(),
+        "test",
+        JSONB.valueOf("{}"),
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
+      ).execute()
+
+    V1_1_1_016__AddDataplaneGroupIdToConnection.doMigration(ctx)
+
+    val connectionDataplaneMappings =
+      ctx
+        .select(ID, DATAPLANE_GROUP_ID)
+        .from(CONNECTION)
+        .fetchMap(
+          { r: Record2<UUID, UUID> -> r.get(ID) },
+          { r: Record2<UUID, UUID?> -> r.get(DATAPLANE_GROUP_ID) },
+        )
+
+    Assertions.assertEquals(autoDataplaneGroupId, connectionDataplaneMappings[usConnectionId])
+    Assertions.assertEquals(autoDataplaneGroupId, connectionDataplaneMappings[euConnectionId])
 
     val isNullable =
       ctx
@@ -206,6 +363,30 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
         .alterTable(DATAPLANE_GROUP)
         .dropConstraintIfExists("dataplane_group_updated_by_fkey")
         .execute()
+    }
+
+    private fun dropNotNullConstraintFromConnection(ctx: DSLContext) {
+      ctx
+        .alterTable(CONNECTION)
+        .alterColumn("dataplane_group_id")
+        .dropNotNull()
+        .execute()
+    }
+  }
+
+  private fun setEnv(
+    key: String,
+    value: String?,
+  ) {
+    val env = System.getenv()
+    val cl = env::class.java
+    val field = cl.getDeclaredField("m")
+    field.isAccessible = true
+    val writableEnv = field.get(env) as MutableMap<String, String?>
+    if (value != null) {
+      writableEnv[key] = value
+    } else {
+      writableEnv.remove(key)
     }
   }
 }

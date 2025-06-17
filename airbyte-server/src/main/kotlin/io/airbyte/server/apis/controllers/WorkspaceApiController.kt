@@ -34,7 +34,7 @@ import io.airbyte.api.problems.throwable.generated.ApiNotImplementedInOssProblem
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.handlers.WorkspacesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
@@ -158,18 +158,6 @@ open class WorkspaceApiController(
     @Body workspaceUsageRequestBody: WorkspaceUsageRequestBody?,
   ): WorkspaceUsageRead = throw ApiNotImplementedInOssProblem("Not implemented in this edition of Airbyte", null)
 
-  @Post("/list_all_paginated")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun listAllWorkspacesPaginated(
-    @Body listResourcesForWorkspacesRequestBody: ListResourcesForWorkspacesRequestBody,
-  ): WorkspaceReadList? =
-    execute {
-      workspacesHandler.listAllWorkspacesPaginated(
-        listResourcesForWorkspacesRequestBody,
-      )
-    }
-
   @Post(uri = "/list_paginated")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
   @ExecuteOn(AirbyteTaskExecutors.IO)
@@ -232,12 +220,12 @@ open class WorkspaceApiController(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ): WorkspaceRead? = execute { workspacesHandler.getWorkspaceByConnectionId(connectionIdRequestBody, true) }
 
+  @Post("/list_by_organization_id")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun listWorkspacesInOrganization(
-    @Body request: ListWorkspacesInOrganizationRequestBody,
-  ): WorkspaceReadList? {
-    // To be implemented
-    return execute { workspacesHandler.listWorkspacesInOrganization(request) }
-  }
+    @Body listWorkspacesInOrganizationRequestBody: ListWorkspacesInOrganizationRequestBody,
+  ): WorkspaceReadList? = execute { workspacesHandler.listWorkspacesInOrganization(listWorkspacesInOrganizationRequestBody) }
 
   @Post("/list_by_user_id")
   @Secured(AuthRoleConstants.READER, AuthRoleConstants.SELF)

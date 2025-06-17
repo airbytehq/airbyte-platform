@@ -5,10 +5,10 @@
 package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.commons.auth.AuthRole
+import io.airbyte.commons.DEFAULT_USER_ID
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.config.InstanceAdminConfig
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.authentication.UsernamePasswordCredentials
@@ -39,7 +39,7 @@ class CommunityAuthProviderTest {
     val response = authProvider.authenticate(HttpRequest.GET("/"), authRequest)!!
 
     assertTrue(response.isAuthenticated)
-    assertEquals(UserPersistence.DEFAULT_USER_ID.toString(), response.authentication.get().name)
+    assertEquals(DEFAULT_USER_ID.toString(), response.authentication.get().name)
     assertTrue(
       response.authentication
         .get()

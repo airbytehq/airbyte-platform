@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.support;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -50,7 +51,7 @@ class CommunityCurrentUserServiceTest {
     // @RequestScope work on the CommunityCurrentUserService
     ServerRequestContext.with(HttpRequest.GET("/"), () -> {
       try {
-        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(UserPersistence.DEFAULT_USER_ID);
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(DEFAULT_USER_ID);
         when(userPersistence.getDefaultUser()).thenReturn(Optional.ofNullable(expectedUser));
 
         // First call - should fetch default user from userPersistence
@@ -73,12 +74,12 @@ class CommunityCurrentUserServiceTest {
   void testCommunityGetCurrentUserIdIfExists() {
     ServerRequestContext.with(HttpRequest.GET("/"), () -> {
       try {
-        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(UserPersistence.DEFAULT_USER_ID);
+        final AuthenticatedUser expectedUser = new AuthenticatedUser().withUserId(DEFAULT_USER_ID);
         when(userPersistence.getDefaultUser()).thenReturn(Optional.of(expectedUser));
 
         final Optional<UUID> userId = currentUserService.getCurrentUserIdIfExists();
         Assertions.assertTrue(userId.isPresent());
-        Assertions.assertEquals(UserPersistence.DEFAULT_USER_ID, userId.get());
+        Assertions.assertEquals(DEFAULT_USER_ID, userId.get());
       } catch (final IOException e) {
         fail(e);
       }

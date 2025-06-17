@@ -6,12 +6,12 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: "html",
   use: {
-    baseURL: process.env.AIRBYTE_SERVER_HOST,
+    baseURL: process.env.AIRBYTE_WEBAPP_URL ?? process.env.AIRBYTE_SERVER_HOST,
     ignoreHTTPSErrors: true,
-    trace: "on-first-retry",
+    trace: "on", // always collect trace for playback
   },
 
   /* Configure projects for major browsers */

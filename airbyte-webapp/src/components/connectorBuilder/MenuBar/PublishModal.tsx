@@ -41,14 +41,15 @@ import { useNotificationService } from "hooks/services/Notification";
 import { RoutePaths, SourcePaths } from "pages/routePaths";
 import {
   useConnectorBuilderFormState,
-  convertJsonToYaml,
   ConnectorBuilderMainRHFContext,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishModal.module.scss";
 import { useExperiment } from "../../../hooks/services/Experiment";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useStreamNames } from "../useStreamNames";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
+import { convertJsonToYaml } from "../utils";
 
 const PUBLISH_TO_WORKSPACE_NOTIFICATION_ID = "publish-to-workspace-notification";
 
@@ -76,7 +77,7 @@ const PublishTypeSwitcher: React.FC<{
   setPublishType: (type: PublishType) => void;
 }> = ({ selectedPublishType, setPublishType }) => {
   const analyticsService = useAnalyticsService();
-  const { streamNames } = useConnectorBuilderFormState();
+  const { streamNames } = useStreamNames();
   const { getStreamTestWarnings } = useStreamTestMetadata();
   const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
   if (!watch) {
@@ -153,13 +154,8 @@ const PublishToWorkspace: React.FC<InnerModalProps> = ({ onClose, setPublishType
   const { formatMessage } = useIntl();
   const analyticsService = useAnalyticsService();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const {
-    projectId,
-    jsonManifest: manifest,
-    currentProject,
-    publishProject,
-    releaseNewVersion,
-  } = useConnectorBuilderFormState();
+  const { projectId, currentProject, publishProject, releaseNewVersion } = useConnectorBuilderFormState();
+  const manifest = useBuilderWatch("manifest");
   const { data: versions, isLoading: isLoadingVersions } = useListBuilderProjectVersions(currentProject);
   const connectorName = useBuilderWatch("name");
   const workspaceId = useCurrentWorkspaceId();
@@ -454,22 +450,20 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const formatError = useFormatError();
   const connectorName = useBuilderWatch("name");
   const connectorImageName = useMemo(() => convertConnectorNameToImageName(connectorName), [connectorName]);
-  const { jsonManifest, updateYamlCdkVersion } = useConnectorBuilderFormState();
+  const { updateYamlCdkVersion } = useConnectorBuilderFormState();
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
+  const manifest = useBuilderWatch("manifest");
 
   // update the version so that the manifest reflects which CDK version was used to build it
-  const jsonManifestWithCorrectedVersion = useMemo(
-    () => updateYamlCdkVersion(jsonManifest),
-    [jsonManifest, updateYamlCdkVersion]
-  );
+  const manifestWithCorrectedVersion = useMemo(() => updateYamlCdkVersion(manifest), [manifest, updateYamlCdkVersion]);
 
   const {
     data: baseImageRead,
     error: baseImageError,
     isLoading: isLoadingBaseImage,
-  } = useGetBuilderProjectBaseImage({ manifest: jsonManifestWithCorrectedVersion });
+  } = useGetBuilderProjectBaseImage({ manifest: manifestWithCorrectedVersion });
 
   // TODO: Remove image name error related code when editing is no longer behind a feature flag
   const [imageNameError, setImageNameError] = useState<string | null>(null);
@@ -527,11 +521,11 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
   const handleSubmit = async (values: ContributeToAirbyteFormValues) => {
     unregisterNotificationById(GENERATE_CONTRIBUTION_NOTIFICATION_ID);
 
-    const jsonManifestWithDescription = {
-      ...jsonManifestWithCorrectedVersion,
+    const manifestWithDescription = {
+      ...manifestWithCorrectedVersion,
       description: values.connectorDescription,
     };
-    const yamlManifest = convertJsonToYaml(jsonManifestWithDescription);
+    const yamlManifest = convertJsonToYaml(manifestWithDescription);
 
     const contribution = await generateContribution({
       name: values.name,
@@ -539,14 +533,14 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       connector_description: values.connectorDescription,
       contribution_description: values.contributionDescription,
       github_token: values.githubToken,
-      manifest_yaml: convertJsonToYaml(jsonManifestWithDescription),
+      manifest_yaml: convertJsonToYaml(manifestWithDescription),
       base_image: baseImage,
       custom_components: customComponentsCode,
     });
     const newProject: BuilderProjectWithManifest = {
       name: values.name,
-      manifest: jsonManifestWithDescription,
-      yamlManifest: convertJsonToYaml(jsonManifestWithDescription),
+      manifest: manifestWithDescription,
+      yamlManifest: convertJsonToYaml(manifestWithDescription),
       componentsFileContent: customComponentsCode,
       contributionPullRequestUrl: contribution.pull_request_url,
       contributionActorDefinitionId: contribution.actor_definition_id,
@@ -586,7 +580,7 @@ const ContributeToAirbyte: React.FC<InnerModalProps> = ({ onClose, setPublishTyp
       defaultValues={{
         name: connectorName,
         connectorImageName,
-        connectorDescription: jsonManifest.description,
+        connectorDescription: manifest.description,
         githubToken: "",
         isEditing: false,
       }}

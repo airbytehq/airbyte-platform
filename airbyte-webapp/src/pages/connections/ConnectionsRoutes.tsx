@@ -3,23 +3,23 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-
 import { useEffectOnce } from "react-use";
 
 import { LoadingPage } from "components";
-import { ConfigureConnectionRoute } from "components/connection/CreateDataActivationConnection/ConfigureConnectionRoute";
-import { CreateDataActivationConnectionRouteWrapper } from "components/connection/CreateDataActivationConnection/CreateDataActivationConnectionRouteWrapper";
-import { MapFieldsRoute } from "components/connection/CreateDataActivationConnection/MapFieldsRoute";
 
+import { CreateConnectionRouteWrapper } from "area/dataActivation/components/CreateConnectionRouteWrapper";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
 import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionRoutePaths, RoutePaths } from "../routePaths";
 
-const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
-const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
+const ConfigureDataActivationConnectionPage = React.lazy(() => import("./ConfigureDataActivationConnectionPage"));
+const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
 const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage"));
+const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
-const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
+const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
+const DataActivationMappingPage = React.lazy(() => import("./DataActivationMappingPage"));
 
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
@@ -76,10 +76,10 @@ export const ConnectionsRoutes: React.FC = () => {
         {dataActivationEnabled && (
           <Route
             path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
-            element={<CreateDataActivationConnectionRouteWrapper />}
+            element={<CreateConnectionRouteWrapper />}
           >
-            <Route index element={<MapFieldsRoute />} />
-            <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureConnectionRoute />} />
+            <Route index element={<DataActivationMappingPage />} />
+            <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureDataActivationConnectionPage />} />
           </Route>
         )}
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />

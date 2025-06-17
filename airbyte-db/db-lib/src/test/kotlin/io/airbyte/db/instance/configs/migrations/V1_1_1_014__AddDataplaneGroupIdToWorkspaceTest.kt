@@ -4,7 +4,6 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.AUTO_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -12,7 +11,6 @@ import io.airbyte.db.instance.development.DevDatabaseMigrator
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.jooq.DSLContext
 import org.jooq.Field
-import org.jooq.Record
 import org.jooq.Record2
 import org.jooq.Table
 import org.jooq.exception.DataAccessException
@@ -33,6 +31,8 @@ import java.util.UUID
 internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
+    val currentEnv = System.getenv("AIRBYTE_EDITION")
+
     val flyway =
       create(
         dataSource,
@@ -50,11 +50,23 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
     dropOrganizationIdFKFromWorkspace(ctx)
     dropOrganizationIdFKFromDataplanegroup(ctx)
     dropUpdatedByFKFromDataplanegroup(ctx)
+    try {
+      dropNotNullConstraintFromWorkspace(ctx)
+    } catch (e: Exception) {
+      // ignore
+    }
+    ctx.deleteFrom(DSL.table("dataplane_group")).execute()
+    ctx.deleteFrom(DSL.table("workspace")).execute()
+    recreateColumnGeography(ctx)
+    dropColumnGeographyDONOTUSE(ctx)
+    setEnv("AIRBYTE_EDITION", currentEnv)
   }
 
   @Test
   @Order(10)
-  fun testDataplaneGroupIdIsPopulated() {
+  fun testDataplaneGroupIdIsPopulatedCloud() {
+    setEnv("AIRBYTE_EDITION", "CLOUD")
+
     val ctx = getDslContext()
     val usDataplaneGroupId = UUID.randomUUID()
     val euDataplaneGroupId = UUID.randomUUID()
@@ -117,8 +129,68 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
         UUID.randomUUID(),
       ).execute()
+
+    V1_1_1_014__AddDataplaneGroupIdToWorkspace.doMigration(ctx)
+
+    val workspaceDataplaneMappings =
+      ctx
+        .select(ID, DATAPLANE_GROUP_ID)
+        .from(WORKSPACE)
+        .fetchMap(
+          { r: Record2<UUID, UUID> -> r.get(ID) },
+          { r: Record2<UUID, UUID?> -> r.get(DATAPLANE_GROUP_ID) },
+        )
+
+    Assertions.assertEquals(usDataplaneGroupId, workspaceDataplaneMappings[usWorkspaceId])
+    Assertions.assertEquals(euDataplaneGroupId, workspaceDataplaneMappings[euWorkspaceId])
+
+    val isNullable =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .filter { field: Field<*> -> "dataplane_group_id" == field.name }
+        .anyMatch { field: Field<*> -> field.dataType.nullable() }
+    Assertions.assertFalse(isNullable)
+
+    val columnExists =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .anyMatch { field: Field<*> -> "geography" == field.name }
+    Assertions.assertFalse(columnExists)
+
+    val deprecatedColumnExists =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .anyMatch { field: Field<*> -> "geography_DO_NOT_USE" == field.name }
+    Assertions.assertTrue(deprecatedColumnExists)
+  }
+
+  @Test
+  @Order(11)
+  fun testDataplaneGroupIdIsPopulatedNonCloud() {
+    setEnv("AIRBYTE_EDITION", "asdf")
+
+    val ctx = getDslContext()
+    val usDataplaneGroupId = UUID.randomUUID()
+    val usWorkspaceId = UUID.randomUUID()
+    val euWorkspaceId = UUID.randomUUID()
+    val autoWorkspaceId = UUID.randomUUID()
+
     ctx
-      .insertInto<Record, UUID, String, String, Boolean, Boolean, OffsetDateTime, OffsetDateTime, Any, UUID>(
+      .insertInto(DATAPLANE_GROUP, ID, ORGANIZATION_ID, NAME)
+      .values(usDataplaneGroupId, DEFAULT_ORGANIZATION_ID, "US")
+      .execute()
+
+    ctx
+      .insertInto(
         WORKSPACE,
         ID,
         NAME,
@@ -130,14 +202,37 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         GEOGRAPHY,
         ORGANIZATION_ID,
       ).values(
-        autoWorkspaceId,
+        usWorkspaceId,
         "",
         "",
         true,
         false,
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, AUTO_DATAPLANE_GROUP),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "US"),
+        UUID.randomUUID(),
+      ).execute()
+    ctx
+      .insertInto(
+        WORKSPACE,
+        ID,
+        NAME,
+        SLUG,
+        INITIAL_SETUP_COMPLETE,
+        TOMBSTONE,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+        ORGANIZATION_ID,
+      ).values(
+        euWorkspaceId,
+        "",
+        "",
+        true,
+        false,
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
         UUID.randomUUID(),
       ).execute()
 
@@ -153,7 +248,125 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         )
 
     Assertions.assertEquals(usDataplaneGroupId, workspaceDataplaneMappings[usWorkspaceId])
-    Assertions.assertEquals(euDataplaneGroupId, workspaceDataplaneMappings[euWorkspaceId])
+    Assertions.assertEquals(usDataplaneGroupId, workspaceDataplaneMappings[euWorkspaceId])
+
+    // AUTO is the default dataplane group and should always exist
+    val autoDataplaneGroupId =
+      ctx
+        .select(ID)
+        .from(DATAPLANE_GROUP)
+        .where(NAME.eq("AUTO"))
+        .fetchOneInto(
+          UUID::class.java,
+        )
+    Assertions.assertEquals(autoDataplaneGroupId, workspaceDataplaneMappings[autoWorkspaceId])
+
+    val isNullable =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .filter { field: Field<*> -> "dataplane_group_id" == field.name }
+        .anyMatch { field: Field<*> -> field.dataType.nullable() }
+    Assertions.assertFalse(isNullable)
+
+    val columnExists =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .anyMatch { field: Field<*> -> "geography" == field.name }
+    Assertions.assertFalse(columnExists)
+
+    val deprecatedColumnExists =
+      ctx
+        .meta()
+        .getTables(WORKSPACE.name)
+        .stream()
+        .flatMap { obj: Table<*> -> obj.fieldStream() }
+        .anyMatch { field: Field<*> -> "geography_DO_NOT_USE" == field.name }
+    Assertions.assertTrue(deprecatedColumnExists)
+  }
+
+  @Test
+  @Order(12)
+  fun testDataplaneGroupIdIsPopulatedNullAirbyteEdition() {
+    setEnv("AIRBYTE_EDITION", null)
+
+    val ctx = getDslContext()
+    val usDataplaneGroupId = UUID.randomUUID()
+    val euDataplaneGroupId = UUID.randomUUID()
+    val usWorkspaceId = UUID.randomUUID()
+    val euWorkspaceId = UUID.randomUUID()
+    val autoWorkspaceId = UUID.randomUUID()
+
+    ctx
+      .insertInto(DATAPLANE_GROUP, ID, ORGANIZATION_ID, NAME)
+      .values(usDataplaneGroupId, DEFAULT_ORGANIZATION_ID, "US")
+      .execute()
+
+    ctx
+      .insertInto(
+        WORKSPACE,
+        ID,
+        NAME,
+        SLUG,
+        INITIAL_SETUP_COMPLETE,
+        TOMBSTONE,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+        ORGANIZATION_ID,
+      ).values(
+        usWorkspaceId,
+        "",
+        "",
+        true,
+        false,
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "US"),
+        UUID.randomUUID(),
+      ).execute()
+    ctx
+      .insertInto(
+        WORKSPACE,
+        ID,
+        NAME,
+        SLUG,
+        INITIAL_SETUP_COMPLETE,
+        TOMBSTONE,
+        CREATED_AT,
+        UPDATED_AT,
+        GEOGRAPHY,
+        ORGANIZATION_ID,
+      ).values(
+        euWorkspaceId,
+        "",
+        "",
+        true,
+        false,
+        OffsetDateTime.now(),
+        OffsetDateTime.now(),
+        DSL.field(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, "EU"),
+        UUID.randomUUID(),
+      ).execute()
+
+    V1_1_1_014__AddDataplaneGroupIdToWorkspace.doMigration(ctx)
+
+    val workspaceDataplaneMappings =
+      ctx
+        .select(ID, DATAPLANE_GROUP_ID)
+        .from(WORKSPACE)
+        .fetchMap(
+          { r: Record2<UUID, UUID> -> r.get(ID) },
+          { r: Record2<UUID, UUID?> -> r.get(DATAPLANE_GROUP_ID) },
+        )
+
+    Assertions.assertEquals(usDataplaneGroupId, workspaceDataplaneMappings[usWorkspaceId])
+    Assertions.assertEquals(usDataplaneGroupId, workspaceDataplaneMappings[euWorkspaceId])
 
     // AUTO is the default dataplane group and should always exist
     val autoDataplaneGroupId =
@@ -197,7 +410,9 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
 
   @Test
   @Order(1)
-  fun testMigrationThrowsWhenDataplaneGroupIdNotFoundForGeography() {
+  fun testMigrationThrowsOnCloudWhenDataplaneGroupIdNotFoundForGeography() {
+    setEnv("AIRBYTE_EDITION", "CLOUD")
+
     val ctx = getDslContext()
     ctx
       .insertInto(
@@ -291,6 +506,52 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         .alterTable(DATAPLANE_GROUP)
         .dropConstraintIfExists("dataplane_group_updated_by_fkey")
         .execute()
+    }
+
+    private fun dropNotNullConstraintFromWorkspace(ctx: DSLContext) {
+      ctx
+        .alterTable(WORKSPACE)
+        .alterColumn("dataplane_group_id")
+        .dropNotNull()
+        .execute()
+    }
+
+    private fun recreateColumnGeography(ctx: DSLContext) {
+      try {
+        ctx
+          .alterTable(WORKSPACE)
+          .addColumn("geography", SQLDataType.VARCHAR)
+          .execute()
+      } catch (e: Exception) {
+        // ignore
+      }
+    }
+
+    private fun dropColumnGeographyDONOTUSE(ctx: DSLContext) {
+      try {
+        ctx
+          .alterTable(WORKSPACE)
+          .dropColumn("geography_DO_NOT_USE")
+          .execute()
+      } catch (e: Exception) {
+        // ignore
+      }
+    }
+  }
+
+  private fun setEnv(
+    key: String,
+    value: String?,
+  ) {
+    val env = System.getenv()
+    val cl = env::class.java
+    val field = cl.getDeclaredField("m")
+    field.isAccessible = true
+    val writableEnv = field.get(env) as MutableMap<String, String?>
+    if (value != null) {
+      writableEnv[key] = value
+    } else {
+      writableEnv.remove(key)
     }
   }
 }

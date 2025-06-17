@@ -13,7 +13,9 @@ import { Icon } from "components/ui/Icon";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
+import { FeatureItem, IfFeatureEnabled } from "core/services/features";
 import { links } from "core/utils/links";
+import { BrandingBadge } from "views/layout/SideBar/AirbyteHomeLink";
 
 import styles from "./SSOSettings.module.scss";
 import { BaseOrganizationFormValues } from "../UpdateOrganizationSettingsForm";
@@ -99,6 +101,9 @@ export const SSOSettings = () => {
                       {formatMessage({ id: "settings.organizationSettings.sso.label.optional" })}
                     </Text>
                   )}
+                  <IfFeatureEnabled feature={FeatureItem.CloudForTeamsBranding}>
+                    <BrandingBadge product="cloudForTeams" testId="sso-label-cloud-for-teams-badge" />
+                  </IfFeatureEnabled>
                 </FlexContainer>
               </DisclosureButton>
               <ExternalLink href={links.ssoDocs} className={styles["card__header-link"]}>

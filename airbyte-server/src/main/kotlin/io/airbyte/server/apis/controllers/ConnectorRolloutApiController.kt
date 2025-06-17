@@ -25,7 +25,7 @@ import io.airbyte.api.model.generated.ConnectorRolloutResponse
 import io.airbyte.api.model.generated.ConnectorRolloutStartRequestBody
 import io.airbyte.api.model.generated.ConnectorRolloutStartResponse
 import io.airbyte.api.model.generated.ConnectorRolloutUpdateStateRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandler
 import io.airbyte.commons.server.handlers.ConnectorRolloutHandlerManual
 import io.airbyte.commons.server.handlers.helpers.ConnectorRolloutHelper

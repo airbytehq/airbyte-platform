@@ -11,8 +11,8 @@ import static org.mockito.Mockito.when;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
-import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
+import io.airbyte.commons.auth.roles.AuthRole;
 import io.airbyte.commons.json.Jsons;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;

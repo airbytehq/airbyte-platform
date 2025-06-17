@@ -6,7 +6,7 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.converters.WorkspaceConverter
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
@@ -65,7 +65,7 @@ open class ResourceBootstrapHandler(
 
     // Ensure user has the required permissions to create a workspace
     roleResolver
-      .Request()
+      .newRequest()
       .withCurrentUser()
       .withRef(AuthenticationId.ORGANIZATION_ID, organization.organizationId)
       .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)

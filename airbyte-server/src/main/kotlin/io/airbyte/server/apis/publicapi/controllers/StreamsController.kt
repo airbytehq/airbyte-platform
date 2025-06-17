@@ -10,7 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import io.airbyte.api.model.generated.DestinationSyncMode
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.problems.throwable.generated.UnexpectedProblem
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.AuthenticationId
@@ -58,7 +58,7 @@ class StreamsController(
 
     val authReq =
       roleResolver
-        .Request()
+        .newRequest()
         .withCurrentUser()
         .withRef(AuthenticationId.SOURCE_ID, sourceId)
 
@@ -179,6 +179,12 @@ class StreamsController(
       if (destinationSyncModes.contains(DestinationSyncMode.OVERWRITE)) {
         connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE)
       }
+      if (destinationSyncModes.contains(DestinationSyncMode.UPDATE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_UPDATE)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.SOFT_DELETE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE)
+      }
     }
     if (sourceSyncModes.contains(SyncMode.INCREMENTAL)) {
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND)) {
@@ -186,6 +192,12 @@ class StreamsController(
       }
       if (destinationSyncModes.contains(DestinationSyncMode.APPEND_DEDUP)) {
         connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.UPDATE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_UPDATE)
+      }
+      if (destinationSyncModes.contains(DestinationSyncMode.SOFT_DELETE)) {
+        connectionSyncModes.add(ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE)
       }
     }
     return connectionSyncModes

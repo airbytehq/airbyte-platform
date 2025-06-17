@@ -18,7 +18,7 @@ import io.airbyte.api.model.generated.ScopedConfigurationReadRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationReadResponse
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateRequestBody
 import io.airbyte.api.model.generated.ScopedConfigurationUpdateResponse
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ScopedConfigurationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.ConfigOriginType

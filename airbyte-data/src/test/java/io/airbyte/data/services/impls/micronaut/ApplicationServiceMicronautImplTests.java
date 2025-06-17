@@ -13,7 +13,6 @@ import static org.mockito.Mockito.when;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import io.airbyte.commons.auth.AuthRole;
 import io.airbyte.commons.auth.config.TokenExpirationConfig;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.resources.MoreResources;
@@ -63,8 +62,11 @@ class ApplicationServiceMicronautImplTests {
         tokenGenerator,
         issuer);
 
-    final var expectedRoles = new HashSet<>();
-    expectedRoles.addAll(AuthRole.getInstanceAdminRoles());
+    // For some reason, this test suite loads a mock token from a resource instead of running the actual
+    // code.
+    // So these roles match the mock token, not the actual roles.
+    final var expectedRoles = Set.of("WORKSPACE_EDITOR", "ORGANIZATION_RUNNER", "WORKSPACE_READER", "ORGANIZATION_EDITOR", "WORKSPACE_ADMIN",
+        "WORKSPACE_RUNNER", "EDITOR", "AUTHENTICATED_USER", "ORGANIZATION_MEMBER", "ORGANIZATION_READER", "READER", "ADMIN", "ORGANIZATION_ADMIN");
     final var token = applicationServer.getToken("test-client-id", "test-client-secret");
     final var claims = getTokenClaims(token);
 

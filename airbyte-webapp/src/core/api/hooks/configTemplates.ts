@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useNotificationService } from "hooks/services/Notification";
+import { ConnectorFormValues } from "views/Connector/ConnectorForm";
 
 import {
   listConfigTemplates,
@@ -72,13 +74,35 @@ export const useCreateConnectionTemplate = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const { registerNotification } = useNotificationService();
+  const analyticsService = useAnalyticsService();
 
   return useMutation(
-    (connectionTemplate: ConnectionTemplateCreateRequestBody) => {
+    ({
+      values,
+      destinationDefinitionId,
+      organizationId,
+    }: {
+      values: ConnectorFormValues;
+      destinationDefinitionId: string;
+      organizationId: string;
+    }) => {
+      const connectionTemplate: ConnectionTemplateCreateRequestBody = {
+        organizationId,
+        destinationName: values.name,
+        destinationConfiguration: values.connectionConfiguration,
+        destinationActorDefinitionId: destinationDefinitionId,
+      };
+
       return publicCreateConnectionTemplate(connectionTemplate, requestOptions);
     },
     {
-      onSuccess: () => {
+      onSuccess: (response, request) => {
+        analyticsService.track(Namespace.EMBEDDED, Action.CONNECTION_TEMPLATE_CREATED, {
+          description: "User created a connection template",
+          connectionTemplateId: response.id,
+          destinationDefinitionId: request.destinationDefinitionId ?? response,
+        });
+
         queryClient.invalidateQueries(configTemplates.lists());
         registerNotification({
           id: "config-template-created",
@@ -86,7 +110,13 @@ export const useCreateConnectionTemplate = () => {
           type: "success",
         });
       },
-      onError: () => {
+      onError: (error, request) => {
+        analyticsService.track(Namespace.EMBEDDED, Action.CONNECTION_TEMPLATE_CREATE_FAILED, {
+          description: "User failed to create a connection template",
+          destinationDefinitionId: request.destinationDefinitionId,
+          error,
+        });
+
         registerNotification({
           id: "config-template-created",
           text: "Failed to create connection template",

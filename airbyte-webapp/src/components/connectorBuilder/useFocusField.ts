@@ -52,15 +52,17 @@ export const useFocusField = () => {
 
     if (focusTab === null || streamTab === focusTab) {
       fieldToFocus.scrollIntoView({ behavior: "smooth", block: "center" });
-      if (fieldToFocus instanceof HTMLElement) {
-        fieldToFocus.focus();
+      setTimeout(() => {
+        if (fieldToFocus instanceof HTMLElement) {
+          fieldToFocus?.focus();
 
-        // Place cursor at the end for input and textarea elements
-        if (fieldToFocus instanceof HTMLInputElement || fieldToFocus instanceof HTMLTextAreaElement) {
-          const valueLength = fieldToFocus.value.length;
-          fieldToFocus.setSelectionRange(valueLength, valueLength);
+          // Place cursor at the end for input and textarea elements
+          if (fieldToFocus instanceof HTMLInputElement || fieldToFocus instanceof HTMLTextAreaElement) {
+            const valueLength = fieldToFocus.value.length;
+            fieldToFocus.setSelectionRange(valueLength, valueLength);
+          }
         }
-      }
+      }, 500);
       setFocusPath(undefined);
       setFocusTab(undefined);
     }
@@ -106,5 +108,7 @@ const getViewFromPath = (path: string): BuilderView | undefined => {
     };
   }
 
-  return undefined;
+  return {
+    type: "global",
+  };
 };

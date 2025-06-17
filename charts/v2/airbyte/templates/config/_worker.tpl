@@ -78,6 +78,24 @@ Renders the worker.configRoot environment variable
 {{- end }}
 
 {{/*
+Renders the worker.discoverRefreshWindowMinutes value
+*/}}
+{{- define "airbyte.worker.discoverRefreshWindowMinutes" }}
+    {{- .Values.worker.discoverRefreshWindowMinutes }}
+{{- end }}
+
+{{/*
+Renders the worker.discoverRefreshWindowMinutes environment variable
+*/}}
+{{- define "airbyte.worker.discoverRefreshWindowMinutes.env" }}
+- name: DISCOVER_REFRESH_WINDOW_MINUTES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: DISCOVER_REFRESH_WINDOW_MINUTES
+{{- end }}
+
+{{/*
 Renders the worker.maxCheckWorkers value
 */}}
 {{- define "airbyte.worker.maxCheckWorkers" }}
@@ -309,6 +327,7 @@ Renders the set of all worker environment variables
 {{- include "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds.env" . }}
 {{- include "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds.env" . }}
 {{- include "airbyte.worker.configRoot.env" . }}
+{{- include "airbyte.worker.discoverRefreshWindowMinutes.env" . }}
 {{- include "airbyte.worker.maxCheckWorkers.env" . }}
 {{- include "airbyte.worker.maxNotifyWorkers.env" . }}
 {{- include "airbyte.worker.maxSyncWorkers.env" . }}
@@ -331,6 +350,7 @@ ACTIVITY_MAX_ATTEMPT: {{ include "airbyte.worker.activityMaxAttempt" . | quote }
 ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityInitialDelayBetweenAttemptsSeconds" . | quote }}
 ACTIVITY_MAX_DELAY_BETWEEN_ATTEMPTS_SECONDS: {{ include "airbyte.worker.activityMaxDelayBetweenAttemptsSeconds" . | quote }}
 CONFIG_ROOT: {{ include "airbyte.worker.configRoot" . | quote }}
+DISCOVER_REFRESH_WINDOW_MINUTES: {{ include "airbyte.worker.discoverRefreshWindowMinutes" . | quote }}
 MAX_CHECK_WORKERS: {{ include "airbyte.worker.maxCheckWorkers" . | quote }}
 MAX_NOTIFY_WORKERS: {{ include "airbyte.worker.maxNotifyWorkers" . | quote }}
 MAX_SYNC_WORKERS: {{ include "airbyte.worker.maxSyncWorkers" . | quote }}

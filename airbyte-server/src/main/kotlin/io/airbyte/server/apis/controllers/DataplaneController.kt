@@ -18,15 +18,15 @@ import io.airbyte.api.model.generated.DataplaneListResponse
 import io.airbyte.api.model.generated.DataplaneRead
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
-import io.airbyte.commons.auth.AuthRoleConstants.ADMIN
+import io.airbyte.commons.auth.roles.AuthRoleConstants.ADMIN
+import io.airbyte.commons.auth.roles.AuthRoleConstants.DATAPLANE
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.Dataplane
-import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.ServiceAccountNotFound
 import io.airbyte.server.services.DataplaneService
 import io.micronaut.context.annotation.Context
-import io.micronaut.context.annotation.Requires
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -36,15 +36,16 @@ import io.micronaut.security.rules.SecurityRule
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.UUID
 import java.util.stream.Collectors
 
 @Context
 @Controller("/api/v1/dataplanes")
 @Secured(SecurityRule.IS_AUTHENTICATED)
-@Requires(bean = DataplaneCredentialsService::class)
 open class DataplaneController(
   private val dataplaneService: DataplaneService,
   private val dataplaneGroupService: DataplaneGroupService,
+  private val roleResolver: RoleResolver,
 ) : DataplaneApi {
   @Post("/create")
   @Secured(ADMIN)
@@ -54,16 +55,20 @@ open class DataplaneController(
   ): DataplaneCreateResponse {
     val dataplane =
       Dataplane().apply {
+        id = UUID.randomUUID()
         dataplaneGroupId = dataplaneCreateRequestBody.dataplaneGroupId
         name = dataplaneCreateRequestBody.name
         enabled = dataplaneCreateRequestBody.enabled
       }
-    val createdDataplane = dataplaneService.writeDataplane(dataplane)
-    val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id)
+
+    // this function will also create a service account
+    // for the dataplane and grant that account the appropriate permissions.
+    val dataplaneWithServiceAccount = dataplaneService.createNewDataplane(dataplane, dataplaneCreateRequestBody.instanceScope)
+
     return DataplaneCreateResponse()
-      .dataplaneId(createdDataplane.id)
-      .clientId(dataplaneAuth.clientId)
-      .clientSecret(dataplaneAuth.clientSecret)
+      .dataplaneId(dataplaneWithServiceAccount.dataplane.id)
+      .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
+      .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
   }
 
   @Post("/update")
@@ -137,13 +142,24 @@ open class DataplaneController(
   }
 
   @Post("/initialize")
-  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun initializeDataplane(
     @Body req: DataplaneInitRequestBody,
   ): DataplaneInitResponse {
-    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    // Note: after the service account migration, the service account id is the same as the
+    // old client id from the dataplane_client_credentials table. If the service account is not
+    // from a migration, then the clientId here should simply be the service account id
+    val dataplane = dataplaneService.getDataplaneByServiceAccountId(req.clientId)
+    if (dataplane == null) {
+      throw ServiceAccountNotFound(UUID.fromString(req.clientId))
+    }
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withOrg(dataplaneGroup.organizationId)
+      .requireRole(DATAPLANE)
 
     val resp = DataplaneInitResponse()
     resp.dataplaneName = dataplane.name
@@ -156,13 +172,22 @@ open class DataplaneController(
   }
 
   @Post("/heartbeat")
-  @Secured(ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun heartbeatDataplane(
     @Body req: DataplaneHeartbeatRequestBody,
   ): DataplaneHeartbeatResponse {
-    val dataplane = dataplaneService.getDataplaneFromClientId(req.clientId)
+    val dataplane = dataplaneService.getDataplaneByServiceAccountId(req.clientId)
+    if (dataplane == null) {
+      throw ServiceAccountNotFound(UUID.fromString(req.clientId))
+    }
+
     val dataplaneGroup = dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId)
+
+    roleResolver
+      .newRequest()
+      .withCurrentAuthentication()
+      .withOrg(dataplaneGroup.organizationId)
+      .requireRole(DATAPLANE)
 
     return DataplaneHeartbeatResponse().apply {
       dataplaneName = dataplane.name

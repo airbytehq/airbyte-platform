@@ -21,6 +21,7 @@ import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -34,9 +35,11 @@ import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.Runs
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -46,7 +49,6 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.mockito.Mockito
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
@@ -80,6 +82,7 @@ class ParallelStreamStatsTrackerTest {
   private lateinit var checkSumCountEventHandler: StateCheckSumCountEventHandler
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
+  private lateinit var replicationInput: ReplicationInput
 
   @BeforeEach
   fun beforeEach() {
@@ -89,8 +92,9 @@ class ParallelStreamStatsTrackerTest {
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
     every { trackingIdentityFetcher.apply(any(), any()) }.returns(trackingIdentity)
-    metricClient = Mockito.mock(MetricClient::class.java)
+    metricClient = mockk<MetricClient>(relaxed = true)
     featureFlagClient = TestClient(mapOf(EmitStateStatsToSegment.key to true, LogStateMsgs.key to false))
+    replicationInput = mockk(relaxed = true)
     checkSumCountEventHandler =
       StateCheckSumCountEventHandler(
         pubSubWriter = null,
@@ -105,6 +109,8 @@ class ParallelStreamStatsTrackerTest {
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
         platformMode = ArchitectureConstants.ORCHESTRATOR,
+        metricClient = metricClient,
+        replicationInput = replicationInput,
       )
     statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, platformMode = ArchitectureConstants.ORCHESTRATOR)
   }
@@ -322,7 +328,7 @@ class ParallelStreamStatsTrackerTest {
     val actualSyncStats = statsTracker.getTotalStats(true)
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), actualSyncStats)
 
-    Mockito.verify(metricClient).count(OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, value = 1) }
 
     // The following metrics are expected to be discarded
     assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
@@ -350,7 +356,7 @@ class ParallelStreamStatsTrackerTest {
     val actualMidSyncSyncStats = statsTracker.getTotalStats(false)
     assertSyncStatsCoreStatsEquals(buildSyncStats(2L, 2L), actualMidSyncSyncStats)
 
-    Mockito.verify(metricClient).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
   }
 
   @Test
@@ -376,29 +382,29 @@ class ParallelStreamStatsTrackerTest {
     val statsAfterState1OutOfOrder = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 2L), statsAfterState1OutOfOrder)
-    Mockito.verify(metricClient, Mockito.times(1)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 2 again
     statsTracker.updateDestinationStateStats(s1State2)
     val statsAfterState2Again = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 2L), statsAfterState2Again)
-    Mockito.verify(metricClient, Mockito.times(2)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 2) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 3
-    Mockito.reset(metricClient)
+    clearMocks(metricClient)
     statsTracker.updateDestinationStateStats(s1State3)
     val statsAfterState3 = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), statsAfterState3)
-    Mockito.verify(metricClient, Mockito.never()).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 0) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 3 again
     statsTracker.updateDestinationStateStats(s1State3)
     val statsAfterState3Again = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), statsAfterState3Again)
-    Mockito.verify(metricClient, Mockito.times(1)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
   }
 
   @Test

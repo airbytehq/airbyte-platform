@@ -5,10 +5,16 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.model.generated.WorkloadOutputWriteRequest
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.workload.repository.domain.Workload
+import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.repository.domain.WorkloadType
+import io.airbyte.workload.services.WorkloadService
 import io.mockk.every
 import io.mockk.impl.annotations.MockK
 import io.mockk.junit5.MockKExtension
+import io.mockk.mockk
 import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,6 +22,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import java.util.UUID
 
 @ExtendWith(MockKExtension::class)
 class WorkloadOutputControllerTest {
@@ -23,12 +30,29 @@ class WorkloadOutputControllerTest {
   private lateinit var storageClient: StorageClient
 
   private lateinit var controller: WorkloadOutputController
+  private val roleResolver = mockk<RoleResolver>(relaxed = true)
+  private val workloadService = mockk<WorkloadService>()
+  private val orgId = UUID.randomUUID()
 
   @BeforeEach
   fun setup() {
-    controller = WorkloadOutputController(storageClient)
+    controller = WorkloadOutputController(storageClient, workloadService, roleResolver)
 
     every { storageClient.write(any(), any()) } returns Unit
+    every { workloadService.getWorkload(any()) } returns
+      Workload(
+        id = "workload 1",
+        dataplaneId = null,
+        status = WorkloadStatus.PENDING,
+        workloadLabels = null,
+        inputPayload = "",
+        workspaceId = null,
+        organizationId = orgId,
+        logPath = "logs",
+        mutexKey = "mutex",
+        type = WorkloadType.SPEC,
+        signalInput = "signalInput",
+      )
   }
 
   @ParameterizedTest

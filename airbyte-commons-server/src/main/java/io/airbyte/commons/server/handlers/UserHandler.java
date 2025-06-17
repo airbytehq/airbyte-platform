@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_USER_ID;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;

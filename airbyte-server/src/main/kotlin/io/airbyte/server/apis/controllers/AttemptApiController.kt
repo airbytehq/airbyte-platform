@@ -15,7 +15,7 @@ import io.airbyte.api.model.generated.InternalOperationResult
 import io.airbyte.api.model.generated.SaveAttemptSyncConfigRequestBody
 import io.airbyte.api.model.generated.SaveStatsRequestBody
 import io.airbyte.api.model.generated.SaveStreamAttemptMetadataRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.converters.JobConverter
 import io.airbyte.commons.server.handlers.AttemptHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors

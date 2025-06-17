@@ -8,6 +8,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.ScopeType
 import io.airbyte.api.client.model.generated.SecretPersistenceConfig
 import io.airbyte.api.client.model.generated.SecretPersistenceType
+import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.AirbyteStream
@@ -46,9 +47,9 @@ internal class MapperSecretHydrationHelperTest {
 
   private val airbyteApiClient = mockk<AirbyteApiClient>()
   private val secretsRepositoryReader = mockk<SecretsRepositoryReader>(relaxed = true)
-
-  private val hashingMapper = HashingMapper()
-  private val encryptionMapper = EncryptionMapper()
+  private val objectMapper = MoreMappers.initMapper()
+  private val hashingMapper = HashingMapper(objectMapper)
+  private val encryptionMapper = EncryptionMapper(objectMapper)
   private val metricClient = mockk<MetricClient>(relaxed = true)
 
   @Suppress("UNCHECKED_CAST")

@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence
 
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
@@ -13,7 +14,6 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
-import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
@@ -203,7 +203,6 @@ open class RepositoryTestSetup {
       connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
-          .withDataplaneGroupId(dataplaneGroupId)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
@@ -213,7 +212,6 @@ open class RepositoryTestSetup {
       connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
-          .withDataplaneGroupId(dataplaneGroupId)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")

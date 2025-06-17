@@ -514,12 +514,11 @@ public class SourceHandler {
     final ConfigWithSecretReferences configWithRefs =
         this.secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(),
             sourceConnection.getWorkspaceId());
+    final JsonNode inlinedConfigWithRefs = InlinedConfigWithSecretRefsKt.toInlined(configWithRefs);
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
-            ? secretsProcessor.simplifySecretsForOutput(
-                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
-                spec.getConnectionSpecification())
-            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+            ? secretsProcessor.simplifySecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification());
     sourceConnection.setConfiguration(sanitizedConfig);
     return toSourceRead(sourceConnection, standardSourceDefinition);
   }

@@ -120,7 +120,7 @@ export const useInitialFormValues = (
   const { getDataplaneGroup } = useGetDataplaneGroup();
 
   return useMemo(() => {
-    const dataplaneGroupId = connection.dataplaneGroupId || workspace.dataplaneGroupId;
+    const dataplaneGroupId = workspace.dataplaneGroupId;
     const initialValues: FormConnectionFormValues = {
       name: connection.name ?? `${connection.source.name} → ${connection.destination.name}`,
       scheduleType: connection.scheduleType ?? ConnectionScheduleType.basic,
@@ -165,7 +165,6 @@ export const useInitialFormValues = (
     connection.namespaceFormat,
     connection.prefix,
     connection.nonBreakingChangesPreference,
-    connection.dataplaneGroupId,
     connection.notifySchemaChanges,
     connection.backfillPreference,
     connection.tags,

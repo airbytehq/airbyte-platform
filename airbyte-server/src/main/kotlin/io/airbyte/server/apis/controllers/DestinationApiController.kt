@@ -22,7 +22,7 @@ import io.airbyte.api.model.generated.PartialDestinationUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.converters.toApi
 import io.airbyte.commons.server.converters.toModel
 import io.airbyte.commons.server.handlers.DestinationHandler
@@ -98,6 +98,7 @@ open class DestinationApiController(
 
   @Post(uri = "/discover_schema")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
   override fun discoverCatalogForDestination(
     @Body destinationDiscoverReqBody: DestinationDiscoverSchemaRequestBody,
   ): DestinationDiscoverRead? =

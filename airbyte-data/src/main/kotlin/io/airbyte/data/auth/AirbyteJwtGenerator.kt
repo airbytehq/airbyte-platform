@@ -4,6 +4,8 @@
 
 package io.airbyte.data.auth
 
+import io.airbyte.data.TokenType
+
 /**
  * AirbyteJwtGenerator provides an interface for generating an encoded JWT token.
  * When Micronaut auth is enabled, this will be a signed JWT.
@@ -12,7 +14,7 @@ package io.airbyte.data.auth
 interface AirbyteJwtGenerator {
   fun generateToken(
     tokenSubject: String,
-    tokenType: String,
+    tokenType: TokenType,
     tokenExpirationLength: Long,
     additionalClaims: Map<String, Any> = emptyMap(),
   ): String

@@ -2,9 +2,51 @@ import { Page } from "@playwright/test";
 import { FeatureItem, FeatureSet } from "@src/core/services/features/types";
 import { Experiments } from "@src/hooks/services/Experiment/experiments";
 
-// Store flags in Node context
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 export const featureFlags: Partial<Experiments> = {};
 export const featureServiceOverrides: FeatureSet = {};
+
+export const setServerFeatureFlags = async (flags: Record<string, string>) => {
+  for (const [key, value] of Object.entries(flags)) {
+    console.log(
+      `[setServerFeatureFlags] Setting feature flag "${key}" to "${value}" calling FF server at ${process.env.AIRBYTE_SERVER_HOST}/api/v1/feature-flags`
+    );
+
+    const response = await fetch(`${process.env.AIRBYTE_SERVER_HOST}/api/v1/feature-flags`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        key,
+        default: value,
+      }),
+      // agent, // not needed with NODE_TLS_REJECT_UNAUTHORIZED=0
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any);
+
+    const responseBody = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `[setServerFeatureFlags] Failed to set feature flag "${key}": ${response.status} ${response.statusText} - ${responseBody}`
+      );
+    }
+    console.log(`[setServerFeatureFlags] PUT ${process.env.AIRBYTE_SERVER_HOST}/api/v1/feature-flags`, {
+      key,
+      value,
+      status: response.status,
+      statusText: response.statusText,
+      responseBody,
+      requestHeaders: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      requestBody: { key, default: value },
+    });
+  }
+};
 
 // Set EXPERIMENT feature flags
 export const setFeatureFlags = (flags: Partial<Experiments>) => {

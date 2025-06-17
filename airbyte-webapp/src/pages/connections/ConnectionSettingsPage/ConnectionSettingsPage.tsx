@@ -17,7 +17,7 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
-import { HttpError, HttpProblem, useCurrentWorkspace, useGetDataplaneGroup } from "core/api";
+import { HttpError, HttpProblem } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { useFormMode } from "core/services/ui/FormModeContext";
@@ -38,10 +38,8 @@ export const ConnectionSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
 
   const { connection, updateConnection } = useConnectionEditService();
-  const { dataplaneGroupId } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { getDataplaneGroup } = useGetDataplaneGroup();
   const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
@@ -117,10 +115,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   );
 
   const isDeprecated = connection.status === "deprecated";
-  const hasConfiguredGeography =
-    connection.dataplaneGroupId !== undefined &&
-    connection.dataplaneGroupId !== dataplaneGroupId &&
-    getDataplaneGroup(connection.dataplaneGroupId)?.name !== "AUTO";
+  const hasConfiguredGeography = false;
 
   return (
     <ScrollParent>

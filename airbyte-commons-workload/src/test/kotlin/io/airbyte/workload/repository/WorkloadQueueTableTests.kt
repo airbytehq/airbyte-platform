@@ -230,7 +230,7 @@ class WorkloadQueueTableTests {
     val entriesToOverrideAckedDate = workloadQueueRepo.findByDataplaneGroup(dataplaneGroup)
 
     entriesToOverrideAckedDate.forEach {
-      it.ackedAt = OffsetDateTime.now().minusWeeks(1)
+      it.ackedAt = OffsetDateTime.now().minusWeeks(1).minusMinutes(5)
       workloadQueueRepo.update(it)
     }
     workloadQueueRepo.cleanUpAckedEntries(deletionLimit)

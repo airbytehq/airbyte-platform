@@ -12,6 +12,7 @@ interface CopyButtonProps {
   title?: string;
   variant?: "secondary" | "clear";
   iconPosition?: "left" | "right";
+  full?: boolean;
 }
 
 export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
@@ -21,6 +22,7 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
   children,
   variant = "secondary",
   iconPosition = "left",
+  full = false,
 }) => {
   const { formatMessage } = useIntl();
   const [copied, setCopied] = useState(false);
@@ -49,7 +51,9 @@ export const CopyButton: React.FC<React.PropsWithChildren<CopyButtonProps>> = ({
       onClick={handleClick}
       icon={children ? "copy" : undefined}
       iconPosition={iconPosition}
+      full={full}
       type="button"
+      data-testid="copy-button"
     >
       {copied && <Icon className={styles.success} type="successFilled" color="success" />}
       {children ? undefined : <Icon type="copy" />}

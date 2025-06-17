@@ -6,11 +6,12 @@ package io.airbyte.server.services
 
 import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
 import io.airbyte.config.Dataplane
-import io.airbyte.config.DataplaneClientCredentials
-import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneTokenService
+import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
+import io.mockk.Runs
 import io.mockk.every
+import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
 import org.jooq.exception.DataAccessException
@@ -24,9 +25,9 @@ import java.util.UUID
 
 class DataplaneServiceTest {
   private lateinit var dataplaneDataService: io.airbyte.data.services.DataplaneService
-  private lateinit var dataplaneCredentialsService: DataplaneCredentialsService
-  private lateinit var dataplaneTokenService: DataplaneTokenService
   private lateinit var dataplaneService: DataplaneService
+  private lateinit var serviceAccountsService: ServiceAccountsService
+  private lateinit var dataplaneTokenService: DataplaneTokenService
 
   private val dataplaneGroupId = UUID.randomUUID()
   private val dataplaneNameConstraintViolationMessage =
@@ -36,19 +37,19 @@ class DataplaneServiceTest {
   fun setup() {
     // Setup all fallbacks/base cases
     dataplaneDataService = mockk()
-    dataplaneCredentialsService = mockk()
+    serviceAccountsService = mockk()
     dataplaneTokenService = mockk()
     dataplaneService =
       DataplaneService(
         dataplaneDataService,
-        dataplaneCredentialsService,
+        serviceAccountsService,
         dataplaneTokenService,
       )
   }
 
   @Test
   fun `writeDataplane with a duplicate name returns a problem`() {
-    every { dataplaneDataService.writeDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
+    every { dataplaneDataService.updateDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
 
     assertThrows<DataplaneNameAlreadyExistsProblem> {
       dataplaneService.writeDataplane(createDataplane(UUID.randomUUID()))
@@ -67,7 +68,7 @@ class DataplaneServiceTest {
         enabled = newEnabled
       }
     every {
-      dataplaneDataService.writeDataplane(
+      dataplaneDataService.updateDataplane(
         mockDataplane.apply {
           name = newName
           enabled = newEnabled
@@ -96,7 +97,7 @@ class DataplaneServiceTest {
     val mockDataplane = createDataplane()
 
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
-    every { dataplaneDataService.writeDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
+    every { dataplaneDataService.updateDataplane(any()) } throws DataAccessException(dataplaneNameConstraintViolationMessage)
 
     assertThrows<DataplaneNameAlreadyExistsProblem> {
       dataplaneService.updateDataplane(mockDataplane.id, "", true)
@@ -115,7 +116,7 @@ class DataplaneServiceTest {
       }
 
     every { dataplaneDataService.getDataplane(mockDataplane.id) } returns mockDataplane
-    every { dataplaneDataService.writeDataplane(any()) } answers { firstArg() }
+    every { dataplaneDataService.updateDataplane(any()) } answers { firstArg() }
 
     val updated =
       dataplaneService.updateDataplane(
@@ -140,7 +141,7 @@ class DataplaneServiceTest {
       }
 
     every { dataplaneDataService.getDataplane(mockDataplane.id) } returns mockDataplane
-    every { dataplaneDataService.writeDataplane(any()) } answers { firstArg() }
+    every { dataplaneDataService.updateDataplane(any()) } answers { firstArg() }
 
     val updated =
       dataplaneService.updateDataplane(
@@ -156,34 +157,19 @@ class DataplaneServiceTest {
   @Test
   fun `deleteDataplane tombstones dataplane and deletes its credentials`() {
     val mockDataplane = createDataplane()
-    val mockCredentials = DataplaneClientCredentials(UUID.randomUUID(), UUID.randomUUID(), "", "", OffsetDateTime.now())
 
     every { dataplaneDataService.getDataplane(any()) } returns mockDataplane
     every { dataplaneDataService.listDataplanes(any(), false) } returns listOf(mockDataplane)
-    every { dataplaneCredentialsService.listCredentialsByDataplaneId(mockDataplane.id) } returns listOf(mockCredentials)
-    every { dataplaneCredentialsService.deleteCredentials(mockCredentials.id) } returns mockCredentials
-    every { dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true }) } returns
+    every { serviceAccountsService.delete(mockDataplane.id) } just Runs
+    every { dataplaneDataService.updateDataplane(mockDataplane.apply { tombstone = true }) } returns
       mockDataplane.apply { tombstone = true }
 
     dataplaneService.deleteDataplane(mockDataplane.id)
 
     verify {
-      dataplaneCredentialsService.deleteCredentials(mockCredentials.id)
-      dataplaneDataService.writeDataplane(mockDataplane.apply { tombstone = true })
+      serviceAccountsService.delete(mockDataplane.id)
+      dataplaneDataService.updateDataplane(mockDataplane.apply { tombstone = true })
     }
-  }
-
-  @Test
-  fun `getDataplaneFromClientId returns client dataplane id given a client id`() {
-    val clientId = "test-client-id"
-    val dataplaneId = UUID.randomUUID()
-    val dataplane = createDataplane(dataplaneId)
-    every { dataplaneCredentialsService.getDataplaneId(clientId) } returns dataplaneId
-    every { dataplaneDataService.getDataplane(dataplaneId) } returns dataplane
-
-    val result = dataplaneService.getDataplaneFromClientId(clientId)
-
-    Assertions.assertEquals(dataplane, result)
   }
 
   private fun createDataplane(id: UUID? = null): Dataplane =

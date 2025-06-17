@@ -74,7 +74,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
   const { setValue, getValues, watch } = useFormContext();
   const [refTargetToSources, setRefTargetToSources] = useState<Map<string, string[]>>(new Map());
   const [refSourceToTarget, setRefSourceToTarget] = useState<Map<string, string>>(new Map());
-  const { getSchemaAtPath, nestedUnderPath } = useSchemaForm();
+  const { getSchemaAtPath } = useSchemaForm();
 
   // Get information about a reference at a path
   const getReferenceInfo = useCallback(
@@ -310,7 +310,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       const fieldName = pathParts.at(-1) ?? undefined;
       const parentPath = pathParts.slice(0, -1).join(".");
 
-      if (!fieldName || !refTargetPath || path === nestedUnderPath) {
+      if (!fieldName || !refTargetPath) {
         return null;
       }
 
@@ -332,7 +332,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       // This has a higher chance of causing collisions, but it's the best we can do for now.
       return `${refTargetPath}.${fieldName}`;
     },
-    [refTargetPath, nestedUnderPath, getSchemaAtPath]
+    [refTargetPath, getSchemaAtPath]
   );
 
   const handleLinkAction = useCallback(

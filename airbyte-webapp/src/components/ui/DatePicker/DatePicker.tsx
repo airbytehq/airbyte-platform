@@ -20,6 +20,7 @@ import { Button } from "../Button";
 import { Input } from "../Input";
 
 export interface DatePickerProps {
+  id?: string;
   className?: string;
   disabled?: boolean;
   endDate?: Date;
@@ -67,6 +68,7 @@ registerLocale("en-GB", en);
 registerLocale("en", en);
 
 export const DatePicker: React.FC<DatePickerProps> = ({
+  id,
   className,
   disabled,
   endDate,
@@ -142,6 +144,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   return (
     <div className={classNames(styles.wrapper, className)} ref={wrapperRef} onBlur={handleWrapperBlur}>
       <Input
+        id={id}
         placeholder={placeholder}
         error={error}
         value={value}

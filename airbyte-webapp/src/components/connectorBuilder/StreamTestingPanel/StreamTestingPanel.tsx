@@ -23,7 +23,8 @@ import { useBuilderWatch } from "../useBuilderWatch";
 export const StreamTestingPanel: React.FC<unknown> = () => {
   const { isTestReadSettingsOpen, setTestReadSettingsOpen, setTestingValuesInputOpen } =
     useConnectorBuilderFormManagementState();
-  const { jsonManifest, yamlEditorIsMounted } = useConnectorBuilderFormState();
+  const { yamlEditorIsMounted } = useConnectorBuilderFormState();
+  const manifest = useBuilderWatch("manifest");
   const mode = useBuilderWatch("mode");
   const { theme } = useAirbyteTheme();
   const testingValuesErrors = useTestingValuesErrors();
@@ -37,8 +38,8 @@ export const StreamTestingPanel: React.FC<unknown> = () => {
   }
 
   const hasStreams =
-    (jsonManifest.streams && jsonManifest.streams.length > 0) ||
-    (jsonManifest.dynamic_streams && jsonManifest.dynamic_streams.length > 0);
+    (manifest.streams && manifest.streams.length > 0) ||
+    (manifest.dynamic_streams && manifest.dynamic_streams.length > 0);
 
   return (
     <div className={styles.container}>

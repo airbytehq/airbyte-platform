@@ -12,9 +12,9 @@ import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.RevokeSourceOauthTokensRequest
 import io.airbyte.api.model.generated.SetInstancewideSourceOauthParamsRequestBody
 import io.airbyte.api.model.generated.SourceOauthConsentRequest
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors

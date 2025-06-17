@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.CompleteOAuthResponse
 import io.airbyte.api.model.generated.DestinationOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OAuthHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

@@ -21,7 +21,6 @@ import io.airbyte.server.apis.publicapi.services.DestinationService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkConstructor
 import io.mockk.mockkObject
 import io.mockk.unmockkObject
 import io.mockk.verify
@@ -36,19 +35,13 @@ class ConnectionsControllerTest {
   private val sourceService: SourceService = mockk()
   private val destinationService: DestinationService = mockk()
   private val trackingHelper: TrackingHelper = mockk(relaxed = true)
-  private val roleResolver: RoleResolver = mockk()
+  private val roleResolver: RoleResolver = mockk(relaxed = true)
   private val currentUserService: CurrentUserService = mockk()
 
   @BeforeEach
   fun setUp() {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
-    mockkConstructor(RoleResolver.Request::class)
-    every { anyConstructed<RoleResolver.Request>().withCurrentUser() } returns
-      mockk {
-        every { withRef(any(), any<String>()) } returns this
-        every { requireRole(any()) } returns Unit
-      }
 
     // Mock trackingHelper to just execute the passed function
     every { trackingHelper.callWithTracker<Any>(any(), any(), any(), any()) } answers {

@@ -8,7 +8,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
 import io.airbyte.commons.server.handlers.OrganizationsHandler

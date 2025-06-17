@@ -4,8 +4,8 @@
 
 package io.airbyte.mappers.mocks
 
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.TestMapperConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.SlimStream
 
 class FailingTestMapper : TestMapper() {

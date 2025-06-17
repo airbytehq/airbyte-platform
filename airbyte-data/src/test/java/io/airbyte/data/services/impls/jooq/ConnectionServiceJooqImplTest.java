@@ -115,7 +115,6 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withDataplaneGroupId(UUID.randomUUID())
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());

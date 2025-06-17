@@ -237,7 +237,6 @@ const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>): ErrorRep
       const value = obj[key];
 
       if (isError(value)) {
-        // "global" or stream number if under formValues, or "inputs" if under testingValues
         const view: BuilderView | { type: "unknown" } =
           currentPath[0] === "testingValues"
             ? { type: "inputs" }
@@ -246,7 +245,9 @@ const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>): ErrorRep
               ? { type: "stream", index: Number(currentPath[2]) }
               : currentPath[1] === "dynamic_streams"
               ? { type: "dynamic_stream", index: Number(currentPath[2]) }
-              : { type: "unknown" }
+              : currentPath[1] === "spec"
+              ? { type: "inputs" }
+              : { type: "global" }
             : { type: "unknown" };
         const fullPath = [...currentPath, key].join(".");
         if (typeof view === "object" && "index" in view) {

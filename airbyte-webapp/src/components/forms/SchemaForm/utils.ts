@@ -36,7 +36,7 @@ export const hasFields = <T extends object>(object: T | {}): object is T => {
 };
 
 export const isEmptyObject = (object: object): boolean => {
-  return typeof object === "object" && !Array.isArray(object) && Object.keys(object).length === 0;
+  return typeof object === "object" && object !== null && !Array.isArray(object) && Object.keys(object).length === 0;
 };
 
 // Convert a $ref of the form "#/path/to/field" to a path of the form "path.to.field"
@@ -162,14 +162,6 @@ export const isAdvancedField = (fullFieldPath: string, objectPath: string, nonAd
   }
   const nonAdvancedFullPaths = nonAdvancedFields.map((field) => `${objectPath}.${field}`);
   return !nonAdvancedFullPaths.includes(fullFieldPath);
-};
-
-export const nestPath = (path: string, rootPath?: string) => {
-  return rootPath && !path.startsWith(rootPath) ? `${rootPath}${path ? `.${path}` : ""}` : path;
-};
-
-export const unnestPath = (path: string, rootPath?: string) => {
-  return rootPath && path.startsWith(rootPath) ? path.slice(rootPath.length + 1) : path;
 };
 
 export const scrollFieldIntoView = (path: string) => {

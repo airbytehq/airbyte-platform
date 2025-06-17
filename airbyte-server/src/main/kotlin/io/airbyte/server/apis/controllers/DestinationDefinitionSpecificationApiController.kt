@@ -8,7 +8,7 @@ import io.airbyte.api.generated.DestinationDefinitionSpecificationApi
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
 import io.airbyte.api.model.generated.DestinationIdRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

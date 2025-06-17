@@ -381,6 +381,12 @@ data class SecretStorage(
   override val kind: String = "secret-storage"
 }
 
+data class TokenSubject(
+  override val key: String,
+) : Context {
+  override val kind: String = "token-subject"
+}
+
 /**
  * Combines two contexts.
  */

@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.problems.throwable.generated.MapperSecretNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.RuntimeSecretsManagerRequiredProblem
 import io.airbyte.commons.constants.AirbyteSecretConstants
+import io.airbyte.commons.jackson.MoreMappers
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.server.helpers.ConnectionHelpers
 import io.airbyte.config.AirbyteSecret
@@ -62,9 +63,9 @@ internal class MapperSecretHelperTest {
   private val secretsProcessor = mockk<JsonSecretsProcessor>()
   private val featureFlagClient = mockk<TestClient>()
   private val metricClient = mockk<MetricClient>(relaxed = true)
-
-  private val hashingMapper = HashingMapper()
-  private val encryptionMapper = EncryptionMapper()
+  private val objectMapper = MoreMappers.initMapper()
+  private val hashingMapper = HashingMapper(objectMapper)
+  private val encryptionMapper = EncryptionMapper(objectMapper)
 
   private val mapperSecretHelper =
     MapperSecretHelper(

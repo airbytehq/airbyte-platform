@@ -225,7 +225,7 @@ internal class SecretsHelpersTest {
 
     val inputConfigWithRefs =
       ConfigWithSecretReferences(
-        config =
+        originalConfig =
           Jsons.jsonNode(
             mapOf(
               "key1" to
@@ -250,7 +250,7 @@ internal class SecretsHelpersTest {
           ),
       )
 
-    val originalConfigCopy = inputConfigWithRefs.config.deepCopy<JsonNode>()
+    val originalConfigCopy = inputConfigWithRefs.originalConfig.deepCopy<JsonNode>()
 
     every {
       defaultPersistence.read(legacyRef.secretCoordinate)
@@ -285,7 +285,7 @@ internal class SecretsHelpersTest {
     Assertions.assertEquals(expectedConfig, actualCombinedConfig)
 
     // check that we didn't mutate the input config
-    Assertions.assertEquals(originalConfigCopy, inputConfigWithRefs.config)
+    Assertions.assertEquals(originalConfigCopy, inputConfigWithRefs.originalConfig)
   }
 
   @Test

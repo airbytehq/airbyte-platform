@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.GetActorDefinitionVersionDefaultRequestBod
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionRequestBody
 import io.airbyte.api.model.generated.ResolveActorDefinitionVersionResponse
 import io.airbyte.api.model.generated.SourceIdRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ActorDefinitionVersionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute
