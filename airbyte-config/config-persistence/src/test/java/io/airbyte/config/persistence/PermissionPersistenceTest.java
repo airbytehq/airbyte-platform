@@ -4,7 +4,6 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -113,12 +112,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void listPermissionByWorkspaceTest() throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionByWorkspace(MockData.WORKSPACE_ID_1);
-    Assertions.assertEquals(2, permissions.size());
-  }
-
-  @Test
   void listUsersInOrganizationTest() throws IOException {
     final List<UserPermission> userPermissions = permissionPersistence.listUsersInOrganization(MockData.ORGANIZATION_ID_1);
     Assertions.assertEquals(1, userPermissions.size());
@@ -159,43 +152,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
           .anyMatch(expectedPermission -> expectedPermission.getPermissionId().equals(actualPermission.getPermission().getPermissionId())
               && actualPermission.getUser().getUserId().equals(expectedPermission.getUserId())));
     }
-  }
-
-  @Test
-  void isUserInstanceAdmin() throws IOException {
-    final AuthenticatedUser user1 = MockData.users().get(0);
-    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
-    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
-    Assertions.assertTrue(permissionPersistence.isUserInstanceAdmin(user1.getUserId()));
-
-    final AuthenticatedUser user2 = MockData.users().get(1);
-    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
-    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
-    Assertions.assertFalse(permissionPersistence.isUserInstanceAdmin(user2.getUserId()));
-  }
-
-  @Test
-  void isAuthUserInstanceAdmin() throws IOException {
-    final AuthenticatedUser user1 = MockData.users().get(0);
-    Assertions.assertEquals(user1.getUserId(), MockData.permission1.getUserId());
-    Assertions.assertEquals(MockData.permission1.getPermissionType(), PermissionType.INSTANCE_ADMIN);
-    Assertions.assertTrue(permissionPersistence.isAuthUserInstanceAdmin(user1.getAuthUserId()));
-
-    final AuthenticatedUser user2 = MockData.users().get(1);
-    Assertions.assertEquals(user2.getUserId(), MockData.permission2.getUserId());
-    Assertions.assertNotEquals(MockData.permission2.getPermissionType(), PermissionType.INSTANCE_ADMIN);
-    Assertions.assertFalse(permissionPersistence.isAuthUserInstanceAdmin(user2.getAuthUserId()));
-  }
-
-  @Test
-  void isUserOrganizationAdmin() throws IOException {
-    // In MockData we have a user with userId(CREATOR_USER_ID_1), default workspace (WORKSPACE_ID_1)
-    // which is in organization(DEFAULT_ORGANIZATION_ID)
-    // also we have a permission(CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID, ORGANIZATION_ADMIN)
-    Assertions.assertTrue(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_1, DEFAULT_ORGANIZATION_ID));
-
-    // In MockData, user(CREATOR_USER_ID_2) does not have an org_admin permission, so should be false
-    Assertions.assertFalse(permissionPersistence.isUserOrganizationAdmin(MockData.CREATOR_USER_ID_2, DEFAULT_ORGANIZATION_ID));
   }
 
 }

@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import io.airbyte.api.model.generated.PermissionCheckRead;
@@ -39,12 +38,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.Mockito;
 
 @SuppressWarnings("PMD.AvoidDuplicateLiterals")
 class PermissionHandlerTest {
@@ -62,17 +61,6 @@ class PermissionHandlerTest {
     workspaceService = mock(WorkspaceService.class);
     permissionDao = mock(PermissionDao.class);
     permissionHandler = new PermissionHandler(permissionPersistence, workspaceService, uuidSupplier, permissionDao);
-  }
-
-  @Test
-  void isUserInstanceAdmin() throws IOException {
-    final UUID userId = UUID.randomUUID();
-
-    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(true);
-    Assertions.assertTrue(permissionHandler.isUserInstanceAdmin(userId));
-
-    when(permissionPersistence.isUserInstanceAdmin(userId)).thenReturn(false);
-    Assertions.assertFalse(permissionHandler.isUserInstanceAdmin(userId));
   }
 
   @Nested
@@ -148,6 +136,20 @@ class PermissionHandlerTest {
               .withPermissionType(PermissionType.WORKSPACE_READER)
               .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
               .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
+
+      when(permissionDao.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
+          .thenReturn(new Permission()
+              .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
+              .withPermissionType(PermissionType.WORKSPACE_READER)
+              .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
+              .withUserId(PERMISSION_WORKSPACE_READER.getUserId()));
+
+      when(permissionDao.getPermission(PERMISSION_ORGANIZATION_ADMIN.getPermissionId()))
+          .thenReturn(new Permission()
+              .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
+              .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
+              .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId())
+              .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId()));
 
       when(permissionPersistence.getPermission(PERMISSION_ORGANIZATION_ADMIN.getPermissionId()))
           .thenReturn(Optional.of(new Permission()
@@ -326,7 +328,7 @@ class PermissionHandlerTest {
     @Test
     void permissionsCheckMultipleWorkspaces() throws IOException {
       final UUID otherWorkspaceId = UUID.randomUUID();
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.WORKSPACE_ADMIN)
               .withUserId(USER_ID)
@@ -356,7 +358,7 @@ class PermissionHandlerTest {
     @Test
     void permissionsCheckMultipleWorkspacesOrgPermission() throws IOException, JsonValidationException, ConfigNotFoundException {
       final UUID otherWorkspaceId = UUID.randomUUID();
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(
           new Permission()
               .withPermissionType(PermissionType.WORKSPACE_ADMIN)
               .withUserId(USER_ID)
@@ -412,7 +414,7 @@ class PermissionHandlerTest {
     @EnumSource(value = PermissionType.class,
                 names = {"WORKSPACE_OWNER", "WORKSPACE_ADMIN", "WORKSPACE_EDITOR", "WORKSPACE_READER"})
     void workspaceLevelPermissions(final PermissionType userPermissionType) throws IOException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(userPermissionType)
           .withWorkspaceId(WORKSPACE_ID)
           .withUserId(USER_ID)));
@@ -491,7 +493,7 @@ class PermissionHandlerTest {
     @EnumSource(value = PermissionType.class,
                 names = {"ORGANIZATION_ADMIN", "ORGANIZATION_EDITOR", "ORGANIZATION_READER", "ORGANIZATION_MEMBER"})
     void organizationLevelPermissions(final PermissionType userPermissionType) throws IOException, JsonValidationException, ConfigNotFoundException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(userPermissionType)
           .withOrganizationId(ORGANIZATION_ID)
           .withUserId(USER_ID)));
@@ -570,7 +572,7 @@ class PermissionHandlerTest {
 
     @Test
     void instanceAdminPermissions() throws IOException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.INSTANCE_ADMIN)
           .withUserId(USER_ID)));
 
@@ -622,7 +624,7 @@ class PermissionHandlerTest {
     void ensureNoExceptionOnOrgPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
       // Ensure that when we check permissions for a workspace that's not in an organization against an
       // org permission, we don't throw an exception.
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
           .withOrganizationId(ORGANIZATION_ID)
           .withUserId(USER_ID),
@@ -645,7 +647,7 @@ class PermissionHandlerTest {
     void ensureFailedPermissionCheckForWorkspaceOutsideTheOrg() throws IOException, JsonValidationException, ConfigNotFoundException {
       // Ensure that when we check permissions for a workspace that's not in an organization against an
       // org permission, we fail the check if the workspace has no org ID set
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
           .withOrganizationId(ORGANIZATION_ID)
           .withUserId(USER_ID),
@@ -721,16 +723,14 @@ class PermissionHandlerTest {
           .withOrganizationId(UUID.randomUUID())
           .withPermissionType(PermissionType.ORGANIZATION_ADMIN);
 
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(
           List.of(workspacePermission, otherWorkspacePermission, orgPermission));
 
       permissionHandler.deleteUserFromWorkspace(new PermissionDeleteUserFromWorkspaceRequestBody().userId(USER_ID).workspaceId(WORKSPACE_ID));
 
       // verify the intended permission was deleted
       verify(permissionDao).deletePermissions(List.of(workspacePermission.getPermissionId()));
-
-      // verify the other permissions were not deleted
-      verifyNoMoreInteractions(permissionDao);
+      verify(permissionDao, Mockito.times(1)).deletePermissions(Mockito.any());
     }
 
   }

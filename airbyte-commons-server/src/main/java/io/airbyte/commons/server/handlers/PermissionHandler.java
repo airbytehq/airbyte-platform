@@ -18,7 +18,6 @@ import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.server.errors.ConflictException;
 import io.airbyte.commons.server.errors.OperationNotAllowedException;
-import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.Permission;
 import io.airbyte.config.UserPermission;
 import io.airbyte.config.helpers.PermissionHelper;
@@ -33,7 +32,6 @@ import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -85,7 +83,7 @@ public class PermissionHandler {
     }
 
     // Look for an existing permission.
-    final List<Permission> existingPermissions = permissionPersistence.listPermissionsByUser(permissionCreate.getUserId());
+    final List<Permission> existingPermissions = permissionDao.getPermissionsForUser(permissionCreate.getUserId());
     for (final Permission p : existingPermissions) {
       if (checkPermissionsAreEqual(permissionCreate, p)) {
         return p;
@@ -107,17 +105,7 @@ public class PermissionHandler {
   }
 
   public Permission getPermissionById(final UUID permissionId) throws ConfigNotFoundException, IOException {
-    final Optional<Permission> permission =
-        permissionPersistence.getPermission(permissionId);
-    if (permission.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.PERMISSION, permissionId);
-    }
-    return permission.get();
-  }
-
-  private PermissionRead buildPermissionRead(final UUID permissionId) throws ConfigNotFoundException, IOException {
-    final Permission permission = getPermissionById(permissionId);
-    return buildPermissionRead(permission);
+    return permissionDao.getPermission(permissionId);
   }
 
   private static PermissionRead buildPermissionRead(final Permission permission) {
@@ -159,7 +147,8 @@ public class PermissionHandler {
    */
   public PermissionRead getPermissionRead(final PermissionIdRequestBody permissionIdRequestBody)
       throws ConfigNotFoundException, IOException {
-    return buildPermissionRead(permissionIdRequestBody.getPermissionId());
+    final Permission permission = getPermissionById(permissionIdRequestBody.getPermissionId());
+    return buildPermissionRead(permission);
   }
 
   /**
@@ -342,16 +331,9 @@ public class PermissionHandler {
         : new PermissionCheckRead().status(StatusEnum.FAILED);
   }
 
-  public Boolean isUserInstanceAdmin(final UUID userId) throws IOException {
-    return permissionPersistence.isUserInstanceAdmin(userId);
-  }
-
-  public Boolean isAuthUserInstanceAdmin(final String authUserId) throws IOException {
-    return permissionPersistence.isAuthUserInstanceAdmin(authUserId);
-  }
-
-  public Boolean isUserOrganizationAdmin(final UUID userId, final UUID organizationId) throws IOException {
-    return permissionPersistence.isUserOrganizationAdmin(userId, organizationId);
+  public Boolean isUserInstanceAdmin(final UUID userId) {
+    return permissionDao.getPermissionsForUser(userId).stream()
+        .anyMatch(it -> it.getPermissionType().equals(Permission.PermissionType.INSTANCE_ADMIN));
   }
 
   /**
@@ -363,14 +345,14 @@ public class PermissionHandler {
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
   public PermissionReadList permissionReadListForUser(final UUID userId) throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionsByUser(userId);
+    final List<Permission> permissions = permissionDao.getPermissionsForUser(userId);
     return new PermissionReadList().permissions(permissions.stream()
         .map(PermissionHandler::buildPermissionRead)
         .collect(Collectors.toList()));
   }
 
   public List<Permission> listPermissionsForUser(final UUID userId) throws IOException {
-    return permissionPersistence.listPermissionsByUser(userId);
+    return permissionDao.getPermissionsForUser(userId);
   }
 
   /**
@@ -383,7 +365,9 @@ public class PermissionHandler {
    * @throws JsonValidationException if unable to retrieve the permissions for the user.
    */
   public PermissionReadList listPermissionsByUserInAnOrganization(final UUID userId, final UUID organizationId) throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionsByUserInAnOrganization(userId, organizationId);
+
+    final List<Permission> permissions =
+        permissionDao.getPermissionsForUser(userId).stream().filter(it -> organizationId.equals(it.getOrganizationId())).toList();
     return new PermissionReadList().permissions(permissions.stream()
         .map(PermissionHandler::buildPermissionRead)
         .collect(Collectors.toList()));
@@ -412,7 +396,7 @@ public class PermissionHandler {
     final UUID workspaceId = deleteUserFromWorkspaceRequestBody.getWorkspaceId();
 
     // delete all workspace-level permissions that match the userId and workspaceId
-    final List<UUID> userWorkspacePermissionIds = permissionPersistence.listPermissionsByUser(userId).stream()
+    final List<UUID> userWorkspacePermissionIds = permissionDao.getPermissionsForUser(userId).stream()
         .filter(permission -> permission.getWorkspaceId() != null && permission.getWorkspaceId().equals(workspaceId))
         .map(Permission::getPermissionId)
         .toList();
@@ -456,11 +440,6 @@ public class PermissionHandler {
         .map(Permission::getUserId)
         .collect(Collectors.toSet())
         .size();
-  }
-
-  public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndWorkspace(final UUID workspaceId, final String authUserId)
-      throws IOException {
-    return permissionPersistence.findPermissionTypeForUserAndWorkspace(workspaceId, authUserId);
   }
 
   public io.airbyte.config.Permission.PermissionType findPermissionTypeForUserAndOrganization(final UUID organizationId, final String authUserId)
