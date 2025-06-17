@@ -166,9 +166,9 @@ public class BaseConfigDatabaseTest {
 
   /**
    * This method used to live on PermissionPersistence, but it was deprecated in favor of the new
-   * PermissionService backed by a Micronaut Data repository. Many tests depended on this method, so
-   * rather than keep it in the deprecated PermissionPersistence, a simplified version is implemented
-   * here for tests only.
+   * PermissionService.kt backed by a Micronaut Data repository. Many tests depended on this method,
+   * so rather than keep it in the deprecated PermissionPersistence, a simplified version is
+   * implemented here for tests only.
    */
   protected static void writePermission(final Permission permission) throws SQLException {
     final io.airbyte.db.instance.configs.jooq.generated.enums.PermissionType permissionType =

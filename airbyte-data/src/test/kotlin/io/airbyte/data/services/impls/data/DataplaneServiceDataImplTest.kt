@@ -10,7 +10,7 @@ import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.repositories.entities.Dataplane
 import io.airbyte.data.repositories.entities.DataplaneGroup
-import io.airbyte.data.services.PermissionDao
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.data.services.shared.DataplaneWithServiceAccount
@@ -35,9 +35,9 @@ class DataplaneServiceDataImplTest {
   private val dataplaneRepository = mockk<DataplaneRepository>()
   private val dataplaneGroupRepository = mockk<DataplaneGroupRepository>()
   private val serviceAccountsService = mockk<ServiceAccountsService>()
-  private val permissionDao = mockk<PermissionDao>()
+  private val permissionService = mockk<PermissionService>()
   private var dataplaneServiceDataImpl =
-    DataplaneServiceDataImpl(dataplaneRepository, dataplaneGroupRepository, serviceAccountsService, permissionDao)
+    DataplaneServiceDataImpl(dataplaneRepository, dataplaneGroupRepository, serviceAccountsService, permissionService)
 
   @BeforeEach
   fun reset() {
@@ -78,7 +78,7 @@ class DataplaneServiceDataImplTest {
     every { dataplaneGroupRepository.findById(dataplane.dataplaneGroupId) } returns Optional.of(group)
     every { dataplaneRepository.save(any()) } returns dataplane
     every { serviceAccountsService.create(any(), any(), any()) } returns serviceAccount
-    every { permissionDao.createServiceAccountPermission(any()) } returns mockk<Permission>()
+    every { permissionService.createServiceAccountPermission(any()) } returns mockk<Permission>()
 
     val retrievedDataplane = dataplaneServiceDataImpl.createDataplaneAndServiceAccount(dataplane.toConfigModel())
     assertEquals(dataplaneWithServiceAccount, retrievedDataplane)
