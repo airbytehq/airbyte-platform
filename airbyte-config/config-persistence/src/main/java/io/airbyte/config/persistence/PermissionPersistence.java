@@ -7,7 +7,6 @@ package io.airbyte.config.persistence;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.AUTH_USER;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.PERMISSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.USER;
-import static org.jooq.impl.DSL.asterisk;
 
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.config.Permission;
@@ -18,12 +17,10 @@ import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.jooq.DSLContext;
 import org.jooq.Record;
-import org.jooq.Result;
 
 /**
  * Permission Persistence.
@@ -39,53 +36,6 @@ public class PermissionPersistence {
 
   public PermissionPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);
-  }
-
-  /**
-   * Get a permission by permission Id.
-   *
-   * @param permissionId the permission id
-   * @return the permission information if it exists in the database, Optional.empty() otherwise
-   * @throws IOException in case of a db error
-   */
-  public Optional<Permission> getPermission(final UUID permissionId) throws IOException {
-
-    final Result<Record> result = database.query(ctx -> ctx
-        .select(asterisk())
-        .from(PERMISSION)
-        .where(PERMISSION.ID.eq(permissionId)).fetch());
-
-    if (result.isEmpty()) {
-      return Optional.empty();
-    }
-
-    return Optional.of(createPermissionFromRecord(result.get(0)));
-  }
-
-  /**
-   * List permissions by User id.
-   *
-   * @param userId the user id
-   * @return list of permissions associate with the user
-   * @throws IOException in case of a db error
-   */
-  public List<Permission> listPermissionsByUser(final UUID userId) throws IOException {
-    final Result<Record> result = database.query(ctx -> ctx
-        .select(asterisk())
-        .from(PERMISSION)
-        .where(PERMISSION.USER_ID.eq(userId))
-        .fetch());
-    return result.stream().map(this::createPermissionFromRecord).collect(Collectors.toList());
-  }
-
-  private Permission createPermissionFromRecord(final Record record) {
-    return new Permission()
-        .withPermissionId(record.get(PERMISSION.ID))
-        .withPermissionType(record.get(PERMISSION.PERMISSION_TYPE) == null ? null
-            : Enums.toEnum(record.get(PERMISSION.PERMISSION_TYPE, String.class), PermissionType.class).orElseThrow())
-        .withUserId(record.get(PERMISSION.USER_ID))
-        .withWorkspaceId(record.get(PERMISSION.WORKSPACE_ID))
-        .withOrganizationId(record.get(PERMISSION.ORGANIZATION_ID));
   }
 
   public List<UserPermission> listInstanceAdminUsers() throws IOException {

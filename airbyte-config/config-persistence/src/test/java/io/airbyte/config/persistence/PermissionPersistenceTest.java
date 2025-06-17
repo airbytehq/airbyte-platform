@@ -26,7 +26,6 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -76,39 +75,6 @@ class PermissionPersistenceTest extends BaseConfigDatabaseTest {
     for (final Permission permission : MockData.permissions()) {
       BaseConfigDatabaseTest.writePermission(permission);
     }
-  }
-
-  @Test
-  void permissionTypeTest() throws IOException {
-    for (final Permission permission : MockData.permissions()) {
-      final Optional<Permission> permissionFromDb = permissionPersistence.getPermission(permission.getPermissionId());
-      if (permission.getPermissionType() == PermissionType.WORKSPACE_OWNER) {
-        Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, permissionFromDb.get().getPermissionType());
-      } else {
-        Assertions.assertEquals(permission.getPermissionType(), permissionFromDb.get().getPermissionType());
-      }
-    }
-  }
-
-  @Test
-  void getPermissionByIdTest() throws IOException {
-    for (final Permission permission : MockData.permissions()) {
-      final Optional<Permission> permissionFromDb = permissionPersistence.getPermission(permission.getPermissionId());
-      Assertions.assertEquals(permission.getPermissionId(), permissionFromDb.get().getPermissionId());
-      Assertions.assertEquals(permission.getOrganizationId(), permissionFromDb.get().getOrganizationId());
-      Assertions.assertEquals(permission.getWorkspaceId(), permissionFromDb.get().getWorkspaceId());
-      Assertions.assertEquals(permission.getUserId(), permissionFromDb.get().getUserId());
-      // permission type "WORKSPACE_OWNER" will be converted into "WORKSPACE_ADMIN"
-      Assertions.assertEquals(
-          permission.getPermissionType() == PermissionType.WORKSPACE_OWNER ? PermissionType.WORKSPACE_ADMIN : permission.getPermissionType(),
-          permissionFromDb.get().getPermissionType());
-    }
-  }
-
-  @Test
-  void listPermissionByUserTest() throws IOException {
-    final List<Permission> permissions = permissionPersistence.listPermissionsByUser(MockData.CREATOR_USER_ID_1);
-    Assertions.assertEquals(3, permissions.size());
   }
 
   @Test

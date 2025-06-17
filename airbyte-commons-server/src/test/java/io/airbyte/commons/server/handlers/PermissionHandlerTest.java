@@ -34,7 +34,6 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -130,12 +129,6 @@ class PermissionHandlerTest {
 
     @BeforeEach
     void setup() throws IOException {
-      when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
-          .thenReturn(Optional.of(new Permission()
-              .withPermissionId(PERMISSION_WORKSPACE_READER.getPermissionId())
-              .withPermissionType(PermissionType.WORKSPACE_READER)
-              .withWorkspaceId(PERMISSION_WORKSPACE_READER.getWorkspaceId())
-              .withUserId(PERMISSION_WORKSPACE_READER.getUserId())));
 
       when(permissionDao.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
           .thenReturn(new Permission()
@@ -150,13 +143,6 @@ class PermissionHandlerTest {
               .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
               .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId())
               .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId()));
-
-      when(permissionPersistence.getPermission(PERMISSION_ORGANIZATION_ADMIN.getPermissionId()))
-          .thenReturn(Optional.of(new Permission()
-              .withPermissionId(PERMISSION_ORGANIZATION_ADMIN.getPermissionId())
-              .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
-              .withOrganizationId(PERMISSION_ORGANIZATION_ADMIN.getOrganizationId())
-              .withUserId(PERMISSION_ORGANIZATION_ADMIN.getUserId())));
     }
 
     @Test
@@ -250,9 +236,6 @@ class PermissionHandlerTest {
 
     @Test
     void deletesPermission() throws Exception {
-      when(permissionPersistence.getPermission(PERMISSION_WORKSPACE_READER.getPermissionId()))
-          .thenReturn(Optional.of(PERMISSION_WORKSPACE_READER));
-
       permissionHandler.deletePermission(new PermissionIdRequestBody().permissionId(PERMISSION_WORKSPACE_READER.getPermissionId()));
 
       verify(permissionDao).deletePermission(PERMISSION_WORKSPACE_READER.getPermissionId());
@@ -277,7 +260,7 @@ class PermissionHandlerTest {
 
     @Test
     void mismatchedUserId() throws IOException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.WORKSPACE_ADMIN)
           .withUserId(USER_ID)));
 
@@ -293,7 +276,7 @@ class PermissionHandlerTest {
 
     @Test
     void mismatchedWorkspaceId() throws IOException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.WORKSPACE_ADMIN)
           .withWorkspaceId(WORKSPACE_ID)
           .withUserId(USER_ID)));
@@ -310,7 +293,7 @@ class PermissionHandlerTest {
 
     @Test
     void mismatchedOrganizationId() throws IOException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
           .withOrganizationId(ORGANIZATION_ID)
           .withUserId(USER_ID)));
@@ -391,7 +374,7 @@ class PermissionHandlerTest {
 
     @Test
     void workspaceNotInOrganization() throws IOException, JsonValidationException, ConfigNotFoundException {
-      when(permissionPersistence.listPermissionsByUser(USER_ID)).thenReturn(List.of(new Permission()
+      when(permissionDao.getPermissionsForUser(USER_ID)).thenReturn(List.of(new Permission()
           .withPermissionType(PermissionType.ORGANIZATION_ADMIN)
           .withOrganizationId(ORGANIZATION_ID)
           .withUserId(USER_ID)));
