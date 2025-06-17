@@ -54,11 +54,15 @@ open class ConnectorRolloutServiceDataImpl(
 
     for (existingConnectorRollout in existingConnectorRolloutOnActorDefinitionId) {
       if (ConnectorEnumRolloutState.valueOf(existingConnectorRollout.state.name.uppercase()) !in connectorRolloutEnumFinalStates) {
-        throw RuntimeException(
-          "A connector rollout is incomplete (current state: ${existingConnectorRollout.state.name}) " +
+        logger.info {
+          "Connector rollout ${existingConnectorRollout.id} is incomplete (current state: ${existingConnectorRollout.state.name}) " +
             "for this actor definition id ${connectorRollout.actorDefinitionId} " +
-            "on version ${existingConnectorRollout.releaseCandidateVersionId} ",
-        )
+            "on version ${existingConnectorRollout.releaseCandidateVersionId} . " +
+            "Canceling the rollout. Actors will remain pinned."
+        }
+        existingConnectorRollout.state = ConnectorRolloutStateType.canceled
+        existingConnectorRollout.errorMsg = "Rollout was incomplete when a new rollout was started. Cancelled without unpinning."
+        repository.save(existingConnectorRollout)
       }
     }
 
