@@ -5,6 +5,7 @@
 package io.airbyte.initContainer.input
 
 import io.airbyte.commons.protocol.ProtocolSerializer
+import io.airbyte.commons.protocol.SerializationTarget
 import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
@@ -65,7 +66,7 @@ class ReplicationHydrationProcessor(
     logger.info { "Writing source inputs..." }
     fileClient.writeInputFile(
       FileConstants.CATALOG_FILE,
-      protocolSerializer.serialize(hydrated.catalog, false),
+      protocolSerializer.serialize(hydrated.catalog, false, SerializationTarget.SOURCE),
       SOURCE_DIR,
     )
 
@@ -97,7 +98,7 @@ class ReplicationHydrationProcessor(
       // Write original catalog as is
       fileClient.writeInputFile(
         FileConstants.CATALOG_FILE,
-        protocolSerializer.serialize(hydrated.catalog, hydrated.destinationSupportsRefreshes),
+        protocolSerializer.serialize(hydrated.catalog, hydrated.destinationSupportsRefreshes, SerializationTarget.DESTINATION),
         DEST_DIR,
       )
 
@@ -118,7 +119,7 @@ class ReplicationHydrationProcessor(
 
       fileClient.writeInputFile(
         FileConstants.CATALOG_FILE,
-        protocolSerializer.serialize(destinationCatalog, hydrated.destinationSupportsRefreshes),
+        protocolSerializer.serialize(destinationCatalog, hydrated.destinationSupportsRefreshes, SerializationTarget.DESTINATION),
         DEST_DIR,
       )
     }
