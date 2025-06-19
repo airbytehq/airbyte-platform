@@ -1,0 +1,96 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.orgPicker {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: variables.$spacing-sm;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  height: 58px;
+
+  > *:first-child {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.orgPicker__dropdownButton {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: none;
+  border: none;
+  padding: 0 variables.$spacing-sm;
+  cursor: pointer;
+  border-radius: variables.$border-radius-sm;
+
+  &:focus-visible {
+    outline: variables.$border-thick solid colors.$blue-500;
+    outline-offset: variables.$border-thick;
+    border-radius: variables.$border-radius-sm;
+  }
+
+  .orgPicker__logo {
+    width: 24px;
+    height: 37px;
+    flex-shrink: 0;
+  }
+
+  .orgPicker__workspace {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    margin: 0 variables.$spacing-md;
+
+    .orgPicker__workspaceName,
+    .orgPicker__orgName {
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 18px;
+      font-weight: 500;
+      font-size: variables.$font-size-sm;
+    }
+  }
+
+  .orgPicker__chevron {
+    display: flex;
+    align-items: center;
+    width: 14px;
+    height: 14px;
+    color: colors.$grey-400;
+    flex-shrink: 0;
+  }
+}
+
+.orgPicker__dropdownMenuItem {
+  width: 240px;
+  min-height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
+  padding: 0 variables.$spacing-md;
+
+  .dropdownMenu__orgName {
+    flex: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 20px;
+    font-weight: 500;
+    font-size: variables.$font-size-sm;
+    padding-left: variables.$spacing-md;
+  }
+
+  .orgPicker__gearIcon {
+    color: colors.$grey-400;
+  }
+}

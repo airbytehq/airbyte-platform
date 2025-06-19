@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ORGANIZATION;
@@ -36,14 +37,6 @@ import org.jooq.Result;
 public class OrganizationPersistence {
 
   private final ExceptionWrappingDatabase database;
-
-  /**
-   * Each installation of Airbyte comes with a default organization. The ID of this organization is
-   * hardcoded to the 0 UUID so that it can be consistently retrieved.
-   */
-  public static final UUID DEFAULT_ORGANIZATION_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
-
-  public static final String AIRBYTE_ORGANIZATION_EMAIL_DOMAIN = "airbyte.io";
 
   public OrganizationPersistence(final Database database) {
     this.database = new ExceptionWrappingDatabase(database);

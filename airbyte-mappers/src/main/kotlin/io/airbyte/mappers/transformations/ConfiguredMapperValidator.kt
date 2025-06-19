@@ -5,9 +5,9 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import jakarta.inject.Singleton
 
@@ -16,10 +16,11 @@ class ConfiguredMapperValidator {
   fun validateMapperConfig(
     jsonSchema: JsonNode,
     mapperConfig: ConfiguredMapper,
+    objectMapper: ObjectMapper,
   ) {
     val schemaFactory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
     val schema = schemaFactory.getSchema(jsonSchema)
-    val configAsJson = Jsons.jsonNode(mapperConfig)
+    val configAsJson: JsonNode = objectMapper.valueToTree(mapperConfig)
 
     val validationErrors = schema.validate(configAsJson)
 

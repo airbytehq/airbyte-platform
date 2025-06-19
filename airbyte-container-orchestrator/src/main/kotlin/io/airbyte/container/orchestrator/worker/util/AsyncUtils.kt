@@ -8,7 +8,8 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
-import org.slf4j.MDC
+import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.withContext
 
 object AsyncUtils {
   fun runAsync(
@@ -17,8 +18,9 @@ object AsyncUtils {
     mdc: Map<String, String>,
     block: suspend () -> Unit,
   ) = scope.async(dispatcher) {
-    MDC.setContextMap(mdc)
-    block()
+    withContext(MDCContext(mdc)) {
+      block()
+    }
   }
 
   fun runLaunch(
@@ -27,7 +29,8 @@ object AsyncUtils {
     mdc: Map<String, String>,
     block: suspend () -> Unit,
   ) = scope.launch(dispatcher) {
-    MDC.setContextMap(mdc)
-    block()
+    withContext(MDCContext(mdc)) {
+      block()
+    }
   }
 }

@@ -52,6 +52,10 @@ jest.mock("core/api", () => ({
     nextExecutions: [],
   }),
   useGetDataplaneGroup: () => mockGetDataplaneGroup,
+  useGetWebappConfig: () => ({
+    version: "test-version",
+    edition: "community",
+  }),
 }));
 
 jest.mock("area/connector/utils", () => ({

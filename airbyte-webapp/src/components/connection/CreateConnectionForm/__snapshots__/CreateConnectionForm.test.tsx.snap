@@ -440,38 +440,34 @@ exports[`CreateConnectionForm should render 1`] = `
                                 />
                               </div>
                             </label>
-                            <div
-                              data-testid="sync-catalog-filter-depth"
+                            <button
+                              aria-expanded="false"
+                              aria-haspopup="listbox"
+                              class="<removed-for-snapshot-test>"
+                              data-headlessui-state=""
+                              data-testid="sync-catalog-filter-depth-listbox-button"
+                              id="headlessui-listbox-button-:r2:"
+                              type="button"
                             >
-                              <button
-                                aria-expanded="false"
-                                aria-haspopup="listbox"
+                              <span
                                 class="<removed-for-snapshot-test>"
-                                data-headlessui-state=""
-                                data-testid="sync-catalog-filter-depth-listbox-button"
-                                id="headlessui-listbox-button-:r2:"
-                                type="button"
+                                data-type="text"
                               >
                                 <span
                                   class="<removed-for-snapshot-test>"
-                                  data-type="text"
                                 >
-                                  <span
-                                    class="<removed-for-snapshot-test>"
-                                  >
-                                    Streams and fields
-                                  </span>
+                                  Streams and fields
                                 </span>
-                                <div
-                                  class="<removed-for-snapshot-test>"
-                                  data-icon="chevron-down"
-                                  data-testid="mocksvg"
-                                />
-                              </button>
+                              </span>
                               <div
-                                style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                                class="<removed-for-snapshot-test>"
+                                data-icon="chevron-down"
+                                data-testid="mocksvg"
                               />
-                            </div>
+                            </button>
+                            <div
+                              style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                            />
                           </div>
                           <div
                             class="<removed-for-snapshot-test>"
@@ -871,38 +867,34 @@ exports[`CreateConnectionForm should render 1`] = `
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <div
-                                    data-testid="sync-mode-select"
+                                  <button
+                                    aria-expanded="false"
+                                    aria-haspopup="listbox"
+                                    class="<removed-for-snapshot-test>"
+                                    data-headlessui-state=""
+                                    data-testid="sync-mode-select-listbox-button"
+                                    id="headlessui-listbox-button-:r19:"
+                                    type="button"
                                   >
-                                    <button
-                                      aria-expanded="false"
-                                      aria-haspopup="listbox"
+                                    <span
                                       class="<removed-for-snapshot-test>"
-                                      data-headlessui-state=""
-                                      data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r19:"
-                                      type="button"
                                     >
-                                      <span
+                                      <p
                                         class="<removed-for-snapshot-test>"
+                                        data-type="text"
                                       >
-                                        <p
-                                          class="<removed-for-snapshot-test>"
-                                          data-type="text"
-                                        >
-                                          Full refresh | Overwrite + Deduped
-                                        </p>
-                                      </span>
-                                      <div
-                                        class="<removed-for-snapshot-test>"
-                                        data-icon="caret-down"
-                                        data-testid="mocksvg"
-                                      />
-                                    </button>
+                                        Full refresh | Overwrite + Deduped
+                                      </p>
+                                    </span>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                                      class="<removed-for-snapshot-test>"
+                                      data-icon="caret-down"
+                                      data-testid="mocksvg"
                                     />
-                                  </div>
+                                  </button>
+                                  <div
+                                    style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1024,38 +1016,34 @@ exports[`CreateConnectionForm should render 1`] = `
                                 <td
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  <div
-                                    data-testid="sync-mode-select"
+                                  <button
+                                    aria-expanded="false"
+                                    aria-haspopup="listbox"
+                                    class="<removed-for-snapshot-test>"
+                                    data-headlessui-state=""
+                                    data-testid="sync-mode-select-listbox-button"
+                                    id="headlessui-listbox-button-:r1f:"
+                                    type="button"
                                   >
-                                    <button
-                                      aria-expanded="false"
-                                      aria-haspopup="listbox"
+                                    <span
                                       class="<removed-for-snapshot-test>"
-                                      data-headlessui-state=""
-                                      data-testid="sync-mode-select-listbox-button"
-                                      id="headlessui-listbox-button-:r1f:"
-                                      type="button"
                                     >
-                                      <span
+                                      <p
                                         class="<removed-for-snapshot-test>"
+                                        data-type="text"
                                       >
-                                        <p
-                                          class="<removed-for-snapshot-test>"
-                                          data-type="text"
-                                        >
-                                          Full refresh | Overwrite + Deduped
-                                        </p>
-                                      </span>
-                                      <div
-                                        class="<removed-for-snapshot-test>"
-                                        data-icon="caret-down"
-                                        data-testid="mocksvg"
-                                      />
-                                    </button>
+                                        Full refresh | Overwrite + Deduped
+                                      </p>
+                                    </span>
                                     <div
-                                      style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                                      class="<removed-for-snapshot-test>"
+                                      data-icon="caret-down"
+                                      data-testid="mocksvg"
                                     />
-                                  </div>
+                                  </button>
+                                  <div
+                                    style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
+                                  />
                                 </td>
                                 <td
                                   class="<removed-for-snapshot-test>"
@@ -1279,7 +1267,7 @@ exports[`CreateConnectionForm should render when loading 1`] = `
           class="<removed-for-snapshot-test>"
           data-type="text"
         >
-          We are fetching the schema of your data source. 
+          We are fetching the schema of your data. 
 This should take less than a minute, but may take a few minutes on slow internet connections or data sources with a large amount of streams.
         </p>
       </div>

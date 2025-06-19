@@ -530,12 +530,11 @@ public class DestinationHandler {
     final ConfigWithSecretReferences configWithRefs =
         this.secretReferenceService.getConfigWithSecretReferences(dci.getDestinationId(), dci.getConfiguration(),
             destinationConnection.getWorkspaceId());
+    final JsonNode inlinedConfigWithRefs = InlinedConfigWithSecretRefsKt.toInlined(configWithRefs);
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
-            ? secretsProcessor.simplifySecretsForOutput(
-                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
-                spec.getConnectionSpecification())
-            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+            ? secretsProcessor.simplifySecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification())
+            : secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification());
     dci.setConfiguration(sanitizedConfig);
 
     final StandardDestinationDefinition standardDestinationDefinition =

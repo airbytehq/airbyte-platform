@@ -11,6 +11,6 @@ import io.airbyte.config.ConfiguredAirbyteCatalog;
  */
 public interface ProtocolSerializer {
 
-  String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes);
+  String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes, final SerializationTarget target);
 
 }

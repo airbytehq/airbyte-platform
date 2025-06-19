@@ -1,4 +1,4 @@
-import { Fragment, Suspense } from "react";
+import { Suspense } from "react";
 import { FormattedMessage } from "react-intl";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
@@ -6,7 +6,7 @@ import { ConnectorIcon } from "components/ConnectorIcon";
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
-import { NumberBadge } from "components/ui/NumberBadge";
+import { StepStatus, StepsIndicators } from "components/ui/StepsIndicators/StepsIndicators";
 import { SupportLevelBadge } from "components/ui/SupportLevelBadge";
 import { Text } from "components/ui/Text";
 
@@ -20,16 +20,12 @@ import {
   useGetSource,
 } from "core/api";
 import { SupportLevel } from "core/api/types/AirbyteClient";
-import { RoutePaths } from "pages/routePaths";
+import { ConnectionRoutePaths, RoutePaths } from "pages/routePaths";
 
 import styles from "./CreateConnectionTitleBlock.module.scss";
 
-type StepStatus = "complete" | "active" | "incomplete";
-const COMPLETE = "complete";
-const ACTIVE = "active";
-const INCOMPLETE = "incomplete";
-const SOURCEID_PARAM = "sourceId";
-const DESTINATIONID_PARAM = "destinationId";
+export const SOURCEID_PARAM = "sourceId";
+export const DESTINATIONID_PARAM = "destinationId";
 
 interface ConnectionSteps {
   defineSource: StepStatus;
@@ -44,63 +40,38 @@ const useCalculateStepStatuses = (source: string | null, destination: string | n
 
   if (!source && !destination) {
     return {
-      defineSource: ACTIVE,
-      defineDestination: INCOMPLETE,
-      selectStreams: INCOMPLETE,
-      configureConnection: INCOMPLETE,
+      defineSource: StepStatus.ACTIVE,
+      defineDestination: StepStatus.INCOMPLETE,
+      selectStreams: StepStatus.INCOMPLETE,
+      configureConnection: StepStatus.INCOMPLETE,
     };
   }
 
   if (source && !destination) {
     return {
-      defineSource: COMPLETE,
-      defineDestination: ACTIVE,
-      selectStreams: INCOMPLETE,
-      configureConnection: INCOMPLETE,
+      defineSource: StepStatus.COMPLETE,
+      defineDestination: StepStatus.ACTIVE,
+      selectStreams: StepStatus.INCOMPLETE,
+      configureConnection: StepStatus.INCOMPLETE,
     };
   }
   if (destination && !source) {
     return {
-      defineSource: ACTIVE,
-      defineDestination: COMPLETE,
-      selectStreams: INCOMPLETE,
-      configureConnection: INCOMPLETE,
+      defineSource: StepStatus.ACTIVE,
+      defineDestination: StepStatus.COMPLETE,
+      selectStreams: StepStatus.INCOMPLETE,
+      configureConnection: StepStatus.INCOMPLETE,
     };
   }
   if (source && destination) {
     return {
-      defineSource: COMPLETE,
-      defineDestination: COMPLETE,
-      selectStreams: isOnContinuedSimplifiedStep ? COMPLETE : ACTIVE,
-      configureConnection: isOnContinuedSimplifiedStep ? ACTIVE : INCOMPLETE,
+      defineSource: StepStatus.COMPLETE,
+      defineDestination: StepStatus.COMPLETE,
+      selectStreams: isOnContinuedSimplifiedStep ? StepStatus.COMPLETE : StepStatus.ACTIVE,
+      configureConnection: isOnContinuedSimplifiedStep ? StepStatus.ACTIVE : StepStatus.INCOMPLETE,
     };
   }
   return undefined;
-};
-
-const StepItem: React.FC<{ state: StepStatus; step: keyof ConnectionSteps; value: number }> = ({
-  state,
-  step,
-  value,
-}) => {
-  const color = state === INCOMPLETE ? "grey" : "blue";
-  const messageId =
-    step === "defineSource"
-      ? "connectionForm.defineSource"
-      : step === "defineDestination"
-      ? "connectionForm.defineDestination"
-      : step === "configureConnection"
-      ? "connectionForm.configureConnection"
-      : "connectionForm.selectStreams";
-
-  return (
-    <FlexContainer alignItems="center" gap="sm">
-      <NumberBadge value={value} outline={state !== ACTIVE} color={color} />
-      <Text color={color} size="sm">
-        <FormattedMessage id={messageId} />
-      </Text>
-    </FlexContainer>
-  );
 };
 
 interface ConnectorBrandingProps {
@@ -182,6 +153,8 @@ const ConnectorPlaceholder: React.FC = () => {
 export const CreateConnectionTitleBlock: React.FC = () => {
   const [searchParams] = useSearchParams();
   const { workspaceId } = useCurrentWorkspace();
+  const location = useLocation();
+  const isDataActivation = location.pathname.includes(ConnectionRoutePaths.ConfigureDataActivation);
 
   const sourceId = searchParams.get(SOURCEID_PARAM);
   const destinationId = searchParams.get(DESTINATIONID_PARAM);
@@ -191,6 +164,22 @@ export const CreateConnectionTitleBlock: React.FC = () => {
     // this should not be a possible state, but we'll handle it just in case
     return <Navigate to={`/${RoutePaths.Workspaces}/${workspaceId}/${RoutePaths.Connections}`} />;
   }
+
+  const stepLabels: Record<keyof ConnectionSteps, React.ReactNode> = {
+    defineSource: <FormattedMessage id="connectionForm.defineSource" />,
+    defineDestination: <FormattedMessage id="connectionForm.defineDestination" />,
+    selectStreams: isDataActivation ? (
+      <FormattedMessage id="connection.create.mapFields" />
+    ) : (
+      <FormattedMessage id="connectionForm.selectStreams" />
+    ),
+    configureConnection: <FormattedMessage id="connectionForm.configureConnection" />,
+  };
+
+  const steps = (Object.keys(stepStatuses) as Array<keyof ConnectionSteps>).map((step) => ({
+    state: stepStatuses[step],
+    label: stepLabels[step],
+  }));
 
   return (
     <Box pb="lg">
@@ -202,16 +191,7 @@ export const CreateConnectionTitleBlock: React.FC = () => {
             {destinationId && <DestinationBlock destinationId={destinationId} />}
           </FlexContainer>
         )}
-        <FlexContainer gap="sm" alignItems="center">
-          {(Object.keys(stepStatuses) as Array<keyof ConnectionSteps>).map((step, idx) => {
-            return (
-              <Fragment key={step}>
-                <StepItem state={stepStatuses[step]} step={step} value={idx + 1} />
-                {idx !== Object.keys(stepStatuses).length - 1 && <Icon type="chevronRight" color="disabled" />}
-              </Fragment>
-            );
-          })}
-        </FlexContainer>
+        <StepsIndicators steps={steps} />
       </FlexContainer>
     </Box>
   );

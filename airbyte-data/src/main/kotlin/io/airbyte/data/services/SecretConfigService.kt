@@ -8,6 +8,7 @@ import io.airbyte.domain.models.SecretConfig
 import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
+import java.time.OffsetDateTime
 
 interface SecretConfigService {
   fun create(secretConfigCreate: SecretConfigCreate): SecretConfig
@@ -18,4 +19,11 @@ interface SecretConfigService {
     storageId: SecretStorageId,
     coordinate: String,
   ): SecretConfig?
+
+  fun findAirbyteManagedConfigsWithoutReferences(
+    excludeCreatedAfter: OffsetDateTime,
+    limit: Int,
+  ): List<SecretConfig>
+
+  fun deleteByIds(ids: List<SecretConfigId>)
 }

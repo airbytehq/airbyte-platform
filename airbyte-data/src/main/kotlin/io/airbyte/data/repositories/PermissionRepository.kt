@@ -23,9 +23,20 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
 
   fun findByUserId(userId: UUID): List<Permission>
 
+  fun findByServiceAccountId(serviceAccountId: UUID): List<Permission>
+
   fun findByOrganizationId(organizationId: UUID): List<Permission>
 
   fun deleteByIdIn(permissionIds: List<UUID>)
+
+  @Query(
+    """
+    select * from permission p
+    join auth_user au on p.user_id = au.user_id
+    where au.auth_user_id = :authUserId
+  """,
+  )
+  fun queryByAuthUser(authUserId: String): List<Permission>
 
   @Query(
     """

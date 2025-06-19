@@ -36,15 +36,17 @@ export const getPostgresCreateSourceBody = (name: string): SourceCreate => ({
   },
 });
 
-export const getE2ETestingCreateDestinationBody = (name: string) => ({
+export const getE2ETestingCreateDestinationBody = (name: string): DestinationCreate => ({
   name,
+  destinationDefinitionId: ConnectorIds.Destinations.EndToEndTesting,
   workspaceId: getWorkspaceId(),
-  destinationDefinitionId: ConnectorIds.Destinations.E2ETesting,
   connectionConfiguration: {
-    type: "LOGGING",
-    logging_config: {
-      logging_type: "FirstN",
-      max_entry_count: 100,
+    test_destination: {
+      test_destination_type: "LOGGING",
+      logging_config: {
+        logging_type: "FirstN",
+        max_entry_count: 100,
+      },
     },
   },
 });
@@ -78,15 +80,6 @@ export const getPokeApiCreateSourceBody = (sourceName: string, pokeName: string)
   workspaceId: getWorkspaceId(),
   sourceDefinitionId: ConnectorIds.Sources.PokeApi,
   connectionConfiguration: { pokemon_name: pokeName },
-});
-
-export const getLocalJSONCreateDestinationBody = (name: string): DestinationCreate => ({
-  name,
-  destinationDefinitionId: ConnectorIds.Destinations.LocalJson,
-  workspaceId: getWorkspaceId(),
-  connectionConfiguration: {
-    destination_path: "/local",
-  },
 });
 
 export const getUpdateConnectionBody = (

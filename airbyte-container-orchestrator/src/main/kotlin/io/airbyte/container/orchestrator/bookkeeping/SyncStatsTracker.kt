@@ -21,6 +21,8 @@ interface SyncStatsTracker {
    */
   fun updateStats(recordMessage: AirbyteRecordMessage)
 
+  fun updateStatsFromDestination(recordMessage: AirbyteRecordMessage)
+
   /**
    * There are several assumptions here:
    *

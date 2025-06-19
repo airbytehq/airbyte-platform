@@ -15,7 +15,10 @@ import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationSyncMode;
 import io.airbyte.config.SyncMode;
 import io.airbyte.protocol.models.v0.AirbyteMessage;
+import io.airbyte.protocol.models.v0.AirbyteMessage.Type;
 import io.airbyte.protocol.models.v0.Config;
+import io.airbyte.protocol.models.v0.DestinationCatalog;
+import io.airbyte.protocol.models.v0.DestinationOperation;
 import io.airbyte.workers.internal.exception.SourceException;
 import io.airbyte.workers.testutils.AirbyteMessageUtils;
 import java.util.List;
@@ -85,6 +88,17 @@ class BasicAirbyteMessageValidatorTest {
 
     final var m = BasicAirbyteMessageValidator.validate(bad.get(), Optional.empty());
     assertTrue(m.isEmpty());
+  }
+
+  @Test
+  void testValidDestinationCatalog() {
+    final AirbyteMessage message = new AirbyteMessage()
+        .withType(Type.DESTINATION_CATALOG)
+        .withDestinationCatalog(new DestinationCatalog().withOperations(List.of(
+            new DestinationOperation().withObjectName("my_object"))));
+    final var m = BasicAirbyteMessageValidator.validate(message, Optional.empty());
+    assertTrue(m.isPresent());
+    assertEquals(message, m.get());
   }
 
   @Test

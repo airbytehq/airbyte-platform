@@ -1,0 +1,37 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.container {
+  height: 100%;
+  min-width: 760px;
+}
+
+.panelsContainer {
+  flex: 1 1;
+  min-height: 0;
+}
+
+.leftPanel {
+  overflow: hidden;
+}
+
+.rightPanel {
+  @include mixins.left-shadow;
+
+  border-top-left-radius: variables.$border-radius-lg;
+  border-bottom-left-radius: variables.$border-radius-lg;
+  background-color: colors.$foreground;
+}
+
+.gradientBg {
+  background-color: colors.$backdrop;
+}
+
+.solidBg {
+  background-color: colors.$backdrop;
+}
+
+.form {
+  height: 100%;
+}

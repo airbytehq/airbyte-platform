@@ -1,5 +1,6 @@
 import classNames from "classnames";
 import { diffJson, Change } from "diff";
+import isEqual from "lodash/isEqual";
 import merge from "lodash/merge";
 import React, { useMemo, useState } from "react";
 import { useFormContext } from "react-hook-form";
@@ -13,14 +14,14 @@ import { Pre } from "components/ui/Pre";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { StreamReadInferredSchema } from "core/api/types/ConnectorBuilderClient";
+import { DeclarativeStreamSchemaLoader, InlineSchemaLoaderType } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SchemaDiffView.module.scss";
 import { SchemaConflictMessage } from "../SchemaConflictMessage";
-import { isEmptyOrDefault } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
-import { formatJson } from "../utils";
+import { useStreamName } from "../useStreamNames";
+import { getStreamFieldPath, formatJson } from "../utils";
 
 interface SchemaDiffViewProps {
   inferredSchema: StreamReadInferredSchema;
@@ -35,26 +36,22 @@ interface Diff {
   /**
    * Formatted merged schema if merging in the detected schema changes the existing schema
    */
-  mergedSchema?: string;
+  mergedSchema?: object;
   /**
    * Flag if overriding the existing schema with the new schema would lose information
    */
   lossyOverride: boolean;
 }
 
-function getDiff(existingSchema: string | undefined, detectedSchema: object): Diff {
-  if (!existingSchema) {
-    return { changes: [], lossyOverride: false };
-  }
+function getDiff(existingSchema: object, detectedSchema: object): Diff {
   try {
-    const existingObject = existingSchema ? JSON.parse(existingSchema) : undefined;
-    const mergedSchemaPreferExisting = formatJson(merge({}, detectedSchema, existingObject), true);
-    const changes = diffJson(existingObject, detectedSchema);
+    const mergedSchemaPreferExisting = merge({}, detectedSchema, existingSchema);
+    const changes = diffJson(existingSchema, detectedSchema);
     // The override would be lossy if lines are removed in the diff
     const lossyOverride = changes.some((change) => change.removed);
     return {
       changes,
-      mergedSchema: mergedSchemaPreferExisting !== existingSchema ? mergedSchemaPreferExisting : undefined,
+      mergedSchema: !isEqual(mergedSchemaPreferExisting, existingSchema) ? mergedSchemaPreferExisting : undefined,
       lossyOverride,
     };
   } catch {
@@ -66,29 +63,44 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
   const analyticsService = useAnalyticsService();
   const mode = useBuilderWatch("mode");
   const testStreamId = useBuilderWatch("testStreamId");
-  const { streamIdToStreamRepresentation } = useConnectorBuilderFormState();
+  const streamName = useStreamName(testStreamId);
   const { setValue } = useFormContext();
-  const path = `formValues.streams.${testStreamId.index}.schema` as const;
-  const value = useBuilderWatch(path);
-  const formattedSchema = useMemo(() => inferredSchema && formatJson(inferredSchema, true), [inferredSchema]);
+  const schemaLoaderPath = useMemo(() => getStreamFieldPath(testStreamId, "schema_loader", true), [testStreamId]);
+  const declaredSchemaLoader = useBuilderWatch(schemaLoaderPath) as DeclarativeStreamSchemaLoader | undefined;
+  const declaredSchema = useMemo(() => {
+    if (!declaredSchemaLoader) {
+      return undefined;
+    }
+    if (Array.isArray(declaredSchemaLoader)) {
+      return undefined;
+    }
+    if (declaredSchemaLoader.type !== InlineSchemaLoaderType.InlineSchemaLoader) {
+      return undefined;
+    }
+    return declaredSchemaLoader.schema;
+  }, [declaredSchemaLoader]);
+  const declaredAndInferredSchemasAreEqual = useMemo(
+    () => isEqual(declaredSchema, inferredSchema),
+    [declaredSchema, inferredSchema]
+  );
 
   const [schemaDiff, setSchemaDiff] = useState<Diff>(() =>
-    mode === "ui" ? getDiff(value, inferredSchema) : { changes: [], lossyOverride: false }
+    mode === "ui" && declaredSchema ? getDiff(declaredSchema, inferredSchema) : { changes: [], lossyOverride: false }
   );
 
   useDebounce(
     () => {
-      if (mode === "ui") {
-        setSchemaDiff(getDiff(value, inferredSchema));
+      if (mode === "ui" && declaredSchema) {
+        setSchemaDiff(getDiff(declaredSchema, inferredSchema));
       }
     },
     250,
-    [value, inferredSchema, mode]
+    [declaredSchemaLoader, inferredSchema, mode]
   );
 
   return (
     <FlexContainer direction="column">
-      {mode === "ui" && !isEmptyOrDefault(value) && value !== formattedSchema && (
+      {mode === "ui" && declaredSchema && !declaredAndInferredSchemasAreEqual && (
         <Message type="warning" text={<SchemaConflictMessage errors={incompatibleErrors} />}>
           <FlexItem grow className={styles.mergeButtons}>
             <FlexContainer direction="column">
@@ -98,12 +110,15 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                     full
                     type="button"
                     variant="primaryDark"
-                    disabled={value === formattedSchema}
+                    disabled={declaredAndInferredSchemasAreEqual}
                     onClick={() => {
-                      setValue(path, formattedSchema);
+                      setValue(schemaLoaderPath, {
+                        type: InlineSchemaLoaderType.InlineSchemaLoader,
+                        schema: inferredSchema,
+                      });
                       analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
                         actionDescription: "Declared schema overwritten by detected schema",
-                        ...streamIdToStreamRepresentation(testStreamId),
+                        stream_name: streamName,
                       });
                     }}
                   >
@@ -125,10 +140,13 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
                           variant="primaryDark"
                           type="button"
                           onClick={() => {
-                            setValue(path, schemaDiff.mergedSchema);
+                            setValue(schemaLoaderPath, {
+                              type: InlineSchemaLoaderType.InlineSchemaLoader,
+                              schema: schemaDiff.mergedSchema,
+                            });
                             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.MERGE_SCHEMA, {
                               actionDescription: "Detected and Declared schemas merged to update declared schema",
-                              ...streamIdToStreamRepresentation(testStreamId),
+                              stream_name: streamName,
                             });
                           }}
                         >
@@ -145,16 +163,19 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
           </FlexItem>
         </Message>
       )}
-      {mode === "ui" && isEmptyOrDefault(value) && (
+      {mode === "ui" && !declaredSchema && (
         <Button
           full
           variant="secondary"
           type="button"
           onClick={() => {
-            setValue(path, formattedSchema);
+            setValue(schemaLoaderPath, {
+              type: InlineSchemaLoaderType.InlineSchemaLoader,
+              schema: inferredSchema,
+            });
             analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.OVERWRITE_SCHEMA, {
               actionDescription: "Declared schema overwritten by detected schema",
-              ...streamIdToStreamRepresentation(testStreamId),
+              stream_name: streamName,
             });
           }}
           data-testid="accept-schema"
@@ -163,9 +184,9 @@ export const SchemaDiffView: React.FC<SchemaDiffViewProps> = ({ inferredSchema, 
         </Button>
       )}
       <FlexItem>
-        {mode === "yaml" || !schemaDiff.changes.length || isEmptyOrDefault(value) ? (
+        {mode === "yaml" || !schemaDiff.changes.length || !declaredSchema ? (
           <Pre className={styles.diffLine}>
-            {formattedSchema
+            {formatJson(inferredSchema, true)
               .split("\n")
               .map((line) => ` ${line}`)
               .join("\n")}

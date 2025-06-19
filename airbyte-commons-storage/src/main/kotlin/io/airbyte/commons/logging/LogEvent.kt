@@ -18,6 +18,7 @@ import io.airbyte.commons.logging.logback.CALLER_METHOD_NAME_PATTERN
 import io.airbyte.commons.logging.logback.CALLER_QUALIFIED_CLASS_NAME_PATTERN
 import io.airbyte.commons.logging.logback.CALLER_THREAD_NAME_PATTERN
 import io.airbyte.commons.logging.logback.MaskedDataConverter
+import kotlinx.coroutines.CancellationException
 
 private val maskedDataConverter = MaskedDataConverter()
 
@@ -104,7 +105,7 @@ class StackTraceElementDeserializer : StdDeserializer<StackTraceElement>(StackTr
 }
 
 /**
- *  * Custom Jackson [StdSerializer] to reduce the amount of characters written for [StackTraceElement] objects.
+ *  * Custom Jackson [StdSerializer] to reduce the number of characters written for [StackTraceElement] objects.
  */
 class StackTraceElementSerializer : StdSerializer<StackTraceElement>(StackTraceElement::class.java) {
   override fun serialize(
@@ -122,6 +123,27 @@ class StackTraceElementSerializer : StdSerializer<StackTraceElement>(StackTraceE
   }
 }
 
+/**
+ * Custom Jackson [StdSerializer] to avoid serialization of additional members that are unnecessary/may reference classes
+ * that do not exist on the classpath at runtime.
+ */
+class CancellationExceptionSerializer : StdSerializer<CancellationException>(CancellationException::class.java) {
+  override fun serialize(
+    value: CancellationException,
+    gen: JsonGenerator,
+    provider: SerializerProvider,
+  ) {
+    with(gen) {
+      writeStartObject()
+      writeStringField(MESSAGE_FIELD, value.message)
+      writeObjectField(CAUSE_FIELD, value.cause)
+      writeEndObject()
+    }
+  }
+}
+
+private const val CAUSE_FIELD = "cause"
+private const val MESSAGE_FIELD = "message"
 private const val SHORT_CLASS_NAME_FIELD = "cn"
 private const val SHORT_LINE_NUMBER_FIELD = "ln"
 private const val SHORT_METHOD_NAME_FIELD = "mn"

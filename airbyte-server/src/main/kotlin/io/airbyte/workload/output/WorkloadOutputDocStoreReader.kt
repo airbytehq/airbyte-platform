@@ -20,7 +20,7 @@ class DocStoreAccessException(
   override val cause: Throwable,
 ) : Exception(message, cause)
 
-// TODO This is extracted from airbyte-commons-worker/src/main/kotlin/io.airbyte.workers.workload.JobOutputDocStore.
+// TODO This methods are extracted from io.airbyte.workers.workload.WorkloadOutputWriter (formerly JobOutputDocStore).
 // TODO Delete the other one when everything has been migrated to this one
 @Singleton
 class WorkloadOutputDocStoreReader(

@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
-import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
 import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
@@ -21,7 +21,7 @@ import {
   ConnectorSpecification,
   ConnectorT,
 } from "core/domain/connector";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { generateMessageFromError } from "core/utils/errorStatusMessage";
 import { links } from "core/utils/links";
 import { Intent, useGeneratedIntent } from "core/utils/rbac";
@@ -47,7 +47,6 @@ interface ConnectorCardBaseProps {
   onSubmit: (values: ConnectorCardValues) => Promise<void> | void;
   reloadConfig?: () => void;
   onDeleteClick?: () => void;
-  onConnectorDefinitionSelect?: (id: string) => void;
   availableConnectorDefinitions: ConnectorDefinition[];
   supportLevel?: SupportLevel;
 
@@ -65,6 +64,8 @@ interface ConnectorCardBaseProps {
   fetchingConnectorError?: Error | null;
   isLoading?: boolean;
   leftFooterSlot?: React.ReactNode;
+  hideCopyConfig?: boolean;
+  skipCheckConnection?: boolean;
 }
 
 interface ConnectorCardCreateProps extends ConnectorCardBaseProps {
@@ -81,93 +82,15 @@ const getConnectorId = (connectorRead: DestinationRead | SourceRead) => {
 };
 
 /**
- * When creating an Airbyte Embedded Template, we need to set the authentication values to mock values.
- * These are overridden when the user creates a Source using the PartialUserCreateForm, but placeholders
- * are required in order for the template to be created + rendered properly.
- */
-
-const prepareOauthFieldsForTemplate = (
-  partialDefaultConfig: Record<string, unknown>,
-  advancedAuth: ConnectorDefinitionSpecificationRead["advancedAuth"]
-) => {
-  if (advancedAuth?.oauthConfigSpecification) {
-    // Set auth_type based on predicate
-    if (advancedAuth.predicateKey && advancedAuth.predicateValue) {
-      const authTypePath = advancedAuth.predicateKey;
-      let current = partialDefaultConfig;
-      for (let i = 0; i < authTypePath.length - 1; i++) {
-        if (!current[authTypePath[i]]) {
-          current[authTypePath[i]] = {};
-        }
-        current = current[authTypePath[i]] as Record<string, unknown>;
-      }
-      current[authTypePath[authTypePath.length - 1]] = advancedAuth.predicateValue;
-    }
-
-    // Handle all three OAuth specifications
-    const specs = [
-      advancedAuth.oauthConfigSpecification.completeOAuthOutputSpecification,
-      advancedAuth.oauthConfigSpecification.completeOAuthServerInputSpecification,
-      advancedAuth.oauthConfigSpecification.completeOAuthServerOutputSpecification,
-    ].filter((spec): spec is NonNullable<typeof spec> => spec !== undefined);
-
-    specs.forEach((spec) => {
-      const typedSpec = spec as unknown as {
-        properties: Record<string, { path_in_connector_config?: string[] }>;
-      };
-      if (typedSpec.properties) {
-        Object.entries(typedSpec.properties).forEach(([_, property]) => {
-          if (property.path_in_connector_config) {
-            const pathParts = property.path_in_connector_config;
-            if (pathParts.length > 0) {
-              let current = partialDefaultConfig;
-              for (let i = 0; i < pathParts.length - 1; i++) {
-                if (!current[pathParts[i]]) {
-                  current[pathParts[i]] = {};
-                }
-                current = current[pathParts[i]] as Record<string, unknown>;
-              }
-              current[pathParts[pathParts.length - 1]] = "mock-string";
-            }
-          }
-        });
-      }
-    });
-  }
-};
-
-/**
  * Prepares the configuration for creating a source config template
  */
-const prepareSourceConfigTemplate = (
-  values: ConnectorFormValues,
-  definitionId: string,
-  advancedAuth: ConnectorDefinitionSpecificationRead["advancedAuth"],
-  organizationId: string
-) => {
+const prepareSourceConfigTemplate = (values: ConnectorFormValues, definitionId: string, organizationId: string) => {
   const partialDefaultConfig = { ...values.connectionConfiguration } as Record<string, unknown>;
-  prepareOauthFieldsForTemplate(partialDefaultConfig, advancedAuth);
 
   return {
     organizationId,
     actorDefinitionId: definitionId,
     partialDefaultConfig,
-  };
-};
-
-/**
- * Prepares the configuration for creating a destination config template
- */
-const prepareDestinationConfigTemplate = (
-  values: ConnectorFormValues,
-  definitionId: string,
-  organizationId: string
-) => {
-  return {
-    organizationId,
-    destinationName: values.name,
-    destinationConfiguration: values.connectionConfiguration,
-    destinationActorDefinitionId: definitionId,
   };
 };
 
@@ -180,6 +103,8 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   headerBlock,
   supportLevel,
   leftFooterSlot = null,
+  hideCopyConfig = false,
+  skipCheckConnection = false,
   ...props
 }) => {
   const canEditConnector = useGeneratedIntent(Intent.CreateOrEditConnector);
@@ -187,12 +112,13 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
   const { formatMessage } = useIntl();
   const { organizationId, workspaceId } = useCurrentWorkspace();
   const { mutate: createConfigTemplate } = useCreateConfigTemplate();
-  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
   const isTemplateCreateButtonEnabled = useExperiment("embedded.templateCreateButton");
   const canCreateTemplate = useGeneratedIntent(Intent.CreateOrEditConnection);
   const showCreateTemplateButton = isTemplateCreateButtonEnabled && canCreateTemplate;
+  const { mutate: createConnectionTemplate } = useCreateConnectionTemplate();
 
   const { setDocumentationPanelOpen, setSelectedConnectorDefinition } = useDocumentationPanelContext();
+
   const {
     testConnector,
     isTestConnectionInProgress,
@@ -201,6 +127,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     reset,
     isSuccess: connectionTestSuccess,
   } = useTestConnector(props);
+  const isCloudApp = useIsCloudApp();
   const { trackTestConnectorFailure, trackTestConnectorSuccess, trackTestConnectorStarted } =
     useAnalyticsTrackFunctions(props.formType);
 
@@ -225,7 +152,6 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     }
     return definition;
   }, [availableConnectorDefinitions, selectedConnectorDefinitionSpecificationId]);
-  const advancedAuth = selectedConnectorDefinitionSpecification?.advancedAuth;
 
   // Handle Doc panel
   useEffect(() => {
@@ -277,11 +203,15 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     };
 
     try {
-      const response = await testConnectorWithTracking(connectorCardValues);
-      if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
-        reloadConfig();
-      } else {
+      if (skipCheckConnection) {
         await onSubmit(connectorCardValues);
+      } else {
+        const response = await testConnectorWithTracking(connectorCardValues);
+        if (response.jobInfo.connectorConfigurationUpdated && reloadConfig) {
+          reloadConfig();
+        } else {
+          await onSubmit(connectorCardValues);
+        }
       }
     } catch (e) {
       setErrorStatusRequest(e);
@@ -309,6 +239,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
     <ConnectorForm
       canEdit={canEditConnector && (isConnectorEntitled || !connector)}
       trackDirtyChanges
+      formId={props.formId}
       headerBlock={
         <FlexContainer direction="column" className={styles.header}>
           {headerBlock}
@@ -349,7 +280,7 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
       renderFooter={({ dirty, isSubmitting, isValid, resetConnectorForm, getValues }) =>
         selectedConnectorDefinitionSpecification && (
           <>
-            {isCloudApp() &&
+            {isCloudApp &&
               selectedConnectorDefinition &&
               "sourceDefinitionId" in selectedConnectorDefinition &&
               selectedConnectorDefinition.sourceType === "database" && <AllowlistIpBanner connectorId={connectorId} />}
@@ -378,17 +309,21 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
               }}
               connectionTestSuccess={connectionTestSuccess}
               leftSlot={leftFooterSlot}
-              onCopyConfig={() => {
-                const values = getValues();
-                const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
-                return {
-                  name: values.name,
-                  workspaceId,
-                  definitionId,
-                  config: values.connectionConfiguration as Record<string, unknown>,
-                  schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
-                };
-              }}
+              onCopyConfig={
+                hideCopyConfig
+                  ? undefined
+                  : () => {
+                      const values = getValues();
+                      const definitionId = selectedConnectorDefinition ? Connector.id(selectedConnectorDefinition) : "";
+                      return {
+                        name: values.name,
+                        workspaceId,
+                        definitionId,
+                        config: values.connectionConfiguration as Record<string, unknown>,
+                        schema: selectedConnectorDefinitionSpecification?.connectionSpecification,
+                      };
+                    }
+              }
               onCreateConfigTemplate={
                 showCreateTemplateButton
                   ? props.formType === "source"
@@ -397,18 +332,14 @@ export const ConnectorCard: React.FC<ConnectorCardCreateProps | ConnectorCardEdi
                         const definitionId = selectedConnectorDefinition
                           ? Connector.id(selectedConnectorDefinition)
                           : "";
-                        createConfigTemplate(
-                          prepareSourceConfigTemplate(values, definitionId, advancedAuth, organizationId)
-                        );
+                        createConfigTemplate(prepareSourceConfigTemplate(values, definitionId, organizationId));
                       }
                     : () => {
                         const values = getValues();
                         const definitionId = selectedConnectorDefinition
                           ? Connector.id(selectedConnectorDefinition)
                           : "";
-                        createConnectionTemplate(
-                          prepareDestinationConfigTemplate(values, definitionId, organizationId)
-                        );
+                        createConnectionTemplate({ values, destinationDefinitionId: definitionId, organizationId });
                       }
                   : undefined
               }
@@ -450,7 +381,7 @@ const AllowlistIpBanner = ({ connectorId }: { connectorId: string | undefined })
           initiallyOpen={connectorId ? allowlistIpsOpen ?? true : true}
           onClick={(newOpenState) => setAllowlistIpsOpen(newOpenState)}
         >
-          <Pre>{useAirbyteCloudIps().join("\n")}</Pre>
+          <Pre>{useAirbyteCloudIpsByDataplane().join("\n")}</Pre>
         </Collapsible>
       </Box>
     </Message>

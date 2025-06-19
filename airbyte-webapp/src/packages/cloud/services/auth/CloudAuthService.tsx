@@ -10,7 +10,7 @@ import { LoadingPage } from "components";
 
 import { HttpProblem, useGetOrCreateUser, useUpdateUser } from "core/api";
 import { UserRead } from "core/api/types/AirbyteClient";
-import { config } from "core/config";
+import { buildConfig } from "core/config";
 import { useFormatError } from "core/errors";
 import { AuthContext, AuthContextApi } from "core/services/auth";
 import { EmbeddedAuthService } from "core/services/auth/EmbeddedAuthService";
@@ -77,7 +77,7 @@ function createRedirectUri(realm: string) {
 function createUserManager(realm: string) {
   return new UserManager({
     userStore: new WebStorageStateStore({ store: window.localStorage }),
-    authority: `${config.keycloakBaseUrl}/auth/realms/${realm}`,
+    authority: `${buildConfig.keycloakBaseUrl}/auth/realms/${realm}`,
     client_id: KEYCLOAK_CLIENT_ID,
     redirect_uri: createRedirectUri(realm),
   });
@@ -97,7 +97,7 @@ export function initializeUserManager() {
 
   // Look for a localStorage entry that matches the current backend we're connecting to
   const existingLocalStorageEntry = localStorageKeys.find((key) =>
-    key.startsWith(`oidc.user:${config.keycloakBaseUrl}`)
+    key.startsWith(`oidc.user:${buildConfig.keycloakBaseUrl}`)
   );
 
   if (existingLocalStorageEntry) {
@@ -381,7 +381,7 @@ const CloudKeycloakAuthService: React.FC<PropsWithChildren> = ({ children }) => 
    */
   const redirectToRegistrationWithPassword = useCallback(async () => {
     const keycloak = new Keycloak({
-      url: `${config.keycloakBaseUrl}/auth`,
+      url: `${buildConfig.keycloakBaseUrl}/auth`,
       realm: AIRBYTE_CLOUD_REALM,
       clientId: KEYCLOAK_CLIENT_ID,
     });

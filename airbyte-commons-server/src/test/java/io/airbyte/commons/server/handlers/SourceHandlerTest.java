@@ -72,6 +72,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.domain.models.SecretStorage;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
@@ -79,11 +80,11 @@ import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.protocol.models.v0.CatalogHelpers;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -116,6 +117,7 @@ class SourceHandlerTest {
   private OAuthConfigSupplier oAuthConfigSupplier;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
+  private PartialUserConfigService partialUserConfigService;
 
   private static final String API_KEY_FIELD = "apiKey";
   private static final String API_KEY_VALUE = "987-xyz";
@@ -171,6 +173,7 @@ class SourceHandlerTest {
     secretReferenceService = mock(SecretReferenceService.class);
     currentUserService = mock(CurrentUserService.class);
     secretPersistence = mock(SecretPersistence.class);
+    partialUserConfigService = mock(PartialUserConfigService.class);
 
     when(licenseEntitlementChecker.checkEntitlement(any(), any(), any())).thenReturn(true);
     when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(ORG_ID);
@@ -222,7 +225,8 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService);
   }
 
   @Test
@@ -380,7 +384,10 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService
+
+    );
 
     final SourceCreate sourceCreate = new SourceCreate()
         .name(sourceConnection.getName())
@@ -598,7 +605,8 @@ class SourceHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService,
+        partialUserConfigService);
 
     final String updatedSourceName = "my updated source name";
     final JsonNode newConfiguration = sourceConnection.getConfiguration();
@@ -814,10 +822,10 @@ class SourceHandlerTest {
         .connectorVersion(connectorVersion)
         .configurationHash(hashValue);
 
-    when(catalogService.writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
+    when(catalogService.writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue)).thenReturn(catalogId);
     final DiscoverCatalogResult result = sourceHandler.writeDiscoverCatalogResult(request);
 
-    verify(catalogService).writeActorCatalogFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
+    verify(catalogService).writeActorCatalogWithFetchEvent(expectedCatalog, actorId, connectorVersion, hashValue);
     assert (result.getCatalogId()).equals(catalogId);
   }
 

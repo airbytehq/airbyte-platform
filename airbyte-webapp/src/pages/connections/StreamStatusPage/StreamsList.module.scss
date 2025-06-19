@@ -16,24 +16,6 @@ $card-header-fixed-height: 77px;
   border-top-right-radius: variables.$border-radius-lg;
 }
 
-.clickableHeader {
-  all: unset;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-
-  .icon {
-    margin-left: variables.$spacing-sm;
-  }
-
-  p {
-    margin-left: variables.$spacing-sm;
-    background-color: colors.$grey-100;
-    padding: variables.$spacing-xs variables.$spacing-sm;
-    border-radius: variables.$border-radius-sm;
-  }
-}
-
 .search {
   flex-basis: 400px;
 }

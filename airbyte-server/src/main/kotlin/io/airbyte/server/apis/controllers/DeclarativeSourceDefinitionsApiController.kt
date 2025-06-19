@@ -9,7 +9,7 @@ import io.airbyte.api.model.generated.DeclarativeManifestsReadList
 import io.airbyte.api.model.generated.DeclarativeSourceDefinitionCreateManifestRequestBody
 import io.airbyte.api.model.generated.ListDeclarativeManifestsRequestBody
 import io.airbyte.api.model.generated.UpdateActiveManifestRequestBody
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

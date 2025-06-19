@@ -158,6 +158,86 @@ spec:
                 name: {{ .Release.Name }}-airbyte-env
                 key: WORKSPACE_ROOT
 
+            # Secrets Manager
+          - name: SECRET_PERSISTENCE
+            value: {{ include "airbyte.secretPersistence" . }}
+            # Values for AwsSecretsManager
+          {{- if eq ((((.Values.global).secretsManager).awsSecretManager).authenticationType) "credentials" }}
+          - name: AWS_SECRET_MANAGER_ACCESS_KEY_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.awsSecretManagerAccessKeyIdSecretKey" .Values.global.secretsManager.awsSecretManager.accessKeyIdSecretKey }}
+          - name: AWS_SECRET_MANAGER_SECRET_ACCESS_KEY
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.awsSecretManagerSecretAccessKeySecretKey" .Values.global.secretsManager.awsSecretManager.secretAccessKeySecretKey }}
+          {{- end }}
+          {{- if ((((.Values.global).secretsManager).awsSecretManager).region) }}
+          - name: AWS_SECRET_MANAGER_REGION
+            value: {{ (((.Values.global).secretsManager).awsSecretManager).region }}
+          {{- end }}
+          {{- if ((((.Values.global).secretsManager).awsSecretManager).tags) }}
+          - name: AWS_SECRET_MANAGER_SECRET_TAGS
+            value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.awsSecretManager.tags }}
+          {{- end }}
+          {{- if ((((.Values.global).secretsManager).awsSecretManager).kms) }}
+          - name: AWS_KMS_KEY_ARN
+            value: {{ ((((.Values.global).secretsManager).awsSecretManager).kms) | default "" }}
+          {{- end }}
+
+            # Values for Azure Key Vault
+          {{- if (((.Values.global).secretsManager).azureKeyVault) }}
+
+          - name: AB_AZURE_KEY_VAULT_VAULT_URL
+            value: {{ (((.Values.global).secretsManager).azureKeyVault).vaultUrl }}
+
+          - name: AB_AZURE_KEY_VAULT_TENANT_ID
+            value: {{ (((.Values.global).secretsManager).azureKeyVault).tenantId }}
+
+          - name: AB_AZURE_KEY_VAULT_CLIENT_ID
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.azureKeyVaultClientIdSecretKey" .Values.global.secretsManager.azureKeyVault.clientIdSecretKey }}
+          - name: AB_AZURE_KEY_VAULT_CLIENT_SECRET
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.azureKeyVaultClientSecretSecretKey" .Values.global.secretsManager.azureKeyVault.clientSecretSecretKey }}
+
+          {{- end }}
+
+          {{- if ((((.Values.global).secretsManager).azureKeyVault).tags) }}
+          - name: AB_AZURE_KEY_VAULT_TAGS
+            value: {{ include "airbyte.tagsToString" .Values.global.secretsManager.azureKeyVault.tags }}
+          {{- end }}
+
+            # Values for googleSecretManager secrets
+          {{- if (((.Values.global).secretsManager).googleSecretManager) }}
+          - name: SECRET_STORE_GCP_PROJECT_ID
+            value: {{ .Values.global.secretsManager.googleSecretManager.projectId }}
+          - name: SECRET_STORE_GCP_CREDENTIALS
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.googleSecretManagerCredentialsSecretKey" .Values.global.secretsManager.googleSecretManager.credentialsSecretKey }}
+          {{- end }}
+
+            # Values for vault secrets
+          {{- if (((.Values.global).secretsManager).vault) }}
+          - name: VAULT_ADDRESS
+            value: {{ (((.Values.global).secretsManager).vault).address }}
+          - name: VAULT_PREFIX
+            value: {{ (((.Values.global).secretsManager).vault).prefix }}
+          - name: VAULT_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "airbyte.secretStoreName" .Values.global.secretsManager.secretsManagerSecretName }}
+                key: {{ include "airbyte.vaultAuthTokenSecretKey" .Values.global.secretsManager.vault.authTokenSecretKey }}
+          {{- end }}
+
           # Database
           {{- include "airbyte.database.envs" . | nindent 10 }}
           {{- include "airbyte.enterprise.license" . | nindent 10 }}

@@ -8,12 +8,12 @@ import io.airbyte.featureflag.ANONYMOUS
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.UseCustomK8sScheduler
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
-import io.airbyte.workers.pod.ContainerConstants
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.pod.KubeContainerInfo
-import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.constants.ContainerConstants
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
+import io.airbyte.workload.launcher.pods.KubeContainerInfo
+import io.airbyte.workload.launcher.pods.KubePodInfo
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar
@@ -66,7 +66,7 @@ data class ConnectorPodFactory(
         containerInfo = kubePodInfo.mainContainerInfo!!,
         runtimeEnvVars = runtimeEnvVars,
       )
-    val sidecar: Container = buildSidecarContainer(volumeMounts = volumeMountPairs.sidecarMounts)
+    val sidecar: Container = buildSidecarContainer(volumeMounts = volumeMountPairs.sidecarMounts, runtimeEnvVars = runtimeEnvVars)
 
     // TODO: We should inject the scheduler from the ENV and use this just for overrides
     val schedulerName = featureFlagClient.stringVariation(UseCustomK8sScheduler, Connection(ANONYMOUS))
@@ -121,7 +121,10 @@ data class ConnectorPodFactory(
       .build()
   }
 
-  private fun buildSidecarContainer(volumeMounts: List<VolumeMount>): Container {
+  private fun buildSidecarContainer(
+    volumeMounts: List<VolumeMount>,
+    runtimeEnvVars: List<EnvVar>,
+  ): Container {
     val mainCommand = ContainerCommandFactory.sidecar()
     val sidecarReqs = resourceRequirementsFactory.sidecar()
 
@@ -131,7 +134,7 @@ data class ConnectorPodFactory(
       .withImagePullPolicy(sidecarContainerInfo.pullPolicy)
       .withCommand("sh", "-c", mainCommand)
       .withWorkingDir(FileConstants.CONFIG_DIR)
-      .withEnv(sideCarEnvVars)
+      .withEnv(sideCarEnvVars + runtimeEnvVars)
       .withVolumeMounts(volumeMounts)
       .withResources(ResourceConversionUtils.domainToApi(sidecarReqs))
       .withSecurityContext(workloadSecurityContextProvider.rootlessContainerSecurityContext())

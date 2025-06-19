@@ -1,5 +1,4 @@
 import {
-  enterDestinationPath,
   selectServiceType,
   enterApiKey,
   enterName,
@@ -59,13 +58,12 @@ export const fillDummyApiForm = (name: string, apiKey: string) => {
   enterApiKey(apiKey);
 };
 
-export const fillLocalJsonForm = (name: string, destinationPath: string) => {
+export const fillE2ETestingForm = (name: string) => {
   cy.intercept("/api/v1/destination_definition_specifications/get").as("getDestinationSpecifications");
 
-  selectServiceType("Local JSON", "marketplace");
+  selectServiceType("End-to-End Testing (/dev/null)", "marketplace");
 
   cy.wait("@getDestinationSpecifications");
 
   enterName(name);
-  enterDestinationPath(destinationPath);
 };

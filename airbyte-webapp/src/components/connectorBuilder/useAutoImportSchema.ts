@@ -2,25 +2,19 @@ import { useConnectorBuilderFormState } from "services/connectorBuilder/Connecto
 
 import { StreamId } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
+import { getStreamFieldPath } from "./utils";
 
 // only auto import schema if it is enabled for the provided stream and connector is in draft mode
 export const useAutoImportSchema = (streamId: StreamId) => {
   const { displayedVersion } = useConnectorBuilderFormState();
-  const streams = useBuilderWatch("formValues.streams");
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
 
-  if (displayedVersion !== undefined) {
+  const namePath = getStreamFieldPath(streamId, "name");
+  const streamName = useBuilderWatch(namePath) as string | undefined;
+  const autoImportSchema = useBuilderWatch(`manifest.metadata.autoImportSchema.${streamName}`) as boolean | undefined;
+
+  if (displayedVersion !== "draft") {
     return false;
   }
 
-  if (streamId.type === "generated_stream") {
-    return dynamicStreams[dynamicStreams.findIndex((stream) => stream.dynamicStreamName === streamId.dynamicStreamName)]
-      ?.streamTemplate.autoImportSchema;
-  }
-
-  if (streamId.type === "dynamic_stream") {
-    return dynamicStreams[streamId.index]?.streamTemplate.autoImportSchema;
-  }
-
-  return streams[streamId.index]?.autoImportSchema;
+  return autoImportSchema;
 };

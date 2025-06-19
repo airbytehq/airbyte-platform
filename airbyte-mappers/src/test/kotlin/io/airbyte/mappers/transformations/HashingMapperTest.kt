@@ -4,9 +4,9 @@
 
 package io.airbyte.mappers.transformations
 
+import TEST_OBJECT_MAPPER
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.contains
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
@@ -31,7 +31,7 @@ import java.security.Security
 private const val MAPPER_NAME = "hashing"
 
 class HashingMapperTest {
-  private val hashingMapper = spyk(HashingMapper())
+  private val hashingMapper = spyk(HashingMapper(TEST_OBJECT_MAPPER))
 
   @Test
   fun schemaTransformsFieldNamesCorrectly() {
@@ -91,7 +91,7 @@ class HashingMapperTest {
         ),
       )
 
-    val record = TestRecordAdapter(StreamDescriptor().withName("stream"), mapOf("field1" to "value1", "field2" to "value2"))
+    val record = TestRecordAdapter(StreamDescriptor().withName("stream"), mutableMapOf("field1" to "value1", "field2" to "value2"))
     hashingMapper.map(config, record)
 
     assertTrue(record.has("field1_hashed"))
@@ -152,7 +152,7 @@ class HashingMapperTest {
         javaClass.classLoader.getResource("HashingMapperConfigExamples.json")
           ?: throw IllegalArgumentException("File not found: HashingMapperConfigExamples.json")
 
-      val configExamples = Jsons.deserialize(File(resource.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
+      val configExamples = TEST_OBJECT_MAPPER.readValue(File(resource.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
 
       configExamples.forEachIndexed { index, configExample ->
         try {
@@ -168,7 +168,7 @@ class HashingMapperTest {
       val config =
         ConfiguredMapper(
           MAPPER_NAME,
-          Jsons.jsonNode(
+          TEST_OBJECT_MAPPER.valueToTree(
             mapOf(
               HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1",
               HashingMapper.METHOD_CONFIG_KEY to "unsupported",
@@ -194,7 +194,12 @@ class HashingMapperTest {
       val config =
         ConfiguredMapper(
           MAPPER_NAME,
-          Jsons.jsonNode(mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed")),
+          TEST_OBJECT_MAPPER.valueToTree(
+            mapOf(
+              HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1",
+              HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
+            ),
+          ),
         )
       val exception =
         assertThrows(IllegalArgumentException::class.java) {
@@ -211,7 +216,12 @@ class HashingMapperTest {
       val config =
         ConfiguredMapper(
           MAPPER_NAME,
-          Jsons.jsonNode(mapOf(HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1", HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed")),
+          TEST_OBJECT_MAPPER.valueToTree(
+            mapOf(
+              HashingMapper.TARGET_FIELD_CONFIG_KEY to "field1",
+              HashingMapper.FIELD_NAME_SUFFIX_CONFIG_KEY to "_hashed",
+            ),
+          ),
         )
       val exception =
         assertThrows(IllegalArgumentException::class.java) {

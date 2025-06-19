@@ -9,6 +9,7 @@ interface FlexItemProps {
    * Sets `flex-grow` to 1 if truthy
    */
   grow?: boolean;
+  noShrink?: boolean;
   /**
    * The `align-self` css property
    */
@@ -23,6 +24,7 @@ interface FlexItemProps {
 export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttributes<HTMLDivElement>>> = ({
   className,
   grow,
+  noShrink,
   alignSelf,
   children,
   ...otherProps
@@ -30,6 +32,7 @@ export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttr
   const fullClassName = classNames(
     {
       [styles.grow]: grow,
+      [styles.noShrink]: noShrink,
       [styles.alignSelfStart]: alignSelf === "flex-start",
       [styles.alignSelfEnd]: alignSelf === "flex-end",
       [styles.alignSelfCenter]: alignSelf === "center",

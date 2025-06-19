@@ -11,14 +11,12 @@ import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.model.generated.WebBackendConnectionRead
 import io.airbyte.api.model.generated.WebBackendConnectionReadList
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
-import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
-import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
 import io.airbyte.api.server.generated.models.WebappConfigResponse
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
@@ -35,15 +33,16 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @MicronautTest(rebuildContext = true)
-@Property(name = "AIRBYTE_EDITION", value = "community")
+@Property(name = "AIRBYTE_EDITION", value = "CoMMuniTY")
 internal class WebBackendApiControllerTest {
   @Inject
-  lateinit var apiAuthorizationHelper: ApiAuthorizationHelper
+  lateinit var roleResolver: RoleResolver
 
   @Inject
   lateinit var webBackendConnectionsHandler: WebBackendConnectionsHandler
@@ -52,23 +51,14 @@ internal class WebBackendApiControllerTest {
   lateinit var webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler
 
   @Inject
-  lateinit var webBackendGeographiesHandler: WebBackendGeographiesHandler
-
-  @Inject
   @Client("/")
   lateinit var client: HttpClient
-
-  @MockBean(ApiAuthorizationHelper::class)
-  fun apiAuthorizationHelper(): ApiAuthorizationHelper = mockk(relaxed = true)
 
   @MockBean(WebBackendConnectionsHandler::class)
   fun webBackendConnectionsHandler(): WebBackendConnectionsHandler = mockk()
 
   @MockBean(WebBackendCheckUpdatesHandler::class)
   fun webBackendCheckUpdatesHandler(): WebBackendCheckUpdatesHandler = mockk()
-
-  @MockBean(WebBackendGeographiesHandler::class)
-  fun webBackendGeographiesHandler(): WebBackendGeographiesHandler = mockk()
 
   @MockBean(WebBackendCronExpressionHandler::class)
   fun webBackendCronExpressionHandler(): WebBackendCronExpressionHandler = mockk()
@@ -111,9 +101,10 @@ internal class WebBackendApiControllerTest {
 
     // This only impacts calls where withRefreshCatalog(true) is present
     // first two calls succeed, third call will fail
+    val editorRole = setOf(AuthRoleConstants.ADMIN)
     every {
-      apiAuthorizationHelper.checkWorkspacesPermissions(any(), any(), any(), any())
-    } returns Unit andThen Unit andThenThrows ForbiddenProblem()
+      roleResolver.resolveRoles(any(), any(), any(), any(), any())
+    } returns editorRole andThen editorRole andThen emptySet<String>()
 
     val path = "/api/v1/web_backend/connections/get"
 
@@ -156,14 +147,6 @@ internal class WebBackendApiControllerTest {
   }
 
   @Test
-  fun testWebBackendListGeographies() {
-    every { webBackendGeographiesHandler.listGeographies(any()) } returns WebBackendGeographiesListResult()
-
-    val path = "/api/v1/web_backend/geographies/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-  }
-
-  @Test
   fun testWebBackendUpdateConnection() {
     every { webBackendConnectionsHandler.webBackendUpdateConnection(any()) } returns WebBackendConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
@@ -176,6 +159,9 @@ internal class WebBackendApiControllerTest {
   @Test
   fun `test config`() {
     val path = "/api/v1/web_backend/config"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.GET<WebappConfigResponse>(path)))
+    val response = client.toBlocking().exchange(HttpRequest.GET<Any>(path), WebappConfigResponse::class.java)
+    assertStatus(HttpStatus.OK, response.status)
+    // verify casing of edition is lowercase
+    assertEquals("community", response.body.get().edition)
   }
 }

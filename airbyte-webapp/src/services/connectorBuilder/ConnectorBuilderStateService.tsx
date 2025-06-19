@@ -1,38 +1,24 @@
 import { UseMutateAsyncFunction, UseQueryResult } from "@tanstack/react-query";
-import { dump } from "js-yaml";
+import { load } from "js-yaml";
 import isEqual from "lodash/isEqual";
-import merge from "lodash/merge";
 import toPath from "lodash/toPath";
 import { editor, Position } from "monaco-editor";
 import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext, UseFormReturn } from "react-hook-form";
 import { useIntl } from "react-intl";
-import { useParams } from "react-router-dom";
-import { useDebounce } from "react-use";
+import { useDebounce, useUpdateEffect } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
-import {
-  BuilderState,
-  BuilderStream,
-  convertToManifest,
-  DEFAULT_BUILDER_FORM_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES,
-  DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-  GeneratedBuilderStream,
-  GeneratedDeclarativeStream,
-  isStreamDynamicStream,
-  StreamId,
-} from "components/connectorBuilder/types";
+import { BuilderState, GeneratedDeclarativeStream, isStreamDynamicStream } from "components/connectorBuilder/types";
 import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
+import { useBuilderErrors } from "components/connectorBuilder/useBuilderErrors";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
-import { useUpdateLockedInputs } from "components/connectorBuilder/useLockedInputs";
-import { getStreamHash, useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
+import { useStreamName } from "components/connectorBuilder/useStreamNames";
+import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
-import { formatJson, streamNameOrDefault } from "components/connectorBuilder/utils";
-import { useNoUiValueModal } from "components/connectorBuilder/YamlEditor/NoUiValueModal";
+import { convertJsonToYaml, formatJson } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -40,42 +26,43 @@ import {
   BuilderProjectPublishBody,
   BuilderProjectWithManifest,
   convertProjectDetailsReadToBuilderProject,
-  HttpError,
   NewVersionBody,
   StreamReadTransformedSlices,
-  useBuilderProject,
   useBuilderProjectReadStream,
-  useBuilderResolvedManifest,
   useBuilderProjectFullResolveManifest,
-  useBuilderResolvedManifestSuspense,
   useCurrentWorkspace,
   usePublishBuilderProject,
   useReleaseNewBuilderProjectVersion,
   useUpdateBuilderProject,
   useIsForeignWorkspace,
   useCancelBuilderProjectStreamRead,
+  HttpError,
 } from "core/api";
 import {
   ConnectorBuilderProjectFullResolveResponse,
   ConnectorBuilderProjectTestingValues,
   ConnectorBuilderProjectTestingValuesUpdate,
+  KnownExceptionInfo,
   SourceDefinitionIdBody,
 } from "core/api/types/AirbyteClient";
-import { KnownExceptionInfo, StreamRead } from "core/api/types/ConnectorBuilderClient";
+import { StreamRead } from "core/api/types/ConnectorBuilderClient";
 import {
   ConnectorManifest,
   DeclarativeComponentSchema,
   DeclarativeStreamType,
   AsyncRetrieverType,
   DeclarativeComponentSchemaStreamsItem,
+  DeclarativeStream,
+  InlineSchemaLoaderType,
+  InlineSchemaLoader,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Blocker, useBlocker } from "core/services/navigation";
 import { removeEmptyProperties } from "core/utils/form";
 import { useIntent } from "core/utils/rbac";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
-import { useExperiment } from "hooks/services/Experiment";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { useConnectorBuilderLocalStorage } from "./ConnectorBuilderLocalStorageService";
@@ -98,43 +85,31 @@ export type TestingValuesUpdate = UseMutateAsyncFunction<
 >;
 
 interface FormStateContext {
-  jsonManifest: DeclarativeComponentSchema;
   customComponentsCode: string | undefined;
   yamlEditorIsMounted: boolean;
   yamlIsValid: boolean;
+  yamlIsDirty: boolean;
   savingState: SavingState;
-  permission: ConnectorBuilderPermission;
   blockedOnInvalidState: boolean;
   projectId: string;
   currentProject: BuilderProject;
   previousManifestDraft:
     | { manifest: DeclarativeComponentSchema; componentsFileContent: string | undefined }
     | undefined;
-  displayedVersion: number | undefined;
-  formValuesValid: boolean;
-  formValuesDirty: boolean;
-  resolvedManifest: ConnectorManifest;
-  resolveErrorMessage: string | undefined;
-  resolveError: HttpError<KnownExceptionInfo> | null;
-  isResolving: boolean;
-  streamNames: string[];
-  dynamicStreamNames: string[];
-  streamIdToStreamRepresentation: (streamId: StreamId) => { stream_name: string } | { dynamic_stream_name: string };
+  displayedVersion: number | "draft";
   undoRedo: UndoRedo;
   setDisplayedVersion: (
-    value: number | undefined,
+    value: number | "draft",
     manifest: DeclarativeComponentSchema,
     customComponentsCode: string | undefined
   ) => void;
-  updateJsonManifest: (jsonValue: ConnectorManifest) => void;
   setYamlIsValid: (value: boolean) => void;
+  setYamlIsDirty: (value: boolean) => void;
   setYamlEditorIsMounted: (value: boolean) => void;
   triggerUpdate: () => void;
   publishProject: (options: BuilderProjectPublishBody) => Promise<SourceDefinitionIdBody>;
   releaseNewVersion: (options: NewVersionBody) => Promise<void>;
   toggleUI: (newMode: BuilderState["mode"]) => Promise<void>;
-  setFormValuesValid: (value: boolean) => void;
-  setFormValuesDirty: (value: boolean) => void;
   updateYamlCdkVersion: (currentManifest: ConnectorManifest) => ConnectorManifest;
   assistEnabled: boolean;
   assistSessionId: string;
@@ -187,8 +162,6 @@ interface FormManagementStateContext {
   setTestReadSettingsOpen: (open: boolean) => void;
   handleScrollToField: (ref: React.RefObject<HTMLDivElement>, path: string) => void;
   setScrollToField: (field: string | undefined) => void;
-  stateKey: number;
-  setStateKey: React.Dispatch<React.SetStateAction<number>>;
   newUserInputContext: NewUserInputContext | undefined;
   setNewUserInputContext: (context: NewUserInputContext | undefined) => void;
 }
@@ -204,7 +177,7 @@ export const ConnectorBuilderFormManagementStateContext = React.createContext<Fo
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const ConnectorBuilderMainRHFContext = React.createContext<UseFormReturn<any, unknown> | null>(null);
 
-export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+export const useConnectorBuilderPermission = () => {
   const restrictAdminInForeignWorkspace = useFeature(FeatureItem.RestrictAdminInForeignWorkspace);
   const { workspaceId } = useCurrentWorkspace();
   const canUpdateConnector = useIntent("UpdateCustomConnector", { workspaceId });
@@ -214,6 +187,11 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   if (canUpdateConnector) {
     permission = restrictAdminInForeignWorkspace && isForeignWorkspace ? "adminReadOnly" : "write";
   }
+  return permission;
+};
+
+export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const permission = useConnectorBuilderPermission();
 
   return (
     <InternalConnectorBuilderFormStateProvider permission={permission}>
@@ -222,55 +200,18 @@ export const ConnectorBuilderFormStateProvider: React.FC<React.PropsWithChildren
   );
 };
 
-const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
-  "version",
-  "type",
-  "description",
-  "check",
-  "definitions",
-  "streams",
-  "spec",
-  "metadata",
-  "schemas",
-];
-export function convertJsonToYaml(json: ConnectorManifest): string {
-  const yamlString = dump(json, {
-    noRefs: true,
-    quotingType: '"',
-    sortKeys: (a: keyof ConnectorManifest, b: keyof ConnectorManifest) => {
-      const orderA = MANIFEST_KEY_ORDER.indexOf(a);
-      const orderB = MANIFEST_KEY_ORDER.indexOf(b);
-      if (orderA === -1 && orderB === -1) {
-        return 0;
-      }
-      if (orderA === -1) {
-        return 1;
-      }
-      if (orderB === -1) {
-        return -1;
-      }
-      return orderA - orderB;
-    },
-  });
-
-  // add newlines between root-level fields
-  return yamlString.replace(/^\S+.*/gm, (match, offset) => {
-    return offset > 0 ? `\n${match}` : match;
-  });
-}
-
 export const InternalConnectorBuilderFormStateProvider: React.FC<
   React.PropsWithChildren<{ permission: ConnectorBuilderPermission }>
 > = ({ children, permission }) => {
-  const { formatMessage } = useIntl();
-  const { projectId, builderProject, updateProject, updateError } = useInitializedBuilderProject();
+  const { projectId, builderProject, isResolving, resolveError, resolveErrorMessage, resetResolveState } =
+    useConnectorBuilderResolve();
+  const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
 
   const currentProject: BuilderProject = useMemo(
     () => convertProjectDetailsReadToBuilderProject(builderProject.builderProject),
     [builderProject.builderProject]
   );
 
-  const { setStateKey } = useConnectorBuilderFormManagementState();
   const { setStoredMode, isAssistProjectEnabled, setAssistProjectEnabled, getAssistProjectSessionId } =
     useConnectorBuilderLocalStorage();
 
@@ -286,265 +227,109 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
 
-  const [displayedVersion, setDisplayedVersion] = useState<number | undefined>(
-    builderProject.declarativeManifest?.version
+  const [displayedVersion, setDisplayedVersion] = useState<number | "draft">(
+    builderProject.declarativeManifest?.version ?? "draft"
   );
   const [previousManifestDraft, setPreviousManifestDraft] = useState<
     FormStateContext["previousManifestDraft"] | undefined
   >(undefined);
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
-  const [jsonManifest, setJsonManifest] = useState<ConnectorManifest>(
-    (builderProject.declarativeManifest?.manifest as DeclarativeComponentSchema) ??
-      (isSchemaFormEnabled ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM : DEFAULT_JSON_MANIFEST_VALUES)
-  );
+
   const [yamlIsValid, setYamlIsValid] = useState(true);
+  const [yamlIsDirty, setYamlIsDirty] = useState(false);
   const [yamlEditorIsMounted, setYamlEditorIsMounted] = useState(true);
-  const [formValuesValid, setFormValuesValid] = useState(true);
-  const [formValuesDirty, setFormValuesDirty] = useState(false);
 
-  const workspaceId = useCurrentWorkspaceId();
-
-  const { setValue, getValues } = useFormContext();
+  const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
-  const view = useBuilderWatch("view");
   const name = useBuilderWatch("name");
+  const yaml = useBuilderWatch("yaml");
+  const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const customComponentsCode = useBuilderWatch("customComponentsCode");
+  const { hasErrors } = useBuilderErrors();
 
-  const {
-    data: resolveData,
-    isError: isResolveError,
-    error: resolveError,
-    isFetching: isResolving,
-  } = useBuilderResolvedManifest(
-    {
-      manifest: jsonManifest,
-      workspace_id: workspaceId,
-      project_id: projectId,
-      form_generated_manifest: mode === "ui",
-    },
-    // In UI mode, only call resolve if the form is valid, since an invalid form is expected to not resolve
-    mode === "yaml" || (mode === "ui" && !isSchemaFormEnabled && formValuesValid)
-  );
-
-  const unknownErrorMessage = formatMessage({ id: "connectorBuilder.unknownError" });
-  const resolveErrorMessage = isResolveError
-    ? resolveError instanceof HttpError
-      ? resolveError.response?.message || unknownErrorMessage
-      : unknownErrorMessage
-    : undefined;
-
-  const resolvedManifest =
-    isSchemaFormEnabled && mode === "ui"
-      ? jsonManifest
-      : (structuredClone(resolveData?.manifest ?? DEFAULT_JSON_MANIFEST_VALUES) as ConnectorManifest);
-
-  resolvedManifest.streams = resolvedManifest.streams ?? [];
-
-  let dynamicStreamNames = useMemo(
-    () => resolvedManifest.dynamic_streams?.map((dynamic_stream) => dynamic_stream.name ?? "") ?? [],
-    [resolvedManifest]
-  );
-
-  const areDynamicStreamsEnabled = useExperiment("connectorBuilder.dynamicStreams");
-  if (!areDynamicStreamsEnabled) {
-    dynamicStreamNames = [];
-  }
-
-  const streamNames = useMemo(
-    () => resolvedManifest.streams?.map((stream) => stream?.name ?? "") ?? [],
-    [resolvedManifest]
-  );
-
-  const streamIdToStreamRepresentation = useCallback(
-    (streamId: StreamId) =>
-      streamId.type === "stream"
-        ? { stream_name: streamNames[streamId.index] }
-        : { dynamic_stream_name: dynamicStreamNames[streamId.index] },
-    [streamNames, dynamicStreamNames]
-  );
-
-  useEffect(() => {
-    if (name !== currentProject.name) {
-      setPreviousManifestDraft(undefined);
-      setDisplayedVersion(undefined);
-    }
-  }, [currentProject.name, name]);
-
-  useEffect(() => {
-    setPreviousManifestDraft(undefined);
-    setDisplayedVersion(undefined);
-  }, [customComponentsCode]);
-
-  // use ref so that updateJsonManifest is not recreated on every change to jsonManifest
-  const jsonManifestRef = useRef(jsonManifest);
-  jsonManifestRef.current = jsonManifest;
-  const updateJsonManifest = useCallback((newManifest: ConnectorManifest) => {
-    // ensures that undefined values don't cause an unnecessary save
-    const cleanedJsonManifest = removeEmptyProperties(newManifest);
-    if (!isEqual(cleanedJsonManifest, jsonManifestRef.current)) {
-      setJsonManifest(cleanedJsonManifest);
-      setPreviousManifestDraft(undefined);
-      setDisplayedVersion(undefined);
-    }
-  }, []);
-
-  useEffect(() => {
+  useUpdateEffect(() => {
     setStoredMode(projectId, mode);
-  }, [mode, projectId, setStoredMode]);
-
-  const formValues = useBuilderWatch("formValues");
-  const openNoUiValueModal = useNoUiValueModal();
+  }, [mode]);
 
   const toggleUI = useCallback(
     async (newMode: BuilderState["mode"]) => {
       if (newMode === "yaml") {
-        setValue("yaml", convertJsonToYaml(jsonManifest));
+        setValue("yaml", convertJsonToYaml(manifest));
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
-        const confirmDiscard = (errorMessage: string) => {
-          if (
-            isEqual(formValues, DEFAULT_BUILDER_FORM_VALUES) &&
-            (!jsonManifest.streams || jsonManifest.streams.length > 0)
-          ) {
-            openNoUiValueModal(errorMessage);
-          } else {
-            openConfirmationModal({
-              text: "connectorBuilder.toggleModal.text.uiValueAvailable",
-              textValues: { error: errorMessage },
-              title: "connectorBuilder.toggleModal.title",
-              submitButtonText: "connectorBuilder.toggleModal.submitButton",
-              onSubmit: () => {
-                setValue("mode", "ui");
-                closeConfirmationModal();
-                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
-                  actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
-                });
-              },
-            });
-          }
-        };
-        try {
-          if (isEqual(jsonManifest, removeEmptyProperties(DEFAULT_JSON_MANIFEST_VALUES))) {
-            setValue("mode", "ui");
-            return;
-          }
-          if (isResolveError) {
-            confirmDiscard(resolveErrorMessage ?? "");
-            return;
-          }
-          if (isSchemaFormEnabled) {
-            setValue("manifest", resolvedManifest);
-            setValue("mode", "ui");
-            return;
-          }
-          const convertedFormValues = convertToBuilderFormValuesSync(resolvedManifest);
-          const convertedManifest = removeEmptyProperties(convertToManifest(convertedFormValues));
-          // set jsonManifest first so that a save isn't triggered
-          setJsonManifest(convertedManifest);
-          setPersistedState({
-            name: currentProject.name,
-            manifest: convertedManifest,
-            componentsFileContent: customComponentsCode,
+        if (resolveError) {
+          openConfirmationModal({
+            text: "connectorBuilder.toggleModal.text.uiValueAvailable",
+            textValues: { error: resolveErrorMessage ?? "" },
+            title: "connectorBuilder.toggleModal.title",
+            submitButtonText: "connectorBuilder.toggleModal.submitButton",
+            onSubmit: () => {
+              setValue("mode", "ui");
+              resetResolveState();
+              closeConfirmationModal();
+              analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DISCARD_YAML_CHANGES, {
+                actionDescription: "YAML changes were discarded due to failure when converting from YAML to UI",
+              });
+            },
           });
-          setValue("formValues", convertedFormValues, { shouldValidate: true });
-          if (view.type === "generated_stream") {
-            setValue("view", {
-              type: "dynamic_stream",
-              index: dynamicStreamNames.findIndex((name) => name === view.dynamicStreamName),
-            });
-          }
-          setValue("mode", "ui");
-        } catch (e) {
-          confirmDiscard(e.message);
-          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.YAML_TO_UI_CONVERSION_FAILURE, {
-            actionDescription: "Failure occured when converting from YAML to UI",
-            error_message: e.message,
-          });
+          return;
         }
+        setValue("mode", "ui");
       }
     },
     [
       setValue,
-      jsonManifest,
-      formValues,
-      openNoUiValueModal,
+      manifest,
+      resolveError,
       openConfirmationModal,
+      resolveErrorMessage,
+      resetResolveState,
       closeConfirmationModal,
       analyticsService,
-      isResolveError,
-      isSchemaFormEnabled,
-      resolvedManifest,
-      currentProject.name,
-      customComponentsCode,
-      view,
-      resolveErrorMessage,
-      dynamicStreamNames,
     ]
   );
 
   const updateYamlCdkVersion = useCallback(
     (currentManifest: ConnectorManifest) => {
       if (mode === "yaml") {
-        const newManifest = { ...currentManifest, version: CDK_VERSION };
+        const newManifest = { ...(load(yaml) as ConnectorManifest), version: CDK_VERSION };
         setValue("yaml", convertJsonToYaml(newManifest));
         return newManifest;
       }
       return currentManifest;
     },
-    [mode, setValue]
+    [mode, setValue, yaml]
   );
 
   const [persistedState, setPersistedState] = useState<BuilderProjectWithManifest>(() => ({
-    manifest: jsonManifest,
+    manifest,
     name: builderProject.builderProject.name,
     componentsFileContent: builderProject.builderProject.componentsFileContent,
   }));
 
   const setToVersion = useCallback(
-    (version: number | undefined, manifest: DeclarativeComponentSchema, componentsFileContent: string | undefined) => {
-      const updateManifestState = (manifestToProcess: DeclarativeComponentSchema) => {
-        const cleanedManifest = removeEmptyProperties(manifestToProcess);
-        if (version === undefined) {
-          // set persisted state to the current state so that the draft is not saved when switching back to the staged draft
-          setPersistedState({ name: currentProject.name, manifest: cleanedManifest, componentsFileContent });
-        }
-        // set json manifest first so that a save isn't triggered
-        setJsonManifest(cleanedManifest);
-        setValue("yaml", convertJsonToYaml(cleanedManifest));
-        setValue("customComponentsCode", componentsFileContent || undefined);
-      };
-
-      const view = getValues("view");
-      if (view.type === "stream" && manifest.streams && manifest.streams.length <= view.index) {
-        // switch back to global view if the selected stream does not exist anymore
-        setValue("view", { type: "global" });
-      }
-
-      if (displayedVersion === undefined && version !== undefined) {
-        setPreviousManifestDraft({ manifest: resolvedManifest, componentsFileContent: customComponentsCode });
-      } else if (version === undefined) {
+    (version: number | "draft", newManifest: DeclarativeComponentSchema, componentsFileContent: string | undefined) => {
+      setPersistedState({ name, manifest: newManifest, componentsFileContent });
+      if (displayedVersion === "draft" && version !== "draft") {
+        setPreviousManifestDraft({ manifest, componentsFileContent: customComponentsCode });
+      } else if (version === "draft") {
         setPreviousManifestDraft(undefined);
       }
-
-      const mode = getValues("mode");
-      if (mode === "ui") {
-        try {
-          const formValues = convertToBuilderFormValuesSync(manifest);
-          updateManifestState(convertToManifest(formValues));
-          setValue("formValues", formValues);
-        } catch (e) {
-          updateManifestState(manifest);
-          setValue("mode", "yaml");
-        }
-      } else {
-        updateManifestState(manifest);
-      }
-
+      setValue("generatedStreams", {});
+      setValue("manifest", newManifest);
+      setValue("yaml", convertJsonToYaml(newManifest));
+      setValue("customComponentsCode", componentsFileContent || undefined);
+      setValue(
+        "view",
+        newManifest.streams && newManifest.streams.length > 0
+          ? { type: "stream", index: 0 }
+          : newManifest.dynamic_streams && newManifest.dynamic_streams.length > 0
+          ? { type: "dynamic_stream", index: 0 }
+          : { type: "global" }
+      );
       setDisplayedVersion(version);
-      setStateKey((key) => key + 1);
     },
-    [currentProject.name, displayedVersion, getValues, resolvedManifest, setStateKey, setValue, customComponentsCode]
+    [name, displayedVersion, setValue, manifest, customComponentsCode]
   );
 
   const { mutateAsync: sendPublishRequest } = usePublishBuilderProject();
@@ -553,122 +338,106 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(jsonManifest);
+      const updatedManifest = updateYamlCdkVersion(manifest);
       const result = await sendPublishRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(1);
       return result;
     },
-    [jsonManifest, sendPublishRequest, updateYamlCdkVersion]
+    [manifest, sendPublishRequest, updateYamlCdkVersion]
   );
 
   const releaseNewVersion = useCallback(
     async (options: NewVersionBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(jsonManifest);
+      const updatedManifest = updateYamlCdkVersion(manifest);
       await sendNewVersionRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(options.version);
     },
-    [jsonManifest, sendNewVersionRequest, updateYamlCdkVersion]
+    [manifest, sendNewVersionRequest, updateYamlCdkVersion]
   );
 
-  const formAndResolveValid = useMemo(() => formValuesValid && resolveError === null, [formValuesValid, resolveError]);
-
   const savingState = getSavingState(
-    jsonManifest,
+    manifest,
     yamlIsValid,
-    formAndResolveValid,
+    hasErrors(),
     mode,
     name,
     persistedState,
-    displayedVersion,
     updateError,
     permission,
+    resolveError,
+    isResolving,
     customComponentsCode
   );
 
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const triggerUpdate = useCallback(async () => {
-    if (permission !== "write") {
-      // do not save the project if the user is not a member of the workspace to allow testing with connectors without changing them
+    // don't update if the saving state indicates it can't be saved
+    if (savingState !== "loading") {
       return;
     }
-    if (!name) {
-      // do not save the project as long as the name is not set
-      return;
-    }
-    // do not save invalid ui-based manifest (e.g. no streams), but always save yaml-based manifest
-    if (modeRef.current === "ui" && !formAndResolveValid) {
-      return;
-    }
-    const newProject: BuilderProjectWithManifest = {
+    const resolvedProject: BuilderProjectWithManifest = {
       name,
-      manifest: jsonManifest,
-      yamlManifest: convertJsonToYaml(jsonManifest),
+      manifest,
+      yamlManifest: convertJsonToYaml(manifest),
       componentsFileContent: customComponentsCode,
     };
-    await updateProject(newProject);
-    setPersistedState(newProject);
-  }, [permission, name, formAndResolveValid, jsonManifest, updateProject, customComponentsCode]);
+    await updateProject(
+      mode === "yaml"
+        ? {
+            name,
+            manifest: load(yaml) as ConnectorManifest,
+            yamlManifest: yaml,
+            componentsFileContent: customComponentsCode,
+          }
+        : resolvedProject
+    );
+    setPersistedState(resolvedProject);
+  }, [savingState, mode, name, yaml, customComponentsCode, manifest, updateProject]);
 
   useDebounce(
     () => {
-      if (displayedVersion) {
-        // do not save already released versions as draft
-        return;
-      }
       if (
-        persistedState.manifest === jsonManifest &&
+        isEqual(persistedState.manifest, manifest) &&
         persistedState.name === name &&
         persistedState.componentsFileContent === customComponentsCode
       ) {
         // first run of the hook, no need to update
         return;
       }
+      setDisplayedVersion("draft");
+      setPreviousManifestDraft(undefined);
       triggerUpdate();
     },
     2000,
-    [triggerUpdate, name, jsonManifest]
+    [triggerUpdate, name, manifest]
   );
 
   const { pendingBlocker, blockedOnInvalidState } = useBlockOnSavingState(savingState);
 
-  useUpdateLockedInputs();
-
   const undoRedo = useUndoRedo();
 
   const ctx: FormStateContext = {
-    jsonManifest,
     customComponentsCode,
     yamlEditorIsMounted,
     yamlIsValid,
+    yamlIsDirty,
     savingState,
-    permission,
     blockedOnInvalidState,
     projectId,
     currentProject,
     previousManifestDraft,
     displayedVersion,
-    formValuesValid,
-    formValuesDirty,
-    resolvedManifest,
-    resolveError,
-    resolveErrorMessage,
-    isResolving,
-    streamNames,
-    dynamicStreamNames,
-    streamIdToStreamRepresentation,
     undoRedo,
     setDisplayedVersion: setToVersion,
-    updateJsonManifest,
     setYamlIsValid,
+    setYamlIsDirty,
     setYamlEditorIsMounted,
     triggerUpdate,
     publishProject,
     releaseNewVersion,
     toggleUI,
-    setFormValuesValid,
-    setFormValuesDirty,
     updateYamlCdkVersion,
     setAssistEnabled,
     assistEnabled,
@@ -682,83 +451,6 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     </ConnectorBuilderFormStateContext.Provider>
   );
 };
-
-export function useInitializedBuilderProject() {
-  const { projectId } = useParams<{
-    projectId: string;
-  }>();
-  if (!projectId) {
-    throw new Error("Could not find project id in path");
-  }
-  const builderProject = useBuilderProject(projectId);
-  const { mutateAsync: updateProject, error: updateError } = useUpdateBuilderProject(projectId);
-  const isSchemaFormEnabled = useExperiment("connectorBuilder.schemaForm");
-  const persistedManifest =
-    (builderProject.declarativeManifest?.manifest as ConnectorManifest) ??
-    (isSchemaFormEnabled ? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM : DEFAULT_JSON_MANIFEST_VALUES);
-  const resolvedManifest = useBuilderResolvedManifestSuspense(builderProject.declarativeManifest?.manifest, projectId);
-  const [initialFormValues, failedInitialFormValueConversion, initialYaml] = useMemo(() => {
-    if (!resolvedManifest) {
-      // could not resolve manifest, use default form values
-      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(persistedManifest)];
-    }
-    setInitialStreamHashes(persistedManifest, resolvedManifest);
-    try {
-      return [convertToBuilderFormValuesSync(resolvedManifest), false, convertJsonToYaml(persistedManifest)];
-    } catch (e) {
-      // could not convert to form values, use default form values
-      return [DEFAULT_BUILDER_FORM_VALUES, true, convertJsonToYaml(persistedManifest)];
-    }
-  }, [persistedManifest, resolvedManifest]);
-
-  return {
-    projectId,
-    builderProject,
-    updateProject,
-    updateError,
-    initialFormValues,
-    failedInitialFormValueConversion,
-    initialYaml,
-    resolvedManifest,
-  };
-}
-
-/**
- * Sets the hash of the resolved streams in the testedStreams metadata on both the persisted and resolved manifest,
- * for any streams which aren't already in testedStreams.
- *
- * The reason for this is that connectors built outside of the builder likely have already been tested in their own way,
- * and we don't want to require users who are making changes to those connectors to have to re-test those streams in
- * order to contribute their changes.
- *
- * With this, we will only require testing streams that the user changes.
- */
-function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedManifest: ConnectorManifest) {
-  if (!persistedManifest.streams || !resolvedManifest.streams) {
-    return;
-  }
-  if (persistedManifest.streams.length !== resolvedManifest.streams.length) {
-    // this should never happen, since resolving a manifest should never affect the number of streams
-    throw new Error("Persisted manifest streams length doesn't match resolved streams length");
-  }
-  resolvedManifest.streams.forEach((resolvedStream, i) => {
-    const streamName = streamNameOrDefault(resolvedStream.name, i);
-    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
-    if (persistedManifest.metadata?.testedStreams?.[streamName]) {
-      return;
-    }
-    const streamHash = getStreamHash(resolvedStream);
-    const updatedMetadata = merge({}, persistedManifest.metadata, {
-      testedStreams: {
-        [streamName]: {
-          streamHash,
-        },
-      },
-    });
-    persistedManifest.metadata = updatedMetadata;
-    resolvedManifest.metadata = updatedMetadata;
-  });
-}
 
 function useBlockOnSavingState(savingState: SavingState) {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
@@ -797,15 +489,16 @@ function useBlockOnSavingState(savingState: SavingState) {
 }
 
 function getSavingState(
-  currentJsonManifest: ConnectorManifest,
+  currentManifest: ConnectorManifest,
   yamlIsValid: boolean,
-  formAndResolveValid: boolean,
+  hasFormErrors: boolean,
   mode: BuilderState["mode"],
   name: string | undefined,
   persistedState: { name: string; manifest?: DeclarativeComponentSchema; componentsFileContent?: string },
-  displayedVersion: number | undefined,
   updateError: Error | null,
   permission: ConnectorBuilderPermission,
+  resolveError: HttpError<KnownExceptionInfo> | null,
+  isResolving: boolean,
   currentComponentsFileContent?: string
 ): SavingState {
   if (updateError) {
@@ -814,22 +507,25 @@ function getSavingState(
   if (!name) {
     return "invalid";
   }
-  if (mode === "ui" && !formAndResolveValid) {
+  if (mode === "ui" && hasFormErrors) {
     return "invalid";
   }
-  if (mode === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && (!yamlIsValid || resolveError)) {
     return "invalid";
   }
   if (permission !== "write") {
     return "readonly";
   }
+  if (mode === "yaml" && isResolving) {
+    return "loading";
+  }
 
   const currentStateIsPersistedState =
-    persistedState.manifest === currentJsonManifest &&
+    isEqual(persistedState.manifest, currentManifest) &&
     persistedState.name === name &&
     persistedState.componentsFileContent === currentComponentsFileContent;
 
-  if (currentStateIsPersistedState || displayedVersion !== undefined) {
+  if (currentStateIsPersistedState) {
     return "saved";
   }
 
@@ -838,19 +534,13 @@ function getSavingState(
 
 export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   const workspaceId = useCurrentWorkspaceId();
-  const {
-    projectId,
-    isResolving,
-    resolveError,
-    resolvedManifest,
-    jsonManifest,
-    formValuesDirty,
-    updateYamlCdkVersion,
-  } = useConnectorBuilderFormState();
+  const { updateYamlCdkVersion, yamlIsDirty } = useConnectorBuilderFormState();
+  const { projectId, isResolving, resolveError } = useConnectorBuilderResolve();
   const { setValue } = useFormContext();
+  const manifest = removeEmptyProperties(useBuilderWatch("manifest"), true);
   const mode = useBuilderWatch("mode");
   const view = useBuilderWatch("view");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
 
@@ -867,7 +557,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const streamIsDynamic = isStreamDynamicStream(testStreamId);
   let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
   if (streamIsDynamic) {
-    const dynamicStream = resolvedManifest.dynamic_streams?.[testStreamId.index];
+    const dynamicStream = manifest.dynamic_streams?.[testStreamId.index];
     if (dynamicStream?.components_resolver.type === "HttpComponentsResolver") {
       testStream = {
         type: DeclarativeStreamType.DeclarativeStream,
@@ -878,13 +568,13 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       };
     }
   } else if (testStreamId.type === "generated_stream") {
-    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index].declarativeStream;
+    testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
   } else {
-    testStream = resolvedManifest.streams?.[testStreamId.index];
+    testStream = manifest.streams?.[testStreamId.index];
   }
 
   const filteredManifest = {
-    ...resolvedManifest,
+    ...manifest,
     streams: [testStream],
     dynamic_streams: [],
   };
@@ -929,16 +619,16 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const autoImportSchema = useAutoImportSchema(testStreamId);
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
-  const streamUsesCustomCode = getStreamHasCustomType(streamName);
+  const streamUsesCustomCode = getStreamHasCustomType(testStreamId);
 
   const resolvedManifestInput = useMemo(
     () => ({
-      manifest: jsonManifest,
+      manifest,
       builderProjectId: projectId,
       workspaceId,
       streamLimit,
     }),
-    [jsonManifest, projectId, workspaceId, streamLimit]
+    [manifest, projectId, workspaceId, streamLimit]
   );
 
   const fullResolveManifest = useBuilderProjectFullResolveManifest(resolvedManifestInput);
@@ -950,39 +640,22 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     if (!resolvedManifest.data?.manifest || resolvedManifest.isError) {
       return;
     }
-    const manifestAsBuilderValues = convertToBuilderFormValuesSync(resolvedManifest.data.manifest as ConnectorManifest);
 
-    const originalStreamsByDynamicStreamNameAndName = (
+    const generatedStreamsByDynamicStreamName = (
       (resolvedManifest.data.manifest as ConnectorManifest).streams ?? []
-    ).reduce<Record<string, Record<string, GeneratedDeclarativeStream>>>((acc, stream) => {
-      if (!("dynamic_stream_name" in stream) || stream.name == null) {
+    ).reduce<Record<string, DeclarativeStream[]>>((acc, stream) => {
+      if (!("dynamic_stream_name" in stream)) {
         return acc;
       }
       const dynamicStreamKey = (stream as GeneratedDeclarativeStream).dynamic_stream_name;
       if (acc[dynamicStreamKey] == null) {
-        acc[dynamicStreamKey] = {};
+        acc[dynamicStreamKey] = [];
       }
-      acc[dynamicStreamKey][stream.name] = stream as GeneratedDeclarativeStream;
+      acc[dynamicStreamKey].push(stream);
       return acc;
     }, {});
 
-    const groupedStreams = manifestAsBuilderValues.streams.reduce<Record<string, BuilderStream[]>>((acc, stream) => {
-      if (stream.dynamicStreamName == null) {
-        return acc;
-      }
-
-      const dynamicStreamName = stream.dynamicStreamName;
-      if (!acc[dynamicStreamName]) {
-        acc[dynamicStreamName] = [];
-      }
-
-      (stream as GeneratedBuilderStream).declarativeStream =
-        originalStreamsByDynamicStreamNameAndName[dynamicStreamName][stream.name];
-      acc[dynamicStreamName].push(stream);
-      return acc;
-    }, {});
-
-    setValue("formValues.generatedStreams", groupedStreams);
+    setValue("generatedStreams", generatedStreamsByDynamicStreamName);
 
     registerNotification({
       id: "connectorBuilder.generateStreamsSuccess",
@@ -1017,13 +690,15 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       }
 
       if (mode === "ui" && autoImportSchema && result.inferred_schema) {
-        // additionalProperties is automatically set to true on the schema when saving it to the manifest,
-        // so set it to true on the inferred schema as well to avoid unnecessary diffs
         result.inferred_schema.additionalProperties = true;
+        const schemaLoader: InlineSchemaLoader = {
+          type: "InlineSchemaLoader",
+          schema: result.inferred_schema,
+        };
 
-        // Set the inferred schema in the form values when autoImportSchema is enabled
+        // Set the inferred schema on the manifest when autoImportSchema is enabled
         if (testStreamId.type === "stream") {
-          setValue(`formValues.streams.${testStreamId.index}.schema`, formatJson(result.inferred_schema, true), {
+          setValue(`manifest.streams.${testStreamId.index}.schema_loader`, schemaLoader, {
             shouldValidate: true,
             shouldTouch: true,
             shouldDirty: true,
@@ -1039,28 +714,24 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
           }
         } else if (testStreamId.type === "generated_stream") {
           // write the inferred schema to the generated stream's parent dynamic stream
-          const dynamicStreamIndex = resolvedManifest.dynamic_streams?.findIndex(
+          const dynamicStreamIndex = manifest.dynamic_streams?.findIndex(
             (stream) => stream.name === testStreamId.dynamicStreamName
           );
-          if (dynamicStreamIndex !== undefined) {
-            setValue(
-              `formValues.dynamicStreams.${dynamicStreamIndex}.streamTemplate.schema`,
-              formatJson(result.inferred_schema, true),
-              {
-                shouldValidate: true,
-                shouldTouch: true,
-                shouldDirty: true,
-              }
-            );
+          if (dynamicStreamIndex !== undefined && dynamicStreamIndex >= 0) {
+            setValue(`manifest.dynamic_streams.${dynamicStreamIndex}.stream_template.schema_loader`, schemaLoader, {
+              shouldValidate: true,
+              shouldTouch: true,
+              shouldDirty: true,
+            });
           }
         }
       }
 
       // update the version so that it is clear which CDK version was used to test the connector
-      updateYamlCdkVersion(jsonManifest);
+      updateYamlCdkVersion(manifest);
 
       if (testStreamId.type !== "dynamic_stream") {
-        updateStreamTestResults(result, testStream, testStreamId);
+        updateStreamTestResults(result, testStream);
       }
     }
   );
@@ -1070,7 +741,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const { refetch } = streamRead;
   // trigger a stream read if a stream read is queued and form is in a ready state to be tested
   useEffect(() => {
-    if (isResolving || formValuesDirty || testingValuesDirty || !queuedStreamRead) {
+    if (isResolving || testingValuesDirty || yamlIsDirty || !queuedStreamRead) {
       return;
     }
 
@@ -1081,7 +752,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
 
     setQueuedStreamRead(false);
     refetch();
-  }, [isResolving, queuedStreamRead, resolveError, refetch, formValuesDirty, testingValuesDirty]);
+  }, [isResolving, queuedStreamRead, refetch, resolveError, testingValuesDirty, yamlIsDirty]);
 
   const queueStreamRead = useCallback(() => {
     setQueuedStreamRead(true);
@@ -1126,20 +797,29 @@ export function useSchemaWarnings(
   streamNumber: number,
   streamName: string
 ) {
-  const streams = useBuilderWatch("formValues.streams");
-  const schema = streams[streamNumber]?.schema;
+  const stream = useBuilderWatch(`manifest.streams.${streamNumber}`);
+  const schema =
+    stream?.type === DeclarativeStreamType.DeclarativeStream
+      ? !Array.isArray(stream.schema_loader) && stream.schema_loader?.type === InlineSchemaLoaderType.InlineSchemaLoader
+        ? stream.schema_loader.schema
+        : undefined
+      : undefined;
 
-  const formattedDetectedSchema = useMemo(
-    () => streamRead.data?.inferred_schema && formatJson(streamRead.data?.inferred_schema, true),
-    [streamRead.data?.inferred_schema]
-  );
+  const formattedDetectedSchema = useMemo(() => {
+    const inferredSchema = streamRead.data?.inferred_schema;
+    if (!inferredSchema) {
+      return undefined;
+    }
+    inferredSchema.additionalProperties = true;
+    return formatJson(inferredSchema, true);
+  }, [streamRead.data?.inferred_schema]);
 
   const formattedDeclaredSchema = useMemo(() => {
     if (!schema) {
       return undefined;
     }
     try {
-      return formatJson(JSON.parse(schema), true);
+      return formatJson(schema, true);
     } catch {}
     return undefined;
   }, [schema]);
@@ -1190,13 +870,8 @@ export const useConnectorBuilderFormState = () => {
 };
 
 export const useSelectedPageAndSlice = () => {
-  const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
   const testStreamId = useBuilderWatch("testStreamId");
-
-  const selectedStreamName = streamNameOrDefault(
-    testStreamId.type === "dynamic_stream" ? dynamicStreamNames[testStreamId.index] : streamNames[testStreamId.index],
-    testStreamId.index
-  );
+  const selectedStreamName = useStreamName(testStreamId) ?? "";
 
   const [streamToSelectedSlice, setStreamToSelectedSlice] = useState({ [selectedStreamName]: 0 });
   const setSelectedSlice = (sliceIndex: number) => {
@@ -1231,7 +906,6 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
   const [isTestingValuesInputOpen, setTestingValuesInputOpen] = useState(false);
   const [isTestReadSettingsOpen, setTestReadSettingsOpen] = useState(false);
   const [scrollToField, setScrollToField] = useState<string | undefined>(undefined);
-  const [stateKey, setStateKey] = useState(0);
   const [newUserInputContext, setNewUserInputContext] = useState<NewUserInputContext | undefined>(undefined);
 
   const handleScrollToField = useCallback(
@@ -1252,12 +926,10 @@ export const ConnectorBuilderFormManagementStateProvider: React.FC<React.PropsWi
       setTestReadSettingsOpen,
       handleScrollToField,
       setScrollToField,
-      stateKey,
-      setStateKey,
       newUserInputContext,
       setNewUserInputContext,
     }),
-    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, stateKey, newUserInputContext]
+    [isTestingValuesInputOpen, isTestReadSettingsOpen, handleScrollToField, newUserInputContext]
   );
 
   return (

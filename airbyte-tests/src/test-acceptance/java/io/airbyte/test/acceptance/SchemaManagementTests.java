@@ -4,7 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -309,6 +309,7 @@ class SchemaManagementTests {
             existingStreamAndConfig.getConfig().getAliasName(),
             existingStreamAndConfig.getConfig().getSelected(),
             existingStreamAndConfig.getConfig().getSuggested(),
+            existingStreamAndConfig.getConfig().getDestinationObjectName(),
             existingStreamAndConfig.getConfig().getFieldSelectionEnabled(),
             existingStreamAndConfig.getConfig().getIncludeFiles(),
             existingStreamAndConfig.getConfig().getSelectedFields(),
@@ -342,6 +343,7 @@ class SchemaManagementTests {
             "a_new_table",
             true,
             false,
+            null,
             false,
             false,
             List.of(),

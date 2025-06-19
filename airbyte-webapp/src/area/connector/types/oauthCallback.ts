@@ -12,4 +12,8 @@ interface CancelOAuthEvent {
   tabUuid: string;
 }
 
-export type OAuthEvent = CompletedOAuthEvent | TakeoverOAuthEvent | CancelOAuthEvent;
+interface CloseOAuthEvent {
+  type: "close";
+}
+
+export type OAuthEvent = CompletedOAuthEvent | TakeoverOAuthEvent | CancelOAuthEvent | CloseOAuthEvent;

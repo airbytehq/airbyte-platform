@@ -264,7 +264,7 @@ public class SyncWorkflowImpl implements SyncWorkflow {
     if (version == Workflow.DEFAULT_VERSION) {
       return GenerateReplicationActivityInputActivity.toReplicationActivityInput(syncInput, jobRunConfig,
           sourceLauncherConfig, destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput,
-          Map.of(), TimeUnit.HOURS.toSeconds(24), false);
+          Map.of(), TimeUnit.HOURS.toSeconds(24), false, null, null);
     } else {
       return generateReplicationActivityInputActivity.generate(syncInput, jobRunConfig, sourceLauncherConfig,
           destinationLauncherConfig, taskQueue, refreshSchemaOutput, signalInput);

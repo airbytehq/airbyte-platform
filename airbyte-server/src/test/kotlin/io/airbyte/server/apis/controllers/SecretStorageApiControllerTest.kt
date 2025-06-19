@@ -11,6 +11,7 @@ import io.airbyte.api.model.generated.SecretStorageListRequestBody
 import io.airbyte.api.model.generated.SecretStorageRead
 import io.airbyte.api.model.generated.SecretStorageReadList
 import io.airbyte.commons.json.Jsons
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.SecretStorage
 import io.airbyte.domain.models.SecretStorageCreate
@@ -49,6 +50,10 @@ internal class SecretStorageApiControllerTest {
     @Singleton
     @Replaces(SecretStorageService::class)
     fun secretStorageService(): SecretStorageService = mockk()
+
+    @Singleton
+    @Replaces(RoleResolver::class)
+    fun roleResolver(): RoleResolver = mockk(relaxed = true)
   }
 
   @Inject
@@ -63,6 +68,8 @@ internal class SecretStorageApiControllerTest {
 
   @MockBean(CurrentUserService::class)
   fun currentUserService(): CurrentUserService = mockk()
+
+  private val roleResolver = mockk<RoleResolver>()
 
   @Test
   fun testGetSecretStorageById() {

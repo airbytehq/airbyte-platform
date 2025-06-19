@@ -64,6 +64,7 @@ enum class FieldType(
 data class Field(
   val name: String,
   val type: FieldType,
+  val required: Boolean = false,
   // TODO in order to fully support nested configuration, we need to support Array, Object and Union.
   // This is required in order to be able to deprecate `ConfiguredAirbyteStream.stream.jsonSchema`
 )

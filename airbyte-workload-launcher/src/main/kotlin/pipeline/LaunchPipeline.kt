@@ -25,6 +25,7 @@ class LaunchPipeline(
   @Named("claim") private val claim: LaunchStage,
   @Named("check") private val check: LaunchStage,
   @Named("mutex") private val mutex: LaunchStage,
+  @Named("architecture") private val architecture: LaunchStage,
   @Named("launch") private val launch: LaunchStage,
   private val successHandler: SuccessHandler,
   private val failureHandler: FailureHandler,
@@ -53,6 +54,7 @@ class LaunchPipeline(
       .flatMap(loadShed)
       .flatMap(check)
       .flatMap(mutex)
+      .flatMap(architecture)
       .flatMap(launch)
       .onErrorResume { e -> failureHandler.accept(e, io) }
       .doOnNext(successHandler::accept)
@@ -69,6 +71,7 @@ class LaunchPipeline(
       .flatMap(loadShed)
       .flatMap(check)
       .flatMap(mutex)
+      .flatMap(architecture)
       .flatMap(launch)
       .onErrorContinue(failureHandler::accept)
       .doOnNext(successHandler::accept)

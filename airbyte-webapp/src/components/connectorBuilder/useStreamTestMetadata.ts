@@ -3,32 +3,21 @@ import isArray from "lodash/isArray";
 import merge from "lodash/merge";
 import { sha1 } from "object-hash";
 import { useCallback, useContext } from "react";
-import { useFormContext } from "react-hook-form";
+import { UseFormGetValues } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { StreamReadTransformedSlices } from "core/api";
 import { ConnectorBuilderProjectStreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/AirbyteClient";
 import {
   DeclarativeComponentSchemaStreamsItem,
+  DeclarativeStream,
   DeclarativeStreamType,
+  DynamicDeclarativeStream,
   PrimaryKey,
 } from "core/api/types/ConnectorManifest";
-import {
-  ConnectorBuilderMainRHFContext,
-  convertJsonToYaml,
-  useConnectorBuilderFormState,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import {
-  BuilderDynamicStream,
-  BuilderMetadata,
-  GeneratedBuilderStream,
-  GeneratedStreamId,
-  StaticStreamId,
-  StreamId,
-  StreamTestResults,
-} from "./types";
-import { useBuilderWatch } from "./useBuilderWatch";
+import { BuilderState, GeneratedStreamId, StaticStreamId, StreamId, StreamTestResults } from "./types";
 import { formatJson } from "./utils";
 
 type StreamTestMetadataStatus = {
@@ -40,19 +29,12 @@ export interface TestWarning {
   priority: "primary" | "secondary";
 }
 
-function useResolveStreamFromStreamId() {
-  const { resolvedManifest } = useConnectorBuilderFormState();
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
-
+function useResolveStreamFromStreamId(getValues: UseFormGetValues<BuilderState>) {
   return (streamId: StaticStreamId | GeneratedStreamId) => {
     const resolvedStream =
       streamId.type === "generated_stream"
-        ? generatedStreams?.[
-            dynamicStreams?.find((dynamicStream) => dynamicStream.dynamicStreamName === streamId.dynamicStreamName)
-              ?.dynamicStreamName ?? ""
-          ]?.at(streamId.index)?.declarativeStream
-        : resolvedManifest?.streams?.[streamId.index];
+        ? getValues(`generatedStreams.${streamId.dynamicStreamName}.${streamId.index}`)
+        : getValues(`manifest.streams.${streamId.index}`);
 
     return resolvedStream;
   };
@@ -63,61 +45,31 @@ export const getStreamHash = (resolvedStream: DeclarativeComponentSchemaStreamsI
 };
 
 export const useStreamTestMetadata = () => {
-  const { resolvedManifest, jsonManifest, updateJsonManifest } = useConnectorBuilderFormState();
-  const { watch } = useContext(ConnectorBuilderMainRHFContext) || {};
-  if (!watch) {
+  const { watch, setValue, getValues } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!watch || !setValue || !getValues) {
     throw new Error("rhf context not available");
   }
-  const { setValue } = useFormContext();
-  const mode = useBuilderWatch("mode");
-  const dynamicStreams: BuilderDynamicStream[] = watch("formValues.dynamicStreams");
-  const generatedStreams: Record<string, GeneratedBuilderStream[]> = watch("formValues.generatedStreams");
   const { formatMessage } = useIntl();
+
+  const testedStreams = watch("manifest.metadata.testedStreams");
 
   const getStreamNameFromIndex = useCallback(
     (streamIndex: number) => {
-      return resolvedManifest?.streams?.[streamIndex]?.name;
+      return getValues(`manifest.streams.${streamIndex}.name`);
     },
-    [resolvedManifest]
+    [getValues]
   );
 
-  const resolveStreamFromStreamId = useResolveStreamFromStreamId();
+  const resolveStreamFromStreamId = useResolveStreamFromStreamId(getValues);
   const updateStreamTestResults = useCallback(
-    (
-      streamRead: StreamReadTransformedSlices,
-      resolvedTestStream: DeclarativeComponentSchemaStreamsItem,
-      streamId: StaticStreamId | GeneratedStreamId
-    ) => {
+    (streamRead: StreamReadTransformedSlices, resolvedTestStream: DeclarativeComponentSchemaStreamsItem) => {
       const streamTestResults = computeStreamTestResults(streamRead, resolvedTestStream);
 
-      const resolvedStream = resolveStreamFromStreamId(streamId);
-      const streamName = resolvedStream?.name ?? "";
+      const streamName = resolvedTestStream.name ?? "";
 
-      const newManifest = merge({}, jsonManifest, {
-        metadata: { testedStreams: { [streamName]: streamTestResults } },
-      });
-
-      // If in UI mode, the form values are the source of truth defining the connector configuration, so the test results need to be set there.
-      // If in YAML mode, the yaml value is the source of truth defining the connector configuration, so the test results need to be set there.
-      // The underlying jsonManifest that gets saved to the DB and exported gets derived from either of the above depending on which mode is active.
-      if (mode === "ui") {
-        if (streamId.type === "stream") {
-          setValue(`formValues.streams.${streamId.index}.testResults`, streamTestResults);
-        } else {
-          setValue(
-            `formValues.generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.testResults`,
-            streamTestResults
-          );
-        }
-      } else {
-        setValue("yaml", convertJsonToYaml(newManifest));
-      }
-
-      // Update the jsonManifest with the new test results to avoid avoid lag between the setting the form values and the jsonManifest being updated,
-      // which can cause an outdated warning to appear temporarily.
-      updateJsonManifest(newManifest);
+      setValue("manifest.metadata.testedStreams", merge({}, testedStreams, { [streamName]: streamTestResults }));
     },
-    [jsonManifest, mode, setValue, updateJsonManifest, resolveStreamFromStreamId]
+    [setValue, testedStreams]
   );
 
   const getStreamTestMetadataStatus = useCallback(
@@ -126,46 +78,42 @@ export const useStreamTestMetadata = () => {
         return undefined;
       }
 
-      const resolvedStream = resolveStreamFromStreamId(streamId);
+      const streamName: string | undefined =
+        streamId.type === "generated_stream"
+          ? getValues(`generatedStreams.${streamId.dynamicStreamName}.${streamId.index}.name`)
+          : getValues(`manifest.streams.${streamId.index}.name`);
 
-      if (!resolvedStream) {
-        // undefined indicates that the stream has not yet been resolved, so warnings should not be shown
+      if (!streamName) {
         return undefined;
       }
-      const streamName = resolvedStream.name ?? "";
 
-      const metadata = jsonManifest.metadata as BuilderMetadata | undefined;
       if (
-        !metadata ||
-        !metadata.testedStreams ||
-        !metadata.testedStreams[streamName] ||
-        !metadata.testedStreams[streamName].streamHash ||
-        metadata.testedStreams[streamName].streamHash === null
+        !testedStreams ||
+        !testedStreams[streamName] ||
+        !testedStreams[streamName].streamHash ||
+        testedStreams[streamName].streamHash === null
       ) {
         // null indicates that there is no test metadata for the stream, so it is untested
         return null;
       }
 
-      const streamHash = getStreamHash(resolvedStream);
-
-      const { streamHash: metadataStreamHash, ...testStatuses } = metadata.testedStreams[streamName];
-
-      return {
-        isStale: metadataStreamHash !== streamHash,
-        ...testStatuses,
-      };
+      return testedStreams[streamName];
     },
-    [jsonManifest, resolveStreamFromStreamId]
+    [getValues, testedStreams]
   );
 
   const getStreamTestWarnings = useCallback(
     (streamId: StreamId, ignoreStale: boolean = false): TestWarning[] => {
       if (streamId.type === "dynamic_stream") {
-        const dynamicStream = dynamicStreams?.find((_, index) => index === streamId.index);
-        const thisGeneratedStreams = generatedStreams?.[dynamicStream?.dynamicStreamName ?? ""] ?? [];
+        const dynamicStream: DynamicDeclarativeStream | undefined = getValues(
+          `manifest.dynamic_streams.${streamId.index}`
+        );
+        const thisGeneratedStreams: DeclarativeStream[] | undefined | object = getValues(
+          `generatedStreams.${dynamicStream?.name ?? ""}`
+        );
 
         // if the dynamic stream has no generated streams
-        if (thisGeneratedStreams.length === 0) {
+        if (!thisGeneratedStreams || !Array.isArray(thisGeneratedStreams) || thisGeneratedStreams.length === 0) {
           return [
             {
               message: formatMessage({ id: "connectorBuilder.warnings.ungeneratedStreams" }),
@@ -175,7 +123,16 @@ export const useStreamTestMetadata = () => {
         }
 
         // if all generated streams are untested
-        if (thisGeneratedStreams.every((stream) => stream.testResults == null)) {
+        if (
+          thisGeneratedStreams.every(
+            (_, index) =>
+              getStreamTestMetadataStatus({
+                type: "generated_stream",
+                dynamicStreamName: dynamicStream?.name ?? "",
+                index,
+              }) === null
+          )
+        ) {
           return [
             {
               message: formatMessage({ id: "connectorBuilder.warnings.untestedDynamicStream" }),
@@ -187,7 +144,7 @@ export const useStreamTestMetadata = () => {
         const generatedStreamIds: GeneratedStreamId[] = thisGeneratedStreams.map((_stream, index) => {
           return {
             type: "generated_stream",
-            dynamicStreamName: dynamicStream?.dynamicStreamName ?? "",
+            dynamicStreamName: dynamicStream?.name ?? "",
             index,
           };
         });
@@ -273,15 +230,24 @@ export const useStreamTestMetadata = () => {
 
       return warnings;
     },
-    [formatMessage, getStreamTestMetadataStatus, dynamicStreams, generatedStreams]
+    [formatMessage, getStreamTestMetadataStatus, getValues]
   );
 
   const getStreamHasCustomType = useCallback(
-    (streamName: string): boolean => {
-      const currentStream = resolvedManifest.streams?.find((stream) => stream?.name === streamName);
-      return hasCustomType(currentStream);
+    (streamId: StreamId): boolean => {
+      if (streamId.type === "dynamic_stream") {
+        const dynamicStream: DynamicDeclarativeStream | undefined = getValues(
+          `manifest.dynamic_streams.${streamId.index}`
+        );
+        if (!dynamicStream) {
+          return false;
+        }
+        return hasCustomType(dynamicStream);
+      }
+      const stream = resolveStreamFromStreamId(streamId);
+      return hasCustomType(stream);
     },
-    [resolvedManifest]
+    [resolveStreamFromStreamId, getValues]
   );
 
   return {
@@ -291,6 +257,33 @@ export const useStreamTestMetadata = () => {
     getStreamTestWarnings,
     getStreamHasCustomType,
   };
+};
+
+export const useSetStreamToStale = () => {
+  const { setValue, getValues } = useContext(ConnectorBuilderMainRHFContext) || {};
+  if (!setValue || !getValues) {
+    throw new Error("rhf context not available");
+  }
+  return useCallback(
+    (streamId: StreamId) => {
+      if (streamId.type === "dynamic_stream" || streamId.type === "generated_stream") {
+        return;
+      }
+
+      const streamName = getValues(`manifest.streams.${streamId.index}.name`);
+      if (!streamName) {
+        return;
+      }
+
+      const testMetadata = getValues(`manifest.metadata.testedStreams.${streamName}`);
+      if (!testMetadata) {
+        return;
+      }
+
+      setValue(`manifest.metadata.testedStreams.${streamName}.isStale`, true);
+    },
+    [getValues, setValue]
+  );
 };
 
 // Explicitly check if status is false in the rest of the test statuses, as
@@ -310,6 +303,7 @@ const computeStreamTestResults = (
   if (streamRead.slices.length === 0 || streamRead.slices.every((slice) => slice.pages.length === 0)) {
     return {
       streamHash,
+      isStale: false,
       hasResponse: false,
       responsesAreSuccessful: false,
       hasRecords: false,
@@ -320,6 +314,7 @@ const computeStreamTestResults = (
 
   return {
     streamHash,
+    isStale: false,
     hasResponse: true,
     responsesAreSuccessful: streamRead.slices.every((slice) =>
       slice.pages.every((page) => !page.response || (page.response.status >= 200 && page.response.status < 300))

@@ -13,7 +13,7 @@ import java.util.UUID
 class RegionResponseMapperTest {
   @Test
   fun `Should map a DataplaneGroup to a RegionResponse`() {
-    val now = Instant.now().epochSecond
+    val now = 1748886193L
     val dataplaneGroup =
       DataplaneGroup().apply {
         id = UUID.randomUUID()
@@ -31,8 +31,7 @@ class RegionResponseMapperTest {
     assertEquals(dataplaneGroup.organizationId, mapped.organizationId)
     assertEquals(dataplaneGroup.enabled, mapped.enabled)
 
-    val expectedInstant = Instant.ofEpochSecond(now)
-    assertEquals(expectedInstant, Instant.parse(mapped.createdAt))
-    assertEquals(expectedInstant, Instant.parse(mapped.updatedAt))
+    assertEquals(now, Instant.parse(mapped.createdAt).epochSecond)
+    assertEquals(now, Instant.parse(mapped.updatedAt).epochSecond)
   }
 }

@@ -35,6 +35,7 @@ dependencies {
   implementation(libs.s3)
   implementation(libs.sts)
   implementation(libs.kotlin.coroutines)
+  implementation(libs.kotlin.coroutines.sl4j)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -74,7 +75,6 @@ dependencies {
   testImplementation(libs.json.smart)
   testImplementation(libs.bundles.mockito.inline)
   testImplementation(libs.mockk)
-  testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
   testImplementation(libs.postgresql)
   testImplementation(libs.platform.testcontainers.postgresql)
   testImplementation(libs.docker.java)

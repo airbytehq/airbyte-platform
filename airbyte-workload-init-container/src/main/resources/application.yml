@@ -17,6 +17,7 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
 airbyte:
+  platform-mode: ${PLATFORM_MODE:ORCHESTRATOR}
   auth:
     control-plane-token-endpoint: ${CONTROL_PLANE_TOKEN_ENDPOINT}
     dataplane-client-id: ${DATAPLANE_CLIENT_ID}

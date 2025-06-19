@@ -4,14 +4,14 @@
 
 package io.airbyte.mappers.transformations
 
-import io.airbyte.commons.json.Jsons
+import TEST_OBJECT_MAPPER
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.AirbyteSecret
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
 import io.airbyte.config.MapperOperationName.ENCRYPTION
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.config.mapper.configs.AesEncryptionConfig
 import io.airbyte.config.mapper.configs.AesMode
@@ -19,6 +19,7 @@ import io.airbyte.config.mapper.configs.AesPadding
 import io.airbyte.config.mapper.configs.EncryptionConfig
 import io.airbyte.config.mapper.configs.EncryptionMapperConfig
 import io.airbyte.config.mapper.configs.RsaEncryptionConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.airbyte.protocol.models.v0.AirbyteRecordMessageMetaChange
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
+import toPrettyJsonString
 import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import javax.crypto.Cipher
@@ -50,12 +52,12 @@ class EncryptionMapperTest {
 
   @BeforeEach
   fun setup() {
-    encryptionMapper = EncryptionMapper()
+    encryptionMapper = EncryptionMapper(TEST_OBJECT_MAPPER)
   }
 
   @Test
   fun `test spec`() {
-    val jsonString = Jsons.toPrettyString(encryptionMapper.spec().jsonSchema())
+    val jsonString = toPrettyJsonString(encryptionMapper.spec().jsonSchema())
     // spot checking some values
     logger.info { jsonString }
 
@@ -90,9 +92,9 @@ class EncryptionMapperTest {
         padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Hydrated("hydrated secret"),
       )
-    val serializedConfig = Jsons.serialize(config)
+    val serializedConfig = TEST_OBJECT_MAPPER.writeValueAsString(config)
     logger.info { serializedConfig }
-    val result = Jsons.deserialize(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
+    val result = TEST_OBJECT_MAPPER.readValue(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
     assertEquals(AirbyteSecret.Hydrated("hydrated secret"), result.key)
   }
 
@@ -106,9 +108,9 @@ class EncryptionMapperTest {
         padding = AesPadding.PKCS5Padding,
         key = AirbyteSecret.Reference("non-hydrated secret"),
       )
-    val serializedConfig = Jsons.serialize(config)
+    val serializedConfig = TEST_OBJECT_MAPPER.writeValueAsString(config)
     logger.info { serializedConfig }
-    val result = Jsons.deserialize(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
+    val result = TEST_OBJECT_MAPPER.readValue(serializedConfig, EncryptionConfig::class.java) as AesEncryptionConfig
     assertEquals(AirbyteSecret.Reference("non-hydrated secret"), result.key)
   }
 
@@ -125,7 +127,17 @@ class EncryptionMapperTest {
         "key": "hydrated key"
       }
       """.trimIndent()
-    val encryptionConfig = encryptionMapper.spec().deserialize(configuredMapper = ConfiguredMapper("encryption", Jsons.deserialize(config)))
+    val encryptionConfig =
+      encryptionMapper.spec().deserialize(
+        configuredMapper =
+          ConfiguredMapper(
+            "encryption",
+            TEST_OBJECT_MAPPER.readValue(
+              config,
+              JsonNode::class.java,
+            ),
+          ),
+      )
     assertEquals("hydrated key", ((encryptionConfig.config as AesEncryptionConfig).key as AirbyteSecret.Hydrated).value)
   }
 
@@ -142,7 +154,10 @@ class EncryptionMapperTest {
         "key": {"_secret": "my secret reference"}
       }
       """.trimIndent()
-    val encryptionConfig = encryptionMapper.spec().deserialize(configuredMapper = ConfiguredMapper("encryption", Jsons.deserialize(config)))
+    val encryptionConfig =
+      encryptionMapper.spec().deserialize(
+        configuredMapper = ConfiguredMapper("encryption", TEST_OBJECT_MAPPER.readValue(config, JsonNode::class.java)),
+      )
     assertEquals("my secret reference", ((encryptionConfig.config as AesEncryptionConfig).key as AirbyteSecret.Reference).reference)
   }
 
@@ -167,12 +182,22 @@ class EncryptionMapperTest {
 
     verifyRecordInvariant(testRecord).also {
       assertFalse(it.has(nullTestFieldName))
-      assertTrue(
-        it.asProtocol.record.meta.changes.contains(
-          AirbyteRecordMessageMetaChange()
-            .withField(nullTestFieldName)
-            .withChange(AirbyteRecordMessageMetaChange.Change.NULLED)
-            .withReason(AirbyteRecordMessageMetaChange.Reason.PLATFORM_SERIALIZATION_ERROR),
+      val testRecord = it as TestRecordAdapter
+      assertEquals(nullTestFieldName, testRecord.changes.first().fieldName)
+      assertEquals(
+        AirbyteRecordMessageMetaChange.Change.NULLED,
+        AirbyteRecordMessageMetaChange.Change.fromValue(
+          testRecord.changes
+            .first()
+            .change.name,
+        ),
+      )
+      assertEquals(
+        AirbyteRecordMessageMetaChange.Reason.PLATFORM_SERIALIZATION_ERROR,
+        AirbyteRecordMessageMetaChange.Reason.fromValue(
+          testRecord.changes
+            .first()
+            .reason.name,
         ),
       )
     }
@@ -189,7 +214,7 @@ class EncryptionMapperTest {
               Cipher.getInstance("AES/$mode/$padding")
               assertDoesNotThrow { runTestSchemaForAES(mode, padding) }
               return@map 1
-            } catch (e: Exception) {
+            } catch (_: Exception) {
               assertThrows<EncryptionConfigException> { runTestSchemaForAES(mode, padding) }
               return@map 0
             }
@@ -353,7 +378,6 @@ class EncryptionMapperTest {
   }
 
   private fun verifyRecordInvariant(record: AirbyteRecord): AirbyteRecord {
-    println(record.asProtocol)
     assertEquals(SANITY_CHECK_VALUE, record.get(SANITY_CHECK_KEY).asString())
     return record
   }
@@ -364,7 +388,7 @@ class EncryptionMapperTest {
   ): AirbyteRecord =
     TestRecordAdapter(
       StreamDescriptor().withName("stream").withNamespace("ns"),
-      mapOf(key to value, SANITY_CHECK_KEY to SANITY_CHECK_VALUE),
+      mutableMapOf(key to value, SANITY_CHECK_KEY to SANITY_CHECK_VALUE),
     )
 
   private fun decryptAES(

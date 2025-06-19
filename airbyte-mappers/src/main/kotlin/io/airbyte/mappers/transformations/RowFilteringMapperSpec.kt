@@ -5,15 +5,17 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
 
-class RowFilteringMapperSpec : ConfigValidatingSpec<RowFilteringMapperConfig>() {
+class RowFilteringMapperSpec(
+  objectMapper: ObjectMapper,
+) : ConfigValidatingSpec<RowFilteringMapperConfig>(objectMapper) {
   private val rowFilterMapperConfigSpecGenerator = RowFilterMapperConfigSpecGenerator()
 
   override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): RowFilteringMapperConfig =
-    Jsons.deserialize(Jsons.serialize(configuredMapper), RowFilteringMapperConfig::class.java)
+    objectMapper().readValue(objectMapper().writeValueAsString(configuredMapper), RowFilteringMapperConfig::class.java)
 
   override fun jsonSchema(): JsonNode = rowFilterMapperConfigSpecGenerator.generateSchema(specType())
 

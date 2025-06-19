@@ -101,3 +101,15 @@
   padding: variables.$spacing-xs variables.$spacing-sm;
   border-radius: variables.$border-radius-md;
 }
+
+$buttonWidth: 26px;
+
+.addStreamButton {
+  width: $buttonWidth;
+  height: $buttonWidth !important;
+  border-radius: 50%;
+}
+
+.streamTemplateList {
+  min-height: 70px;
+}

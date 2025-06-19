@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
@@ -68,15 +68,19 @@ import io.airbyte.data.services.shared.DestinationAndDefinition;
 import io.airbyte.data.services.shared.SourceAndDefinition;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.db.Database;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
 import io.airbyte.protocol.models.v0.CatalogHelpers;
+import io.airbyte.protocol.models.v0.DestinationCatalog;
+import io.airbyte.protocol.models.v0.DestinationOperation;
+import io.airbyte.protocol.models.v0.DestinationSyncMode;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -108,6 +112,7 @@ import org.junit.jupiter.api.Test;
 class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
   private static final String DOCKER_IMAGE_TAG = "1.2.0";
+  private static final String OTHER_DOCKER_IMAGE_TAG = "1.3.0";
   private static final String CONFIG_HASH = "ConfigHash";
   private static final UUID DATAPLANE_GROUP_ID = UUID.randomUUID();
 
@@ -287,12 +292,12 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    catalogService.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final AirbyteCatalog secondCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("size", JsonSchemaType.NUMBER), Field.of("label", JsonSchemaType.STRING),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    catalogService.writeActorCatalogFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
+    catalogService.writeActorCatalogWithFetchEvent(secondCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
 
     final String expectedCatalog =
         "{"
@@ -317,7 +322,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final Optional<ActorCatalog> catalogResult = catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
     assertTrue(catalogResult.isPresent());
-    assertEquals(expectedCatalog, Jsons.serialize(catalogResult.get().getCatalog()));
+    assertEquals(Jsons.deserialize(expectedCatalog, AirbyteCatalog.class), Jsons.object(catalogResult.get().getCatalog(), AirbyteCatalog.class));
   }
 
   @Test
@@ -345,7 +350,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final AirbyteCatalog firstCatalog = CatalogHelpers.createAirbyteCatalog("product",
         Field.of("label", JsonSchemaType.STRING), Field.of("size", JsonSchemaType.NUMBER),
         Field.of("color", JsonSchemaType.STRING), Field.of("price", JsonSchemaType.NUMBER));
-    catalogService.writeActorCatalogFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    catalogService.writeActorCatalogWithFetchEvent(firstCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final String expectedCatalog =
         "{"
@@ -398,23 +403,23 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
 
     final AirbyteCatalog actorCatalog = CatalogHelpers.createAirbyteCatalog("clothes", Field.of("name", JsonSchemaType.STRING));
     final AirbyteCatalog expectedActorCatalog = CatalogHelpers.createAirbyteCatalog("clothes", Field.of("name", JsonSchemaType.STRING));
-    catalogService.writeActorCatalogFetchEvent(
+    catalogService.writeActorCatalogWithFetchEvent(
         actorCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
 
     final Optional<ActorCatalog> catalog =
         catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
     assertTrue(catalog.isPresent());
     assertEquals(expectedActorCatalog, Jsons.object(catalog.get().getCatalog(), AirbyteCatalog.class));
-    assertFalse(catalogService.getActorCatalog(source.getSourceId(), "1.3.0", CONFIG_HASH).isPresent());
+    assertFalse(catalogService.getActorCatalog(source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent());
     assertFalse(catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash).isPresent());
 
-    catalogService.writeActorCatalogFetchEvent(actorCatalog, source.getSourceId(), "1.3.0", CONFIG_HASH);
+    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH);
     final Optional<ActorCatalog> catalogNewConnectorVersion =
-        catalogService.getActorCatalog(source.getSourceId(), "1.3.0", CONFIG_HASH);
+        catalogService.getActorCatalog(source.getSourceId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH);
     assertTrue(catalogNewConnectorVersion.isPresent());
     assertEquals(expectedActorCatalog, Jsons.object(catalogNewConnectorVersion.get().getCatalog(), AirbyteCatalog.class));
 
-    catalogService.writeActorCatalogFetchEvent(actorCatalog, source.getSourceId(), "1.2.0", otherConfigHash);
+    catalogService.writeActorCatalogWithFetchEvent(actorCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
     final Optional<ActorCatalog> catalogNewConfig =
         catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
     assertTrue(catalogNewConfig.isPresent());
@@ -424,13 +429,13 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     assertEquals(1, catalogDbEntry);
 
     // Writing the previous catalog with v1 data types
-    catalogService.writeActorCatalogFetchEvent(expectedActorCatalog, source.getSourceId(), "1.2.0", otherConfigHash);
+    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
     final Optional<ActorCatalog> catalogV1NewConfig =
         catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
     assertTrue(catalogV1NewConfig.isPresent());
     assertEquals(expectedActorCatalog, Jsons.object(catalogNewConfig.get().getCatalog(), AirbyteCatalog.class));
 
-    catalogService.writeActorCatalogFetchEvent(expectedActorCatalog, source.getSourceId(), "1.4.0", otherConfigHash);
+    catalogService.writeActorCatalogWithFetchEvent(expectedActorCatalog, source.getSourceId(), "1.4.0", otherConfigHash);
     final Optional<ActorCatalog> catalogV1again =
         catalogService.getActorCatalog(source.getSourceId(), DOCKER_IMAGE_TAG, otherConfigHash);
     assertTrue(catalogV1again.isPresent());
@@ -439,6 +444,54 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
     final int catalogDbEntry2 = database.query(ctx -> ctx.selectCount().from(ACTOR_CATALOG)).fetchOne().into(int.class);
     // TODO this should be 2 once we re-enable datatypes v1
     assertEquals(1, catalogDbEntry2);
+  }
+
+  @Test
+  void testSimpleInsertDestinationActorCatalog() throws IOException {
+    final String otherConfigHash = "OtherConfigHash";
+    final StandardWorkspace workspace = MockData.standardWorkspaces().get(0);
+
+    final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
+        .withDestinationDefinitionId(UUID.randomUUID())
+        .withName("destinationDefinition");
+    final ActorDefinitionVersion actorDefinitionVersion = MockData.actorDefinitionVersion()
+        .withActorDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withVersionId(destinationDefinition.getDefaultVersionId());
+    destinationService.writeConnectorMetadata(destinationDefinition, actorDefinitionVersion, Collections.emptyList());
+
+    final DestinationConnection destination = new DestinationConnection()
+        .withDestinationDefinitionId(destinationDefinition.getDestinationDefinitionId())
+        .withDestinationId(UUID.randomUUID())
+        .withName("SomeDestinationConnector")
+        .withWorkspaceId(workspace.getWorkspaceId())
+        .withConfiguration(Jsons.deserialize("{}"));
+    destinationService.writeDestinationConnectionNoSecrets(destination);
+
+    final DestinationCatalog destinationCatalog = new DestinationCatalog().withOperations(List.of(
+        new DestinationOperation().withObjectName("test_object").withSyncMode(DestinationSyncMode.APPEND).withJsonSchema(Jsons.emptyObject())));
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+
+    final Optional<ActorCatalog> catalog =
+        catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, CONFIG_HASH);
+    assertTrue(catalog.isPresent());
+    assertEquals(destinationCatalog, Jsons.object(catalog.get().getCatalog(), DestinationCatalog.class));
+    assertFalse(catalogService.getActorCatalog(destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH).isPresent());
+    assertFalse(catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash).isPresent());
+
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH);
+    final Optional<ActorCatalog> catalogNewConnectorVersion =
+        catalogService.getActorCatalog(destination.getDestinationId(), OTHER_DOCKER_IMAGE_TAG, CONFIG_HASH);
+    assertTrue(catalogNewConnectorVersion.isPresent());
+    assertEquals(destinationCatalog, Jsons.object(catalogNewConnectorVersion.get().getCatalog(), DestinationCatalog.class));
+
+    catalogService.writeActorCatalogWithFetchEvent(destinationCatalog, destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash);
+    final Optional<ActorCatalog> catalogNewConfig =
+        catalogService.getActorCatalog(destination.getDestinationId(), DOCKER_IMAGE_TAG, otherConfigHash);
+    assertTrue(catalogNewConfig.isPresent());
+    assertEquals(destinationCatalog, Jsons.object(catalogNewConfig.get().getCatalog(), DestinationCatalog.class));
+
+    final int catalogDbEntry = database.query(ctx -> ctx.selectCount().from(ACTOR_CATALOG)).fetchOne().into(int.class);
+    assertEquals(1, catalogDbEntry);
   }
 
   @Test
@@ -1018,6 +1071,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
         ctx.update(ACTOR_CATALOG)
             .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(actorCatalog.getCatalog())))
             .set(ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
+            .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()))
             .set(ACTOR_CATALOG.MODIFIED_AT, timestamp)
             .where(ACTOR_CATALOG.ID.eq(actorCatalog.getId()))
             .execute();
@@ -1026,6 +1080,7 @@ class ConfigRepositoryE2EReadWriteTest extends BaseConfigDatabaseTest {
             .set(ACTOR_CATALOG.ID, actorCatalog.getId())
             .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(actorCatalog.getCatalog())))
             .set(ACTOR_CATALOG.CATALOG_HASH, actorCatalog.getCatalogHash())
+            .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.valueOf(actorCatalog.getCatalogType().toString()))
             .set(ACTOR_CATALOG.CREATED_AT, timestamp)
             .set(ACTOR_CATALOG.MODIFIED_AT, timestamp)
             .execute();

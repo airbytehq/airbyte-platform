@@ -158,6 +158,8 @@ spec:
           value: "X-Airbyte-Auth"
         - name: AIRBYTE_API_AUTH_HEADER_VALUE
           value: "Internal worker"
+        - name: API_AUTHORIZATION_ENABLED
+          value: "true"
         {{- else if and (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) .Values.global.auth.enabled }}
           # Self-Managed Enterprise and Community w/ auth enabled use the same auth header, just
           # splitting into two separate blocks for readability.

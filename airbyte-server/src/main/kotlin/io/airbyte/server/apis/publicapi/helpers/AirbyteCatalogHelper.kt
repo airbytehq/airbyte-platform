@@ -157,10 +157,16 @@ object AirbyteCatalogHelper {
         ),
       )
     }
-    // 3. Selected fields must contain primary key(s) in dedup mode.
-    if (streamConfiguration.syncMode == ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY ||
-      streamConfiguration.syncMode == ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED
-    ) {
+
+    val requiredPrimaryKeySyncModes =
+      listOf(
+        ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+        ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
+        ConnectionSyncModeEnum.INCREMENTAL_UPDATE,
+        ConnectionSyncModeEnum.FULL_REFRESH_UPDATE,
+      )
+    // 3. Selected fields must contain primary key(s) in dedup and update modes.
+    if (streamConfiguration.syncMode != null && requiredPrimaryKeySyncModes.contains(streamConfiguration.syncMode)) {
       val primaryKeys = selectPrimaryKey(sourceStream, streamConfiguration)
       val primaryKeyFields = primaryKeys?.mapNotNull { it.firstOrNull() } ?: emptyList()
       require(primaryKeyFields.all { it in allSelectedFieldsSet }) {
@@ -178,6 +184,8 @@ object AirbyteCatalogHelper {
       setOf(
         ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
         ConnectionSyncModeEnum.INCREMENTAL_APPEND,
+        ConnectionSyncModeEnum.INCREMENTAL_UPDATE,
+        ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE,
       )
     if (streamConfiguration.syncMode in incrementalSyncModes) {
       val cursorField = selectCursorField(sourceStream, streamConfiguration)
@@ -335,6 +343,10 @@ object AirbyteCatalogHelper {
 
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> {
         validateCursorField(streamConfiguration.cursorField, airbyteStream)
+        validatePrimaryKey(streamConfiguration.primaryKey, airbyteStream)
+      }
+
+      ConnectionSyncModeEnum.FULL_REFRESH_UPDATE, ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> {
         validatePrimaryKey(streamConfiguration.primaryKey, airbyteStream)
       }
 
@@ -542,6 +554,8 @@ object AirbyteCatalogHelper {
         namespace = streamConfiguration.namespace
       }
 
+      destinationObjectName = streamConfiguration.destinationObjectName ?: sourceSchemaStreamConfiguration.destinationObjectName
+
       mappers = sourceSchemaStreamConfiguration.mappers
       if (streamConfiguration.mappers != null) {
         mappers = streamConfiguration.mappers!!.map { configuredMapperConverter(it) }
@@ -579,6 +593,34 @@ object AirbyteCatalogHelper {
             syncMode = SyncMode.INCREMENTAL
             destinationSyncMode = DestinationSyncMode.APPEND_DEDUP
             cursorField = selectCursorField(sourceSchemaStream, streamConfiguration)
+            primaryKey = selectPrimaryKey(sourceSchemaStream, streamConfiguration)
+          }
+
+          ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> {
+            syncMode = SyncMode.INCREMENTAL
+            destinationSyncMode = DestinationSyncMode.UPDATE
+            cursorField = selectCursorField(sourceSchemaStream, streamConfiguration)
+            primaryKey = selectPrimaryKey(sourceSchemaStream, streamConfiguration)
+          }
+
+          ConnectionSyncModeEnum.FULL_REFRESH_UPDATE -> {
+            syncMode = SyncMode.FULL_REFRESH
+            destinationSyncMode = DestinationSyncMode.UPDATE
+            cursorField = sourceSchemaStreamConfiguration.cursorField
+            primaryKey = selectPrimaryKey(sourceSchemaStream, streamConfiguration)
+          }
+
+          ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE -> {
+            syncMode = SyncMode.INCREMENTAL
+            destinationSyncMode = DestinationSyncMode.SOFT_DELETE
+            cursorField = selectCursorField(sourceSchemaStream, streamConfiguration)
+            primaryKey = selectPrimaryKey(sourceSchemaStream, streamConfiguration)
+          }
+
+          ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE -> {
+            syncMode = SyncMode.FULL_REFRESH
+            destinationSyncMode = DestinationSyncMode.SOFT_DELETE
+            cursorField = sourceSchemaStreamConfiguration.cursorField
             primaryKey = selectPrimaryKey(sourceSchemaStream, streamConfiguration)
           }
 

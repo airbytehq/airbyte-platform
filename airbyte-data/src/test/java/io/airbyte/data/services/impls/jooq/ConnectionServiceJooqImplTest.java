@@ -19,8 +19,8 @@ import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -115,7 +115,6 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withDataplaneGroupId(UUID.randomUUID())
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());

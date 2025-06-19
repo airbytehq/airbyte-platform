@@ -44,6 +44,7 @@ public class JsonSchemas {
   private static final String JSON_SCHEMA_TYPE_KEY = "type";
   private static final String JSON_SCHEMA_PROPERTIES_KEY = "properties";
   private static final String JSON_SCHEMA_ITEMS_KEY = "items";
+  private static final String JSON_SCHEMA_ADDITIONAL_PROPERTIES_KEY = "additionalProperties";
 
   // all JSONSchema types.
   private static final String ARRAY_TYPE = "array";
@@ -332,6 +333,38 @@ public class JsonSchemas {
           + '}';
     }
 
+  }
+
+  /**
+   * Checks if a JSON schema allows additional properties. According to JSON Schema specification: -
+   * If additionalProperties is missing, additional properties are allowed (default: true) - If
+   * additionalProperties is true, additional properties are allowed - If additionalProperties is
+   * false, additional properties are not allowed - If additionalProperties is an object (schema),
+   * additional properties are allowed but must conform to the schema
+   *
+   * @param schema the JSON schema to check
+   * @return true if the schema allows additional properties, false otherwise
+   */
+  public static boolean allowsAdditionalProperties(final JsonNode schema) {
+    final JsonNode additionalPropertiesNode = schema.get(JSON_SCHEMA_ADDITIONAL_PROPERTIES_KEY);
+
+    // If additionalProperties is not specified, default is true (allows additional properties)
+    if (additionalPropertiesNode == null) {
+      return true;
+    }
+
+    // If it's a boolean, return its value
+    if (additionalPropertiesNode.isBoolean()) {
+      return additionalPropertiesNode.asBoolean();
+    }
+
+    // If it's an object (schema), additional properties are allowed but must conform to the schema
+    if (additionalPropertiesNode.isObject()) {
+      return true;
+    }
+
+    // Default to true for any other case
+    return true;
   }
 
 }

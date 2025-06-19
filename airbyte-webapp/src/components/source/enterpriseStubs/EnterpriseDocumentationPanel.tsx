@@ -9,7 +9,7 @@ import { ExternalLink } from "components/ui/Link";
 import { Markdown } from "components/ui/Markdown";
 
 import { useConnectorDocumentation } from "core/api";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { prepareMarkdown, removeFirstHeading } from "views/Connector/ConnectorDocumentationLayout/DocumentationPanel";
 import styles from "views/Connector/ConnectorDocumentationLayout/DocumentationPanel.module.scss";
 
@@ -31,7 +31,7 @@ export const EnterpriseDocumentationPanel: React.FC<EnterpriseDocumentationPanel
   documentationUrl,
 }) => {
   const { formatMessage } = useIntl();
-
+  const isCloudApp = useIsCloudApp();
   const { data, isLoading, error } = useConnectorDocumentation("source", id, undefined, documentationUrl);
 
   const doc = data?.doc;
@@ -39,9 +39,9 @@ export const EnterpriseDocumentationPanel: React.FC<EnterpriseDocumentationPanel
   const docsContent = useMemo(
     () =>
       doc && !error
-        ? prepareMarkdown(doc, isCloudApp() ? "cloud" : "oss")
+        ? prepareMarkdown(doc, isCloudApp ? "cloud" : "oss")
         : formatMessage({ id: "connector.setupGuide.notFound" }),
-    [doc, error, formatMessage]
+    [doc, error, formatMessage, isCloudApp]
   );
 
   if (isLoading) {

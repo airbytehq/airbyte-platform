@@ -7,6 +7,7 @@ package io.airbyte.server.handlers
 import com.cronutils.utils.VisibleForTesting
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.api.model.generated.ConnectionCreate
 import io.airbyte.api.model.generated.ConnectionScheduleData
 import io.airbyte.api.model.generated.ConnectionScheduleDataBasicSchedule
@@ -36,11 +37,14 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.secrets.JsonSecretsProcessor
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
+import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
+import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.server.apis.publicapi.services.JobService
 import io.airbyte.server.apis.publicapi.services.SourceService
 import io.airbyte.validation.json.JsonMergingHelper
@@ -62,6 +66,7 @@ class PartialUserConfigHandler(
   private val destinationHandler: DestinationHandler,
   private val sourceService: SourceService,
   private val jobService: JobService,
+  private val actorDefinitionService: ActorDefinitionService,
 ) {
   private val jsonMergingHelper = JsonMergingHelper()
   private val logger = KotlinLogging.logger {}
@@ -100,6 +105,20 @@ class PartialUserConfigHandler(
 
     partialUserConfigService.createPartialUserConfig(partialUserConfigToPersist)
 
+    // Create a configured schema and set the sync mode to incremental_append
+    val schemaResponse: SourceDiscoverSchemaRead = sourceService.getSourceSchema(sourceRead.sourceId, false)
+    val configuredSchema = schemaResponse.catalog
+
+    for (stream in configuredSchema.streams) {
+      stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+      if (stream.stream.supportedSyncModes.contains(SyncMode.INCREMENTAL) and stream.stream.sourceDefinedCursor) {
+        // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
+        // We can make this configurable in the future as needed
+        stream.config.syncMode = SyncMode.INCREMENTAL
+        stream.config.cursorField = stream.stream.defaultCursorField
+      }
+    }
+
     // Create connection
     val destinations = destinationHandler.listDestinationsForWorkspace(WorkspaceIdRequestBody().workspaceId(partialUserConfigCreate.workspaceId))
     val organizationId = workspaceHelper.getOrganizationForWorkspace(partialUserConfigCreate.workspaceId)
@@ -112,72 +131,67 @@ class PartialUserConfigHandler(
       }
       val destination =
         matchingDestinations.firstOrNull()
-          ?: throw IllegalStateException("No destination found with name: ${connectionTemplate.destinationName}. This is unexpected!")
 
-      val schemaResponse: SourceDiscoverSchemaRead = sourceService.getSourceSchema(sourceRead.sourceId, false)
+      if (destination != null) {
+        val namespaceFormat =
+          if (connectionTemplate.namespaceDefinitionType == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT &&
+            connectionTemplate.namespaceFormat == null
+          ) {
+            workspaceRepository.findById(partialUserConfigToPersist.workspaceId).get().name
+          } else {
+            connectionTemplate.namespaceFormat
+          }
 
-      val configuredSchema = schemaResponse.catalog
+        val defaultPrefix = "${sourceRead.sourceId}_"
 
-      for (stream in configuredSchema.streams) {
-        if (stream.config.syncMode == SyncMode.INCREMENTAL) {
-          // For the typical AI use case, INCREMENTAL_APPEND is the right mode as it'll allow Operators to process new data
-          // We can make this configurable in the future as needed
-          stream.config.destinationSyncMode = DestinationSyncMode.APPEND
+        val createConnection =
+          ConnectionCreate()
+            .sourceId(sourceRead.sourceId)
+            .destinationId(destination.destinationId)
+            .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
+            .name("${sourceRead.name} -> ${destination.name}")
+            .namespaceFormat(namespaceFormat)
+            .status(ConnectionStatus.ACTIVE)
+            .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
+            .prefix(connectionTemplate.prefix ?: defaultPrefix)
+            .syncCatalog(schemaResponse.catalog)
+            .scheduleType(
+              when (connectionTemplate.scheduleType) {
+                StandardSync.ScheduleType.MANUAL -> ConnectionScheduleType.MANUAL
+                StandardSync.ScheduleType.BASIC_SCHEDULE -> ConnectionScheduleType.BASIC
+                StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
+              },
+            ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
+        // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
+        if (connectionTemplate.resourceRequirements != null) {
+          createConnection.resourceRequirements(
+            io.airbyte.api.model.generated
+              .ResourceRequirements()
+              .cpuLimit(connectionTemplate.resourceRequirements!!.cpuLimit)
+              .cpuRequest(connectionTemplate.resourceRequirements!!.cpuRequest)
+              .memoryLimit(connectionTemplate.resourceRequirements!!.memoryLimit)
+              .memoryRequest(connectionTemplate.resourceRequirements!!.memoryRequest)
+              .ephemeralStorageLimit(connectionTemplate.resourceRequirements!!.ephemeralStorageLimit)
+              .ephemeralStorageRequest(connectionTemplate.resourceRequirements!!.ephemeralStorageRequest),
+          )
         }
-      }
+        val connection =
+          connectionsHandler.createConnection(
+            createConnection,
+          )
 
-      val namespaceFormat =
-        if (connectionTemplate.namespaceDefinitionType == JobSyncConfig.NamespaceDefinitionType.CUSTOMFORMAT &&
-          connectionTemplate.namespaceFormat == null
-        ) {
-          workspaceRepository.findById(partialUserConfigToPersist.workspaceId).get().name
+        if (connectionTemplate.syncOnCreate) {
+          val syncId = jobService.sync(connection.connectionId)
+          logger.info(
+            "Created connection: ${connection.connectionId} and started sync with id $syncId",
+          )
         } else {
-          connectionTemplate.namespaceFormat
+          logger.info("Created connection: ${connection.connectionId} but did not start sync")
         }
-
-      val createConnection =
-        ConnectionCreate()
-          .sourceId(sourceRead.sourceId)
-          .destinationId(destination.destinationId)
-          .namespaceDefinition(NamespaceDefinitionType.fromValue(connectionTemplate.namespaceDefinitionType.value()))
-          .name("${sourceRead.name} -> ${destination.name}")
-          .namespaceFormat(namespaceFormat)
-          .status(ConnectionStatus.ACTIVE)
-          .nonBreakingChangesPreference(NonBreakingChangesPreference.fromValue(connectionTemplate.nonBreakingChangesPreference.value()))
-          .prefix(connectionTemplate.prefix)
-          .syncCatalog(schemaResponse.catalog)
-          .scheduleType(
-            when (connectionTemplate.scheduleType) {
-              StandardSync.ScheduleType.MANUAL -> ConnectionScheduleType.MANUAL
-              StandardSync.ScheduleType.BASIC_SCHEDULE -> ConnectionScheduleType.BASIC
-              StandardSync.ScheduleType.CRON -> ConnectionScheduleType.CRON
-            },
-          ).scheduleData(convertScheduleData(connectionTemplate.scheduleData))
-      // FIXME tags are missing https://github.com/airbytehq/airbyte-internal-issues/issues/12810
-      if (connectionTemplate.resourceRequirements != null) {
-        createConnection.resourceRequirements(
-          io.airbyte.api.model.generated
-            .ResourceRequirements()
-            .cpuLimit(connectionTemplate.resourceRequirements!!.cpuLimit)
-            .cpuRequest(connectionTemplate.resourceRequirements!!.cpuRequest)
-            .memoryLimit(connectionTemplate.resourceRequirements!!.memoryLimit)
-            .memoryRequest(connectionTemplate.resourceRequirements!!.memoryRequest)
-            .ephemeralStorageLimit(connectionTemplate.resourceRequirements!!.ephemeralStorageLimit)
-            .ephemeralStorageRequest(connectionTemplate.resourceRequirements!!.ephemeralStorageRequest),
-        )
-      }
-      val connection =
-        connectionsHandler.createConnection(
-          createConnection,
-        )
-
-      if (connectionTemplate.syncOnCreate) {
-        val syncId = jobService.sync(connection.connectionId)
-        logger.info(
-          "Created connection: ${connection.connectionId} and started sync with id $syncId",
-        )
       } else {
-        logger.info("Created connection: ${connection.connectionId} but did not start sync")
+        logger.info(
+          "Did not create a connection for source ${sourceRead.sourceId} because no matching destination was found for ${connectionTemplate.destinationName}",
+        )
       }
     }
 
@@ -239,6 +253,11 @@ class PartialUserConfigHandler(
         configTemplate.configTemplate.userConfigSpec.connectionSpecification,
       )
 
+    val spec = getConnectorSpecification(ActorDefinitionId(configTemplate.configTemplate.actorDefinitionId))
+
+    val combinedConfigsObject = sanitizedConnectionConfiguration as ObjectNode
+    combinedConfigsObject.set<JsonNode>("advancedAuth", objectMapper.valueToTree(spec.advancedAuth))
+
     return PartialUserConfigWithFullDetails(
       partialUserConfig =
         PartialUserConfig(
@@ -249,8 +268,8 @@ class PartialUserConfigHandler(
         ),
       connectionConfiguration = sanitizedConnectionConfiguration,
       configTemplate = configTemplate.configTemplate,
-      actorName = sourceRead.name,
-      actorIcon = sourceRead.icon,
+      actorName = configTemplate.actorName,
+      actorIcon = configTemplate.actorIcon,
     )
   }
 
@@ -275,6 +294,11 @@ class PartialUserConfigHandler(
         ObjectMapper().valueToTree(connectionConfiguration),
       )
 
+    val spec = getConnectorSpecification(ActorDefinitionId(configTemplate.configTemplate.actorDefinitionId))
+
+    val combinedConfigsObject = combinedConfigs as ObjectNode
+    combinedConfigsObject.set<JsonNode>("advancedAuth", objectMapper.valueToTree(spec.advancedAuth))
+
     // Update the source using the combined config
     // "Partial update" allows us to update the configuration without changing the name or other properties on the source
 
@@ -282,10 +306,16 @@ class PartialUserConfigHandler(
       sourceHandler.partialUpdateSource(
         PartialSourceUpdate()
           .sourceId(storedPartialUserConfig.partialUserConfig.actorId)
-          .connectionConfiguration(combinedConfigs),
+          .connectionConfiguration(combinedConfigsObject),
       )
 
     return sourceRead
+  }
+
+  fun deletePartialUserConfig(partialUserConfigId: UUID) {
+    val partialUserConfig = partialUserConfigService.getPartialUserConfig(partialUserConfigId)
+
+    partialUserConfig.partialUserConfig.actorId?.let { sourceHandler.deleteSource(SourceIdRequestBody().apply { this.sourceId = it }) }
   }
 
   private fun createSourceCreateFromPartialUserConfig(
@@ -433,5 +463,14 @@ class PartialUserConfigHandler(
         return node
       }
     }
+  }
+
+  private fun getConnectorSpecification(actorDefinitionId: ActorDefinitionId): ConnectorSpecification {
+    val actorDefinition =
+      actorDefinitionService
+        .getDefaultVersionForActorDefinitionIdOptional(actorDefinitionId.value)
+        .orElseThrow { throw RuntimeException("ActorDefinition not found") }
+    val actorDefinitionSpec = actorDefinition.spec
+    return actorDefinitionSpec
   }
 }

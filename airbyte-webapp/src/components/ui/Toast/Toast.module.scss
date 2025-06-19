@@ -1,32 +1,33 @@
 @use "scss/colors";
 @use "scss/variables";
 
-.toastContainer {
+.container {
+  position: relative;
+  max-width: variables.$width-max-notification;
+}
+
+.toastMessage {
   box-shadow: variables.$box-shadow-raised;
   max-width: variables.$width-max-notification;
   border-radius: variables.$border-radius-md;
   border-width: 1px;
   border-style: solid;
   position: relative;
+  overflow: hidden;
+}
 
-  &--timeout {
-    &::after {
-      content: " ";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 3px;
+.progressBar {
+  content: " ";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 10000;
 
-      // Use as a background color the primary color of the message as set via the Message component
-      background-color: var(--message-color);
-      animation: timeout-bar forwards 5s linear;
-    }
-
-    &:hover::after {
-      animation-play-state: paused;
-    }
-  }
+  // Use as a background color the primary color of the message as set via the Message component
+  background-color: var(--message-color);
+  animation: timeout-bar forwards 5s linear;
 }
 
 @keyframes timeout-bar {

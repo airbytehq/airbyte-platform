@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
@@ -33,6 +34,7 @@ jest.mock("core/api", () => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
   })),
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
@@ -65,11 +67,12 @@ const connectorDefinition = {
 } as ConnectorDefinition;
 
 const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: string, option: string) => {
-  const dropdownContainer = getByTestId(container, dropdownContainerTestId);
-  const selectButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
-  fireEvent.click(selectButton);
+  const dropdownControlButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
+  fireEvent.click(dropdownControlButton);
 
-  const listBoxOption = getByRole(dropdownContainer, "option", { name: option });
+  const dropdownOptionsMenu = getByTestId(container, `${dropdownContainerTestId}-listbox-options`);
+
+  const listBoxOption = getByRole(dropdownOptionsMenu, "option", { name: option });
   fireEvent.click(listBoxOption);
 };
 

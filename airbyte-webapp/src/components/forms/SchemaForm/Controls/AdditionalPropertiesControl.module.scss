@@ -17,3 +17,7 @@
 .keyInputContainer {
   flex-shrink: 0;
 }
+
+.keyErrorMessage {
+  padding-top: variables.$spacing-sm;
+}

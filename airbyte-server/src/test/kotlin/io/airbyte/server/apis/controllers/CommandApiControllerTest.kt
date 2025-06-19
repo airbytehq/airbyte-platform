@@ -15,6 +15,8 @@ import io.airbyte.api.model.generated.DiscoverCommandOutputRequest
 import io.airbyte.api.model.generated.DiscoverCommandOutputResponse
 import io.airbyte.api.model.generated.FailureOrigin
 import io.airbyte.api.model.generated.FailureType
+import io.airbyte.api.model.generated.ReplicateCommandOutputRequest
+import io.airbyte.api.model.generated.ReplicateCommandOutputResponse
 import io.airbyte.api.model.generated.RunCheckCommandRequest
 import io.airbyte.api.model.generated.RunCheckCommandResponse
 import io.airbyte.commons.json.Jsons
@@ -23,7 +25,10 @@ import io.airbyte.commons.server.helpers.SecretSanitizer
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ReplicationAttemptSummary
+import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
+import io.airbyte.config.StandardSyncSummary
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
@@ -234,6 +239,38 @@ class CommandApiControllerTest {
   }
 
   @Test
+  fun `getReplicateCommandOutput returns all the fields`() {
+    val persistedReplicationOutput =
+      ReplicationOutput()
+        .withReplicationAttemptSummary(
+          ReplicationAttemptSummary()
+            .withStatus(StandardSyncSummary.ReplicationStatus.COMPLETED),
+        ).withFailures(
+          listOf(
+            FailureReason().withFailureOrigin(FailureReason.FailureOrigin.SOURCE).withExternalMessage("Something to validate"),
+          ),
+        )
+    every { commandService.getReplicationOutput(TEST_COMMAND_ID) } returns persistedReplicationOutput
+
+    val output = controller.getReplicateCommandOutput(ReplicateCommandOutputRequest().id(TEST_COMMAND_ID))
+    assertEquals(
+      ReplicateCommandOutputResponse()
+        .id(TEST_COMMAND_ID)
+        .attemptSummary(persistedReplicationOutput.replicationAttemptSummary)
+        .failures(
+          listOf(
+            io.airbyte.api.model.generated
+              .FailureReason()
+              .failureOrigin(FailureOrigin.SOURCE)
+              .externalMessage("Something to validate"),
+          ),
+        ),
+      output,
+    )
+    verify { commandService.getReplicationOutput(TEST_COMMAND_ID) }
+  }
+
+  @Test
   fun `run check with an actor id`() {
     val request =
       RunCheckCommandRequest()
@@ -282,7 +319,7 @@ class CommandApiControllerTest {
         .id(TEST_COMMAND_ID)
         .actorId(TEST_ACTOR_ID)
         .jobId(TEST_JOB_ID)
-        .attemptNumber(TEST_ATTEMPT_NUMBER.toBigDecimal())
+        .attemptNumber(TEST_ATTEMPT_NUMBER.toInt())
         .priority("high")
         .signalInput(TEST_SIGNAL_INPUT)
     val output = controller.runCheckCommand(request)

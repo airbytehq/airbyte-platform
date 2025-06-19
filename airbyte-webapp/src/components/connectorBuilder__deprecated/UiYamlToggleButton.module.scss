@@ -1,0 +1,66 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "./builderVariables.scss";
+
+.button {
+  cursor: pointer;
+  border: variables.$border-thin solid colors.$dark-blue;
+  background-color: colors.$dark-blue;
+  padding: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template: 1fr / 1fr 1fr;
+  align-self: center;
+  flex-basis: auto;
+  flex-shrink: 0;
+
+  &.xs {
+    width: auto;
+    border-radius: variables.$border-radius-xs;
+  }
+
+  &.sm {
+    width: builderVariables.$toggleButtonWidth;
+    border-radius: variables.$border-radius-sm;
+  }
+
+  &:disabled {
+    pointer-events: none;
+    opacity: 0.25;
+  }
+}
+
+.text {
+  height: 100%;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 9px;
+
+  &.xs {
+    font-size: variables.$font-size-xs;
+    padding: 3px 5px;
+  }
+
+  &.sm {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+}
+
+.selected {
+  background-color: transparent;
+  color: colors.$foreground;
+}
+
+.unselected {
+  background-color: colors.$foreground;
+  color: colors.$dark-blue;
+}
+
+.tooltipContainer {
+  width: fit-content;
+  align-self: center;
+}

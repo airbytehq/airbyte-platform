@@ -17,10 +17,9 @@ import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.StreamDescriptor
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
-import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
+import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEvent
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.container.orchestrator.bookkeeping.getPerStreamStats
@@ -29,9 +28,12 @@ import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTr
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
+import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.container.orchestrator.worker.util.BytesSizeHelper.byteCountToDisplaySize
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
@@ -46,12 +48,11 @@ import io.airbyte.protocol.models.v0.AirbyteMessage.Type.RECORD
 import io.airbyte.protocol.models.v0.AirbyteMessage.Type.STATE
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.workers.WorkerUtils
-import io.airbyte.workers.context.ReplicationContext
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.helper.ResumableFullRefreshStatsHelper
 import io.airbyte.workers.internal.AirbyteMapper
-import io.airbyte.workers.models.StateWithId.attachIdToStateMessageFromSource
 import io.github.oshai.kotlinlogging.KotlinLogging
+import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.nio.file.Path
 import java.util.Optional
@@ -60,13 +61,14 @@ private val logger = KotlinLogging.logger {}
 
 @Singleton
 class ReplicationWorkerHelper(
-  private val fieldSelector: FieldSelector,
-  private val mapper: AirbyteMapper,
+  private val fieldSelector: FieldSelector?,
+  private val mapper: AirbyteMapper?,
   private val messageTracker: AirbyteMessageTracker,
   private val eventPublisher: ReplicationAirbyteMessageEventPublishingHelper,
   private val timeTracker: ThreadedTimeTracker,
   private val analyticsTracker: AnalyticsMessageTracker,
   private val streamStatusCompletionTracker: StreamStatusCompletionTracker,
+  @Named("parallelStreamStatsTracker") val syncStatsTracker: SyncStatsTracker,
   private val streamStatusTracker: StreamStatusTracker,
   private val recordMapper: RecordMapper,
   private val replicationWorkerState: ReplicationWorkerState,
@@ -121,7 +123,7 @@ class ReplicationWorkerHelper(
     streamMappers = catalogWithoutInvalidMappers.catalog.streams.associate { stream -> stream.streamDescriptor to stream.mappers }
     destinationConfig =
       WorkerUtils.syncToWorkerDestinationConfig(context.replicationInput).apply {
-        catalog = mapper.mapCatalog(catalog)
+        catalog = mapper?.mapCatalog(catalog) ?: catalog
         supportRefreshes = context.supportRefreshes
       }
     mappersConfigured = streamMappers.isNotEmpty()
@@ -160,7 +162,7 @@ class ReplicationWorkerHelper(
     timeTracker.trackSourceReadStartTime()
     val sourceConfig =
       WorkerUtils.syncToWorkerSourceConfig(replicationInput).also {
-        fieldSelector.populateFields(it.catalog)
+        fieldSelector?.populateFields(it.catalog)
       }
     try {
       source.start(sourceConfig, jobRoot, context.replicationContext.connectionId)
@@ -181,9 +183,9 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfSource() {
-    val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+    val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
     logger.info { "Total records read: ($bytes)" }
-    fieldSelector.reportMetrics(context.replicationContext.sourceId)
+    fieldSelector?.reportMetrics(context.replicationContext.sourceId)
     timeTracker.trackSourceReadEndTime()
   }
 
@@ -192,7 +194,7 @@ class ReplicationWorkerHelper(
   }
 
   fun processMessageFromDestination(destinationRawMessage: AirbyteMessage) {
-    val message = mapper.revertMap(destinationRawMessage)
+    val message = mapper?.revertMap(destinationRawMessage) ?: destinationRawMessage
     internalProcessMessageFromDestination(message)
   }
 
@@ -209,17 +211,17 @@ class ReplicationWorkerHelper(
       }
     val completed = outputStatus == ReplicationStatus.COMPLETED
     val totalStats = getTotalStats(timeTracker, completed)
-    val streamStats = messageTracker.syncStatsTracker.getPerStreamStats(completed)
+    val streamStats = syncStatsTracker.getPerStreamStats(completed)
 
-    if (!completed && messageTracker.syncStatsTracker.getUnreliableStateTimingMetrics()) {
+    if (!completed && syncStatsTracker.getUnreliableStateTimingMetrics()) {
       logger.warn { "Unreliable committed record counts; setting committed record stats to null" }
     }
 
     val summary =
       ReplicationAttemptSummary()
         .withStatus(outputStatus)
-        .withRecordsSynced(messageTracker.syncStatsTracker.getTotalRecordsCommitted())
-        .withBytesSynced(messageTracker.syncStatsTracker.getTotalBytesCommitted())
+        .withRecordsSynced(syncStatsTracker.getTotalRecordsCommitted())
+        .withBytesSynced(syncStatsTracker.getTotalBytesCommitted())
         .withTotalStats(totalStats)
         .withStreamStats(streamStats)
         .withStartTime(timeTracker.replicationStartTime)
@@ -254,8 +256,8 @@ class ReplicationWorkerHelper(
   @VisibleForTesting
   fun internalProcessMessageFromSource(sourceRawMessage: AirbyteMessage): AirbyteMessage? {
     updateRecordsCount()
-    fieldSelector.filterSelectedFields(sourceRawMessage)
-    fieldSelector.validateSchema(sourceRawMessage)
+    fieldSelector?.filterSelectedFields(sourceRawMessage)
+    fieldSelector?.validateSchema(sourceRawMessage)
     messageTracker.acceptFromSource(sourceRawMessage)
     streamStatusTracker.track(sourceRawMessage)
     return when (sourceRawMessage.type) {
@@ -283,7 +285,7 @@ class ReplicationWorkerHelper(
       val adapter = AirbyteJsonRecordAdapter(sourceRawMessage)
       applyTransformationMappers(adapter)
       return if (!adapter.shouldInclude()) {
-        messageTracker.syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
+        syncStatsTracker.updateFilteredOutRecordsStats(sourceRawMessage.record)
         null
       } else {
         sourceRawMessage
@@ -317,10 +319,10 @@ class ReplicationWorkerHelper(
 
   fun processMessageFromSource(sourceRawMessage: AirbyteMessage): Optional<AirbyteMessage> =
     internalProcessMessageFromSource(attachIdToStateMessageFromSource(sourceRawMessage))
-      ?.let { mapper.mapMessage(it) }
+      ?.let { mapper?.mapMessage(it) ?: it }
       ?.let { Optional.of(it) } ?: Optional.empty()
 
-  internal fun applyTransformationMappers(message: AirbyteRecord) {
+  internal fun applyTransformationMappers(message: AirbyteJsonRecordAdapter) {
     streamMappers[message.streamDescriptor]?.takeIf { it.isNotEmpty() }?.let { mappers ->
       recordMapper.applyMappers(message, mappers)
     }
@@ -330,7 +332,7 @@ class ReplicationWorkerHelper(
     timeTracker: ThreadedTimeTracker,
     completed: Boolean,
   ): SyncStats =
-    messageTracker.syncStatsTracker.getTotalStats(completed).apply {
+    syncStatsTracker.getTotalStats(completed).apply {
       replicationStartTime = timeTracker.replicationStartTime
       replicationEndTime = timeTracker.replicationEndTime
       sourceReadStartTime = timeTracker.sourceReadStartTime
@@ -371,7 +373,7 @@ class ReplicationWorkerHelper(
     if (recordsRead == 5000L) {
       totalRecordsRead += recordsRead
       logger.info {
-        val bytes = byteCountToDisplaySize(messageTracker.syncStatsTracker.getTotalBytesEmitted())
+        val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
         "Records read: $totalRecordsRead ($bytes)"
       }
       recordsRead = 0

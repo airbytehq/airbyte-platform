@@ -1,0 +1,33 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.createConnectionFlowLayout {
+  &__grid {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "header"
+      "main"
+      "footer";
+  }
+
+  &__header {
+    grid-area: header;
+  }
+
+  &__main {
+    grid-area: main;
+    overflow-y: auto;
+  }
+
+  &__footer {
+    padding: variables.$spacing-xl;
+    background-color: colors.$foreground;
+    grid-area: footer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: variables.$border-thin solid colors.$grey-100;
+  }
+}

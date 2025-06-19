@@ -2,6 +2,7 @@ import {
   ActorDefinitionVersionRead,
   SourceDefinitionRead,
   SourceDefinitionSpecificationRead,
+  SourceDiscoverSchemaRead,
   SupportState,
 } from "core/api/types/AirbyteClient";
 
@@ -449,5 +450,48 @@ export const mockSourceDefinitionSpecification: SourceDefinitionSpecificationRea
     logs: {
       logLines: [],
     },
+  },
+};
+
+export const mockSourceDiscoverSchemaRead: SourceDiscoverSchemaRead = {
+  jobInfo: {
+    id: "1df56aba-ecee-4e65-b035-bfc1bc34cb2e",
+    configType: "discover_schema",
+    createdAt: 1674834137604,
+    endedAt: 1674834137604,
+    succeeded: true,
+    connectorConfigurationUpdated: false,
+    logs: {
+      logLines: [],
+    },
+  },
+  catalog: {
+    streams: [
+      {
+        stream: {
+          name: "test_stream",
+          namespace: "test_namespace",
+          supportedSyncModes: ["full_refresh", "incremental"],
+          sourceDefinedCursor: false,
+          jsonSchema: {
+            type: "object",
+            properties: {
+              id: {
+                type: "string",
+              },
+              name: {
+                type: "string",
+              },
+            },
+          },
+        },
+        config: {
+          syncMode: "full_refresh",
+          destinationSyncMode: "append",
+          selected: true,
+          fieldSelectionEnabled: false,
+        },
+      },
+    ],
   },
 };

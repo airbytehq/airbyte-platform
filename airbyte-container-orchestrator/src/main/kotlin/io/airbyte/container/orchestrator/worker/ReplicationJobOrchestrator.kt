@@ -7,7 +7,6 @@ package io.airbyte.container.orchestrator.worker
 import com.google.common.annotations.VisibleForTesting
 import datadog.trace.api.Trace
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.config.FailureReason
 import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
@@ -25,7 +24,7 @@ import io.airbyte.workers.helper.FailureHelper.platformFailure
 import io.airbyte.workers.helper.FailureHelper.sourceFailure
 import io.airbyte.workers.internal.exception.DestinationException
 import io.airbyte.workers.internal.exception.SourceException
-import io.airbyte.workers.workload.JobOutputDocStore
+import io.airbyte.workers.workload.WorkloadOutputWriter
 import io.airbyte.workload.api.client.WorkloadApiClient
 import io.airbyte.workload.api.client.model.generated.WorkloadCancelRequest
 import io.airbyte.workload.api.client.model.generated.WorkloadFailureRequest
@@ -54,7 +53,7 @@ internal const val FAILED_STATUS: String = "failed"
 internal const val SUCCESS_STATUS: String = "success"
 
 private val BYTES_GAUGE_FUNCTION =
-  ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary -> replicationAttemptSummary.bytesSynced / BYTES_TO_GB }
+  ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary -> (replicationAttemptSummary.bytesSynced ?: 0) / BYTES_TO_GB }
 
 private val DURATION_GAUGE_FUNCTION =
   ToDoubleFunction { replicationAttemptSummary: ReplicationAttemptSummary ->
@@ -68,11 +67,11 @@ private val DURATION_GAUGE_FUNCTION =
 class ReplicationJobOrchestrator(
   private val replicationInput: ReplicationInput,
   @Named("workloadId") private val workloadId: String,
-  @Named("workspaceRoot") private val workspaceRoot: Path,
+  @Named("jobRoot") private val jobRoot: Path,
   private val jobRunConfig: JobRunConfig,
   private val replicationWorker: ReplicationWorker,
   private val workloadApiClient: WorkloadApiClient,
-  private val jobOutputDocStore: JobOutputDocStore,
+  private val outputWriter: WorkloadOutputWriter,
   private val metricClient: MetricClient,
 ) {
   @Trace(operationName = ApmTraceConstants.JOB_ORCHESTRATOR_OPERATION_NAME)
@@ -83,6 +82,7 @@ class ReplicationJobOrchestrator(
 
     ApmTraceUtils.addTagsToTrace(
       mutableMapOf<String, Any>(
+        ApmTraceConstants.Tags.IS_RESET_KEY to replicationInput.isReset,
         ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
         ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY to destinationLauncherConfig.dockerImage,
         ApmTraceConstants.Tags.SOURCE_DOCKER_IMAGE_KEY to sourceLauncherConfig.dockerImage,
@@ -90,17 +90,11 @@ class ReplicationJobOrchestrator(
     )
 
     logger.info { "Running replication worker..." }
-    val jobRoot =
-      TemporalUtils.getJobRoot(
-        workspaceRoot,
-        jobRunConfig.jobId,
-        jobRunConfig.attemptId,
-      )
 
     val replicationOutput =
       run(replicationWorker, replicationInput, jobRoot, workloadId)
 
-    jobOutputDocStore.writeSyncOutput(workloadId, replicationOutput)
+    outputWriter.writeSyncOutput(workloadId, replicationOutput)
     updateStatusInWorkloadApi(replicationOutput, workloadId)
 
     val attributes =
@@ -136,7 +130,7 @@ class ReplicationJobOrchestrator(
     val attemptNumber = Math.toIntExact(jobRunConfig.attemptId)
     val attributes = buildMetricAttributes(replicationInput, jobId, attemptNumber)
     try {
-      return replicationWorker.runReplicationBlocking(replicationInput, jobRoot)
+      return replicationWorker.runReplicationBlocking(jobRoot)
     } catch (e: DestinationException) {
       failWorkload(workloadId = workloadId, failureReason = destinationFailure(e, jobId, attemptNumber), originalException = e)
       attributes.add(MetricAttribute(STATUS_ATTRIBUTE, FAILED_STATUS))

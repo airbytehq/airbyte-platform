@@ -23,10 +23,10 @@ final class NumPendingJobs extends Emitter {
 
   public NumPendingJobs(final MetricClient client, final MetricRepository db) {
     super(client, () -> {
-      db.numberOfPendingJobsByGeography().forEach((geography, count) -> client.gauge(
+      db.numberOfPendingJobsByDataplaneGroupName().forEach((dataplaneGroupName, count) -> client.gauge(
           OssMetricsRegistry.NUM_PENDING_JOBS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geography != null ? geography : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName != null ? dataplaneGroupName : Emitter.UNKNOWN)));
 
       return null;
     });
@@ -86,10 +86,10 @@ final class OldestPendingJob extends Emitter {
 
   OldestPendingJob(final MetricClient client, final MetricRepository db) {
     super(client, () -> {
-      db.oldestPendingJobAgeSecsByGeography().forEach((geographyType, count) -> client.gauge(
+      db.oldestPendingJobAgeSecsByDataplaneGroupName().forEach((dataplaneGroupName, count) -> client.gauge(
           OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS,
           count,
-          new MetricAttribute(MetricTags.GEOGRAPHY, geographyType != null ? geographyType : Emitter.UNKNOWN)));
+          new MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName != null ? dataplaneGroupName : Emitter.UNKNOWN)));
       return null;
     });
   }

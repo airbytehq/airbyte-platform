@@ -12,6 +12,8 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.EmitStateStatsToSegment
 import io.airbyte.featureflag.FailSyncOnInvalidChecksum
 import io.airbyte.featureflag.FeatureFlagClient
@@ -19,6 +21,7 @@ import io.airbyte.featureflag.LogStateMsgs
 import io.airbyte.featureflag.TestClient
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteGlobalState
 import io.airbyte.protocol.models.v0.AirbyteMessage
@@ -28,14 +31,15 @@ import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.models.StateWithId
+import io.airbyte.workers.models.ArchitectureConstants
 import io.airbyte.workers.testutils.AirbyteMessageUtils
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.Runs
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -45,7 +49,6 @@ import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
-import org.mockito.Mockito
 import java.util.UUID
 
 private val logger = KotlinLogging.logger { }
@@ -79,6 +82,7 @@ class ParallelStreamStatsTrackerTest {
   private lateinit var checkSumCountEventHandler: StateCheckSumCountEventHandler
   private lateinit var featureFlagClient: FeatureFlagClient
   private lateinit var statsTracker: ParallelStreamStatsTracker
+  private lateinit var replicationInput: ReplicationInput
 
   @BeforeEach
   fun beforeEach() {
@@ -88,8 +92,9 @@ class ParallelStreamStatsTrackerTest {
     val trackingIdentity = mockk<TrackingIdentity>()
     every { trackingIdentity.email } returns "test"
     every { trackingIdentityFetcher.apply(any(), any()) }.returns(trackingIdentity)
-    metricClient = Mockito.mock(MetricClient::class.java)
+    metricClient = mockk<MetricClient>(relaxed = true)
     featureFlagClient = TestClient(mapOf(EmitStateStatsToSegment.key to true, LogStateMsgs.key to false))
+    replicationInput = mockk(relaxed = true)
     checkSumCountEventHandler =
       StateCheckSumCountEventHandler(
         pubSubWriter = null,
@@ -103,8 +108,11 @@ class ParallelStreamStatsTrackerTest {
         attemptNumber = ATTEMPT_NUMBER,
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
+        metricClient = metricClient,
+        replicationInput = replicationInput,
       )
-    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler)
+    statsTracker = ParallelStreamStatsTracker(metricClient, checkSumCountEventHandler, platformMode = ArchitectureConstants.ORCHESTRATOR)
   }
 
   @Test
@@ -320,7 +328,7 @@ class ParallelStreamStatsTrackerTest {
     val actualSyncStats = statsTracker.getTotalStats(true)
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), actualSyncStats)
 
-    Mockito.verify(metricClient).count(OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_COLLISION_FROM_SOURCE, value = 1) }
 
     // The following metrics are expected to be discarded
     assertNull(statsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted())
@@ -348,7 +356,7 @@ class ParallelStreamStatsTrackerTest {
     val actualMidSyncSyncStats = statsTracker.getTotalStats(false)
     assertSyncStatsCoreStatsEquals(buildSyncStats(2L, 2L), actualMidSyncSyncStats)
 
-    Mockito.verify(metricClient).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
   }
 
   @Test
@@ -374,29 +382,29 @@ class ParallelStreamStatsTrackerTest {
     val statsAfterState1OutOfOrder = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 2L), statsAfterState1OutOfOrder)
-    Mockito.verify(metricClient, Mockito.times(1)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 2 again
     statsTracker.updateDestinationStateStats(s1State2)
     val statsAfterState2Again = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 2L), statsAfterState2Again)
-    Mockito.verify(metricClient, Mockito.times(2)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 2) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 3
-    Mockito.reset(metricClient)
+    clearMocks(metricClient)
     statsTracker.updateDestinationStateStats(s1State3)
     val statsAfterState3 = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), statsAfterState3)
-    Mockito.verify(metricClient, Mockito.never()).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 0) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
 
     // Sending state 3 again
     statsTracker.updateDestinationStateStats(s1State3)
     val statsAfterState3Again = statsTracker.getTotalStats(false)
     // Stats count should remain stable because state1 has already been handled
     assertSyncStatsCoreStatsEquals(buildSyncStats(3L, 3L), statsAfterState3Again)
-    Mockito.verify(metricClient, Mockito.times(1)).count(OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, 1)
+    verify(exactly = 1) { metricClient.count(metric = OssMetricsRegistry.STATE_ERROR_UNKNOWN_FROM_DESTINATION, value = 1) }
   }
 
   @Test
@@ -411,17 +419,17 @@ class ParallelStreamStatsTrackerTest {
     statsTracker.updateDestinationStateStats(s2State1)
 
     assertEquals(
-      java.util.Map.of(stream1, 0L, stream2, 2L),
+      mapOf(stream1 to 0L, stream2 to 2L),
       statsTracker.getStreamToCommittedRecords(),
     )
     assertEquals(
-      java.util.Map.of(stream1, 0L, stream2, 2L * MESSAGE_SIZE),
+      mapOf(stream1 to 0L, stream2 to 2L * MESSAGE_SIZE),
       statsTracker.getStreamToCommittedBytes(),
     )
 
-    assertEquals(java.util.Map.of(stream1, 1L, stream2, 2L), statsTracker.getStreamToEmittedRecords())
+    assertEquals(mapOf(stream1 to 1L, stream2 to 2L), statsTracker.getStreamToEmittedRecords())
     assertEquals(
-      java.util.Map.of(stream1, 1L * MESSAGE_SIZE, stream2, 2L * MESSAGE_SIZE),
+      mapOf(stream1 to 1L * MESSAGE_SIZE, stream2 to 2L * MESSAGE_SIZE),
       statsTracker.getStreamToEmittedBytes(),
     )
 
@@ -481,7 +489,7 @@ class ParallelStreamStatsTrackerTest {
       statsTracker.getStreamToEstimatedRecords(),
     )
     assertEquals(
-      java.util.Map.of(stream1, 10L, stream2, 100L),
+      mapOf(stream1 to 10L, stream2 to 100L),
       statsTracker.getStreamToEstimatedBytes(),
     )
   }
@@ -499,8 +507,8 @@ class ParallelStreamStatsTrackerTest {
 
     assertEquals(5L, statsTracker.getTotalRecordsEstimated())
     assertEquals(15L, statsTracker.getTotalBytesEstimated())
-    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
-    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
+    assertEquals(mapOf<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
+    assertEquals(mapOf<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
   }
 
   @Test
@@ -512,8 +520,8 @@ class ParallelStreamStatsTrackerTest {
     assertEquals(buildSyncStats(0L, 0L), actualSyncStats)
     assertEquals(0L, statsTracker.getTotalRecordsEstimated())
     assertEquals(0L, statsTracker.getTotalBytesEstimated())
-    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
-    assertEquals(java.util.Map.of<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
+    assertEquals(mapOf<Any, Any>(), statsTracker.getStreamToEstimatedBytes())
+    assertEquals(mapOf<Any, Any>(), statsTracker.getStreamToEstimatedRecords())
   }
 
   @Test
@@ -561,7 +569,7 @@ class ParallelStreamStatsTrackerTest {
   @Test
   fun testNoStatsForNullStreamAreReturned() {
     // Checking for LegacyStates
-    val legacyState = StateWithId.attachIdToStateMessageFromSource(AirbyteMessageUtils.createStateMessage(1337)).state
+    val legacyState = attachIdToStateMessageFromSource(AirbyteMessageUtils.createStateMessage(1337)).state
 
     statsTracker.updateSourceStatesStats(legacyState)
     statsTracker.updateDestinationStateStats(legacyState)
@@ -592,7 +600,7 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -604,7 +612,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -641,7 +649,7 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -654,7 +662,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -695,7 +703,7 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -708,7 +716,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -749,7 +757,7 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -762,7 +770,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -800,7 +808,7 @@ class ParallelStreamStatsTrackerTest {
     val namespace = "namespace"
     val recordCount = 10
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withStream(
@@ -859,12 +867,11 @@ class ParallelStreamStatsTrackerTest {
         .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
 
     assertEquals(stateMessage1, copyOfStateMessage1)
-    val state = StateWithId.attachIdToStateMessageFromSource(AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(stateMessage1)).state
+    val state = attachIdToStateMessageFromSource(AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(stateMessage1)).state
     val state2 =
-      StateWithId
-        .attachIdToStateMessageFromSource(
-          AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(copyOfStateMessage1),
-        ).state
+      attachIdToStateMessageFromSource(
+        AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(copyOfStateMessage1),
+      ).state
 
     val replicationInputFeatureFlagReader =
       mockk<ReplicationInputFeatureFlagReader> {
@@ -896,7 +903,7 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -918,7 +925,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -971,7 +978,7 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -993,7 +1000,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -1047,7 +1054,7 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -1103,7 +1110,7 @@ class ParallelStreamStatsTrackerTest {
     val recordCountStream1 = 10
     val recordCountStream2 = 15
     val stateMessage1 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -1125,7 +1132,7 @@ class ParallelStreamStatsTrackerTest {
         ),
       )
     val stateMessage2 =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteMessage().withType(AirbyteMessage.Type.STATE).withState(
           AirbyteStateMessage()
             .withGlobal(
@@ -1297,12 +1304,11 @@ class ParallelStreamStatsTrackerTest {
     streamName: String,
     value: Int,
   ): AirbyteStateMessage =
-    StateWithId
-      .attachIdToStateMessageFromSource(
-        AirbyteMessage()
-          .withType(AirbyteMessage.Type.STATE)
-          .withState(AirbyteMessageUtils.createStreamStateMessage(streamName, value)),
-      ).state
+    attachIdToStateMessageFromSource(
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.STATE)
+        .withState(AirbyteMessageUtils.createStreamStateMessage(streamName, value)),
+    ).state
 
   private fun createGlobalState(
     value: Int,
@@ -1312,19 +1318,18 @@ class ParallelStreamStatsTrackerTest {
     for (streamName in streamNames) {
       streamStates.add(AirbyteMessageUtils.createStreamState(streamName).withStreamState(Jsons.jsonNode(value)))
     }
-    return StateWithId
-      .attachIdToStateMessageFromSource(
-        AirbyteMessage()
-          .withType(AirbyteMessage.Type.STATE)
-          .withState(
-            AirbyteStateMessage()
-              .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
-              .withGlobal(
-                AirbyteGlobalState()
-                  .withStreamStates(streamStates),
-              ),
-          ),
-      ).state
+    return attachIdToStateMessageFromSource(
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.STATE)
+        .withState(
+          AirbyteStateMessage()
+            .withType(AirbyteStateMessage.AirbyteStateType.GLOBAL)
+            .withGlobal(
+              AirbyteGlobalState()
+                .withStreamStates(streamStates),
+            ),
+        ),
+    ).state
   }
 
   private fun trackRecords(

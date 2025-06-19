@@ -24,7 +24,7 @@ class EmbeddedWorkspacesHandler(
     workspaceName: String,
   ): WorkspaceId {
     val existingWorkspaces =
-      workspaceRepository.findByNameAndOrganizationId(
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(
         name = workspaceName,
         organizationId = organizationId.value,
       )
@@ -35,7 +35,7 @@ class EmbeddedWorkspacesHandler(
       }
       return WorkspaceId(existingWorkspaces[0].id!!)
     } else {
-      // FIXME: we'll eventually want to make webhooks, notifications, and default geography configurable
+      // FIXME: we'll eventually want to make webhooks and notifications configurable
       // https://github.com/airbytehq/airbyte-internal-issues/issues/12785
       val workspaceRead = workspacesHandler.createWorkspace(WorkspaceCreate().name(workspaceName).organizationId(organizationId.value))
       val workspaceId = WorkspaceId(workspaceRead.workspaceId)

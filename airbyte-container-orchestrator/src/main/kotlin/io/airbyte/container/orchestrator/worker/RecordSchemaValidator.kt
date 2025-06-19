@@ -9,9 +9,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
 import io.airbyte.validation.json.JsonSchemaValidator
-import jakarta.annotation.PostConstruct
-import jakarta.inject.Named
-import jakarta.inject.Singleton
 import java.io.Closeable
 import java.io.IOException
 import java.util.concurrent.ConcurrentMap
@@ -21,19 +18,18 @@ import java.util.concurrent.ExecutorService
  * Validates that [AirbyteRecordMessage] data conforms to the JSON schema defined by the source's
  * configured catalog.
  */
-@Singleton
 class RecordSchemaValidator(
-  @Named("jsonSchemaValidator") private val jsonSchemaValidator: JsonSchemaValidator,
-  @Named("schemaValidationExecutorService") private val schemaValidationExecutorService: ExecutorService,
-  @Named("streamNamesToSchemas") private val streamNamesToSchemas: MutableMap<AirbyteStreamNameNamespacePair, JsonNode?>,
+  private val jsonSchemaValidator: JsonSchemaValidator,
+  private val schemaValidationExecutorService: ExecutorService,
+  private val streamNamesToSchemas: MutableMap<AirbyteStreamNameNamespacePair, JsonNode?>,
 ) : Closeable {
-  @PostConstruct
   fun initializeSchemaValidator() {
     // initialize schema validator to avoid creating validators each time.
-    for (stream in streamNamesToSchemas.keys) {
+    streamNamesToSchemas.keys.forEach { stream ->
       // We must choose a JSON validator version for validating the schema
       // Rather than allowing connectors to use any version, we enforce validation using V7
       val schema: JsonNode? = streamNamesToSchemas[stream]
+
       (schema as ObjectNode).put("\$schema", "http://json-schema.org/draft-07/schema#")
       // Starting with draft-06 of JSON schema, "id" is a reserved keyword. To use "id" in
       // a JSON schema, it must be escaped as "$id". Because this mistake exists in connectors,

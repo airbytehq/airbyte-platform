@@ -18,6 +18,7 @@ import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretReferenceCreate
 import io.airbyte.domain.models.SecretReferenceId
 import io.airbyte.domain.models.SecretReferenceScopeType
+import io.airbyte.domain.models.SecretReferenceWithConfig
 import io.airbyte.domain.models.SecretStorageId
 import io.airbyte.domain.models.UserId
 import io.airbyte.domain.models.WorkspaceId
@@ -196,24 +197,47 @@ class SecretReferenceService(
     // skip the secret reference lookup and just use the secrets in the config as-is.
     // Note: we cannot look up the workspace from the actorId, because the actor may not be
     // persisted yet.
+    //
+    // Details -
+    //
+    // There are 2 types of secrets that may be in the config: persisted and non-persisted.
+    //
+    // Non-persisted secrets are always stored in `_secret` nodes. This is also how legacy secret references were stored.
+    // Now, persisted secret references are stored in `_secret_reference_id`.
+    // Both persisted and non-persisted secrets may be present at the same time. When this happens, the non-persisted secrets should take precedence.
+    //
+    // There are 3 cases where we expect `_secrets` to be populated:
+    // 1. Secret references were persisted in the legacy format. In this case, we see a `_secret` key and no `_secret_reference_id`.
+    // 2. Secrets were stored via dual-writes in the old & new format (`_secret` and `_secret_reference_id` are present.)
+    // 3. An actor is being created or updated in the UI, and we're running `check` before anything has been persisted. (Only `_secret` is present.)
+    //
+    // When `_secret` is present we assume that they're newer than or were created at the same time as any secrets referenced by `_secret_reference_id`.
+    // Therefore, we can safely always let `_secret` take precedence over secrets referenced by `_secret_reference_id`.
+    var nonPersistedSecretRefsInConfig: Map<String, SecretReferenceConfig>
+    var refsForScope: List<SecretReferenceWithConfig>
     val orgId = workspaceHelper.getOrganizationForWorkspace(workspaceId.value)
-    val refsForScope =
-      if (featureFlagClient.boolVariation(
-          ReadSecretReferenceIdsInConfigs,
-          Multi(listOf(Workspace(workspaceId.value), Organization(orgId))),
-        )
-      ) {
-        val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId.value)
-        assertConfigReferenceIdsExist(config, result.map { it.secretReference.id }.toSet())
-        result
-      } else {
-        emptyList()
-      }
 
-    val nonPersistedSecretRefsInConfig =
-      SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config)).filter {
-        it.value.secretReferenceId == null
-      }
+    if (featureFlagClient.boolVariation(
+        ReadSecretReferenceIdsInConfigs,
+        Multi(listOf(Workspace(workspaceId.value), Organization(orgId))),
+      )
+    ) {
+      // Get all persisted secret refs
+      val result = secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId.value)
+      assertConfigReferenceIdsExist(config, result.map { it.secretReference.id }.toSet())
+      refsForScope = result
+
+      // Gather all non-persisted secret refs separately from the persisted ones
+      nonPersistedSecretRefsInConfig =
+        SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config)).filter {
+          it.value.secretReferenceId == null
+        }
+    } else {
+      // Handle persisted and non-persisted secret refs together (downstream we'll only look at the non-persisted refs since the flag is off)
+      refsForScope = emptyList()
+      nonPersistedSecretRefsInConfig =
+        SecretReferenceHelpers.getReferenceMapFromConfig(InlinedConfigWithSecretRefs(config))
+    }
 
     val persistedSecretRefs =
       refsForScope

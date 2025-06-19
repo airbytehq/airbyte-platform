@@ -5,8 +5,10 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.model.generated.OrganizationRead
+import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigTemplate
@@ -36,18 +38,28 @@ class ConfigTemplatesPublicControllerTest {
 
   private val configTemplateService: ConfigTemplateService = mockk()
   private val currentUserService: CurrentUserService = mockk()
-  private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val trackingHelper: TrackingHelper = mockk()
   private val licenseEntitlementChecker: LicenseEntitlementChecker = mockk()
+  private val organizationHandler: OrganizationsHandler = mockk()
   private val controller =
-    ConfigTemplatesPublicController(currentUserService, configTemplateService, apiAuthorizationHelper, trackingHelper, licenseEntitlementChecker)
+    ConfigTemplatesPublicController(
+      currentUserService,
+      configTemplateService,
+      trackingHelper,
+      licenseEntitlementChecker,
+      organizationHandler,
+    )
+  private val organizationReadList =
+    OrganizationReadList().organizations(listOf(OrganizationRead().organizationId(organizationId)))
 
   @BeforeEach
   fun setup() {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
-    every { apiAuthorizationHelper.isUserOrganizationAdminOrThrow(any(), any()) } returns Unit
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
+    every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
+    every { organizationHandler.listOrganizationsByUser(any()) } returns organizationReadList
+    every { licenseEntitlementChecker.checkEntitlements(any(), any()) } returns true
   }
 
   @Test

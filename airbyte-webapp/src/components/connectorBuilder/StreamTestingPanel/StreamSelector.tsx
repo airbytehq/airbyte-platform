@@ -7,11 +7,11 @@ import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
 import { StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useStreamNames } from "../useStreamNames";
 
 interface StreamSelectorProps {
   className?: string;
@@ -45,14 +45,14 @@ const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ se
   );
 };
 
-export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => {
+export const StreamSelector: React.FC<StreamSelectorProps> = () => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
-  const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
+  const generatedStreams = useBuilderWatch("generatedStreams");
+  const { streamNames, dynamicStreamNames } = useStreamNames();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
     return (
@@ -142,7 +142,6 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   return (
     <ListBox
-      className={className}
       options={options}
       selectedValue={selectedValue}
       onSelect={handleStreamSelect}

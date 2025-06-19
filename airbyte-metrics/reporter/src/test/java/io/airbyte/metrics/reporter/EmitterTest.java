@@ -44,13 +44,13 @@ class EmitterTest {
   @Test
   void TestNumPendingJobs() {
     final var value = Map.of(AUTO_REGION, 101, EU_REGION, 20);
-    when(repo.numberOfPendingJobsByGeography()).thenReturn(value);
+    when(repo.numberOfPendingJobsByDataplaneGroupName()).thenReturn(value);
 
     final var emitter = new NumPendingJobs(client, repo);
     emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
-    verify(repo).numberOfPendingJobsByGeography();
+    verify(repo).numberOfPendingJobsByDataplaneGroupName();
     verify(client).gauge(OssMetricsRegistry.NUM_PENDING_JOBS, 101,
         new MetricAttribute(MetricTags.GEOGRAPHY, AUTO_REGION));
     verify(client).gauge(OssMetricsRegistry.NUM_PENDING_JOBS, 20,
@@ -109,13 +109,13 @@ class EmitterTest {
   @Test
   void TestOldestPendingJob() {
     final var value = Map.of(AUTO_REGION, 101.0, EU_REGION, 20.0);
-    when(repo.oldestPendingJobAgeSecsByGeography()).thenReturn(value);
+    when(repo.oldestPendingJobAgeSecsByDataplaneGroupName()).thenReturn(value);
 
     final var emitter = new OldestPendingJob(client, repo);
     emitter.emit();
 
     assertEquals(Duration.ofSeconds(15), emitter.getDuration());
-    verify(repo).oldestPendingJobAgeSecsByGeography();
+    verify(repo).oldestPendingJobAgeSecsByDataplaneGroupName();
     verify(client).gauge(OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS, 101,
         new MetricAttribute(MetricTags.GEOGRAPHY, AUTO_REGION));
     verify(client).gauge(OssMetricsRegistry.OLDEST_PENDING_JOB_AGE_SECS, 20,

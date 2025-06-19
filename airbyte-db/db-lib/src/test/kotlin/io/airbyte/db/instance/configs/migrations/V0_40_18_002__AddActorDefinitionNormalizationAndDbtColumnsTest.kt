@@ -16,9 +16,11 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {

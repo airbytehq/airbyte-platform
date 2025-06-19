@@ -11,8 +11,10 @@ import io.airbyte.commons.temporal.TemporalUtils
 import io.airbyte.commons.temporal.scheduling.DiscoverCommandInput
 import io.airbyte.config.ActorCatalog
 import io.airbyte.config.ActorType
+import io.airbyte.config.CatalogDiff
 import io.airbyte.config.ConnectorJobOutput
 import io.airbyte.config.FailureReason
+import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardCheckConnectionOutput
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
@@ -24,12 +26,14 @@ import io.airbyte.server.helpers.WorkloadIdGenerator
 import io.airbyte.server.repositories.CommandsRepository
 import io.airbyte.server.repositories.domain.Command
 import io.airbyte.workers.models.CheckConnectionInput
+import io.airbyte.workers.models.ReplicationActivityInput
 import io.airbyte.workload.common.WorkloadLabels
 import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.output.WorkloadOutputDocStoreReader
 import io.airbyte.workload.repository.domain.Workload
 import io.airbyte.workload.repository.domain.WorkloadLabel
 import io.airbyte.workload.repository.domain.WorkloadStatus
+import io.airbyte.workload.services.ConflictException
 import io.airbyte.workload.services.NotFoundException
 import io.airbyte.workload.services.WorkloadService
 import io.micronaut.context.annotation.Property
@@ -63,6 +67,7 @@ private data class WorkloadCreatePayload(
   val priority: WorkloadPriority,
   val dataplaneGroupId: UUID,
   val signalInput: String?,
+  val mutexKey: String?,
 )
 
 @Singleton
@@ -197,6 +202,7 @@ class CommandService(
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
+      mutexKey = null,
     )
   }
 
@@ -217,9 +223,9 @@ class CommandService(
     val actualAttemptNumber = attemptNumber ?: 0L
     val actor = actorRepository.findByActorId(actorId) ?: throw NotFoundException("Unable to find actorId $actorId")
     val workspaceId = actor.workspaceId
-    val discoverInput = jobInputService.getDiscoveryInputWithJobId(actorId, workspaceId, actualJobId, actualAttemptNumber)
+    val discoverInput = jobInputService.getDiscoverInput(actorId, actualJobId, actualAttemptNumber)
     val workloadPayload =
-      createDiscoverCreateWorkloadRequest(
+      createDiscoverWorkloadRequest(
         actorId = actorId,
         workspaceId = workspaceId,
         discoverInput = discoverInput,
@@ -236,7 +242,7 @@ class CommandService(
     return true
   }
 
-  private fun createDiscoverCreateWorkloadRequest(
+  private fun createDiscoverWorkloadRequest(
     actorId: UUID,
     workspaceId: UUID,
     discoverInput: DiscoverCommandInput.DiscoverCatalogInput,
@@ -282,6 +288,87 @@ class CommandService(
       priority = workloadPriority,
       dataplaneGroupId = dataplaneGroupId,
       signalInput = signalInput,
+      mutexKey = null,
+    )
+  }
+
+  fun createReplicateCommand(
+    commandId: String,
+    connectionId: UUID,
+    jobId: String,
+    attemptNumber: Long,
+    appliedCatalogDiff: CatalogDiff?,
+    signalInput: String?,
+    commandInput: JsonNode,
+  ): Boolean {
+    if (commandsRepository.existsById(commandId)) {
+      return false
+    }
+
+    val replicationInput =
+      jobInputService.getReplicationInput(
+        connectionId = connectionId,
+        appliedCatalogDiff = appliedCatalogDiff,
+        jobId = jobId.toLong(),
+        attemptNumber = attemptNumber,
+        signalInput = signalInput,
+      )
+    val workspaceId = replicationInput.connectionContext?.workspaceId ?: throw IllegalStateException("workspaceId is missing")
+    val workloadPayload =
+      createReplicateWorkloadRequest(
+        connectionId = connectionId,
+        workspaceId = workspaceId,
+        replicationInput = replicationInput,
+        signalInput = signalInput,
+      )
+    createCommand(
+      commandId = commandId,
+      commandType = CommandType.REPLICATE.name,
+      commandInput = commandInput,
+      workspaceId = workspaceId,
+      workloadPayload = workloadPayload,
+    )
+    return true
+  }
+
+  private fun createReplicateWorkloadRequest(
+    connectionId: UUID,
+    workspaceId: UUID,
+    replicationInput: ReplicationActivityInput,
+    signalInput: String?,
+  ): WorkloadCreatePayload {
+    val jobId = replicationInput.jobRunConfig?.jobId?.toLong() ?: throw IllegalStateException("jobId is missing")
+    // because this is the only place where it's attemptId
+    val attemptNumber = replicationInput.jobRunConfig?.attemptId?.toLong() ?: throw IllegalStateException("attemptNumber is missing")
+
+    val workloadId =
+      workloadIdGenerator.generateReplicateWorkloadId(
+        connectionId = connectionId,
+        jobId = jobId,
+        attemptNumber = attemptNumber,
+      )
+    val labels =
+      listOfNotNull(
+        WorkloadLabel(key = WorkloadLabels.CONNECTION_ID_LABEL_KEY, value = connectionId.toString()),
+        WorkloadLabel(key = WorkloadLabels.JOB_LABEL_KEY, value = jobId.toString()),
+        WorkloadLabel(key = WorkloadLabels.ATTEMPT_LABEL_KEY, value = attemptNumber.toString()),
+        WorkloadLabel(key = WorkloadLabels.WORKSPACE_LABEL_KEY, value = workspaceId.toString()),
+        WorkloadLabel(key = WorkloadLabels.ACTOR_TYPE, value = ActorType.SOURCE.toString()),
+        WorkloadLabel(key = WorkloadLabels.WORKER_POD_LABEL_KEY, value = WorkloadLabels.WORKER_POD_LABEL_VALUE),
+      )
+
+    val dataplaneGroupId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).dataplaneGroupId
+
+    return WorkloadCreatePayload(
+      workloadId = workloadId,
+      labels = labels,
+      workloadInput = Jsons.serialize(replicationInput),
+      logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId.toString(), attemptNumber)),
+      type = WorkloadType.SYNC,
+      priority = WorkloadPriority.DEFAULT,
+      dataplaneGroupId = dataplaneGroupId,
+      signalInput = signalInput,
+      mutexKey = connectionId.toString(),
     )
   }
 
@@ -305,39 +392,49 @@ class CommandService(
         createdAt = currentTime,
         updatedAt = currentTime,
       )
-    val mutexKey: String? = null
     val workloadAutoId = UUID.randomUUID()
 
     // TODO the workloadService.createWorkload and Command.save should be in a transaction
-    workloadService.createWorkload(
-      workloadId = workloadPayload.workloadId,
-      labels = workloadPayload.labels,
-      input = workloadPayload.workloadInput,
-      logPath = workloadPayload.logPath,
-      mutexKey = mutexKey,
-      type = workloadPayload.type,
-      autoId = workloadAutoId,
-      deadline = null,
-      signalInput = workloadPayload.signalInput,
-      dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
-      priority = workloadPayload.priority,
-    )
+    val createdWorkload =
+      try {
+        workloadService.createWorkload(
+          workloadId = workloadPayload.workloadId,
+          labels = workloadPayload.labels,
+          input = workloadPayload.workloadInput,
+          workspaceId = workspaceId,
+          organizationId = organizationId,
+          logPath = workloadPayload.logPath,
+          mutexKey = workloadPayload.mutexKey,
+          type = workloadPayload.type,
+          autoId = workloadAutoId,
+          deadline = null,
+          signalInput = workloadPayload.signalInput,
+          dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
+          priority = workloadPayload.priority,
+        )
+        true
+      } catch (e: ConflictException) {
+        log.info { "The workload ${workloadPayload.workloadId} already exists for command $commandId, continuing" }
+        false
+      }
 
     // because workloadId is a foreign key
     commandsRepository.save(command)
 
     // TODO this should only run if both saves above are successful
-    workloadQueueService.create(
-      workloadId = workloadPayload.workloadId,
-      workloadInput = workloadPayload.workloadInput,
-      labels = workloadPayload.labels.associate { it.key to it.value },
-      logPath = workloadPayload.logPath,
-      mutexKey = mutexKey,
-      workloadType = workloadPayload.type,
-      autoId = workloadAutoId,
-      priority = workloadPayload.priority,
-      dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
-    )
+    if (createdWorkload) {
+      workloadQueueService.create(
+        workloadId = workloadPayload.workloadId,
+        workloadInput = workloadPayload.workloadInput,
+        labels = workloadPayload.labels.associate { it.key to it.value },
+        logPath = workloadPayload.logPath,
+        mutexKey = workloadPayload.mutexKey,
+        workloadType = workloadPayload.type,
+        autoId = workloadAutoId,
+        priority = workloadPayload.priority,
+        dataplaneGroup = workloadPayload.dataplaneGroupId.toString(),
+      )
+    }
   }
 
   fun cancel(commandId: String) {
@@ -345,6 +442,33 @@ class CommandService(
       workloadService.cancelWorkload(command.workloadId, "api", "cancelled from the api")
     }
   }
+
+  data class CommandModel(
+    val id: String,
+    val workloadId: String,
+    val commandType: String,
+    val commandInput: JsonNode,
+    val workspaceId: UUID,
+    val organizationId: UUID,
+    val createdAt: OffsetDateTime,
+    val updatedAt: OffsetDateTime,
+  )
+
+  fun get(commandId: String): CommandModel? =
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        CommandModel(
+          id = command.id,
+          workloadId = command.workloadId,
+          commandType = command.commandType,
+          commandInput = command.commandInput,
+          workspaceId = command.workspaceId,
+          organizationId = command.organizationId,
+          createdAt = command.createdAt ?: OffsetDateTime.now(),
+          updatedAt = command.updatedAt ?: OffsetDateTime.now(),
+        )
+      }.orElse(null)
 
   fun getStatus(commandId: String): CommandStatus? =
     commandsRepository
@@ -397,6 +521,11 @@ class CommandService(
       )
     }
 
+  fun getReplicationOutput(commandId: String): ReplicationOutput? =
+    getReplicationOutput(commandId) { failureReason ->
+      ReplicationOutput().withFailures(listOf(failureReason))
+    }
+
   private fun getConnectorJobOutput(
     commandId: String,
     onFailure: (FailureReason) -> ConnectorJobOutput,
@@ -406,6 +535,22 @@ class CommandService(
       .map { command ->
         try {
           workloadOutputReader.readConnectorOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
+        } catch (e: Exception) {
+          val workload = workloadService.getWorkload(command.workloadId)
+          val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)
+          onFailure(failureReason)
+        }
+      }.orElse(null)
+
+  private fun getReplicationOutput(
+    commandId: String,
+    onFailure: (FailureReason) -> ReplicationOutput,
+  ): ReplicationOutput? =
+    commandsRepository
+      .findById(commandId)
+      .map { command ->
+        try {
+          workloadOutputReader.readSyncOutput(command.workloadId) ?: throw NotFoundException("no output found for $commandId")
         } catch (e: Exception) {
           val workload = workloadService.getWorkload(command.workloadId)
           val failureReason = getFailureReasonForMissingConnectorJobOutput(commandId, workload, e)

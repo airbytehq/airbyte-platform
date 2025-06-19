@@ -5,7 +5,7 @@ import { ExternalLink } from "components/ui/Link";
 import { InfoTooltip } from "components/ui/Tooltip";
 
 import { links } from "core/utils/links";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
+import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import { BuilderConfigView } from "./BuilderConfigView";
 import styles from "./ComponentsView.module.scss";
@@ -13,7 +13,7 @@ import { CustomComponentsEditor } from "../CustomComponentsEditor/CustomComponen
 
 export const ComponentsView: React.FC = () => {
   const { formatMessage } = useIntl();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
 
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>

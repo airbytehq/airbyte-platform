@@ -22,6 +22,7 @@ object DataplaneMapper {
       .withCreatedAt(this.createdAt?.toEpochSecond())
       .withUpdatedAt(this.updatedAt?.toEpochSecond())
       .withTombstone(this.tombstone)
+      .withServiceAccountId(this.serviceAccountId)
 
   fun ModelDataplane.toEntity(): EntityDataplane =
     EntityDataplane(
@@ -32,5 +33,6 @@ object DataplaneMapper {
       createdAt = this.createdAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
       updatedAt = this.updatedAt?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
       tombstone = this.tombstone ?: false,
+      serviceAccountId = this.serviceAccountId,
     )
 }

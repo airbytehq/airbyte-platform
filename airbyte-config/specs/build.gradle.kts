@@ -40,14 +40,10 @@ airbyte {
   }
 }
 
-val downloadConnectorRegistry =
-  tasks.register<Download>("downloadConnectorRegistry") {
-    src("https://connectors.airbyte.com/files/registries/v0/oss_registry.json")
-    dest(File(projectDir, "src/main/resources/seed/local_oss_registry.json"))
-    overwrite(true)
-    onlyIfModified(true)
-  }
-
-tasks.processResources {
-  dependsOn(downloadConnectorRegistry)
+tasks.register<Download>("downloadConnectorRegistry") {
+  src("https://connectors.airbyte.com/files/registries/v0/oss_registry.json")
+  dest(File(projectDir, "src/main/resources/seed/local_oss_registry.json"))
+  overwrite(true)
+  useETag(true)
+  onlyIfModified(true)
 }

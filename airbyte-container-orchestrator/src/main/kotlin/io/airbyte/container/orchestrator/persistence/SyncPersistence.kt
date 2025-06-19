@@ -110,7 +110,7 @@ class SyncPersistenceImpl(
    * Stop background data flush thread and attempt to flush pending data
    *
    *
-   * If there is already flush in progress, wait for it to terminate. If it didn't terminate during
+   * If there is already a flush in progress, wait for it to terminate. If it didn't terminate during
    * the allocated time, we exit rather than attempting a concurrent write that could lead to
    * non-deterministic behavior.
    *
@@ -122,7 +122,7 @@ class SyncPersistenceImpl(
     // stop the buffered refresh
     stateFlushExecutorService.shutdown()
 
-    // Wait for previous running task to terminate
+    // Wait for the previous running task to terminate
     try {
       val terminated = stateFlushExecutorService.awaitTermination(FLUSH_TERMINATION_TIMEOUT_IN_SECONDS, TimeUnit.SECONDS)
       if (!terminated) {
@@ -278,6 +278,11 @@ class SyncPersistenceImpl(
   override fun updateStats(recordMessage: AirbyteRecordMessage) {
     isReceivingStats = true
     syncStatsTracker.updateStats(recordMessage)
+  }
+
+  override fun updateStatsFromDestination(recordMessage: AirbyteRecordMessage) {
+    isReceivingStats = true
+    syncStatsTracker.updateStatsFromDestination(recordMessage)
   }
 
   override fun updateEstimates(estimate: AirbyteEstimateTraceMessage) {

@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { render } from "test-utils";
 import { mockSourceDefinition } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { SelectConnector } from "./SelectConnector";
@@ -25,6 +26,7 @@ jest.mock("core/api", () => ({
     return [defaultFilters, () => null];
   },
   useListEnterpriseStubsForWorkspace: () => ({ enterpriseSourceDefinitions: [] }),
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 describe(`${SelectConnector.name}`, () => {

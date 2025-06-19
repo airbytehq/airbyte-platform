@@ -16,6 +16,11 @@ import java.util.UUID
 interface ConfigTemplateService {
   fun getConfigTemplate(configTemplateId: UUID): ConfigTemplateWithActorDetails
 
+  fun getConfigTemplate(
+    configTemplateId: UUID,
+    workspaceId: UUID,
+  ): ConfigTemplateWithActorDetails
+
   fun listConfigTemplatesForOrganization(organizationId: OrganizationId): List<ConfigTemplateWithActorDetails>
 
   fun createTemplate(

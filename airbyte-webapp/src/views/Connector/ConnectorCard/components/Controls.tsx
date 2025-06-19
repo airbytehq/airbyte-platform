@@ -105,7 +105,12 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
-        <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || (isEditMode && !dirty)}>
+        <Button
+          type="submit"
+          data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+          isLoading={isSubmitting}
+          disabled={isSubmitting || (isEditMode && !dirty)}
+        >
           {isEditMode ? (
             <FormattedMessage id="form.saveChangesAndTest" />
           ) : (

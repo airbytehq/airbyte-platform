@@ -1,17 +1,21 @@
 import { useMemo } from "react";
-import { useFormContext } from "react-hook-form";
-import { useUnmount } from "react-use";
+import { useWatch } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
+import { Badge } from "components/ui/Badge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { ArrayOfObjectsControl } from "./ArrayOfObjectsControl";
 import { MultiOptionControl } from "./MultiOptionControl";
 import { ObjectControl } from "./ObjectControl";
+import styles from "./SchemaFormControl.module.scss";
 import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, displayName, nestPath, resolveTopLevelRef } from "../utils";
+import { AirbyteJsonSchema, displayName, resolveTopLevelRef } from "../utils";
 
 interface SchemaFormControlProps {
   /**
@@ -70,13 +74,10 @@ export const SchemaFormControl = ({
     getSchemaAtPath,
     registerRenderedPath,
     onlyShowErrorIfTouched,
-    nestedUnderPath,
     verifyArrayItems,
-    convertJsonSchemaToZodSchema,
+    isRequired: isPathRequired,
+    disableFormControlsUnderPath,
   } = useSchemaForm();
-  const { register, clearErrors } = useFormContext();
-
-  const targetPath = path ? path : nestPath(path, nestedUnderPath);
 
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
@@ -94,44 +95,10 @@ export const SchemaFormControl = ({
       return false;
     }
 
-    const pathParts = path.split(".");
-    const fieldName = pathParts.at(-1);
-    if (!fieldName) {
-      return false;
-    }
+    return !isPathRequired(path);
+  }, [isPathRequired, isRequired, path]);
 
-    const parentPath = pathParts.slice(0, -1).join(".");
-    const parentSchema = getSchemaAtPath(parentPath, true);
-    if (parentSchema?.required?.includes(fieldName)) {
-      return false;
-    }
-
-    return true;
-  }, [getSchemaAtPath, isRequired, path]);
-
-  useUnmount(() => {
-    // Remove the validation logic for this field when unmounting.
-    // Using unregister() fully removes the field from the form which causes other issues,
-    // so just use register() to replace the validation logic with a no-op.
-    register(targetPath, {
-      validate: () => {
-        return true;
-      },
-    });
-    clearErrors(targetPath);
-  });
-
-  // Register validation logic for this field
-  register(targetPath, {
-    validate: (value) => {
-      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, !isOptional);
-      const result = zodSchema.safeParse(value);
-      if (result.success === false) {
-        return result.error.issues.at(-1)?.message;
-      }
-      return true;
-    },
-  });
+  const value = useWatch({ name: path });
 
   // ~ declarative_component_schema type $parameters handling ~
   if (path.includes("$parameters")) {
@@ -143,22 +110,28 @@ export const SchemaFormControl = ({
     return overrideByPath[path];
   }
 
-  if (targetSchema.deprecated) {
+  if (targetSchema.deprecated && value === undefined) {
     return null;
   }
 
   const baseProps: BaseControlProps = {
-    name: targetPath,
+    name: path,
     label: titleOverride ? titleOverride : titleOverride === null ? undefined : displayName(path, targetSchema.title),
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
     optional: isOptional,
-    header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
+    header: targetSchema.deprecated ? (
+      <DeprecatedBadge message={targetSchema.deprecation_message} />
+    ) : (
+      <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+    ),
     containerControlClassName: className,
     onlyShowErrorIfTouched,
     placeholder,
+    "data-field-path": path,
+    disabled: !!disableFormControlsUnderPath && path.startsWith(disableFormControlsUnderPath),
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {
@@ -227,4 +200,16 @@ export const SchemaFormControl = ({
   }
 
   return null;
+};
+
+const DeprecatedBadge = ({ message }: { message?: string }) => {
+  return message ? (
+    <Tooltip control={<Badge variant="grey">Deprecated</Badge>} placement="top">
+      <ReactMarkdown className={styles.deprecatedTooltip}>{message}</ReactMarkdown>
+    </Tooltip>
+  ) : (
+    <Badge variant="grey">
+      <FormattedMessage id="form.deprecated" />
+    </Badge>
+  );
 };

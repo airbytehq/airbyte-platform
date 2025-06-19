@@ -29,10 +29,10 @@ import io.airbyte.data.services.SourceService
 import io.airbyte.db.jdbc.JdbcUtils
 import io.airbyte.domain.services.llm.OpenAIChatCompletionService
 import io.airbyte.metrics.MetricClient
-import io.airbyte.protocol.models.Field
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.CatalogHelpers
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.protocol.models.v0.Field
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

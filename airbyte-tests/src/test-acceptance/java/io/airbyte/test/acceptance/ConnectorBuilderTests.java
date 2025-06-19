@@ -4,7 +4,7 @@
 
 package io.airbyte.test.acceptance;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient;
 import static io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -275,6 +275,7 @@ public class ConnectorBuilderTests {
             null,
             null,
             syncCatalog,
+            null,
             null,
             null,
             null,

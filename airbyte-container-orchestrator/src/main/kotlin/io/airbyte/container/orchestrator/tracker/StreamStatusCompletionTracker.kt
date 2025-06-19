@@ -48,7 +48,7 @@ class StreamStatusCompletionTracker(
 
   fun finalize(
     exitCode: Int,
-    namespacingMapper: AirbyteMapper,
+    namespacingMapper: AirbyteMapper?,
   ): List<AirbyteMessage> {
     if (!shouldEmitStreamStatus || exitCode != 0) {
       return listOf()
@@ -58,10 +58,10 @@ class StreamStatusCompletionTracker(
 
   private fun streamDescriptorsToCompleteStatusMessage(
     streamDescriptors: Set<StreamDescriptor>,
-    namespacingMapper: AirbyteMapper,
+    namespacingMapper: AirbyteMapper?,
   ): List<AirbyteMessage> =
     streamDescriptors.map {
-      namespacingMapper.mapMessage(
+      val message =
         AirbyteMessage()
           .withType(AirbyteMessage.Type.TRACE)
           .withTrace(
@@ -73,8 +73,8 @@ class StreamStatusCompletionTracker(
                   .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.COMPLETE)
                   .withStreamDescriptor(it),
               ),
-          ),
-      )
+          )
+      namespacingMapper?.mapMessage(message) ?: message
     }
 }
 

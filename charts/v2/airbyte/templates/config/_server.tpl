@@ -6,33 +6,445 @@
 */}}
 
 {{/*
-Renders the server.applications value
+Renders the server secret name
 */}}
-{{- define "airbyte.server.applications" }}
-    {{- .Values.server.applications | default ternary "database" "" (eq (include "airbyte.auth.identityProvider.type" .) "generic-oidc") }}
+{{- define "airbyte.server.secretName" }}
+{{- if .Values.server.secretName }}
+    {{- .Values.server.secretName }}
+{{- else }}
+    {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
+{{- end }}
 {{- end }}
 
 {{/*
-Renders the server.applications environment variable
+Renders the server.auditLoggingEnabled value
 */}}
-{{- define "airbyte.server.applications.env" }}
-- name: AB_AIRBYTE_APPLICATIONS
+{{- define "airbyte.server.auditLoggingEnabled" }}
+	{{- if eq .Values.server.auditLoggingEnabled nil }}
+    	{{- false }}
+	{{- else }}
+    	{{- .Values.server.auditLoggingEnabled }}
+	{{- end }}
+{{- end }}
+
+{{/*
+Renders the server.auditLoggingEnabled environment variable
+*/}}
+{{- define "airbyte.server.auditLoggingEnabled.env" }}
+- name: AUDIT_LOGGING_ENABLED
   valueFrom:
     configMapKeyRef:
       name: {{ .Release.Name }}-airbyte-env
-      key: AB_AIRBYTE_APPLICATIONS
+      key: AUDIT_LOGGING_ENABLED
+{{- end }}
+
+{{/*
+Renders the server.configDbMaxPoolSize value
+*/}}
+{{- define "airbyte.server.configDbMaxPoolSize" }}
+    {{- .Values.server.configDbMaxPoolSize | default 20 }}
+{{- end }}
+
+{{/*
+Renders the server.configDbMaxPoolSize environment variable
+*/}}
+{{- define "airbyte.server.configDbMaxPoolSize.env" }}
+- name: CONFIG_DB_MAX_POOL_SIZE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONFIG_DB_MAX_POOL_SIZE
+{{- end }}
+
+{{/*
+Renders the server.connectorDatadogSupportNames value
+*/}}
+{{- define "airbyte.server.connectorDatadogSupportNames" }}
+    {{- .Values.server.connectorDatadogSupportNames | default "source-postgres-strict-encrypt=2.0.5" }}
+{{- end }}
+
+{{/*
+Renders the server.connectorDatadogSupportNames environment variable
+*/}}
+{{- define "airbyte.server.connectorDatadogSupportNames.env" }}
+- name: CONNECTOR_DATADOG_SUPPORT_NAMES
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: CONNECTOR_DATADOG_SUPPORT_NAMES
+{{- end }}
+
+{{/*
+Renders the server.warehouseExports.projectId value
+*/}}
+{{- define "airbyte.server.warehouseExports.projectId" }}
+    {{- .Values.server.warehouseExports.projectId }}
+{{- end }}
+
+{{/*
+Renders the server.warehouseExports.projectId environment variable
+*/}}
+{{- define "airbyte.server.warehouseExports.projectId.env" }}
+- name: GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID
+{{- end }}
+
+{{/*
+Renders the server.warehouseExports.bucketName value
+*/}}
+{{- define "airbyte.server.warehouseExports.bucketName" }}
+    {{- .Values.server.warehouseExports.bucketName }}
+{{- end }}
+
+{{/*
+Renders the server.warehouseExports.bucketName environment variable
+*/}}
+{{- define "airbyte.server.warehouseExports.bucketName.env" }}
+- name: GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME
+{{- end }}
+
+{{/*
+Renders the server.data.salesCustomerAttributesObjectPrefix value
+*/}}
+{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix" }}
+    {{- .Values.server.data.salesCustomerAttributesObjectPrefix | default "data/sales_customer_attributes" }}
+{{- end }}
+
+{{/*
+Renders the server.data.salesCustomerAttributesObjectPrefix environment variable
+*/}}
+{{- define "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" }}
+- name: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX
+{{- end }}
+
+{{/*
+Renders the server.httpIdleTimeout value
+*/}}
+{{- define "airbyte.server.httpIdleTimeout" }}
+    {{- .Values.server.httpIdleTimeout }}
+{{- end }}
+
+{{/*
+Renders the server.httpIdleTimeout environment variable
+*/}}
+{{- define "airbyte.server.httpIdleTimeout.env" }}
+- name: HTTP_IDLE_TIMEOUT
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: HTTP_IDLE_TIMEOUT
+{{- end }}
+
+{{/*
+Renders the server.openai.syncAssistantApiKey value
+*/}}
+{{- define "airbyte.server.openai.syncAssistantApiKey" }}
+    {{- .Values.server.openai.syncAssistantApiKey }}
+{{- end }}
+
+{{/*
+Renders the server.openai.syncAssistantApiKey secret key
+*/}}
+{{- define "airbyte.server.openai.syncAssistantApiKey.secretKey" }}
+	{{- .Values.server.openai.syncAssistantApiKeySecretKey | default "OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT" }}
+{{- end }}
+
+{{/*
+Renders the server.openai.syncAssistantApiKey environment variable
+*/}}
+{{- define "airbyte.server.openai.syncAssistantApiKey.env" }}
+- name: OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "airbyte.server.secretName" . }}
+      key: {{ include "airbyte.server.openai.syncAssistantApiKey.secretKey" . }}
+{{- end }}
+
+{{/*
+Renders the server.publicApiExecutor.numThreads value
+*/}}
+{{- define "airbyte.server.publicApiExecutor.numThreads" }}
+    {{- .Values.server.publicApiExecutor.numThreads }}
+{{- end }}
+
+{{/*
+Renders the server.publicApiExecutor.numThreads environment variable
+*/}}
+{{- define "airbyte.server.publicApiExecutor.numThreads.env" }}
+- name: PUBLIC_API_EXECUTOR_THREADS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: PUBLIC_API_EXECUTOR_THREADS
+{{- end }}
+
+{{/*
+Renders the server.scheduler.numThreads value
+*/}}
+{{- define "airbyte.server.scheduler.numThreads" }}
+    {{- .Values.server.scheduler.numThreads }}
+{{- end }}
+
+{{/*
+Renders the server.scheduler.numThreads environment variable
+*/}}
+{{- define "airbyte.server.scheduler.numThreads.env" }}
+- name: SCHEDULER_TASK_EXECUTOR_THREADS
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: SCHEDULER_TASK_EXECUTOR_THREADS
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogApplicationId value
+*/}}
+{{- define "airbyte.server.webapp.datadogApplicationId" }}
+    {{- .Values.server.webapp.datadogApplicationId }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogApplicationId environment variable
+*/}}
+{{- define "airbyte.server.webapp.datadogApplicationId.env" }}
+- name: WEBAPP_DATADOG_APPLICATION_ID
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_DATADOG_APPLICATION_ID
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogClientToken value
+*/}}
+{{- define "airbyte.server.webapp.datadogClientToken" }}
+    {{- .Values.server.webapp.datadogClientToken }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogClientToken environment variable
+*/}}
+{{- define "airbyte.server.webapp.datadogClientToken.env" }}
+- name: WEBAPP_DATADOG_CLIENT_TOKEN
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_DATADOG_CLIENT_TOKEN
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogEnv value
+*/}}
+{{- define "airbyte.server.webapp.datadogEnv" }}
+    {{- .Values.server.webapp.datadogEnv }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogEnv environment variable
+*/}}
+{{- define "airbyte.server.webapp.datadogEnv.env" }}
+- name: WEBAPP_DATADOG_ENV
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_DATADOG_ENV
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogService value
+*/}}
+{{- define "airbyte.server.webapp.datadogService" }}
+    {{- .Values.server.webapp.datadogService | default "airbyte-webapp" }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogService environment variable
+*/}}
+{{- define "airbyte.server.webapp.datadogService.env" }}
+- name: WEBAPP_DATADOG_SERVICE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_DATADOG_SERVICE
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogSite value
+*/}}
+{{- define "airbyte.server.webapp.datadogSite" }}
+    {{- .Values.server.webapp.datadogSite | default "datadoghq.com" }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.datadogSite environment variable
+*/}}
+{{- define "airbyte.server.webapp.datadogSite.env" }}
+- name: WEBAPP_DATADOG_SITE
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_DATADOG_SITE
+{{- end }}
+
+{{/*
+Renders the server.webapp.hockeystackApiKey value
+*/}}
+{{- define "airbyte.server.webapp.hockeystackApiKey" }}
+    {{- .Values.server.webapp.hockeystackApiKey }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.hockeystackApiKey environment variable
+*/}}
+{{- define "airbyte.server.webapp.hockeystackApiKey.env" }}
+- name: WEBAPP_HOCKEYSTACK_API_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_HOCKEYSTACK_API_KEY
+{{- end }}
+
+{{/*
+Renders the server.webapp.launchdarklyKey value
+*/}}
+{{- define "airbyte.server.webapp.launchdarklyKey" }}
+    {{- .Values.server.webapp.launchdarklyKey }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.launchdarklyKey environment variable
+*/}}
+{{- define "airbyte.server.webapp.launchdarklyKey.env" }}
+- name: WEBAPP_LAUNCHDARKLY_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_LAUNCHDARKLY_KEY
+{{- end }}
+
+{{/*
+Renders the server.webapp.osanoKey value
+*/}}
+{{- define "airbyte.server.webapp.osanoKey" }}
+    {{- .Values.server.webapp.osanoKey }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.osanoKey environment variable
+*/}}
+{{- define "airbyte.server.webapp.osanoKey.env" }}
+- name: WEBAPP_OSANO_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_OSANO_KEY
+{{- end }}
+
+{{/*
+Renders the server.webapp.segmentToken value
+*/}}
+{{- define "airbyte.server.webapp.segmentToken" }}
+    {{- .Values.server.webapp.segmentToken }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.segmentToken environment variable
+*/}}
+{{- define "airbyte.server.webapp.segmentToken.env" }}
+- name: WEBAPP_SEGMENT_TOKEN
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_SEGMENT_TOKEN
+{{- end }}
+
+{{/*
+Renders the server.webapp.zendeskKey value
+*/}}
+{{- define "airbyte.server.webapp.zendeskKey" }}
+    {{- .Values.server.webapp.zendeskKey }}
+{{- end }}
+
+{{/*
+Renders the server.webapp.zendeskKey environment variable
+*/}}
+{{- define "airbyte.server.webapp.zendeskKey.env" }}
+- name: WEBAPP_ZENDESK_KEY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: WEBAPP_ZENDESK_KEY
 {{- end }}
 
 {{/*
 Renders the set of all server environment variables
 */}}
 {{- define "airbyte.server.envs" }}
-{{- include "airbyte.server.applications.env" . }}
+{{- include "airbyte.server.auditLoggingEnabled.env" . }}
+{{- include "airbyte.server.configDbMaxPoolSize.env" . }}
+{{- if (eq (include "airbyte.common.edition" .) "cloud") }}
+{{- include "airbyte.server.connectorDatadogSupportNames.env" . }}
+{{- end }}
+{{- include "airbyte.server.warehouseExports.projectId.env" . }}
+{{- include "airbyte.server.warehouseExports.bucketName.env" . }}
+{{- include "airbyte.server.data.salesCustomerAttributesObjectPrefix.env" . }}
+{{- include "airbyte.server.httpIdleTimeout.env" . }}
+{{- include "airbyte.server.openai.syncAssistantApiKey.env" . }}
+{{- include "airbyte.server.publicApiExecutor.numThreads.env" . }}
+{{- include "airbyte.server.scheduler.numThreads.env" . }}
+{{- include "airbyte.server.webapp.datadogApplicationId.env" . }}
+{{- include "airbyte.server.webapp.datadogClientToken.env" . }}
+{{- include "airbyte.server.webapp.datadogEnv.env" . }}
+{{- include "airbyte.server.webapp.datadogService.env" . }}
+{{- include "airbyte.server.webapp.datadogSite.env" . }}
+{{- include "airbyte.server.webapp.hockeystackApiKey.env" . }}
+{{- include "airbyte.server.webapp.launchdarklyKey.env" . }}
+{{- include "airbyte.server.webapp.osanoKey.env" . }}
+{{- include "airbyte.server.webapp.segmentToken.env" . }}
+{{- include "airbyte.server.webapp.zendeskKey.env" . }}
 {{- end }}
 
 {{/*
 Renders the set of all server config map variables
 */}}
 {{- define "airbyte.server.configVars" }}
-AB_AIRBYTE_APPLICATIONS: {{ include "airbyte.server.applications" . | quote }}
+AUDIT_LOGGING_ENABLED: {{ include "airbyte.server.auditLoggingEnabled" . | quote }}
+CONFIG_DB_MAX_POOL_SIZE: {{ include "airbyte.server.configDbMaxPoolSize" . | quote }}
+{{- if (eq (include "airbyte.common.edition" .) "cloud") }}
+CONNECTOR_DATADOG_SUPPORT_NAMES: {{ include "airbyte.server.connectorDatadogSupportNames" . | quote }}
+{{- end }}
+GCS_AIRBYTE_WAREHOUSE_EXPORTS_PROJECT_ID: {{ include "airbyte.server.warehouseExports.projectId" . | quote }}
+GCS_AIRBYTE_WAREHOUSE_EXPORTS_BUCKET_NAME: {{ include "airbyte.server.warehouseExports.bucketName" . | quote }}
+GCS_DATA_SALES_CUSTOMER_ATTRIBUTES_OBJECT_PREFIX: {{ include "airbyte.server.data.salesCustomerAttributesObjectPrefix" . | quote }}
+HTTP_IDLE_TIMEOUT: {{ include "airbyte.server.httpIdleTimeout" . | quote }}
+PUBLIC_API_EXECUTOR_THREADS: {{ include "airbyte.server.publicApiExecutor.numThreads" . | quote }}
+SCHEDULER_TASK_EXECUTOR_THREADS: {{ include "airbyte.server.scheduler.numThreads" . | quote }}
+WEBAPP_DATADOG_APPLICATION_ID: {{ include "airbyte.server.webapp.datadogApplicationId" . | quote }}
+WEBAPP_DATADOG_CLIENT_TOKEN: {{ include "airbyte.server.webapp.datadogClientToken" . | quote }}
+WEBAPP_DATADOG_ENV: {{ include "airbyte.server.webapp.datadogEnv" . | quote }}
+WEBAPP_DATADOG_SERVICE: {{ include "airbyte.server.webapp.datadogService" . | quote }}
+WEBAPP_DATADOG_SITE: {{ include "airbyte.server.webapp.datadogSite" . | quote }}
+WEBAPP_HOCKEYSTACK_API_KEY: {{ include "airbyte.server.webapp.hockeystackApiKey" . | quote }}
+WEBAPP_LAUNCHDARKLY_KEY: {{ include "airbyte.server.webapp.launchdarklyKey" . | quote }}
+WEBAPP_OSANO_KEY: {{ include "airbyte.server.webapp.osanoKey" . | quote }}
+WEBAPP_SEGMENT_TOKEN: {{ include "airbyte.server.webapp.segmentToken" . | quote }}
+WEBAPP_ZENDESK_KEY: {{ include "airbyte.server.webapp.zendeskKey" . | quote }}
+{{- end }}
+
+{{/*
+Renders the set of all server secret variables
+*/}}
+{{- define "airbyte.server.secrets" }}
+OPENAI_API_KEY_PROJ_FAILED_SYNC_ASSISTANT: {{ include "airbyte.server.openai.syncAssistantApiKey" . | quote }}
 {{- end }}

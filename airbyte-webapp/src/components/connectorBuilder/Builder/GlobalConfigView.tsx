@@ -1,42 +1,26 @@
-import { useIntl } from "react-intl";
+import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
+import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 
-import { AssistButton } from "components/connectorBuilder/Builder/Assist/AssistButton";
+import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { Namespace, Action, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
-
-import { AuthenticationSection } from "./AuthenticationSection";
-import { BuilderCard } from "./BuilderCard";
-import { BuilderConfigView } from "./BuilderConfigView";
-import { BuilderField } from "./BuilderField";
 import styles from "./GlobalConfigView.module.scss";
-
 export const GlobalConfigView: React.FC = () => {
-  const { formatMessage } = useIntl();
-  const analyticsService = useAnalyticsService();
-  const { permission } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
 
   return (
     <fieldset className={styles.fieldset} disabled={permission === "readOnly"}>
-      <BuilderConfigView heading={formatMessage({ id: "connectorBuilder.globalConfiguration" })}>
-        <BuilderCard>
-          <BuilderField
-            type="jinja"
-            manifestPath="HttpRequester.properties.url_base"
-            path="formValues.global.urlBase"
-            labelAction={<AssistButton assistKey="urlbase" />}
-            onBlur={(value: string) => {
-              if (value) {
-                analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.API_URL_CREATE, {
-                  actionDescription: "Base API URL filled in",
-                  api_url: value,
-                });
-              }
-            }}
-          />
-        </BuilderCard>
-        <AuthenticationSection authPath="formValues.global.authenticator" />
-      </BuilderConfigView>
+      <FlexContainer direction="column">
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.check" />
+        </Card>
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.concurrency_level" />
+        </Card>
+        <Card className={styles.card}>
+          <SchemaFormControl path="manifest.api_budget" />
+        </Card>
+      </FlexContainer>
     </fieldset>
   );
 };

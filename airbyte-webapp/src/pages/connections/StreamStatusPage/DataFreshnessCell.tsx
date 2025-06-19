@@ -1,31 +1,25 @@
 import dayjs from "dayjs";
 import { useMemo } from "react";
-import { FormattedMessage } from "react-intl";
+import { FormattedDate } from "react-intl";
 
 import { Text } from "components/ui/Text";
+import { Tooltip } from "components/ui/Tooltip";
 
-export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined; showRelativeTime: boolean }> = ({
-  transitionedAt,
-  showRelativeTime,
-}) => {
-  const lastSyncDisplayText = useMemo(() => {
-    if (transitionedAt) {
-      const lastSync = dayjs(transitionedAt);
+export const DataFreshnessCell: React.FC<{ transitionedAt: number | undefined }> = ({ transitionedAt }) => {
+  const relativeTime = useMemo(() => dayjs(transitionedAt).fromNow(), [transitionedAt]);
 
-      if (showRelativeTime) {
-        return lastSync.fromNow();
-      }
-      return lastSync.format("MM.DD.YY HH:mm:ss");
-    }
-
-    return <FormattedMessage id="general.dash" />;
-  }, [transitionedAt, showRelativeTime]);
-
-  if (lastSyncDisplayText) {
+  if (relativeTime) {
     return (
-      <Text size="xs" color="grey300" data-testid="streams-list-data-freshness-cell-content">
-        {lastSyncDisplayText}
-      </Text>
+      <Tooltip
+        placement="top"
+        control={
+          <Text size="xs" color="grey300" data-testid="streams-list-data-freshness-cell-content">
+            {relativeTime}
+          </Text>
+        }
+      >
+        <FormattedDate value={transitionedAt} timeStyle="long" dateStyle="medium" />
+      </Tooltip>
     );
   }
   return null;

@@ -5,14 +5,14 @@ import { EMPTY, Subject } from "rxjs";
 import { Experiments, defaultExperimentValues } from "./experiments";
 import { ExperimentProvider, ExperimentService, useExperiment } from "./ExperimentService";
 
-type TestExperimentValueType = Experiments["connector.airbyteCloudIpAddresses"];
+type TestExperimentValueType = Experiments["connection.onboarding.sources"];
 
-const TEST_EXPERIMENT_KEY = "connector.airbyteCloudIpAddresses";
+const TEST_EXPERIMENT_KEY = "connection.onboarding.sources";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const getExperiment: ExperimentService["getExperiment"] = (key): any => {
   if (key === TEST_EXPERIMENT_KEY) {
-    return "10.0.0.0,10.1.0.0";
+    return "sourceA,sourceB";
   }
   throw new Error(`${key} not mocked for testing`);
 };
@@ -41,11 +41,11 @@ describe("ExperimentService", () => {
         </ExperimentProvider>
       );
       const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), { wrapper });
-      expect(result.current).toEqual("10.0.0.0,10.1.0.0");
+      expect(result.current).toEqual("sourceA,sourceB");
     });
 
     it("should return the defaultValue if ExperimentService provides undefined", () => {
-      jest.replaceProperty(defaultExperimentValues, "connector.airbyteCloudIpAddresses", "10.42.0.0");
+      jest.replaceProperty(defaultExperimentValues, TEST_EXPERIMENT_KEY, "defaultSource");
       const wrapper: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => (
         <ExperimentProvider
           value={{
@@ -61,13 +61,13 @@ describe("ExperimentService", () => {
         </ExperimentProvider>
       );
       const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), { wrapper });
-      expect(result.current).toEqual("10.42.0.0");
+      expect(result.current).toEqual("defaultSource");
     });
 
     it("should return the default value if no ExperimentService is provided", () => {
-      jest.replaceProperty(defaultExperimentValues, "connector.airbyteCloudIpAddresses", "10.42.0.0");
+      jest.replaceProperty(defaultExperimentValues, TEST_EXPERIMENT_KEY, "defaultSource");
       const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY));
-      expect(result.current).toEqual("10.42.0.0");
+      expect(result.current).toEqual("defaultSource");
     });
 
     it("should rerender whenever the ExperimentService emits a new value", () => {
@@ -89,11 +89,11 @@ describe("ExperimentService", () => {
       const { result } = renderHook(() => useExperiment(TEST_EXPERIMENT_KEY), {
         wrapper,
       });
-      expect(result.current).toEqual("10.0.0.0,10.1.0.0");
+      expect(result.current).toEqual("sourceA,sourceB");
       act(() => {
-        subject.next("10.10.10.10");
+        subject.next("sourceC");
       });
-      expect(result.current).toEqual("10.10.10.10");
+      expect(result.current).toEqual("sourceC");
     });
   });
 });

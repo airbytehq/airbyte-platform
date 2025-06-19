@@ -248,7 +248,7 @@ paths:
               $ref: "#/components/schemas/WorkloadQueueCleanLimit"
       responses:
         "204":
-          description: Cleaning workload queue successfull
+          description: Cleaning workload queue successful
   /api/v1/workload/queue/depth:
     post:
       tags:
@@ -446,6 +446,14 @@ components:
             $ref: "#/components/schemas/WorkloadLabel"
         inputPayload:
           type: string
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
         logPath:
           type: string
         mutexKey:
@@ -521,6 +529,14 @@ components:
             $ref: "#/components/schemas/WorkloadLabel"
         workloadInput:
           type: string
+        workspaceId:
+          type: string
+          format: uuid
+          nullable: true
+        organizationId:
+          type: string
+          format: uuid
+          nullable: true
         logPath:
           type: string
         mutexKey:

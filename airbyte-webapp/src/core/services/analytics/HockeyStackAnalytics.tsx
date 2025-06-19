@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-import { config } from "core/config";
+import { useWebappConfig } from "core/config";
 import { trackError } from "core/utils/datadog";
 
 declare global {
@@ -19,10 +19,11 @@ const HOCKEYSTACK_SCRIPT_ID = "hs-snippet";
 class HockeyStackLoadingError extends Error {}
 
 export const HockeyStackAnalytics: React.FC<React.PropsWithChildren> = ({ children }) => {
+  const { hockeystackApiKey } = useWebappConfig();
   const [hockeyStackInitialized, setHockeyStackInitialized] = useState(false);
 
   useEffect(() => {
-    if (!config.hockeyStackApiKey) {
+    if (!hockeystackApiKey) {
       setHockeyStackInitialized(true);
       return;
     }
@@ -45,7 +46,7 @@ export const HockeyStackAnalytics: React.FC<React.PropsWithChildren> = ({ childr
       script.integrity = "sha256-70jTH6ifyOB05/vjr6qwnaJQLCWdQFYl1xJZSsTdzQ4=";
       script.crossOrigin = "anonymous";
       script.dataset.cookieless = "1";
-      script.dataset.apikey = config.hockeyStackApiKey;
+      script.dataset.apikey = hockeystackApiKey;
       script.onload = () => {
         setHockeyStackInitialized(true);
       };
@@ -57,7 +58,7 @@ export const HockeyStackAnalytics: React.FC<React.PropsWithChildren> = ({ childr
     }
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [hockeystackApiKey]);
 
   // Don't render children until HockeyStack is loaded. This is important, because we want the
   // analyticsProvider.identify() call to only be fired once both Segment and HockeyStack are loaded.

@@ -4,6 +4,7 @@
 
 package io.airbyte.test.utils;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static java.lang.Thread.sleep;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -102,7 +103,6 @@ import io.airbyte.commons.temporal.TemporalWorkflowUtils;
 import io.airbyte.commons.temporal.config.TemporalSdkTimeouts;
 import io.airbyte.commons.temporal.scheduling.ConnectionManagerWorkflow;
 import io.airbyte.commons.temporal.scheduling.state.WorkflowState;
-import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.db.Database;
 import io.airbyte.db.factory.DataSourceFactory;
 import io.airbyte.db.jdbc.JdbcUtils;
@@ -162,7 +162,6 @@ public class AcceptanceTestHarness {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(AcceptanceTestHarness.class);
 
-  private static final UUID DEFAULT_ORGANIZATION_ID = OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
   private static final DockerImageName DESTINATION_POSTGRES_IMAGE_NAME = DockerImageName.parse("postgres:15-alpine");
 
   private static final DockerImageName SOURCE_POSTGRES_IMAGE_NAME = DockerImageName.parse("debezium/postgres:15-alpine")
@@ -321,6 +320,7 @@ public class AcceptanceTestHarness {
         STREAM_NAME.replace(".", "_"),
         true,
         true,
+        null,
         null,
         null,
         List.of(),
@@ -678,6 +678,7 @@ public class AcceptanceTestHarness {
         create.getScheduleData(),
         null,
         create.getCatalogId(),
+        null,
         create.getDataplaneGroupId(),
         null,
         null,
@@ -714,6 +715,7 @@ public class AcceptanceTestHarness {
             create.getScheduleData(),
             null,
             create.getCatalogId(),
+            null,
             create.getDataplaneGroupId(),
             null,
             null,
@@ -758,6 +760,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null));
   }
 
@@ -771,6 +774,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             catalog,
+            null,
             null,
             null,
             null,
@@ -803,6 +807,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             sourceCatalogId,
+            null,
             null,
             null,
             null,
@@ -1175,6 +1180,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             null);
     updateConnection(connectionUpdate);
   }
@@ -1393,6 +1399,7 @@ public class AcceptanceTestHarness {
             null,
             null,
             null,
+            null,
             nonBreakingChangesPreference,
             backfillPreference,
             null,
@@ -1446,6 +1453,7 @@ public class AcceptanceTestHarness {
             stream.getConfig().getAliasName(),
             stream.getConfig().getSelected(),
             stream.getConfig().getSuggested(),
+            stream.getConfig().getDestinationObjectName(),
             stream.getConfig().getIncludeFiles(),
             stream.getConfig().getFieldSelectionEnabled(),
             stream.getConfig().getSelectedFields(),
@@ -1479,6 +1487,7 @@ public class AcceptanceTestHarness {
             operation.getOperatorConfiguration(),
             operation.getOperationId())),
         connection.getSourceCatalogId(),
+        null,
         null,
         null,
         null,

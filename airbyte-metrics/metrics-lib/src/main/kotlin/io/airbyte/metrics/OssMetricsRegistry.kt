@@ -339,6 +339,10 @@ enum class OssMetricsRegistry(
     metricName = "state_buffering",
     metricDescription = "number of state messages being buffered before a flush",
   ),
+  STATE_CHECKSUM_COUNT_ERROR(
+    metricName = "state_checksum_error",
+    metricDescription = "number of state checksum errors for a given connection",
+  ),
   STATE_COMMIT_ATTEMPT(
     metricName = "state_commit_attempt",
     metricDescription = "number of attempts to commit states from the orchestrator/workers",
@@ -586,6 +590,10 @@ enum class OssMetricsRegistry(
   DELETE_SECRET_DEFAULT_STORE(
     metricName = "delete_secret_default_store",
     metricDescription = "A secret was created in the default configured secret store.",
+  ),
+  DELETE_SECRET(
+    metricName = "delete_secret",
+    metricDescription = "A secret was deleted from a secrets manager.",
   ),
   CATALOG_SIZE_VALIDATION_ERROR(
     metricName = "catalog_size_validation_error",

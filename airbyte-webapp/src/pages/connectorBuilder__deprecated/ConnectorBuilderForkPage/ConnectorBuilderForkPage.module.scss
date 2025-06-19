@@ -1,0 +1,19 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.container {
+  max-width: 500px;
+  margin: auto;
+}
+
+.form {
+  padding: variables.$spacing-xl;
+}
+
+$iconWidth: 20px;
+
+.connectorIcon {
+  width: $iconWidth;
+  height: $iconWidth;
+}

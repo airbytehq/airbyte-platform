@@ -146,8 +146,8 @@ public class DbConverter {
         .withResourceRequirements(
             Jsons.deserialize(record.get(CONNECTION.RESOURCE_REQUIREMENTS).data(), ResourceRequirements.class))
         .withSourceCatalogId(record.get(CONNECTION.SOURCE_CATALOG_ID))
+        .withDestinationCatalogId(record.get(CONNECTION.DESTINATION_CATALOG_ID))
         .withBreakingChange(record.get(CONNECTION.BREAKING_CHANGE))
-        .withDataplaneGroupId(record.get(CONNECTION.DATAPLANE_GROUP_ID))
         .withNonBreakingChangesPreference(
             Enums.toEnum(Optional.ofNullable(record.get(SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS)).orElse(AutoPropagationStatus.ignore)
                 .getLiteral(), NonBreakingChangesPreference.class).orElseThrow())
@@ -360,7 +360,11 @@ public class DbConverter {
   public static ActorCatalog buildActorCatalog(final Record record) {
     return new ActorCatalog()
         .withId(record.get(ACTOR_CATALOG.ID))
-        .withCatalog(Jsons.jsonNode(parseAirbyteCatalog(record.get(ACTOR_CATALOG.CATALOG).toString())))
+        .withCatalog(record.get(ACTOR_CATALOG.CATALOG) == null ? null
+            : Jsons.deserialize(record.get(ACTOR_CATALOG.CATALOG).toString()))
+        .withCatalogType(record.get(ACTOR_CATALOG.CATALOG_TYPE) != null
+            ? Enums.toEnum(record.get(ACTOR_CATALOG.CATALOG_TYPE, String.class), ActorCatalog.CatalogType.class).orElseThrow()
+            : null)
         .withCatalogHash(record.get(ACTOR_CATALOG.CATALOG_HASH));
   }
 
@@ -550,7 +554,10 @@ public class DbConverter {
         .withInternalSupportLevel(record.get(ACTOR_DEFINITION_VERSION.INTERNAL_SUPPORT_LEVEL, Long.class))
         .withLanguage(record.get(ACTOR_DEFINITION_VERSION.LANGUAGE))
         .withSupportsFileTransfer(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_FILE_TRANSFER))
-        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION));
+        .withSupportsDataActivation(record.get(ACTOR_DEFINITION_VERSION.SUPPORTS_DATA_ACTIVATION))
+        .withConnectorIPCOptions(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS) == null
+            ? null
+            : Jsons.deserialize(record.get(ACTOR_DEFINITION_VERSION.CONNECTOR_IPC_OPTIONS).data()));
   }
 
   public static SecretPersistenceCoordinate buildSecretPersistenceCoordinate(final Record record) {

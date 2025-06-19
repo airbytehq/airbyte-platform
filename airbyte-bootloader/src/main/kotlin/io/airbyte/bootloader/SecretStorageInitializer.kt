@@ -4,8 +4,8 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes
 import io.airbyte.data.services.SecretStorageService
 import io.airbyte.domain.models.PatchField.Companion.toPatch
@@ -47,11 +47,11 @@ class SecretStorageInitializer(
           SecretStorageCreate(
             id = SecretStorage.DEFAULT_SECRET_STORAGE_ID,
             scopeType = SecretStorageScopeType.ORGANIZATION,
-            scopeId = OrganizationPersistence.DEFAULT_ORGANIZATION_ID,
+            scopeId = DEFAULT_ORGANIZATION_ID,
             descriptor = DEFAULT_SECRET_STORAGE_DESCRIPTOR,
             storageType = configuredSecretStorageType,
             configuredFromEnvironment = true,
-            createdBy = UserId(UserPersistence.DEFAULT_USER_ID),
+            createdBy = UserId(DEFAULT_USER_ID),
           ),
         )
       }
@@ -63,7 +63,7 @@ class SecretStorageInitializer(
           }
           secretStorageService.patch(
             id = existingStorage.id,
-            updatedBy = UserId(UserPersistence.DEFAULT_USER_ID),
+            updatedBy = UserId(DEFAULT_USER_ID),
             storageType = configuredSecretStorageType.toPatch(),
           )
         }

@@ -67,8 +67,7 @@ $sm-size: 14px;
   }
 
   &.disabled {
-    background-color: colors.$grey-100;
-    border-color: colors.$grey-300;
+    border-color: colors.$grey-100;
     color: colors.$grey-300;
     cursor: not-allowed;
 

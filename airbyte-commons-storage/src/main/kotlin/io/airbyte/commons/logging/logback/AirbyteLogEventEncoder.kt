@@ -8,9 +8,11 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.encoder.EncoderBase
 import com.fasterxml.jackson.databind.module.SimpleModule
 import io.airbyte.commons.jackson.MoreMappers
+import io.airbyte.commons.logging.CancellationExceptionSerializer
 import io.airbyte.commons.logging.LogEvents
 import io.airbyte.commons.logging.StackTraceElementSerializer
 import io.airbyte.commons.logging.toLogEvent
+import kotlinx.coroutines.CancellationException
 
 val EMPTY_BYTES: ByteArray = ByteArray(0)
 val NEW_LINE = "\n".toByteArray()
@@ -41,6 +43,7 @@ class AirbyteLogEventEncoder : EncoderBase<ILoggingEvent>() {
     super.start()
     val structuredLogEventModule = SimpleModule()
     structuredLogEventModule.addSerializer(StackTraceElement::class.java, StackTraceElementSerializer())
+    structuredLogEventModule.addSerializer(CancellationException::class.java, CancellationExceptionSerializer())
     objectMapper.registerModule(structuredLogEventModule)
   }
 }

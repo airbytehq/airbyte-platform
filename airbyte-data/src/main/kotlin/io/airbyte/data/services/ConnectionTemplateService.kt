@@ -13,21 +13,11 @@ import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 
-sealed class ActorDefinitionIdOrType {
-  data class DefinitionId(
-    val id: ActorDefinitionId,
-  ) : ActorDefinitionIdOrType()
-
-  data class Type(
-    val type: String,
-  ) : ActorDefinitionIdOrType()
-}
-
 interface ConnectionTemplateService {
   fun createTemplate(
     organizationId: OrganizationId,
     destinationName: String,
-    destinationActorDefinitionIdOrDestinationType: ActorDefinitionIdOrType,
+    actorDefinitionId: ActorDefinitionId,
     destinationConfig: JsonNode,
     namespaceDefinitionType: NamespaceDefinitionType,
     namespaceFormat: String?,

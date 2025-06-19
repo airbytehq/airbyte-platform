@@ -131,18 +131,6 @@ storage:
   #  connectionString: <azure storage connection string>
   #  connectionStringSecretKey: <secret coordinate containing an existing connection-string secret>
 
-keycloak:
-  secretName: ""
-
-  url: ""
-  internalHost:
-  internalProtocol: "http"
-  internalBasePath: "/auth"
-  protocol: "https"
-
-  clientRealm: ""
-  realmIssuer: ""
-
 workloads:
   secretName: ""
   namespace: "jobs"
@@ -243,41 +231,9 @@ jobs:
     #sentry: {}
     #  dsn: ""
 
-temporal:
-  secretName: ""
-
-  host: ""
-
-  cli:
-    address: ""
-    namespace: ""
-    tlsCert: ""
-    tlsCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
-    tlsKey: ""
-    tlsKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
-
-  cloud:
-    enabled: false
-    host: ""
-    namespace: ""
-    clientCert: ""
-    clientCertSecretKey: "TEMPORAL_CLOUD_CLIENT_CERT"
-    clientKey: ""
-    clientKeySecretKey: "TEMPORAL_CLOUD_CLIENT_KEY"
-
-  sdk:
-    rpc:
-      timeout: "120s"
-      longPollTimeout: "140s"
-      queryTimeout: "20s"
-
-  prometheus:
-    endpoint: ""
-
 tracking:
   enabled: true
   secretName: ""
-  strategy: "segment" # one of: logging, segment
 
   segment:
     writeKey: ""
@@ -285,15 +241,6 @@ tracking:
 
 micronaut:
   environments: []
-
-# TODO: do we actually need this?
-worker:
-  activityMaxAttempt: ""
-  activityInitialDelayBetweenAttemptsSeconds: ""
-  activityMaxDelayBetweenAttemptsSeconds: ""
-  maxNotifyWorkers: 5
-
-  workloadApi: {}
 
 workloadApiServer:
   secretName: ""

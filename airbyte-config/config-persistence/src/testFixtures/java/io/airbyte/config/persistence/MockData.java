@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -14,6 +14,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorCatalog.CatalogType;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionConfigInjection;
@@ -696,7 +697,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -717,7 +717,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -738,7 +737,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -759,7 +757,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.DEPRECATED)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -780,7 +777,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.ACTIVE)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -801,7 +797,6 @@ public class MockData {
         .withResourceRequirements(resourceRequirements)
         .withStatus(Status.DEPRECATED)
         .withSchedule(schedule)
-        .withDataplaneGroupId(DATAPLANE_GROUP_ID_DEFAULT)
         .withBreakingChange(false)
         .withNonBreakingChangesPreference(NonBreakingChangesPreference.IGNORE)
         .withBackfillPreference(StandardSync.BackfillPreference.DISABLED)
@@ -816,9 +811,9 @@ public class MockData {
         io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteStream(
             "models",
             "models_schema",
-            io.airbyte.protocol.models.Field.of("id", JsonSchemaType.NUMBER),
-            io.airbyte.protocol.models.Field.of("make_id", JsonSchemaType.NUMBER),
-            io.airbyte.protocol.models.Field.of("model", JsonSchemaType.STRING))
+            io.airbyte.protocol.models.v0.Field.of("id", JsonSchemaType.NUMBER),
+            io.airbyte.protocol.models.v0.Field.of("make_id", JsonSchemaType.NUMBER),
+            io.airbyte.protocol.models.v0.Field.of("model", JsonSchemaType.STRING))
             .withSupportedSyncModes(
                 Lists.newArrayList(io.airbyte.protocol.models.v0.SyncMode.FULL_REFRESH, io.airbyte.protocol.models.v0.SyncMode.INCREMENTAL))
             .withSourceDefinedPrimaryKey(List.of(List.of("id")))));
@@ -849,14 +844,17 @@ public class MockData {
     final ActorCatalog actorCatalog1 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_1)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("TESTHASH");
     final ActorCatalog actorCatalog2 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_2)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("12345");
     final ActorCatalog actorCatalog3 = new ActorCatalog()
         .withId(ACTOR_CATALOG_ID_3)
         .withCatalog(Jsons.deserialize("{}"))
+        .withCatalogType(CatalogType.SOURCE_CATALOG)
         .withCatalogHash("SomeOtherHash");
     return Arrays.asList(actorCatalog1, actorCatalog2, actorCatalog3);
   }

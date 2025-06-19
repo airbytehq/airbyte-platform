@@ -6,7 +6,6 @@ package io.airbyte.workload.api.client.config
 
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.UserAgentInterceptor
-import io.airbyte.api.client.auth.AirbyteAuthHeaderInterceptor
 import io.airbyte.api.client.auth.DataplaneAccessTokenInterceptor
 import io.airbyte.api.client.config.ClientApiType
 import io.airbyte.api.client.config.ClientConfigurationSupport.generateDefaultRetryPolicy
@@ -65,7 +64,6 @@ class WorkloadApiClientSupportFactory {
     @Named("workloadApiAuthenticationInterceptor") workloadApiAuthenticationInterceptor: WorkloadApiAuthenticationInterceptor,
     dataplaneAccessTokenInterceptor: DataplaneAccessTokenInterceptor?,
     @Named("userAgentInterceptor") userAgentInterceptor: UserAgentInterceptor,
-    @Named("airbyteAuthHeaderInterceptor") airbyteAuthHeaderInterceptor: AirbyteAuthHeaderInterceptor,
   ): OkHttpClient {
     val builder: OkHttpClient.Builder = OkHttpClient.Builder()
     // If a dataplaneAccessTokenInterceptor is available, use it. Otherwise, fall back on the
@@ -76,7 +74,6 @@ class WorkloadApiClientSupportFactory {
       builder.addInterceptor(dataplaneAccessTokenInterceptor)
     } else {
       builder.addInterceptor(workloadApiAuthenticationInterceptor)
-      builder.addInterceptor(airbyteAuthHeaderInterceptor) // TODO(parker) look into removing this, may not be doing anything?
     }
     builder.addInterceptor(userAgentInterceptor)
     builder.readTimeout(Duration.ofSeconds(readTimeoutSeconds))

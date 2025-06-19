@@ -45,8 +45,8 @@ import io.airbyte.config.StandardSync.Status;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -173,7 +173,6 @@ public class ConnectionHelpers {
                                                               final UUID destinationId,
                                                               final List<UUID> operationIds,
                                                               final UUID sourceCatalogId,
-                                                              final UUID dataplaneGroupId,
                                                               final boolean breaking,
                                                               final Boolean notifySchemaChange,
                                                               final Boolean notifySchemaChangeByEmail,
@@ -199,7 +198,6 @@ public class ConnectionHelpers {
             .memoryRequest(TESTING_RESOURCE_REQUIREMENTS.getMemoryRequest())
             .memoryLimit(TESTING_RESOURCE_REQUIREMENTS.getMemoryLimit()))
         .sourceCatalogId(sourceCatalogId)
-        .dataplaneGroupId(dataplaneGroupId)
         .breakingChange(breaking)
         .notifySchemaChanges(notifySchemaChange)
         .notifySchemaChangesByEmail(notifySchemaChangeByEmail)
@@ -214,7 +212,6 @@ public class ConnectionHelpers {
         standardSync.getDestinationId(),
         standardSync.getOperationIds(),
         standardSync.getSourceCatalogId(),
-        standardSync.getDataplaneGroupId(),
         standardSync.getBreakingChange(),
         standardSync.getNotifySchemaChanges(),
         standardSync.getNotifySchemaChangesByEmail(),
@@ -251,7 +248,6 @@ public class ConnectionHelpers {
         .namespaceFormat(standardSync.getNamespaceFormat())
         .prefix(standardSync.getPrefix())
         .sourceCatalogId(standardSync.getSourceCatalogId())
-        .dataplaneGroupId(standardSync.getDataplaneGroupId())
         .breakingChange(standardSync.getBreakingChange())
         .notifySchemaChanges(standardSync.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail());
@@ -356,7 +352,7 @@ public class ConnectionHelpers {
         .syncMode(io.airbyte.config.SyncMode.INCREMENTAL)
         .destinationSyncMode(DestinationSyncMode.APPEND)
         .cursorField(List.of(FIELD_NAME))
-        .fields(List.of(new io.airbyte.config.Field(FIELD_NAME, FieldType.STRING)))
+        .fields(List.of(new io.airbyte.config.Field(FIELD_NAME, FieldType.STRING, false)))
         .build();
   }
 

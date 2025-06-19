@@ -1,9 +1,11 @@
 import React from "react";
 import { useIntl } from "react-intl";
+import { useSearchParams } from "react-router-dom";
 
 import { FlexContainer } from "components/ui/Flex";
 
 import { useExperiment } from "hooks/services/Experiment";
+import { RoutePaths } from "pages/routePaths";
 
 import styles from "./Auth.module.scss";
 
@@ -27,8 +29,14 @@ const hasValidRightSideUrl = (url?: string): boolean => {
 };
 
 export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
+  const [searchParams] = useSearchParams();
   const { formatMessage } = useIntl();
   const rightSideUrl = useExperiment("authPage.rightSideUrl");
+  const embeddedRightSideUrl = useExperiment("authPage.embedded.rightSideUrl");
+
+  const loginRedirect = searchParams.get("loginRedirect");
+  const shouldShowEmbedded = loginRedirect === RoutePaths.EmbeddedOnboarding;
+  const rightSideUrlToUse = shouldShowEmbedded ? embeddedRightSideUrl : rightSideUrl;
 
   return (
     <FlexContainer className={styles.container}>
@@ -41,10 +49,10 @@ export const AuthLayout: React.FC<React.PropsWithChildren<unknown>> = ({ childre
         {children}
       </FlexContainer>
       <FlexContainer direction="column" className={styles["container__right-side"]}>
-        {hasValidRightSideUrl(rightSideUrl) ? (
+        {hasValidRightSideUrl(rightSideUrlToUse) ? (
           <iframe
             className={styles.container__iframe}
-            src={rightSideUrl}
+            src={rightSideUrlToUse}
             title={formatMessage({ id: "login.rightSideFrameTitle" })}
           />
         ) : (

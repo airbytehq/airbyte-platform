@@ -31,4 +31,4 @@ fun buildConfigWithSecretRefsJava(config: JsonNode): ConfigWithSecretReferences 
   )
 
 fun ConfigWithSecretReferences.toInlined(): InlinedConfigWithSecretRefs =
-  SecretsHelpers.SecretReferenceHelpers.inlineSecretReferences(this.config, this.referencedSecrets)
+  SecretsHelpers.SecretReferenceHelpers.inlineSecretReferences(this.originalConfig, this.referencedSecrets)

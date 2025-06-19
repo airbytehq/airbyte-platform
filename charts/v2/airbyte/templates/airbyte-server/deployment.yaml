@@ -86,8 +86,9 @@ spec:
         {{- include "airbyte.logging.envs" . | nindent 8 }} 
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
-        {{- include "airbyte.storage.envs" . | nindent 8 }}
         {{- include "airbyte.secretsManager.envs" . | nindent 8 }}
+        {{- include "airbyte.server.envs" . | nindent 8 }}
+        {{- include "airbyte.storage.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
         {{- include "airbyte.worker.envs" . | nindent 8 }}
@@ -109,6 +110,7 @@ spec:
         {{- include "airbyte.keycloak.admin.user.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- else if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.aws.envs" . | nindent 8 }}
         {{- include "airbyte.connectorRollout.envs" . | nindent 8 }}
         {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.keycloak.admin.client.envs" . | nindent 8 }}
@@ -116,6 +118,7 @@ spec:
         {{- include "airbyte.keycloak.client.envs" . | nindent 8 }}
         {{- include "airbyte.orb.envs" . | nindent 8 -}}
         {{- include "airbyte.redis.envs" . | nindent 8 -}}
+        {{- include "airbyte.speakeasy.envs" . | nindent 8 }}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.billing.envs" . | nindent 8 }}

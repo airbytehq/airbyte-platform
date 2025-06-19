@@ -4,10 +4,10 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.AuthRole
 import io.airbyte.commons.auth.RequiresAuthMode
 import io.airbyte.commons.auth.config.AuthMode
 import io.airbyte.commons.auth.config.TokenExpirationConfig
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.Application
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.data.config.InstanceAdminConfig

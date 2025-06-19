@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import { useIntl } from "react-intl";
@@ -34,6 +34,7 @@ export const sourcesKeys = {
   lists: () => [...sourcesKeys.all, "list"] as const,
   list: (filters: string) => [...sourcesKeys.lists(), { filters }] as const,
   detail: (sourceId: string) => [...sourcesKeys.all, "details", sourceId] as const,
+  discoverSchema: (sourceId: string) => [...sourcesKeys.all, "discoverSchema", sourceId] as const,
 };
 
 interface ValuesProps {
@@ -178,6 +179,21 @@ const useUpdateSource = () => {
         queryClient.setQueryData(sourcesKeys.detail(data.sourceId), data);
       },
       onError,
+    }
+  );
+};
+
+export const useDiscoverSchemaQuery = (sourceId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    sourcesKeys.discoverSchema(sourceId),
+    async () => {
+      return discoverSchemaForSource({ sourceId, disable_cache: true }, requestOptions);
+    },
+    {
+      cacheTime: 0, // As soon as the query is not used, it should be removed from the cache
+      staleTime: 1000 * 60 * 20, // A discovered schema should be valid for max 20 minutes on the client before refetching
     }
   );
 };

@@ -118,11 +118,11 @@ properties:
   source_catalog_id:
     type: string
     format: uuid
-  resourceRequirements:
-    "$ref": ResourceRequirements.yaml
-  dataplaneGroupId:
+  destinationCatalogId:
     type: string
     format: uuid
+  resourceRequirements:
+    "$ref": ResourceRequirements.yaml
   breakingChange:
     type: boolean
   # TODO: reduce clutter by grouping these preferences into some logical structure

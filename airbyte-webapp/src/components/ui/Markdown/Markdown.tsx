@@ -54,7 +54,7 @@ function preprocessMarkdown(markdown: string, additionalPlugins: PluggableList =
   // of lookbehind assertions: besides legitimate lists, we don't want to insert a
   // zero-width space into a table definition or html comment and break their rendering,
   // either.
-  preprocessed = preprocessed.replace(/(?<!<!-|-|:|\|)(?<=\S)(- |\+ |[^*]\* |\d+\. )/g, "&ZeroWidthSpace;$1");
+  preprocessed = preprocessed.replace(/(?<!<!-|-|:|\|)(?<=\S)(- |\+ |[^*]\* |\d+\. )/g, "\u200B$1");
 
   // Ensure there's an empty line before and after tags with custom react logic if there
   // isn't one already, to ensure that it is parsed as its own component.

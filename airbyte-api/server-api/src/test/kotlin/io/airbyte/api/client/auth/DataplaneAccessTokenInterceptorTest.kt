@@ -12,8 +12,10 @@ import io.mockk.mockk
 import io.mockk.verify
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.time.Instant
 import kotlin.time.Duration.Companion.minutes
@@ -52,12 +54,16 @@ internal class DataplaneAccessTokenInterceptorTest {
     val chain: Interceptor.Chain = mockk()
     val builder: Request.Builder = mockk()
     val request: Request = mockk()
+    val response: Response =
+      mockk {
+        every { code } returns 200
+      }
 
     every { builder.addHeader(any(), any()) } returns (builder)
     every { builder.build() } returns (mockk<Request>())
     every { request.newBuilder() } returns (builder)
     every { chain.request() } returns (request)
-    every { chain.proceed(any()) } returns (mockk<Response>())
+    every { chain.proceed(any()) } returns (response)
 
     interceptor.intercept(chain)
 
@@ -86,12 +92,16 @@ internal class DataplaneAccessTokenInterceptorTest {
     val chain: Interceptor.Chain = mockk()
     val builder: Request.Builder = mockk()
     val request: Request = mockk()
+    val response: Response =
+      mockk {
+        every { code } returns 200
+      }
 
     every { builder.addHeader(any(), any()) } returns (builder)
     every { builder.build() } returns (mockk<Request>())
     every { request.newBuilder() } returns (builder)
     every { chain.request() } returns (request)
-    every { chain.proceed(any()) } returns (mockk<Response>())
+    every { chain.proceed(any()) } returns (response)
 
     interceptor.intercept(chain)
 
@@ -127,5 +137,42 @@ internal class DataplaneAccessTokenInterceptorTest {
 
     verify(exactly = 0) { builder.addHeader(any(), any()) }
     verify(exactly = 1) { chain.proceed(request) }
+  }
+
+  @Test
+  fun `test that when a request fails with 403 forbidden, the cached token is cleared`() {
+    val httpClient = mockk<OkHttpClient>()
+
+    val interceptor =
+      DataplaneAccessTokenInterceptor(
+        authClientId = "test-client-id",
+        authClientSecret = "test-client-secret",
+        authTokenEndpoint = "http://example.com/token",
+        httpClient = httpClient,
+      )
+
+    interceptor.cachedToken =
+      DataplaneAccessTokenInterceptor.CachedToken(
+        token = "testtoken",
+        expiresAt = Instant.now().plusSeconds(5.minutes.inWholeSeconds),
+      )
+
+    val chain: Interceptor.Chain = mockk()
+    val request = Request.Builder().url("http://testing.airbyte.io").build()
+    val response: Response =
+      Response
+        .Builder()
+        .protocol(Protocol.HTTP_1_1)
+        .message("forbidden")
+        .request(request)
+        .code(403)
+        .build()
+
+    every { chain.request() } returns request
+    every { chain.proceed(any()) } returns response
+
+    interceptor.intercept(chain)
+
+    assertNull(interceptor.cachedToken)
   }
 }

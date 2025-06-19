@@ -31,22 +31,12 @@
     "generate-client": "./scripts/load-declarative-schema.sh && orval",
     "validate-links": "ts-node --skip-project ./scripts/validate-links.ts",
     "validate-lock": "node ./scripts/validate-lock-files.js",
-    "preanalyze-lowcode": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
-    "analyze-lowcode": "ts-node --skip-project ./scripts/analyze-low-code-manifests.ts",
     "cypress:open": "CYPRESS_AIRBYTE_SERVER_BASE_URL=${CYPRESS_AIRBYTE_SERVER_BASE_URL:-https://local.airbyte.dev} cypress open --config-file cypress/cypress.config.ts",
     "precypress:run": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
     "cypress:run": "CYPRESS_BASE_URL=${CYPRESS_BASE_URL:-http://localhost:8000} CYPRESS_AIRBYTE_SERVER_BASE_URL=${CYPRESS_AIRBYTE_SERVER_BASE_URL:-http://localhost:8001} cypress run --config-file cypress/cypress.config.ts",
     "createdbsource": "docker run --rm -d -p 5433:5432 -e POSTGRES_PASSWORD=secret_password -e POSTGRES_DB=airbyte_ci_source --name airbyte_ci_pg_source postgres",
     "createdbdestination": "docker run --rm -d -p 5434:5432 -e POSTGRES_PASSWORD=secret_password -e POSTGRES_DB=airbyte_ci_destination --name airbyte_ci_pg_destination postgres",
-    "createdummyapi": "docker run --rm -d -p 6767:6767 --mount type=bind,source=\"$(pwd)\"/scripts/dummy_api.js,target=/index.js --name=dummy_api node:20-alpine \"index.js\"",
-    "precloud-test": "echo KNOWN BUG: 'pnpm test' reports failure even on successes because the 'vite preview' server does not shut down gracefully",
-    "cloud-test": "START_SERVER_AND_TEST_INSECURE=1 start-server-and-test start:cloud-preview https://localhost:3001 cloud-cypress:run",
-    "cloud-test:dev": "START_SERVER_AND_TEST_INSECURE=1 start-server-and-test start:cloud https://localhost:3001 cloud-cypress:open",
-    "precloud-test:stage": "TS_NODE_TRANSPILE_ONLY=true pnpm run generate-client",
-    "cloud-test:stage": "cypress run --config-file cypress/cypress.stage-cloud-config.ts",
-    "cloud-test:stage:dev": "cypress open --config-file cypress/cypress.stage-cloud-config.ts",
-    "cloud-cypress:open": "cypress open --config-file cypress/cypress.cloud-config.ts",
-    "cloud-cypress:run": "cypress run --config-file cypress/cypress.cloud-config.ts"
+    "createdummyapi": "docker run --rm -d -p 6767:6767 --mount type=bind,source=\"$(pwd)\"/scripts/dummy_api.js,target=/index.js --name=dummy_api node:20-alpine \"index.js\""
   },
   "dependencies": {
     "@cfworker/json-schema": "^1.12.7",

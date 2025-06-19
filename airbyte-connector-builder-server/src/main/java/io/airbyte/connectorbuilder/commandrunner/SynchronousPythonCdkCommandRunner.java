@@ -13,8 +13,6 @@ import io.airbyte.connectorbuilder.filewriter.AirbyteArgument;
 import io.airbyte.connectorbuilder.filewriter.AirbyteFileWriter;
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage;
 import io.airbyte.workers.internal.AirbyteStreamFactory;
-import jakarta.inject.Inject;
-import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.util.List;
 import org.slf4j.Logger;
@@ -24,7 +22,6 @@ import org.slf4j.LoggerFactory;
  * Communicates with the CDK's Connector Builder handler by launching a Python process via an
  * Airbyte `read` command.
  */
-@Singleton
 public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandRunner {
 
   private final AirbyteFileWriter writer;
@@ -40,7 +37,6 @@ public class SynchronousPythonCdkCommandRunner implements SynchronousCdkCommandR
 
   private static final Logger LOGGER = LoggerFactory.getLogger(SynchronousPythonCdkCommandRunner.class);
 
-  @Inject
   public SynchronousPythonCdkCommandRunner(
                                            final AirbyteFileWriter writer,
                                            final AirbyteStreamFactory streamFactory,

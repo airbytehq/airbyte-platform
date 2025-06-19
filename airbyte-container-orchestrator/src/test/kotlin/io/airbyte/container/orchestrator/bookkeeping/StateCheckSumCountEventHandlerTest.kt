@@ -11,16 +11,18 @@ import io.airbyte.analytics.TrackingIdentity
 import io.airbyte.analytics.TrackingIdentityFetcher
 import io.airbyte.api.client.model.generated.DeploymentMetadataRead
 import io.airbyte.commons.json.Jsons
-import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.StateCheckSumCountEventHandler.Companion.DUMMY_STATE_MESSAGE
+import io.airbyte.container.orchestrator.worker.exception.InvalidChecksumException
+import io.airbyte.container.orchestrator.worker.model.StateCheckSumCountEvent
+import io.airbyte.container.orchestrator.worker.model.attachIdToStateMessageFromSource
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.metrics.MetricClient
+import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStateStats
 import io.airbyte.protocol.models.v0.AirbyteStreamState
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.exception.InvalidChecksumException
-import io.airbyte.workers.models.StateCheckSumCountEvent
-import io.airbyte.workers.models.StateWithId
+import io.airbyte.workers.models.ArchitectureConstants
 import io.mockk.Runs
 import io.mockk.clearAllMocks
 import io.mockk.every
@@ -37,7 +39,7 @@ import java.time.Instant
 import java.util.UUID
 import java.util.function.Supplier
 
-class StateCheckSumCountEventHandlerTest {
+internal class StateCheckSumCountEventHandlerTest {
   private val pubSubWriter = mockk<StateCheckSumEventPubSubWriter>(relaxed = true)
   private val featureFlagClient = mockk<FeatureFlagClient>(relaxed = true)
   private val deploymentFetcher = mockk<DeploymentFetcher>(relaxed = true)
@@ -51,6 +53,8 @@ class StateCheckSumCountEventHandlerTest {
   private val attemptNumber = 1
   private val epochMilliSupplier: Supplier<Long> = Supplier { 1718277705335 }
   private val idSupplier: Supplier<UUID> = Supplier { UUID.fromString("8d9ccf10-0ddd-4533-a4c7-9e502abd4723") }
+  private val metricClient: MetricClient = mockk(relaxed = true)
+  private val replicationInput: ReplicationInput = mockk(relaxed = true)
 
   private lateinit var handler: StateCheckSumCountEventHandler
 
@@ -73,6 +77,9 @@ class StateCheckSumCountEventHandlerTest {
         attemptNumber = attemptNumber,
         epochMilliSupplier = epochMilliSupplier,
         idSupplier = idSupplier,
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
+        metricClient = metricClient,
+        replicationInput = replicationInput,
       )
   }
 
@@ -103,6 +110,9 @@ class StateCheckSumCountEventHandlerTest {
         attemptNumber = attemptNumber,
         epochMilliSupplier = { System.currentTimeMillis() },
         idSupplier = { UUID.randomUUID() },
+        platformMode = ArchitectureConstants.ORCHESTRATOR,
+        metricClient = metricClient,
+        replicationInput = replicationInput,
       )
     val timeInMicroSecond = handler.getCurrentTimeInMicroSecond()
     val instant = Instant.ofEpochMilli(timeInMicroSecond / 1000)
@@ -512,7 +522,7 @@ class StateCheckSumCountEventHandlerTest {
 
   private fun airbyteStateMessageWithOutAnyCounts(): AirbyteStateMessage {
     val stateMessage =
-      StateWithId.attachIdToStateMessageFromSource(
+      attachIdToStateMessageFromSource(
         AirbyteStateMessage()
           .withType(AirbyteStateMessage.AirbyteStateType.STREAM)
           .withStream(

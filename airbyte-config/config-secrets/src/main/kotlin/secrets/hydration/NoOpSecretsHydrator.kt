@@ -40,10 +40,10 @@ class NoOpSecretsHydrator : SecretsHydrator {
   override fun hydrate(
     config: ConfigWithSecretReferences,
     secretPersistence: SecretPersistence,
-  ): JsonNode = config.config
+  ): JsonNode = config.originalConfig
 
   override fun hydrate(
     config: ConfigWithSecretReferences,
     secretPersistence: Map<UUID?, SecretPersistence>,
-  ): JsonNode = config.config
+  ): JsonNode = config.originalConfig
 }

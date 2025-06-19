@@ -127,10 +127,35 @@ val copySeed =
     dependsOn(project(":oss:airbyte-config:init").tasks.named("processResources"))
   }
 
+val copyWebapp =
+  tasks.register<Copy>("copyWebapp") {
+    from("${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app")
+    into("${project.layout.projectDirectory}/src/main/resources/webapp")
+
+    doFirst {
+      val src = "${project(":oss:airbyte-webapp").layout.buildDirectory.get()}/app"
+      if (!file(src).exists()) {
+        throw GradleException("source file $src does not exist")
+      }
+    }
+
+    dependsOn(
+      project(":oss:airbyte-webapp").tasks.named("assemble"),
+      "spotlessStyling",
+    )
+  }
+
+tasks.named("assemble") {
+  dependsOn(copyWebapp)
+}
+
 // need to make sure that the files are in the resource directory before copying.)
 // tests require the seed to exist.)
 tasks.named("test") {
   dependsOn(copySeed)
+}
+tasks.named("processResources") {
+  dependsOn(copyWebapp)
 }
 tasks.named("assemble") {
   dependsOn(copySeed)

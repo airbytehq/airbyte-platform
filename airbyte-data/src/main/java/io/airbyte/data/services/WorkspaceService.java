@@ -30,8 +30,6 @@ public interface WorkspaceService {
 
   List<StandardWorkspace> listStandardWorkspaces(boolean includeTombstone) throws IOException;
 
-  List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
-
   Stream<StandardWorkspace> listWorkspaceQuery(Optional<List<UUID>> workspaceId, boolean includeTombstone) throws IOException;
 
   List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;

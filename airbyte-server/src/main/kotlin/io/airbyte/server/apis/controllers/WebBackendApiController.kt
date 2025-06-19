@@ -7,7 +7,6 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.generated.WebBackendApi
 import io.airbyte.api.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.model.generated.ConnectionStateType
-import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.model.generated.WebBackendConnectionCreate
 import io.airbyte.api.model.generated.WebBackendConnectionListRequestBody
@@ -17,8 +16,6 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate
 import io.airbyte.api.model.generated.WebBackendCronExpressionDescription
 import io.airbyte.api.model.generated.WebBackendDescribeCronExpressionRequestBody
-import io.airbyte.api.model.generated.WebBackendGeographiesListRequest
-import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendValidateMappersRequestBody
 import io.airbyte.api.model.generated.WebBackendValidateMappersResponse
 import io.airbyte.api.model.generated.WebBackendWorkspaceState
@@ -26,15 +23,13 @@ import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
 import io.airbyte.api.model.generated.WebappConfigResponse
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.lang.MoreBooleans
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
-import io.airbyte.commons.server.support.CurrentUserService
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.metrics.lib.TracingHelper
 import io.airbyte.server.apis.execute
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
@@ -54,13 +49,11 @@ import java.util.concurrent.Callable
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class WebBackendApiController(
   private val webBackendConnectionsHandler: WebBackendConnectionsHandler,
-  private val webBackendGeographiesHandler: WebBackendGeographiesHandler,
   private val webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler,
   private val webBackendCronExpressionHandler: WebBackendCronExpressionHandler,
   private val webBackendMappersHandler: WebBackendMappersHandler,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
-  private val currentUserService: CurrentUserService,
   private val webappConfig: WebappConfig,
+  private val roleResolver: RoleResolver,
 ) : WebBackendApi {
   @Post("/state/get_type")
   @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
@@ -101,15 +94,11 @@ open class WebBackendApiController(
       if (MoreBooleans.isTruthy(webBackendConnectionRequestBody.withRefreshedCatalog)) {
         // only allow refresh catalog if the user is at least a workspace editor or
         // organization editor for the connection's workspace
-        apiAuthorizationHelper.checkWorkspacesPermissions(
-          webBackendConnectionRequestBody.connectionId.toString(),
-          Scope.CONNECTION,
-          currentUserService.currentUser.userId,
-          setOf(
-            PermissionType.WORKSPACE_EDITOR,
-            PermissionType.ORGANIZATION_EDITOR,
-          ),
-        )
+        roleResolver
+          .newRequest()
+          .withCurrentUser()
+          .withRef(AuthenticationId.CONNECTION_ID, webBackendConnectionRequestBody.connectionId.toString())
+          .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
       }
       webBackendConnectionsHandler.webBackendGetConnection(webBackendConnectionRequestBody)
     }
@@ -135,18 +124,6 @@ open class WebBackendApiController(
       TracingHelper.addWorkspace(webBackendConnectionListRequestBody.workspaceId)
       webBackendConnectionsHandler.webBackendListConnectionsForWorkspace(webBackendConnectionListRequestBody)
     }
-
-  @Post("/geographies/list")
-  @Secured(AuthRoleConstants.AUTHENTICATED_USER)
-  @ExecuteOn(AirbyteTaskExecutors.IO)
-  override fun webBackendListGeographies(
-    @Body webBackendGeographiesListRequest: WebBackendGeographiesListRequest,
-  ): WebBackendGeographiesListResult? =
-    execute(
-      Callable {
-        webBackendGeographiesHandler.listGeographies(webBackendGeographiesListRequest.organizationId)
-      },
-    )
 
   @Post("/connections/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
@@ -185,10 +162,12 @@ open class WebBackendApiController(
     }
 
   @Get("/config")
+  @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getWebappConfig(): WebappConfigResponse =
     WebappConfigResponse().apply {
-      edition = webappConfig.edition
+      version = webappConfig.version
+      edition = webappConfig.edition.lowercase()
       datadogApplicationId = webappConfig.webApp["datadog-application-id"]
       datadogClientToken = webappConfig.webApp["datadog-client-token"]
       datadogEnv = webappConfig.webApp["datadog-env"]
@@ -211,6 +190,7 @@ open class WebBackendApiController(
  */
 @ConfigurationProperties("airbyte")
 data class WebappConfig(
+  @Value("\${AIRBYTE_VERSION}") val version: String,
   @Value("\${AIRBYTE_EDITION}") val edition: String,
   val webApp: Map<String, String>,
 )

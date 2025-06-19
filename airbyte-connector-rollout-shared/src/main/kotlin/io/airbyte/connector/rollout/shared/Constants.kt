@@ -15,10 +15,10 @@ object Constants {
   const val DEFAULT_ROLLOUT_EXPIRATION_SECONDS = 604800
 
   // 3 hours
-  const val DEFAULT_WAIT_BETWEEN_ROLLOUTS_SECONDS = 10800
+  const val DEFAULT_WAIT_BETWEEN_ROLLOUTS_SECONDS = 3 * 3600
 
   // 1 hour
-  const val DEFAULT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS = 360
+  const val DEFAULT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS = 3600
 
   // Percentage of syncs required to be successful for a rollout to be automatically released
   const val DEFAULT_SUCCESS_THRESHOLD_PERCENTAGE = 100

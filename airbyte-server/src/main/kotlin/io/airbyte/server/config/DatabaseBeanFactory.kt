@@ -10,6 +10,7 @@ import io.airbyte.config.persistence.StatePersistence
 import io.airbyte.config.persistence.StreamResetPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.config.persistence.WorkspacePersistence
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl
 import io.airbyte.db.Database
 import io.airbyte.db.check.DatabaseMigrationCheck
 import io.airbyte.db.check.JobsDatabaseAvailabilityCheck
@@ -96,7 +97,8 @@ class DatabaseBeanFactory {
   @Singleton
   fun statePersistence(
     @Named("configDatabase") configDatabase: Database?,
-  ): StatePersistence = StatePersistence(configDatabase)
+    connectionServiceJooqImpl: ConnectionServiceJooqImpl,
+  ): StatePersistence = StatePersistence(configDatabase, connectionServiceJooqImpl)
 
   @Singleton
   fun userPersistence(

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIntl } from "react-intl";
 
 import { useNotificationService } from "hooks/services/Notification";
@@ -50,6 +50,13 @@ export const useCreateApplication = () => {
       },
     }
   );
+};
+
+export const useNonblockingListApplications = () => {
+  const requestOptions = useRequestOptions();
+  return useQuery(applicationKeys.lists(), () => {
+    return listApplications(requestOptions);
+  });
 };
 
 export const useListApplications = () => {

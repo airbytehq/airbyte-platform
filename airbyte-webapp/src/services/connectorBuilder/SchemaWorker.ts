@@ -5,7 +5,7 @@ import { StreamReadSlicesItemPagesItemRecordsItem } from "core/api/types/Connect
 import { InlineSchemaLoaderSchema } from "core/api/types/ConnectorManifest";
 
 export interface IncomingData {
-  schema: string;
+  schema: InlineSchemaLoaderSchema;
   records: StreamReadSlicesItemPagesItemRecordsItem[];
   streamName: string;
 }
@@ -17,15 +17,7 @@ export interface OutgoingData {
 
 onmessage = (event: MessageEvent<IncomingData>) => {
   const { schema, records, streamName } = event.data;
-  let parsedSchema: InlineSchemaLoaderSchema;
-  try {
-    parsedSchema = JSON.parse(schema);
-  } catch {
-    // if the schema is not valid JSON, we can't validate it
-    postMessage({ streamName });
-    return;
-  }
-  const validator = new Validator(parsedSchema, undefined, false);
+  const validator = new Validator(schema, undefined, false);
   const errors = uniq(
     records.flatMap((record) =>
       validator.validate(record).errors.map((error) => `${error.error} (${error.keywordLocation})`)

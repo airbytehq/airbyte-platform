@@ -5,8 +5,8 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.commons.storage.StorageConfig
-import io.airbyte.workers.sync.OrchestratorConstants
 import io.airbyte.workload.launcher.constants.EnvVarConstants
+import io.airbyte.workload.launcher.constants.OrchestratorConstants
 import io.airbyte.workload.launcher.model.toEnvVarList
 import io.airbyte.workload.launcher.model.toRefEnvVarList
 import io.fabric8.kubernetes.api.model.EnvVar

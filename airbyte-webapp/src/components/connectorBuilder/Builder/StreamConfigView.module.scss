@@ -104,8 +104,14 @@ $controlButtonWidth: 24px;
   & input {
     font-weight: bold;
     font-size: 15px;
+
+    &::placeholder {
+      font-weight: normal;
+      font-size: 13px;
+    }
   }
 
+  padding-bottom: 0;
   width: auto;
 }
 
@@ -127,4 +133,14 @@ $controlButtonWidth: 24px;
 
 .requestTypeButton {
   background-color: colors.$foreground;
+}
+
+.card {
+  & > div {
+    padding-bottom: 0;
+  }
+}
+
+.hidden {
+  display: none;
 }

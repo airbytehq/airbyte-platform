@@ -19,7 +19,7 @@ import {
   useListUsersInOrganization,
 } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
@@ -33,6 +33,7 @@ import { OrganizationUsersTable } from "./OrganizationUsersTable";
 const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
+  const isCloudApp = useIsCloudApp();
   const workspace = useCurrentWorkspace();
   const organization = useCurrentOrganizationInfo();
   const canUpdateOrganizationPermissions = useIntent("UpdateOrganizationPermissions", {
@@ -104,7 +105,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
               </FlexContainer>
             </Badge>
           )}
-          {!organization?.sso && isCloudApp() && (
+          {!organization?.sso && isCloudApp && (
             <ExternalLink href={links.contactSales}>
               <Text size="sm" color="blue">
                 <FormattedMessage id="settings.accessManagement.enableSso" />

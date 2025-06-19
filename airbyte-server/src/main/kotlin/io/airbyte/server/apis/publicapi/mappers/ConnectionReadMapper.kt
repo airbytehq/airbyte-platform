@@ -38,7 +38,6 @@ object ConnectionReadMapper {
   fun from(
     connectionRead: ConnectionRead,
     workspaceId: UUID?,
-    dataplaneGroupName: String,
   ): ConnectionResponse {
     val streamConfigurations =
       connectionRead.syncCatalog?.let { catalog ->
@@ -92,7 +91,6 @@ object ConnectionReadMapper {
       workspaceId = workspaceId.toString(),
       status = ConnectionStatusEnum.valueOf(connectionRead.status.toString().uppercase()),
       schedule = connectionScheduleResponse,
-      dataResidency = dataplaneGroupName.lowercase(),
       configurations = streamConfigurations,
       nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
@@ -186,6 +184,14 @@ object ConnectionReadMapper {
               DestinationSyncMode.OVERWRITE_DEDUP,
               ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
             ),
+            Pair(
+              DestinationSyncMode.UPDATE,
+              ConnectionSyncModeEnum.FULL_REFRESH_UPDATE,
+            ),
+            Pair(
+              DestinationSyncMode.SOFT_DELETE,
+              ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE,
+            ),
           ),
         SyncMode.INCREMENTAL to
           mapOf(
@@ -196,6 +202,14 @@ object ConnectionReadMapper {
             Pair(
               DestinationSyncMode.APPEND_DEDUP,
               ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+            ),
+            Pair(
+              DestinationSyncMode.UPDATE,
+              ConnectionSyncModeEnum.INCREMENTAL_UPDATE,
+            ),
+            Pair(
+              DestinationSyncMode.SOFT_DELETE,
+              ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE,
             ),
           ),
       )

@@ -48,6 +48,7 @@ class LaunchPipelineTest {
         loadShed = MockStage(StageName.LOAD_SHED),
         check = MockStage(StageName.CHECK_STATUS),
         mutex = MockStage(StageName.MUTEX),
+        architecture = MockStage(StageName.ARCHITECTURE),
         launch = MockStage(StageName.LAUNCH),
         successHandler = successHandler,
         failureHandler = failureHandler,
@@ -105,6 +106,7 @@ class LaunchPipelineTest {
         // simulate workload-2 having an error
         check = MockStage(StageName.CHECK_STATUS) { if (it.msg == workload2) throw exception else it },
         mutex = MockStage(StageName.MUTEX),
+        architecture = MockStage(StageName.ARCHITECTURE),
         launch = MockStage(StageName.LAUNCH),
         successHandler = successHandler,
         failureHandler = failureHandler,

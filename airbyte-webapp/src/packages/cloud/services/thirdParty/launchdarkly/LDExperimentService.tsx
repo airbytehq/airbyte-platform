@@ -7,7 +7,7 @@ import { finalize, Subject } from "rxjs";
 import { LoadingPage } from "components";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
-import { config } from "core/config";
+import { useWebappConfig } from "core/config";
 import { useAnalyticsService } from "core/services/analytics";
 import { useAuthService } from "core/services/auth";
 import { FeatureSet, FeatureItem, useFeatureService } from "core/services/features";
@@ -237,7 +237,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
 };
 
 export const LDExperimentServiceProvider: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
-  const { launchDarkly: launchdarklyKey } = config;
+  const { launchdarklyKey } = useWebappConfig();
 
   return !launchdarklyKey ? (
     <>{children}</>

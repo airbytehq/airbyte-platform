@@ -168,27 +168,6 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
     return listWorkspaceQuery(Optional.empty(), includeTombstone).toList();
   }
 
-  /**
-   * List ALL workspaces (paginated) with some filtering.
-   *
-   * @param resourcesQueryPaginated - contains all the information we need to paginate
-   * @return A List of StandardWorkspace objects
-   * @throws IOException you never know when you IO
-   */
-  @Override
-  public List<StandardWorkspace> listAllWorkspacesPaginated(final ResourcesQueryPaginated resourcesQueryPaginated) throws IOException {
-    return database.query(ctx -> ctx.select(WORKSPACE.asterisk())
-        .from(WORKSPACE)
-        .where(resourcesQueryPaginated.includeDeleted() ? noCondition() : WORKSPACE.TOMBSTONE.notEqual(true))
-        .and(resourcesQueryPaginated.nameContains() != null ? WORKSPACE.NAME.contains(resourcesQueryPaginated.nameContains()) : noCondition())
-        .limit(resourcesQueryPaginated.pageSize())
-        .offset(resourcesQueryPaginated.rowOffset())
-        .fetch())
-        .stream()
-        .map(DbConverter::buildStandardWorkspace)
-        .toList();
-  }
-
   @Override
   public Stream<StandardWorkspace> listWorkspaceQuery(final Optional<List<UUID>> workspaceIds, final boolean includeTombstone) throws IOException {
     return database.query(ctx -> ctx.select(WORKSPACE.asterisk())

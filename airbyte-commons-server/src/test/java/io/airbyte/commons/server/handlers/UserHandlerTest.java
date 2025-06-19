@@ -4,7 +4,7 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.config.persistence.UserPersistence.DEFAULT_USER_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_USER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;

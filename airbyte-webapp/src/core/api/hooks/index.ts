@@ -18,7 +18,6 @@ export * from "./destinationDefinitions";
 export * from "./diagnostics";
 export * from "./enterpriseSources";
 export * from "./filters";
-export * from "./geographies";
 export * from "./health";
 export * from "./instanceConfiguration";
 export * from "./jobs";

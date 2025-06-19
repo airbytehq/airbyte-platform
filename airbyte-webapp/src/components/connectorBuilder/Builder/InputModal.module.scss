@@ -1,0 +1,12 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.inputFormBody {
+  gap: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.deleteButtonContainer {
+  flex-grow: 1;
+}

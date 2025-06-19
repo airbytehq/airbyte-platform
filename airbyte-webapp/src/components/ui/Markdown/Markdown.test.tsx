@@ -145,6 +145,23 @@ visible content after
     expect(queryByStyle(preStyles.codeBlock)).toBeInTheDocument();
     expect(queryByStyle(preStyles.codeCopyButton)).toBeInTheDocument();
   });
+
+  it("renders a normal markdown list without zero-width space characters", () => {
+    const md = `
+- First item
+- Second item **+ add**
+`;
+    render(<Markdown content={md} />);
+    const listItems = document.querySelectorAll("li");
+    expect(listItems.length).toBe(2);
+    expect(listItems[0].textContent).toBe("First item");
+    expect(listItems[1].textContent).toContain("Second item");
+
+    // Check that <strong> exists and contains '+ add'
+    const strong = listItems[1].querySelector("strong");
+    expect(strong).toBeInTheDocument();
+    expect(strong?.textContent).toContain("+ add");
+  });
 });
 
 describe("preprocessing markdown strings", () => {

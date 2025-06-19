@@ -1,4 +1,4 @@
-{{- if and (.Values.featureflagServer.enabled) (eq .Values.global.edition "community") }}
+{{- if .Values.featureflagServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -59,7 +59,7 @@ spec:
       containers:
       - name: airbyte-featureflag-server-container
         image: {{ include "imageUrl" (list .Values.featureflagServer.image $) }}
-        imagePullPolicy: "{{ .Values.featureflagServer.image.pullPolic }}"
+        imagePullPolicy: "{{ .Values.featureflagServer.image.pullPolicy }}"
         env:
         {{- if .Values.featureflagServer.debug.enabled }}
         - name: JAVA_TOOL_OPTIONS

@@ -42,6 +42,7 @@ dependencies {
   implementation(libs.kubernetes.client)
   implementation(libs.bundles.datadog)
   implementation(libs.kotlin.coroutines)
+  implementation(libs.kotlin.coroutines.sl4j)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))

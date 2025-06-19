@@ -2,6 +2,7 @@
 @use "scss/variables";
 
 .listboxButton {
+  padding: 0 variables.$spacing-md;
   width: 100%;
   cursor: pointer;
   background-color: initial;
@@ -15,7 +16,7 @@
   gap: variables.$spacing-md;
   font-size: variables.$font-size-lg;
   line-height: 1.4;
-  min-height: 36px;
+  height: variables.$form-input-height;
 
   &:disabled {
     border-color: colors.$grey-100;

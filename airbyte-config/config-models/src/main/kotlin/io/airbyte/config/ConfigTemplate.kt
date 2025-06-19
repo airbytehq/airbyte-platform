@@ -5,6 +5,7 @@
 package io.airbyte.config
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import java.time.OffsetDateTime
 import java.util.UUID
@@ -22,6 +23,8 @@ data class ConfigTemplate(
    * - documentationUrl (optional)
    */
   val userConfigSpec: ConnectorSpecification,
+  val advancedAuth: AdvancedAuth? = null,
+  val advancedAuthGlobalCredentialsAvailable: Boolean? = null,
   val createdAt: OffsetDateTime? = null,
   val updatedAt: OffsetDateTime? = null,
 )

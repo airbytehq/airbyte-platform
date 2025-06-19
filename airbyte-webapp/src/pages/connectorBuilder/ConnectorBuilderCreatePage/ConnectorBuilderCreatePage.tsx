@@ -5,8 +5,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 import { useNavigate } from "react-router-dom";
 
-import { BuilderFormValues, DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/types";
-import { useManifestToBuilderForm } from "components/connectorBuilder/useManifestToBuilderForm";
+import { DEFAULT_CONNECTOR_NAME } from "components/connectorBuilder/constants";
 import { HeadTitle } from "components/HeadTitle";
 import { Button, ButtonProps } from "components/ui/Button";
 import { Card } from "components/ui/Card";
@@ -48,7 +47,6 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { createAndNavigate, isLoading: isCreateProjectLoading } = useCreateAndNavigate();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-  const { convertToBuilderFormValues } = useManifestToBuilderForm();
   const [importYamlLoading, setImportYamlLoading] = useState(false);
 
   const { workspaceId } = useCurrentWorkspace();
@@ -72,9 +70,9 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
         const fileName = file?.name;
 
         try {
-          let json;
+          let manifest: ConnectorManifest;
           try {
-            json = load(yaml) as ConnectorManifest;
+            manifest = load(yaml) as ConnectorManifest;
           } catch (e) {
             if (e instanceof YAMLException) {
               registerNotification({
@@ -98,22 +96,11 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
             return;
           }
 
-          let convertedFormValues: BuilderFormValues;
-          try {
-            convertedFormValues = await convertToBuilderFormValues(json, DEFAULT_CONNECTOR_NAME);
-          } catch (e) {
-            analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_INCOMPATIBLE_YAML_IMPORTED, {
-              actionDescription: "A YAML manifest that's incompatible with the Builder UI was imported",
-              error_message: e.message,
-            });
-            createAndNavigate({ name: getConnectorName(fileName), manifest: json });
-            return;
-          }
+          createAndNavigate({ name: getConnectorName(fileName), manifest });
 
-          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.UI_COMPATIBLE_YAML_IMPORTED, {
-            actionDescription: "A YAML manifest that's compatible with the Builder UI was imported",
+          analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.YAML_IMPORTED, {
+            actionDescription: "A YAML manifest was imported",
           });
-          createAndNavigate({ name: getConnectorName(fileName, convertedFormValues), manifest: json });
         } finally {
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
@@ -126,7 +113,7 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
         reader.readAsText(file);
       }
     },
-    [analyticsService, convertToBuilderFormValues, createAndNavigate, registerNotification]
+    [analyticsService, createAndNavigate, registerNotification]
   );
 
   // clear out notification on unmount, so it doesn't persist after a redirect
@@ -201,14 +188,13 @@ const ConnectorBuilderCreatePageInner: React.FC = () => {
   );
 };
 
-function getConnectorName(fileName?: string | undefined, formValues?: BuilderFormValues) {
+function getConnectorName(fileName?: string | undefined) {
   if (!fileName) {
     return DEFAULT_CONNECTOR_NAME;
   }
   const fileNameNoType = lowerCase(fileName.split(".")[0].trim());
-  if (fileNameNoType === "manifest" && formValues?.global?.urlBase) {
-    // remove http protocol from beginning of url
-    return formValues.global.urlBase.replace(/(^\w+:|^)\/\//, "");
+  if (fileNameNoType === "manifest") {
+    return DEFAULT_CONNECTOR_NAME;
   }
   return startCase(fileNameNoType);
 }
