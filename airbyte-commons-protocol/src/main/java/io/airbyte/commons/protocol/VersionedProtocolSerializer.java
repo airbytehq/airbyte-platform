@@ -27,10 +27,12 @@ public class VersionedProtocolSerializer implements ProtocolSerializer {
   }
 
   @Override
-  public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog, final boolean supportsRefreshes) {
+  public String serialize(final ConfiguredAirbyteCatalog configuredAirbyteCatalog,
+                          final boolean supportsRefreshes,
+                          final SerializationTarget target) {
     // TODO: rework the migration part to support different protocol version. This currently works
     // because we only have one major.
-    return new DefaultProtocolSerializer().serialize(configuredAirbyteCatalog, supportsRefreshes);
+    return new DefaultProtocolSerializer().serialize(configuredAirbyteCatalog, supportsRefreshes, target);
   }
 
 }

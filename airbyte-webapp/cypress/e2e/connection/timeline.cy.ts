@@ -1,24 +1,24 @@
 import { requestDeleteConnection, requestDeleteDestination, requestDeleteSource } from "@cy/commands/api";
 import {
   startManualSync,
-  createJsonDestinationViaApi,
   createNewConnectionViaApi,
   createPokeApiSourceViaApi,
+  createE2ETestingDestinationViaApi,
 } from "@cy/commands/connection";
 import { visit } from "@cy/pages/connection/connectionPageObject";
 import { DestinationRead, SourceRead, WebBackendConnectionRead } from "@src/core/api/types/AirbyteClient";
 
 describe("Connection Timeline", () => {
   let pokeApiSource: SourceRead;
-  let jsonDestination: DestinationRead;
+  let E2ETestingDestination: DestinationRead;
   let connection: WebBackendConnectionRead | null = null;
 
   beforeEach(() => {
     createPokeApiSourceViaApi().then((source) => {
       pokeApiSource = source;
     });
-    createJsonDestinationViaApi().then((destination) => {
-      jsonDestination = destination;
+    createE2ETestingDestinationViaApi().then((destination) => {
+      E2ETestingDestination = destination;
     });
   });
 
@@ -30,9 +30,9 @@ describe("Connection Timeline", () => {
     if (pokeApiSource) {
       requestDeleteSource({ sourceId: pokeApiSource.sourceId });
     }
-    if (jsonDestination) {
+    if (E2ETestingDestination) {
       requestDeleteDestination({
-        destinationId: jsonDestination.destinationId,
+        destinationId: E2ETestingDestination.destinationId,
       });
     }
   });
@@ -40,7 +40,7 @@ describe("Connection Timeline", () => {
   it("Should list events and interact with job logs modal and links", () => {
     cy.visit("/");
 
-    createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+    createNewConnectionViaApi(pokeApiSource, E2ETestingDestination).then((connectionResponse) => {
       connection = connectionResponse;
       visit(connection, "timeline");
     });

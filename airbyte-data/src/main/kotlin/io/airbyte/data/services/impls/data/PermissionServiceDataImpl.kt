@@ -11,8 +11,8 @@ import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
-import io.airbyte.data.services.PermissionDao
 import io.airbyte.data.services.PermissionRedundantException
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
@@ -23,10 +23,10 @@ import jakarta.inject.Singleton
 import java.util.UUID
 
 @Singleton
-open class PermissionDaoDataImpl(
+open class PermissionServiceDataImpl(
   private val workspaceService: WorkspaceService,
   private val permissionRepository: PermissionRepository,
-) : PermissionDao {
+) : PermissionService {
   override fun getPermission(permissionId: UUID): Permission =
     permissionRepository
       .findById(permissionId)

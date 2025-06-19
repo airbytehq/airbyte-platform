@@ -1,9 +1,9 @@
 import { requestDeleteDestination } from "@cy/commands/api";
-import { createJsonDestinationViaApi } from "@cy/commands/connection";
+import { createE2ETestingDestinationViaApi } from "@cy/commands/connection";
 import { DestinationRead } from "@src/core/api/types/AirbyteClient";
-import { createLocalJsonDestination, deleteDestination, updateDestination } from "commands/destination";
+import { createE2ETestingDestination, deleteDestination, updateDestination } from "commands/destination";
 
-describe.skip("Destination main actions", () => {
+describe("Destination main actions", () => {
   let destination: DestinationRead;
 
   afterEach(() => {
@@ -25,43 +25,51 @@ describe.skip("Destination main actions", () => {
     cy.url().should("match", /.*\/destination\/new-destination/);
   });
   it("Create new destination", () => {
-    createLocalJsonDestination("Test destination cypress", "/local");
+    createE2ETestingDestination("E2E Test destination cypress");
 
     cy.url().should("include", `/destination/`);
   });
 
   it("Update destination", () => {
-    createJsonDestinationViaApi().then((jsonDestination) => {
-      destination = jsonDestination;
-      updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
+    createE2ETestingDestinationViaApi().then((e2eTestingDestination) => {
+      destination = e2eTestingDestination;
+      updateDestination(
+        e2eTestingDestination.name,
+        "connectionConfiguration.test_destination.logging_config.max_entry_count",
+        "10"
+      );
 
       cy.get("div[data-id='success-result']").should("exist");
-      cy.get("input[value='/local/my-json']").should("exist");
+      cy.get("input[value='10']").should("exist");
     });
   });
 
   it("Can edit source again without leaving the page", () => {
-    createJsonDestinationViaApi().then((jsonDestination) => {
-      destination = jsonDestination;
-      updateDestination(jsonDestination.name, "connectionConfiguration.destination_path", "/local/my-json");
+    createE2ETestingDestinationViaApi().then((e2eTestingDestination) => {
+      destination = e2eTestingDestination;
+      updateDestination(
+        e2eTestingDestination.name,
+        "connectionConfiguration.test_destination.logging_config.max_entry_count",
+        "10"
+      );
 
       cy.get("div[data-id='success-result']").should("exist");
-      cy.get("input[value='/local/my-json']").should("exist");
+      cy.get("input[value='10']").should("exist");
     });
 
     cy.get("button[type=submit]").should("be.disabled");
 
-    cy.get("input[name='connectionConfiguration.destination_path']").clear();
-    cy.get("input[name='connectionConfiguration.destination_path']").type("/local/my-json2");
+    cy.get("input[name='connectionConfiguration.test_destination.logging_config.max_entry_count']").clear();
+    cy.get("input[name='connectionConfiguration.test_destination.logging_config.max_entry_count']").type("10");
     cy.get("button[type=submit]").should("be.enabled");
   });
 
   it("Delete destination", () => {
-    createJsonDestinationViaApi().then((jsonDestination) => {
-      deleteDestination(jsonDestination.name);
+    createE2ETestingDestinationViaApi().then((e2eTestingDestination) => {
+      deleteDestination(e2eTestingDestination.name);
 
       cy.visit("/destination");
-      cy.get("div").contains(jsonDestination.name).should("not.exist");
+      cy.get("div").contains(e2eTestingDestination.name).should("not.exist");
     });
   });
 });

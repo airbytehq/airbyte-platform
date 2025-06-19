@@ -10,7 +10,7 @@ import java.util.UUID
 /**
  * A service that manages permissions.
  */
-interface PermissionDao {
+interface PermissionService {
   /**
    * Get a permission by its unique id.
    */

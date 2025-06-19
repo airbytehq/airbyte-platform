@@ -11,7 +11,7 @@ import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.services.DataplaneService
-import io.airbyte.data.services.PermissionDao
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.ServiceAccountsService
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toConfigModel
 import io.airbyte.data.services.impls.data.mappers.DataplaneMapper.toEntity
@@ -28,7 +28,7 @@ open class DataplaneServiceDataImpl(
   private val repository: DataplaneRepository,
   private val groupRepository: DataplaneGroupRepository,
   private val serviceAccountsService: ServiceAccountsService,
-  private val permissionDao: PermissionDao,
+  private val permissionService: PermissionService,
 ) : DataplaneService {
   override fun getDataplane(id: UUID): Dataplane =
     repository
@@ -85,7 +85,7 @@ open class DataplaneServiceDataImpl(
     if (!instanceScope) {
       perm.withOrganizationId(group.organizationId)
     }
-    permissionDao.createServiceAccountPermission(perm)
+    permissionService.createServiceAccountPermission(perm)
 
     return DataplaneWithServiceAccount(dataplaneConfigModel, serviceAccount)
   }

@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq
 import com.google.common.io.Resources
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.protocol.DefaultProtocolSerializer
+import io.airbyte.commons.protocol.SerializationTarget
 import io.airbyte.config.Notification
 import io.airbyte.config.Notification.NotificationType
 import io.airbyte.config.NotificationSettings
@@ -51,7 +52,7 @@ internal class DbConverterTest {
     protocol: ProtocolConfiguredAirbyteCatalog,
   ) {
     val internalToProtocol: ProtocolConfiguredAirbyteCatalog =
-      parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false))
+      parseConfiguredAirbyteCatalogAsProtocol(DefaultProtocolSerializer().serialize(internal, false, SerializationTarget.SOURCE))
 
     // This is to ease the defaults in the comparison. The frozen catalogs do not have includeFiles,
     // we default to false in the new model

@@ -1,4 +1,4 @@
-{{- if .Values.temporal.enabled }}
+{{- if and (.Values.temporal.enabled) (not (eq (include "airbyte.temporal.cloud.enabled" .) "true")) }}
 ---
 apiVersion: apps/v1
 kind: Deployment

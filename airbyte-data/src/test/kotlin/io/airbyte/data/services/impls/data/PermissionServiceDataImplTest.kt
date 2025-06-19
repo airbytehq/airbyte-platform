@@ -26,19 +26,19 @@ import org.junit.jupiter.api.assertThrows
 import java.util.Optional
 import java.util.UUID
 
-class PermissionDaoDataImplTest {
+class PermissionServiceDataImplTest {
   private val testUserId = UUID.randomUUID()
   private val testServiceAccountId = UUID.randomUUID()
 
   private lateinit var workspaceService: WorkspaceService
   private lateinit var permissionRepository: PermissionRepository
-  private lateinit var permissionService: PermissionDaoDataImpl
+  private lateinit var permissionService: PermissionServiceDataImpl
 
   @BeforeEach
   fun setUp() {
     workspaceService = mockk()
     permissionRepository = mockk()
-    permissionService = PermissionDaoDataImpl(workspaceService, permissionRepository)
+    permissionService = PermissionServiceDataImpl(workspaceService, permissionRepository)
   }
 
   @Nested

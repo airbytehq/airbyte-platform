@@ -11,7 +11,7 @@ import { Message } from "components/ui/Message";
 import { Pre } from "components/ui/Pre";
 import { Spinner } from "components/ui/Spinner";
 
-import { useAirbyteCloudIps } from "area/connector/utils/useAirbyteCloudIps";
+import { useAirbyteCloudIpsByDataplane } from "area/connector/utils/useAirbyteCloudIpsByDataplane";
 import { ErrorWithJobInfo, useCreateConfigTemplate, useCreateConnectionTemplate, useCurrentWorkspace } from "core/api";
 import { DestinationRead, SourceRead, SupportLevel } from "core/api/types/AirbyteClient";
 import {
@@ -381,7 +381,7 @@ const AllowlistIpBanner = ({ connectorId }: { connectorId: string | undefined })
           initiallyOpen={connectorId ? allowlistIpsOpen ?? true : true}
           onClick={(newOpenState) => setAllowlistIpsOpen(newOpenState)}
         >
-          <Pre>{useAirbyteCloudIps().join("\n")}</Pre>
+          <Pre>{useAirbyteCloudIpsByDataplane().join("\n")}</Pre>
         </Collapsible>
       </Box>
     </Message>
