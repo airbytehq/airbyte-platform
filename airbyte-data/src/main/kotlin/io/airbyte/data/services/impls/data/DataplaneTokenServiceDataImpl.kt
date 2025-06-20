@@ -6,7 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.config.TokenExpirationConfig
 import io.airbyte.commons.auth.roles.AuthRole
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.airbyte.data.services.DataplaneTokenService
 import io.airbyte.data.services.ServiceAccountsService
 import io.micronaut.context.annotation.Property

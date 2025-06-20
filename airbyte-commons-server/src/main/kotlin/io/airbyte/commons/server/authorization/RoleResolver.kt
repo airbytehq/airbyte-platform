@@ -20,7 +20,7 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.helpers.PermissionHelper
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.featureflag.IgnoreTokenRoleClaims
 import io.airbyte.featureflag.TokenSubject

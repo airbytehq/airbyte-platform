@@ -4,7 +4,7 @@
 
 package io.airbyte.data.auth
 
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.micronaut.context.annotation.Property
 import io.micronaut.context.annotation.Replaces
 import io.micronaut.context.annotation.Requires
