@@ -4,7 +4,7 @@
 
 package io.airbyte.workload.auth
 
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import io.micronaut.core.order.Ordered

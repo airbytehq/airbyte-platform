@@ -2,7 +2,7 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.data
+package io.airbyte.data.auth
 
 /**
  * TokenType describes the various types of auth (JWT) tokens we use in Airbyte.
@@ -39,7 +39,7 @@ enum class TokenType {
     fun fromClaims(claims: Map<String, Any>): TokenType {
       val claimedType = claims["typ"] as? String
       if (claimedType != null) {
-        for (it in TokenType.entries) {
+        for (it in entries) {
           if (claimedType == it.toClaim().second) {
             return it
           }

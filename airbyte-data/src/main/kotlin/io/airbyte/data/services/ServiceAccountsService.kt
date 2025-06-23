@@ -5,8 +5,8 @@
 package io.airbyte.data.services
 
 import io.airbyte.commons.auth.config.TokenExpirationConfig
-import io.airbyte.data.TokenType
 import io.airbyte.data.auth.AirbyteJwtGenerator
+import io.airbyte.data.auth.TokenType
 import io.airbyte.data.repositories.ServiceAccountsRepository
 import io.airbyte.domain.models.ServiceAccount
 import jakarta.inject.Singleton

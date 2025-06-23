@@ -200,7 +200,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
         log.debug("Response from userinfo endpoint: {}", responseBody);
         return validateUserInfo(responseBody);
       } else {
-        log.warn("Non-200 response from userinfo endpoint: {}", response.code());
+        log.debug("Non-200 response from userinfo endpoint: {}", response.code());
         return Mono.just(false);
       }
     } catch (final Exception e) {

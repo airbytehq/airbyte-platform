@@ -13,7 +13,7 @@ import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.HttpRequest

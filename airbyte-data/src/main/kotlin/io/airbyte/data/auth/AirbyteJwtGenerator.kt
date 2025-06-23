@@ -4,7 +4,7 @@
 
 package io.airbyte.data.auth
 
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 
 /**
  * AirbyteJwtGenerator provides an interface for generating an encoded JWT token.

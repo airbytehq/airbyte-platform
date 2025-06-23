@@ -15,7 +15,7 @@ import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.data.TokenType
+import io.airbyte.data.auth.TokenType
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.EmbeddedWidgetApi
 import io.airbyte.publicApi.server.generated.models.EmbeddedOrganizationListItem
