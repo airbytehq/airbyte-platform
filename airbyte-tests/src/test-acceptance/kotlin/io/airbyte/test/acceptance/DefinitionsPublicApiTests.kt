@@ -28,18 +28,18 @@ import java.util.UUID
 
 @Tag("api")
 class DefinitionsPublicApiTests {
-  val testResources = AcceptanceTestsResources()
-  val sourceDefinitionsApi =
+  private val testResources = AcceptanceTestsResources()
+  private val sourceDefinitionsApi =
     PublicSourceDefinitionsApi(
       basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
-  val destinationDefinitionsApi =
+  private val destinationDefinitionsApi =
     PublicDestinationDefinitionsApi(
       basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
-  val declarativeSourceDefinitionsApi =
+  private val declarativeSourceDefinitionsApi =
     PublicDeclarativeSourceDefinitionsApi(
       basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),

@@ -1468,17 +1468,16 @@ class AcceptanceTestHarness
       return mostRecentSyncJob
     }
 
-    @get:Throws(IOException::class)
-    val nonExistentResource: Unit
-      get() {
-        apiClient.destinationDefinitionSpecificationApi
-          .getDestinationDefinitionSpecification(
-            DestinationDefinitionIdWithWorkspaceId(
-              UUID.randomUUID(),
-              UUID.randomUUID(),
-            ),
-          )
-      }
+    @Throws(IOException::class)
+    fun getNonExistentResource() {
+      apiClient.destinationDefinitionSpecificationApi
+        .getDestinationDefinitionSpecification(
+          DestinationDefinitionIdWithWorkspaceId(
+            UUID.randomUUID(),
+            UUID.randomUUID(),
+          ),
+        )
+    }
 
     @Throws(IOException::class)
     fun getSourceDefinition(sourceDefinitionId: UUID): SourceDefinitionRead =

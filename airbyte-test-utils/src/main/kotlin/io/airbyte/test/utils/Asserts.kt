@@ -43,7 +43,7 @@ object Asserts {
     assertSourceAndDestinationDbRawRecordsInSync(
       source,
       destination,
-      java.util.Set.of(inputSchema),
+      setOf(inputSchema),
       outputSchema,
       withNormalizedTable,
       withScdTable,
@@ -111,6 +111,7 @@ object Asserts {
     LOGGER.debug("tables found in source: ${sourceTables.joinToString(", ") { it.getFullyQualifiedTableName() }}")
 
     val expDestTables = addAirbyteGeneratedTables(outputSchema, withNormalizedTable, withScdTable, sourceTables)
+    LOGGER.debug("expected destination tables: ${expDestTables.joinToString(", ")}")
 
     val destinationTables = Databases.listAllTables(destination, outputSchema)
     Assertions.assertEquals(
@@ -289,12 +290,10 @@ object Asserts {
       .flatMap { x: SchemaTableNamePair ->
         val cleanedNameStream = x.tableName.replace(".", "_")
         val explodedStreamNames: MutableList<SchemaTableNamePair> =
-          ArrayList(
-            java.util.List.of(
-              SchemaTableNamePair(
-                outputSchema,
-                String.format("_airbyte_raw_%s%s", AcceptanceTestHarness.OUTPUT_STREAM_PREFIX, cleanedNameStream),
-              ),
+          mutableListOf(
+            SchemaTableNamePair(
+              outputSchema,
+              String.format("_airbyte_raw_%s%s", AcceptanceTestHarness.OUTPUT_STREAM_PREFIX, cleanedNameStream),
             ),
           )
 
