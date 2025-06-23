@@ -50,8 +50,10 @@ data class AirbyteJsonRecordAdapter(
     oldFieldName: String,
     newFieldName: String,
   ) {
-    data.set<JsonNode>(newFieldName, data[oldFieldName])
-    data.remove(oldFieldName)
+    if (newFieldName != oldFieldName) {
+      data.set<JsonNode>(newFieldName, data[oldFieldName])
+      data.remove(oldFieldName)
+    }
   }
 
   override fun <T : Any> set(

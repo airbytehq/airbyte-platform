@@ -33,7 +33,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_24_002__BackfillBreakingChangeNotificationSettings()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -42,7 +42,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
 
   @Test
   fun testBackfillBreakingChangeNotificationSettings() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val workspaceId = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
     val workspaceId3 = UUID.randomUUID()

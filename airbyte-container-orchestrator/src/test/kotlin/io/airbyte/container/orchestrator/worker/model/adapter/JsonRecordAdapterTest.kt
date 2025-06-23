@@ -59,6 +59,26 @@ internal class JsonRecordAdapterTest {
   }
 
   @Test
+  fun `renaming a field creates the new field and removes the old one`() {
+    val adapter = getAdapterFromRecord(jsonRecordString)
+    val newFieldName = "$STRING_FIELD-new"
+
+    Assertions.assertFalse(adapter.has(newFieldName))
+
+    adapter.rename(STRING_FIELD, newFieldName)
+
+    Assertions.assertEquals("bar", adapter.get(newFieldName).asString())
+    Assertions.assertFalse(adapter.has(STRING_FIELD))
+  }
+
+  @Test
+  fun `renaming to the same name does nothing`() {
+    val adapter = getAdapterFromRecord(jsonRecordString)
+    adapter.rename(STRING_FIELD, STRING_FIELD)
+    Assertions.assertEquals("bar", adapter.get(STRING_FIELD).asString())
+  }
+
+  @Test
   fun `tracking meta changes`() {
     val adapter = getAdapterFromRecord(jsonRecordString)
 

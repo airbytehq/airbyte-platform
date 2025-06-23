@@ -39,7 +39,7 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
   @BeforeEach
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   fun setupJobDatabase() {
-    jobDatabase = JobsDatabaseTestProvider(dslContext, null).create(false)
+    jobDatabase = JobsDatabaseTestProvider(dslContext!!, null).create(false)
   }
 
   @Test
@@ -49,9 +49,9 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
 
     // when there is database environment variable, return the database
     val configs = Mockito.mock(Configs::class.java)
-    Mockito.`when`(configs.databaseUser).thenReturn(container.username)
-    Mockito.`when`(configs.databasePassword).thenReturn(container.password)
-    Mockito.`when`(configs.databaseUrl).thenReturn(container.jdbcUrl)
+    Mockito.`when`(configs.databaseUser).thenReturn(container!!.username)
+    Mockito.`when`(configs.databasePassword).thenReturn(container!!.password)
+    Mockito.`when`(configs.databaseUrl).thenReturn(container!!.jdbcUrl)
 
     Assertions.assertNotNull(
       getJobsDatabase(configs.databaseUser, configs.databasePassword, configs.databaseUrl),

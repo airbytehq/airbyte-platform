@@ -35,7 +35,7 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_5_004__AddActorDefinitionBreakingChangeTable()
     devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -45,14 +45,14 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
   @AfterEach
   fun afterEach() {
     // Making sure we reset between tests
-    dslContext.dropSchemaIfExists("public").cascade().execute()
-    dslContext.createSchema("public").execute()
-    dslContext.setSchema("public").execute()
+    dslContext!!.dropSchemaIfExists("public").cascade().execute()
+    dslContext!!.createSchema("public").execute()
+    dslContext!!.setSchema("public").execute()
   }
 
   @Test
   fun testSimpleMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
     val actorDefinitionId = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -106,7 +106,7 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
     val workspaceId = UUID.randomUUID()
     val scopeId = UUID.randomUUID()
 
-    val context = getDslContext()
+    val context = dslContext!!
 
     // We retroactively made orgs required so applying the default org/user migration so we can use the
     // default org to allow this test to pass

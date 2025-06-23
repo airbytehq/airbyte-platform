@@ -31,7 +31,7 @@ internal class V0_50_33_016__AddIconUrlToActorDefinitionTest : AbstractConfigsDa
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_33_008__AddMutexKeyAndTypeColumnsToWorkload()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -41,7 +41,7 @@ internal class V0_50_33_016__AddIconUrlToActorDefinitionTest : AbstractConfigsDa
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // ignore all foreign key constraints
     context.execute("SET session_replication_role = replica;")

@@ -81,7 +81,7 @@ class ReplicationJobOrchestrator(
     val destinationLauncherConfig = replicationInput.destinationLauncherConfig
 
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any>(
+      mutableMapOf(
         ApmTraceConstants.Tags.IS_RESET_KEY to replicationInput.isReset,
         ApmTraceConstants.Tags.JOB_ID_KEY to jobRunConfig.jobId,
         ApmTraceConstants.Tags.DESTINATION_DOCKER_IMAGE_KEY to destinationLauncherConfig.dockerImage,

@@ -47,13 +47,13 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_6_0_002__AllowNullSecretConfigUser()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
-    val ctx = getDslContext()
-    dslContext.execute("ALTER TABLE config_template DROP CONSTRAINT IF EXISTS config_template_valid_reference_check")
-    dslContext.execute("ALTER TABLE config_template DROP CONSTRAINT IF EXISTS config_template_actor_definition_version_id_unique")
+    val ctx = dslContext!!
+    dslContext!!.execute("ALTER TABLE config_template DROP CONSTRAINT IF EXISTS config_template_valid_reference_check")
+    dslContext!!.execute("ALTER TABLE config_template DROP CONSTRAINT IF EXISTS config_template_actor_definition_version_id_unique")
 
     V1_6_0_003__ConfigTemplateInstanceDefaults.updateConfigTemplateTable(ctx)
 
@@ -66,7 +66,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
   fun `test can insert record with organization_id and actor_definition_id`() {
     val configId = UUID.randomUUID()
 
-    dslContext
+    dslContext!!
       .insertInto(DSL.table(TABLE_CONFIG_TEMPLATE))
       .columns(
         DSL.field(COL_ID),
@@ -83,7 +83,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
       ).execute()
 
     val result =
-      dslContext
+      dslContext!!
         .selectFrom(DSL.table(TABLE_CONFIG_TEMPLATE))
         .where(DSL.field(COL_ID).eq(configId))
         .fetchOne()
@@ -99,7 +99,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
     val configId = UUID.randomUUID()
     val actorDefVersionId = UUID.randomUUID()
 
-    dslContext
+    dslContext!!
       .insertInto(DSL.table(TABLE_CONFIG_TEMPLATE))
       .columns(
         DSL.field(COL_ID),
@@ -114,7 +114,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
       ).execute()
 
     val result =
-      dslContext
+      dslContext!!
         .selectFrom(DSL.table(TABLE_CONFIG_TEMPLATE))
         .where(DSL.field(COL_ID).eq(configId))
         .fetchOne()
@@ -132,7 +132,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
 
     // Use assertThrows to test the constraint violation
     assertThrows(Exception::class.java) {
-      dslContext
+      dslContext!!
         .insertInto(DSL.table(TABLE_CONFIG_TEMPLATE))
         .columns(
           DSL.field(COL_ID),
@@ -158,7 +158,7 @@ class V1_6_0_003__ConfigTemplateInstanceDefaultsTest : AbstractConfigsDatabaseTe
 
     assertThrows(Exception::class.java) {
       // Try to insert without required fields
-      dslContext
+      dslContext!!
         .insertInto(DSL.table(TABLE_CONFIG_TEMPLATE))
         .columns(
           DSL.field(COL_ID),

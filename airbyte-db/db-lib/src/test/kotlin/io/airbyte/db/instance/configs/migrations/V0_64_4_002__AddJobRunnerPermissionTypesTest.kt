@@ -35,19 +35,19 @@ internal class V0_64_4_002__AddJobRunnerPermissionTypesTest : AbstractConfigsDat
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_64_4_001__AddFinalizationInputToWorkload()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     ctx.deleteFrom(PERMISSION_TABLE).execute()
     ctx.deleteFrom(USER_TABLE).execute()
   }
 
   @Test
   fun testCreateOrgRunnerPermission() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V0_64_4_002__AddJobRunnerPermissionTypes.runMigration(ctx)
     val userId = createUser(ctx, "test@test.com")
     createOrgPermission(ctx, userId, PermissionType.ORGANIZATION_RUNNER)
@@ -59,7 +59,7 @@ internal class V0_64_4_002__AddJobRunnerPermissionTypesTest : AbstractConfigsDat
 
   @Test
   fun testCreateWorkspaceRunnerPermission() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V0_64_4_002__AddJobRunnerPermissionTypes.runMigration(ctx)
     val workspaceId = UUID.randomUUID()
     createWorkspace(ctx, workspaceId, DEFAULT_ORGANIZATION_ID)
@@ -73,7 +73,7 @@ internal class V0_64_4_002__AddJobRunnerPermissionTypesTest : AbstractConfigsDat
 
   @Test
   fun testCreateOldPermission() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V0_64_4_002__AddJobRunnerPermissionTypes.runMigration(ctx)
     val workspaceId = UUID.randomUUID()
     createWorkspace(ctx, workspaceId, DEFAULT_ORGANIZATION_ID)
@@ -89,7 +89,7 @@ internal class V0_64_4_002__AddJobRunnerPermissionTypesTest : AbstractConfigsDat
 
   @Test
   fun testCreateInvalidPermission() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V0_64_4_002__AddJobRunnerPermissionTypes.runMigration(ctx)
     val workspaceId = UUID.randomUUID()
     createWorkspace(ctx, workspaceId, DEFAULT_ORGANIZATION_ID)

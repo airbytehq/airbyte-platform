@@ -41,7 +41,7 @@ open class WorkloadQueueService(
     priority: WorkloadPriority,
     dataplaneGroup: String?,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId))
 
     // TODO dataplaneGroup should not be nullable
     if (dataplaneGroup != null) {

@@ -23,7 +23,7 @@ internal class V0_35_59_002__AddActorDefinitionWorkspaceGrantTableTest : Abstrac
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)
 
     val actorDefinitionId = UUID(0L, 1L)

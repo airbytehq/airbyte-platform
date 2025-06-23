@@ -19,7 +19,7 @@ import java.util.UUID
 internal class V0_35_14_001__AddTombstoneToActorDefinitionTest : AbstractConfigsDatabaseTest() {
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // necessary to add actor_definition table
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

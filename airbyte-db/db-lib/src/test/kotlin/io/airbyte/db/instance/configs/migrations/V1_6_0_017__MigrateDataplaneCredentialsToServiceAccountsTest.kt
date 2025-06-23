@@ -30,17 +30,17 @@ class V1_6_0_017__MigrateDataplaneCredentialsToServiceAccountsTest : AbstractCon
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_6_0_016__AddDestinationCatalogToConnection()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    clearCredsTable(getDslContext())
+    clearCredsTable(dslContext!!)
   }
 
   @Test
   fun `existing credentials are moved to service accounts table`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val dataplaneId = UUID.randomUUID()
     val dataplaneGroupId = UUID.randomUUID()

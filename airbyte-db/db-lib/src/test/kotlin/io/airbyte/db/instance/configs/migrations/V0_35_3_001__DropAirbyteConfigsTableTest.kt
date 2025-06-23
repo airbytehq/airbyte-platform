@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test
 internal class V0_35_3_001__DropAirbyteConfigsTableTest : AbstractConfigsDatabaseTest() {
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertTrue(airbyteConfigsExists(context))
     dropTable(context)
     Assertions.assertFalse(airbyteConfigsExists(context))

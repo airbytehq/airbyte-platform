@@ -105,7 +105,7 @@ class SchemaManagementTests {
             destinationId,
             catalog,
             discoverResult.getCatalogId(),
-            testHarness.getDataplaneGroupId()).build());
+            testHarness.dataplaneGroupId).build());
     LOGGER.info("Created connection: {}", createdConnection);
     // Create a connection that shares the source, to verify that the schema management actions are
     // applied to all connections with the same source.

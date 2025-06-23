@@ -29,7 +29,7 @@ internal class V0_55_1_003__EditRefreshTableTest : AbstractConfigsDatabaseTest()
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_55_1_002__AddGenerationTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -38,7 +38,7 @@ internal class V0_55_1_003__EditRefreshTableTest : AbstractConfigsDatabaseTest()
 
   @Test
   fun test() {
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     editRefreshTable(dslContext)
     val index =
       dslContext

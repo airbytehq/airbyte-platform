@@ -34,7 +34,7 @@ internal class V0_50_41_002__AddAuthUsersTableTest : AbstractConfigsDatabaseTest
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_33_016__AddIconUrlToActorDefinition()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -44,7 +44,7 @@ internal class V0_50_41_002__AddAuthUsersTableTest : AbstractConfigsDatabaseTest
   @Test
   @Throws(SQLException::class, IOException::class)
   fun testPopulateAuthUsersTable() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     createAuthUsersTable(context)
     populateAuthUserTable(context)

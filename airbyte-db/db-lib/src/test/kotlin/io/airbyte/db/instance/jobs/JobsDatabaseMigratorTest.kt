@@ -21,12 +21,12 @@ internal class JobsDatabaseMigratorTest : AbstractJobsDatabaseTest() {
     schemaDumpFile.deleteOnExit()
     val flyway =
       create(
-        getDataSource(),
+        dataSource!!,
         javaClass.simpleName,
         JobsDatabaseMigrator.DB_IDENTIFIER,
         JobsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val migrator: DatabaseMigrator = JobsDatabaseMigrator(database, flyway)
+    val migrator: DatabaseMigrator = JobsDatabaseMigrator(database!!, flyway)
     migrator.migrate()
     val schema = migrator.dumpSchema()
     dumpSchema(schema!!, schemaDumpFile.absolutePath, false)

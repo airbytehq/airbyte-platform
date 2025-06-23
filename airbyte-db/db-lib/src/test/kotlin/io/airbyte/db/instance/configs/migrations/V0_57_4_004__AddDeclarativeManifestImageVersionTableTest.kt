@@ -21,7 +21,7 @@ internal class V0_57_4_004__AddDeclarativeManifestImageVersionTableTest : Abstra
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     createDeclarativeManifestImageVersionTable(context)
 
     val majorVersion = 0

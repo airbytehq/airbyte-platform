@@ -25,7 +25,7 @@ internal class V0_50_33_014__AddScopedConfigurationTableTest : AbstractConfigsDa
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     createResourceTypeEnum(context)
     createScopeTypeEnum(context)

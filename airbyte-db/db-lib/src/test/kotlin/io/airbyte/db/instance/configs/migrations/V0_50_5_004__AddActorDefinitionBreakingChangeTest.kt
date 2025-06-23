@@ -33,7 +33,7 @@ internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfi
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_4_002__DropActorDefinitionVersionedCols()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -43,7 +43,7 @@ internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfi
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     createBreakingChangesTable(context)
 
     val actorDefinitionId = UUID.randomUUID()

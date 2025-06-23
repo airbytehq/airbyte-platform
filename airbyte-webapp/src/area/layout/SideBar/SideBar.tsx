@@ -76,8 +76,8 @@ const OrganizationNavItems = () => {
   const multiWorkspaceUI = useFeature(FeatureItem.MultiWorkspaceUI);
   const displayOrganizationUsers = useFeature(FeatureItem.DisplayOrganizationUsers);
   const canViewOrgSettings = useIntent("ViewOrganizationSettings", { organizationId });
-  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
-  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
+  const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling, { organizationId });
+  const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage, { organizationId });
   const basePath = `${RoutePaths.Organization}/${organizationId}/`;
   return (
     <>
@@ -140,6 +140,8 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
       ? formatMessage({ id: "sidebar.defaultUsername" })
       : user?.name?.trim() || user?.email?.trim();
 
+  const basePath = pathname.split("/").slice(0, 3).join("/");
+
   return (
     <nav className={classNames(styles.sidebar, { [styles.hidden]: isHidden })}>
       <AirbyteOrgPicker />
@@ -164,7 +166,7 @@ export const SideBar: React.FC<PropsWithChildren> = () => {
               options={[
                 {
                   as: "a",
-                  href: RoutePaths.Settings, // NOTE: This needs to be fixed once user paths are set up
+                  href: `${basePath}/${SettingsRoutePaths.User}`,
                   displayName: formatMessage({ id: "sidebar.userSettings" }),
                   internal: true,
                   icon: <Icon type="gear" />,

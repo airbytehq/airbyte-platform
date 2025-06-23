@@ -30,7 +30,7 @@ internal class V1_1_0_005__UpdateConnectorRolloutStateEnumTest : AbstractConfigs
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     // Initialize the database with migrations up to, but not including, our target migration
     val previousMigration: BaseJavaMigration = V1_1_0_004__UpdateConfigOriginTypeEnum()
@@ -40,7 +40,7 @@ internal class V1_1_0_005__UpdateConnectorRolloutStateEnumTest : AbstractConfigs
 
   @Test
   fun testMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     ctx.alterTable(CONNECTOR_ROLLOUT_TABLE).dropConstraintIfExists("fk_actor_definition_id").execute()
     ctx.alterTable(CONNECTOR_ROLLOUT_TABLE).dropConstraintIfExists("fk_initial_version_id").execute()
     ctx.alterTable(CONNECTOR_ROLLOUT_TABLE).dropConstraintIfExists("fk_release_candidate_version_id").execute()

@@ -33,7 +33,7 @@ internal class V0_50_23_002__SetBreakingChangesMessageColumnToClobTypeTest : Abs
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_21_001__BackfillActorDefaultVersionAndSetNonNull()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -42,7 +42,7 @@ internal class V0_50_23_002__SetBreakingChangesMessageColumnToClobTypeTest : Abs
 
   @Test
   fun testInsertThrowsBeforeMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     insertActorDefinitionDependency(ctx)
     val exception: Throwable =
       Assertions.assertThrows(
@@ -53,7 +53,7 @@ internal class V0_50_23_002__SetBreakingChangesMessageColumnToClobTypeTest : Abs
 
   @Test
   fun testInsertSucceedsAfterMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     insertActorDefinitionDependency(ctx)
     alterMessageColumnType(ctx)
     Assertions.assertDoesNotThrow {

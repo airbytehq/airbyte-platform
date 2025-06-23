@@ -33,7 +33,7 @@ internal class V0_55_1_004__EnforceOrgsEverywhereTest : AbstractConfigsDatabaseT
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_55_1_003__EditRefreshTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -51,7 +51,7 @@ internal class V0_55_1_004__EnforceOrgsEverywhereTest : AbstractConfigsDatabaseT
   }
 
   private fun testWithNoOrganization() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val workspaceWithoutOrganization = UUID.randomUUID()
     val workspaceWithOrganization = UUID.randomUUID()
     val organizationId = UUID.randomUUID()
@@ -132,7 +132,7 @@ internal class V0_55_1_004__EnforceOrgsEverywhereTest : AbstractConfigsDatabaseT
   }
 
   private fun testOrgIdNonNull() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     setOrganizationIdNotNull(ctx)
     Assertions.assertThrows(
       IntegrityConstraintViolationException::class.java,
