@@ -11,10 +11,12 @@ import com.google.common.annotations.VisibleForTesting
 import com.google.common.base.Preconditions
 import io.airbyte.commons.constants.AirbyteSecretConstants
 import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
+import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_FIELD
 import io.airbyte.commons.json.JsonPaths
 import io.airbyte.commons.json.JsonSchemas
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.util.MoreIterators
+import io.airbyte.domain.models.SecretStorage
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Optional
@@ -67,38 +69,27 @@ class JsonSecretsProcessor(
     /**
      * Given a JSONSchema object and an object that conforms to that schema, return the coordinates of the secrets only
      *
-     * @param json - json object that conforms to the schema
+     * @param configWithSecretReferences - config object with secret references
      * @param schema - jsonschema object
      * @return json object with only the secret coordinates returned.
      *
-     * TODO: In the future, when we have secret refs, we can simplify this dramatically uby just swapping in the refs from the map (https://github.com/airbytehq/airbyte-platform-internal/pull/15663#discussion_r2023811563)
      */
     fun simplifyAllSecrets(
-      json: JsonNode,
-      schema: JsonNode?,
+      configWithSecretReferences: ConfigWithSecretReferences,
+      showCoordinatesFromDefaultSecretStorage: Boolean,
     ): JsonNode {
-      val pathsWithSecrets =
-        JsonSchemas
-          .collectPathsThatMeetCondition(
-            schema,
-          ) { node: JsonNode ->
-            MoreIterators
-              .toList(node.fields())
-              .stream()
-              .anyMatch { (key): Map.Entry<String, JsonNode> -> AirbyteSecretConstants.AIRBYTE_SECRET_FIELD == key }
-          }.stream()
-          .map { jsonSchemaPath: List<JsonSchemas.FieldNameOrList?>? ->
-            JsonPaths.mapJsonSchemaPathToJsonPath(
-              jsonSchemaPath,
-            )
-          }.collect(Collectors.toSet())
-      var copy = Jsons.clone(json)
+      val pathsWithSecrets = configWithSecretReferences.referencedSecrets.keys
+      var copy = Jsons.clone(configWithSecretReferences.originalConfig)
       for (path in pathsWithSecrets) {
-        // TODO: Is this secret sub (`_secret`) key stored anywhere? AirbyteSecretConstants?
-        var extractedCoordinateNode = JsonPaths.getSingleValue(copy, "$path._secret")
-        var extractedCoordinateString = extractedCoordinateNode.map(JsonNode::asText).orElse(null)
-        if (extractedCoordinateString != null) {
-          copy = JsonPaths.replaceAtString(copy, path, "$AIRBYTE_SECRET_COORDINATE_PREFIX$extractedCoordinateString")
+        val secretCoordinate = configWithSecretReferences.referencedSecrets[path]
+        if (secretCoordinate != null) {
+          val fullCoordinate = secretCoordinate.secretCoordinate.fullCoordinate
+          copy =
+            if (showCoordinatesFromDefaultSecretStorage || secretCoordinate.secretStorageId != SecretStorage.DEFAULT_SECRET_STORAGE_ID.value) {
+              JsonPaths.replaceAtString(copy, path, "$AIRBYTE_SECRET_COORDINATE_PREFIX$fullCoordinate")
+            } else {
+              JsonPaths.replaceAtString(copy, path, AirbyteSecretConstants.SECRETS_MASK)
+            }
         }
       }
       return copy
@@ -152,21 +143,22 @@ class JsonSecretsProcessor(
   }
 
   /**
-   * Returns a copy of the input object wherein any fields annotated with "airbyte_secret" in the
-   * input schema are simplified returning just the secret coordinates.
+   * Returns a copy of the input ConfigWithSecretReferences's config object wherein any secret references are either
+   * resolved to their coordinates if they are stored in a non-default secret storage, or masked if they are stored in the default secret storage.
    *
    * @param schema Schema containing secret annotations
-   * @param obj Object containing potentially secret fields
+   * @param configWithSecretReferences Config containing potentially secret fields
    */
   fun simplifySecretsForOutput(
-    obj: JsonNode,
+    configWithSecretReferences: ConfigWithSecretReferences,
     schema: JsonNode,
+    showCoordinatesFromDefaultSecretStorage: Boolean,
   ): JsonNode {
     if (!isValidJsonSchema(schema)) {
       logger.error { "The schema is not valid, the secret can't be hidden" }
-      return obj
+      return configWithSecretReferences.originalConfig
     }
-    return simplifyAllSecrets(obj, schema)
+    return simplifyAllSecrets(configWithSecretReferences, showCoordinatesFromDefaultSecretStorage)
   }
 
   /**

@@ -506,18 +506,14 @@ public class SourceHandler {
     // read configuration from db
     final StandardSourceDefinition standardSourceDefinition = sourceService
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
-    if (includeSecretCoordinates
-        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
-      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
-    }
     final ConfigWithSecretReferences configWithRefs =
         this.secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(),
             sourceConnection.getWorkspaceId());
     final JsonNode inlinedConfigWithRefs = InlinedConfigWithSecretRefsKt.toInlined(configWithRefs);
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
-            ? secretsProcessor.simplifySecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification())
+            ? secretsProcessor.simplifySecretsForOutput(configWithRefs, spec.getConnectionSpecification(),
+                airbyteEdition != Configs.AirbyteEdition.CLOUD)
             : secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification());
     sourceConnection.setConfiguration(sanitizedConfig);
     return toSourceRead(sourceConnection, standardSourceDefinition);
