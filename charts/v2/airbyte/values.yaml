@@ -2856,3 +2856,5 @@ featureflagServer:
 testWebapp:
   image:
     repository: airbyte/utils
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}

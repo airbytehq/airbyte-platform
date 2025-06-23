@@ -146,5 +146,9 @@ spec:
       env:
         {{- include "airbyte.minio.envs" . | nindent 8 }}
         {{- include "airbyte.storage.minio.endpoint.env" . | nindent 8 }}
+  {{- with .Values.minio.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 6 }}
+  {{- end }}
 {{- end }}
 {{- end }}
