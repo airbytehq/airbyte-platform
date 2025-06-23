@@ -94,7 +94,7 @@ class ClaimedProcessor(
   private fun addTagsToTrace(dataplaneId: String) {
     val commonTags = hashMapOf<String, Any>()
     commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
-    ApmTraceUtils.addTagsToTrace(commonTags)
+    ApmTraceUtils.addTagsToTrace(commonTags.toMap())
   }
 
   private fun getWorkloadList(req: WorkloadListRequest): WorkloadListResponse =
