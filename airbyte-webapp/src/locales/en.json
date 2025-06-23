@@ -23,6 +23,11 @@
   "workspaces.workspace": "Workspace",
   "workspaces.seeAll": "See all workspaces",
   "workspaces.name": "Workspace name",
+  "workspaces.unlock.title": "Want multiple workspaces?",
+  "workspaces.unlock.description": "Hash, encrypt, filter rows, rename fields, and more. Transform your data directly in Airbyte to ensure it arrives exactly how you want it to.",
+  "workspaces.unlock.learnMore": "Learn more",
+  "workspaces.unlock.upgradeMessage": "Talk to our sales team about upgrading to Teams or Enterprise to unlock this feature.",
+  "workspaces.unlock.button": "Unlock multiple workspaces",
   "workspaces.noPermissions": "You do not have permission to view any workspaces in your organization.",
   "workspaces.noPermissions.moreInformation": "Please ask your organization admin for access at <lnk>{adminEmail}</lnk>.",
   "workspaces.activeConnectionLimitReached.title": "You've reached the limit for active connections in a workspace.",
@@ -77,6 +82,7 @@
   "sidebar.workspaceAndOrg": "{workspace} | {organization}",
   "sidebar.workspaceSettings": "Workspace settings",
   "sidebar.myWorkspace": "My Workspace",
+  "sidebar.searchAllWorkspaces": "Search all workspaces",
 
   "form.error": "Error: {message}",
   "form.error.pkAndCursor.required": "Primary key and cursor are missing",
@@ -2565,5 +2571,9 @@
   "embedded.onboarding.upsell.orReturnToAirbyteCloud": "Or return to <lnk>Airbyte Cloud</lnk>",
   "embedded.onboarding.upsell.header": "Unlock the full power of Airbyte Embedded",
   "embedded.onboarding.upsell.description": "Harness the power of Airbyte Embedded and add hundreds of integrations into your product instantly.",
-  "embedded.onboarding.talkToSales": "Talk to sales"
+  "embedded.onboarding.talkToSales": "Talk to sales",
+
+  "organization.members": "{count, plural, one {# member} other {# members}}",
+  "organization.unhealthyWorkspaces": "Unhealthy workspaces",
+  "organization.runningSyncs": "Running syncs"
 }

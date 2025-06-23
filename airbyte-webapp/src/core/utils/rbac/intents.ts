@@ -9,10 +9,10 @@ export const intentToRbacQuery = {
   ViewOrganizationSettings: { resourceType: "ORGANIZATION", role: "READER" },
   ViewLicenseDetails: { resourceType: "WORKSPACE", role: "READER" },
   CreateConfigTemplate: { resourceType: "ORGANIZATION", role: "ADMIN" },
+  DownloadDiagnostics: { resourceType: "ORGANIZATION", role: "READER" },
 
   // workspace
   DeleteWorkspace: { resourceType: "WORKSPACE", role: "ADMIN" },
-  DownloadDiagnostics: { resourceType: "WORKSPACE", role: "READER" },
   UpdateWorkspace: [
     { resourceType: "WORKSPACE", role: "ADMIN" },
     { resourceType: "ORGANIZATION", role: "EDITOR" },

@@ -7,7 +7,7 @@ import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganization, useCurrentWorkspaceOrUndefined } from "core/api";
+import { useFirstOrg, useCurrentWorkspaceOrUndefined } from "core/api";
 import { useIsCloudApp } from "core/utils/app";
 import { RoutePaths } from "pages/routePaths";
 
@@ -16,7 +16,7 @@ import styles from "./AirbyteOrgPicker.module.scss";
 export const AirbyteOrgPicker: React.FC = () => {
   const { formatMessage } = useIntl();
   const workspace = useCurrentWorkspaceOrUndefined();
-  const organization = useCurrentOrganization();
+  const organization = useFirstOrg();
   const isCloudApp = useIsCloudApp();
   const workspaceName = isCloudApp ? workspace?.name : workspace && formatMessage({ id: "sidebar.myWorkspace" });
 
