@@ -2,6 +2,7 @@ import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
+import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { FeatureItem, useFeature } from "core/services/features";
 import { Intent, useGeneratedIntent, useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
@@ -10,7 +11,7 @@ import { EmbeddedOnboardingPage } from "pages/embedded/EmbeddedOnboardingPage/Em
 import { GeneralOrganizationSettingsPage } from "pages/SettingsPage/pages/Organization/GeneralOrganizationSettingsPage";
 import { OrganizationMembersPage } from "pages/SettingsPage/pages/Organization/OrganizationMembersPage";
 
-import { RoutePaths } from "../routePaths";
+import { RoutePaths, SettingsRoutePaths } from "../routePaths";
 
 // Import organization-related components
 const WorkspacesPage = React.lazy(() => import("pages/workspaces"));
@@ -42,6 +43,7 @@ export const OrganizationRoutes: React.FC = () => {
         <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
       )}
       <Route path={RoutePaths.Settings} element={<GeneralOrganizationSettingsPage />} />
+      <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
       <Route path="*" element={<Navigate to={defaultPath} replace />} />
     </Routes>
   );

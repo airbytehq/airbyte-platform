@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 
 import { EnterpriseSourcePage } from "components/source/enterpriseStubs/EnterpriseSourcePage";
 
+import { UserSettingsRoutes } from "area/settings/UserSettingsRoutes";
 import { useCurrentWorkspace } from "core/api";
 import { usePrefetchWorkspaceData } from "core/api/cloud";
 import { useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
@@ -18,7 +19,7 @@ import { AccountSettingsView } from "packages/cloud/views/users/AccountSettingsV
 import { ApplicationSettingsView } from "packages/cloud/views/users/ApplicationSettingsView/ApplicationSettingsView";
 import { WorkspaceSettingsView } from "packages/cloud/views/workspaces/WorkspaceSettingsView";
 import WorkspaceUsagePage from "packages/cloud/views/workspaces/WorkspaceUsagePage";
-import { RoutePaths, DestinationPaths, SourcePaths } from "pages/routePaths";
+import { RoutePaths, DestinationPaths, SourcePaths, SettingsRoutePaths } from "pages/routePaths";
 import AdvancedSettingsPage from "pages/SettingsPage/pages/AdvancedSettingsPage";
 import {
   SourcesPage as SettingsSourcesPage,
@@ -123,6 +124,7 @@ export const WorkspacesRoutes: React.FC = () => {
         <Route path="*" element={<Navigate to={CloudSettingsRoutePaths.Account} replace />} />
       </Route>
       <Route path={`${RoutePaths.ConnectorBuilder}/*`} element={<ConnectorBuilderRoutes />} />
+      <Route path={`${SettingsRoutePaths.User}/*`} element={<UserSettingsRoutes />} />
       <Route path="*" element={<Navigate to={RoutePaths.Connections} replace />} />
     </Routes>
   );

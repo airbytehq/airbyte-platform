@@ -69,7 +69,6 @@ const CloudMainViewRoutes = () => {
 
       {isOrgPickerEnabled ? (
         <Route element={<MainLayout />}>
-          <Route path="account" element={<div>User Settings</div>} />
           <Route path={`${RoutePaths.Organization}/:organizationId/*`} element={<OrganizationRoutes />} />
           <Route path={`${RoutePaths.Workspaces}/:workspaceId/*`} element={<WorkspacesRoutes />} />
         </Route>
