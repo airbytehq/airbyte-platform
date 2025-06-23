@@ -36,7 +36,7 @@ internal class V0_44_5_004__BackFillNotificationSettingsColumnTest : AbstractCon
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_44_5_004__BackFillNotificationSettingsColumn()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -46,7 +46,7 @@ internal class V0_44_5_004__BackFillNotificationSettingsColumnTest : AbstractCon
   @Test
   @Throws(Exception::class)
   fun testMigrateEmptyValues() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Insert data to workspace
     val workspaceId = UUID.randomUUID()
@@ -95,7 +95,7 @@ internal class V0_44_5_004__BackFillNotificationSettingsColumnTest : AbstractCon
   @Test
   @Throws(Exception::class)
   fun testMigrateSlackConfigs() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Insert data to workspace
     val workspaceId = UUID.randomUUID()

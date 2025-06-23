@@ -40,7 +40,7 @@ class ConfigsDatabaseTestProvider(
     val database = Database(dslContext)
 
     if (runMigration) {
-      val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database, flyway)
+      val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
       migrator.createBaseline()
       migrator.migrate()
     } else {

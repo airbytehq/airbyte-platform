@@ -39,7 +39,7 @@ class V1_6_0_016__AddDestinationCatalogToConnectionTest : AbstractConfigsDatabas
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_6_0_015__PreparePermissionTableForServiceAccounts()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
@@ -47,7 +47,7 @@ class V1_6_0_016__AddDestinationCatalogToConnectionTest : AbstractConfigsDatabas
 
   @Test
   fun `test existing rows are defaulted to SOURCE_CATALOG after migration`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val now = OffsetDateTime.now()
 
     // Insert rows before the catalog_type column exists
@@ -84,7 +84,7 @@ class V1_6_0_016__AddDestinationCatalogToConnectionTest : AbstractConfigsDatabas
 
   @Test
   fun `test can insert actor catalog with different catalog types`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Run the migration to add catalog_type column
     V1_6_0_016__AddDestinationCatalogToConnection.addActorCatalogTypeColumn(ctx)

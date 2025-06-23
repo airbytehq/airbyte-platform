@@ -34,7 +34,7 @@ internal class V0_50_21_001__BackfillActorDefaultVersionAndSetNonNullTest : Abst
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_20_001__MakeManualNullableForRemoval()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -61,7 +61,7 @@ internal class V0_50_21_001__BackfillActorDefaultVersionAndSetNonNullTest : Abst
 
   @Test
   fun testBackFillActorDefaultVersionId() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     insertDependencies(ctx)
 
     ctx
@@ -91,7 +91,7 @@ internal class V0_50_21_001__BackfillActorDefaultVersionAndSetNonNullTest : Abst
 
   @Test
   fun testActorDefaultVersionIdIsNotNull() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     setNonNull(context)
 

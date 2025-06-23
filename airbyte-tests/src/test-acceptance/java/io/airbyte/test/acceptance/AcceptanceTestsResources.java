@@ -166,7 +166,7 @@ public class AcceptanceTestsResources {
             destinationId,
             catalog,
             discoverResult.getCatalogId(),
-            testHarness.getDataplaneGroupId())
+            testHarness.dataplaneGroupId)
                 .build());
     LOGGER.info("Beginning testIncrementalSync() sync 1");
 
@@ -280,7 +280,7 @@ public class AcceptanceTestsResources {
             destinationId,
             catalog,
             discoverResult.getCatalogId(),
-            testHarness.getDataplaneGroupId())
+            testHarness.dataplaneGroupId)
                 .build());
     LOGGER.info("Beginning runSmallSyncForAWorkspaceId() sync");
 
@@ -341,7 +341,7 @@ public class AcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.getDockerImageTag());
     LOGGER.info("pg destination definition: {}", destinationDef.getDockerImageTag());
 
-    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId, testFlagsSetter);
+    testHarness = new AcceptanceTestHarness(airbyteApiClient, workspaceId, "postgres_init.sql", testFlagsSetter);
 
     testHarness.ensureCleanSlate();
   }

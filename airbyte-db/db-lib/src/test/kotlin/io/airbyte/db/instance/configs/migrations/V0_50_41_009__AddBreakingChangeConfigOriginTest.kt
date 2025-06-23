@@ -29,7 +29,7 @@ internal class V0_50_41_009__AddBreakingChangeConfigOriginTest : AbstractConfigs
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_41_009__AddBreakingChangeConfigOrigin()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -38,7 +38,7 @@ internal class V0_50_41_009__AddBreakingChangeConfigOriginTest : AbstractConfigs
 
   @Test
   fun testBreakingChangeOriginScopedConfig() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     insertConfigWithOriginType(
       ctx,

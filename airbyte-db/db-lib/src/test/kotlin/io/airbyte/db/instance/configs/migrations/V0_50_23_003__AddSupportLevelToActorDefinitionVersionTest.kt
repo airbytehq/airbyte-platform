@@ -33,7 +33,7 @@ internal class V0_50_23_003__AddSupportLevelToActorDefinitionVersionTest : Abstr
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_6_002__AddDefaultVersionIdToActor()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -43,7 +43,7 @@ internal class V0_50_23_003__AddSupportLevelToActorDefinitionVersionTest : Abstr
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // ignore all foreign key constraints
     context.execute("SET session_replication_role = replica;")

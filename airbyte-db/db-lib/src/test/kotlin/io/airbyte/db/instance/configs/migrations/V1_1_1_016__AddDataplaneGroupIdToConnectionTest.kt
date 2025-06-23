@@ -35,12 +35,12 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_015__AddAirbyteManagedBooleanToSecretConfigTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     dropConstraintsFromConnection(ctx)
     dropOrganizationIdFKFromDataplanegroup(ctx)
     dropUpdatedByFKFromDataplanegroup(ctx)
@@ -58,7 +58,7 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
   fun testDataplaneGroupIdIsPopulatedCloud() {
     setEnv("AIRBYTE_EDITION", "CLOUD")
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
     val euDataplaneGroupId = UUID.randomUUID()
     val usConnectionId = UUID.randomUUID()
@@ -149,7 +149,7 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
   fun testDataplaneGroupIdIsPopulatedNullAirbyteEdition() {
     setEnv("AIRBYTE_EDITION", null)
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val autoDataplaneGroupId = UUID.randomUUID()
     val usConnectionId = UUID.randomUUID()
     val euConnectionId = UUID.randomUUID()
@@ -235,7 +235,7 @@ internal class V1_1_1_016__AddDataplaneGroupIdToConnectionTest : AbstractConfigs
   fun testDataplaneGroupIdIsPopulatedNonCloud() {
     setEnv("AIRBYTE_EDITION", "asdf")
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val autoDataplaneGroupId = UUID.randomUUID()
     val usConnectionId = UUID.randomUUID()
     val euConnectionId = UUID.randomUUID()

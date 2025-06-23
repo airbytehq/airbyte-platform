@@ -28,7 +28,7 @@ internal class V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersionTest : 
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_57_4_011__DropUserTableAuthColumns()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -37,7 +37,7 @@ internal class V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersionTest : 
 
   @Test
   fun testExistingDataDoesNotBreakMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     val majorVersion = 0
     val declarativeManifestImageVersion = "0.0.1"

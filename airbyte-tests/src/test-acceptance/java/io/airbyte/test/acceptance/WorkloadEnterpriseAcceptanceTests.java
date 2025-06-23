@@ -58,7 +58,7 @@ class WorkloadEnterpriseAcceptanceTests {
   }
 
   final boolean ranWithWorkload(final UUID connectionId, final long jobId, final int attemptNumber) throws IOException {
-    final var attempt = testResources.getTestHarness().getApiClient().getAttemptApi().getAttemptForJob(
+    final var attempt = testResources.getTestHarness().apiClient.getAttemptApi().getAttemptForJob(
         new GetAttemptStatsRequestBody(jobId, attemptNumber));
     final String creatingWorkloadLog = "Starting workload heartbeat";
     return attempt.getLogs().getEvents().stream().anyMatch(l -> l.getMessage().contains(creatingWorkloadLog));

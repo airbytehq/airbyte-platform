@@ -26,7 +26,7 @@ class V1_6_0_010__Add_Connector_IPC_Options_ColumnTest : AbstractConfigsDatabase
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V1_6_0_007__ScopeTemplatesByActorDefinition()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -35,7 +35,7 @@ class V1_6_0_010__Add_Connector_IPC_Options_ColumnTest : AbstractConfigsDatabase
 
   @Test
   fun testConnectorIpcOptionsColumnMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val beforeMigration =
       ctx.fetchOne(
         """
@@ -47,7 +47,7 @@ class V1_6_0_010__Add_Connector_IPC_Options_ColumnTest : AbstractConfigsDatabase
       )
     assertNull(beforeMigration, "connector_ipc_options should not exist before migration")
 
-    V1_6_0_010__Add_Connector_IPC_Options_Column.addIPCOptionsColumn(dslContext)
+    V1_6_0_010__Add_Connector_IPC_Options_Column.addIPCOptionsColumn(dslContext!!)
 
     val afterMigration =
       ctx.fetchOne(

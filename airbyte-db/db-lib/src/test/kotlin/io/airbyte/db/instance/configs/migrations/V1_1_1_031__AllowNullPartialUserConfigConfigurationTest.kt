@@ -36,7 +36,7 @@ internal class V1_1_1_031__AllowNullPartialUserConfigConfigurationTest : Abstrac
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_030__BackfillFiltersUpdate()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
@@ -44,7 +44,7 @@ internal class V1_1_1_031__AllowNullPartialUserConfigConfigurationTest : Abstrac
 
   @Test
   fun `allows null partial_user_config_properties column now`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Run the migration
     V1_1_1_031__AllowNullPartialUserConfigConfiguration.dropNotNullFromConfigurationColumn(ctx)

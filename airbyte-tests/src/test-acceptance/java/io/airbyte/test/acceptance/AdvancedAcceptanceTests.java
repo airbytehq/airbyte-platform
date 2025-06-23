@@ -104,7 +104,7 @@ class AdvancedAcceptanceTests {
             destinationId,
             catalog,
             discoverResult.getCatalogId(),
-            testHarness.getDataplaneGroupId())
+            testHarness.dataplaneGroupId)
                 .build());
     final var connectionId = conn.getConnectionId();
     final JobInfoRead connectionSyncRead = testHarness.syncConnection(connectionId);

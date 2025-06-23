@@ -31,7 +31,7 @@ internal class V0_50_5_002__AddOrganizationColumnToWorkspaceTableTest : Abstract
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_5_001__CreateOrganizationTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -41,7 +41,7 @@ internal class V0_50_5_002__AddOrganizationColumnToWorkspaceTableTest : Abstract
   @Test
   @Throws(IOException::class, SQLException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertFalse(foreignKeyExists(context))
     addOrganizationColumnToWorkspace(context)
     Assertions.assertTrue(foreignKeyExists(context))

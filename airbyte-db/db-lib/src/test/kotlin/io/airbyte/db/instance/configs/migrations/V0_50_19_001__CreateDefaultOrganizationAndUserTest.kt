@@ -34,7 +34,7 @@ internal class V0_50_19_001__CreateDefaultOrganizationAndUserTest : AbstractConf
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_16_002__RemoveInvalidSourceStripeCatalog()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -44,14 +44,14 @@ internal class V0_50_19_001__CreateDefaultOrganizationAndUserTest : AbstractConf
   @AfterEach
   fun afterEach() {
     // Making sure we reset between tests
-    dslContext.dropSchemaIfExists("public").cascade().execute()
-    dslContext.createSchema("public").execute()
-    dslContext.setSchema("public").execute()
+    dslContext!!.dropSchemaIfExists("public").cascade().execute()
+    dslContext!!.createSchema("public").execute()
+    dslContext!!.setSchema("public").execute()
   }
 
   @Test
   fun testMigrationBlankDatabase() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // this test is specifically ensuring that lack of a workspace record does not cause an error
     // while creating the default user and organization.
@@ -144,7 +144,7 @@ internal class V0_50_19_001__CreateDefaultOrganizationAndUserTest : AbstractConf
   @ParameterizedTest
   @CsvSource("true", "false")
   fun testMigrationExistingWorkspace(initialSetupComplete: Boolean) {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // 1. Setup initial workspace records in database for pre-migration state
 

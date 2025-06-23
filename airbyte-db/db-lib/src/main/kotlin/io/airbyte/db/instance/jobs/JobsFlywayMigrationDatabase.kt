@@ -24,7 +24,7 @@ class JobsFlywayMigrationDatabase : FlywayMigrationDatabase() {
   override fun getDatabaseMigrator(
     database: Database,
     flyway: Flyway,
-  ): DatabaseMigrator = JobsDatabaseMigrator(database, flyway)
+  ): DatabaseMigrator = JobsDatabaseMigrator(database!!, flyway)
 
   override val installedBy: String
     get() = JobsFlywayMigrationDatabase::class.java.simpleName

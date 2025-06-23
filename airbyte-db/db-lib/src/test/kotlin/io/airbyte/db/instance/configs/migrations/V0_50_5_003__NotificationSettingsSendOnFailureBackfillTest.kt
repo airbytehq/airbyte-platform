@@ -36,7 +36,7 @@ internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : Abst
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_1_001__NotificationSettingsBackfill()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -46,7 +46,7 @@ internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : Abst
   @Test
   @Throws(Exception::class)
   fun testBackfillCustomerIoValues() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Insert data to workspace
     val workspaceId = UUID.randomUUID()
@@ -110,7 +110,7 @@ internal class V0_50_5_003__NotificationSettingsSendOnFailureBackfillTest : Abst
   @Test
   @Throws(Exception::class)
   fun testKeepCustomerIoValues() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Insert data to workspace
     val workspaceId = UUID.randomUUID()

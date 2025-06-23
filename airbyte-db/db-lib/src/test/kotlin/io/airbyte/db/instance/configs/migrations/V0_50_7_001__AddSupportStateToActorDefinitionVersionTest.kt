@@ -32,7 +32,7 @@ internal class V0_50_7_001__AddSupportStateToActorDefinitionVersionTest : Abstra
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_6_002__AddDefaultVersionIdToActor()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -42,7 +42,7 @@ internal class V0_50_7_001__AddSupportStateToActorDefinitionVersionTest : Abstra
   @Test
   @Throws(IOException::class, SQLException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     addSupportStateType(context)
     addSupportStateColumnToActorDefinitionVersion(context)
     Assertions.assertTrue(typeExists(context, "support_state"))
