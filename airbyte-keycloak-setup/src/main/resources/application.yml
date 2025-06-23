@@ -54,5 +54,6 @@ logger:
     io.fabric8.kubernetes.client: INFO
     io.netty: INFO
     io.temporal: INFO
+    io.airbyte.keycloak: ${LOG_LEVEL:INFO}
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
