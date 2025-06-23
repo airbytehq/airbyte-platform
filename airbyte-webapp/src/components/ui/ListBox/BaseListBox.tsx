@@ -1,118 +1,100 @@
-import {
-  Listbox,
-  ListboxOption as OriginalListboxOption,
-  ListboxButton as OriginalListboxButton,
-  ListboxOptions as OriginalListboxOptions,
-} from "@headlessui/react";
-import classNames from "classnames";
+import { Listbox } from "@headlessui/react";
 import isEqual from "lodash/isEqual";
 import React from "react";
 
+import { Box } from "components/ui/Box";
 import { Text } from "components/ui/Text";
 
 import { FloatLayout } from "./FloatLayout";
 import { ListBoxProps, ListBoxControlButtonProps } from "./ListBox";
-import styles from "./ListBox.module.scss";
+import { ListboxButton } from "./ListboxButton";
+import { ListboxOption } from "./ListboxOption";
+import { ListboxOptions } from "./ListboxOptions";
 import { Option } from "./Option";
-import { FlexContainer, FlexItem } from "../Flex";
+import { FlexContainer } from "../Flex";
+import { Icon, IconType } from "../Icon";
 
-export interface BaseListBoxProps<T> extends Omit<ListBoxProps<T>, "controlButton"> {
-  controlButton: React.ComponentType<ListBoxControlButtonProps<T>>;
+export interface BaseListBoxProps<T> extends Omit<ListBoxProps<T>, "controlButtonContent"> {
+  controlButtonContent: React.ComponentType<ListBoxControlButtonProps<T>>;
 }
 
 export const BaseListBox = <T,>({
+  // Core data props
   options,
   selectedValue,
   onSelect,
-  buttonClassName,
-  /**
-   * TODO: this is not an actual button, just button content
-   * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
-   */
-  controlButton,
+  // Button props
+  controlButtonContent,
   controlButtonAs,
+  buttonClassName,
+  hasError,
+  isDisabled,
+  onFocus,
+  // Option props
   optionClassName,
   optionTextAs,
-  selectedOptionClassName,
-  "data-testid": testId,
-  hasError,
-  id,
-  isDisabled,
+  // Layout props
   placement,
   flip = true,
   adaptiveWidth = true,
-  onFocus,
+  // HTML attributes
+  id,
+  "data-testid": testId,
 }: BaseListBoxProps<T>) => {
   const selectedOption = options.find((option) => isEqual(option.value, selectedValue));
 
-  const ControlButton = controlButton;
+  const ControlButtonContent = controlButtonContent;
 
   const onOnSelect = (value: T) => {
     onSelect(value);
   };
 
   const ListBoxOption: React.FC<Option<T>> = ({ label, value, icon, disabled, ...restOptionProps }, index) => (
-    <OriginalListboxOption
+    <ListboxOption
       as="li"
       key={typeof label === "string" ? label : index}
       value={value}
       disabled={disabled}
-      className={classNames(styles.option, optionClassName, {
-        [styles.disabled]: disabled,
-      })}
-      onClick={(e) => e.stopPropagation()}
+      className={optionClassName}
+      onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
       {...(restOptionProps["data-testid"] && {
         "data-testid": `${restOptionProps["data-testid"]}-option`,
       })}
     >
-      {({ focus, selected }) => (
-        <FlexContainer
-          alignItems="center"
-          className={classNames(styles.optionValue, selected && selectedOptionClassName, {
-            [styles.focus]: focus,
-            [styles.selected]: selected,
-          })}
-        >
-          {icon && <FlexItem className={styles.icon}>{icon}</FlexItem>}
-          <Text className={styles.label} as={optionTextAs}>
-            {label}
-          </Text>
+      <Box p="md" as="span">
+        <FlexContainer alignItems="center">
+          {icon && (typeof icon === "string" ? <Icon type={icon as IconType} size="sm" /> : icon)}
+          <Text as={optionTextAs}>{label}</Text>
         </FlexContainer>
-      )}
-    </OriginalListboxOption>
+      </Box>
+    </ListboxOption>
   );
 
   return (
     <Listbox value={selectedValue} onChange={onOnSelect} disabled={isDisabled} by={isEqual}>
       <FloatLayout adaptiveWidth={adaptiveWidth} placement={placement} flip={flip}>
-        <OriginalListboxButton
-          /**
-           * TODO:
-           * 1. place butttonClassName to the end of the classNames list to allow overriding styles
-           * 2. consider ability to pass Button component props to the ListBoxControlButtonProps
-           * (type="clear" for example)
-           * issue_link: https://github.com/airbytehq/airbyte-internal-issues/issues/11011
-           * */
-          className={classNames(buttonClassName, styles.button, { [styles["button--error"]]: hasError })}
+        <ListboxButton
+          id={id}
+          className={buttonClassName}
+          hasError={hasError}
           onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+          as={controlButtonAs}
+          onFocus={onFocus}
           {...(testId && {
             "data-testid": `${testId}-listbox-button`,
           })}
-          id={id}
-          as={controlButtonAs}
-          onFocus={onFocus}
         >
-          <ControlButton selectedOption={selectedOption} isDisabled={isDisabled} />
-        </OriginalListboxButton>
-        <OriginalListboxOptions
+          <ControlButtonContent selectedOption={selectedOption} isDisabled={isDisabled} />
+        </ListboxButton>
+        <ListboxOptions
           as="ul"
-          className={classNames(styles.optionsMenu, { [styles.nonAdaptive]: !adaptiveWidth })}
+          fullWidth={!adaptiveWidth}
           {...(testId && {
             "data-testid": `${testId}-listbox-options`,
           })}
         >
           {options.map(ListBoxOption)}
-        </OriginalListboxOptions>
+        </ListboxOptions>
       </FloatLayout>
     </Listbox>
   );

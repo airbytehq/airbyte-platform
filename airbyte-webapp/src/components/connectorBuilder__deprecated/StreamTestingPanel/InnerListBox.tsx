@@ -26,7 +26,7 @@ export const InnerListBox = <T,>({ buttonClassName, ...restProps }: InnerListBox
     <ListBox
       buttonClassName={classNames(styles.button, buttonClassName)}
       {...restProps}
-      controlButton={ControlButton}
+      controlButtonContent={ControlButton}
     />
   );
 };

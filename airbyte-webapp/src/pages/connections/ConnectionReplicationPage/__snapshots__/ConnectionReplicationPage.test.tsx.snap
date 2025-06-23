@@ -102,21 +102,29 @@ exports[`ConnectionReplicationPage should render 1`] = `
                             id="headlessui-listbox-button-:r2:"
                             type="button"
                           >
-                            <span
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                Streams and fields
-                              </span>
-                            </span>
                             <div
                               class="<removed-for-snapshot-test>"
-                              data-icon="chevron-down"
-                              data-testid="mocksvg"
-                            />
+                            >
+                              <div
+                                class=""
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    Streams and fields
+                                  </span>
+                                </span>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                                data-icon="chevron-down"
+                                data-testid="mocksvg"
+                              />
+                            </div>
                           </button>
                           <div
                             style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -536,18 +544,26 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                   <span
                                     class="<removed-for-snapshot-test>"
                                   >
-                                    <p
+                                    <div
                                       class="<removed-for-snapshot-test>"
-                                      data-type="text"
                                     >
-                                      Full refresh | Overwrite
-                                    </p>
+                                      <div
+                                        class=""
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="chevron-down"
+                                        data-testid="mocksvg"
+                                      />
+                                    </div>
                                   </span>
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                    data-icon="caret-down"
-                                    data-testid="mocksvg"
-                                  />
                                 </button>
                                 <div
                                   style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -659,18 +675,26 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                   <span
                                     class="<removed-for-snapshot-test>"
                                   >
-                                    <p
+                                    <div
                                       class="<removed-for-snapshot-test>"
-                                      data-type="text"
                                     >
-                                      Full refresh | Overwrite
-                                    </p>
+                                      <div
+                                        class=""
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="chevron-down"
+                                        data-testid="mocksvg"
+                                      />
+                                    </div>
                                   </span>
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                    data-icon="caret-down"
-                                    data-testid="mocksvg"
-                                  />
                                 </button>
                                 <div
                                   style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -903,21 +927,29 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                             id="headlessui-listbox-button-:rt:"
                             type="button"
                           >
-                            <span
-                              class="<removed-for-snapshot-test>"
-                              data-type="text"
-                            >
-                              <span
-                                class="<removed-for-snapshot-test>"
-                              >
-                                Streams and fields
-                              </span>
-                            </span>
                             <div
                               class="<removed-for-snapshot-test>"
-                              data-icon="chevron-down"
-                              data-testid="mocksvg"
-                            />
+                            >
+                              <div
+                                class=""
+                              >
+                                <span
+                                  class="<removed-for-snapshot-test>"
+                                  data-type="text"
+                                >
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                  >
+                                    Streams and fields
+                                  </span>
+                                </span>
+                              </div>
+                              <div
+                                class="<removed-for-snapshot-test>"
+                                data-icon="chevron-down"
+                                data-testid="mocksvg"
+                              />
+                            </div>
                           </button>
                           <div
                             style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -1337,18 +1369,26 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                   <span
                                     class="<removed-for-snapshot-test>"
                                   >
-                                    <p
+                                    <div
                                       class="<removed-for-snapshot-test>"
-                                      data-type="text"
                                     >
-                                      Full refresh | Overwrite
-                                    </p>
+                                      <div
+                                        class=""
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="chevron-down"
+                                        data-testid="mocksvg"
+                                      />
+                                    </div>
                                   </span>
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                    data-icon="caret-down"
-                                    data-testid="mocksvg"
-                                  />
                                 </button>
                                 <div
                                   style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -1460,18 +1500,26 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                   <span
                                     class="<removed-for-snapshot-test>"
                                   >
-                                    <p
+                                    <div
                                       class="<removed-for-snapshot-test>"
-                                      data-type="text"
                                     >
-                                      Full refresh | Overwrite
-                                    </p>
+                                      <div
+                                        class=""
+                                      >
+                                        <p
+                                          class="<removed-for-snapshot-test>"
+                                          data-type="text"
+                                        >
+                                          Full refresh | Overwrite
+                                        </p>
+                                      </div>
+                                      <div
+                                        class="<removed-for-snapshot-test>"
+                                        data-icon="chevron-down"
+                                        data-testid="mocksvg"
+                                      />
+                                    </div>
                                   </span>
-                                  <div
-                                    class="<removed-for-snapshot-test>"
-                                    data-icon="caret-down"
-                                    data-testid="mocksvg"
-                                  />
                                 </button>
                                 <div
                                   style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"

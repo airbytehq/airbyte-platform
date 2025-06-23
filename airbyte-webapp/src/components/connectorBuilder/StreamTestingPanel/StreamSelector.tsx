@@ -146,7 +146,7 @@ export const StreamSelector: React.FC<StreamSelectorProps> = () => {
       selectedValue={selectedValue}
       onSelect={handleStreamSelect}
       buttonClassName={styles.button}
-      controlButton={ControlButton}
+      controlButtonContent={ControlButton}
     />
   );
 };

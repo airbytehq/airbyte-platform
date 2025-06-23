@@ -57,7 +57,7 @@ export const CreditsUsageFilters: React.FC = () => {
   return (
     <FlexContainer>
       <ListBox
-        controlButton={CustomControlButton}
+        controlButtonContent={CustomControlButton}
         buttonClassName={styles.controlButton}
         options={[
           {
@@ -77,7 +77,7 @@ export const CreditsUsageFilters: React.FC = () => {
         onSelect={(selectedValue) => setSelectedTimeWindow(selectedValue)}
       />
       <ListBox
-        controlButton={CustomControlButton}
+        controlButtonContent={CustomControlButton}
         buttonClassName={styles.controlButton}
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allSources" }), value: null },
@@ -87,7 +87,7 @@ export const CreditsUsageFilters: React.FC = () => {
         onSelect={(selectedValue) => onSourceSelect(selectedValue)}
       />
       <ListBox
-        controlButton={CustomControlButton}
+        controlButtonContent={CustomControlButton}
         buttonClassName={styles.controlButton}
         options={[
           { label: formatMessage({ id: "settings.organization.billing.filter.allDestinations" }), value: null },

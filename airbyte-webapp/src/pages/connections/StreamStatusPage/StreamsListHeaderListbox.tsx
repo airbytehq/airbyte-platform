@@ -14,14 +14,14 @@ export const StreamsListHeaderListbox = <T,>({ ...rest }: StreamsListHeaderListb
   );
 
   const ControlButton = React.forwardRef<HTMLButtonElement, ListBoxControlButtonProps<T>>((props, ref) => (
-    <Button {...props} type="button" variant="clear" icon="caretDown" iconPosition="right" iconSize="xs" ref={ref} />
+    <Button {...props} type="button" variant="clear" iconSize="xs" ref={ref} />
   ));
   ControlButton.displayName = "ControlButton";
 
   return (
     <ListBox<T>
       {...(rest as ListBoxProps<T>)}
-      controlButton={controlButtonContent}
+      controlButtonContent={controlButtonContent}
       controlButtonAs={ControlButton}
       buttonClassName={styles.controlButton}
     />
