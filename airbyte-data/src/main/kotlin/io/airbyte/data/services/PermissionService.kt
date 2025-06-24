@@ -5,6 +5,7 @@
 package io.airbyte.data.services
 
 import io.airbyte.config.Permission
+import io.airbyte.data.repositories.OrgMemberCount
 import java.util.UUID
 
 /**
@@ -64,6 +65,8 @@ interface PermissionService {
    */
   @Throws(RemoveLastOrgAdminPermissionException::class)
   fun updatePermission(permission: Permission)
+
+  fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount>
 }
 
 /**

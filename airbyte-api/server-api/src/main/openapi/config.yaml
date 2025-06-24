@@ -5295,6 +5295,28 @@ paths:
                 $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/list_summaries:
+    post:
+      tags:
+        - organization
+      summary: Retrieve a paginated list of organizations with an optional filter, containing a summary of various org data
+      operationId: listOrganizationSummaries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListOrganizationSummariesRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrganizationSummariesResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/organizations/get_organization_info:
     post:
       tags:
@@ -14309,6 +14331,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    ListOrganizationSummariesRequestBody:
+      type: object
+      required:
+        - userId
+        - nameContains
+        - pagination
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        nameContains:
+          type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ListOrganizationSummariesResponse:
+      type: object
+      properties:
+        organizationSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationSummary"
+    OrganizationSummary:
+      type: object
+      required:
+        - organization
+        - workspaces
+        - memberCount
+      properties:
+        organization:
+          $ref: "#/components/schemas/OrganizationRead"
+        workspaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceRead"
+        subscription:
+          $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
+        memberCount:
+          type: integer
     IndividualWorkspaceUsageRead:
       type: object
       required:

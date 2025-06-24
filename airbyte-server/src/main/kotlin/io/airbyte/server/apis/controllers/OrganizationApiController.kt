@@ -5,6 +5,8 @@
 package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.OrganizationApi
+import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
+import io.airbyte.api.model.generated.ListOrganizationSummariesResponse
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
@@ -33,7 +35,7 @@ import io.micronaut.security.rules.SecurityRule
 @Controller("/api/v1/organizations")
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class OrganizationApiController(
-  private val organizationsHandler: OrganizationsHandler,
+  val organizationsHandler: OrganizationsHandler,
 ) : OrganizationApi {
   @Post("/get")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
@@ -78,6 +80,13 @@ open class OrganizationApiController(
   override fun getOrganizationUsage(
     @Body organizationUsageRequestBody: OrganizationUsageRequestBody?,
   ): OrganizationUsageRead = throw ApiNotImplementedInOssProblem()
+
+  @Post("/list_summaries")
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.SELF)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun listOrganizationSummaries(
+    @Body organizationSummaryRequestBody: ListOrganizationSummariesRequestBody,
+  ): ListOrganizationSummariesResponse? = execute { organizationsHandler.getOrganizationSummaries(organizationSummaryRequestBody) }
 
   @Post("/get_organization_info")
   @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)

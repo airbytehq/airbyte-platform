@@ -9,6 +9,7 @@ import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
 import io.airbyte.data.services.PermissionRedundantException
@@ -142,6 +143,8 @@ open class PermissionServiceDataImpl(
 
     permissionRepository.update(permission.toEntity()).toConfigModel()
   }
+
+  override fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount> = permissionRepository.getMemberCountByOrgIdList(orgIds)
 
   private fun deletePermissionsMadeRedundantByPermission(
     permission: Permission,

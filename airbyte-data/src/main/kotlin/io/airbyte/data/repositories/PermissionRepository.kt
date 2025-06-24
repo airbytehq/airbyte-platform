@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.Permission
+import io.micronaut.core.annotation.Introspected
 import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
@@ -49,4 +50,21 @@ interface PermissionRepository : PageableRepository<Permission, UUID> {
   """,
   )
   fun findByUserEmail(email: String): List<Permission>
+
+  @Query(
+    """
+      select organization_id as organization_id, count(user_id) as count
+      from permission p
+      join "user" u on p.user_id = u.id
+      where p.organization_id in (:orgIds)
+      group by p.organization_id
+    """,
+  )
+  fun getMemberCountByOrgIdList(orgIds: List<UUID>): List<OrgMemberCount>
 }
+
+@Introspected
+data class OrgMemberCount(
+  val organizationId: UUID,
+  val count: Int? = 0,
+)
