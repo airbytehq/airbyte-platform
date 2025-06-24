@@ -139,10 +139,20 @@ class MessageProcessor(
   override suspend fun run() {
     logger.info { "MessageProcessor started." }
     try {
-      while (!replicationWorkerState.shouldAbort &&
-        !sourceQueue.isClosedForReceiving() &&
-        (destinationQueue == null || !destinationQueue.isClosedForSending())
-      ) {
+      while (true) {
+        if (replicationWorkerState.shouldAbort) {
+          logger.info { "State set to abort — stopping message processor..." }
+          break
+        }
+        if (sourceQueue.isClosedForReceiving()) {
+          logger.info { "Source queue closed — stopping message processor..." }
+          break
+        }
+        if (destinationQueue?.isClosedForSending() == true) {
+          logger.info { "Destination queue closed — stopping message processor..." }
+          break
+        }
+
         val message = sourceQueue.receive() ?: continue
         val processedMessageOpt = replicationWorkerHelper.processMessageFromSource(message)
 
