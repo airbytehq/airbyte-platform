@@ -10,6 +10,7 @@ import io.airbyte.config.StandardCheckConnectionInput
 import io.airbyte.config.StandardDiscoverCatalogInput
 import io.airbyte.config.WorkloadType
 import io.airbyte.featureflag.EnableAsyncProfiler
+import io.airbyte.featureflag.ProfilingMode
 import io.airbyte.featureflag.SocketTest
 import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
@@ -147,6 +148,7 @@ internal class KubePodClientTest {
     every { labeler.getSharedLabels(any(), any(), any(), any(), any(), any()) } returns sharedLabels
 
     every { featureFlagClient.boolVariation(EnableAsyncProfiler, any()) } returns false
+    every { featureFlagClient.stringVariation(ProfilingMode, any()) } returns "cpu"
     every { featureFlagClient.boolVariation(SocketTest, any()) } returns false
 
     every { mapper.toKubeInput(WORKLOAD_ID, checkInput, sharedLabels) } returns connectorKubeInput

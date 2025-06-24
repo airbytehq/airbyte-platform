@@ -67,6 +67,8 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
 
+object ProfilingMode : Permanent<String>(key = "platform.async.profiler.mode", default = "cpu")
+
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
 
 object SocketFormat : Temporary<String>(key = "platform.socket-format", default = "")

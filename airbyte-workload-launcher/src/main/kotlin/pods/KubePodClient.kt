@@ -11,6 +11,7 @@ import io.airbyte.commons.constants.WorkerConstants.KubeConstants.FULL_POD_TIMEO
 import io.airbyte.featureflag.Connection
 import io.airbyte.featureflag.EnableAsyncProfiler
 import io.airbyte.featureflag.FeatureFlagClient
+import io.airbyte.featureflag.ProfilingMode
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.workers.exception.KubeClientException
 import io.airbyte.workers.exception.KubeCommandType
@@ -72,6 +73,7 @@ class KubePodClient(
 
     val kubeInput = mapper.toKubeInput(launcherInput.workloadId, payload, sharedLabels)
     val enableAsyncProfiler = featureFlagClient.boolVariation(EnableAsyncProfiler, Connection(replicationInput.connectionId))
+    val profilingMode = featureFlagClient.stringVariation(ProfilingMode, Connection(replicationInput.connectionId))
     var pod =
       replicationPodFactory.create(
         podName = kubeInput.podName,
@@ -90,6 +92,7 @@ class KubePodClient(
         isFileTransfer = replicationInput.useFileTransfer,
         workspaceId = replicationInput.workspaceId,
         enableAsyncProfiler = enableAsyncProfiler,
+        profilingMode = profilingMode,
         architectureEnvironmentVariables = payload.architectureEnvironmentVariables ?: ArchitectureDecider.buildLegacyEnvironment(),
       )
 

@@ -17,15 +17,16 @@ class ProfilerStarter(
   @Value("\${airbyte.source-keyword}") private val sourceKeyword: String,
   @Value("\${airbyte.destination-keyword}") private val destinationKeyword: String,
   @Value("\${airbyte.orchestrator-keyword}") private val orchestratorKeyword: String,
+  @Value("\${airbyte.profiling-mode}") private val profilingMode: String,
 ) {
   @PostConstruct
   fun start() {
     logger.info { "Starting Airbyte Connector Profiler" }
     val profilingJobs =
       listOf(
-        ProfilerThreadManager.ProfilingJob(sourceKeyword, "cpu"),
-        ProfilerThreadManager.ProfilingJob(destinationKeyword, "cpu"),
-        ProfilerThreadManager.ProfilingJob(orchestratorKeyword, "cpu"),
+        ProfilerThreadManager.ProfilingJob(sourceKeyword, profilingMode),
+        ProfilerThreadManager.ProfilingJob(destinationKeyword, profilingMode),
+        ProfilerThreadManager.ProfilingJob(orchestratorKeyword, profilingMode),
       )
     profilerThreadManager.startProfilingJobs(profilingJobs)
     logger.info { "Finished Airbyte Connector Profiler" }
