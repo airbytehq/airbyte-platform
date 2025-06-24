@@ -5295,6 +5295,29 @@ paths:
                 $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/get_organization_info:
+    post:
+      tags:
+        - organization
+      summary: Retrieve an organization's basic organization info that is accessible for all organization members.
+      operationId: getOrgInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/deployment/metadata:
     post:
       summary: Provides the Airbyte deployment metadata.
@@ -14151,6 +14174,49 @@ components:
           type: string
         organizationLimits:
           $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationInfoRead:
+      type: object
+      description: Limited info about an organization that is safe to expose to organization members.
+      required:
+        - organizationId
+        - organizationName
+        - sso
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        sso:
+          type: boolean
+        billing:
+          type: object
+          required:
+            - paymentStatus
+          properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
+            paymentStatus:
+              type: string
+              enum:
+                - uninitialized
+                - okay
+                - grace_period
+                - disabled
+                - locked
+                - manual
+            accountType:
+              type: string
+              enum:
+                - free
+                - internal
+            gracePeriodEndsAt:
+              type: integer
+              format: int64
     OrganizationLimits:
       type: object
       properties:

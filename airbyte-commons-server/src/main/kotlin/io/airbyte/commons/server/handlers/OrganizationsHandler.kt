@@ -7,6 +7,7 @@ package io.airbyte.commons.server.handlers
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.model.generated.OrganizationInfoRead
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
@@ -135,5 +136,20 @@ open class OrganizationsHandler(
       }
 
     return OrganizationReadList().organizations(organizationReadList)
+  }
+
+  private fun buildOrganizationInfoRead(organization: Organization): OrganizationInfoRead =
+    OrganizationInfoRead()
+      .organizationId(organization.organizationId)
+      .organizationName(organization.name)
+      .sso(organization.ssoRealm != null && organization.ssoRealm.isNotEmpty())
+
+  fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
+    val organization = organizationPersistence.getOrganization(organizationId)
+    if (organization.isEmpty) {
+      throw io.airbyte.data.exceptions
+        .ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId.toString())
+    }
+    return buildOrganizationInfoRead(organization.get())
   }
 }

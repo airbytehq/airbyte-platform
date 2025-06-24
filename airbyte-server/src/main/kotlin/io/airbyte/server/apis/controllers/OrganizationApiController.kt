@@ -8,6 +8,7 @@ import io.airbyte.api.generated.OrganizationApi
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
+import io.airbyte.api.model.generated.OrganizationInfoRead
 import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
@@ -77,4 +78,14 @@ open class OrganizationApiController(
   override fun getOrganizationUsage(
     @Body organizationUsageRequestBody: OrganizationUsageRequestBody?,
   ): OrganizationUsageRead = throw ApiNotImplementedInOssProblem()
+
+  @Post("/get_organization_info")
+  @Secured(AuthRoleConstants.ORGANIZATION_MEMBER)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getOrgInfo(
+    @Body organizationIdRequestBody: OrganizationIdRequestBody,
+  ): OrganizationInfoRead? =
+    execute {
+      organizationsHandler.getOrganizationInfo(organizationIdRequestBody.organizationId)
+    }
 }

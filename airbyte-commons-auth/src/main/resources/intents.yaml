@@ -66,6 +66,16 @@ intents:
     roles:
       - ORGANIZATION_ADMIN
       - ADMIN
+  ViewOrganizationBilling:
+    name: View organization billing
+    description: View billing information for the organization
+    roles:
+      - ORGANIZATION_MEMBER
+      - ORGANIZATION_READER
+      - ORGANIZATION_RUNNER
+      - ORGANIZATION_EDITOR
+      - ORGANIZATION_ADMIN
+      - ADMIN
   ManageOrganizationPaymentConfigs:
     name: Manage organization payment configs
     description: Ability to directly interact with organization payment configs
