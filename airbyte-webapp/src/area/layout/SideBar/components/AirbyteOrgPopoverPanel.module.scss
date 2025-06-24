@@ -1,0 +1,22 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.searchInputBox {
+  border: variables.$border-thin solid colors.$grey-300;
+  border-radius: variables.$border-radius-sm variables.$border-radius-sm 0 0;
+  max-height: variables.$height-org-picker-search;
+}
+
+.searchInput,
+.searchInputContainer {
+  height: 32px;
+  font-size: variables.$font-size-sm;
+}
+
+.list {
+  border: variables.$border-thin solid colors.$grey-300;
+  border-top: none;
+  border-radius: 0 0 variables.$border-radius-sm variables.$border-radius-sm;
+  max-height: variables.$height-org-picker-popover-list;
+  overflow-y: auto;
+}

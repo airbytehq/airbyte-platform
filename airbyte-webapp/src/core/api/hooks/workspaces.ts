@@ -273,7 +273,9 @@ export const useListWorkspacesByUser = (nameContains?: string) => {
   const { userId } = useCurrentUser();
   const requestOptions = useRequestOptions();
 
-  return useQuery(workspaceKeys.list({ nameContains: nameContains ?? "" }), () =>
-    listWorkspacesByUser({ userId, nameContains }, requestOptions)
+  return useQuery(
+    workspaceKeys.list({ nameContains: nameContains ?? "" }),
+    () => listWorkspacesByUser({ userId, nameContains }, requestOptions),
+    { keepPreviousData: true, select: (data) => data.workspaces ?? [] }
   );
 };
