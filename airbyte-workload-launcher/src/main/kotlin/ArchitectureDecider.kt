@@ -147,7 +147,7 @@ class ArchitectureDecider(
       min(
         extractCpuLimit(input, isSource = true),
         extractCpuLimit(input, isSource = false),
-      ) * 4
+      ) * 2
     val socketCount = if (overrideCnt > 0) overrideCnt else defaultCnt
 
     // 2. Build comma‑separated socket paths

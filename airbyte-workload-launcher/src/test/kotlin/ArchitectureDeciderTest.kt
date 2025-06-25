@@ -154,31 +154,29 @@ class ArchitectureDeciderTest {
               serializations = listOf(Serialization.JSONL, Serialization.PROTOBUF),
               transports = listOf(Transport.SOCKET, Transport.STDIO),
             ),
-          cpuLimit = 1, // → min(cpu) * 4 = 4 sockets
+          cpuLimit = 1, // → min(cpu) * 2 = 2 sockets
         ),
       )
 
     Assertions.assertEquals(Transport.SOCKET.name, env.sourceEnvironmentVariables.valueOf(DATA_CHANNEL_MEDIUM))
     Assertions.assertEquals(BOOKKEEPER, env.platformEnvironmentVariables.valueOf(PLATFORM_MODE))
     Assertions.assertEquals(
-      "/var/run/sockets/airbyte_socket_1.sock,/var/run/sockets/airbyte_socket_2.sock," +
-        "/var/run/sockets/airbyte_socket_3.sock,/var/run/sockets/airbyte_socket_4.sock",
+      "/var/run/sockets/airbyte_socket_1.sock,/var/run/sockets/airbyte_socket_2.sock",
       env.sourceEnvironmentVariables.valueOf(DATA_CHANNEL_SOCKET_PATHS),
     )
     Assertions.assertEquals(
-      "/var/run/sockets/airbyte_socket_1.sock,/var/run/sockets/airbyte_socket_2.sock," +
-        "/var/run/sockets/airbyte_socket_3.sock,/var/run/sockets/airbyte_socket_4.sock",
+      "/var/run/sockets/airbyte_socket_1.sock,/var/run/sockets/airbyte_socket_2.sock",
       env.destinationEnvironmentVariables.valueOf(DATA_CHANNEL_SOCKET_PATHS),
     )
     Assertions.assertEquals(
-      4,
+      2,
       env.sourceEnvironmentVariables
         .valueOf(DATA_CHANNEL_SOCKET_PATHS)
         .split(',')
         .size,
     )
     Assertions.assertEquals(
-      4,
+      2,
       env.destinationEnvironmentVariables
         .valueOf(DATA_CHANNEL_SOCKET_PATHS)
         .split(',')
