@@ -136,8 +136,8 @@ class AcceptanceTestsResources {
     assertSourceAndDestinationDbRawRecordsInSync(
       source = src,
       destination = dst,
-      inputSchema = conn.namespaceFormat!!,
-      outputSchema = AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+      inputSchema = AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+      outputSchema = conn.namespaceFormat!!,
       withNormalizedTable = false,
       withScdTable = WITHOUT_SCD_TABLE,
     )
@@ -240,12 +240,12 @@ class AcceptanceTestsResources {
     LOGGER.info("state after sync 3: {}", testHarness.getConnectionState(connectionId))
 
     assertSourceAndDestinationDbRawRecordsInSync(
-      src,
-      dst,
-      conn.namespaceFormat!!,
-      AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-      false,
-      WITHOUT_SCD_TABLE,
+      source = src,
+      destination = dst,
+      inputSchema = AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+      outputSchema = conn.namespaceFormat!!,
+      withNormalizedTable = false,
+      withScdTable = WITHOUT_SCD_TABLE,
     )
     assertStreamStatuses(
       testHarness,

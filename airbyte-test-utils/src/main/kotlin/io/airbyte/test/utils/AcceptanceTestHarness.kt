@@ -518,7 +518,7 @@ class AcceptanceTestHarness
           val result =
             apiClient.sourceApi.discoverSchemaForSource(SourceDiscoverSchemaRequestBody(sourceId, null, true, null))
           if (result.catalog == null) {
-            throw RuntimeException("no catalog returned, retrying...")
+            throw RuntimeException("no catalog returned, retrying... (result was $result)")
           }
           result
         },
