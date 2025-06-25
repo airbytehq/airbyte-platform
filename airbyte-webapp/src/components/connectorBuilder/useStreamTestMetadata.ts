@@ -280,6 +280,10 @@ export const useSetStreamToStale = () => {
         return;
       }
 
+      if (testMetadata.isStale) {
+        return;
+      }
+
       setValue(`manifest.metadata.testedStreams.${streamName}.isStale`, true);
     },
     [getValues, setValue]

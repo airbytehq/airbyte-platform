@@ -11,7 +11,6 @@ import { useDebounce, useUpdateEffect } from "react-use";
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
 import { BuilderState, GeneratedDeclarativeStream, isStreamDynamicStream } from "components/connectorBuilder/types";
-import { useAutoImportSchema } from "components/connectorBuilder/useAutoImportSchema";
 import { useBuilderErrors } from "components/connectorBuilder/useBuilderErrors";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useStreamName } from "components/connectorBuilder/useStreamNames";
@@ -543,6 +542,9 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const generatedStreams = useBuilderWatch("generatedStreams");
   const testStreamId = useBuilderWatch("testStreamId");
   const customComponentsCode = useBuilderWatch("customComponentsCode");
+  const autoImportSchemaMetadata = useBuilderWatch("manifest.metadata.autoImportSchema") as
+    | Record<string, boolean>
+    | undefined;
 
   useEffect(() => {
     if (view.type === "stream") {
@@ -616,7 +618,8 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
   const testStateParsed = testState ? JSON.parse(testState) : undefined;
   const testStateArray = testStateParsed && !Array.isArray(testStateParsed) ? [testStateParsed] : testStateParsed;
 
-  const autoImportSchema = useAutoImportSchema(testStreamId);
+  const autoImportSchema = autoImportSchemaMetadata?.[streamName] ?? false;
+
   const { updateStreamTestResults, getStreamHasCustomType } = useStreamTestMetadata();
 
   const streamUsesCustomCode = getStreamHasCustomType(testStreamId);

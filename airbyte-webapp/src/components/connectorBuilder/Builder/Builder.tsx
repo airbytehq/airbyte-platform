@@ -167,7 +167,7 @@ const TriggerStateEffects = () => {
           const streamIndexString = name.match(/manifest\.streams\.(\d+)\..*/)?.[1];
           try {
             const streamIndex = streamIndexString ? parseInt(streamIndexString, 10) : undefined;
-            if (streamIndex) {
+            if (streamIndex !== undefined) {
               setStreamToStale({ type: "stream", index: streamIndex });
             }
           } catch (error) {}
@@ -220,7 +220,6 @@ const UpdateCheckStreams = () => {
   const checkStreams = useBuilderWatch("manifest.check");
   const { setValue } = useFormContext();
   useUpdateEffect(() => {
-    console.log("checkStreams", checkStreams);
     if (checkStreams.type === CheckDynamicStreamType.CheckDynamicStream) {
       if (dynamicStreamNames.length > 0) {
         return;
