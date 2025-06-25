@@ -205,6 +205,9 @@ spec:
         - name: gcs-log-creds-volume
           mountPath: {{ include "airbyte.storage.gcs.credentialsJsonPath" . | dir }}
           readOnly: true
+        {{- else if eq (lower (include "airbyte.storage.type" .)) "local" }}
+        - name: airbyte-storage
+          mountPath: /storage
         {{- end }}
         {{- if .Values.worker.extraVolumeMounts }}
 {{- toYaml .Values.worker.extraVolumeMounts | nindent 8 }}
@@ -227,6 +230,10 @@ spec:
           items:
             - key: {{ include "airbyte.storage.gcs.credentialsJson.secretKey" . }}
               path: "gcp.json"
+      {{- else if eq (lower (include "airbyte.storage.type" .)) "local" }}
+      - name: airbyte-storage
+        persistentVolumeClaim:
+          claimName: airbyte-storage-pvc
       {{- end }}
       {{- if .Values.worker.extraVolumes }}
 {{- toYaml .Values.worker.extraVolumes | nindent 6 }}

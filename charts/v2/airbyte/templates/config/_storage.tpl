@@ -403,6 +403,9 @@ Renders the set of all storage environment variables
 {{- include "airbyte.storage.s3.secretAccessKey.env" . }}
 {{- end }}
 
+{{- if eq $opt "local" }}
+{{- end }}
+
 {{- end }}
 
 {{/*
@@ -434,6 +437,9 @@ AWS_DEFAULT_REGION: {{ include "airbyte.storage.s3.region" . | quote }}
 AWS_AUTHENTICATION_TYPE: {{ include "airbyte.storage.s3.authenticationType" . | quote }}
 {{- end }}
 
+{{- if eq $opt "local" }}
+{{- end }}
+
 {{- end }}
 
 {{/*
@@ -458,6 +464,9 @@ AWS_SECRET_ACCESS_KEY: {{ include "airbyte.storage.minio.secretAccessKey" . | qu
 {{- if eq $opt "s3" }}
 AWS_ACCESS_KEY_ID: {{ include "airbyte.storage.s3.accessKeyId" . | quote }}
 AWS_SECRET_ACCESS_KEY: {{ include "airbyte.storage.s3.secretAccessKey" . | quote }}
+{{- end }}
+
+{{- if eq $opt "local" }}
 {{- end }}
 
 {{- end }}

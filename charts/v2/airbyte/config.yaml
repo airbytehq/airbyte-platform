@@ -1029,6 +1029,7 @@ storage:
     - gcs
     - minio
     - s3
+    - local
   config: 
     - env: STORAGE_TYPE      
       key: type
