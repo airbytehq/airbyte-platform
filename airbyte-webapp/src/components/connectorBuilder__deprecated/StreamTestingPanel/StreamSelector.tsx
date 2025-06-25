@@ -3,7 +3,6 @@ import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
@@ -32,18 +31,11 @@ interface BaseSelectorOption {
 
 type SelectorOption = BaseSelectorOption | GeneratedStreamOption;
 
-const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => {
-  return (
-    <>
-      {selectedOption && (
-        <Heading className={styles.label} as="h1" size="sm">
-          {selectedOption.label}
-        </Heading>
-      )}
-      <Icon className={styles.caret} type="caretDown" color="primary" />
-    </>
-  );
-};
+const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => (
+  <Heading className={styles.label} as="h1" size="sm">
+    {selectedOption?.label ?? ""}
+  </Heading>
+);
 
 export const StreamSelector: React.FC<StreamSelectorProps> = () => {
   const analyticsService = useAnalyticsService();

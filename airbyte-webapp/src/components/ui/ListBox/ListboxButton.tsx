@@ -23,10 +23,10 @@ export const ListboxButton = React.forwardRef<HTMLButtonElement, ListboxButtonPr
       <HeadlessUIListboxButton {...restProps} className={mergedClassNames} ref={ref}>
         {(bag) => (
           <FlexContainer justifyContent="space-between" className={styles.listboxButton__content} alignItems="center">
-            <FlexItem>
+            <FlexItem className={styles.listboxButton__children}>
               {typeof restProps.children === "function" ? restProps.children(bag) : restProps.children}
             </FlexItem>
-            <Icon type="chevronDown" color="action" />
+            <Icon type="chevronDown" color="action" className={styles.listboxButton__caret} />
           </FlexContainer>
         )}
       </HeadlessUIListboxButton>

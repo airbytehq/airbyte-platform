@@ -53,4 +53,12 @@
   &__content {
     width: 100%;
   }
+
+  &__children {
+    min-width: 0;
+  }
+
+  &__caret {
+    flex-shrink: 0;
+  }
 }

@@ -106,7 +106,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                               class="<removed-for-snapshot-test>"
                             >
                               <div
-                                class=""
+                                class="<removed-for-snapshot-test>"
                               >
                                 <span
                                   class="<removed-for-snapshot-test>"
@@ -548,7 +548,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <div
-                                        class=""
+                                        class="<removed-for-snapshot-test>"
                                       >
                                         <p
                                           class="<removed-for-snapshot-test>"
@@ -679,7 +679,7 @@ exports[`ConnectionReplicationPage should render 1`] = `
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <div
-                                        class=""
+                                        class="<removed-for-snapshot-test>"
                                       >
                                         <p
                                           class="<removed-for-snapshot-test>"
@@ -931,7 +931,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                               class="<removed-for-snapshot-test>"
                             >
                               <div
-                                class=""
+                                class="<removed-for-snapshot-test>"
                               >
                                 <span
                                   class="<removed-for-snapshot-test>"
@@ -1373,7 +1373,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <div
-                                        class=""
+                                        class="<removed-for-snapshot-test>"
                                       >
                                         <p
                                           class="<removed-for-snapshot-test>"
@@ -1504,7 +1504,7 @@ exports[`ConnectionReplicationPage should show an error if there is a schemaErro
                                       class="<removed-for-snapshot-test>"
                                     >
                                       <div
-                                        class=""
+                                        class="<removed-for-snapshot-test>"
                                       >
                                         <p
                                           class="<removed-for-snapshot-test>"
