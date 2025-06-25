@@ -3,7 +3,6 @@ import { useIntl } from "react-intl";
 
 import { ClearFiltersButton } from "components/ui/ClearFiltersButton";
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
@@ -26,8 +25,6 @@ const CustomControlButton = <T,>({ selectedOption }: ListBoxControlButtonProps<T
           {formatMessage({ id: "form.selectValue" })}
         </Text>
       )}
-
-      <Icon type="caretDown" color="action" />
     </>
   );
 };
