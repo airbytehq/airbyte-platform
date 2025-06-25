@@ -131,6 +131,9 @@ open class ProfilerService(
       chosenEvent,
       "-d",
       SECONDS_IN_24_HRS,
+      "-i",
+      SAMPLING_INTERVAL,
+      "-t",
       "-o",
       "tree",
       pid.toString(),
@@ -203,6 +206,7 @@ open class ProfilerService(
     private const val ASYNC_PROFILER_FILE_PREFIX = "async-profiler-"
     private const val BASE_URL = "https://github.com/async-profiler/async-profiler/releases/download/v$ASYNC_PROFILER_VERSION/"
     private const val SECONDS_IN_24_HRS = "86400"
+    private const val SAMPLING_INTERVAL = "1ms"
 
     private const val OS_NAME = "os.name"
     private const val OS_ARCH = "os.arch"
