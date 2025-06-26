@@ -43,6 +43,7 @@
   max-width: calc(100vw - #{variables.$spacing-lg} * 2);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 
   &.sm {
     width: variables.$width-modal-sm;

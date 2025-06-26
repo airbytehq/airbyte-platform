@@ -607,6 +607,37 @@ export const useConnectionList = ({
   ).data;
 };
 
+export const useWorkspaceConnectionStatusCounts = (workspaceId: string) => {
+  const requestOptions = useRequestOptions();
+  const REFETCH_CONNECTION_LIST_INTERVAL = 60_000;
+
+  return useQuery(
+    connectionsKeys.lists([`workspace-${workspaceId}`]),
+    async (): Promise<{ pendingCount: number; successCount: number; failedCount: number }> => {
+      const { connections } = await webBackendListConnectionsForWorkspace({ workspaceId }, requestOptions);
+
+      const pendingCount = connections.filter((connection) => connection.isSyncing).length;
+      const successCount = connections.filter((connection) => connection.latestSyncJobStatus === "succeeded").length;
+      const failedCount = connections.filter(
+        (connection) =>
+          connection.latestSyncJobStatus === "failed" ||
+          connection.latestSyncJobStatus === "cancelled" ||
+          connection.latestSyncJobStatus === "incomplete"
+      ).length;
+
+      return {
+        pendingCount,
+        successCount,
+        failedCount,
+      };
+    },
+    {
+      refetchInterval: REFETCH_CONNECTION_LIST_INTERVAL,
+      suspense: true,
+    }
+  ).data;
+};
+
 export const useGetConnectionState = (connectionId: string) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(connectionsKeys.getState(connectionId), () => getState({ connectionId }, requestOptions));

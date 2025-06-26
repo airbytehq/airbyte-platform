@@ -84,23 +84,25 @@ export const Modal: React.FC<React.PropsWithChildren<ModalProps>> = ({
             children
           ) : (
             <div className={classNames(styles.card, size ? cardStyleBySize[size] : undefined)}>
-              <FlexContainer alignItems="flex-start" justifyContent="space-between">
-                <Box p="xl">
-                  <Heading as="h2" size="sm">
-                    {title}
-                  </Heading>
-                </Box>
-                {onCancel && (
-                  <button
-                    className={styles.card__closeButton}
-                    onClick={onModalCancel}
-                    aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
-                    data-testid="close-modal-button"
-                  >
-                    <Icon type="cross" />
-                  </button>
-                )}
-              </FlexContainer>
+              {title && (
+                <FlexContainer alignItems="flex-start" justifyContent="space-between">
+                  <Box p="xl">
+                    <Heading as="h2" size="sm">
+                      {title}
+                    </Heading>
+                  </Box>
+                  {onCancel && (
+                    <button
+                      className={styles.card__closeButton}
+                      onClick={onModalCancel}
+                      aria-label={formatMessage({ id: "modal.closeButtonLabel" })}
+                      data-testid="close-modal-button"
+                    >
+                      <Icon type="cross" />
+                    </button>
+                  )}
+                </FlexContainer>
+              )}
               {children}
             </div>
           )}

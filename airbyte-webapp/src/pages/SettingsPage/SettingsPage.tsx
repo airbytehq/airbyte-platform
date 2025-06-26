@@ -109,6 +109,7 @@ export const SettingsPage: React.FC = () => {
                 )}
               </>
             )}
+            {/* NOTE: Keep these here or move to the side bar? */}
             {showLicenseUi && (
               <SettingsLink
                 iconType="license"
