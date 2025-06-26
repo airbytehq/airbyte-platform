@@ -21,6 +21,8 @@ class EntitlementService(
     entitlement: Entitlement,
   ): EntitlementResult = entitlementClient.checkEntitlement(organizationId, entitlement)
 
+  fun getEntitlements(organizationId: UUID): List<EntitlementResult> = entitlementClient.getEntitlements(organizationId)
+
   internal fun hasEnterpriseConnectorEntitlements(
     organizationId: UUID,
     actorType: ActorType,

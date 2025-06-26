@@ -5,7 +5,7 @@
 package io.airbyte.commons.entitlements.models
 
 data class EntitlementResult(
-  val entitlementId: String,
+  val featureId: String,
   val isEntitled: Boolean,
   val reason: String? = null,
 )

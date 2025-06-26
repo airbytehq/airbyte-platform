@@ -5,9 +5,26 @@
 package io.airbyte.commons.entitlements.models
 
 object PlatformLlmSyncJobFailureExplanation : FeatureEntitlement(
-  id = "feature-platform-llm-sync-job-failure-explanation",
+  featureId = "feature-platform-llm-sync-job-failure-explanation",
 )
 
 object PlatformSubOneHourSyncFrequency : FeatureEntitlement(
-  id = "feature-platform-sub-one-hour-sync-frequency",
+  featureId = "feature-platform-sub-one-hour-sync-frequency",
 )
+
+object Entitlements {
+  private val ALL =
+    listOf(
+      PlatformLlmSyncJobFailureExplanation,
+      PlatformSubOneHourSyncFrequency,
+    )
+
+  private val byId = ALL.associateBy { it.featureId }
+
+  fun fromId(featureId: String): Entitlement? =
+    if (ConnectorEntitlement.isConnectorFeatureId(featureId)) {
+      ConnectorEntitlement.fromFeatureId(featureId)
+    } else {
+      byId[featureId]
+    }
+}

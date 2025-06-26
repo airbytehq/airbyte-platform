@@ -7,17 +7,29 @@ package io.airbyte.commons.entitlements.models
 import java.util.UUID
 
 interface Entitlement {
-  val id: String
+  val featureId: String
 }
 
-// Make this open if it has logic and you want instantiable base class
 open class FeatureEntitlement(
-  override val id: String,
+  override val featureId: String,
 ) : Entitlement
 
-// Likewise for ConnectorEntitlement
 open class ConnectorEntitlement(
   val actorDefinitionId: UUID,
 ) : Entitlement {
-  override val id: String = "feature-enterprise-connector-$actorDefinitionId"
+  companion object {
+    const val PREFIX = "feature-enterprise-connector-"
+
+    fun isConnectorFeatureId(featureId: String): Boolean = featureId.startsWith(PREFIX)
+
+    fun fromFeatureId(featureId: String): ConnectorEntitlement? =
+      try {
+        val uuid = UUID.fromString(featureId.removePrefix(PREFIX))
+        ConnectorEntitlement(uuid)
+      } catch (e: IllegalArgumentException) {
+        null
+      }
+  }
+
+  override val featureId: String = "$PREFIX$actorDefinitionId"
 }

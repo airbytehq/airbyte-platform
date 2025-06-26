@@ -1766,7 +1766,7 @@ class ConnectionsHandlerTest {
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
         when(entitlementService.checkEntitlement(any(), any()))
-            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
+            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), true, null));
 
         final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.entitlements
 
-import io.airbyte.commons.entitlements.models.Entitlement
 import io.airbyte.commons.entitlements.models.EntitlementPlan
 import io.airbyte.commons.entitlements.models.EntitlementResult
 import io.airbyte.commons.entitlements.models.PlatformLlmSyncJobFailureExplanation
@@ -35,7 +34,7 @@ class EntitlementClientTest {
       val organizationId = UUID.randomUUID()
       val entitlement = PlatformLlmSyncJobFailureExplanation
       val result = client.checkEntitlement(organizationId, entitlement)
-      assertEquals(entitlement.id, result.entitlementId)
+      assertEquals(entitlement.featureId, result.featureId)
       assertEquals(false, result.isEntitled)
       assertEquals("DefaultEntitlementClient grants no entitlements", result.reason)
     }
@@ -69,13 +68,13 @@ class EntitlementClientTest {
         GetEntitlementQuery.Data(
           GetEntitlementQuery.Entitlement(
             "",
-            getMockEntitlementFragment(organizationId, true, entitlement.id),
+            getMockEntitlementFragment(organizationId, true, entitlement.featureId),
           ),
         )
 
       val result = client.checkEntitlement(organizationId, entitlement)
 
-      assertEquals(entitlement.id, result.entitlementId)
+      assertEquals(entitlement.featureId, result.featureId)
       assertEquals(true, result.isEntitled)
       assertEquals(null, result.reason)
     }
@@ -90,7 +89,7 @@ class EntitlementClientTest {
           mutableListOf(
             GetEntitlementsQuery.Entitlement(
               "",
-              getMockEntitlementFragment(organizationId, true, entitlement.id),
+              getMockEntitlementFragment(organizationId, true, entitlement.featureId),
             ),
           ),
         )
@@ -98,7 +97,7 @@ class EntitlementClientTest {
       val result = client.getEntitlements(organizationId)
 
       assertEquals(1, result.size)
-      assertEquals(entitlement.id, result[0].entitlementId)
+      assertEquals(entitlement.featureId, result[0].featureId)
       assertEquals(true, result[0].isEntitled)
       assertEquals(null, result[0].reason)
     }

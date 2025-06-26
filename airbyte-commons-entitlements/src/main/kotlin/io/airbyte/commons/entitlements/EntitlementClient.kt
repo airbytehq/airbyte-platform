@@ -46,7 +46,7 @@ class DefaultEntitlementClient : EntitlementClient {
     organizationId: UUID,
     entitlement: Entitlement,
   ): EntitlementResult =
-    EntitlementResult(entitlementId = entitlement.id, isEntitled = false, reason = "DefaultEntitlementClient grants no entitlements")
+    EntitlementResult(featureId = entitlement.featureId, isEntitled = false, reason = "DefaultEntitlementClient grants no entitlements")
 
   override fun getEntitlements(organizationId: UUID): List<EntitlementResult> = emptyList()
 
@@ -85,7 +85,7 @@ class StiggEntitlementClient(
             FetchEntitlementQuery
               .builder()
               .customerId(organizationId.toString())
-              .featureId(entitlement.id)
+              .featureId(entitlement.featureId)
               .build(),
           ).build(),
       )
@@ -95,7 +95,7 @@ class StiggEntitlementClient(
     }
 
     return EntitlementResult(
-      entitlement.id,
+      entitlement.featureId,
       result.entitlement.entitlementFragment.isGranted,
       result.entitlement.entitlementFragment.accessDeniedReason
         ?.rawValue,

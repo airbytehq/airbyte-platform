@@ -99,7 +99,7 @@ class ConnectionSchedulerHelperTest {
   @Test
   void testPopulateSyncScheduleFromCron() throws JsonValidationException, ConfigNotFoundException {
     when(entitlementService.checkEntitlement(any(), any()))
-        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
+        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), true, null));
 
     final StandardSync actual = new StandardSync();
     connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
@@ -117,7 +117,7 @@ class ConnectionSchedulerHelperTest {
   @ValueSource(booleans = {true, false})
   void testScheduleValidation(Boolean hasEntitlement) {
     when(entitlementService.checkEntitlement(any(), any()))
-        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), hasEntitlement, null));
+        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), hasEntitlement, null));
 
     final StandardSync actual = new StandardSync();
     assertThrows(JsonValidationException.class, () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
@@ -709,7 +709,7 @@ class ConnectionSchedulerHelperTest {
         final StandardSync actual = new StandardSync();
 
         when(entitlementService.checkEntitlement(any(), any()))
-            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
+            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getFeatureId(), true, null));
 
         // NOTE: this method call is the one that parses the given timezone string
         // and will throw an exception if it isn't supported. This method is called
