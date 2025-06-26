@@ -8,6 +8,7 @@ import { useGetWorkspace } from "./workspaces";
 import {
   getOrganization,
   getOrganizationInfo,
+  getOrgInfo,
   listUsersInOrganization,
   updateOrganization,
   getOrganizationTrialStatus,
@@ -24,6 +25,7 @@ import {
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
+  OrganizationInfoRead,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -33,6 +35,7 @@ export const organizationKeys = {
   list: (filters: string[]) => [...organizationKeys.lists(), filters] as const,
   info: (organizationId = "<none>") => [...organizationKeys.all, "info", organizationId] as const,
   detail: (organizationId = "<none>") => [...organizationKeys.all, "details", organizationId] as const,
+  orgInfo: (organizationId = "<none>") => [...organizationKeys.all, "orgInfo", organizationId] as const,
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
@@ -66,6 +69,13 @@ export const useOrganization = (organizationId: string) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(organizationKeys.detail(organizationId), () =>
     getOrganization({ organizationId }, requestOptions)
+  );
+};
+
+export const useOrgInfo = (organizationId: string): OrganizationInfoRead => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.orgInfo(organizationId), () =>
+    getOrgInfo({ organizationId }, requestOptions)
   );
 };
 

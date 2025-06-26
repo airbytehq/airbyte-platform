@@ -5,13 +5,14 @@ import { CopyButton } from "components/ui/CopyButton";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
 import { Text } from "components/ui/Text/Text";
 
-import { useCurrentWorkspace, useListApplications } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useListApplications } from "core/api";
 
 import EmbeddedLogo from "./embedded-logo.svg?react";
 import styles from "./EmbeddedSettingsPage.module.scss";
 
 export const EmbeddedSettingsPage: React.FC = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { applications } = useListApplications();
 
   const envContent = `AIRBYTE_ORGANIZATION_ID=${organizationId}

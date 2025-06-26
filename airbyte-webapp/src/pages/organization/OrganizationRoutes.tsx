@@ -49,7 +49,10 @@ export const OrganizationRoutes: React.FC = () => {
         {canViewOrganizationUsage && (
           <Route path={CloudSettingsRoutePaths.OrganizationUsage} element={<OrganizationUsagePage />} />
         )}
-        <Route path={RoutePaths.Settings} element={<GeneralOrganizationSettingsPage />} />
+        <Route
+          path={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
+          element={<GeneralOrganizationSettingsPage />}
+        />
         <Route path={`${RoutePaths.Settings}/${CloudSettingsRoutePaths.Embedded}`} element={<EmbeddedSettingsPage />} />
         <Route path="*" element={<Navigate to={defaultPath} replace />} />
       </Route>

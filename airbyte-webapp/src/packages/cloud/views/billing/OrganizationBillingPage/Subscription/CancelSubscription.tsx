@@ -4,7 +4,8 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Text } from "components/ui/Text";
 
-import { useCancelSubscription, useCurrentWorkspace, useUnscheduleCancelSubscription } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useCancelSubscription, useUnscheduleCancelSubscription } from "core/api";
 import { OrganizationSubscriptionInfoRead } from "core/api/types/AirbyteClient";
 import { useFormatError } from "core/errors";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
@@ -18,7 +19,7 @@ interface CancelSubscriptionProps {
 export const CancelSubscription: React.FC<CancelSubscriptionProps> = ({ disabled, subscription }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const { registerNotification } = useNotificationService();
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const formatError = useFormatError();
   const { isLoading: cancelLoading, mutateAsync: cancelSubscription } = useCancelSubscription(organizationId);
   const { isLoading: unscheduleLoading, mutateAsync: resubscribe } = useUnscheduleCancelSubscription(organizationId);

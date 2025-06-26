@@ -17,7 +17,7 @@ import { useWebappConfig } from "core/config";
 import { useTrackPage, PageTrackingCodes } from "core/services/analytics";
 
 import { OrganizationWorkspacesCreateControl } from "./components/OrganizationWorkspacesCreateControl";
-import OrganizationWorkspacesList from "./components/OrganizationWorkspacesList";
+import { OrganizationWorkspacesList } from "./components/OrganizationWorkspacesList";
 import { useOrganizationsToCreateWorkspaces } from "./components/useOrganizationsToCreateWorkspaces";
 import styles from "./OrganizationWorkspacesPage.module.scss";
 

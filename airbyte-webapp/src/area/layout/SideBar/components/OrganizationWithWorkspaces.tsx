@@ -48,7 +48,7 @@ export const OrganizationWithWorkspaces: React.FC<OrganizationWithWorkspacesProp
         </div>
         <Icon type="gear" className={styles.gearIcon} aria-hidden="true" />
       </NavLink>
-      <FlexContainer direction="column">
+      <FlexContainer direction="column" gap="none">
         {workspaces.map((workspace) => (
           <NavLink
             key={workspace.workspaceId}

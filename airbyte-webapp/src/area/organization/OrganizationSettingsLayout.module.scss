@@ -15,5 +15,7 @@
   &__content {
     overflow-y: auto;
     position: relative;
+    padding: variables.$spacing-2xl calc(variables.$spacing-2xl * 2);
+    background-color: colors.$foreground;
   }
 }
