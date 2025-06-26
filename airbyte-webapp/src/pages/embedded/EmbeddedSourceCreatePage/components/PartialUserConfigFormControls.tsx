@@ -4,29 +4,26 @@ import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
 interface PartialUserConfigFormControlsProps {
-  isEditMode: boolean;
   isSubmitting: boolean;
-  isValid: boolean;
-  dirty: boolean;
-
-  onCancel: () => void;
+  onDelete?: () => void;
 }
 
 export const PartialUserConfigFormControls: React.FC<PartialUserConfigFormControlsProps> = ({
-  isEditMode,
   isSubmitting,
-  isValid,
-  dirty,
+  onDelete,
 }) => {
   return (
-    <FlexContainer justifyContent="flex-end">
-      <Button full type="submit" disabled={!isValid || !dirty || isSubmitting} isLoading={isSubmitting}>
-        {isEditMode ? (
-          <FormattedMessage id="form.saveChanges" />
-        ) : (
-          <FormattedMessage id="onboarding.sourceSetUp.buttonText" />
-        )}
+    <FlexContainer justifyContent="flex-end" direction="column" gap="lg">
+      <Button full type="submit" disabled={isSubmitting} isLoading={isSubmitting}>
+        <FormattedMessage id="partialUserConfig.buttonText" />
       </Button>
+      {onDelete && (
+        <Button type="button" full variant="clearDanger" disabled={isSubmitting} onClick={onDelete}>
+          <FlexContainer justifyContent="center">
+            <FormattedMessage id="partialUserConfig.delete.buttonText" />
+          </FlexContainer>
+        </Button>
+      )}
     </FlexContainer>
   );
 };

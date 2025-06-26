@@ -1,6 +1,6 @@
 import isBoolean from "lodash/isBoolean";
 import { useEffect, useState } from "react";
-import { get, useFormState, useFormContext, useWatch } from "react-hook-form";
+import { get, useFormContext, useWatch } from "react-hook-form";
 import { useIntl } from "react-intl";
 
 import { CodeEditor } from "components/ui/CodeEditor";
@@ -13,8 +13,9 @@ import styles from "./ObjectControl.module.scss";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
-import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, getDeclarativeSchemaTypeValue, displayName } from "../utils";
+
 export const ObjectControl = ({
   fieldSchema,
   baseProps,
@@ -23,9 +24,9 @@ export const ObjectControl = ({
   hideBorder = false,
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
-  const { errorAtPath } = useSchemaForm();
-  const { errors } = useFormState();
+  const value = useWatch({ name: baseProps.name });
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
+  const error = useErrorAtPath(baseProps.name);
 
   if (!fieldSchema.properties) {
     if (!fieldSchema.additionalProperties) {
@@ -53,55 +54,58 @@ export const ObjectControl = ({
 
   const nonAdvancedElements: JSX.Element[] = [];
   const advancedElements: JSX.Element[] = [];
-  let hasErrorInAdvanced = false;
+  let hasAdvancedValue = false;
 
-  Object.entries(fieldSchema.properties).forEach(([propertyName, property]) => {
-    const isAdvanced = !nonAdvancedFields
-      ? false
-      : !nonAdvancedFields.some((field) => field === propertyName || field.startsWith(`${propertyName}.`));
+  Object.entries(fieldSchema.properties)
+    .filter(([propertyName]) => propertyName !== "$parameters")
+    .forEach(([propertyName, property]) => {
+      const isAdvanced = !nonAdvancedFields
+        ? false
+        : !nonAdvancedFields.some((field) => field === propertyName || field.startsWith(`${propertyName}.`));
 
-    const nonAdvancedSubfields = isAdvanced
-      ? []
-      : !nonAdvancedFields
-      ? []
-      : nonAdvancedFields
-          .filter((field) => field.startsWith(`${propertyName}.`))
-          .map((field) => field.slice(propertyName.length + 1));
+      const nonAdvancedSubfields = isAdvanced
+        ? []
+        : !nonAdvancedFields
+        ? []
+        : nonAdvancedFields
+            .filter((field) => field.startsWith(`${propertyName}.`))
+            .map((field) => field.slice(propertyName.length + 1));
 
-    const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
+      const fullPath = baseProps.name ? `${baseProps.name}.${propertyName}` : propertyName;
 
-    // ~ declarative_component_schema type handling ~
-    if (getDeclarativeSchemaTypeValue(propertyName, property)) {
-      return;
-    }
-
-    const element = (
-      <SchemaFormControl
-        key={fullPath}
-        path={fullPath}
-        overrideByPath={overrideByPath}
-        skipRenderedPathRegistration={skipRenderedPathRegistration}
-        fieldSchema={property as AirbyteJsonSchema}
-        isRequired={fieldSchema.required?.includes(propertyName) ?? false}
-        nonAdvancedFields={nonAdvancedSubfields.length > 0 ? nonAdvancedSubfields : undefined}
-      />
-    );
-
-    if (isAdvanced) {
-      advancedElements.push(element);
-      if (get(errors, fullPath)) {
-        hasErrorInAdvanced = true;
+      // ~ declarative_component_schema type handling ~
+      if (getDeclarativeSchemaTypeValue(propertyName, property)) {
+        return;
       }
-    } else {
-      nonAdvancedElements.push(element);
-    }
-  });
+
+      const element = (
+        <SchemaFormControl
+          key={fullPath}
+          path={fullPath}
+          overrideByPath={overrideByPath}
+          skipRenderedPathRegistration={skipRenderedPathRegistration}
+          fieldSchema={property as AirbyteJsonSchema}
+          isRequired={fieldSchema.required?.includes(propertyName) ?? false}
+          nonAdvancedFields={nonAdvancedSubfields.length > 0 ? nonAdvancedSubfields : undefined}
+        />
+      );
+
+      if (isAdvanced) {
+        advancedElements.push(element);
+        const advancedPropertyValue = get(value, propertyName);
+        if (advancedPropertyValue && !isBoolean(property) && advancedPropertyValue !== property.default) {
+          hasAdvancedValue = true;
+        }
+      } else {
+        nonAdvancedElements.push(element);
+      }
+    });
 
   const contents = (
     <>
       {nonAdvancedElements.length > 0 && nonAdvancedElements}
       {advancedElements.length > 0 && (
-        <Collapsible className={styles.advancedCollapsible} label="Advanced" showErrorIndicator={hasErrorInAdvanced}>
+        <Collapsible className={styles.advancedCollapsible} label="Advanced" initiallyOpen={hasAdvancedValue}>
           {advancedElements}
         </Collapsible>
       )}
@@ -122,9 +126,11 @@ export const ObjectControl = ({
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={errorAtPath(baseProps.name)}
+      error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       {contents}
     </ControlGroup>
@@ -139,7 +145,7 @@ const JsonEditor = ({
   toggleConfig: ReturnType<typeof useToggleConfig>;
 }) => {
   const { formatMessage } = useIntl();
-  const { errorAtPath } = useSchemaForm();
+  const error = useErrorAtPath(baseProps.name);
   const value = useWatch({ name: baseProps.name });
   const { setValue } = useFormContext();
   const [textValue, setTextValue] = useState(JSON.stringify(value, null, 2));
@@ -156,9 +162,11 @@ const JsonEditor = ({
       title={displayName(baseProps.name, baseProps.label)}
       tooltip={baseProps.labelTooltip}
       optional={baseProps.optional}
-      error={errorAtPath(baseProps.name)}
+      error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       footer={!textValue ? formatMessage({ id: "form.enterValidJson" }) : undefined}
+      data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       <FlexContainer className={styles.jsonEditorContainer} direction="column" gap="md">
         <div className={styles.jsonEditor}>
@@ -166,13 +174,15 @@ const JsonEditor = ({
             key={baseProps.name}
             value={textValue}
             language="json"
+            readOnly={baseProps.disabled}
             onChange={(val: string | undefined) => {
               setTextValue(val || "");
-              let parsedValue = val;
               try {
-                parsedValue = JSON.parse(val || "{}");
-              } catch (error) {}
-              setValue(baseProps.name, parsedValue, { shouldValidate: true, shouldTouch: true });
+                const parsedValue = JSON.parse(val || "{}");
+                setValue(baseProps.name, parsedValue, { shouldValidate: true, shouldTouch: true });
+              } catch (error) {
+                setValue(baseProps.name, val, { shouldValidate: true, shouldTouch: true });
+              }
             }}
           />
         </div>

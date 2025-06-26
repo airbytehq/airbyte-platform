@@ -1,16 +1,21 @@
-import { useFormContext, useWatch } from "react-hook-form";
-import { useUnmount } from "react-use";
+import { useMemo } from "react";
+import { useWatch } from "react-hook-form";
+import { FormattedMessage } from "react-intl";
+import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
+import { Badge } from "components/ui/Badge";
+import { Tooltip } from "components/ui/Tooltip";
 
 import { ArrayOfObjectsControl } from "./ArrayOfObjectsControl";
 import { MultiOptionControl } from "./MultiOptionControl";
 import { ObjectControl } from "./ObjectControl";
+import styles from "./SchemaFormControl.module.scss";
 import { OverrideByPath, BaseControlProps } from "./types";
 import { FormControl } from "../../FormControl";
 import { LinkComponentsToggle } from "../LinkComponentsToggle";
 import { useSchemaForm } from "../SchemaForm";
-import { AirbyteJsonSchema, displayName, nestPath, resolveTopLevelRef } from "../utils";
+import { AirbyteJsonSchema, displayName, resolveTopLevelRef } from "../utils";
 
 interface SchemaFormControlProps {
   /**
@@ -43,9 +48,10 @@ interface SchemaFormControlProps {
    */
   nonAdvancedFields?: string[];
 
-  titleOverride?: string;
+  titleOverride?: string | null;
   isRequired?: boolean;
   className?: string;
+  placeholder?: string;
 }
 
 /**
@@ -58,23 +64,20 @@ export const SchemaFormControl = ({
   skipRenderedPathRegistration = false,
   fieldSchema,
   titleOverride,
-  isRequired = true,
+  isRequired,
   className,
   nonAdvancedFields,
+  placeholder,
 }: SchemaFormControlProps) => {
   const {
     schema: rootSchema,
     getSchemaAtPath,
     registerRenderedPath,
-    nestedUnderPath,
+    onlyShowErrorIfTouched,
     verifyArrayItems,
-    convertJsonSchemaToZodSchema,
+    isRequired: isPathRequired,
+    disableFormControlsUnderPath,
   } = useSchemaForm();
-  const { register, clearErrors } = useFormContext();
-
-  const targetPath = path ? path : nestPath(path, nestedUnderPath);
-
-  const value = useWatch({ name: targetPath });
 
   // Register this path synchronously during render
   if (!skipRenderedPathRegistration && path) {
@@ -82,31 +85,20 @@ export const SchemaFormControl = ({
   }
 
   // Get the property at the specified path
-  const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path, value));
+  const targetSchema = resolveTopLevelRef(rootSchema, fieldSchema ?? getSchemaAtPath(path));
+  const isOptional = useMemo(() => {
+    if (isRequired !== undefined) {
+      return !isRequired;
+    }
 
-  useUnmount(() => {
-    // Remove the validation logic for this field when unmounting.
-    // Using unregister() fully removes the field from the form which causes other issues,
-    // so just use register() to replace the validation logic with a no-op.
-    register(targetPath, {
-      validate: () => {
-        return true;
-      },
-    });
-    clearErrors(targetPath);
-  });
+    if (!path) {
+      return false;
+    }
 
-  // Register validation logic for this field
-  register(targetPath, {
-    validate: (value) => {
-      const zodSchema = convertJsonSchemaToZodSchema(targetSchema, isRequired);
-      const result = zodSchema.safeParse(value);
-      if (result.success === false) {
-        return result.error.issues.at(-1)?.message;
-      }
-      return true;
-    },
-  });
+    return !isPathRequired(path);
+  }, [isPathRequired, isRequired, path]);
+
+  const value = useWatch({ name: path });
 
   // ~ declarative_component_schema type $parameters handling ~
   if (path.includes("$parameters")) {
@@ -118,21 +110,28 @@ export const SchemaFormControl = ({
     return overrideByPath[path];
   }
 
-  if (targetSchema.deprecated) {
+  if (targetSchema.deprecated && value === undefined) {
     return null;
   }
 
   const baseProps: BaseControlProps = {
-    name: targetPath,
-    label: titleOverride ?? displayName(path, targetSchema.title),
+    name: path,
+    label: titleOverride ? titleOverride : titleOverride === null ? undefined : displayName(path, targetSchema.title),
     labelTooltip:
       targetSchema.description || targetSchema.examples ? (
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
-    optional: !isRequired,
-    header: <LinkComponentsToggle path={path} fieldSchema={targetSchema} />,
+    optional: isOptional,
+    header: targetSchema.deprecated ? (
+      <DeprecatedBadge message={targetSchema.deprecation_message} />
+    ) : (
+      <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+    ),
     containerControlClassName: className,
-    onlyShowErrorIfTouched: true,
+    onlyShowErrorIfTouched,
+    placeholder,
+    "data-field-path": path,
+    disabled: !!disableFormControlsUnderPath && path.startsWith(disableFormControlsUnderPath),
   };
 
   if (targetSchema.oneOf || targetSchema.anyOf) {
@@ -163,17 +162,18 @@ export const SchemaFormControl = ({
     return <FormControl {...baseProps} fieldType="switch" />;
   }
 
-  if (targetSchema.type === "string") {
-    if (targetSchema.enum) {
-      const options = Array.isArray(targetSchema.enum)
-        ? targetSchema.enum.map((option: string) => ({
-            label: option,
-            value: option,
-          }))
-        : [];
+  if (targetSchema.enum && (targetSchema.type === undefined || targetSchema.type === "string")) {
+    const options = Array.isArray(targetSchema.enum)
+      ? targetSchema.enum.map((option: string) => ({
+          label: option,
+          value: option,
+        }))
+      : [];
 
-      return <FormControl {...baseProps} fieldType="dropdown" options={options} />;
-    }
+    return <FormControl {...baseProps} fieldType="dropdown" options={options} />;
+  }
+
+  if (targetSchema.type === "string") {
     if (targetSchema.multiline) {
       return <FormControl {...baseProps} fieldType="textarea" />;
     }
@@ -186,20 +186,30 @@ export const SchemaFormControl = ({
 
   if (targetSchema.type === "array") {
     const items = verifyArrayItems(targetSchema.items);
-    if (items.type === "object" || items.type === "array") {
-      return (
-        <ArrayOfObjectsControl
-          fieldSchema={targetSchema}
-          baseProps={baseProps}
-          overrideByPath={overrideByPath}
-          skipRenderedPathRegistration={skipRenderedPathRegistration}
-        />
-      );
-    }
     if (items.type === "string" || items.type === "integer" || items.type === "number") {
       return <FormControl {...baseProps} fieldType="array" itemType={items.type} />;
     }
+    return (
+      <ArrayOfObjectsControl
+        fieldSchema={targetSchema}
+        baseProps={baseProps}
+        overrideByPath={overrideByPath}
+        skipRenderedPathRegistration={skipRenderedPathRegistration}
+      />
+    );
   }
 
   return null;
+};
+
+const DeprecatedBadge = ({ message }: { message?: string }) => {
+  return message ? (
+    <Tooltip control={<Badge variant="grey">Deprecated</Badge>} placement="top">
+      <ReactMarkdown className={styles.deprecatedTooltip}>{message}</ReactMarkdown>
+    </Tooltip>
+  ) : (
+    <Badge variant="grey">
+      <FormattedMessage id="form.deprecated" />
+    </Badge>
+  );
 };

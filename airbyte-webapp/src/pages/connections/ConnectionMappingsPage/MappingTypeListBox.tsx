@@ -84,7 +84,7 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
     <ListBox
       options={supportedMappingsOptions}
       selectedValue={selectedValue}
-      controlButton={ControlButton}
+      controlButtonContent={ControlButton}
       buttonClassName={styles.controlButton}
       isDisabled={disabled}
       onSelect={(value) => {

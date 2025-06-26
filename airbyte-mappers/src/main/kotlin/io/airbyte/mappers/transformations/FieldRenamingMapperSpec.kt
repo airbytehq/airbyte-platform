@@ -5,13 +5,15 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
 
-class FieldRenamingMapperSpec : ConfigValidatingSpec<FieldRenamingMapperConfig>() {
+class FieldRenamingMapperSpec(
+  objectMapper: ObjectMapper,
+) : ConfigValidatingSpec<FieldRenamingMapperConfig>(objectMapper) {
   override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): FieldRenamingMapperConfig =
-    Jsons.convertValue(configuredMapper, FieldRenamingMapperConfig::class.java)
+    objectMapper().convertValue(configuredMapper, FieldRenamingMapperConfig::class.java)
 
   override fun jsonSchema(): JsonNode = simpleJsonSchemaGenerator.generateJsonSchema(specType())
 

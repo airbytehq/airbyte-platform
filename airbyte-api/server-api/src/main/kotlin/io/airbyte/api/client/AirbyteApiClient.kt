@@ -7,10 +7,12 @@ package io.airbyte.api.client
 import dev.failsafe.RetryPolicy
 import io.airbyte.api.client.generated.ActorDefinitionVersionApi
 import io.airbyte.api.client.generated.AttemptApi
+import io.airbyte.api.client.generated.CommandApi
 import io.airbyte.api.client.generated.ConnectionApi
 import io.airbyte.api.client.generated.ConnectorBuilderProjectApi
 import io.airbyte.api.client.generated.ConnectorRolloutApi
 import io.airbyte.api.client.generated.DataplaneApi
+import io.airbyte.api.client.generated.DataplaneGroupApi
 import io.airbyte.api.client.generated.DeploymentMetadataApi
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.DestinationDefinitionApi
@@ -32,6 +34,7 @@ import io.airbyte.api.client.generated.StateApi
 import io.airbyte.api.client.generated.StreamStatusesApi
 import io.airbyte.api.client.generated.UserApi
 import io.airbyte.api.client.generated.WebBackendApi
+import io.airbyte.api.client.generated.WorkloadOutputApi
 import io.airbyte.api.client.generated.WorkspaceApi
 import io.micronaut.context.annotation.Requires
 import io.micronaut.context.annotation.Value
@@ -72,10 +75,12 @@ open class AirbyteApiClient(
 ) {
   val actorDefinitionVersionApi = ActorDefinitionVersionApi(basePath = basePath, client = httpClient, policy = policy)
   val attemptApi = AttemptApi(basePath = basePath, client = httpClient, policy = policy)
+  val commandApi = CommandApi(basePath = basePath, client = httpClient, policy = policy)
   val connectionApi = ConnectionApi(basePath = basePath, client = httpClient, policy = policy)
   val connectorBuilderProjectApi = ConnectorBuilderProjectApi(basePath = basePath, client = httpClient, policy = policy)
   val connectorRolloutApi = ConnectorRolloutApi(basePath = basePath, client = httpClient, policy = policy)
   val dataplaneApi = DataplaneApi(basePath = basePath, client = httpClient, policy = policy)
+  val dataplaneGroupApi = DataplaneGroupApi(basePath = basePath, client = httpClient, policy = policy)
   val deploymentMetadataApi = DeploymentMetadataApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationApi = DestinationApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
@@ -99,5 +104,6 @@ open class AirbyteApiClient(
   val streamStatusesApi = StreamStatusesApi(basePath = basePath, client = httpClient, policy = policy)
   val userApi = UserApi(basePath = basePath, client = httpClient, policy = policy)
   val webBackendApi = WebBackendApi(basePath = basePath, client = httpClient, policy = policy)
+  val workloadOutputApi = WorkloadOutputApi(basePath = basePath, client = httpClient, policy = policy)
   val workspaceApi = WorkspaceApi(basePath = basePath, client = httpClient, policy = policy)
 }

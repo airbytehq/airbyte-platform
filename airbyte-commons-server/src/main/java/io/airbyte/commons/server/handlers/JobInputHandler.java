@@ -39,10 +39,12 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.JobWebhookConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.ScopedConfiguration;
+import io.airbyte.config.SourceActorConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionInput;
 import io.airbyte.config.StandardDestinationDefinition;
@@ -215,6 +217,9 @@ public class JobInputHandler {
 
       final ConnectionContext connectionContext = contextBuilder.fromConnectionId(connectionId);
 
+      final var shouldIncludeFiles = shouldIncludeFiles(config, sourceVersion, destinationVersion);
+      final var isDeprecatedFileTransfer = isDeprecatedFileTransfer(attemptSyncConfig.getSourceConfiguration());
+
       final StandardSyncInput syncInput = new StandardSyncInput()
           .withNamespaceDefinition(config.getNamespaceDefinition())
           .withNamespaceFormat(config.getNamespaceFormat())
@@ -233,7 +238,8 @@ public class JobInputHandler {
           .withUseAsyncReplicate(true)
           .withUseAsyncActivities(true)
           .withNetworkSecurityTokens(getNetworkSecurityTokens(config.getWorkspaceId()))
-          .withIncludesFiles(shouldIncludeFiles(config, sourceVersion, destinationVersion));
+          .withIncludesFiles(shouldIncludeFiles || isDeprecatedFileTransfer)
+          .withOmitFileTransferEnvVar(shouldIncludeFiles);
 
       saveAttemptSyncConfig(jobId, attempt, connectionId, attemptSyncConfig);
       return new JobInput(jobRunConfig, sourceLauncherConfig, destinationLauncherConfig, syncInput);
@@ -336,6 +342,38 @@ public class JobInputHandler {
         .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
   }
 
+  public JobWebhookConfig getJobWebhookConfig(final long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+    final JobConfig jobConfig = job.getConfig();
+    if (jobConfig == null) {
+      throw new IllegalStateException("Job config is null");
+    }
+    return getJobWebhookConfig(jobId, jobConfig);
+  }
+
+  private JobWebhookConfig getJobWebhookConfig(final long jobId, final JobConfig jobConfig) {
+    final JobConfig.ConfigType jobConfigType = jobConfig.getConfigType();
+    if (JobConfig.ConfigType.SYNC.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getSync().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getSync().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getResetConnection().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getResetConnection().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.REFRESH.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getRefresh().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getRefresh().getWebhookOperationConfigs());
+    } else {
+      throw new IllegalStateException(
+          String.format("Unexpected config type %s for job %d. The only supported config types for this activity are (%s)",
+              jobConfigType,
+              jobId,
+              REPLICATION_TYPES));
+    }
+  }
+
   /**
    * Returns a Job's JobSyncConfig, converting it from a JobResetConnectionConfig if necessary.
    */
@@ -407,7 +445,7 @@ public class JobInputHandler {
                                                                        @Nullable final ActorDefinitionVersion sourceVersion,
                                                                        final JsonNode sourceConfiguration)
       throws IOException {
-    final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
+    final ConfigReplacer configReplacer = new ConfigReplacer();
 
     final IntegrationLauncherConfig sourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
@@ -433,7 +471,7 @@ public class JobInputHandler {
                                                                             final JsonNode destinationConfiguration,
                                                                             final Map<String, String> additionalEnviornmentVariables)
       throws IOException {
-    final ConfigReplacer configReplacer = new ConfigReplacer(LOGGER);
+    final ConfigReplacer configReplacer = new ConfigReplacer();
 
     return new IntegrationLauncherConfig()
         .withJobId(String.valueOf(jobId))
@@ -482,7 +520,17 @@ public class JobInputHandler {
   Boolean shouldIncludeFiles(final JobSyncConfig jobSyncConfig, final ActorDefinitionVersion sourceAdv, final ActorDefinitionVersion destinationAdv) {
     // TODO add compatibility check with sourceAdv and destinationAdv to avoid scanning through all
     // catalogs for nothing
-    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludesFiles);
+    return jobSyncConfig.getConfiguredAirbyteCatalog().getStreams().stream().anyMatch(ConfiguredAirbyteStream::getIncludeFiles);
+  }
+
+  private Boolean isDeprecatedFileTransfer(final JsonNode sourceConfig) {
+    if (sourceConfig == null) {
+      return false;
+    }
+
+    final var typedSourceConfig = Jsons.object(sourceConfig, SourceActorConfig.class);
+    return typedSourceConfig.getUseFileTransfer()
+        || (typedSourceConfig.getDeliveryMethod() != null && "use_file_transfer".equals(typedSourceConfig.getDeliveryMethod().getDeliveryType()));
   }
 
 }

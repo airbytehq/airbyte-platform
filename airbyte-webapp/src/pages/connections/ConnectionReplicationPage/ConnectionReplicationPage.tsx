@@ -13,7 +13,6 @@ import { SchemaRefreshing } from "components/connection/ConnectionForm/SchemaRef
 import { useReplicationConnectionValidationZodSchema } from "components/connection/ConnectionForm/schemas/connectionSchema";
 import { SyncCatalogTable } from "components/connection/SyncCatalogTable";
 import { Form } from "components/forms";
-import { Box } from "components/ui/Box";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
@@ -28,6 +27,7 @@ import {
   useGetStateTypeQuery,
 } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { trackError } from "core/utils/datadog";
 import { useConfirmCatalogDiff } from "hooks/connection/useConfirmCatalogDiff";
 import { useSchemaChanges } from "hooks/connection/useSchemaChanges";
@@ -93,7 +93,8 @@ export const ConnectionReplicationPage: React.FC = () => {
   const { openModal } = useModalService();
 
   const { connection, updateConnection, discardRefreshedSchema } = useConnectionEditService();
-  const { setSubmitError, refreshSchema, mode } = useConnectionFormService();
+  const { setSubmitError, refreshSchema } = useConnectionFormService();
+  const { mode } = useFormMode();
   const initialValues = useInitialFormValues(connection, mode);
 
   const { supportsRefreshes: destinationSupportsRefreshes } = useDestinationDefinitionVersion(
@@ -280,10 +281,8 @@ export const ConnectionReplicationPage: React.FC = () => {
             <SchemaChangeMessage />
             <SchemaChangeBackdrop>
               <SchemaRefreshing>
-                <Card noPadding title={formatMessage({ id: "connection.schema" })}>
-                  <Box mb="xl">
-                    <SyncCatalogTable />
-                  </Box>
+                <Card title={formatMessage({ id: "connection.schema" })} noPadding className={styles.syncCatalogCard}>
+                  <SyncCatalogTable />
                 </Card>
               </SchemaRefreshing>
             </SchemaChangeBackdrop>

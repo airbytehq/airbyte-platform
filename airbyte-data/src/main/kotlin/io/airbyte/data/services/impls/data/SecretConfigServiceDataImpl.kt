@@ -13,6 +13,7 @@ import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretConfigId
 import io.airbyte.domain.models.SecretStorageId
 import jakarta.inject.Singleton
+import java.time.OffsetDateTime
 
 @Singleton
 class SecretConfigServiceDataImpl(
@@ -27,4 +28,18 @@ class SecretConfigServiceDataImpl(
     storageId: SecretStorageId,
     coordinate: String,
   ): SecretConfig? = secretConfigRepository.findBySecretStorageIdAndExternalCoordinate(storageId.value, coordinate)?.toConfigModel()
+
+  override fun findAirbyteManagedConfigsWithoutReferences(
+    excludeCreatedAfter: OffsetDateTime,
+    limit: Int,
+  ): List<SecretConfig> =
+    secretConfigRepository
+      .findAirbyteManagedConfigsWithoutReferences(excludeCreatedAfter, limit)
+      .map { it.toConfigModel() }
+
+  override fun deleteByIds(ids: List<SecretConfigId>) {
+    if (ids.isNotEmpty()) {
+      secretConfigRepository.deleteByIdIn(ids.map { it.value })
+    }
+  }
 }

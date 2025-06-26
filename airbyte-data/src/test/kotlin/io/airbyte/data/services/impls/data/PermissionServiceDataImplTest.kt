@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
@@ -28,6 +29,7 @@ import java.util.UUID
 
 class PermissionServiceDataImplTest {
   private val testUserId = UUID.randomUUID()
+  private val testServiceAccountId = UUID.randomUUID()
 
   private lateinit var workspaceService: WorkspaceService
   private lateinit var permissionRepository: PermissionRepository
@@ -67,6 +69,28 @@ class PermissionServiceDataImplTest {
       assertEquals(result.toSet(), permissions.toSet())
 
       verify { permissionRepository.findByUserId(testUserId) }
+      confirmVerified(permissionRepository)
+    }
+
+    @Test
+    fun `getPermissionsByServiceAccountId returns permissions based on a service account`() {
+      val permissions =
+        listOf(
+          Permission().apply {
+            permissionId = UUID.randomUUID()
+            serviceAccountId = testServiceAccountId
+            workspaceId = UUID.randomUUID()
+            permissionType = PermissionType.DATAPLANE
+          },
+        )
+
+      every { permissionRepository.findByServiceAccountId(testServiceAccountId) } returns permissions.map { it.toEntity() }
+
+      val result = permissionService.getPermissionsByServiceAccountId(testServiceAccountId)
+
+      assertEquals(result.toSet(), permissions.toSet())
+
+      verify { permissionRepository.findByServiceAccountId(eq(testServiceAccountId)) }
       confirmVerified(permissionRepository)
     }
   }
@@ -805,6 +829,21 @@ class PermissionServiceDataImplTest {
         verify(exactly = 1) { permissionRepository.update(orgPermissionUpdated.toEntity()) }
         confirmVerified(permissionRepository)
       }
+    }
+
+    @Test
+    fun testGetMemberCountsForOrgIdList() {
+      val orgId = UUID.randomUUID()
+      val orgIds = listOf(orgId)
+
+      every { permissionRepository.getMemberCountByOrgIdList(orgIds) } returns listOf(OrgMemberCount(orgId, 1))
+
+      val result = permissionService.getMemberCountsForOrganizationList(orgIds)
+      assert(result.size == 1)
+      assert(result[0].organizationId == orgId)
+      assert(result[0].count == 1)
+
+      verify(exactly = 1) { permissionRepository.getMemberCountByOrgIdList(orgIds) }
     }
   }
 }

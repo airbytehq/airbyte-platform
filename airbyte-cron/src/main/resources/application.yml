@@ -87,6 +87,28 @@ airbyte:
   workspace:
     docker-mount: ${WORKSPACE_DOCKER_MOUNT:}
     root: ${WORKSPACE_ROOT}
+  secret:
+    persistence: ${SECRET_PERSISTENCE:TESTING_CONFIG_DB_TABLE}
+    store:
+      aws:
+        access-key: ${AWS_SECRET_MANAGER_ACCESS_KEY_ID:}
+        secret-key: ${AWS_SECRET_MANAGER_SECRET_ACCESS_KEY:}
+        region: ${AWS_SECRET_MANAGER_REGION:}
+        kmsKeyArn: ${AWS_KMS_KEY_ARN:}
+        tags: ${AWS_SECRET_MANAGER_SECRET_TAGS:}
+      gcp:
+        credentials: ${SECRET_STORE_GCP_CREDENTIALS:}
+        project-id: ${SECRET_STORE_GCP_PROJECT_ID:}
+      vault:
+        address: ${VAULT_ADDRESS:}
+        prefix: ${VAULT_PREFIX:}
+        token: ${VAULT_AUTH_TOKEN:}
+      azure:
+        vault-url: ${AB_AZURE_KEY_VAULT_VAULT_URL:}
+        tenant-id: ${AB_AZURE_KEY_VAULT_TENANT_ID:}
+        client-id: ${AB_AZURE_KEY_VAULT_CLIENT_ID:}
+        client-secret: ${AB_AZURE_KEY_VAULT_CLIENT_SECRET:}
+        tags: ${AB_AZURE_KEY_VAULT_TAGS:}
 
 datasources:
   config:
@@ -111,6 +133,18 @@ datasources:
     driverClassName: org.postgresql.Driver
     username: ${DATABASE_USER}
     password: ${DATABASE_PASSWORD:}
+  local-secrets:
+    connection-test-query: SELECT 1
+    connection-timeout: 30000
+    idle-timeout: 600000
+    initialization-fail-timeout: -1 # Disable fail fast checking to avoid issues due to other pods not being started in time
+    maximum-pool-size: 20
+    minimum-idle: 0
+    url: ${DATABASE_URL}
+    driverClassName: org.postgresql.Driver
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD:}
+    pool-name: config-pool
 
 docker:
   network: ${DOCKER_NETWORK:host}

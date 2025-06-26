@@ -134,6 +134,7 @@ class OAuthImplementationFactory(
     builder.put("airbyte/destination-snowflake", DestinationSnowflakeOAuthFlow(httpClient))
     builder.put("airbyte/destination-google-sheets", DestinationGoogleSheetsOAuthFlow(httpClient))
     builder.put("airbyte/destination-cobra", SalesforceOAuthFlow(httpClient))
+    builder.put("airbyte/destination-salesforce", SalesforceOAuthFlow(httpClient))
     oauthFlowMapping = builder.build()
   }
 

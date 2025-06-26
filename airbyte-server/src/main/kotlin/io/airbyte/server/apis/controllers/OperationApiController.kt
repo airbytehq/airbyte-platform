@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.OperationRead
 import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.OperatorConfiguration
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.OperationsHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

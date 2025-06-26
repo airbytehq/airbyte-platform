@@ -39,6 +39,8 @@ interface WorkloadHandler {
     workloadId: String,
     labels: List<WorkloadLabel>?,
     input: String,
+    workspaceId: UUID?,
+    organizationId: UUID?,
     logPath: String,
     mutexKey: String?,
     type: WorkloadType,

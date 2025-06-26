@@ -4,7 +4,11 @@
 
 package io.airbyte.workload.api
 
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.WorkloadType
+import io.airbyte.data.services.DataplaneGroupService
+import io.airbyte.data.services.DataplaneService
 import io.airbyte.metrics.lib.ApmTraceUtils
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.workload.api.domain.ClaimResponse
@@ -27,7 +31,8 @@ import io.airbyte.workload.api.domain.WorkloadQueueQueryRequest
 import io.airbyte.workload.api.domain.WorkloadQueueStatsResponse
 import io.airbyte.workload.api.domain.WorkloadRunningRequest
 import io.airbyte.workload.api.domain.WorkloadSuccessRequest
-import io.airbyte.workload.handler.DefaultDeadlineValues
+import io.airbyte.workload.common.DefaultDeadlineValues
+import io.airbyte.workload.common.WorkloadQueueService
 import io.airbyte.workload.handler.WorkloadHandler
 import io.micronaut.http.HttpResponse
 import io.micronaut.http.HttpStatus
@@ -60,6 +65,9 @@ open class WorkloadApi(
   private val workloadHandler: WorkloadHandler,
   private val workloadQueueService: WorkloadQueueService,
   private val defaultDeadlineValues: DefaultDeadlineValues,
+  private val roleResolver: RoleResolver,
+  private val dataplaneService: DataplaneService,
+  private val dataplaneGroupService: DataplaneGroupService,
 ) {
   @POST
   @Path("/create")
@@ -87,12 +95,15 @@ open class WorkloadApi(
     ) @Body workloadCreateRequest: WorkloadCreateRequest,
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
         MetricTags.WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
         MetricTags.WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
       ),
     )
+
+    authorize(orgId = workloadCreateRequest.organizationId, dataplaneGroup = workloadCreateRequest.dataplaneGroup)
+
     if (workloadHandler.workloadAlreadyExists(workloadCreateRequest.workloadId)) {
       return HttpResponse.status(HttpStatus.OK)
     }
@@ -103,6 +114,8 @@ open class WorkloadApi(
       workloadCreateRequest.workloadId,
       workloadCreateRequest.labels,
       workloadCreateRequest.workloadInput,
+      workloadCreateRequest.workspaceId,
+      workloadCreateRequest.organizationId,
       workloadCreateRequest.logPath,
       workloadCreateRequest.mutexKey,
       workloadCreateRequest.type,
@@ -155,7 +168,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
     ) @Body workloadFailureRequest: WorkloadFailureRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId))
+    authorize(workloadId = workloadFailureRequest.workloadId)
     workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
   }
 
@@ -188,7 +202,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
     ) @Body workloadSuccessRequest: WorkloadSuccessRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId))
+    authorize(workloadId = workloadSuccessRequest.workloadId)
     workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
   }
 
@@ -221,7 +236,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
     ) @Body workloadRunningRequest: WorkloadRunningRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId))
+    authorize(workloadId = workloadRunningRequest.workloadId)
     workloadHandler.setWorkloadStatusToRunning(
       workloadRunningRequest.workloadId,
       workloadRunningRequest.deadline ?: defaultDeadlineValues.runningStepDeadline(),
@@ -262,8 +278,9 @@ open class WorkloadApi(
         MetricTags.WORKLOAD_ID_TAG to workloadCancelRequest.workloadId,
         MetricTags.WORKLOAD_CANCEL_REASON_TAG to workloadCancelRequest.reason,
         MetricTags.WORKLOAD_CANCEL_SOURCE_TAG to workloadCancelRequest.source,
-      ) as Map<String, Any>?,
+      ),
     )
+    authorize(workloadId = workloadCancelRequest.workloadId)
     workloadHandler.cancelWorkload(workloadCancelRequest.workloadId, workloadCancelRequest.source, workloadCancelRequest.reason)
   }
 
@@ -302,8 +319,9 @@ open class WorkloadApi(
       mutableMapOf(
         MetricTags.WORKLOAD_ID_TAG to workloadClaimRequest.workloadId,
         MetricTags.DATA_PLANE_ID_TAG to workloadClaimRequest.dataplaneId,
-      ) as Map<String, Any>?,
+      ),
     )
+    authorize(workloadId = workloadClaimRequest.workloadId)
     val claimed =
       workloadHandler.claimWorkload(
         workloadClaimRequest.workloadId,
@@ -342,7 +360,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
     ) @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId))
+    authorize(workloadId = workloadLaunchedRequest.workloadId)
     workloadHandler.setWorkloadStatusToLaunched(
       workloadLaunchedRequest.workloadId,
       workloadLaunchedRequest.deadline ?: defaultDeadlineValues.launchStepDeadline(),
@@ -370,7 +389,8 @@ open class WorkloadApi(
   open fun workloadGet(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId))
+    authorize(workloadId = workloadId)
     return workloadHandler.getWorkload(workloadId)
   }
 
@@ -403,7 +423,8 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId))
+    authorize(workloadId = workloadHeartbeatRequest.workloadId)
     workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
   }
 
@@ -425,14 +446,16 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = WorkloadListRequest::class))],
     ) @Body workloadListRequest: WorkloadListRequest,
-  ): WorkloadListResponse =
-    WorkloadListResponse(
+  ): WorkloadListResponse {
+    authorize(dataplanes = workloadListRequest.dataplane)
+    return WorkloadListResponse(
       workloadHandler.getWorkloads(
         workloadListRequest.dataplane,
         workloadListRequest.status,
         workloadListRequest.updatedBefore,
       ),
     )
+  }
 
   @POST
   @Path("/expired_deadline_list")
@@ -452,14 +475,16 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = ExpiredDeadlineWorkloadListRequest::class))],
     ) @Body expiredDeadlineWorkloadListRequest: ExpiredDeadlineWorkloadListRequest,
-  ): WorkloadListResponse =
-    WorkloadListResponse(
+  ): WorkloadListResponse {
+    authorize(dataplanes = expiredDeadlineWorkloadListRequest.dataplane)
+    return WorkloadListResponse(
       workloadHandler.getWorkloadsWithExpiredDeadline(
         expiredDeadlineWorkloadListRequest.dataplane,
         expiredDeadlineWorkloadListRequest.status,
         expiredDeadlineWorkloadListRequest.deadline,
       ),
     )
+  }
 
   @POST
   @Path("/list_long_running_non_sync")
@@ -479,14 +504,16 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse =
-    WorkloadListResponse(
+  ): WorkloadListResponse {
+    authorize(dataplanes = longRunningWorkloadRequest.dataplane)
+    return WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
         longRunningWorkloadRequest.dataplane,
         listOf(WorkloadType.CHECK, WorkloadType.DISCOVER, WorkloadType.SPEC),
         longRunningWorkloadRequest.createdBefore,
       ),
     )
+  }
 
   @POST
   @Path("/list_long_running_sync")
@@ -506,14 +533,16 @@ open class WorkloadApi(
     @RequestBody(
       content = [Content(schema = Schema(implementation = LongRunningWorkloadRequest::class))],
     ) @Body longRunningWorkloadRequest: LongRunningWorkloadRequest,
-  ): WorkloadListResponse =
-    WorkloadListResponse(
+  ): WorkloadListResponse {
+    authorize(dataplanes = longRunningWorkloadRequest.dataplane)
+    return WorkloadListResponse(
       workloadHandler.getWorkloadsRunningCreatedBefore(
         longRunningWorkloadRequest.dataplane,
         listOf(WorkloadType.SYNC),
         longRunningWorkloadRequest.createdBefore,
       ),
     )
+  }
 
   @POST
   @Path("/queue/poll")
@@ -535,10 +564,11 @@ open class WorkloadApi(
     ) @Body req: WorkloadQueuePollRequest,
   ): WorkloadListResponse {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
       ),
     )
+    authorize(dataplaneGroup = req.dataplaneGroup)
     val workloads = workloadHandler.pollWorkloadQueue(req.dataplaneGroup, req.priority, req.quantity)
     return WorkloadListResponse(workloads)
   }
@@ -563,10 +593,11 @@ open class WorkloadApi(
     ) @Body req: WorkloadQueueQueryRequest,
   ): WorkloadDepthResponse {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
       ),
     )
+    authorize(dataplaneGroup = req.dataplaneGroup)
     val count = workloadHandler.countWorkloadQueueDepth(req.dataplaneGroup, req.priority)
     return WorkloadDepthResponse(count)
   }
@@ -586,6 +617,7 @@ open class WorkloadApi(
     ],
   )
   open fun getWorkloadQueueStats(): WorkloadQueueStatsResponse {
+    authorize()
     val stats = workloadHandler.getWorkloadQueueStats()
     return WorkloadQueueStatsResponse(stats)
   }
@@ -598,7 +630,7 @@ open class WorkloadApi(
     value = [
       ApiResponse(
         responseCode = "204",
-        description = "Cleaning workload queue successfull",
+        description = "Cleaning workload queue successful",
       ),
     ],
   )
@@ -607,6 +639,42 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadQueueCleanLimit::class))],
     ) @Body req: WorkloadQueueCleanLimit,
   ) {
+    authorize()
     workloadHandler.cleanWorkloadQueue(req.limit)
+  }
+
+  private fun authorize(
+    orgId: UUID? = null,
+    workloadId: String? = null,
+    dataplaneGroup: String? = null,
+    dataplanes: List<String>? = null,
+  ) {
+    val req = roleResolver.newRequest().withCurrentAuthentication()
+
+    if (orgId != null) {
+      req.withOrg(orgId)
+    }
+
+    if (workloadId != null) {
+      val orgId = workloadHandler.getWorkload(workloadId).organizationId
+      if (orgId != null) {
+        req.withOrg(orgId)
+      }
+    }
+
+    if (dataplaneGroup != null) {
+      val orgId = dataplaneGroupService.getOrganizationIdFromDataplaneGroup(UUID.fromString(dataplaneGroup))
+      req.withOrg(orgId)
+    }
+
+    if (dataplanes != null) {
+      for (dataplaneId in dataplanes) {
+        val dataplane = dataplaneService.getDataplane(UUID.fromString(dataplaneId))
+        val orgId = dataplaneGroupService.getOrganizationIdFromDataplaneGroup(dataplane.dataplaneGroupId)
+        req.withOrg(orgId)
+      }
+    }
+
+    req.requireRole(AuthRoleConstants.DATAPLANE)
   }
 }

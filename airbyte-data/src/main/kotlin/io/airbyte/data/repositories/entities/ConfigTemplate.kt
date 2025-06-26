@@ -19,7 +19,7 @@ data class ConfigTemplate(
   @field:Id
   @AutoPopulated
   var id: UUID? = null,
-  var organizationId: UUID,
+  var organizationId: UUID? = null,
   var actorDefinitionId: UUID,
   @field:TypeDef(type = DataType.JSON)
   var partialDefaultConfig: JsonNode,

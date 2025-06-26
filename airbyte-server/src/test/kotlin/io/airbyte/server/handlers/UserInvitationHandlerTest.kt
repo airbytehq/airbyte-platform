@@ -5,8 +5,8 @@
 package io.airbyte.server.handlers
 
 import io.airbyte.analytics.TrackingClient
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.api.model.generated.InviteCodeRequestBody
-import io.airbyte.api.model.generated.PermissionCreate
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
@@ -23,7 +23,6 @@ import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.UserPermission
-import io.airbyte.config.persistence.PermissionPersistence
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
@@ -32,7 +31,6 @@ import io.airbyte.data.services.UserInvitationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.notification.CustomerIoEmailConfig
 import io.airbyte.notification.CustomerIoEmailNotificationSender
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.server.handlers.apidomainmapping.UserInvitationMapper
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
@@ -45,6 +43,8 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.util.Optional
 import java.util.UUID
@@ -73,9 +73,6 @@ internal class UserInvitationHandlerTest {
   var userPersistence: UserPersistence? = null
 
   @Mock
-  var permissionPersistence: PermissionPersistence? = null
-
-  @Mock
   var permissionHandler: PermissionHandler? = null
 
   @Mock
@@ -94,7 +91,6 @@ internal class UserInvitationHandlerTest {
         workspaceService!!,
         organizationService!!,
         userPersistence!!,
-        permissionPersistence!!,
         permissionHandler!!,
         trackingClient!!,
       )
@@ -126,7 +122,7 @@ internal class UserInvitationHandlerTest {
     internal inner class CreateAndSendInvitation {
       @Throws(Exception::class)
       private fun setupSendInvitationMocks() {
-        Mockito.`when`<String>(webUrlHelper!!.getBaseUrl()).thenReturn(webappBaseUrl)
+        Mockito.`when`<String>(webUrlHelper!!.baseUrl).thenReturn(webappBaseUrl)
         Mockito.`when`<UserInvitation>(service!!.createUserInvitation(userInvitation)).thenReturn(userInvitation)
         Mockito.`when`<StandardWorkspace>(workspaceService!!.getStandardWorkspaceNoSecrets(workspaceId, false)).thenReturn(
           StandardWorkspace().withName(
@@ -206,7 +202,7 @@ internal class UserInvitationHandlerTest {
         // the org has a user with a different email, but not the one we're inviting.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
         Mockito
-          .`when`<List<UserPermission>>(permissionPersistence!!.listUsersInOrganization(orgId))
+          .`when`<List<UserPermission>>(permissionHandler!!.listUsersInOrganization(orgId))
           .thenReturn(java.util.List.of<UserPermission>(UserPermission().withUser(otherUserInOrg)))
 
         // call the handler method under test.
@@ -251,19 +247,19 @@ internal class UserInvitationHandlerTest {
         Assertions.assertNotNull(capturedUserInvitation.expiresAt)
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor = ArgumentCaptor.forClass(CustomerIoEmailConfig::class.java)
-        val inviteLinkCaptor = ArgumentCaptor.forClass(String::class.java)
+        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
+        val inviteLinkCaptor = org.mockito.kotlin.argumentCaptor<String>()
 
         verify(customerIoEmailNotificationSender!!, Mockito.times(1)).sendInviteToUser(
           emailConfigCaptor.capture(),
-          org.mockito.kotlin.eq(currentUser.name),
+          eq(currentUser.name),
           inviteLinkCaptor.capture(),
         )
 
-        val capturedEmailConfig = emailConfigCaptor.value
+        val capturedEmailConfig = emailConfigCaptor.firstValue
         Assertions.assertEquals(invitedEmail, capturedEmailConfig.to)
 
-        val capturedInviteLink = inviteLinkCaptor.value
+        val capturedInviteLink = inviteLinkCaptor.firstValue
         Assertions.assertEquals(
           webappBaseUrl + UserInvitationHandler.ACCEPT_INVITE_PATH + capturedUserInvitation.inviteCode,
           capturedInviteLink,
@@ -273,7 +269,7 @@ internal class UserInvitationHandlerTest {
         Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)
 
         // make sure we never created a permission, because the invitation path was taken instead.
-        verify(permissionHandler!!, Mockito.times(0)).createPermission(org.mockito.kotlin.any<PermissionCreate>())
+        verify(permissionHandler!!, Mockito.times(0)).createPermission(org.mockito.kotlin.any<Permission>())
 
         // make sure the final result is correct
         Assertions.assertFalse(result.directlyAdded)
@@ -281,9 +277,9 @@ internal class UserInvitationHandlerTest {
 
         // verify we sent an invitation tracking event
         verify(trackingClient!!, Mockito.times(1)).track(
-          org.mockito.kotlin.eq(workspaceId),
-          org.mockito.kotlin.eq(ScopeType.WORKSPACE),
-          org.mockito.kotlin.eq(UserInvitationHandler.USER_INVITED),
+          eq(workspaceId),
+          eq(ScopeType.WORKSPACE),
+          eq(UserInvitationHandler.USER_INVITED),
           org.mockito.kotlin.any<Map<String, Any?>>(),
         )
       }
@@ -314,7 +310,7 @@ internal class UserInvitationHandlerTest {
 
         // set up two users inside the workspace's org, one with the same email and one with a different email.
         val otherUserInOrg = User().withUserId(UUID.randomUUID()).withEmail("other@airbyte.io")
-        Mockito.`when`(permissionPersistence!!.listUsersInOrganization(orgId)).thenReturn(
+        Mockito.`when`(permissionHandler!!.listUsersInOrganization(orgId)).thenReturn(
           listOf(
             UserPermission().withUser(matchingUserInOrg1),
             UserPermission().withUser(otherUserInOrg),
@@ -339,7 +335,7 @@ internal class UserInvitationHandlerTest {
         // capture and verify the permissions that are created by the permission handler!!.
         val permissionCreateCaptor =
           ArgumentCaptor.forClass(
-            PermissionCreate::class.java,
+            Permission::class.java,
           )
         verify(permissionHandler!!, Mockito.times(expectedUserIds.size))
           .createPermission(permissionCreateCaptor.capture())
@@ -351,23 +347,20 @@ internal class UserInvitationHandlerTest {
 
         for (capturedPermissionCreate in capturedPermissionCreateValues) {
           Assertions.assertEquals(workspaceId, capturedPermissionCreate.workspaceId)
-          Assertions.assertEquals(PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.permissionType)
+          Assertions.assertEquals(Permission.PermissionType.WORKSPACE_ADMIN, capturedPermissionCreate.permissionType)
           Assertions.assertTrue(expectedUserIds.contains(capturedPermissionCreate.userId))
         }
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor =
-          ArgumentCaptor.forClass(
-            CustomerIoEmailConfig::class.java,
-          )
+        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
         verify(customerIoEmailNotificationSender!!, Mockito.times(1))
           .sendNotificationOnInvitingExistingUser(
             emailConfigCaptor.capture(),
-            org.mockito.kotlin.eq<String>(currentUser.name),
-            org.mockito.kotlin.eq<String>(workspaceName),
+            eq<String>(currentUser.name),
+            eq<String>(workspaceName),
           )
 
-        Assertions.assertEquals(invitedEmail, emailConfigCaptor.value.to)
+        Assertions.assertEquals(invitedEmail, emailConfigCaptor.firstValue.to)
 
         // make sure no other emails are sent.
         Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)

@@ -23,8 +23,9 @@
     // Debug utility meant to be used only temporary for local debugging
     "src/core/utils/useMemoDebug.ts",
 
-    // Ignore schema form files, as it is still under development
-    "src/components/forms/SchemaForm/**"
+    // Ignore unused Builder file as it will come back in a later PR
+    "src/components/connectorBuilder/Builder/AddStreamButton.tsx",
+    "src/components/connectorBuilder/Builder/Assist/AssistButton.tsx"
   ],
   "ignoreDependencies": [
     // Knip doesn't detect the import to this from a SASS file

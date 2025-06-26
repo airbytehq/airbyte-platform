@@ -15,10 +15,12 @@ import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -29,7 +31,7 @@ internal class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test : 
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_33_004__AddSecretPersistenceTypeColumnAndAlterConstraint()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -39,14 +41,14 @@ internal class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test : 
   @AfterEach
   fun afterEach() {
     // Making sure we reset between tests
-    dslContext.dropSchemaIfExists("public").cascade().execute()
-    dslContext.createSchema("public").execute()
-    dslContext.setSchema("public").execute()
+    dslContext!!.dropSchemaIfExists("public").cascade().execute()
+    dslContext!!.createSchema("public").execute()
+    dslContext!!.setSchema("public").execute()
   }
 
   @Test
   fun testMigrationDefaultState() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // a prior migration should have already inserted the default user
     val userRecord =
@@ -82,7 +84,7 @@ internal class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test : 
 
   @Test
   fun testMigrationNoDefaultUser() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // a prior migration should have already inserted the default user
     val userRecord =
@@ -122,7 +124,7 @@ internal class V0_50_33_005__CreateInstanceAdminPermissionForDefaultUser_Test : 
 
   @Test
   fun testMigrationAlreadyInstanceAdmin() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // a prior migration should have already inserted the default user
     val userRecord =

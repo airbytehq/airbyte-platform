@@ -4,11 +4,13 @@
 
 package io.airbyte.workers.temporal.sync
 
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.io.LineGobbler
 import io.airbyte.commons.logging.LogClientManager
 import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.commons.temporal.TemporalUtils
+import io.airbyte.config.ConnectionContext
 import io.airbyte.config.OperatorWebhookInput
 import io.airbyte.config.StandardSyncInput
 import io.airbyte.config.StandardSyncOperation
@@ -36,6 +38,21 @@ class InvokeOperationsActivityImpl(
     operations: List<StandardSyncOperation>,
     syncInput: StandardSyncInput,
     jobRunConfig: JobRunConfig,
+  ): WebhookOperationSummary =
+    invokeOperationsV2(
+      operations = operations,
+      webhookOperationConfigs = syncInput.webhookOperationConfigs,
+      connectionContext = syncInput.connectionContext,
+      jobId = jobRunConfig.jobId.toString(),
+      attemptId = jobRunConfig.attemptId,
+    )
+
+  override fun invokeOperationsV2(
+    operations: List<StandardSyncOperation>,
+    webhookOperationConfigs: JsonNode?,
+    connectionContext: ConnectionContext?,
+    jobId: String,
+    attemptId: Long,
   ): WebhookOperationSummary {
     val webhookOperationSummary = WebhookOperationSummary()
     MdcScope
@@ -44,7 +61,7 @@ class InvokeOperationsActivityImpl(
       .build()
       .use { _ ->
         try {
-          logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobRunConfig.jobId, jobRunConfig.attemptId))
+          logClientManager.setJobMdc(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptId))
           logger.info { LineGobbler.formatStartSection(SECTION_NAME) }
 
           if (CollectionUtils.isNotEmpty(operations)) {
@@ -60,8 +77,8 @@ class InvokeOperationsActivityImpl(
                         .withExecutionUrl(standardSyncOperation.operatorWebhook.executionUrl)
                         .withExecutionBody(standardSyncOperation.operatorWebhook.executionBody)
                         .withWebhookConfigId(standardSyncOperation.operatorWebhook.webhookConfigId)
-                        .withWorkspaceWebhookConfigs(syncInput.webhookOperationConfigs)
-                        .withConnectionContext(syncInput.connectionContext),
+                        .withWorkspaceWebhookConfigs(webhookOperationConfigs)
+                        .withConnectionContext(connectionContext),
                     )
                 logger.info {
                   "Webhook ${standardSyncOperation.operatorWebhook.webhookConfigId} completed ${if (success) "successfully" else "unsuccessfully"}"

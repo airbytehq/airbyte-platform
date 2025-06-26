@@ -427,7 +427,7 @@ module.exports = {
       },
     },
     {
-      files: ["scripts/**/*", "packages/**/*"],
+      files: ["scripts/**/*", "packages/**/*", "playwright/scripts/**/*"],
       rules: {
         "@typescript-eslint/no-var-requires": "off",
       },

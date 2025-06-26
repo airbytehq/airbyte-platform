@@ -17,24 +17,6 @@ Renders the dataPlane secret name
 {{- end }}
 
 {{/*
-Renders the dataPlane.id value
-*/}}
-{{- define "airbyte-data-plane.dataPlane.id" }}
-    {{- .Values.dataPlane.id | default "local" }}
-{{- end }}
-
-{{/*
-Renders the dataPlane.id environment variable
-*/}}
-{{- define "airbyte-data-plane.dataPlane.id.env" }}
-- name: DATA_PLANE_ID
-  valueFrom:
-    configMapKeyRef:
-      name: {{ .Release.Name }}-airbyte-data-plane-env
-      key: DATA_PLANE_ID
-{{- end }}
-
-{{/*
 Renders the dataPlane.controlPlaneAuthEndpoint value
 */}}
 {{- define "airbyte-data-plane.dataPlane.controlPlaneAuthEndpoint" }}
@@ -99,7 +81,7 @@ Renders the dataPlane.clientId environment variable
 Renders the dataPlane.clientIdSecretName value
 */}}
 {{- define "airbyte-data-plane.dataPlane.clientIdSecretName" }}
-    {{- .Values.dataPlane.clientIdSecretName }}
+    {{- .Values.dataPlane.clientIdSecretName | default (include "airbyte-data-plane.dataPlane.secretName" .) }}
 {{- end }}
 
 {{/*
@@ -160,7 +142,7 @@ Renders the dataPlane.clientSecret environment variable
 Renders the dataPlane.clientSecretSecretName value
 */}}
 {{- define "airbyte-data-plane.dataPlane.clientSecretSecretName" }}
-    {{- .Values.dataPlane.clientSecretSecretName }}
+    {{- .Values.dataPlane.clientSecretSecretName | default (include "airbyte-data-plane.dataPlane.secretName" .) }}
 {{- end }}
 
 {{/*
@@ -178,7 +160,7 @@ Renders the dataPlane.clientSecretSecretName environment variable
 Renders the dataPlane.clientSecretSecretKey value
 */}}
 {{- define "airbyte-data-plane.dataPlane.clientSecretSecretKey" }}
-    {{- .Values.dataPlane.clientSecretSecretKey }}
+    {{- .Values.dataPlane.clientSecretSecretKey | default "DATAPLANE_CLIENT_SECRET" }}
 {{- end }}
 
 {{/*
@@ -196,7 +178,6 @@ Renders the dataPlane.clientSecretSecretKey environment variable
 Renders the set of all dataPlane environment variables
 */}}
 {{- define "airbyte-data-plane.dataPlane.envs" }}
-{{- include "airbyte-data-plane.dataPlane.id.env" . }}
 {{- include "airbyte-data-plane.dataPlane.controlPlaneAuthEndpoint.env" . }}
 {{- include "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint.env" . }}
 {{- include "airbyte-data-plane.dataPlane.clientId.env" . }}
@@ -211,7 +192,6 @@ Renders the set of all dataPlane environment variables
 Renders the set of all dataPlane config map variables
 */}}
 {{- define "airbyte-data-plane.dataPlane.configVars" }}
-DATA_PLANE_ID: {{ include "airbyte-data-plane.dataPlane.id" . | quote }}
 CONTROL_PLANE_AUTH_ENDPOINT: {{ include "airbyte-data-plane.dataPlane.controlPlaneAuthEndpoint" . | quote }}
 CONTROL_PLANE_TOKEN_ENDPOINT: {{ include "airbyte-data-plane.dataPlane.controlPlaneTokenEndpoint" . | quote }}
 DATAPLANE_CLIENT_ID_SECRET_NAME: {{ include "airbyte-data-plane.dataPlane.clientIdSecretName" . | quote }}

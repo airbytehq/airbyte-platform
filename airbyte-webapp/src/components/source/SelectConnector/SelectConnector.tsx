@@ -196,8 +196,9 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
   }, [connectorType, connectorDefinitions, enterpriseSourceDefinitions]);
 
   function keywordMatch(definition: ConnectorDefinitionOrEnterpriseStub, searchTerm: string) {
-    const keywords = searchTerm.split(" ").filter(Boolean);
-    return keywords.every((keyword) => definition.name.toLowerCase().includes(keyword));
+    const keywords = searchTerm.toLowerCase().split(" ").filter(Boolean);
+    const name = definition.name.toLowerCase();
+    return keywords.every((keyword) => name.includes(keyword));
   }
 
   // Filter all connectors based on search term
@@ -305,7 +306,6 @@ export const SelectConnector: React.FC<SelectConnectorProps> = ({
               data-testid={`see-more-${tabName}`}
               type="button"
               variant="secondary"
-              className={styles.selectConnector__seeMore}
               onClick={() => setSelectedTab(tabName)}
             >
               <FlexContainer alignItems="center" gap="lg">

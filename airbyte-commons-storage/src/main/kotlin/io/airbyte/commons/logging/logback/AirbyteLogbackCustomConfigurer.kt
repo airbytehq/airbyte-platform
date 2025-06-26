@@ -27,8 +27,12 @@ import ch.qos.logback.core.util.StatusPrinter2
 import io.airbyte.commons.envvar.EnvVar
 import io.airbyte.commons.logging.DEFAULT_AUDIT_LOGGING_PATH_MDC_KEY
 import io.airbyte.commons.logging.DEFAULT_JOB_LOG_PATH_MDC_KEY
+import io.airbyte.commons.storage.CloudStorageBulkUploaderExecutor
 import io.airbyte.commons.storage.DocumentType
 import org.slf4j.Logger.ROOT_LOGGER_NAME
+
+private const val DEFAULT_APPENDER_TIMEOUT_MIN = "15"
+val APPENDER_TIMEOUT = EnvVar.LOG_IDLE_ROUTE_TTL.fetchNotNull(default = DEFAULT_APPENDER_TIMEOUT_MIN)
 
 /**
  * Custom Logback [Configurator] that configures Logback appenders and loggers for use in the platform.  This configurator allows us to
@@ -275,17 +279,21 @@ class AirbyteLogbackCustomConfigurer :
    * @param loggerContext The logging context.
    */
   private fun registerShutdownHook(loggerContext: LoggerContext) {
-    val shutdownHook = DefaultShutdownHook().apply { context = loggerContext }
     Runtime.getRuntime().addShutdownHook(
-      Thread {
-        AirbyteCloudStorageAppenderExecutorServiceHelper.stopAirbyteCloudStorageAppenderExecutorService()
-        shutdownHook.run()
-      },
+      Thread { AirbyteLogbackShutdownHook().apply { context = loggerContext }.run() },
     )
   }
 }
 
-private const val DEFAULT_APPENDER_TIMEOUT_MIN = "15"
-val APPENDER_TIMEOUT = EnvVar.LOG_IDLE_ROUTE_TTL.fetchNotNull(default = DEFAULT_APPENDER_TIMEOUT_MIN)
-
 private fun getLogLevel(): Level = Level.toLevel(EnvVar.LOG_LEVEL.fetchNotNull(default = Level.INFO.toString()))
+
+/**
+ * Custom Logback [ch.qos.logback.core.hook.ShutdownHook] implementation that ensures that all Logback appenders
+ * are shut down when the JVM exits AND that the executor service used to upload log events to cloud storage is flushed on exit.
+ */
+class AirbyteLogbackShutdownHook : DefaultShutdownHook() {
+  override fun run() {
+    super.stop()
+    CloudStorageBulkUploaderExecutor.stopAirbyteCloudStorageAppenderExecutorService()
+  }
+}

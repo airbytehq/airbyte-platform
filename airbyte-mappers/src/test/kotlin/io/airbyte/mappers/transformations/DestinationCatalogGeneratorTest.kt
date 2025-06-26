@@ -4,7 +4,8 @@
 
 package io.airbyte.mappers.transformations
 
-import io.airbyte.commons.json.Jsons
+import TEST_OBJECT_MAPPER
+import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.AirbyteStream
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
@@ -22,9 +23,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class DestinationCatalogGeneratorTest {
-  private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf())
-  private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()))
-  private val destinationCatalogGeneratorWithFailingMapper = DestinationCatalogGenerator(listOf(FailingTestMapper()))
+  private val destinationCatalogGeneratorWithoutMapper = DestinationCatalogGenerator(listOf(), TEST_OBJECT_MAPPER)
+  private val destinationCatalogGeneratorWithMapper = DestinationCatalogGenerator(listOf(TestMapper()), TEST_OBJECT_MAPPER)
+  private val destinationCatalogGeneratorWithFailingMapper = DestinationCatalogGenerator(listOf(FailingTestMapper()), TEST_OBJECT_MAPPER)
 
   @Test
   fun `test generateDestinationCatalogWithoutMapper`() {
@@ -34,7 +35,7 @@ class DestinationCatalogGeneratorTest {
           AirbyteStream(
             name = "users",
             jsonSchema =
-              Jsons.jsonNode(
+              TEST_OBJECT_MAPPER.valueToTree(
                 mapOf(
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
@@ -178,7 +179,7 @@ class DestinationCatalogGeneratorTest {
         ]
       }
       """.trimIndent()
-    val catalogParsed = Jsons.deserialize(catalogJson, ConfiguredAirbyteCatalog::class.java)
+    val catalogParsed = TEST_OBJECT_MAPPER.readValue(catalogJson, ConfiguredAirbyteCatalog::class.java)
     val catalogGenerated = destinationCatalogGeneratorWithoutMapper.generateDestinationCatalog(catalogParsed)
 
     assertEquals(catalogParsed, catalogGenerated.catalog)
@@ -319,10 +320,10 @@ class DestinationCatalogGeneratorTest {
         ]
       }
       """.trimIndent()
-    val catalogParsed = Jsons.deserialize(catalogJson, ConfiguredAirbyteCatalog::class.java)
+    val catalogParsed = TEST_OBJECT_MAPPER.readValue(catalogJson, ConfiguredAirbyteCatalog::class.java)
     val catalogGenerated = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalogParsed)
 
-    assertEquals(Jsons.deserialize(expectedCatalogJson, ConfiguredAirbyteCatalog::class.java), catalogGenerated.catalog)
+    assertEquals(TEST_OBJECT_MAPPER.readValue(expectedCatalogJson, ConfiguredAirbyteCatalog::class.java), catalogGenerated.catalog)
   }
 
   @Test
@@ -334,7 +335,7 @@ class DestinationCatalogGeneratorTest {
           AirbyteStream(
             name = "users",
             jsonSchema =
-              Jsons.jsonNode(
+              TEST_OBJECT_MAPPER.valueToTree(
                 mapOf(
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
@@ -372,7 +373,7 @@ class DestinationCatalogGeneratorTest {
           AirbyteStream(
             name = "users",
             jsonSchema =
-              Jsons.jsonNode(
+              TEST_OBJECT_MAPPER.valueToTree(
                 mapOf(
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
@@ -408,7 +409,7 @@ class DestinationCatalogGeneratorTest {
         stream =
           AirbyteStream(
             name = "users",
-            jsonSchema = Jsons.emptyObject(),
+            jsonSchema = TEST_OBJECT_MAPPER.valueToTree(emptyMap<String, Any>()),
             supportedSyncModes = listOf(),
           ),
         fields =
@@ -430,7 +431,7 @@ class DestinationCatalogGeneratorTest {
         stream =
           AirbyteStream(
             name = "users",
-            jsonSchema = Jsons.emptyObject(),
+            jsonSchema = TEST_OBJECT_MAPPER.valueToTree(emptyMap<String, Any>()),
             supportedSyncModes = listOf(),
           ),
         fields =
@@ -464,7 +465,7 @@ class DestinationCatalogGeneratorTest {
           AirbyteStream(
             name = "users",
             jsonSchema =
-              Jsons.jsonNode(
+              TEST_OBJECT_MAPPER.valueToTree(
                 mapOf(
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
@@ -491,7 +492,7 @@ class DestinationCatalogGeneratorTest {
           AirbyteStream(
             name = "users",
             jsonSchema =
-              Jsons.jsonNode(
+              TEST_OBJECT_MAPPER.valueToTree(
                 mapOf(
                   "type" to "object",
                   "${'$'}schema" to "http://json-schema.org/schema#",
@@ -515,7 +516,7 @@ class DestinationCatalogGeneratorTest {
     val catalogCopy = destinationCatalogGeneratorWithMapper.generateDestinationCatalog(catalog)
 
     assertEquals(
-      Jsons.jsonNode(
+      TEST_OBJECT_MAPPER.valueToTree(
         mapOf(
           "type" to "object",
           "${'$'}schema" to "http://json-schema.org/schema#",
@@ -531,7 +532,7 @@ class DestinationCatalogGeneratorTest {
         .stream.jsonSchema,
     )
     assertEquals(
-      Jsons.jsonNode(
+      TEST_OBJECT_MAPPER.valueToTree(
         mapOf(
           "type" to "object",
           "${'$'}schema" to "http://json-schema.org/schema#",
@@ -566,7 +567,7 @@ class DestinationCatalogGeneratorTest {
         Field("fieldUnknown", FieldType.UNKNOWN),
       )
     val expectedOutputJson =
-      Jsons.deserialize(
+      TEST_OBJECT_MAPPER.readValue(
         """
       {
         "fieldString": {
@@ -620,12 +621,13 @@ class DestinationCatalogGeneratorTest {
         }
       }
     """,
+        JsonNode::class.java,
       )
 
     val result =
       destinationCatalogGeneratorWithoutMapper.generateJsonSchemaFromFields(
         input,
-        Jsons.jsonNode(
+        TEST_OBJECT_MAPPER.valueToTree(
           mapOf(
             "properties" to
               mapOf(
@@ -637,6 +639,6 @@ class DestinationCatalogGeneratorTest {
           ),
         ),
       )
-    assertEquals(expectedOutputJson, Jsons.deserialize(result))
+    assertEquals(expectedOutputJson, TEST_OBJECT_MAPPER.readValue(result, JsonNode::class.java))
   }
 }

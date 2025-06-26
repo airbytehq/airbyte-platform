@@ -1,6 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 
+import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
+import { useCurrentUser } from "core/services/auth";
 
 import { useGetWorkspace } from "./workspaces";
 import {
@@ -11,18 +13,20 @@ import {
   getOrganizationTrialStatus,
   getOrganizationUsage,
   listWorkspacesInOrganization,
+  listOrganizationsByUser,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
+  ListOrganizationsByUserRequestBody,
+  OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
-
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
   lists: () => [...organizationKeys.all, "list"] as const,
@@ -35,6 +39,8 @@ export const organizationKeys = {
   usage: (organizationId: string, timeWindow: string) =>
     [SCOPE_ORGANIZATION, "usage", organizationId, timeWindow] as const,
   workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
+  listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
+    [...organizationKeys.all, "byUser", requestBody] as const,
 };
 
 /**
@@ -119,7 +125,7 @@ export const useOrganizationTrialStatus = (
 
 export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTimeWindow }) => {
   const requestOptions = useRequestOptions();
-  const { organizationId } = useCurrentOrganizationInfo();
+  const organizationId = useCurrentOrganizationId();
 
   return useSuspenseQuery(organizationKeys.usage(organizationId, timeWindow), () =>
     getOrganizationUsage({ organizationId, timeWindow }, requestOptions)
@@ -131,4 +137,34 @@ export const useListWorkspacesInOrganization = ({ organizationId }: { organizati
   const queryKey = organizationKeys.workspaces(organizationId);
 
   return useSuspenseQuery(queryKey, () => listWorkspacesInOrganization({ organizationId }, requestOptions));
+};
+
+export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserRequestBody) => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.listByUser(requestBody), () =>
+    listOrganizationsByUser(requestBody, requestOptions)
+  );
+};
+
+export const useFirstOrg = (): OrganizationRead => {
+  const { userId } = useCurrentUser();
+  const { organizations } = useListOrganizationsByUser({ userId });
+  // NOTE: Users invited to a workspace may have no organization.
+  // https://github.com/airbytehq/airbyte-internal-issues/issues/13034
+  return organizations[0] || {};
+};
+
+export const useOrganizationUserCount = (organizationId: string): number | null => {
+  const requestOptions = useRequestOptions();
+  return (
+    useQuery(
+      [SCOPE_ORGANIZATION, "users", "count", organizationId],
+      async () => {
+        return listUsersInOrganization({ organizationId }, requestOptions);
+      },
+      {
+        select: (data) => data.users.length,
+      }
+    ).data ?? null
+  );
 };

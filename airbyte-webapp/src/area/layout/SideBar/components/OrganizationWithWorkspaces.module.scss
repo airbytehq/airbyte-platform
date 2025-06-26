@@ -1,0 +1,76 @@
+@use "scss/colors";
+@use "scss/variables";
+
+.organizationName {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: colors.$dark-blue;
+  padding: variables.$spacing-sm variables.$spacing-md;
+  min-height: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover {
+    background-color: colors.$blue-40;
+  }
+
+  &:focus-visible {
+    outline-offset: -1px;
+  }
+}
+
+.orgTextBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.orgTitle {
+  line-height: variables.$spacing-xl;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orgMeta {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: variables.$spacing-xl;
+}
+
+.gearIcon {
+  color: colors.$grey-400;
+}
+
+.workspaceItem {
+  padding-left: calc(variables.$spacing-md * 2);
+  padding-right: variables.$spacing-md;
+  cursor: pointer;
+  color: colors.$grey-600;
+  text-decoration: none;
+  font-size: variables.$font-size-sm;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  height: 32px;
+  line-height: 32px;
+  text-align: left;
+  min-width: 0;
+
+  &:hover {
+    background-color: colors.$blue-40;
+    color: colors.$dark-blue;
+  }
+
+  &:focus-visible {
+    outline-offset: -1px;
+    background-color: colors.$blue-40;
+    color: colors.$dark-blue;
+  }
+}

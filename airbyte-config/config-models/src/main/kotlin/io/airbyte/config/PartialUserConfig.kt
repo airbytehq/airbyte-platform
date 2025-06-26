@@ -19,11 +19,6 @@ data class PartialUserConfig(
   val id: UUID,
   val workspaceId: UUID,
   val configTemplateId: UUID,
-  /**
-   * JSON string containing user-specific configuration properties that will be
-   * applied to the template configuration
-   */
-  var connectionConfiguration: JsonNode,
   val actorId: UUID? = null,
 )
 
@@ -35,6 +30,7 @@ data class PartialUserConfigWithActorDetails(
   val partialUserConfig: PartialUserConfig,
   val actorIcon: String,
   val actorName: String,
+  val configTemplateId: UUID,
 )
 
 /**
@@ -44,6 +40,14 @@ data class PartialUserConfigWithActorDetails(
 data class PartialUserConfigWithConfigTemplateAndActorDetails(
   val partialUserConfig: PartialUserConfig,
   val configTemplate: ConfigTemplate,
+  val actorName: String,
+  val actorIcon: String,
+)
+
+data class PartialUserConfigWithFullDetails(
+  val partialUserConfig: PartialUserConfig,
+  val configTemplate: ConfigTemplate,
+  val connectionConfiguration: JsonNode,
   val actorName: String,
   val actorIcon: String,
 )

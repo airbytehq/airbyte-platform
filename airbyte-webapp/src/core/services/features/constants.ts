@@ -5,12 +5,13 @@ export const defaultOssFeatures = [
   FeatureItem.AllowUpdateConnectors,
   FeatureItem.AllowUploadCustomImage,
   FeatureItem.EnterpriseUpsell,
+  FeatureItem.ShowOSSWorkspaceName,
 ];
 
 export const defaultEnterpriseFeatures = [
   ...defaultOssFeatures,
   FeatureItem.AllowAllRBACRoles,
-  FeatureItem.AllowChangeDataGeographies,
+  FeatureItem.AllowChangeDataplanes,
   FeatureItem.ConnectionHistoryGraphs,
   FeatureItem.ConnectorResourceAllocation,
   FeatureItem.DiagnosticsExport,
@@ -26,7 +27,7 @@ export const defaultEnterpriseFeatures = [
 
 export const defaultCloudFeatures = [
   FeatureItem.AllowAutoDetectSchema,
-  FeatureItem.AllowChangeDataGeographies,
+  FeatureItem.AllowChangeDataplanes,
   FeatureItem.AllowDBTCloudIntegration,
   FeatureItem.CloudForTeamsUpsell,
   FeatureItem.ConnectionHistoryGraphs,
@@ -38,4 +39,5 @@ export const defaultCloudFeatures = [
   FeatureItem.RestrictAdminInForeignWorkspace,
   FeatureItem.ShowInviteUsersHint,
   FeatureItem.FieldHashing, // also governed by connection.hashingUI experiment
+  FeatureItem.DisplayOrganizationUsers,
 ];

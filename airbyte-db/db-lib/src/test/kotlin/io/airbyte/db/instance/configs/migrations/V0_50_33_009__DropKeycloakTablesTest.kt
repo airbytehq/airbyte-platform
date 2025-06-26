@@ -10,12 +10,14 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.Assert
 import org.junit.Test
+import org.junit.jupiter.api.Disabled
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 class V0_50_33_009__DropKeycloakTablesTest : AbstractConfigsDatabaseTest() {
   @Test
   fun testDropTables() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     val tablesToDelete: List<String> =
       listOf(

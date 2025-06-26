@@ -1,26 +1,23 @@
 import { datadogRum } from "@datadog/browser-rum";
 
-import { config } from "core/config";
+import { WebappConfigResponse } from "core/api/types/AirbyteClient";
 
 import { fullStorySessionLink } from "./fullstory";
 
-export const loadDatadog = (): void => {
-  const {
-    version,
-    datadog: { applicationId, clientToken, site, service, env },
-  } = config;
+export const loadDatadog = (config: WebappConfigResponse): void => {
+  const { version, datadogApplicationId, datadogClientToken, datadogSite, datadogService, datadogEnv } = config;
 
-  if (!applicationId || !clientToken) {
+  if (!datadogApplicationId || !datadogClientToken) {
     return;
   }
 
   datadogRum.init({
-    applicationId,
-    clientToken,
-    site,
-    service,
+    applicationId: datadogApplicationId,
+    clientToken: datadogClientToken,
+    site: datadogSite,
+    service: datadogService,
     version,
-    env,
+    env: datadogEnv,
     sampleRate: 100,
     sessionReplaySampleRate: 0,
     trackInteractions: false,

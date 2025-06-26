@@ -4,7 +4,7 @@ import {
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
 } from "@cy/commands/connection";
-import { fillLocalJsonForm, fillPokeAPIForm } from "@cy/commands/connector";
+import { fillE2ETestingForm, fillPokeAPIForm } from "@cy/commands/connector";
 import { StreamRowPageObject } from "@cy/pages/connection/StreamRowPageObject";
 import { streamsTable } from "@cy/pages/connection/StreamsTablePageObject";
 import { goToDestinationPage, openDestinationConnectionsPage } from "@cy/pages/destinationPage";
@@ -129,7 +129,7 @@ describe("Connection - Create new connection", { testIsolation: false }, () => {
           cy.get("label").contains("Set up a new destination").click();
           cy.location("search").should("eq", `?sourceId=${source.sourceId}&destinationType=new`);
 
-          fillLocalJsonForm(appendRandomString("LocalJSON Cypress"), "/local");
+          fillE2ETestingForm(appendRandomString("E2E Test destination cypress"));
 
           cy.get("button").contains("Set up destination").click();
 

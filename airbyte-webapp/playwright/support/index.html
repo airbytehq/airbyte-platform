@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Airbyte Embedded Widget</title>
+  </head>
+  <body>
+    <h1>Airbyte Embedded Widget</h1>
+    <button id="open-widget">Open Airbyte Widget</button>
+    <div id="widget-container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@airbyte-embedded/airbyte-embedded-widget"></script>
+
+    <script>
+      function getApiBase() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("apiBase") || "http://localhost:3001";
+      }
+      const apiBase = getApiBase();
+
+      document.getElementById("open-widget").addEventListener("click", async () => {
+        try {
+          const response = await fetch(`${apiBase}/api/widget_token`);
+          const data = await response.json();
+
+          if (!data.token) {
+            throw new Error("Missing 'token' in response");
+          }
+
+          const widgetResultCallback = (result) => {
+            fetch(`${apiBase}/api/embedded_response`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(result),
+            })
+              .then((response) => console.log("Callback response:", response.status))
+              .catch((err) => console.error("Callback error:", err));
+          };
+
+          const widget = new AirbyteEmbeddedWidget({
+            token: data.token,
+            onEvent: widgetResultCallback,
+            // If the widget supports a container option, uncomment the next line:
+            // container: document.getElementById("widget-container"),
+          });
+
+          widget.open();
+        } catch (err) {
+          console.error("Failed to load widget:", err);
+        }
+      });
+    </script>
+  </body>
+</html>

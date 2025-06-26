@@ -1,6 +1,6 @@
+import AirbyteLogo from "components/illustrations/airbyte-logo.svg?react";
 import { SimpleAuthLoginForm } from "components/login/SimpleAuthLoginForm";
 import { FlexContainer } from "components/ui/Flex";
-import AirbyteLogo from "images/airbyteLogo.svg?react";
 
 import styles from "./LoginPage.module.scss";
 

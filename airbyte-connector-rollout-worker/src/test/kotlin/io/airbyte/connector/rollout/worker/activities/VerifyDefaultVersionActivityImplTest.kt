@@ -63,6 +63,7 @@ class VerifyDefaultVersionActivityImplTest {
           supportState = SupportState.SUPPORTED,
           supportsRefreshes = true,
           supportsFileTransfer = false,
+          supportsDataActivation = false,
         ),
         ActorDefinitionVersionRead(
           // Different tag for subsequent verification
@@ -72,6 +73,7 @@ class VerifyDefaultVersionActivityImplTest {
           supportState = SupportState.SUPPORTED,
           supportsRefreshes = true,
           supportsFileTransfer = false,
+          supportsDataActivation = false,
         ),
       )
 
@@ -125,6 +127,7 @@ class VerifyDefaultVersionActivityImplTest {
         supportState = SupportState.SUPPORTED,
         supportsRefreshes = true,
         supportsFileTransfer = false,
+        supportsDataActivation = false,
       )
 
     val input =
@@ -157,6 +160,7 @@ class VerifyDefaultVersionActivityImplTest {
         supportState = SupportState.SUPPORTED,
         supportsRefreshes = true,
         supportsFileTransfer = false,
+        supportsDataActivation = false,
       )
 
     val input =

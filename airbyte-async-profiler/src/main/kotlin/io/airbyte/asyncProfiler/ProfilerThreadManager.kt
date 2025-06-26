@@ -19,7 +19,7 @@ import java.nio.file.Files
 class ProfilerThreadManager(
   private val profilerService: ProfilerService,
   @Value("\${airbyte.connection-id}") private val connectionId: String,
-  @Value("\${airbyte.job-id}") private val jobId: String,
+  @Value("\${airbyte.job-id}") private val jobId: Long,
   @Value("\${airbyte.attempt-id}") private val attemptId: String,
   @Named("profilerOutputStore") private val storageClient: StorageClient,
 ) {

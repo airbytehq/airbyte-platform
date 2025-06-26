@@ -37,3 +37,7 @@ properties:
   tombstone:
     type: boolean
     description: Whether the dataplane is marked as deleted
+  service_account_id:
+    type: string
+    format: uuid
+    description: id of the service account that manages this dataplane, if any

@@ -1,14 +1,14 @@
 import merge from "lodash/merge";
 
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
-import { BuilderFormValues } from "components/connectorBuilder/types";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
+  ConnectorManifest,
+  DatetimeBasedCursor,
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
   HttpRequesterHttpMethod,
@@ -19,9 +19,16 @@ import {
 } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-export type AssistKey = "urlbase" | "auth" | "metadata" | "record_selector" | "paginator" | "request_options";
+export type AssistKey =
+  | "urlbase"
+  | "auth"
+  | "metadata"
+  | "record_selector"
+  | "paginator"
+  | "request_options"
+  | "incremental_sync";
 
-export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
+export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): ConnectorManifest => {
   const update = updates.manifest_update;
   const updatedManifest: DeclarativeComponentSchema = {
     type: "DeclarativeSource",
@@ -49,10 +56,12 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
             path: update?.stream_path ?? "",
             http_method: update?.stream_http_method ?? "GET",
             request_headers: update?.request_headers ?? undefined,
+            request_body_json: update?.request_body_json ?? undefined,
           },
           paginator: update?.paginator ?? undefined,
         },
         primary_key: update?.primary_key ?? undefined,
+        incremental_sync: update?.incremental_sync ?? undefined,
       },
     ],
     spec: {
@@ -63,8 +72,7 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
       },
     },
   };
-  const updatedForm = convertToBuilderFormValuesSync(updatedManifest);
-  return updatedForm;
+  return updatedManifest;
 };
 
 export interface BuilderAssistCoreParams {
@@ -104,6 +112,8 @@ export interface ManifestUpdate {
   record_selector: RecordSelector | null;
   primary_key: PrimaryKey | null;
   request_headers: Record<string, string> | null;
+  request_body_json: Record<string, string> | null;
+  incremental_sync: DatetimeBasedCursor | null;
 }
 
 export interface BuilderAssistBaseResponse {
@@ -153,7 +163,8 @@ const useAssistGlobalContext = (): { params: Record<string, unknown> } => {
 };
 
 const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
-  const { assistEnabled, projectId, assistSessionId, jsonManifest } = useConnectorBuilderFormState();
+  const { assistEnabled, projectId, assistSessionId } = useConnectorBuilderFormState();
+  const manifest = useBuilderWatch("manifest");
   // session id on form
   const params = {
     docs_url: useBuilderWatch("formValues.assist.docsUrl"),
@@ -161,7 +172,7 @@ const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequir
     app_name: useBuilderWatch("name") || "Connector",
     url_base: useBuilderWatch("formValues.global.urlBase"),
     project_id: projectId,
-    manifest: jsonManifest,
+    manifest,
     session_id: assistSessionId,
   };
   const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);
@@ -218,6 +229,13 @@ export const useBuilderAssistStreamResponse = (input: BuilderAssistInputStreamPa
 export const useBuilderAssistFindRequestOptions = (input: BuilderAssistInputStreamParams) => {
   const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
   return useAssistProxyQuery<BuilderAssistManifestResponse>("find_request_parameters", hasRequiredParams, params, [
+    "url_base",
+  ]);
+};
+
+export const useBuilderAssistFindIncrementalSync = (input: BuilderAssistInputStreamParams) => {
+  const { params, hasRequiredParams } = useAssistProjectStreamContext(input);
+  return useAssistProxyQuery<BuilderAssistManifestResponse>("find_stream_incremental_sync", hasRequiredParams, params, [
     "url_base",
   ]);
 };

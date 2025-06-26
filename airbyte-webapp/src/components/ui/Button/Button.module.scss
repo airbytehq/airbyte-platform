@@ -2,6 +2,62 @@
 @use "scss/variables";
 @use "scss/mixins";
 
+// Primary
+$primary-text-color: colors.$white;
+$primary-background-color: colors.$blue-400;
+$primary-background-color-hover: colors.$blue-500;
+$primary-background-color-active: colors.$blue-600;
+
+// Secondary
+$secondary-text-color: colors.$grey-400;
+$secondary-background-color: colors.$foreground;
+$secondary-border-color: colors.$grey-300;
+$secondary-text-color-hover: colors.$grey-500;
+$secondary-background-color-hover: transparent;
+$secondary-border-color-hover: colors.$grey-400;
+$secondary-text-color-active: colors.$grey-500;
+$secondary-background-color-active: transparent;
+$secondary-border-color-active: colors.$grey-500;
+
+// Clear
+$clear-text-color: colors.$grey-300;
+$clear-background-color: transparent;
+$clear-text-color-hover: colors.$grey-500;
+$clear-text-color-active: colors.$grey-500;
+
+// Danger
+$danger-text-color: colors.$foreground;
+$danger-background-color: colors.$red-300;
+$danger-background-color-hover: colors.$red-400;
+$danger-background-color-active: colors.$red-600;
+
+// Primary Dark
+$primary-dark-text-color: colors.$foreground;
+$primary-dark-background-color: colors.$dark-blue;
+$primary-dark-background-color-hover: colors.$dark-blue-800;
+$primary-dark-background-color-active: colors.$dark-blue-1000;
+
+// Secondary Dark
+$secondary-dark-text-color: colors.$dark-blue-900;
+$secondary-dark-background-color: transparent;
+$secondary-dark-border-color: colors.$dark-blue-900;
+$secondary-dark-text-color-hover: colors.$dark-blue-600;
+$secondary-dark-border-color-hover: colors.$dark-blue-600;
+$secondary-dark-text-color-active: colors.$dark-blue-1000;
+$secondary-dark-border-color-active: colors.$dark-blue-1000;
+
+// Clear Dark
+$clear-dark-text-color: colors.$grey-500;
+$clear-dark-background-color: transparent;
+$clear-dark-text-color-hover: colors.$grey-600;
+$clear-dark-text-color-active: colors.$grey-600;
+
+// Clear Danger
+$clear-danger-text-color: colors.$red-400;
+$clear-danger-text-color-hover: colors.$red-600;
+$clear-danger-text-color-active: colors.$red-600;
+$clear-danger-background-color: transparent;
+
 .button {
   display: inline-flex;
   align-items: center;
@@ -16,264 +72,163 @@
   transition: 0.2s ease-in;
   white-space: nowrap;
 
-  &.full {
+  // Elements
+  &__children {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__icon {
+    display: flex;
+    justify-content: center;
+    align-content: center;
+    position: relative;
+    flex: 0 0 auto;
+    color: inherit;
+    transition: color 0.2s ease-in;
+
+    &--left {
+      &.button__icon--with-label {
+        margin-right: 7px;
+      }
+    }
+
+    &--right {
+      &.button__icon--with-label {
+        margin-left: 7px;
+      }
+    }
+
+    &--loading {
+      position: absolute;
+      transition: none;
+    }
+  }
+
+  // Modifiers - Sizes
+  &--size-xs {
+    height: variables.$button-height-xs;
+    font-size: variables.$font-size-sm;
+    line-height: 15px;
+    padding: 6px 10px;
+
+    .button__icon {
+      font-size: variables.$font-size-lg;
+    }
+  }
+
+  &--size-sm {
+    height: variables.$button-height-sm;
+    font-size: variables.$font-size-sm;
+    line-height: 1.2;
+    padding: 8px 10px;
+
+    .button__icon {
+      font-size: 15px;
+    }
+  }
+
+  // Modifiers - States
+  &--full-width {
     width: 100%;
   }
 
-  &:disabled,
-  &.disabled,
-  &.isLoading {
+  &:disabled {
     pointer-events: none;
+    opacity: 0.5;
   }
 
-  &:focus-visible,
-  &:hover,
-  &:not(.typeLight) {
-    box-shadow: 0 3px 4px -2px rgba(26, 25, 77, 21%);
+  &--loading {
+    pointer-events: none;
+    position: relative;
+    align-content: center;
+    justify-content: center;
+
+    .button__children {
+      color: transparent;
+    }
+
+    .button__icon {
+      transition: none;
+    }
+
+    .button__icon--regular {
+      visibility: hidden;
+    }
   }
 
   &:focus-visible {
     outline: 3px solid colors.$blue-50;
   }
 
-  &:disabled:not(.isLoading),
-  &.disabled:not(.isLoading) {
-    opacity: 0.5;
-    transition: opacity 0.2 ease-in;
+  &--magic .button__icon {
+    color: colors.$gradient-primary-start;
+    --start-color: #{colors.$gradient-primary-start};
+    --stop-color: #{colors.$gradient-primary-stop};
   }
 
-  .childrenContainer {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .buttonIcon {
-    display: flex;
-    justify-content: center;
-    align-content: center;
-    position: relative;
-    flex: 0 0 auto;
-
-    &.positionLeft {
-      &.withLabel {
-        margin-right: 7px;
-      }
-    }
-
-    &.positionRight {
-      &.withLabel {
-        margin-left: 7px;
-      }
-    }
-
-    &.typePrimary,
-    &.typeDanger {
-      color: colors.$foreground;
-    }
-
-    &.typeSecondary,
-    &.typeClear,
-    &.typeLight {
-      color: colors.$grey-300;
-    }
-
-    &.isRegularIcon {
-      &.typeSecondary,
-      &.typeClear {
-        &:hover {
-          color: colors.$grey-400;
-        }
-
-        &:active {
-          color: colors.$grey-400;
-        }
-      }
-
-      &.typeLight {
-        &:hover {
-          color: colors.$grey-500;
-        }
-
-        &:active {
-          color: colors.$grey-500;
-        }
-      }
-    }
-
-    &.loadingIcon {
-      position: absolute;
-    }
-  }
-
-  &.sizeXS {
-    height: variables.$button-height-xs;
-    font-size: variables.$font-size-sm;
-    line-height: 15px;
-    padding: 10px;
-
-    .buttonIcon {
-      font-size: variables.$font-size-lg;
-    }
-  }
-
-  &.sizeS {
-    height: variables.$button-height-sm;
-    font-size: variables.$font-size-sm;
-    line-height: 1.2;
-    padding: 10px 14px;
-
-    .buttonIcon {
-      font-size: 15px;
-    }
-  }
-
-  &.sizeL {
-    height: variables.$button-height-lg;
-    font-size: 16px;
-    line-height: 19px;
-    padding: 10px 14px;
-
-    .buttonIcon {
-      &.isSpinnerIcon {
-        margin-top: 3px;
-      }
-
-      font-size: 18px;
-    }
-  }
-
-  &.typePrimary {
-    background-color: colors.$blue-400;
-    color: colors.$white;
+  // Modifiers - Variants
+  &--primary {
+    background-color: $primary-background-color;
+    color: $primary-text-color;
 
     &:hover {
-      background-color: colors.$blue-500;
+      background-color: $primary-background-color-hover;
     }
 
     &:active {
-      background-color: colors.$blue-600;
+      background-color: $primary-background-color-active;
     }
   }
 
-  &.typeSecondary {
-    background-color: transparent;
-    color: colors.$grey-400;
-    border: 1px solid colors.$grey-300;
-    box-shadow: none;
+  &--secondary {
+    background-color: $secondary-background-color;
+    color: $secondary-text-color;
+    border: variables.$border-thin solid $secondary-border-color;
 
     &:hover {
-      border-color: colors.$grey-400;
-      color: colors.$grey-500;
+      background-color: $secondary-background-color-hover;
+      color: $secondary-text-color-hover;
+      border-color: $secondary-border-color-hover;
     }
 
     &:active {
-      border-color: colors.$grey-500;
-      color: colors.$grey-500;
+      background-color: $secondary-background-color-active;
+      color: $secondary-text-color-active;
+      border-color: $secondary-border-color-active;
     }
   }
 
-  &.typeClear {
-    background-color: transparent;
-    color: colors.$grey-300;
-    box-shadow: none;
+  &--clear {
+    background-color: $clear-background-color;
+    color: $clear-text-color;
 
     &:hover {
-      color: colors.$grey-400;
+      color: $clear-text-color-hover;
     }
 
     &:active {
-      color: colors.$grey-400;
+      color: $clear-text-color-active;
     }
   }
 
-  &.typeDanger {
-    background-color: colors.$red-300;
-    color: colors.$foreground;
+  &--danger {
+    background-color: $danger-background-color;
+    color: $danger-text-color;
 
     &:hover {
-      background-color: colors.$red-400;
+      background-color: $danger-background-color-hover;
     }
 
     &:active {
-      background-color: colors.$red-600;
+      background-color: $danger-background-color-active;
     }
   }
 
-  &.typeLight {
-    background-color: colors.$grey-50;
-    color: colors.$grey-300;
-
-    &:hover {
-      background-color: colors.$grey-100;
-      color: colors.$grey-500;
-    }
-
-    &:active {
-      background-color: colors.$grey-200;
-      color: colors.$grey-500;
-    }
-  }
-
-  &.typePrimaryDark {
-    background-color: colors.$dark-blue;
-    color: colors.$foreground;
-
-    &:hover {
-      background-color: colors.$dark-blue-800;
-      color: colors.$foreground;
-    }
-
-    &:active {
-      background-color: colors.$dark-blue-1000;
-      color: colors.$foreground;
-    }
-  }
-
-  &.typeSecondaryDark {
-    background-color: transparent;
-    color: colors.$dark-blue-900;
-    border: 1px solid colors.$dark-blue-900;
-    box-shadow: none;
-
-    &:hover {
-      border-color: colors.$dark-blue-600;
-      color: colors.$dark-blue-600;
-    }
-
-    &:active {
-      border-color: colors.$dark-blue-1000;
-      color: colors.$dark-blue-1000;
-    }
-  }
-
-  &.isLoading {
-    position: relative;
-    align-content: center;
-    justify-content: center;
-
-    .childrenContainer {
-      color: transparent;
-    }
-
-    .buttonIcon {
-      &.isRegularIcon {
-        visibility: hidden;
-      }
-    }
-  }
-
-  &.typeMagic {
+  &--magic {
     color: colors.$inverse;
     @include mixins.gradient-border(variables.$border-thin, colors.$gradient-primary, colors.$gradient-secondary);
-
-    & .buttonIcon {
-      // Note: The icon must support a gradient
-      // so we fallback to the start color
-      color: colors.$gradient-primary-start;
-      --start-color: #{colors.$gradient-primary-start};
-      --stop-color: #{colors.$gradient-primary-stop};
-    }
 
     &:hover {
       filter: brightness(0.9);
@@ -284,35 +239,64 @@
     }
   }
 
-  &.typeClearDark {
-    background-color: transparent;
-    color: colors.$grey-500;
-    box-shadow: none;
-    padding: 0;
-
-    & .buttonIcon {
-      color: colors.$grey-400;
-    }
+  &--primary-dark {
+    background-color: colors.$dark-blue;
+    color: colors.$foreground;
 
     &:hover {
-      color: colors.$grey-600;
-
-      & .buttonIcon {
-        color: colors.$grey-500;
-      }
+      background-color: colors.$dark-blue-800;
     }
 
     &:active {
-      color: colors.$grey-600;
-
-      & .buttonIcon {
-        color: colors.$grey-500;
-      }
+      background-color: colors.$dark-blue-1000;
     }
   }
 
-  &.link {
-    font: inherit;
+  &--secondary-dark {
+    background-color: $secondary-dark-background-color;
+    color: $secondary-dark-text-color;
+    border: variables.$border-thin solid $secondary-dark-border-color;
+
+    &:hover {
+      border-color: $secondary-dark-border-color-hover;
+      color: $secondary-dark-text-color-hover;
+    }
+
+    &:active {
+      border-color: $secondary-dark-border-color-active;
+      color: $secondary-dark-text-color-active;
+    }
+  }
+
+  &--clear-danger {
+    background-color: $clear-danger-background-color;
+    color: $clear-danger-text-color;
+    padding: 0;
+
+    &:hover {
+      color: $clear-danger-text-color-hover;
+    }
+
+    &:active {
+      color: $clear-danger-text-color-active;
+    }
+  }
+
+  &--clear-dark {
+    background-color: $clear-dark-background-color;
+    color: $clear-dark-text-color;
+    padding: 0;
+
+    &:hover {
+      color: $clear-dark-text-color-hover;
+    }
+
+    &:active {
+      color: $clear-dark-text-color-active;
+    }
+  }
+
+  &--link {
     padding: 0;
     background: none;
     background-color: transparent;

@@ -5,8 +5,10 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.api.model.generated.OrganizationRead
+import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.handlers.OrganizationsHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConfigTemplate
@@ -30,24 +32,34 @@ import java.util.UUID
 
 @MicronautTest(environments = ["test"])
 class ConfigTemplatesPublicControllerTest {
-  val organizationId = UUID.randomUUID()
+  val organizationId: UUID = UUID.randomUUID()
 
   private val objectMapper: ObjectMapper = ObjectMapper()
 
   private val configTemplateService: ConfigTemplateService = mockk()
   private val currentUserService: CurrentUserService = mockk()
-  private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val trackingHelper: TrackingHelper = mockk()
   private val licenseEntitlementChecker: LicenseEntitlementChecker = mockk()
+  private val organizationHandler: OrganizationsHandler = mockk()
   private val controller =
-    ConfigTemplatesPublicController(currentUserService, configTemplateService, apiAuthorizationHelper, trackingHelper, licenseEntitlementChecker)
+    ConfigTemplatesPublicController(
+      currentUserService,
+      configTemplateService,
+      trackingHelper,
+      licenseEntitlementChecker,
+      organizationHandler,
+    )
+  private val organizationReadList =
+    OrganizationReadList().organizations(listOf(OrganizationRead().organizationId(organizationId)))
 
   @BeforeEach
   fun setup() {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
-    every { apiAuthorizationHelper.isUserOrganizationAdminOrThrow(any(), any()) } returns Unit
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
+    every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
+    every { organizationHandler.listOrganizationsByUser(any()) } returns organizationReadList
+    every { licenseEntitlementChecker.checkEntitlements(any(), any()) } returns true
   }
 
   @Test
@@ -128,6 +140,44 @@ class ConfigTemplatesPublicControllerTest {
 
   @Test
   fun `test create endpoint`() {
+    val configTemplateId = UUID.randomUUID()
+    val actorDefinitionId = UUID.randomUUID()
+
+    val partialDefaultConfig = objectMapper.readTree("{}")
+    val userConfigSpec = objectMapper.readTree("{}")
+    val configTemplate =
+      ConfigTemplateWithActorDetails(
+        ConfigTemplate(
+          id = configTemplateId,
+          organizationId = organizationId,
+          actorDefinitionId = UUID.randomUUID(),
+          partialDefaultConfig = partialDefaultConfig,
+          userConfigSpec = ConnectorSpecification().withConnectionSpecification(objectMapper.readTree("{}")),
+          createdAt = OffsetDateTime.now(),
+          updatedAt = OffsetDateTime.now(),
+        ),
+        actorName = "actorName",
+        actorIcon = "actorIcon",
+      )
+    every {
+      configTemplateService.createTemplate(OrganizationId(organizationId), ActorDefinitionId(actorDefinitionId), partialDefaultConfig, userConfigSpec)
+    } returns configTemplate
+
+    val requestBody =
+      ConfigTemplateCreateRequestBody(
+        organizationId,
+        actorDefinitionId,
+        partialDefaultConfig,
+        userConfigSpec,
+      )
+
+    val response = controller.createConfigTemplate(requestBody)
+
+    assertEquals(response.id, configTemplateId)
+  }
+
+  @Test
+  fun `test create endpoint without a user spec`() {
     val configTemplateId = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
 

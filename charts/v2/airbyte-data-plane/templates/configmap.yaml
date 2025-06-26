@@ -9,16 +9,11 @@ data:
   {{- include "airbyte-data-plane.dataPlane.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.jobs.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.jobs.errors.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.keycloak.client.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.logging.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.metrics.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.micronaut.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.secretsManager.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.storage.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.temporal.cloud.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.temporal.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.temporal.sdk.configVars" . | nindent 2 }}
-  {{- include "airbyte-data-plane.temporal.worker.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.tracking.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.worker.configVars" . | nindent 2 }}
   {{- include "airbyte-data-plane.workloadApiServer.configVars" . | nindent 2 }}

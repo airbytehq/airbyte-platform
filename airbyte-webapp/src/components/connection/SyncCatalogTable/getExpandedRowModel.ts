@@ -29,20 +29,25 @@ export function getExpandedRowModel(): (table: Table<SyncCatalogUIModel>) => () 
           return rowModel;
         }
 
-        return expandRows(rowModel, table.getState().globalFilter);
+        return expandRows(rowModel, table.getState().globalFilter, table);
       },
       getMemoOptions(table.options, "debugTable", "getExpandedRowModel")
     );
 }
 
-export function expandRows(rowModel: RowModel<SyncCatalogUIModel>, globalFilter: string) {
+export function expandRows(
+  rowModel: RowModel<SyncCatalogUIModel>,
+  globalFilter: string,
+  table: Table<SyncCatalogUIModel>
+) {
+  const maxDepth = table.options.maxLeafRowFilterDepth ?? 100;
   const expandedRows: Array<Row<SyncCatalogUIModel>> = [];
 
   const recurseMatchingSubRows = (subRows: Array<Row<SyncCatalogUIModel>>): Array<Row<SyncCatalogUIModel>> => {
     const matchingRows: Array<Row<SyncCatalogUIModel>> = [];
 
     subRows.forEach((row) => {
-      if (rowHasSearchTerm(row, globalFilter)) {
+      if (rowHasSearchTerm(row, globalFilter) && row.depth < maxDepth) {
         matchingRows.push(row);
       }
       if (row.subRows?.length) {

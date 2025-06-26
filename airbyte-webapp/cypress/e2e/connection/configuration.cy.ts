@@ -7,11 +7,11 @@ import {
 } from "@cy/commands/api";
 import { deleteEntity, submitButtonClick } from "@cy/commands/common";
 import {
-  createJsonDestinationViaApi,
   createNewConnectionViaApi,
   createPokeApiSourceViaApi,
   createPostgresDestinationViaApi,
   createPostgresSourceViaApi,
+  createE2ETestingDestinationViaApi,
 } from "@cy/commands/connection";
 import { runDbQuery } from "@cy/commands/db/db";
 import { createUsersTableQuery, dropUsersTableQuery } from "@cy/commands/db/queries";
@@ -31,9 +31,7 @@ import {
   AirbyteStreamAndConfiguration,
   ConnectionStatus,
   DestinationRead,
-  DestinationSyncMode,
   SourceRead,
-  SyncMode,
   WebBackendConnectionRead,
 } from "@src/core/api/types/AirbyteClient";
 import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
@@ -41,7 +39,7 @@ import { ConnectionRoutePaths, RoutePaths } from "@src/pages/routePaths";
 describe("Connection Configuration", { tags: "@connection-configuration" }, () => {
   let pokeApiSource: SourceRead;
   let postgresSource: SourceRead;
-  let jsonDestination: DestinationRead;
+  let E2ETestingDestination: DestinationRead;
   let postgresDestination: DestinationRead;
   let connection: WebBackendConnectionRead | null;
 
@@ -55,8 +53,8 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     createPostgresSourceViaApi().then((source) => {
       postgresSource = source;
     });
-    createJsonDestinationViaApi().then((destination) => {
-      jsonDestination = destination;
+    createE2ETestingDestinationViaApi().then((destination) => {
+      E2ETestingDestination = destination;
     });
     createPostgresDestinationViaApi().then((destination) => {
       postgresDestination = destination;
@@ -77,9 +75,9 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     if (postgresSource) {
       requestDeleteSource({ sourceId: postgresSource.sourceId });
     }
-    if (jsonDestination) {
+    if (E2ETestingDestination) {
       requestDeleteDestination({
-        destinationId: jsonDestination.destinationId,
+        destinationId: E2ETestingDestination.destinationId,
       });
     }
     if (postgresDestination) {
@@ -99,7 +97,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
     describe("Sync frequency", { testIsolation: false }, () => {
       let loadedConnection: WebBackendConnectionRead;
       it("Default to manual schedule", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(pokeApiSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -172,7 +170,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
     describe("Destination namespace", { testIsolation: false }, () => {
       it("Set destination namespace with 'Custom format' option", () => {
-        createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(postgresSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -210,7 +208,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
         connectionSettings.checkSuccessResult();
       });
       it("Set destination namespace with 'Custom format' option and interpolates an empty string if relevant", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(pokeApiSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -247,7 +245,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
       });
 
       it("Set destination namespace with 'Source-defined' option", () => {
-        createNewConnectionViaApi(postgresSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(postgresSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -260,7 +258,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
       });
 
       it("Set destination namespace with 'Source-defined' option and shows destination fallback if relevant", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(pokeApiSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -271,7 +269,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
       });
 
       it("Set destination namespace with 'Destination default' option", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(pokeApiSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -306,7 +304,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
     describe("Destination prefix", { testIsolation: false }, () => {
       it("add destination prefix, set destination namespace custom format, change prefix and make sure that it's applied to all streams", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+        createNewConnectionViaApi(pokeApiSource, postgresDestination).then((connectionResponse) => {
           connection = connectionResponse;
           visit(connection, "settings");
         });
@@ -350,7 +348,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
         connectionSettings.checkSuccessResult();
       });
       it("can remove destination prefix", () => {
-        createNewConnectionViaApi(pokeApiSource, jsonDestination)
+        createNewConnectionViaApi(pokeApiSource, E2ETestingDestination)
           .then((connection) => {
             requestUpdateConnection(
               getUpdateConnectionBody(connection.connectionId, {
@@ -389,7 +387,7 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
   describe("Settings page", () => {
     it("Delete connection", () => {
-      createNewConnectionViaApi(pokeApiSource, jsonDestination).then((connectionResponse) => {
+      createNewConnectionViaApi(pokeApiSource, E2ETestingDestination).then((connectionResponse) => {
         connection = connectionResponse;
         visit(connection);
         connectionSettings.goToSettingsPage();
@@ -400,34 +398,9 @@ describe("Connection Configuration", { tags: "@connection-configuration" }, () =
 
   describe("Deleted connection", () => {
     beforeEach(() => {
-      createNewConnectionViaApi(pokeApiSource, jsonDestination).as("connection");
+      createNewConnectionViaApi(pokeApiSource, postgresDestination).as("connection");
       cy.get<WebBackendConnectionRead>("@connection").then((connection) => {
         requestDeleteConnection({ connectionId: connection.connectionId });
-      });
-      createNewConnectionViaApi(postgresSource, postgresDestination).as("postgresConnection");
-      cy.get<WebBackendConnectionRead>("@postgresConnection").then((postgresConnection) => {
-        const streamToUpdate = postgresConnection.syncCatalog.streams.findIndex(
-          (stream) => stream.stream?.name === "users" && stream.stream.namespace === "public"
-        );
-
-        const newSyncCatalog = {
-          streams: [...postgresConnection.syncCatalog.streams],
-        };
-        // update so one stream is disabled, to test that you can still filter by enabled/disabled streams
-        newSyncCatalog.streams[streamToUpdate].config = {
-          ...newSyncCatalog.streams[streamToUpdate].config,
-          syncMode: SyncMode.full_refresh,
-          destinationSyncMode: DestinationSyncMode.append,
-          selected: false,
-        };
-
-        requestUpdateConnection(
-          getUpdateConnectionBody(postgresConnection.connectionId, { syncCatalog: newSyncCatalog })
-        );
-
-        requestDeleteConnection({
-          connectionId: postgresConnection.connectionId,
-        });
       });
     });
 

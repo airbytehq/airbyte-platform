@@ -40,7 +40,6 @@ export interface CardProps {
   collapsible?: boolean;
   defaultCollapsedState?: boolean;
   collapsedPreviewInfo?: React.ReactNode;
-  inset?: boolean;
   dataTestId?: string;
 }
 
@@ -55,7 +54,6 @@ export const Card = React.forwardRef<HTMLDivElement, React.PropsWithChildren<Car
       bodyClassName,
       noPadding = false,
       titleWithBottomBorder = false,
-      inset = false,
       collapsible,
       defaultCollapsedState = false,
       collapsedPreviewInfo,
@@ -108,14 +106,7 @@ export const Card = React.forwardRef<HTMLDivElement, React.PropsWithChildren<Car
     );
 
     return (
-      <div
-        className={classNames(className, styles.container, {
-          [styles.inset]: inset,
-        })}
-        data-testid={dataTestId}
-        {...restProps}
-        ref={ref}
-      >
+      <div className={classNames(className, styles.container)} data-testid={dataTestId} {...restProps} ref={ref}>
         {title && !collapsible ? headerTitle : null}
         {/* if collapsible and(if) preview info is provided */}
         {collapsible && (

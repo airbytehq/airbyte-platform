@@ -20,6 +20,7 @@ import com.google.cloud.secretmanager.v1.SecretVersionName
 import com.google.protobuf.ByteString
 import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
+import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes.GOOGLE_SECRET_MANAGER
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
@@ -46,7 +47,7 @@ private val logger = KotlinLogging.logger {}
  * order (or depending on our retention for the secrets pretend to insert earlier versions).
  */
 @Singleton
-@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^google_secret_manager$")
+@Requires(property = "airbyte.secret.persistence", pattern = "(?i)^$GOOGLE_SECRET_MANAGER$")
 @Named("secretPersistence")
 class GoogleSecretManagerPersistence(
   @Value("\${airbyte.secret.store.gcp.project-id}") val gcpProjectId: String,

@@ -4,7 +4,6 @@
 
 package io.airbyte.commons.server.handlers;
 
-import static io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt.getWorkspaceWithFixedGeography;
 import static io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt.validateWorkspace;
 import static io.airbyte.config.helpers.NotificationSettingsHelpersKt.patchNotificationSettingsWithDefaultValue;
 import static io.airbyte.config.persistence.ConfigNotFoundException.NO_ORGANIZATION_FOR_WORKSPACE;
@@ -37,9 +36,7 @@ import io.airbyte.api.model.generated.WorkspaceReadList;
 import io.airbyte.api.model.generated.WorkspaceUpdate;
 import io.airbyte.api.model.generated.WorkspaceUpdateName;
 import io.airbyte.api.model.generated.WorkspaceUpdateOrganization;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.random.RandomKt;
-import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.NotificationConverter;
 import io.airbyte.commons.server.converters.NotificationSettingsConverter;
 import io.airbyte.commons.server.converters.WorkspaceConverter;
@@ -51,16 +48,16 @@ import io.airbyte.commons.server.limits.ConsumptionService;
 import io.airbyte.commons.server.limits.ProductLimitsProvider;
 import io.airbyte.commons.server.slug.Slug;
 import io.airbyte.config.Configs;
+import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.Notification;
 import io.airbyte.config.Organization;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
-import io.airbyte.config.persistence.PermissionPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
 import io.airbyte.data.services.shared.ResourcesByUserQueryPaginated;
@@ -94,15 +91,14 @@ public class WorkspacesHandler {
   private static final Logger LOGGER = LoggerFactory.getLogger(WorkspacesHandler.class);
   private final WorkspacePersistence workspacePersistence;
   private final OrganizationPersistence organizationPersistence;
-  private final SecretsRepositoryWriter secretsRepositoryWriter;
-  private final PermissionPersistence permissionPersistence;
+  private final PermissionHandler permissionHandler;
   private final ConnectionsHandler connectionsHandler;
   private final DestinationHandler destinationHandler;
   private final SourceHandler sourceHandler;
   private final Supplier<UUID> uuidSupplier;
   private final WorkspaceService workspaceService;
+  private final DataplaneGroupService dataplaneGroupService;
   private final TrackingClient trackingClient;
-  private final ApiPojoConverters apiPojoConverters;
   private final ProductLimitsProvider limitsProvider;
   private final ConsumptionService consumptionService;
   private final FeatureFlagClient ffClient;
@@ -111,30 +107,28 @@ public class WorkspacesHandler {
   @VisibleForTesting
   public WorkspacesHandler(final WorkspacePersistence workspacePersistence,
                            final OrganizationPersistence organizationPersistence,
-                           final SecretsRepositoryWriter secretsRepositoryWriter,
-                           final PermissionPersistence permissionPersistence,
+                           final PermissionHandler permissionHandler,
                            final ConnectionsHandler connectionsHandler,
                            final DestinationHandler destinationHandler,
                            final SourceHandler sourceHandler,
                            @Named("uuidGenerator") final Supplier<UUID> uuidSupplier,
                            final WorkspaceService workspaceService,
+                           final DataplaneGroupService dataplaneGroupService,
                            final TrackingClient trackingClient,
-                           final ApiPojoConverters apiPojoConverters,
                            final ProductLimitsProvider limitsProvider,
                            final ConsumptionService consumptionService,
                            final FeatureFlagClient ffClient,
                            final Configs.AirbyteEdition airbyteEdition) {
     this.workspacePersistence = workspacePersistence;
     this.organizationPersistence = organizationPersistence;
-    this.secretsRepositoryWriter = secretsRepositoryWriter;
-    this.permissionPersistence = permissionPersistence;
+    this.permissionHandler = permissionHandler;
     this.connectionsHandler = connectionsHandler;
     this.destinationHandler = destinationHandler;
     this.sourceHandler = sourceHandler;
     this.uuidSupplier = uuidSupplier;
     this.workspaceService = workspaceService;
+    this.dataplaneGroupService = dataplaneGroupService;
     this.trackingClient = trackingClient;
-    this.apiPojoConverters = apiPojoConverters;
     this.limitsProvider = limitsProvider;
     this.consumptionService = consumptionService;
     this.ffClient = ffClient;
@@ -147,7 +141,7 @@ public class WorkspacesHandler {
     final WorkspaceCreateWithId workspaceCreateWithId = new WorkspaceCreateWithId()
         .id(uuidSupplier.get())
         .organizationId(workspaceCreate.getOrganizationId())
-        .defaultGeography(workspaceCreate.getDefaultGeography())
+        .dataplaneGroupId(workspaceCreate.getDataplaneGroupId())
         .displaySetupWizard(workspaceCreate.getDisplaySetupWizard())
         .name(workspaceCreate.getName())
         .notifications(workspaceCreate.getNotifications())
@@ -177,10 +171,14 @@ public class WorkspacesHandler {
     final Boolean securityUpdates = workspaceCreateWithId.getSecurityUpdates();
     final Boolean displaySetupWizard = workspaceCreateWithId.getDisplaySetupWizard();
 
-    // if not set on the workspaceCreate, set the defaultGeography to AUTO
-    final String defaultGeography = workspaceCreateWithId.getDefaultGeography() != null
-        ? workspaceCreateWithId.getDefaultGeography()
-        : DataplaneConstantsKt.GEOGRAPHY_AUTO;
+    // if not set on the workspaceCreate, set the default dataplane group ID
+    UUID dataplaneGroupId;
+    if (workspaceCreateWithId.getDataplaneGroupId() == null) {
+      final DataplaneGroup defaultDataplaneGroup = dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition);
+      dataplaneGroupId = defaultDataplaneGroup.getId();
+    } else {
+      dataplaneGroupId = workspaceCreateWithId.getDataplaneGroupId();
+    }
 
     // NotificationSettings from input will be patched with default values.
     final io.airbyte.config.NotificationSettings notificationSettings =
@@ -199,7 +197,7 @@ public class WorkspacesHandler {
         .withTombstone(false)
         .withNotifications(NotificationConverter.toConfigList(workspaceCreateWithId.getNotifications()))
         .withNotificationSettings(notificationSettings)
-        .withDefaultGeography(getDefaultGeographyForAirbyteEdition(defaultGeography))
+        .withDataplaneGroupId(dataplaneGroupId)
         .withWebhookOperationConfigs(WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.getWebhookConfigs(), uuidSupplier))
         .withOrganizationId(workspaceCreateWithId.getOrganizationId());
 
@@ -235,23 +233,8 @@ public class WorkspacesHandler {
     persistStandardWorkspace(persistedWorkspace);
   }
 
-  public WorkspaceReadList listWorkspaces() throws JsonValidationException, IOException {
+  public WorkspaceReadList listWorkspaces() throws IOException {
     final List<WorkspaceRead> reads = workspaceService.listStandardWorkspaces(false).stream()
-        .map(WorkspaceConverter::domainToApiModel)
-        .collect(Collectors.toList());
-    return new WorkspaceReadList().workspaces(reads);
-  }
-
-  public WorkspaceReadList listAllWorkspacesPaginated(final ListResourcesForWorkspacesRequestBody listResourcesForWorkspacesRequestBody)
-      throws IOException {
-    final List<WorkspaceRead> reads = workspaceService.listAllWorkspacesPaginated(
-        new ResourcesQueryPaginated(
-            listResourcesForWorkspacesRequestBody.getWorkspaceIds(),
-            listResourcesForWorkspacesRequestBody.getIncludeDeleted(),
-            listResourcesForWorkspacesRequestBody.getPagination().getPageSize(),
-            listResourcesForWorkspacesRequestBody.getPagination().getRowOffset(),
-            listResourcesForWorkspacesRequestBody.getNameContains()))
-        .stream()
         .map(WorkspaceConverter::domainToApiModel)
         .collect(Collectors.toList());
     return new WorkspaceReadList().workspaces(reads);
@@ -356,7 +339,7 @@ public class WorkspacesHandler {
   public WorkspaceReadList listWorkspacesByUser(final ListWorkspacesByUserRequestBody request)
       throws IOException {
     // If user has instance_admin permission, list all workspaces.
-    if (permissionPersistence.isUserInstanceAdmin(request.getUserId())) {
+    if (permissionHandler.isUserInstanceAdmin(request.getUserId())) {
       return listWorkspacesByInstanceAdminUser(request);
     }
     // User has no instance_admin permission.
@@ -401,7 +384,7 @@ public class WorkspacesHandler {
     if (CollectionUtils.isEmpty(workspacePatch.getWebhookConfigs())) {
       // We aren't persisting any secrets. It's safe (and necessary) to use the NoSecrets variant because
       // we never hydrated them in the first place.
-      workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
+      workspaceService.writeStandardWorkspaceNoSecrets(workspace);
     } else {
       // We're saving new webhook configs, so we need to persist the secrets.
       persistStandardWorkspace(workspace);
@@ -425,7 +408,7 @@ public class WorkspacesHandler {
 
     // NOTE: it's safe (and necessary) to use the NoSecrets variant because we never hydrated them in
     // the first place.
-    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
+    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
 
     return buildWorkspaceReadFromId(workspaceId);
   }
@@ -438,7 +421,7 @@ public class WorkspacesHandler {
     final StandardWorkspace persistedWorkspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false);
     persistedWorkspace
         .withOrganizationId(workspaceUpdateOrganization.getOrganizationId());
-    workspaceService.writeStandardWorkspaceNoSecrets(getWorkspaceWithFixedGeography(persistedWorkspace, airbyteEdition));
+    workspaceService.writeStandardWorkspaceNoSecrets(persistedWorkspace);
     return buildWorkspaceReadFromId(workspaceId);
   }
 
@@ -524,8 +507,8 @@ public class WorkspacesHandler {
       patchNotifications(workspace, workspacePatch.getNotificationsConfig());
     }
 
-    if (workspacePatch.getDefaultGeography() != null) {
-      workspace.setDefaultGeography(getDefaultGeographyForAirbyteEdition(workspacePatch.getDefaultGeography()));
+    if (workspacePatch.getDataplaneGroupId() != null) {
+      workspace.setDataplaneGroupId(workspacePatch.getDataplaneGroupId());
     }
     if (workspacePatch.getName() != null) {
       workspace.setName(workspacePatch.getName());
@@ -625,15 +608,8 @@ public class WorkspacesHandler {
   private WorkspaceRead persistStandardWorkspace(final StandardWorkspace workspace)
       throws JsonValidationException, IOException, ConfigNotFoundException {
 
-    workspaceService.writeWorkspaceWithSecrets(getWorkspaceWithFixedGeography(workspace, airbyteEdition));
+    workspaceService.writeWorkspaceWithSecrets(workspace);
     return WorkspaceConverter.domainToApiModel(workspace);
-  }
-
-  private String getDefaultGeographyForAirbyteEdition(final String geography) {
-    if (airbyteEdition.equals(Configs.AirbyteEdition.CLOUD) && DataplaneConstantsKt.GEOGRAPHY_AUTO.equalsIgnoreCase(geography)) {
-      return DataplaneConstantsKt.GEOGRAPHY_US;
-    }
-    return geography;
   }
 
   public WorkspaceIdList listActiveWorkspacesByMostRecentlyRunningJobs(@NotNull TimeWindowRequestBody timeWindowRequestBody) throws IOException {

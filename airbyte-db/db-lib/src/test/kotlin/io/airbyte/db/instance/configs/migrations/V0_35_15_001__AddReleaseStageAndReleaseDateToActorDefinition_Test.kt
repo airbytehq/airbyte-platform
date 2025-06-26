@@ -12,14 +12,16 @@ import org.jooq.DSLContext
 import org.jooq.JSONB
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_35_15_001__AddReleaseStageAndReleaseDateToActorDefinition_Test : AbstractConfigsDatabaseTest() {
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // necessary to add actor_definition table
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

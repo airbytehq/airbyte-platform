@@ -170,7 +170,6 @@ class WorkloadApiQueuePollerTest {
       labels: List<WorkloadLabel> = listOf(),
       inputPayload: String = "payload",
       logPath: String = "/path",
-      geography: String = "AUTO",
       type: WorkloadType = WorkloadType.SYNC,
       autoId: UUID = UUID.randomUUID(),
     ): Workload =
@@ -179,7 +178,6 @@ class WorkloadApiQueuePollerTest {
         labels = labels,
         inputPayload = inputPayload,
         logPath = logPath,
-        geography = geography,
         type = type,
         autoId = autoId,
       )

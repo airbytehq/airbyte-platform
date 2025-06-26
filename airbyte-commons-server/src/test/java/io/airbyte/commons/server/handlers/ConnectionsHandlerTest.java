@@ -23,6 +23,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Lists;
 import io.airbyte.analytics.TrackingClient;
 import io.airbyte.api.model.generated.ActorDefinitionRequestBody;
@@ -83,15 +85,20 @@ import io.airbyte.api.problems.model.generated.MapperValidationProblemResponse;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorData;
 import io.airbyte.api.problems.model.generated.ProblemMapperErrorDataMapper;
 import io.airbyte.api.problems.throwable.generated.ConnectionDoesNotSupportFileTransfersProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidAdditionalFieldProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogInvalidOperationProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingObjectNameProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogMissingRequiredFieldProblem;
+import io.airbyte.api.problems.throwable.generated.DestinationCatalogRequiredProblem;
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem;
 import io.airbyte.api.problems.throwable.generated.MapperValidationProblem;
 import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTransfersProblem;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
+import io.airbyte.commons.jackson.MoreMappers;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.converters.ConfigurationUpdate;
@@ -127,7 +134,9 @@ import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.ConnectionContext;
 import io.airbyte.config.Cron;
 import io.airbyte.config.DataType;
+import io.airbyte.config.DestinationCatalog;
 import io.airbyte.config.DestinationConnection;
+import io.airbyte.config.DestinationOperation;
 import io.airbyte.config.FailureReason;
 import io.airbyte.config.FieldSelectionData;
 import io.airbyte.config.Job;
@@ -179,12 +188,14 @@ import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.StreamStatusesService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.domain.services.secrets.SecretPersistenceService;
 import io.airbyte.domain.services.secrets.SecretReferenceService;
 import io.airbyte.domain.services.secrets.SecretStorageService;
+import io.airbyte.featureflag.EnableDestinationCatalogValidation;
 import io.airbyte.featureflag.ResetStreamsStateWhenDisabled;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.featureflag.ValidateConflictingDestinationStreams;
@@ -199,8 +210,8 @@ import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -229,7 +240,6 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
@@ -313,7 +323,7 @@ class ConnectionsHandlerTest {
   private ConnectionScheduleHelper connectionSchedulerHelper;
   private LicenseEntitlementChecker licenseEntitlementChecker;
   private ContextBuilder contextBuilder;
-  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), Collections.singletonList(new HashingMapper()));
+  private final CatalogConverter catalogConverter = new CatalogConverter(new FieldGenerator(), List.of(new HashingMapper(MoreMappers.initMapper())));
   private final ApplySchemaChangeHelper applySchemaChangeHelper = new ApplySchemaChangeHelper(catalogConverter);
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
@@ -322,6 +332,7 @@ class ConnectionsHandlerTest {
   private SecretStorageService secretStorageService;
   private SecretReferenceService secretReferenceService;
   private CurrentUserService currentUserService;
+  private PartialUserConfigService partialUserConfigService;
 
   @SuppressWarnings("unchecked")
   @BeforeEach
@@ -366,7 +377,6 @@ class ConnectionsHandlerTest {
         .withScheduleData(ConnectionHelpers.generateBasicScheduleData())
         .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
         .withSourceCatalogId(UUID.randomUUID())
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(true)
         .withBreakingChange(false)
@@ -389,7 +399,6 @@ class ConnectionsHandlerTest {
         .withScheduleData(ConnectionHelpers.generateBasicScheduleData())
         .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
         .withSourceCatalogId(UUID.randomUUID())
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withNotifySchemaChanges(false)
         .withNotifySchemaChangesByEmail(true)
         .withBreakingChange(false);
@@ -406,8 +415,7 @@ class ConnectionsHandlerTest {
         .withOperationIds(List.of(operationId))
         .withManual(false)
         .withSchedule(ConnectionHelpers.generateBasicSchedule())
-        .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+        .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS);
 
     jobPersistence = mock(JobPersistence.class);
     streamRefreshesHandler = mock(StreamRefreshesHandler.class);
@@ -490,7 +498,7 @@ class ConnectionsHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService, partialUserConfigService);
 
     connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
     matchSearchHandler =
@@ -553,8 +561,7 @@ class ConnectionsHandlerTest {
           mapperSecretHelper,
           metricClient,
           licenseEntitlementChecker,
-          contextBuilder,
-          Configs.AirbyteEdition.COMMUNITY);
+          contextBuilder);
 
       when(uuidGenerator.get()).thenReturn(standardSync.getConnectionId());
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
@@ -773,7 +780,6 @@ class ConnectionsHandlerTest {
           .withOperationIds(List.of(operationId))
           .withManual(true)
           .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
-          .withGeography(DataplaneConstantsKt.GEOGRAPHY_US)
           .withBreakingChange(false)
           .withNotifySchemaChanges(false)
           .withNotifySchemaChangesByEmail(true);
@@ -963,6 +969,64 @@ class ConnectionsHandlerTest {
       assertTrue(Enums.isCompatible(NamespaceDefinitionType.class, io.airbyte.config.JobSyncConfig.NamespaceDefinitionType.class));
     }
 
+    @ParameterizedTest
+    @CsvSource({"true,false", "true,true", "false,true", "false,false"})
+    void defaultsForIncludeFiles(final boolean sourceSupportsFiles, final boolean destSupportsFiles) {
+      final var sourceDefinitionVersion = new ActorDefinitionVersion();
+      sourceDefinitionVersion.setSupportsFileTransfer(sourceSupportsFiles);
+
+      final var destDefinitionVersion = new ActorDefinitionVersion();
+      destDefinitionVersion.setSupportsFileTransfer(destSupportsFiles);
+
+      final List<AirbyteStreamAndConfiguration> streams = new ArrayList<>();
+
+      // file based and no include files value set
+      final var stream1 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream1").isFileBased(true))
+          .config(new AirbyteStreamConfiguration());
+      // not file based
+      final var stream2 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream2").isFileBased(false))
+          .config(new AirbyteStreamConfiguration());
+      // file based and include files set to false
+      final var stream3 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream3").isFileBased(true))
+          .config(new AirbyteStreamConfiguration().includeFiles(false));
+      // file based and include files set to true
+      final var stream4 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream4").isFileBased(true))
+          .config(new AirbyteStreamConfiguration().includeFiles(true));
+      // file based and no include files value set (same as stream1)
+      final var stream5 = new AirbyteStreamAndConfiguration()
+          .stream(new AirbyteStream().name("stream5").isFileBased(true))
+          .config(new AirbyteStreamConfiguration());
+
+      streams.add(stream1);
+      streams.add(stream2);
+      streams.add(stream3);
+      streams.add(stream4);
+      streams.add(stream5);
+      final var catalog = new AirbyteCatalog().streams(streams);
+
+      final AirbyteCatalog actual = connectionsHandler.applyDefaultIncludeFiles(catalog, sourceDefinitionVersion, destDefinitionVersion);
+
+      if (!sourceSupportsFiles) {
+        // existing values are respected; others remain unset
+        assertEquals(null, actual.getStreams().get(0).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(1).getConfig().getIncludeFiles());
+        assertEquals(false, actual.getStreams().get(2).getConfig().getIncludeFiles());
+        assertEquals(true, actual.getStreams().get(3).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(4).getConfig().getIncludeFiles());
+      } else {
+        // default to whether the destination supports; non-file based streams remain unset
+        assertEquals(destSupportsFiles, actual.getStreams().get(0).getConfig().getIncludeFiles());
+        assertEquals(null, actual.getStreams().get(1).getConfig().getIncludeFiles());
+        assertEquals(false, actual.getStreams().get(2).getConfig().getIncludeFiles());
+        assertEquals(true, actual.getStreams().get(3).getConfig().getIncludeFiles());
+        assertEquals(destSupportsFiles, actual.getStreams().get(4).getConfig().getIncludeFiles());
+      }
+    }
+
     @Nested
     class CreateConnection {
 
@@ -973,6 +1037,12 @@ class ConnectionsHandlerTest {
         // for update calls
         when(workspaceHelper.getWorkspaceForConnectionId(standardSync.getConnectionId())).thenReturn(workspaceId);
         when(workspaceHelper.getOrganizationForWorkspace(any())).thenReturn(organizationId);
+        final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+        final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+        when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
       }
 
       private ConnectionCreate buildConnectionCreateRequest(final StandardSync standardSync, final AirbyteCatalog catalog) {
@@ -993,7 +1063,7 @@ class ConnectionsHandlerTest {
                 .memoryRequest(standardSync.getResourceRequirements().getMemoryRequest())
                 .memoryLimit(standardSync.getResourceRequirements().getMemoryLimit()))
             .sourceCatalogId(standardSync.getSourceCatalogId())
-            .geography(standardSync.getGeography())
+            .destinationCatalogId(standardSync.getDestinationCatalogId())
             .notifySchemaChanges(standardSync.getNotifySchemaChanges())
             .notifySchemaChangesByEmail(standardSync.getNotifySchemaChangesByEmail())
             .backfillPreference(Enums.convertTo(standardSync.getBackfillPreference(), SchemaChangeBackfillPreference.class));
@@ -1005,12 +1075,8 @@ class ConnectionsHandlerTest {
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
 
-        // set a defaultGeography on the workspace as EU, but expect connection to be
-        // created AUTO because the ConnectionCreate geography takes precedence over the workspace
-        // defaultGeography.
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
@@ -1042,8 +1108,7 @@ class ConnectionsHandlerTest {
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
 
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog);
@@ -1069,40 +1134,10 @@ class ConnectionsHandlerTest {
       }
 
       @Test
-      void testCreateConnectionUsesDefaultGeographyFromWorkspace()
-          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
-
-        when(workspaceHelper.getWorkspaceForSourceId(sourceId)).thenReturn(workspaceId);
-
-        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
-
-        // don't set a geography on the ConnectionCreate to force inheritance from workspace default
-        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog).geography(null);
-
-        // set the workspace default to EU
-        final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
-        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
-
-        // the expected read and verified write is generated from the standardSync, so set this to EU as
-        // well
-        standardSync.setGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
-
-        final ConnectionRead expectedConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
-        final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
-
-        assertEquals(expectedConnectionRead, actualConnectionRead);
-        verify(connectionService).writeStandardSync(standardSync
-            .withNotifySchemaChangesByEmail(null));
-      }
-
-      @Test
       void testCreateConnectionWithSelectedFields()
           throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog catalogWithSelectedFields = ConnectionHelpers.generateApiCatalogWithTwoFields();
@@ -1127,8 +1162,7 @@ class ConnectionsHandlerTest {
       void testCreateConnectionWithHashedFields()
           throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
@@ -1149,8 +1183,7 @@ class ConnectionsHandlerTest {
       void testCreateConnectionWithMappers()
           throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final UUID newMapperId = UUID.randomUUID();
@@ -1173,6 +1206,28 @@ class ConnectionsHandlerTest {
         verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
       }
 
+      @Test
+      void testCreateConnectionWithDestinationCatalog()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final StandardWorkspace workspace = new StandardWorkspace()
+            .withWorkspaceId(workspaceId);
+        when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
+
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+
+        final UUID destinationCatalogId = UUID.randomUUID();
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalog)
+            .destinationCatalogId(destinationCatalogId);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.createConnection(connectionCreate);
+
+        final ConnectionRead expectedConnectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
+        assertEquals(expectedConnectionRead, actualConnectionRead);
+
+        standardSync.withDestinationCatalogId(destinationCatalogId);
+        verify(connectionService).writeStandardSync(standardSync.withNotifySchemaChangesByEmail(null));
+      }
+
       @ParameterizedTest
       @CsvSource({
         "true, true, true", // all supported
@@ -1186,8 +1241,7 @@ class ConnectionsHandlerTest {
                                                      final boolean streamSupportsFiles)
           throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
@@ -1218,8 +1272,7 @@ class ConnectionsHandlerTest {
       @Test
       void testCreateConnectionValidatesMappers() throws JsonValidationException, ConfigNotFoundException, IOException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
@@ -1274,8 +1327,7 @@ class ConnectionsHandlerTest {
       void testCreateFullRefreshConnectionWithSelectedFields()
           throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.config.persistence.ConfigNotFoundException {
         final StandardWorkspace workspace = new StandardWorkspace()
-            .withWorkspaceId(workspaceId)
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
+            .withWorkspaceId(workspaceId);
         when(workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true)).thenReturn(workspace);
 
         final AirbyteCatalog fullRefreshCatalogWithSelectedFields = ConnectionHelpers.generateApiCatalogWithTwoFields();
@@ -1487,6 +1539,52 @@ class ConnectionsHandlerTest {
         assertThrows(BadRequestException.class, () -> connectionsHandler.createConnection(request));
       }
 
+      @ParameterizedTest
+      @CsvSource({
+        "true, true, true, true", // feature flag enabled, destination supports data activation, has destination catalog
+        "true, true, false, false", // feature flag enabled, destination supports data activation, no destination catalog - should throw
+        "true, false, false, true", // feature flag enabled, destination doesn't support data activation, no destination catalog
+        "false, true, true, true", // feature flag disabled, destination supports data activation, has destination catalog
+        "false, true, false, true", // feature flag disabled, destination supports data activation, no destination catalog
+        "false, false, false, true", // feature flag disabled, destination doesn't support data activation, no destination catalog
+      })
+      void testCreateConnectionValidatesDestinationCatalog(final boolean featureFlagEnabled,
+                                                           final boolean destinationSupportsDataActivation,
+                                                           final boolean hasDestinationCatalog,
+                                                           final boolean shouldSucceed)
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final UUID destinationCatalogIdInCreate = hasDestinationCatalog ? UUID.randomUUID() : null;
+
+        final AirbyteCatalog catalogForCreate = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionCreate connectionCreate = buildConnectionCreateRequest(standardSync, catalogForCreate);
+        if (hasDestinationCatalog) {
+          connectionCreate.destinationCatalogId(destinationCatalogIdInCreate);
+          when(catalogService.getActorCatalogById(destinationCatalogIdInCreate))
+              .thenReturn(new ActorCatalog().withId(destinationCatalogIdInCreate).withCatalog(Jsons.emptyObject()));
+          when(connectionService.getStandardSync(standardSync.getConnectionId()))
+              .thenReturn(Jsons.clone(standardSync).withDestinationCatalogId(destinationCatalogIdInCreate));
+        }
+
+        when(featureFlagClient.boolVariation(EnableDestinationCatalogValidation.INSTANCE, new Workspace(workspaceId)))
+            .thenReturn(featureFlagEnabled);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsDataActivation(false));
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation));
+
+        if (shouldSucceed) {
+          // Connection should be created successfully
+          final ConnectionRead actualRead = connectionsHandler.createConnection(connectionCreate);
+          final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+              .syncCatalog(catalogForCreate)
+              .destinationCatalogId(destinationCatalogIdInCreate);
+          assertEquals(expectedRead, actualRead);
+        } else {
+          // Should throw DestinationCatalogRequiredProblem
+          assertThrows(DestinationCatalogRequiredProblem.class, () -> connectionsHandler.createConnection(connectionCreate));
+        }
+      }
+
     }
 
     @Nested
@@ -1529,7 +1627,6 @@ class ConnectionsHandlerTest {
             .withScheduleData(ConnectionHelpers.generateBasicScheduleData())
             .withResourceRequirements(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS)
             .withSourceCatalogId(UUID.randomUUID())
-            .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
             .withNotifySchemaChanges(false)
             .withNotifySchemaChangesByEmail(true)
             .withBreakingChange(false);
@@ -1539,6 +1636,12 @@ class ConnectionsHandlerTest {
             .thenReturn(new StandardSourceDefinition().withName("source").withSourceDefinitionId(UUID.randomUUID()));
         when(destinationService.getDestinationDefinitionFromConnection(connection3Id))
             .thenReturn(new StandardDestinationDefinition().withName("destination").withDestinationDefinitionId(UUID.randomUUID()));
+        final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+        final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+        when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
       }
 
       private ConfiguredAirbyteStream buildConfiguredStream(final String name) {
@@ -1576,151 +1679,6 @@ class ConnectionsHandlerTest {
         assertEquals(expectedRead, actualConnectionRead);
         verify(connectionService).writeStandardSync(expectedPersistedSync);
         verify(eventRunner).update(connectionUpdate.getConnectionId());
-      }
-
-      @ParameterizedTest
-      @EnumSource(Configs.AirbyteEdition.class)
-      void testUpdateConnectionPatchGeographyByAirbyteEdition(final Configs.AirbyteEdition airbyteEdition) throws Exception {
-        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
-            .connectionId(standardSync.getConnectionId())
-            .name("newName")
-            .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
-
-        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
-            .withName("newName")
-            .withGeography(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO);
-
-        new ConnectionsHandler(
-            streamRefreshesHandler,
-            jobPersistence,
-            catalogService,
-            uuidGenerator,
-            workspaceHelper,
-            trackingClient,
-            eventRunner,
-            connectionHelper,
-            featureFlagClient,
-            actorDefinitionVersionHelper,
-            connectorDefinitionSpecificationHandler,
-            streamGenerationRepository,
-            catalogGenerationSetter,
-            catalogValidator,
-            notificationHelper,
-            streamStatusesService,
-            connectionTimelineEventService,
-            connectionTimelineEventHelper,
-            statePersistence,
-            sourceService,
-            destinationService,
-            connectionService,
-            workspaceService,
-            destinationCatalogGenerator,
-            catalogConverter,
-            applySchemaChangeHelper,
-            apiPojoConverters,
-            connectionSchedulerHelper,
-            mapperSecretHelper,
-            metricClient,
-            licenseEntitlementChecker,
-            contextBuilder,
-            airbyteEdition).applyPatchToStandardSync(standardSync, connectionUpdate, UUID.randomUUID());
-
-        assertEquals(expectedPersistedSync, standardSync);
-      }
-
-      @ParameterizedTest
-      @EnumSource(Configs.AirbyteEdition.class)
-      void testGetGeographyFromConnectionCreateOrWorkspace(final Configs.AirbyteEdition airbyteEdition) throws Exception {
-        final ConnectionCreate connectionCreate = new ConnectionCreate()
-            .name("newName")
-            .geography(DataplaneConstantsKt.GEOGRAPHY_AUTO);
-
-        final String geography = new ConnectionsHandler(
-            streamRefreshesHandler,
-            jobPersistence,
-            catalogService,
-            uuidGenerator,
-            workspaceHelper,
-            trackingClient,
-            eventRunner,
-            connectionHelper,
-            featureFlagClient,
-            actorDefinitionVersionHelper,
-            connectorDefinitionSpecificationHandler,
-            streamGenerationRepository,
-            catalogGenerationSetter,
-            catalogValidator,
-            notificationHelper,
-            streamStatusesService,
-            connectionTimelineEventService,
-            connectionTimelineEventHelper,
-            statePersistence,
-            sourceService,
-            destinationService,
-            connectionService,
-            workspaceService,
-            destinationCatalogGenerator,
-            catalogConverter,
-            applySchemaChangeHelper,
-            apiPojoConverters,
-            connectionSchedulerHelper,
-            mapperSecretHelper,
-            metricClient,
-            licenseEntitlementChecker,
-            contextBuilder,
-            airbyteEdition).getGeographyFromConnectionCreateOrWorkspace(connectionCreate);
-
-        assertEquals(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO,
-            geography);
-      }
-
-      @ParameterizedTest
-      @EnumSource(Configs.AirbyteEdition.class)
-      void testGetGeographyFromConnectionCreateOrWorkspaceNoConnectionGeography(final Configs.AirbyteEdition airbyteEdition) throws Exception {
-        final ConnectionCreate connectionCreate = new ConnectionCreate()
-            .name("newName");
-
-        when(workspaceService.getStandardWorkspaceNoSecrets(any(), eq(true))).thenReturn(new StandardWorkspace()
-            .withWorkspaceId(UUID.randomUUID())
-            .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO));
-
-        final String geography = new ConnectionsHandler(
-            streamRefreshesHandler,
-            jobPersistence,
-            catalogService,
-            uuidGenerator,
-            workspaceHelper,
-            trackingClient,
-            eventRunner,
-            connectionHelper,
-            featureFlagClient,
-            actorDefinitionVersionHelper,
-            connectorDefinitionSpecificationHandler,
-            streamGenerationRepository,
-            catalogGenerationSetter,
-            catalogValidator,
-            notificationHelper,
-            streamStatusesService,
-            connectionTimelineEventService,
-            connectionTimelineEventHelper,
-            statePersistence,
-            sourceService,
-            destinationService,
-            connectionService,
-            workspaceService,
-            destinationCatalogGenerator,
-            catalogConverter,
-            applySchemaChangeHelper,
-            apiPojoConverters,
-            connectionSchedulerHelper,
-            mapperSecretHelper,
-            metricClient,
-            licenseEntitlementChecker,
-            contextBuilder,
-            airbyteEdition).getGeographyFromConnectionCreateOrWorkspace(connectionCreate);
-
-        assertEquals(airbyteEdition == Configs.AirbyteEdition.CLOUD ? DataplaneConstantsKt.GEOGRAPHY_US : DataplaneConstantsKt.GEOGRAPHY_AUTO,
-            geography);
       }
 
       @Test
@@ -1908,6 +1866,29 @@ class ConnectionsHandlerTest {
         final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
             .withCatalog(expectedPersistedCatalog)
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate));
+
+        when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+
+        final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+
+        assertEquals(expectedRead, actualConnectionRead);
+        verify(connectionService).writeStandardSync(expectedPersistedSync);
+        verify(eventRunner).update(connectionUpdate.getConnectionId());
+      }
+
+      @Test
+      void testUpdateConnectionPatchDestinationCatalogId()
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+        final UUID newDestinationCatalogId = UUID.randomUUID();
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .destinationCatalogId(newDestinationCatalogId);
+
+        final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+            .destinationCatalogId(newDestinationCatalogId);
+
+        final StandardSync expectedPersistedSync = Jsons.clone(standardSync)
+            .withDestinationCatalogId(newDestinationCatalogId);
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
@@ -2152,8 +2133,7 @@ class ConnectionsHandlerTest {
             .syncCatalog(catalogForUpdate)
             .resourceRequirements(resourceRequirements)
             .sourceCatalogId(newSourceCatalogId)
-            .operationIds(List.of(operationId, otherOperationId))
-            .geography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .operationIds(List.of(operationId, otherOperationId));
 
         final ConfiguredAirbyteCatalog expectedPersistedCatalog = ConnectionHelpers.generateBasicConfiguredAirbyteCatalog();
         expectedPersistedCatalog.getStreams().get(0).getStream().withName(AZKABAN_USERS);
@@ -2168,8 +2148,7 @@ class ConnectionsHandlerTest {
             .withFieldSelectionData(catalogConverter.getFieldSelectionData(catalogForUpdate))
             .withResourceRequirements(apiPojoConverters.resourceRequirementsToInternal(resourceRequirements))
             .withSourceCatalogId(newSourceCatalogId)
-            .withOperationIds(List.of(operationId, otherOperationId))
-            .withGeography(DataplaneConstantsKt.GEOGRAPHY_EU);
+            .withOperationIds(List.of(operationId, otherOperationId));
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
 
@@ -2185,7 +2164,6 @@ class ConnectionsHandlerTest {
             standardSync.getDestinationId(),
             standardSync.getOperationIds(),
             newSourceCatalogId,
-            standardSync.getGeography(),
             false,
             standardSync.getNotifySchemaChanges(),
             standardSync.getNotifySchemaChangesByEmail(),
@@ -2350,6 +2328,193 @@ class ConnectionsHandlerTest {
         verify(statePersistence).bulkDelete(moreComplexCatalogSync.getConnectionId(), expectedStreams);
       }
 
+      @ParameterizedTest
+      @CsvSource({
+        "true, true, true, true", // feature flag enabled, destination supports data activation, has destination catalog
+        "true, true, false, false", // feature flag enabled, destination supports data activation, no destination catalog - should throw
+        "true, false, false, true", // feature flag enabled, destination doesn't support data activation, no destination catalog
+        "false, true, true, true", // feature flag disabled, destination supports data activation, has destination catalog
+        "false, true, false, true", // feature flag disabled, destination supports data activation, no destination catalog
+        "false, false, false, true", // feature flag disabled, destination doesn't support data activation, no destination catalog
+      })
+      void testUpdateConnectionValidatesDestinationCatalog(final boolean featureFlagEnabled,
+                                                           final boolean destinationSupportsDataActivation,
+                                                           final boolean hasDestinationCatalogInUpdate,
+                                                           final boolean shouldSucceed)
+          throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
+
+        final AirbyteCatalog catalogForUpdate = ConnectionHelpers.generateBasicApiCatalog();
+        final ConnectionUpdate connectionUpdate = new ConnectionUpdate()
+            .connectionId(standardSync.getConnectionId())
+            .syncCatalog(catalogForUpdate);
+
+        final @Nullable UUID destinationCatalogIdInUpdate = hasDestinationCatalogInUpdate ? UUID.randomUUID() : null;
+
+        // Set destination catalog ID in the update if specified
+        if (hasDestinationCatalogInUpdate) {
+          connectionUpdate.destinationCatalogId(destinationCatalogIdInUpdate);
+          when(catalogService.getActorCatalogById(destinationCatalogIdInUpdate))
+              .thenReturn(new ActorCatalog().withId(destinationCatalogIdInUpdate).withCatalog(Jsons.emptyObject()));
+        }
+
+        when(featureFlagClient.boolVariation(eq(EnableDestinationCatalogValidation.INSTANCE), any()))
+            .thenReturn(featureFlagEnabled);
+        when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsDataActivation(false));
+        when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(
+            new ActorDefinitionVersion().withSupportsDataActivation(destinationSupportsDataActivation));
+
+        if (shouldSucceed) {
+          // Connection should be updated successfully
+          final ConnectionRead actualRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
+          final ConnectionRead expectedRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync)
+              .syncCatalog(catalogForUpdate)
+              .destinationCatalogId(destinationCatalogIdInUpdate);
+          assertEquals(expectedRead, actualRead);
+        } else {
+          // Should throw DestinationCatalogRequiredProblem
+          assertThrows(DestinationCatalogRequiredProblem.class, () -> connectionsHandler.updateConnection(connectionUpdate, null, false));
+        }
+      }
+
+    }
+
+    @Nested
+    class ValidateCatalogWithDestinationCatalog {
+
+      @Test
+      void testValidateCatalogWithDestinationCatalogSuccess() throws JsonValidationException {
+        // Create test data
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().destinationObjectName("test_table");
+
+        final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+
+        final JsonNode destinationSchema = ConnectionHelpers.generateBasicJsonSchema();
+        ((ObjectNode) destinationSchema).put("additionalProperties", false);
+
+        final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of(
+            new DestinationOperation(
+                "test_table",
+                io.airbyte.config.DestinationSyncMode.APPEND,
+                destinationSchema,
+                null)));
+
+        final CatalogGenerationResult generationResult = new CatalogGenerationResult(configuredCatalog, Map.of());
+
+        // Set up mocks
+        when(destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)).thenReturn(generationResult);
+
+        // Should not throw any exception
+        assertDoesNotThrow(() -> connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog));
+      }
+
+      @Test
+      void testValidateCatalogWithDestinationCatalogMissingObjectName() throws JsonValidationException {
+        // Create test data with missing destination object name
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        // Don't set destination object name - it will be null
+
+        final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+
+        final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of());
+
+        final CatalogGenerationResult generationResult = new CatalogGenerationResult(configuredCatalog, Map.of());
+
+        // Set up mocks
+        when(destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)).thenReturn(generationResult);
+
+        // Should throw DestinationCatalogMissingObjectNameProblem
+        assertThrows(DestinationCatalogMissingObjectNameProblem.class,
+            () -> connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog));
+      }
+
+      @Test
+      void testValidateCatalogWithDestinationCatalogInvalidOperation() throws JsonValidationException {
+        // Create test data with invalid operation (missing from destination catalog)
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().destinationObjectName("test_table");
+
+        final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+
+        // No operations defined
+        final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of());
+
+        final CatalogGenerationResult generationResult = new CatalogGenerationResult(configuredCatalog, Map.of());
+
+        // Set up mocks
+        when(destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)).thenReturn(generationResult);
+
+        // Should throw DestinationCatalogInvalidOperationProblem
+        assertThrows(DestinationCatalogInvalidOperationProblem.class,
+            () -> connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog));
+      }
+
+      @Test
+      void testValidateCatalogWithDestinationCatalogMissingRequiredField() throws JsonValidationException {
+        // Create test data with missing required field
+        final AirbyteCatalog catalog = ConnectionHelpers.generateBasicApiCatalog();
+        catalog.getStreams().getFirst().getConfig().destinationObjectName("test_table");
+
+        final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+
+        final JsonNode destinationSchema = Jsons.jsonNode(Map.of(
+            "type", "object",
+            "properties", Map.of(
+                "field1", Map.of("type", "string"),
+                "field2", Map.of("type", "string")),
+            "required", List.of("field2") // field2 is required
+        ));
+
+        final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of(
+            new DestinationOperation(
+                "test_table",
+                io.airbyte.config.DestinationSyncMode.APPEND,
+                destinationSchema,
+                null)));
+
+        final CatalogGenerationResult generationResult = new CatalogGenerationResult(configuredCatalog, Map.of());
+
+        // Set up mocks
+        when(destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)).thenReturn(generationResult);
+
+        // Should throw DestinationCatalogMissingRequiredFieldProblem
+        assertThrows(DestinationCatalogMissingRequiredFieldProblem.class,
+            () -> connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog));
+      }
+
+      @Test
+      void testValidateCatalogWithDestinationCatalogInvalidAdditionalField() throws JsonValidationException {
+        // Create test data with additional field not allowed
+        final AirbyteCatalog catalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+        catalog.getStreams().getFirst().getConfig().destinationObjectName("test_table");
+
+        final ConfiguredAirbyteCatalog configuredCatalog = catalogConverter.toConfiguredInternal(catalog);
+
+        final JsonNode destinationSchema = Jsons.jsonNode(Map.of(
+            "type", "object",
+            "properties", Map.of(
+                FIELD_NAME, Map.of("type", "string")),
+            "additionalProperties", false // Additional properties not allowed
+        ));
+
+        final DestinationCatalog destinationCatalog = new DestinationCatalog(List.of(
+            new DestinationOperation(
+                "test_table",
+                io.airbyte.config.DestinationSyncMode.APPEND,
+                destinationSchema,
+                null)));
+
+        final CatalogGenerationResult generationResult = new CatalogGenerationResult(configuredCatalog, Map.of());
+
+        // Set up mocks
+        when(destinationCatalogGenerator.generateDestinationCatalog(configuredCatalog)).thenReturn(generationResult);
+
+        // Should throw DestinationCatalogInvalidAdditionalFieldProblem
+        assertThrows(DestinationCatalogInvalidAdditionalFieldProblem.class,
+            () -> connectionsHandler.validateCatalogWithDestinationCatalog(catalog, destinationCatalog));
+      }
+
     }
 
   }
@@ -2386,8 +2551,7 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator, catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
           metricClient, licenseEntitlementChecker,
-          contextBuilder,
-          Configs.AirbyteEdition.COMMUNITY);
+          contextBuilder);
     }
 
     private Attempt generateMockAttemptWithStreamStats(final Instant attemptTime, final List<Map<List<String>, Long>> streamsToRecordsSynced) {
@@ -2626,8 +2790,7 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper, apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper,
           metricClient, licenseEntitlementChecker,
-          contextBuilder,
-          Configs.AirbyteEdition.COMMUNITY);
+          contextBuilder);
     }
 
     @Test
@@ -3407,6 +3570,13 @@ class ConnectionsHandlerTest {
       final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
           .withSourceDefinitionId(UUID.randomUUID());
 
+      final ActorDefinitionVersion sourceVersion = mock(ActorDefinitionVersion.class);
+      final ActorDefinitionVersion destinationVersion = mock(ActorDefinitionVersion.class);
+      when(sourceVersion.getSupportsFileTransfer()).thenReturn(false);
+      when(destinationVersion.getSupportsFileTransfer()).thenReturn(false);
+      when(actorDefinitionVersionHelper.getSourceVersion(any(), any(), any())).thenReturn(sourceVersion);
+      when(actorDefinitionVersionHelper.getDestinationVersion(any(), any(), any())).thenReturn(destinationVersion);
+
       when(catalogService.getActorCatalogById(SOURCE_CATALOG_ID)).thenReturn(actorCatalog);
       when(connectionService.getStandardSync(CONNECTION_ID)).thenReturn(standardSync);
       when(sourceService.getSourceConnection(SOURCE_ID)).thenReturn(source);
@@ -3446,8 +3616,7 @@ class ConnectionsHandlerTest {
           destinationCatalogGenerator,
           catalogConverter, applySchemaChangeHelper,
           apiPojoConverters, connectionSchedulerHelper, mapperSecretHelper, metricClient, licenseEntitlementChecker,
-          contextBuilder,
-          Configs.AirbyteEdition.COMMUNITY);
+          contextBuilder);
     }
 
     @Test
@@ -3620,7 +3789,7 @@ class ConnectionsHandlerTest {
         throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.config.persistence.ConfigNotFoundException {
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final var catalogWithDiff =
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
@@ -3678,7 +3847,7 @@ class ConnectionsHandlerTest {
 
       final Field newField = Field.of(A_DIFFERENT_COLUMN, JsonSchemaType.STRING);
       final var catalogWithDiff =
-          io.airbyte.protocol.models.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
+          io.airbyte.protocol.models.v0.CatalogHelpers.createAirbyteCatalog(SHOES, Field.of(SKU, JsonSchemaType.STRING), newField);
       final ActorCatalog discoveredCatalog = new ActorCatalog()
           .withCatalog(Jsons.jsonNode(catalogWithDiff))
           .withCatalogHash("")
@@ -3792,8 +3961,7 @@ class ConnectionsHandlerTest {
           connectionSchedulerHelper,
           mapperSecretHelper, metricClient,
           licenseEntitlementChecker,
-          contextBuilder,
-          Configs.AirbyteEdition.COMMUNITY);
+          contextBuilder);
     }
 
     @Test

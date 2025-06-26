@@ -46,6 +46,7 @@ export const links = {
   connectorBuilderTutorial: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/tutorial`,
   connectorBuilderAssist: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/ai-assist`,
   connectorBuilderCustomComponents: `${BASE_DOCS_LINK}/connector-development/connector-builder-ui/custom-components`,
+  connectorBuilderStreamTemplates: `${BASE_DOCS_LINK}/platform/next/connector-development/connector-builder-ui/stream-templates`,
   interpolationVariableDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference`,
   interpolationMacroDocs: `${BASE_DOCS_LINK}/connector-development/config-based/understanding-the-yaml-file/reference#macros`,
   creditDescription: `${BASE_DOCS_LINK}/cloud/managing-airbyte-cloud/manage-credits#what-are-credits`,
@@ -62,6 +63,9 @@ export const links = {
   billingNotificationsForm:
     "https://airbyte.retool.com/form/f06009f2-aad6-4df4-bb54-41f3b17d50d2?orgId={organizationId}&email={email}",
   connectionMappings: `${BASE_DOCS_LINK}/using-airbyte/mappings`,
+  dataActivationDocs: `${BASE_DOCS_LINK}`, // Does not exist yet - this is a placeholder
+  ssoDocs: `${BASE_DOCS_LINK}/platform/access-management/sso`,
+  embeddedOnboardingDocs: `${BASE_DOCS_LINK}/embedded/develop-your-app`,
 } as const;
 
 export type OutboundLinks = typeof links;

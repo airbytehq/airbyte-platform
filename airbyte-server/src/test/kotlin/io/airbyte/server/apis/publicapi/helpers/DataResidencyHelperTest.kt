@@ -4,16 +4,18 @@
 
 package io.airbyte.server.apis.publicapi.helpers
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import java.util.UUID
 
 class DataResidencyHelperTest {
   private lateinit var dataplaneGroupService: DataplaneGroupService
@@ -24,67 +26,84 @@ class DataResidencyHelperTest {
   }
 
   @Test
-  fun `returns null when dataResidency is null`() {
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition returns null when dataResidency is null`() {
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
-    val result = helper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(null)
+    val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(null)
     Assertions.assertNull(result)
   }
 
   @Test
-  fun `cloud edition with AUTO returns default group`() {
-    val defaultGroup = DataplaneGroup().withName("cloud-default")
-    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, GEOGRAPHY_US) } returns defaultGroup
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with AUTO returns US group`() {
+    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) } returns cloudDataplaneGroup
 
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
 
     listOf("auto", "AUTO", "AuTo").forEach { input ->
-      val result = helper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(input)
-      Assertions.assertEquals("cloud-default", result, "Expected default for input: $input")
+      val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(input)
+      Assertions.assertEquals(cloudDataplaneGroup.id, result?.id, "Expected default for input: $input")
     }
+
+    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) }
   }
 
   @Test
-  fun `cloud edition with US returns US (case insensitive)`() {
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with US returns US group`() {
+    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
+
     val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
 
     listOf("us", "US", "Us").forEach { input ->
-      val result = helper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(input)
-      Assertions.assertEquals(input, result, "Expected US for input: $input")
+      every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, input) } returns cloudDataplaneGroup
+
+      val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(input)
+      Assertions.assertEquals(cloudDataplaneGroup.id, result?.id, "Expected US for input: $input")
     }
+
+    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, US_DATAPLANE_GROUP) }
   }
 
   @Test
-  fun `cloud edition with custom value returns custom value`() {
-    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition cloud edition with custom value returns custom value`() {
+    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
     val customValue = "eu-west"
-    val result = helper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(customValue)
-    Assertions.assertEquals(customValue, result)
+
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) } returns cloudDataplaneGroup
+
+    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.CLOUD)
+
+    val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(customValue)
+    Assertions.assertEquals(cloudDataplaneGroup.id, result?.id)
+
+    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) }
   }
 
   @Test
-  fun `OSS editions return original value and log warning (case insensitive)`() {
-    val editions = listOf(AirbyteEdition.COMMUNITY, AirbyteEdition.ENTERPRISE)
-    val inputs = listOf("us", "US", "Us", "auto", "AUTO", "Auto", "eu-central", "Asia")
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition OSS edition returns default dataplane group`() {
+    val ossDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
+    every { dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(AirbyteEdition.COMMUNITY) } returns ossDataplaneGroup
 
-    for (edition in editions) {
-      val helper = DataResidencyHelper(dataplaneGroupService, edition)
-      for (input in inputs) {
-        val result = helper.getDataplaneGroupNameFromResidencyAndAirbyteEdition(input)
-        Assertions.assertEquals(input, result, "$edition expected original value for input: $input")
-      }
+    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.COMMUNITY)
+    for (input in listOf("us", "US", "Us", "auto", "AUTO", "Auto", "eu-central", "Asia")) {
+      val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(input)
+      Assertions.assertEquals(ossDataplaneGroup.id, result?.id, "Expected value for input: $input")
     }
+
+    verify { dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(AirbyteEdition.COMMUNITY) }
   }
 
   @Test
-  fun `OSS editions with custom value return custom value`() {
-    val customValue = "asia-east"
+  fun `getDataplaneGroupFromResidencyAndAirbyteEdition Enterprise edition returns custom dataplane group`() {
+    val cloudDataplaneGroup = DataplaneGroup().withId(UUID.randomUUID())
+    val customValue = "eu-west"
 
-    val helperCommunity = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.COMMUNITY)
-    val resultCommunity = helperCommunity.getDataplaneGroupNameFromResidencyAndAirbyteEdition(customValue)
-    Assertions.assertEquals(customValue, resultCommunity)
+    every { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) } returns cloudDataplaneGroup
 
-    val helperEnterprise = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.ENTERPRISE)
-    val resultEnterprise = helperEnterprise.getDataplaneGroupNameFromResidencyAndAirbyteEdition(customValue)
-    Assertions.assertEquals(customValue, resultEnterprise)
+    val helper = DataResidencyHelper(dataplaneGroupService, AirbyteEdition.ENTERPRISE)
+
+    val result = helper.getDataplaneGroupFromResidencyAndAirbyteEdition(customValue)
+    Assertions.assertEquals(cloudDataplaneGroup.id, result?.id)
+
+    verify { dataplaneGroupService.getDataplaneGroupByOrganizationIdAndName(DEFAULT_ORGANIZATION_ID, customValue) }
   }
 }

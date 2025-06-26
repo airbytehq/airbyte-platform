@@ -19,7 +19,9 @@ import io.airbyte.commons.storage.GcsStorageClient
 import io.airbyte.commons.storage.LocalStorageClient
 import io.airbyte.commons.storage.MinioStorageClient
 import io.airbyte.commons.storage.S3StorageClient
+import io.airbyte.commons.storage.STRUCTURED_LOG_FILE_EXTENSION
 import io.airbyte.commons.storage.StorageClient
+import io.airbyte.commons.storage.createFileId
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify

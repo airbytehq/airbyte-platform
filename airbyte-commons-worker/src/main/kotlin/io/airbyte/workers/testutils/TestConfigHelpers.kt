@@ -20,8 +20,8 @@ import io.airbyte.config.SyncMode
 import io.airbyte.config.helpers.CatalogHelpers
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.protocol.models.Field
 import io.airbyte.protocol.models.JsonSchemaType
+import io.airbyte.protocol.models.v0.Field
 import java.util.UUID
 
 private const val CONNECTION_NAME = "favorite_color_pipe"
@@ -149,7 +149,7 @@ object TestConfigHelpers {
           DestinationSyncMode.APPEND,
         )
 
-      val streams = listOf<ConfiguredAirbyteStream>(streamOne, streamTwo)
+      val streams = listOf(streamOne, streamTwo)
       catalog.withStreams(streams)
     } else {
       val stream =

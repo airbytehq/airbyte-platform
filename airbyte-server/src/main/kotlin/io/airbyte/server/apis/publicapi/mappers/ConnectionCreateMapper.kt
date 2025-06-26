@@ -47,9 +47,6 @@ object ConnectionCreateMapper {
       connectionCreateOss.prefix = connectionCreateRequest.prefix
     }
 
-    // set geography
-    connectionCreateOss.geography = connectionCreateRequest.dataResidency
-
     // set schedule
     if (connectionCreateRequest.schedule != null) {
       connectionCreateOss.scheduleType = ConnectionScheduleType.fromValue(connectionCreateRequest.schedule!!.scheduleType.toString())

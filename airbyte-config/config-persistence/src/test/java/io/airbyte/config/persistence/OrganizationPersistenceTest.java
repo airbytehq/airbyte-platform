@@ -70,8 +70,7 @@ class OrganizationPersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        dataplaneGroupService);
+        metricClient);
     truncateAllTables();
 
     for (final Organization organization : MockData.organizations()) {

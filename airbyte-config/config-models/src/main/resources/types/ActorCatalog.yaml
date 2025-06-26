@@ -1,6 +1,6 @@
 ---
 "$schema": http://json-schema.org/draft-07/schema#
-"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/AttemptFailureSummary.yaml
+"$id": https://github.com/airbytehq/airbyte/blob/master/airbyte-config/models/src/main/resources/types/ActorCatalog.yaml
 title: ActorCatalog
 description: Catalog of an actor.
 type: object
@@ -18,3 +18,8 @@ properties:
     existingJavaType: com.fasterxml.jackson.databind.JsonNode
   catalogHash:
     type: string
+  catalogType:
+    type: string
+    enum:
+      - source_catalog
+      - destination_catalog

@@ -10,12 +10,15 @@ import static io.airbyte.metrics.lib.MetricTags.AUTHENTICATION_REQUEST_URI_ATTRI
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.nimbusds.jwt.JWT;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.PlainJWT;
 import io.airbyte.commons.auth.RequiresAuthMode;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.config.AuthMode;
+import io.airbyte.commons.auth.roles.AuthRole;
 import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.commons.server.support.RbacRoleHelper;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -27,6 +30,7 @@ import io.micronaut.core.order.Ordered;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.security.authentication.Authentication;
 import io.micronaut.security.authentication.AuthenticationException;
+import io.micronaut.security.token.jwt.validator.JwtAuthenticationFactory;
 import io.micronaut.security.token.validator.TokenValidator;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
@@ -50,8 +54,16 @@ import reactor.core.publisher.Mono;
 @Singleton
 @Primary
 @RequiresAuthMode(AuthMode.OIDC)
+// We're not confident about what the identity-provider.type will be when keycloak *should* be
+// enabled,
+// (we think it's usually "oidc" or "keycloak"). We're more confident about when we definitely
+// *don't* want it enabled,
+// so here we rule out "generic-oidc" and "simple" explicitly. Otherwise, for now, keycloak is
+// enabled.
 @Requires(property = "airbyte.auth.identity-provider.type",
           notEquals = "generic-oidc")
+@Requires(property = "airbyte.auth.identity-provider.type",
+          notEquals = "simple")
 @SuppressWarnings({"PMD.PreserveStackTrace", "PMD.UseTryWithResources", "PMD.UnusedFormalParameter", "PMD.UnusedPrivateMethod",
   "PMD.ExceptionAsFlowControl"})
 public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
@@ -65,16 +77,16 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
 
   private final OkHttpClient client;
   private final AirbyteKeycloakConfiguration keycloakConfiguration;
-  private final TokenRoleResolver tokenRoleResolver;
+  private final JwtAuthenticationFactory authenticationFactory;
   private final Optional<MetricClient> metricClient;
 
   public KeycloakTokenValidator(@Named("keycloakTokenValidatorHttpClient") final OkHttpClient okHttpClient,
                                 final AirbyteKeycloakConfiguration keycloakConfiguration,
-                                final TokenRoleResolver tokenRoleResolver,
+                                final JwtAuthenticationFactory authenticationFactory,
                                 final Optional<MetricClient> metricClient) {
     this.client = okHttpClient;
     this.keycloakConfiguration = keycloakConfiguration;
-    this.tokenRoleResolver = tokenRoleResolver;
+    this.authenticationFactory = authenticationFactory;
     this.metricClient = metricClient;
   }
 
@@ -123,21 +135,24 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
             new MetricAttribute(MetricTags.USER_TYPE, INTERNAL_SERVICE_ACCOUNT),
             new MetricAttribute(MetricTags.CLIENT_ID, clientName),
             new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));
-        return Authentication.build(clientName, RbacRoleHelper.getInstanceAdminRoles(), userAttributeMap);
+        return Authentication.build(clientName, AuthRole.getInstanceAdminRoles(), userAttributeMap);
       }
 
       final String authUserId = jwtPayload.get("sub").asText();
       log.debug("Performing authentication for auth user '{}'...", authUserId);
 
       if (StringUtils.isNotBlank(authUserId)) {
-        final var roles = tokenRoleResolver.resolveRoles(authUserId, request);
-
-        log.debug("Authenticating user '{}' with roles {}...", authUserId, roles);
         metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
             AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
             new MetricAttribute(MetricTags.USER_TYPE, EXTERNAL_USER),
             new MetricAttribute(AUTHENTICATION_REQUEST_URI_ATTRIBUTE_KEY, request.getUri().getPath())));
-        return Authentication.build(authUserId, roles, userAttributeMap);
+
+        final JWTClaimsSet.Builder builder = new JWTClaimsSet.Builder().subject(authUserId);
+        for (final Map.Entry<String, Object> entry : userAttributeMap.entrySet()) {
+          builder.claim(entry.getKey(), entry.getValue());
+        }
+        final JWT jwt = new PlainJWT(builder.build());
+        return authenticationFactory.createAuthentication(jwt).orElseThrow();
       } else {
         throw new AuthenticationException("Failed to authenticate the user because the userId was blank.");
       }
@@ -185,7 +200,7 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
         log.debug("Response from userinfo endpoint: {}", responseBody);
         return validateUserInfo(responseBody);
       } else {
-        log.warn("Non-200 response from userinfo endpoint: {}", response.code());
+        log.debug("Non-200 response from userinfo endpoint: {}", response.code());
         return Mono.just(false);
       }
     } catch (final Exception e) {

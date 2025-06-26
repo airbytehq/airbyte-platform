@@ -7,7 +7,9 @@ package io.airbyte.persistence.job.errorreporter;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
@@ -24,7 +26,6 @@ import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
-import io.airbyte.persistence.job.WebUrlHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.List;
@@ -429,7 +430,7 @@ class JobErrorReporterTest {
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
     Mockito.when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext);
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
@@ -467,7 +468,7 @@ class JobErrorReporterTest {
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, null, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, null, failureReason, jobContext);
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
@@ -498,7 +499,7 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext);
 
     Mockito.verifyNoInteractions(jobErrorReportingClient);
   }

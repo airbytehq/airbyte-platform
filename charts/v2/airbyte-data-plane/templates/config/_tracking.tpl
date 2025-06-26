@@ -49,7 +49,7 @@ Renders the tracking.strategy environment variable
 Renders the tracking.segment.writeKeySecretKey value
 */}}
 {{- define "airbyte-data-plane.tracking.segment.writeKeySecretKey" }}
-    {{- .Values.tracking.segment.writeKeySecretKey | default "7UDdp5K55CyiGgsauOr2pNNujGvmhaeu" }}
+    {{- .Values.tracking.segment.writeKeySecretKey }}
 {{- end }}
 
 {{/*

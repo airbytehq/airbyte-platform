@@ -53,7 +53,7 @@ class RecordMetricActivityImplTest {
     when(connectionUpdaterInput.getConnectionId()).thenReturn(CONNECTION_ID);
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID)))
         .thenReturn(new WorkspaceRead(WORKSPACE_ID, UUID.randomUUID(), "name", "slug", false, UUID.randomUUID(), null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null));
+            null, null, null, null, null, null, null));
     when(workspaceApi.getWorkspaceByConnectionId(new ConnectionIdRequestBody(CONNECTION_ID_WITHOUT_WORKSPACE)))
         .thenThrow(new ClientException("Not Found", HttpStatus.NOT_FOUND.getCode(), null));
     when(airbyteApiClient.getWorkspaceApi()).thenReturn(workspaceApi);

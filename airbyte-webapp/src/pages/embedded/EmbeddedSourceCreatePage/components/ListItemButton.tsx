@@ -1,4 +1,5 @@
 import { FlexContainer } from "components/ui/Flex";
+import { Icon } from "components/ui/Icon";
 
 import { SvgIcon } from "area/connector/utils";
 
@@ -8,11 +9,17 @@ interface ListItemButtonProps {
   label: string;
   onClick: () => void;
   icon?: string;
+  configured?: boolean;
 }
 
-export const ListItemButton: React.FC<ListItemButtonProps> = ({ label, onClick, icon }) => {
+export const ListItemButton: React.FC<ListItemButtonProps> = ({ label, onClick, icon, configured }) => {
   return (
-    <button className={styles.button} onClick={onClick}>
+    <button className={styles.button} onClick={onClick} title={label}>
+      {configured && (
+        <div className={styles.configuredIcon}>
+          <Icon type="successOutline" size="xl" color="primary" />
+        </div>
+      )}
       <div className={styles.buttonContent}>
         <FlexContainer className={styles.iconContainer} aria-hidden="true" alignItems="center">
           <SvgIcon src={icon} />

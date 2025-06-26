@@ -4,6 +4,8 @@
 
 package io.airbyte.initContainer.input
 
+import io.airbyte.initContainer.hydration.DiscoverCatalogInputHydrator
+import io.airbyte.initContainer.serde.ObjectSerializer
 import io.airbyte.initContainer.system.FileClient
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
@@ -11,11 +13,9 @@ import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags.CONNECTION_ID
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_IMAGE
 import io.airbyte.metrics.lib.MetricTags.CONNECTOR_TYPE
-import io.airbyte.workers.hydration.DiscoverCatalogInputHydrator
 import io.airbyte.workers.models.DiscoverCatalogInput
 import io.airbyte.workers.models.SidecarInput
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.serde.ObjectSerializer
 import io.airbyte.workers.serde.PayloadDeserializer
 import io.airbyte.workload.api.client.model.generated.Workload
 import io.micronaut.context.annotation.Requires
@@ -40,16 +40,22 @@ class DiscoverHydrationProcessor(
         inputHydrator.getHydratedStandardDiscoverInput(parsed.discoverCatalogInput)
       } catch (e: SecretCoordinateException) {
         val attrs =
-          listOf(
+          mutableListOf(
             MetricAttribute(CONNECTOR_IMAGE, parsed.launcherConfig.dockerImage),
             MetricAttribute(
               CONNECTOR_TYPE,
               parsed.discoverCatalogInput.actorContext.actorType
                 .toString(),
             ),
-            MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()),
           )
-        metricClient.count(metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE, attributes = attrs.toTypedArray())
+        if (parsed.launcherConfig.connectionId != null) {
+          attrs.add(MetricAttribute(CONNECTION_ID, parsed.launcherConfig.connectionId.toString()))
+        }
+
+        metricClient.count(
+          metric = OssMetricsRegistry.SECRETS_HYDRATION_FAILURE,
+          attributes = attrs.toTypedArray(),
+        )
         throw e
       }
 

@@ -50,6 +50,66 @@ const exampleOptions: Array<Option<number>> = [
     label: "five",
     value: 5,
   },
+  {
+    label: "six",
+    value: 6,
+  },
+  {
+    label: "seven",
+    value: 7,
+  },
+  {
+    label: "eight",
+    value: 8,
+  },
+  {
+    label: "nine",
+    value: 9,
+  },
+  {
+    label: "ten",
+    value: 10,
+  },
+  {
+    label: "eleven",
+    value: 11,
+  },
+  {
+    label: "twelve",
+    value: 12,
+  },
+  {
+    label: "thirteen",
+    value: 13,
+  },
+  {
+    label: "fourteen",
+    value: 14,
+  },
+  {
+    label: "fifteen",
+    value: 15,
+  },
+  {
+    label: "sixteen",
+    value: 16,
+  },
+  {
+    label: "seventeen",
+    value: 17,
+  },
+  {
+    label: "eighteen",
+    value: 18,
+  },
+  {
+    label: "nineteen",
+    value: 19,
+  },
+  {
+    label: "twenty",
+    value: 20,
+  },
 ];
 
 export const Default: StoryObj<typeof MultiSelectTags<number>> = {

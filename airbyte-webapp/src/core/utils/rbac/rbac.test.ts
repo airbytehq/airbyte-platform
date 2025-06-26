@@ -1,6 +1,7 @@
 import { renderHook } from "@testing-library/react";
 
 import { mockUser } from "test-utils/mock-data/mockUser";
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 
 import { useRbac } from "./rbac";
 import { useRbacPermissionsQuery } from "./rbacPermissionsQuery";
@@ -18,13 +19,11 @@ jest.mock("./rbacPermissionsQuery", () => ({
 }));
 const mockUseRbacPermissionsQuery = useRbacPermissionsQuery as unknown as jest.Mock;
 
-jest.mock("core/api", () => {
-  const actual = jest.requireActual("core/api");
-  return {
-    ...actual,
-    useListPermissions: jest.fn(() => ({ permissions: [] })),
-  };
-});
+jest.mock("core/api", () => ({
+  useCurrentUser: jest.fn(),
+  useListPermissions: jest.fn(() => ({ permissions: [] })),
+  getWebappConfig: () => mockWebappConfig,
+}));
 
 describe("useRbac", () => {
   describe("query assembly", () => {

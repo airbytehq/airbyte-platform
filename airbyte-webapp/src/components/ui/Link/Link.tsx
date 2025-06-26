@@ -10,6 +10,7 @@ export interface LinkProps {
   variant?: "default" | "primary" | "button" | "buttonPrimary";
   onClick?: ComponentProps<typeof ReactRouterLink>["onClick"];
   title?: string;
+  state?: unknown;
 }
 
 interface InternalLinkProps extends LinkProps {
@@ -17,7 +18,7 @@ interface InternalLinkProps extends LinkProps {
 }
 
 export const Link = forwardRef<HTMLAnchorElement, PropsWithChildren<InternalLinkProps>>(
-  ({ children, className, to, opensInNewTab = false, variant = "default", ...props }, ref) => {
+  ({ children, className, to, opensInNewTab = false, variant = "default", state, ...props }, ref) => {
     return (
       <ReactRouterLink
         ref={ref}
@@ -25,6 +26,7 @@ export const Link = forwardRef<HTMLAnchorElement, PropsWithChildren<InternalLink
         className={getLinkClassNames({ className, variant })}
         target={opensInNewTab ? "_blank" : undefined}
         to={to}
+        state={state}
       >
         {children}
       </ReactRouterLink>

@@ -2,14 +2,12 @@ import { useCallback } from "react";
 
 import { ConnectionScheduleDataBasicSchedule } from "core/api/types/AirbyteClient";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import {
-  useConnectionFormService,
-  ConnectionOrPartialConnection,
-} from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
+import { ConnectionOrPartialConnection } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 export const useTrackConnectionFrequency = (connection: ConnectionOrPartialConnection) => {
   const analyticsService = useAnalyticsService();
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
 
   const trackDropdownSelect = useCallback(
     (value: ConnectionScheduleDataBasicSchedule) => {

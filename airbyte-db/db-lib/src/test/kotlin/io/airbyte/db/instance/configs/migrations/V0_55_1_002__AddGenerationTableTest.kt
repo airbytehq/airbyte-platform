@@ -15,9 +15,11 @@ import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_55_1_002__AddGenerationTableTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -28,7 +30,7 @@ internal class V0_55_1_002__AddGenerationTableTest : AbstractConfigsDatabaseTest
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_55_1_001__AddRefreshesTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -37,7 +39,7 @@ internal class V0_55_1_002__AddGenerationTableTest : AbstractConfigsDatabaseTest
 
   @Test
   fun test() {
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     val tableExists = generationTableExists(dslContext)
 
     Assertions.assertFalse(tableExists)

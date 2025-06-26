@@ -13,8 +13,8 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentWorkspace } from "core/api";
 import { FieldSpec } from "core/api/types/AirbyteClient";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useIntent } from "core/utils/rbac";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { MappingRowItem } from "./MappingRow";
 import styles from "./SelectTargetField.module.scss";
@@ -121,7 +121,7 @@ const FieldComboBox: React.FC<FieldComboBoxProps> = ({
   hasError = false,
   disabled,
 }) => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const [query, setQuery] = useState<string>("");
   const { formatMessage } = useIntl();
 

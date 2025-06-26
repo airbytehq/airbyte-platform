@@ -1,15 +1,15 @@
 import { goToDestinationPage, openNewDestinationForm } from "pages/destinationPage";
 
 import { deleteEntity, openConnectorPage, submitButtonClick, updateField } from "./common";
-import { fillLocalJsonForm, fillPostgresForm } from "./connector";
+import { fillE2ETestingForm, fillPostgresForm } from "./connector";
 
-export const createLocalJsonDestination = (name: string, destinationPath = "/local") => {
+export const createE2ETestingDestination = (name: string) => {
   cy.intercept("/api/v1/scheduler/destinations/check_connection").as("checkDestinationConnection");
   cy.intercept("/api/v1/destinations/create").as("createDestination");
 
   goToDestinationPage();
   openNewDestinationForm();
-  fillLocalJsonForm(name, destinationPath);
+  fillE2ETestingForm(name);
   submitButtonClick();
 
   cy.wait("@checkDestinationConnection", { requestTimeout: 60000 });

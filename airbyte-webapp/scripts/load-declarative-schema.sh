@@ -24,7 +24,11 @@ then
     else
         echo "Found cached CDK manifest schema $CDK_VERSION"
     fi
-    cp ${TARGET_FILE} build/declarative_component_schema.yaml
+    
+    # cp ${TARGET_FILE} build/declarative_component_schema.yaml
+
+    # TEMPORARY HACK: Remove any lines containing "- array" from the schema file, since this breaks orval
+    grep -v '\- array' ${TARGET_FILE} > build/declarative_component_schema.yaml
 else
     echo "Copying local CDK manifest version from $CDK_MANIFEST_PATH"
     cp ${CDK_MANIFEST_PATH} build/declarative_component_schema.yaml

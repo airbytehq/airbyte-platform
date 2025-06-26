@@ -251,7 +251,6 @@ const SimplifiedCronScheduleFormControl: React.FC<{ disabled: boolean }> = ({ di
               <ListBox
                 isDisabled={disabled}
                 options={cronTimeZones}
-                adaptiveWidth
                 selectedValue={cronTimeZone}
                 onSelect={onCronTimeZoneSelect}
                 optionClassName={styles.cronZoneOption}

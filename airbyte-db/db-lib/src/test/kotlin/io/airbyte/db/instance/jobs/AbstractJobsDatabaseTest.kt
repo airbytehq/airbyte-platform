@@ -11,7 +11,7 @@ import org.jooq.DSLContext
 import javax.sql.DataSource
 
 abstract class AbstractJobsDatabaseTest : AbstractDatabaseTest() {
-  override fun getDatabase(
+  override fun createDatabase(
     dataSource: DataSource,
     dslContext: DSLContext,
   ): Database = TestDatabaseProviders(dataSource, dslContext).turnOffMigration().createNewJobsDatabase()

@@ -56,6 +56,7 @@ import io.airbyte.config.secrets.persistence.SecretPersistence;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.domain.models.SecretStorage;
@@ -107,6 +108,7 @@ public class SourceHandler {
   private final SecretStorageService secretStorageService;
   private final SecretReferenceService secretReferenceService;
   private final CurrentUserService currentUserService;
+  private final PartialUserConfigService partialUserConfigService;
 
   @VisibleForTesting
   public SourceHandler(final CatalogService catalogService,
@@ -130,7 +132,8 @@ public class SourceHandler {
                        final SecretsRepositoryWriter secretsRepositoryWriter,
                        final SecretStorageService secretStorageService,
                        final SecretReferenceService secretReferenceService,
-                       final CurrentUserService currentUserService) {
+                       final CurrentUserService currentUserService,
+                       final PartialUserConfigService partialUserConfigService) {
     this.catalogService = catalogService;
     this.secretsRepositoryReader = secretsRepositoryReader;
     validator = integrationSchemaValidation;
@@ -153,6 +156,7 @@ public class SourceHandler {
     this.secretStorageService = secretStorageService;
     this.secretReferenceService = secretReferenceService;
     this.currentUserService = currentUserService;
+    this.partialUserConfigService = partialUserConfigService;
   }
 
   public SourceRead createSourceWithOptionalSecret(final SourceCreate sourceCreate)
@@ -422,6 +426,9 @@ public class SourceHandler {
     // Delete secret references for this source
     secretReferenceService.deleteActorSecretReferences(source.getSourceId());
 
+    // Delete partial user config(s) for this source, if any
+    partialUserConfigService.deletePartialUserConfigForSource(source.getSourceId());
+
     // Mark source as tombstoned and clear config
     try {
       sourceService.tombstoneSource(
@@ -442,7 +449,7 @@ public class SourceHandler {
   }
 
   private UUID writeActorCatalog(final AirbyteCatalog persistenceCatalog, final SourceDiscoverSchemaWriteRequestBody request) throws IOException {
-    return catalogService.writeActorCatalogFetchEvent(
+    return catalogService.writeActorCatalogWithFetchEvent(
         persistenceCatalog,
         request.getSourceId(),
         request.getConnectorVersion(),
@@ -499,20 +506,15 @@ public class SourceHandler {
     // read configuration from db
     final StandardSourceDefinition standardSourceDefinition = sourceService
         .getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
-    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(sourceConnection.getWorkspaceId());
-    if (includeSecretCoordinates
-        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
-      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
-    }
     final ConfigWithSecretReferences configWithRefs =
         this.secretReferenceService.getConfigWithSecretReferences(sourceConnection.getSourceId(), sourceConnection.getConfiguration(),
             sourceConnection.getWorkspaceId());
+    final JsonNode inlinedConfigWithRefs = InlinedConfigWithSecretRefsKt.toInlined(configWithRefs);
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
-            ? secretsProcessor.simplifySecretsForOutput(
-                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
-                spec.getConnectionSpecification())
-            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+            ? secretsProcessor.simplifySecretsForOutput(configWithRefs, spec.getConnectionSpecification(),
+                airbyteEdition != Configs.AirbyteEdition.CLOUD)
+            : secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification());
     sourceConnection.setConfiguration(sanitizedConfig);
     return toSourceRead(sourceConnection, standardSourceDefinition);
   }
@@ -599,7 +601,7 @@ public class SourceHandler {
           sourceId,
           workspaceId,
           secretStorageId.get(),
-          currentUserService.getCurrentUser().getUserId());
+          currentUserService.getCurrentUserIdIfExists().orElse(null));
     }
 
     newSourceConnection.setConfiguration(updatedConfig);

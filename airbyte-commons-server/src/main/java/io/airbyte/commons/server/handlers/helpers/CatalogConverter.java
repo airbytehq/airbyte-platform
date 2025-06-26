@@ -97,7 +97,8 @@ public class CatalogConverter {
                   .aliasName(Names.toAlphanumericAndUnderscore(configuredStream.getStream().getName()))
                   .selected(true)
                   .suggested(false)
-                  .includeFiles(configuredStream.getIncludesFiles())
+                  .includeFiles(configuredStream.getIncludeFiles())
+                  .destinationObjectName(configuredStream.getDestinationObjectName())
                   .fieldSelectionEnabled(getStreamHasFieldSelectionEnabled(fieldSelectionData, streamDescriptor))
                   .selectedFields(List.of())
                   // TODO(pedro): `hashedFields` should be removed once the UI is updated to use `mappers`.
@@ -268,6 +269,7 @@ public class CatalogConverter {
                 .destinationSyncMode(Enums.convertTo(s.getConfig().getDestinationSyncMode(), io.airbyte.config.DestinationSyncMode.class))
                 .cursorField(s.getConfig().getCursorField())
                 .primaryKey(Optional.ofNullable(s.getConfig().getPrimaryKey()).orElse(Collections.emptyList()))
+                .destinationObjectName(s.getConfig().getDestinationObjectName())
                 .fields(fieldGenerator.getFieldsFromSchema(convertedStream.getJsonSchema()));
 
             if (s.getConfig().getMappers() != null && !s.getConfig().getMappers().isEmpty()) {

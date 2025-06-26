@@ -6,6 +6,7 @@ package io.airbyte.connectorSidecar
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.api.client.AirbyteApiClient
+import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.SourceApi
 import io.airbyte.api.client.model.generated.DiscoverCatalogResult
 import io.airbyte.commons.converters.CatalogClientConverters
@@ -27,6 +28,9 @@ import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.Config
 import io.airbyte.protocol.models.v0.ConnectorSpecification
+import io.airbyte.protocol.models.v0.DestinationCatalog
+import io.airbyte.protocol.models.v0.DestinationOperation
+import io.airbyte.protocol.models.v0.DestinationSyncMode
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.models.SidecarInput
 import io.mockk.every
@@ -62,6 +66,9 @@ class ConnectorMessageProcessorTest {
   @MockK
   private lateinit var sourceApi: SourceApi
 
+  @MockK
+  private lateinit var destinationApi: DestinationApi
+
   private lateinit var connectorMessageProcessor: ConnectorMessageProcessor
 
   private val catalogClientConverters = CatalogClientConverters(FieldGenerator())
@@ -69,6 +76,7 @@ class ConnectorMessageProcessorTest {
   @BeforeEach
   fun init() {
     every { airbyteApiClient.sourceApi } returns sourceApi
+    every { airbyteApiClient.destinationApi } returns destinationApi
     connectorMessageProcessor = ConnectorMessageProcessor(connectorConfigUpdater, airbyteApiClient, catalogClientConverters)
   }
 
@@ -500,6 +508,48 @@ class ConnectorMessageProcessorTest {
 
     val discoveredCatalogId = UUID.randomUUID()
     every { sourceApi.writeDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = discoveredCatalogId)
+
+    val output =
+      connectorMessageProcessor.run(
+        InputStream.nullInputStream(),
+        streamFactory,
+        ConnectorMessageProcessor.OperationInput(
+          discoveryInput =
+            StandardDiscoverCatalogInput()
+              .withConnectionConfiguration(Jsons.emptyObject())
+              .withSourceId(UUID.randomUUID().toString()),
+        ),
+        0,
+        SidecarInput.OperationType.DISCOVER,
+      )
+
+    assertEquals(discoveredCatalogId, output.discoverCatalogId)
+  }
+
+  @Test
+  fun `properly discover destination catalog`() {
+    val catalog =
+      AirbyteMessage()
+        .withType(AirbyteMessage.Type.DESTINATION_CATALOG)
+        .withDestinationCatalog(
+          DestinationCatalog()
+            .withOperations(
+              listOf(
+                DestinationOperation()
+                  .withObjectName("name")
+                  .withSyncMode(DestinationSyncMode.APPEND)
+                  .withJsonSchema(Jsons.emptyObject()),
+              ),
+            ),
+        )
+
+    every { streamFactory.create(any()) } returns
+      Stream.of(
+        catalog,
+      )
+
+    val discoveredCatalogId = UUID.randomUUID()
+    every { destinationApi.writeDestinationDiscoverCatalogResult(any()) } returns DiscoverCatalogResult(catalogId = discoveredCatalogId)
 
     val output =
       connectorMessageProcessor.run(

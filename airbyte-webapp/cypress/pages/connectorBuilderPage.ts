@@ -14,16 +14,16 @@ const streamUrlPathFromModal = "[name='urlPath']";
 const streamUrlPathFromForm = "[name='formValues.streams.0.urlPath']";
 const recordSelectorToggle = "[data-testid='toggle-formValues.streams.0.recordSelector']";
 const recordSelectorFieldPathInput = "[data-testid='tag-input-formValues.streams.0.recordSelector.fieldPath'] input";
-const authType = "[data-testid='formValues.global.authenticator.type']";
+const authType = "formValues.global.authenticator.type";
 const limitInput = "[name='formValues.streams.0.paginator.strategy.page_size']";
-const injectLimitInto = "[data-testid$='paginator.pageSizeOption.inject_into']";
+const injectLimitInto = "paginator.pageSizeOption.inject_into";
 const injectLimitFieldName = "[name='formValues.streams.0.paginator.pageSizeOption.field_name']";
-const injectOffsetInto = "[data-testid$='paginator.pageTokenOption.inject_into']";
+const injectOffsetInto = "paginator.pageTokenOption.inject_into";
 const injectOffsetFieldName = "[name='formValues.streams.0.paginator.pageTokenOption.field_name']";
 const testPageItem = "[data-testid='test-pages'] li";
 const submit = "button[type='submit']";
 const testStreamButton = "[data-testid='read-stream']";
-const sliceDropdown = '[data-testid="tag-select-slice"]';
+const sliceDropdown = "tag-select-slice";
 
 export const goToConnectorBuilderCreatePage = () => {
   // Clear any stored connector chat builder params before visiting
@@ -111,8 +111,8 @@ export const configureParameters = (values: string, cursor_field: string) => {
 };
 
 export const getSlicesFromDropdown = () => {
-  cy.get(`${sliceDropdown} button`).click();
-  return cy.get(`${sliceDropdown} li`);
+  cy.get(`[data-testid="${sliceDropdown}-listbox-button"]`).click({ force: true });
+  return cy.get(`[data-testid="${sliceDropdown}-listbox-options"] li`);
 };
 
 export const openStreamSchemaTab = () => {

@@ -1,5 +1,6 @@
 @use "scss/variables";
 @use "scss/colors";
+@use "scss/mixins";
 
 .container {
   flex: 1;
@@ -83,5 +84,15 @@
 
   :last-child {
     flex-grow: 1;
+  }
+}
+
+.pulsate {
+  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+
+  & > * {
+    // keep content visible above the pulses
+    display: inline-block;
+    z-index: 1;
   }
 }

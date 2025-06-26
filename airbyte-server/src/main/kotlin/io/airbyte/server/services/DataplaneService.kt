@@ -6,9 +6,10 @@ package io.airbyte.server.services
 
 import io.airbyte.api.problems.throwable.generated.DataplaneNameAlreadyExistsProblem
 import io.airbyte.config.Dataplane
-import io.airbyte.data.services.DataplaneCredentialsService
 import io.airbyte.data.services.DataplaneService
 import io.airbyte.data.services.DataplaneTokenService
+import io.airbyte.data.services.ServiceAccountsService
+import io.airbyte.data.services.shared.DataplaneWithServiceAccount
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import org.jooq.exception.DataAccessException
@@ -17,11 +18,9 @@ import java.util.UUID
 @Singleton
 open class DataplaneService(
   private val dataplaneDataService: DataplaneService,
-  private val dataplaneCredentialsService: DataplaneCredentialsService,
+  private val serviceAccountsService: ServiceAccountsService,
   private val dataplaneTokenService: DataplaneTokenService,
 ) {
-  fun createCredentials(dataplaneId: UUID): io.airbyte.config.DataplaneClientCredentials = dataplaneCredentialsService.createCredentials(dataplaneId)
-
   fun listDataplanes(dataplaneGroupId: UUID): List<Dataplane> = dataplaneDataService.listDataplanes(dataplaneGroupId, false)
 
   fun updateDataplane(
@@ -48,23 +47,20 @@ open class DataplaneService(
         tombstone = true
       }
 
-    dataplaneCredentialsService.listCredentialsByDataplaneId(existingDataplane.id).map { dataplaneCredentialsService.deleteCredentials(it.id) }
+    serviceAccountsService.delete(dataplaneId)
     return writeDataplane(tombstonedDataplane)
   }
 
   fun getToken(
-    clientId: String,
-    clientSecret: String,
-  ): String = dataplaneTokenService.getToken(clientId, clientSecret)
+    serviceAccountId: String,
+    secret: String,
+  ): String = dataplaneTokenService.getToken(serviceAccountId, secret)
 
-  fun getDataplaneFromClientId(clientId: String): Dataplane {
-    val dataplaneId = dataplaneCredentialsService.getDataplaneId(clientId)
-    return dataplaneDataService.getDataplane(dataplaneId)
-  }
+  fun getDataplane(dataplaneId: String): Dataplane = dataplaneDataService.getDataplane(UUID.fromString(dataplaneId))
 
   fun writeDataplane(dataplane: Dataplane): Dataplane {
     try {
-      return dataplaneDataService.writeDataplane(dataplane)
+      return dataplaneDataService.updateDataplane(dataplane)
     } catch (e: DataAccessException) {
       if (e.message?.contains("duplicate key value violates unique constraint") == true &&
         e.message?.contains("dataplane_dataplane_group_id_name_key") == true
@@ -74,4 +70,11 @@ open class DataplaneService(
       throw e
     }
   }
+
+  fun createNewDataplane(
+    dataplane: Dataplane,
+    instanceScope: Boolean,
+  ): DataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(dataplane, instanceScope)
+
+  fun getDataplaneByServiceAccountId(serviceAccountId: String) = dataplaneDataService.getDataplaneByServiceAccountId(serviceAccountId)
 }

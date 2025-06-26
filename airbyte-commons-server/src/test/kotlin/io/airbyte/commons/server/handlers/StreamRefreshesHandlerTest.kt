@@ -38,7 +38,7 @@ import java.util.UUID
 
 internal class StreamRefreshesHandlerTest {
   private val connectionService: ConnectionService = mockk()
-  private val streamRefreshesRepository: StreamRefreshesRepository = mockk()
+  private val streamRefreshesRepository: StreamRefreshesRepository = mockk(relaxed = true)
   private val eventRunner: EventRunner = mockk()
   private val actorDefinitionVersionHandler: ActorDefinitionVersionHandler = mockk()
   private val jobPersistence: JobPersistence = mockk()

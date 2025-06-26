@@ -4,12 +4,12 @@
 
 package io.airbyte.server.config
 
+import io.airbyte.api.client.WebUrlHelper
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
-import io.airbyte.persistence.job.WebUrlHelper
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.errorreporter.JobErrorReportingClient
 import io.airbyte.persistence.job.errorreporter.LoggingJobErrorReportingClient

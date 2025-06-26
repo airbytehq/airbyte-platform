@@ -33,7 +33,7 @@ internal class V1_1_1_028__AddFiltersToConnectorRolloutTest : AbstractConfigsDat
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_026__AddActorIdToPartialUserConfig()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
@@ -41,7 +41,7 @@ internal class V1_1_1_028__AddFiltersToConnectorRolloutTest : AbstractConfigsDat
 
   @Test
   fun `filters column exists and is backfilled`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     ctx.execute("ALTER TABLE connector_rollout DROP CONSTRAINT IF EXISTS fk_actor_definition_id")
     ctx.execute("ALTER TABLE connector_rollout DROP CONSTRAINT IF EXISTS fk_release_candidate_version_id")
 

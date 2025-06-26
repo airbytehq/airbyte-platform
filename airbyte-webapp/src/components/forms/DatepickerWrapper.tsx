@@ -10,6 +10,7 @@ export const DatepickerWrapper = <T extends FormValues>({
   name,
   format = "date",
   hasError,
+  controlId,
   ...rest
 }: Omit<DatepickerControlProps<T>, OmittableProperties>) => {
   const { control } = useFormContext();
@@ -24,6 +25,7 @@ export const DatepickerWrapper = <T extends FormValues>({
       render={({ field }) => (
         <DatePicker
           {...rest}
+          id={controlId}
           value={value ?? ""}
           onChange={field.onChange}
           withTime={format === "date-time"}

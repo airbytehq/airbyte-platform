@@ -5,6 +5,7 @@
 package io.airbyte.db.instance.configs.migrations
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.config.Configs.AirbyteEdition
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -50,16 +51,35 @@ class V1_1_1_014__AddDataplaneGroupIdToWorkspace : BaseJavaMigration() {
         .execute()
     }
 
+    private fun fromEnv(): AirbyteEdition? =
+      when (System.getenv("AIRBYTE_EDITION")?.uppercase()) {
+        "CLOUD" -> AirbyteEdition.CLOUD
+        "COMMUNITY" -> AirbyteEdition.COMMUNITY
+        "ENTERPRISE" -> AirbyteEdition.ENTERPRISE
+        else -> null
+      }
+
     @VisibleForTesting
     fun populateDataplaneGroupIds(ctx: DSLContext) {
       log.info { "Updating workspaces with dataplane_group_id" }
       // Update workspace table with corresponding dataplane_group_id
-      ctx
-        .update(WORKSPACE)
-        .set(WORKSPACE_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
-        .from(DATAPLANE_GROUP)
-        .where(WORKSPACE_GEOGRAPHY.cast(SQLDataType.VARCHAR).eq(DATAPLANE_GROUP_NAME))
-        .execute()
+      when (fromEnv()) {
+        AirbyteEdition.CLOUD -> {
+          ctx
+            .update(WORKSPACE)
+            .set(WORKSPACE_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
+            .from(DATAPLANE_GROUP)
+            .where(WORKSPACE_GEOGRAPHY.cast(SQLDataType.VARCHAR).eq(DATAPLANE_GROUP_NAME))
+            .execute()
+        }
+        else -> {
+          ctx
+            .update(WORKSPACE)
+            .set(WORKSPACE_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
+            .from(DATAPLANE_GROUP)
+            .execute()
+        }
+      }
     }
 
     @VisibleForTesting

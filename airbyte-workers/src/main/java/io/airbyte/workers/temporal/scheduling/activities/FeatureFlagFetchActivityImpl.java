@@ -8,11 +8,17 @@ import io.airbyte.api.client.AirbyteApiClient;
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody;
 import io.airbyte.api.client.model.generated.WorkspaceRead;
 import io.airbyte.commons.temporal.exception.RetryableException;
+import io.airbyte.featureflag.Connection;
 import io.airbyte.featureflag.FeatureFlagClient;
+import io.airbyte.featureflag.Multi;
+import io.airbyte.featureflag.UseCommandCheck;
+import io.airbyte.featureflag.UseSyncV2;
+import io.airbyte.featureflag.Workspace;
 import io.micronaut.http.HttpStatus;
 import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.openapitools.client.infrastructure.ClientException;
@@ -58,9 +64,16 @@ public class FeatureFlagFetchActivityImpl implements FeatureFlagFetchActivity {
 
   @Override
   public FeatureFlagFetchOutput getFeatureFlags(final FeatureFlagFetchInput input) {
-    // No feature flags are currently in use.
-    // To get value for a feature flag with the workspace context, add it to the workspaceFlags list.
-    return new FeatureFlagFetchOutput(Map.of());
+    final UUID workspaceId = getWorkspaceId(input.getConnectionId());
+
+    final boolean useCommandCheck = featureFlagClient.boolVariation(UseCommandCheck.INSTANCE,
+        new Multi(List.of(new Connection(input.getConnectionId()), new Workspace(workspaceId))));
+
+    final boolean useSyncV2 = featureFlagClient.boolVariation(UseSyncV2.INSTANCE,
+        new Multi(List.of(new Connection(input.getConnectionId()), new Workspace(workspaceId))));
+
+    return new FeatureFlagFetchOutput(Map.of(UseCommandCheck.INSTANCE.getKey(), useCommandCheck,
+        UseSyncV2.INSTANCE.getKey(), useSyncV2));
   }
 
 }

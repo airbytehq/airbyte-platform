@@ -24,28 +24,18 @@ import org.slf4j.LoggerFactory
 import java.util.UUID
 
 interface DataplaneService {
-  fun controllerListDataplanes(regionId: UUID): Response
+  fun controllerListDataplanes(): Response
 
-  fun controllerCreateDataplane(
-    regionId: UUID,
-    dataplaneCreateRequest: DataplaneCreateRequest,
-  ): Response
+  fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response
 
-  fun controllerGetDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response
+  fun controllerGetDataplane(dataplaneId: UUID): Response
 
   fun controllerUpdateDataplane(
-    regionId: UUID,
     dataplaneId: UUID,
     dataplanePatchRequest: DataplanePatchRequest,
   ): Response
 
-  fun controllerDeleteDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response
+  fun controllerDeleteDataplane(dataplaneId: UUID): Response
 }
 
 @Singleton
@@ -59,12 +49,12 @@ class DataplaneServiceImpl(
     private val log = LoggerFactory.getLogger(DataplaneServiceImpl::class.java)
   }
 
-  override fun controllerListDataplanes(regionId: UUID): Response {
+  override fun controllerListDataplanes(): Response {
     val userId = currentUserService.currentUser.userId
     val result =
       trackingHelper.callWithTracker(
         {
-          runCatching { dataplaneDataService.listDataplanes(regionId, false) }
+          runCatching { dataplaneDataService.listDataplanes(withTombstone = false) }
             .onFailure {
               log.error("Error listing dataplanes", it)
               ConfigClientErrorHandler.handleError(it)
@@ -78,29 +68,27 @@ class DataplaneServiceImpl(
     return Response.ok().entity(result?.map(DataplaneResponseMapper::from)).build()
   }
 
-  override fun controllerCreateDataplane(
-    regionId: UUID,
-    dataplaneCreateRequest: DataplaneCreateRequest,
-  ): Response {
+  override fun controllerCreateDataplane(dataplaneCreateRequest: DataplaneCreateRequest): Response {
     val userId = currentUserService.currentUser.userId
 
     val newDataplane =
       io.airbyte.config.Dataplane().apply {
-        dataplaneGroupId = regionId
+        id = UUID.randomUUID()
+        dataplaneGroupId = dataplaneCreateRequest.regionId
         name = dataplaneCreateRequest.name
-        enabled = dataplaneCreateRequest.enabled
+        enabled = dataplaneCreateRequest.enabled ?: true
       }
 
     val result =
       trackingHelper.callWithTracker(
         {
           runCatching {
-            val createdDataplane = dataplaneDataService.writeDataplane(newDataplane)
-            val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id)
+            val dataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(newDataplane)
             DataplaneCreateResponse()
-              .dataplaneId(createdDataplane.id)
-              .clientId(dataplaneAuth.clientId)
-              .clientSecret(dataplaneAuth.clientSecret)
+              .regionId(dataplaneWithServiceAccount.dataplane.dataplaneGroupId)
+              .dataplaneId(dataplaneWithServiceAccount.dataplane.id)
+              .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
+              .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
           }.onFailure {
             log.error("Error creating dataplane", it)
             ConfigClientErrorHandler.handleError(it)
@@ -114,10 +102,7 @@ class DataplaneServiceImpl(
     return Response.ok().entity(DataplaneCreateResponseMapper.from(result)).build()
   }
 
-  override fun controllerGetDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response {
+  override fun controllerGetDataplane(dataplaneId: UUID): Response {
     val userId = currentUserService.currentUser.userId
 
     val result =
@@ -138,7 +123,6 @@ class DataplaneServiceImpl(
   }
 
   override fun controllerUpdateDataplane(
-    regionId: UUID,
     dataplaneId: UUID,
     dataplanePatchRequest: DataplanePatchRequest,
   ): Response {
@@ -154,7 +138,7 @@ class DataplaneServiceImpl(
     val result =
       trackingHelper.callWithTracker(
         {
-          runCatching { dataplaneDataService.writeDataplane(updated) }
+          runCatching { dataplaneDataService.updateDataplane(updated) }
             .onFailure {
               log.error("Error updating dataplane", it)
               ConfigClientErrorHandler.handleError(it)
@@ -168,10 +152,7 @@ class DataplaneServiceImpl(
     return Response.ok().entity(DataplaneResponseMapper.from(result)).build()
   }
 
-  override fun controllerDeleteDataplane(
-    regionId: UUID,
-    dataplaneId: UUID,
-  ): Response {
+  override fun controllerDeleteDataplane(dataplaneId: UUID): Response {
     val userId = currentUserService.currentUser.userId
 
     val result =

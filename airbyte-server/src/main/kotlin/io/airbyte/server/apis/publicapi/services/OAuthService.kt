@@ -15,7 +15,7 @@ import java.util.UUID
 interface OAuthService {
   fun getSourceConsentUrl(
     workspaceId: @NotBlank UUID,
-    definitionId: @NotBlank UUID,
+    definitionId: @NotBlank UUID?,
     redirectUrl: @NotBlank String,
     oauthInputConfiguration: JsonNode,
   ): OAuthConsentRead

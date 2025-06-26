@@ -30,7 +30,7 @@ internal class V1_1_1_002_AddEnterpriseToActorDefinitionTest : AbstractConfigsDa
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V1_1_1_001__AddResourceRequirementsToActor()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -40,7 +40,7 @@ internal class V1_1_1_002_AddEnterpriseToActorDefinitionTest : AbstractConfigsDa
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     Assertions.assertFalse(enterpriseColumnExists(context))
 

@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConfiguredAirbyteStream;
 import io.airbyte.config.DestinationConnection;
@@ -20,8 +19,8 @@ import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.data.exceptions.ConfigNotFoundException;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.test.utils.BaseConfigDatabaseTest;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -44,8 +43,7 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
   private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
   public ConnectionServiceJooqImplTest() {
-    final DataplaneGroupServiceTestJooqImpl dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
+    this.connectionServiceJooqImpl = new ConnectionServiceJooqImpl(database);
   }
 
   private static Stream<Arguments> actorSyncsStreamTestProvider() {
@@ -117,7 +115,6 @@ class ConnectionServiceJooqImplTest extends BaseConfigDatabaseTest {
         .withCatalog(new ConfiguredAirbyteCatalog().withStreams(streams))
         .withManual(true)
         .withNamespaceDefinition(NamespaceDefinitionType.SOURCE)
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
         .withBreakingChange(false)
         .withStatus(StandardSync.Status.ACTIVE)
         .withTags(Collections.emptyList());

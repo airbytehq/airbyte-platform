@@ -12,6 +12,7 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from "area/connector/utils";
 import { connectionsKeys, HttpError, HttpProblem, useCreateConnection, useDiscoverSchema } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
+import { FormModeProvider, useFormMode } from "core/services/ui/FormModeContext";
 import {
   ConnectionFormServiceProvider,
   useConnectionFormService,
@@ -34,7 +35,8 @@ const CreateConnectionFormInner: React.FC = () => {
   const navigate = useNavigate();
   const { clearAllFormChanges } = useFormChangeTrackerService();
   const { mutateAsync: createConnection } = useCreateConnection();
-  const { connection, mode, setSubmitError } = useConnectionFormService();
+  const { connection, setSubmitError } = useConnectionFormService();
+  const { mode } = useFormMode();
   const initialValues = useInitialFormValues(connection, mode);
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const { formatMessage } = useIntl();
@@ -200,13 +202,14 @@ export const CreateConnectionForm: React.FC = () => {
   };
 
   return (
-    <ConnectionFormServiceProvider
-      connection={partialConnection}
-      mode="create"
-      refreshSchema={onDiscoverSchema}
-      schemaError={schemaErrorStatus}
-    >
-      {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner />}
-    </ConnectionFormServiceProvider>
+    <FormModeProvider mode="create">
+      <ConnectionFormServiceProvider
+        connection={partialConnection}
+        refreshSchema={onDiscoverSchema}
+        schemaError={schemaErrorStatus}
+      >
+        {isLoading ? <LoadingSchema /> : <CreateConnectionFormInner />}
+      </ConnectionFormServiceProvider>
+    </FormModeProvider>
   );
 };

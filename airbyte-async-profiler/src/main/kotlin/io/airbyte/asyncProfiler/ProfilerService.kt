@@ -71,10 +71,9 @@ open class ProfilerService(
           ?: throw RuntimeException("Could not find profiler.sh or asprof after extraction.")
       scriptFile.setExecutable(true)
 
-      val chosenEvent = eventType ?: "cpu"
-      val outputPath = getOutputPath(tempDir, mainClassKeyword)
+      val outputPath = getOutputPath(tempDir, mainClassKeyword, eventType)
 
-      val profilerCmd = profilerCommand(scriptFile, outputPath, chosenEvent, pid)
+      val profilerCmd = profilerCommand(scriptFile, outputPath, eventType, pid)
       logger.info { "Running profiler command: $profilerCmd" }
 
       val process = createProcessBuilder(*profilerCmd.toTypedArray()).start()
@@ -132,6 +131,9 @@ open class ProfilerService(
       chosenEvent,
       "-d",
       SECONDS_IN_24_HRS,
+      "-i",
+      SAMPLING_INTERVAL,
+      "-t",
       "-o",
       "tree",
       pid.toString(),
@@ -168,7 +170,8 @@ open class ProfilerService(
   private fun getOutputPath(
     tempDir: File,
     mainClassKeyword: String,
-  ) = File(tempDir, "$mainClassKeyword.${fileExtension()}").absolutePath
+    eventType: String,
+  ) = File(tempDir, "$mainClassKeyword-$eventType.${fileExtension()}").absolutePath
 
   private fun fileExtension() = "html"
 
@@ -199,10 +202,11 @@ open class ProfilerService(
     private const val ARCH_X86_64 = "x86_64"
     private const val ARCH_AMD_64 = "amd64"
     private const val LINUX = "linux"
-    private const val ASYNC_PROFILER_VERSION = "3.0"
+    private const val ASYNC_PROFILER_VERSION = "4.0"
     private const val ASYNC_PROFILER_FILE_PREFIX = "async-profiler-"
     private const val BASE_URL = "https://github.com/async-profiler/async-profiler/releases/download/v$ASYNC_PROFILER_VERSION/"
     private const val SECONDS_IN_24_HRS = "86400"
+    private const val SAMPLING_INTERVAL = "1ms"
 
     private const val OS_NAME = "os.name"
     private const val OS_ARCH = "os.arch"

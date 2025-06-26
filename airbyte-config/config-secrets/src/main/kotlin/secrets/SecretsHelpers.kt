@@ -234,7 +234,7 @@ object SecretsHelpers {
       return JsonNodeFactory.instance.objectNode()
     }
 
-    var config = configWithRefs.config
+    var config = configWithRefs.originalConfig
     for ((hydrationPath, secretRefConfig) in configWithRefs.referencedSecrets) {
       val secretPersistence = resolvePersistence(secretRefConfig.secretStorageId)
       val secretValue = getOrThrowSecretValue(secretPersistence, secretRefConfig.secretCoordinate)
@@ -579,6 +579,17 @@ object SecretsHelpers {
       return secretRefIds
     }
 
+    fun getSecretReferenceIdAtPath(
+      config: JsonNode,
+      nodePath: String,
+    ): SecretReferenceId? =
+      JsonPaths
+        .getSingleValue(config, nodePath)
+        .map { it.get(SECRET_REF_ID_FIELD) }
+        .filter { it.isTextual }
+        .map { SecretReferenceId(UUID.fromString(it.asText())) }
+        .orElse(null)
+
     private enum class SecretNodeType {
       AIRBYTE_MANAGED_SECRET_COORDINATE,
       EXTERNAL_SECRET_COORDINATE,
@@ -742,4 +753,37 @@ object SecretsHelpers {
       return configCopy
     }
   }
+
+  /**
+   * Merge nodes but don't merge keys with secret JSON values.
+   */
+  fun mergeNodesExceptForSecrets(
+    mainNode: JsonNode,
+    updateNode: JsonNode,
+  ): JsonNode {
+    val fieldNames = updateNode.fieldNames()
+    while (fieldNames.hasNext()) {
+      val fieldName = fieldNames.next()
+      val jsonNode = mainNode[fieldName]
+      // if field exists and is an embedded object
+      if (isStandardObjectNode(jsonNode)) {
+        mergeNodesExceptForSecrets(jsonNode, updateNode[fieldName])
+      } else {
+        // if the value of the JsonNode in `fieldName` is either a secret or a plain value
+        // we replace it with the passed in value
+        if (mainNode is ObjectNode) {
+          // Overwrite field
+          val value = updateNode[fieldName]
+          mainNode.replace(fieldName, value)
+        }
+      }
+    }
+    return mainNode
+  }
+
+  /**
+   * Checks if the given JsonNode is a regular object. If it's a secret node, returns false.
+   */
+  private fun isStandardObjectNode(node: JsonNode?): Boolean =
+    node != null && node.isObject && node[COORDINATE_FIELD] == null && node[SECRET_REF_ID_FIELD] == null
 }

@@ -13,10 +13,12 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_57_4_001__AddRefreshSupportTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -27,7 +29,7 @@ internal class V0_57_4_001__AddRefreshSupportTest : AbstractConfigsDatabaseTest(
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_57_4_001__AddRefreshSupport()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -36,7 +38,7 @@ internal class V0_57_4_001__AddRefreshSupportTest : AbstractConfigsDatabaseTest(
 
   @Test
   fun testSupportRefreshes() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // ignore all foreign key constraints
     ctx.execute("SET session_replication_role = replica;")

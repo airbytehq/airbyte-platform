@@ -15,6 +15,7 @@ import com.amazonaws.services.secretsmanager.model.ResourceNotFoundException
 import com.amazonaws.services.secretsmanager.model.Tag
 import com.amazonaws.services.secretsmanager.model.UpdateSecretResult
 import io.airbyte.config.AwsRoleSecretPersistenceConfig
+import io.airbyte.config.secrets.SecretCoordinate
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate
 import io.mockk.every
 import io.mockk.mockk
@@ -42,6 +43,29 @@ class AwsSecretManagerPersistenceTest {
   fun `test reading secret from client`() {
     val secret = "secret value"
     val coordinate = AirbyteManagedSecretCoordinate("airbyte_secret_coordinate", 1L)
+    val mockClient: AwsClient = mockk()
+    val mockAwsClient: AWSSecretsManager = mockk()
+    val mockResult: DescribeSecretResult = mockk()
+    val mockSecretResult: GetSecretValueResult = mockk()
+    val persistence = AwsSecretManagerPersistence(mockClient, AwsCache(mockClient))
+    every { mockResult.versionIdsToStages } returns mapOf("version" to listOf("AWSCURRENT"))
+    every { mockSecretResult.secretBinary } returns ByteBuffer.wrap(secret.toByteArray())
+    every { mockSecretResult.secretBinary = any() } returns Unit
+    every { mockSecretResult.versionStages } returns listOf("AWSCURRENT")
+    every { mockSecretResult.setVersionStages(any()) } returns Unit
+    every { mockSecretResult.secretString } returns secret
+    every { mockSecretResult.clone() } returns mockSecretResult
+    every { mockAwsClient.describeSecret(any()) } returns mockResult
+    every { mockAwsClient.getSecretValue(any()) } returns mockSecretResult
+    every { mockClient.client } returns mockAwsClient
+    val result = persistence.read(coordinate)
+    Assertions.assertEquals(secret, result)
+  }
+
+  @Test
+  fun `test reading external secret from client`() {
+    val secret = "secret value"
+    val coordinate = SecretCoordinate.ExternalSecretCoordinate("my/external_coordinate")
     val mockClient: AwsClient = mockk()
     val mockAwsClient: AWSSecretsManager = mockk()
     val mockResult: DescribeSecretResult = mockk()

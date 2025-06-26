@@ -1,4 +1,3 @@
-import classNames from "classnames";
 import isBoolean from "lodash/isBoolean";
 import { useCallback, useMemo } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -7,12 +6,12 @@ import { ListBox } from "components/ui/ListBox";
 
 import { AdditionalPropertiesControl } from "./AdditionalPropertiesControl";
 import { ControlGroup } from "./ControlGroup";
-import styles from "./MultiOptionControl.module.scss";
 import { ObjectControl } from "./ObjectControl";
 import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps, OverrideByPath, BaseControlProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 import { AirbyteJsonSchema, resolveTopLevelRef } from "../utils";
 
 export const MultiOptionControl = ({
@@ -24,32 +23,31 @@ export const MultiOptionControl = ({
   nonAdvancedFields,
 }: BaseControlComponentProps) => {
   const value: unknown = useWatch({ name: baseProps.name });
-  const { setValue, unregister } = useFormContext();
+  const { setValue, clearErrors } = useFormContext();
   const {
     schema: rootSchema,
     getSelectedOptionSchema,
-    errorAtPath,
     extractDefaultValuesFromSchema,
     verifyArrayItems,
   } = useSchemaForm();
   const toggleConfig = useToggleConfig(baseProps.name, fieldSchema);
-  const error = errorAtPath(baseProps.name);
+  const error = useErrorAtPath(baseProps.name);
   const optionSchemas = fieldSchema.oneOf ?? fieldSchema.anyOf;
   const options = useMemo(
     () =>
       optionSchemas
         ?.map((optionSchema) => resolveTopLevelRef(rootSchema, optionSchema as AirbyteJsonSchema))
-        ?.filter((optionSchema) => !isBoolean(optionSchema) && !optionSchema.deprecated) as AirbyteJsonSchema[],
+        ?.filter((optionSchema) => !isBoolean(optionSchema)) as AirbyteJsonSchema[],
     [optionSchemas, rootSchema]
   );
   const currentlySelectedOption = useMemo(
     () => (options ? getSelectedOptionSchema(options, value) : undefined),
     [getSelectedOptionSchema, options, value]
   );
-  const displayError = useMemo(
-    () => (currentlySelectedOption?.type === "object" ? error : undefined),
-    [currentlySelectedOption, error]
-  );
+  const displayOptions = useMemo(() => {
+    return options?.filter((option) => currentlySelectedOption === option || !option.deprecated);
+  }, [currentlySelectedOption, options]);
+  const displayError = useMemo(() => (value === undefined ? error : undefined), [error, value]);
 
   const getOptionLabel = useCallback(
     (option: AirbyteJsonSchema | undefined): string => {
@@ -80,7 +78,7 @@ export const MultiOptionControl = ({
     [verifyArrayItems]
   );
 
-  if (options.length === 1) {
+  if (displayOptions.length === 1) {
     return (
       <ObjectControl
         baseProps={baseProps}
@@ -117,31 +115,34 @@ export const MultiOptionControl = ({
       path={baseProps.name}
       error={displayError}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
       control={
         <ListBox
-          className={classNames({ [styles.listBoxError]: !!displayError })}
-          options={options.map((option) => ({
-            label: getOptionLabel(option),
+          hasError={!!displayError}
+          isDisabled={baseProps.disabled}
+          options={displayOptions.map((option) => ({
+            label: `${getOptionLabel(option)} ${option.deprecated ? " (Deprecated)" : ""}`,
             value: getOptionLabel(option),
           }))}
           onSelect={(selectedValue) => {
-            const selectedOption = options.find((option) => selectedValue === getOptionLabel(option));
+            const selectedOption = displayOptions.find((option) => selectedValue === getOptionLabel(option));
             if (!selectedOption) {
               setValue(baseProps.name, undefined);
               return;
             }
 
-            // unregister the field to remove the validation logic of the previous option
-            unregister(baseProps.name);
-
             const defaultValues = extractDefaultValuesFromSchema(selectedOption);
             setValue(baseProps.name, defaultValues, { shouldValidate: false });
+
+            // Only clear the error for the parent field itself, without validating
+            clearErrors(baseProps.name);
           }}
           selectedValue={getOptionLabel(currentlySelectedOption)}
           adaptiveWidth={false}
         />
       }
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
+      disabled={baseProps.disabled}
     >
       {renderOptionContents(
         baseProps,
@@ -169,7 +170,7 @@ const renderOptionContents = (
   if (selectedOption.properties) {
     return (
       <ObjectControl
-        baseProps={baseProps}
+        baseProps={{ ...baseProps, header: undefined }}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}
         hideBorder
@@ -182,7 +183,7 @@ const renderOptionContents = (
   if (selectedOption.additionalProperties && !isBoolean(selectedOption.additionalProperties)) {
     return (
       <AdditionalPropertiesControl
-        baseProps={baseProps}
+        baseProps={{ ...baseProps, header: undefined }}
         fieldSchema={selectedOption.additionalProperties}
         overrideByPath={overrideByPath}
         skipRenderedPathRegistration={skipRenderedPathRegistration}

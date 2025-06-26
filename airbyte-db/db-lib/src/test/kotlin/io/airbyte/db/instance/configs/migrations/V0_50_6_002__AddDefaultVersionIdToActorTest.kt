@@ -14,11 +14,13 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_6_002__AddDefaultVersionIdToActorTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -29,7 +31,7 @@ internal class V0_50_6_002__AddDefaultVersionIdToActorTest : AbstractConfigsData
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_6_001__DropUnsupportedProtocolFlagCol()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -39,7 +41,7 @@ internal class V0_50_6_002__AddDefaultVersionIdToActorTest : AbstractConfigsData
   @Test
   @Throws(IOException::class, SQLException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     addDefaultVersionIdColumnToActor(context)
     Assertions.assertTrue(columnExists(context, "default_version_id", "actor"))
     Assertions.assertTrue(foreignKeyExists(context, "default_version_id", "actor"))

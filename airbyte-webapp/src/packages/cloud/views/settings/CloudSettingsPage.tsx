@@ -27,6 +27,8 @@ export const CloudSettingsPage: React.FC = () => {
   const showAdvancedSettings = useExperiment("settings.showAdvancedSettings");
   const canManageOrganizationBilling = useGeneratedIntent(Intent.ManageOrganizationBilling);
   const canViewOrganizationUsage = useGeneratedIntent(Intent.ViewOrganizationUsage);
+  const canManageEmbedded = useIntent("CreateConfigTemplate", { organizationId: workspace.organizationId });
+  const allowConfigTemplateEndpoints = useExperiment("platform.allow-config-template-endpoints");
 
   return (
     <SettingsLayout>
@@ -37,6 +39,13 @@ export const CloudSettingsPage: React.FC = () => {
             name={formatMessage({ id: "settings.account" })}
             to={CloudSettingsRoutePaths.Account}
           />
+          {canManageEmbedded && allowConfigTemplateEndpoints && (
+            <SettingsLink
+              iconType="stars"
+              name={formatMessage({ id: "settings.embedded" })}
+              to={CloudSettingsRoutePaths.Embedded}
+            />
+          )}
           <SettingsLink
             iconType="grid"
             name={formatMessage({ id: "settings.applications" })}
@@ -98,7 +107,7 @@ export const CloudSettingsPage: React.FC = () => {
           />
         </SettingsNavigationBlock>
         {canViewOrgSettings && (
-          <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             <SettingsLink
               iconType="gear"
               name={formatMessage({ id: "settings.general" })}

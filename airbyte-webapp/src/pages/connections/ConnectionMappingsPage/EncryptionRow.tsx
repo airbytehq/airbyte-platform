@@ -10,13 +10,14 @@ import {
   EncryptionMapperAlgorithm,
   StreamMapperType,
   EncryptionMapperConfiguration,
+  MapperValidationErrorType,
 } from "core/api/types/AirbyteClient";
 
 import { autoSubmitResolver } from "./autoSubmitResolver";
 import { useMappingContext } from "./MappingContext";
-import { MappingFormTextInput, MappingRowItem } from "./MappingRow";
-import styles from "./MappingRow.module.scss";
+import { MappingFormTextInput, MappingRowContent, MappingRowItem } from "./MappingRow";
 import { MappingTypeListBox } from "./MappingTypeListBox";
+import { MappingValidationErrorMessage } from "./MappingValidationErrorMessage";
 import { SelectTargetField } from "./SelectTargetField";
 import { StreamMapperWithId } from "./types";
 
@@ -55,8 +56,14 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
   });
 
   useEffect(() => {
-    if (mapping.validationError && mapping.validationError.type === "FIELD_NOT_FOUND") {
-      methods.setError("targetField", { message: mapping.validationError.message });
+    if (
+      mapping.validationError &&
+      mapping.validationError.type === MapperValidationErrorType.FIELD_NOT_FOUND &&
+      "targetField" in methods.formState.touchedFields
+    ) {
+      methods.setError("targetField", {
+        message: "connections.mappings.error.FIELD_NOT_FOUND",
+      });
     } else {
       methods.clearErrors("targetField");
     }
@@ -70,43 +77,44 @@ export const EncryptionForm: React.FC<EncryptionFormProps> = ({ streamDescriptor
 
   return (
     <FormProvider {...methods}>
-      <form className={styles.form}>
-        <MappingRowItem>
-          <MappingTypeListBox
-            disabled={isStreamValidating}
-            selectedValue={StreamMapperType.encryption}
-            streamDescriptorKey={streamDescriptorKey}
-            mappingId={mapping.id}
-          />
-        </MappingRowItem>
-        <MappingRowItem>
-          <SelectTargetField<EncryptionMapperConfiguration>
-            mappingId={mapping.id}
-            streamDescriptorKey={streamDescriptorKey}
-            name="targetField"
-            disabled={isStreamValidating}
-          />
-        </MappingRowItem>
-        <MappingRowItem>
-          <Text>
-            <FormattedMessage id="connections.mappings.usingRsaAndKey" />
-          </Text>
-        </MappingRowItem>
-        {values.algorithm === "RSA" && (
+      <form>
+        <MappingRowContent>
           <MappingRowItem>
-            <MappingFormTextInput
-              placeholder={formatMessage({ id: "connections.mappings.encryption.publicKey" })}
-              name="publicKey"
+            <MappingTypeListBox
+              disabled={isStreamValidating}
+              selectedValue={StreamMapperType.encryption}
+              streamDescriptorKey={streamDescriptorKey}
+              mappingId={mapping.id}
+            />
+          </MappingRowItem>
+          <MappingRowItem>
+            <SelectTargetField<EncryptionMapperConfiguration>
+              mappingId={mapping.id}
+              streamDescriptorKey={streamDescriptorKey}
+              name="targetField"
               disabled={isStreamValidating}
             />
-            <FormControlErrorMessage<EncryptionMapperConfiguration> name="publicKey" />
           </MappingRowItem>
-        )}
-        {mapping.validationError && mapping.validationError.type !== "FIELD_NOT_FOUND" && (
-          <Text italicized color="red">
-            {mapping.validationError.message}
-          </Text>
-        )}
+          <MappingRowItem>
+            <Text>
+              <FormattedMessage id="connections.mappings.usingRsaAndKey" />
+            </Text>
+          </MappingRowItem>
+          {values.algorithm === "RSA" && (
+            <MappingRowItem>
+              <MappingFormTextInput
+                placeholder={formatMessage({ id: "connections.mappings.encryption.publicKey" })}
+                name="publicKey"
+                disabled={isStreamValidating}
+              />
+              <FormControlErrorMessage<EncryptionMapperConfiguration> name="publicKey" />
+            </MappingRowItem>
+          )}
+        </MappingRowContent>
+        <MappingValidationErrorMessage<EncryptionMapperConfiguration>
+          validationError={mapping.validationError}
+          touchedFields={methods.formState.touchedFields}
+        />
       </form>
     </FormProvider>
   );

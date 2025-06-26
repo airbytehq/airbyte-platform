@@ -37,19 +37,19 @@ internal class V1_1_1_017__AddOrganizationIdToActorOauthParameterTest : Abstract
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_016__AddDataplaneGroupIdToConnection()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     dropConstraints(ctx)
     V1_1_1_017__AddOrganizationIdToActorOauthParameter.doMigration(ctx)
   }
 
   @Test
   fun testCreateOverrideWithOrganizationId() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val id = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
@@ -92,7 +92,7 @@ internal class V1_1_1_017__AddOrganizationIdToActorOauthParameterTest : Abstract
 
   @Test
   fun testCreateOverrideWithWorkspaceId() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val id = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
@@ -138,7 +138,7 @@ internal class V1_1_1_017__AddOrganizationIdToActorOauthParameterTest : Abstract
 
   @Test
   fun testCreateOverrideWithOrganizationIdAndWorkspaceId() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val id = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()
@@ -171,7 +171,7 @@ internal class V1_1_1_017__AddOrganizationIdToActorOauthParameterTest : Abstract
 
   @Test
   fun testCreateOverrideWithoutOrganizationIdOrWorkspaceId() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val id = UUID.randomUUID()
     val actorDefinitionId = UUID.randomUUID()

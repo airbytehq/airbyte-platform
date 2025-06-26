@@ -282,8 +282,6 @@ webapp:
   ##  webapp.api.url The webapp API url.
   api:
     url: /api/v1/
-  connector-builder-server:
-    url: /connector-builder-api
 
   ##  webapp.fullstory.enabled Whether or not to enable fullstory
   fullstory:
@@ -1092,7 +1090,7 @@ temporal:
   image:
     repository: temporalio/auto-setup
     pullPolicy: IfNotPresent
-    tag: "1.26"
+    tag: "1.27.2"
 
   ##  temporal.service.type The Kubernetes Service Type
   ##  temporal.service.port The temporal port and exposed kubernetes port
@@ -1120,7 +1118,7 @@ temporal:
   ## Examples (when using `temporal.containerSecurityContext.readOnlyRootFilesystem=true`):
   ## extraInitContainers:
   ##   - name: config-loader
-  ##     image: temporalio/auto-setup:1.23
+  ##     image: temporalio/auto-setup:1.27.2
   ##     command:
   ##       - /bin/sh
   ##       - -c

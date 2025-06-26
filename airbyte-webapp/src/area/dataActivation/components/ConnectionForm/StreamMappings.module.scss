@@ -1,0 +1,59 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.streamMappings {
+  display: grid;
+  grid-template-columns: 30px 1fr 20px 1fr;
+  gap: variables.$spacing-md;
+
+  &__container {
+    position: relative;
+  }
+
+  &__fullWidth {
+    grid-column: 1 / -1;
+  }
+
+  &__leftGutter {
+    grid-column: 1;
+    height: variables.$form-input-height;
+  }
+
+  &__sourceSettings {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: variables.$spacing-md;
+  }
+
+  &__source {
+    grid-column: 2;
+  }
+
+  &__arrow {
+    height: variables.$form-input-height;
+    grid-column: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  &__destination {
+    grid-column: 4;
+  }
+
+  &__destinationSettings {
+    grid-column: 4;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: variables.$spacing-md;
+  }
+
+  &__divider {
+    grid-column: 1 / -1;
+    margin-inline: calc(-1 * variables.$spacing-xl);
+    margin-block: variables.$spacing-sm;
+    height: variables.$border-thin;
+    background-color: colors.$grey-100;
+  }
+}

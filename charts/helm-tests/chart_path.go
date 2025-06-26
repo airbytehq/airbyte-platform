@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func DetermineChartPath() string {
+func DetermineChartPath(chartSubDir string) string {
 
 	if p := os.Getenv("HELM_CHART_PATH"); p != "" {
 		return p
@@ -18,7 +18,7 @@ func DetermineChartPath() string {
 		cwd = filepath.ToSlash(cwd)
 		idx := strings.Index(cwd, "oss/charts")
 		if idx != -1 {
-			return cwd[:idx+10] + "/airbyte"
+			return cwd[:idx+10] + "/" + chartSubDir
 		}
 	}
 

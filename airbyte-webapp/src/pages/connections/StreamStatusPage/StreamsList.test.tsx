@@ -21,6 +21,11 @@ jest.mock("hooks/services/ConnectionForm/ConnectionFormService", () => ({
     connection: mockConnection,
   }),
 }));
+jest.mock("core/services/ui/FormModeContext", () => ({
+  useFormMode: () => ({
+    mode: "create",
+  }),
+}));
 jest.mock("components/connection/ConnectionSync/ConnectionSyncContext", () => ({
   useConnectionSyncContext: () => ({
     syncConnection: jest.fn(),
@@ -87,7 +92,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Synced", "Queued for next sync"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["1,000 loaded", "-"],
-      expectedFreshness: ["a minute ago", "-"],
+      expectedFreshness: ["a minute ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {
@@ -115,7 +120,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["500 extracted", "Starting…"],
-      expectedFreshness: ["-", "-"],
+      expectedFreshness: ["a few seconds ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {
@@ -143,7 +148,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["500 extracted", "Starting…"],
-      expectedFreshness: ["-", "-"],
+      expectedFreshness: ["a few seconds ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {

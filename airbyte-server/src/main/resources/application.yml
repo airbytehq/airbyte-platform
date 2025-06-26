@@ -33,6 +33,11 @@ micronaut:
     webhook:
       type: fixed
       n-threads: ${WEBHOOK_TASK_EXECUTOR_THREADS:3}
+  http:
+    client:
+      read-timeout: ${READ_TIMEOUT:10m}
+      max-content-length: 52428800 # 50MB
+      event-loop-group: http-client-event-loop
   metrics:
     enabled: ${MICROMETER_METRICS_ENABLED:false}
     binders:
@@ -59,9 +64,25 @@ micronaut:
         step: ${MICROMETER_METRICS_STEP:PT30S}
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
+  netty:
+    event-loops:
+      http-client-event-loop:
+        num-threads: 10
+        prefer-native-transport: true
   security:
     authentication-provider-strategy: ALL
     enabled: ${API_AUTHORIZATION_ENABLED:false}
+    # these urls need to match the micronaut.router.static-resources, otherwise the webapp isn't going to work
+    intercept-url-map:
+      - pattern: /assets/**
+        access:
+          - isAnonymous()
+      - pattern: /fonts/**
+        access:
+          - isAnonymous()
+      - pattern: /*
+        access:
+          - isAnonymous()
     token:
       jwt:
         enabled: ${API_AUTHORIZATION_ENABLED:false}
@@ -69,6 +90,22 @@ micronaut:
           secret:
             generator:
               secret: ${AB_JWT_SIGNATURE_SECRET:}
+  # These static resources are what allow the frontend code to work.
+  router:
+    static-resources:
+      assets:
+        mapping: /assets/**
+        paths:
+          - classpath:webapp/assets
+      fonts:
+        mapping: /fonts/**
+        paths:
+          - classpath:webapp/fonts
+      default:
+        mapping: /**
+        paths:
+          - classpath:webapp
+
   server:
     port: 8001
     cors:
@@ -93,17 +130,6 @@ micronaut:
       max-header-size: ${NETTY_MAX_HEADER_SIZE:32768}
     max-request-size: 10485760 # 10MB the micronaut default. If we want to bump, double check it works for nginx.
 
-  http:
-    client:
-      read-timeout: ${READ_TIMEOUT:10m}
-      max-content-length: 52428800 # 50MB
-      event-loop-group: http-client-event-loop
-  netty:
-    event-loops:
-      http-client-event-loop:
-        num-threads: 10
-        prefer-native-transport: true
-
 airbyte:
   airbyte-url: ${AIRBYTE_URL:}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
@@ -113,8 +139,6 @@ airbyte:
   notification:
     customerio:
       apikey: ${CUSTOMERIO_API_KEY:}
-  applications:
-    type: ${AB_AIRBYTE_APPLICATIONS:}
   auth:
     token-expiration:
       application-token-expiration-in-minutes: ${AB_AIRBYTE_AUTH_TOKEN_EXPIRATION_APPLICATION:15}
@@ -218,6 +242,8 @@ airbyte:
     strategy: ${TRACKING_STRATEGY:LOGGING}
     write-key: ${SEGMENT_WRITE_KEY:}
   worker:
+    discover:
+      auto-refresh-window: ${DISCOVER_REFRESH_WINDOW_MINUTES:1440}
     kube-job-config-variant-override: ${JOB_RESOURCE_VARIANT_OVERRIDE:}
     kube-job-configs:
       default:
@@ -356,6 +382,17 @@ airbyte:
   temporal:
   web-app:
     url: ${WEBAPP_URL:}
+    datadog_application_id: ${WEBAPP_DATADOG_APPLICATION_ID:}
+    datadog_client_token: ${WEBAPP_DATADOG_CLIENT_TOKEN:}
+    datadog_env: ${WEBAPP_DATADOG_ENV:}
+    datadog_service: ${WEBAPP_DATADOG_SERVICE:}
+    datadog_site: ${WEBAPP_DATADOG_SITE:}
+    hockeystack_api_key: ${WEBAPP_HOCKEYSTACK_API_KEY:}
+    launchdarkly_key: ${WEBAPP_LAUNCHDARKLY_KEY:}
+    osano_key: ${WEBAPP_OSANO_KEY:}
+    segment_token: ${WEBAPP_SEGMENT_TOKEN:}
+    zendesk_key: ${WEBAPP_ZENDESK_KEY:}
+
   workspace:
     root: ${WORKSPACE_ROOT}
   protocol:

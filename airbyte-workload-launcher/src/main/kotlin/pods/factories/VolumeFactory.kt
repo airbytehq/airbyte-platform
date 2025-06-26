@@ -8,6 +8,8 @@ import io.airbyte.commons.storage.STORAGE_CLAIM_NAME
 import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.workers.pod.FileConstants
+import io.airbyte.workload.launcher.ArchitectureDecider
+import io.airbyte.workload.launcher.pipeline.stages.model.ArchitectureEnvironmentVariables
 import io.fabric8.kubernetes.api.model.PersistentVolumeClaimVolumeSource
 import io.fabric8.kubernetes.api.model.SecretVolumeSourceBuilder
 import io.fabric8.kubernetes.api.model.Volume
@@ -64,19 +66,19 @@ data class VolumeFactory(
     return VolumeMountPair(volume, mount)
   }
 
-  private fun socket(): VolumeMountPair {
+  private fun socket(socketPath: String): VolumeMountPair {
     val unixSocketVolume =
       VolumeBuilder()
-        .withName("unix-socket-volume")
+        .withName(SOCKET_VOLUME)
         .withNewEmptyDir()
-        .withMedium("Memory")
+        .withMedium(MEMORY_MEDIUM)
         .endEmptyDir()
         .build()
 
     val unixSocketVolumeMount =
       VolumeMountBuilder()
-        .withName("unix-socket-volume")
-        .withMountPath("/var/run/sockets") // common mount point for the Unix sockets
+        .withName(SOCKET_VOLUME)
+        .withMountPath(socketPath) // common mount point for the Unix sockets
         .build()
     return VolumeMountPair(unixSocketVolume, unixSocketVolumeMount)
   }
@@ -273,7 +275,7 @@ data class VolumeFactory(
   fun replication(
     useStaging: Boolean,
     enableAsyncProfiler: Boolean = false,
-    socketTest: Boolean = false,
+    architecture: ArchitectureEnvironmentVariables = ArchitectureDecider.buildLegacyEnvironment(),
   ): ReplicationVolumes {
     val volumes = mutableListOf<Volume>()
     val orchVolumeMounts = mutableListOf<VolumeMount>()
@@ -343,8 +345,8 @@ data class VolumeFactory(
       }
     }
 
-    if (socketTest) {
-      socket().also {
+    if (architecture.isSocketBased()) {
+      socket(architecture.getSocketBasePath()).also {
         volumes.add(it.volume)
         orchVolumeMounts.add(it.mount)
         sourceVolumeMounts.add(it.mount)
@@ -370,6 +372,8 @@ data class VolumeFactory(
     const val SOURCE_VOLUME_NAME = "airbyte-source"
     const val STAGING_VOLUME_NAME = "airbyte-file-staging"
     const val SHARED_TMP = "shared-tmp"
+    const val SOCKET_VOLUME = "unix-socket-volume"
+    const val MEMORY_MEDIUM = "Memory"
 
     // "local" means that the connector has local file access to this volume.
     const val LOCAL_VOLUME_MOUNT = "/local"

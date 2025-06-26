@@ -150,7 +150,7 @@ export const InviteUserRow: React.FC<InviteUserRowProps> = ({
               <ListBox<PermissionType>
                 buttonClassName={styles.inviteUserRow__listBoxButton}
                 selectedValue={selectedPermissionType}
-                controlButton={() => (
+                controlButtonContent={() => (
                   <Box py="sm" px="xs">
                     <FlexContainer direction="row" alignItems="center" gap="xs">
                       <Text size="md" color="grey" as="span">

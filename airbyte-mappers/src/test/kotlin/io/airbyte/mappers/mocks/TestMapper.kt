@@ -4,13 +4,13 @@
 
 package io.airbyte.mappers.mocks
 
+import TEST_OBJECT_MAPPER
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.FieldType
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.TEST_MAPPER_NAME
 import io.airbyte.config.mapper.configs.TestMapperConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.ConfigValidatingSpec
 import io.airbyte.mappers.transformations.FilteredRecordsMapper
 import io.airbyte.mappers.transformations.MapperSpec
@@ -46,11 +46,11 @@ open class TestMapper : FilteredRecordsMapper<TestMapperConfig>() {
   override fun spec(): MapperSpec<TestMapperConfig> = TestMapperSpec()
 }
 
-class TestMapperSpec : ConfigValidatingSpec<TestMapperConfig>() {
+class TestMapperSpec : ConfigValidatingSpec<TestMapperConfig>(TEST_OBJECT_MAPPER) {
   private val simpleJsonSchemaGeneratorFromSpec: SimpleJsonSchemaGeneratorFromSpec = SimpleJsonSchemaGeneratorFromSpec()
 
   override fun deserializeVerifiedConfig(configuredMapper: ConfiguredMapper): TestMapperConfig =
-    Jsons.convertValue(configuredMapper, TestMapperConfig::class.java)
+    objectMapper().convertValue(configuredMapper, TestMapperConfig::class.java)
 
   override fun jsonSchema(): JsonNode = simpleJsonSchemaGeneratorFromSpec.generateJsonSchema(specType())
 

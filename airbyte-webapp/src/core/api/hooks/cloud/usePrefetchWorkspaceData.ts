@@ -25,18 +25,21 @@ export const usePrefetchWorkspaceData = () => {
         queryFn: useGetWorkspaceQuery(workspaceId),
         suspense: true,
         staleTime: 10000,
+        enabled: Boolean(workspaceId),
       },
       {
         queryKey: getCurrentWorkspaceStateQueryKey(workspaceId),
         queryFn: useGetCurrentWorkspaceStateQuery(workspaceId),
         suspense: true,
         staleTime: 10000,
+        enabled: Boolean(workspaceId),
       },
       {
         queryKey: getListPermissionsQueryKey(user.userId),
         queryFn: useListPermissionsQuery(user.userId),
         suspense: true,
         staleTime: 10000,
+        enabled: Boolean(workspaceId),
       },
     ],
   });

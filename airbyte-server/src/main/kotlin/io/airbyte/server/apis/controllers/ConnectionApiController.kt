@@ -45,9 +45,9 @@ import io.airbyte.api.model.generated.PostprocessDiscoveredCatalogResult
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
-import io.airbyte.commons.auth.AuthRoleConstants
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.ConnectionsHandler
 import io.airbyte.commons.server.handlers.JobHistoryHandler
 import io.airbyte.commons.server.handlers.MatchSearchHandler
@@ -111,7 +111,7 @@ open class ConnectionApiController(
   @Post(uri = "/create")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.SCHEDULER)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun createConnection(
     @Body connectionCreate: ConnectionCreate,
   ): ConnectionRead? = execute { connectionsHandler.createConnection(connectionCreate) }
@@ -119,7 +119,7 @@ open class ConnectionApiController(
   @Post(uri = "/update")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateConnection(
     @Body connectionUpdate: ConnectionUpdate,
   ): ConnectionRead? = execute { connectionsHandler.updateConnection(connectionUpdate, null, false) }
@@ -127,7 +127,7 @@ open class ConnectionApiController(
   @Post(uri = "/update_with_reason")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun updateConnectionWithReason(
     @Body connectionUpdateWithReason: ConnectionUpdateWithReason,
   ): ConnectionRead? =
@@ -200,7 +200,7 @@ open class ConnectionApiController(
   ): ConnectionReadList? = execute { matchSearchHandler.searchConnections(connectionSearch) }
 
   @Post(uri = "/get")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
@@ -246,7 +246,7 @@ open class ConnectionApiController(
     }
 
   @Post(uri = "/getForJob")
-  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER)
+  @Secured(AuthRoleConstants.WORKSPACE_READER, AuthRoleConstants.ORGANIZATION_READER, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getConnectionForJob(
     @Body connectionAndJobIdRequestBody: ConnectionAndJobIdRequestBody,
@@ -322,7 +322,7 @@ open class ConnectionApiController(
   @Status(HttpStatus.NO_CONTENT)
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  @AuditLogging(provider = AuditLoggingProvider.BASIC)
+  @AuditLogging(provider = AuditLoggingProvider.ONLY_ACTOR)
   override fun deleteConnection(
     @Body connectionIdRequestBody: ConnectionIdRequestBody,
   ) {

@@ -25,12 +25,12 @@ open class PartialUserConfigServiceDataImpl(
   override fun getPartialUserConfig(partialUserConfigId: UUID): PartialUserConfigWithConfigTemplateAndActorDetails {
     val partialUserConfig =
       repository
-        .findById(partialUserConfigId)
+        .findByIdAndTombstoneFalse(partialUserConfigId)
         .orElseThrow {
           throw RuntimeException("PartialUserConfig not found")
         }.toConfigModel()
 
-    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId)
+    val configTemplate = configTemplateService.getConfigTemplate(partialUserConfig.configTemplateId, partialUserConfig.workspaceId)
 
     return PartialUserConfigWithConfigTemplateAndActorDetails(
       partialUserConfig = partialUserConfig,
@@ -41,7 +41,7 @@ open class PartialUserConfigServiceDataImpl(
   }
 
   override fun listPartialUserConfigs(workspaceId: UUID): List<PartialUserConfigWithActorDetails> {
-    val partialUserConfigs = repository.findByWorkspaceId(workspaceId).map { it.toConfigModel() }
+    val partialUserConfigs = repository.findByWorkspaceIdAndTombstoneFalse(workspaceId).map { it.toConfigModel() }
     val sourceDefinitions = partialUserConfigs.map { partialUserConfig -> sourceService.getSourceDefinitionFromSource(partialUserConfig.actorId) }
 
     return partialUserConfigs.mapIndexed { index, partialUserConfig ->
@@ -49,6 +49,7 @@ open class PartialUserConfigServiceDataImpl(
         partialUserConfig = partialUserConfig,
         actorName = sourceDefinitions[index].name,
         actorIcon = sourceDefinitions[index].iconUrl,
+        configTemplateId = partialUserConfig.configTemplateId,
       )
     }
   }
@@ -60,6 +61,7 @@ open class PartialUserConfigServiceDataImpl(
       partialUserConfig = storedPartialUserConfig,
       actorName = sourceDefinition.name,
       actorIcon = sourceDefinition.iconUrl,
+      configTemplateId = storedPartialUserConfig.configTemplateId,
     )
   }
 
@@ -78,6 +80,29 @@ open class PartialUserConfigServiceDataImpl(
       partialUserConfig = updatedPartialUserConfig,
       actorName = sourceDefinition.name,
       actorIcon = sourceDefinition.iconUrl,
+      configTemplateId = updatedPartialUserConfig.configTemplateId,
     )
+  }
+
+  override fun deletePartialUserConfig(partialUserConfigId: UUID) {
+    val partialUserConfig =
+      repository
+        .findById(partialUserConfigId)
+        .orElseThrow {
+          throw RuntimeException("PartialUserConfig not found for delete")
+        }
+
+    partialUserConfig.tombstone = true
+
+    repository.update(partialUserConfig)
+  }
+
+  override fun deletePartialUserConfigForSource(sourceId: UUID) {
+    val partialUserConfigs = repository.findByActorId(sourceId)
+    if (partialUserConfigs.isEmpty()) {
+      return
+    }
+
+    partialUserConfigs.forEach { it.id?.let { foundConfigId -> deletePartialUserConfig(foundConfigId) } }
   }
 }

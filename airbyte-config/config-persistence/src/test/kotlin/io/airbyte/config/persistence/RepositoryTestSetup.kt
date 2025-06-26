@@ -4,9 +4,7 @@
 
 package io.airbyte.config.persistence
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.config.ActorDefinitionVersion
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.config.DestinationConnection
@@ -16,7 +14,6 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.SupportLevel
-import io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl
 import io.airbyte.data.services.impls.jooq.ActorDefinitionServiceJooqImpl
@@ -44,6 +41,7 @@ open class RepositoryTestSetup {
   companion object {
     val connectionId1 = UUID.randomUUID()
     val connectionId2 = UUID.randomUUID()
+    val dataplaneGroupId = UUID.randomUUID()
     private lateinit var context: ApplicationContext
     private lateinit var jooqDslContext: DSLContext
 
@@ -83,18 +81,16 @@ open class RepositoryTestSetup {
       val database = databaseProviders.createNewConfigsDatabase()
 
       val dataplaneGroupService = DataplaneGroupServiceTestJooqImpl(database)
-      listOf(GEOGRAPHY_EU, GEOGRAPHY_US, GEOGRAPHY_AUTO).forEach {
-        try {
-          dataplaneGroupService.writeDataplaneGroup(
-            DataplaneGroup()
-              .withId(UUID.randomUUID())
-              .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-              .withName(it)
-              .withEnabled(true)
-              .withTombstone(false),
-          )
-        } catch (_: IntegrityConstraintViolationException) {
-        }
+      try {
+        dataplaneGroupService.writeDataplaneGroup(
+          DataplaneGroup()
+            .withId(dataplaneGroupId)
+            .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+            .withName("test")
+            .withEnabled(true)
+            .withTombstone(false),
+        )
+      } catch (_: IntegrityConstraintViolationException) {
       }
 
       val workspaceId = UUID.randomUUID()
@@ -106,13 +102,12 @@ open class RepositoryTestSetup {
           mockk(),
           mockk(),
           mockk(),
-          dataplaneGroupService,
         )
 
       workspaceService.writeStandardWorkspaceNoSecrets(
         StandardWorkspace()
           .withWorkspaceId(workspaceId)
-          .withDefaultGeography(GEOGRAPHY_US)
+          .withDataplaneGroupId(dataplaneGroupId)
           .withName("")
           .withSlug("")
           .withInitialSetupComplete(true)
@@ -204,21 +199,19 @@ open class RepositoryTestSetup {
           .withWorkspaceId(workspaceId),
       )
 
-      val connectionRepo = StandardSyncPersistence(database, dataplaneGroupService)
-      connectionRepo.writeStandardSync(
+      val connectionRepo = RepositoryTestSyncHelper(database)
+      connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId1)
-          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")
           .withBreakingChange(true),
       )
 
-      connectionRepo.writeStandardSync(
+      connectionRepo.createStandardSync(
         StandardSync()
           .withConnectionId(connectionId2)
-          .withGeography(GEOGRAPHY_US)
           .withSourceId(sourceId)
           .withDestinationId(destinationId)
           .withName("not null")

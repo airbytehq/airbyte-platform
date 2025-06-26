@@ -5,13 +5,13 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 
 import { FormConnectionFormValues } from "../../ConnectionForm/formConfig";
 import { useRefreshSourceSchemaWithConfirmationOnDirty } from "../../ConnectionForm/refreshSourceSchemaWithConfirmationOnDirty";
 
 export const RefreshSchemaControl: React.FC = () => {
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { isDirty } = useFormState<FormConnectionFormValues>();
   const refreshSchema = useRefreshSourceSchemaWithConfirmationOnDirty(isDirty);
 

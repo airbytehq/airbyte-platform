@@ -2,114 +2,127 @@ import React, { useCallback } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
+import { SchemaFormControl } from "components/forms/SchemaForm/Controls/SchemaFormControl";
 import { Button } from "components/ui/Button";
+import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
+import { InfoTooltip } from "components/ui/Tooltip";
 
+import { DynamicDeclarativeStream } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { links } from "core/utils/links";
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
+import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import { BuilderCard } from "./BuilderCard";
 import { BuilderConfigView } from "./BuilderConfigView";
-import { BuilderField } from "./BuilderField";
-import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
-import styles from "./StreamConfigView.module.scss";
-import { manifestRecordSelectorToBuilder } from "../convertManifestToBuilderForm";
-import { builderRecordSelectorToManifest, DynamicStreamPathFn } from "../types";
-import { useBuilderWatch } from "../useBuilderWatch";
-
+import styles from "./DynamicStreamConfigView.module.scss";
+import { StreamConfigView } from "./StreamConfigView";
+import { StreamId } from "../types";
+import { getStreamFieldPath } from "../utils";
 interface DynamicStreamConfigViewProps {
-  streamNum: number;
+  streamId: StreamId;
 }
 
-export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = ({ streamNum }) => {
+export const DynamicStreamConfigView: React.FC<DynamicStreamConfigViewProps> = ({ streamId }) => {
   const { openConfirmationModal, closeConfirmationModal } = useConfirmationModalService();
   const analyticsService = useAnalyticsService();
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
   const { formatMessage } = useIntl();
-  const baseUrl = useBuilderWatch("formValues.global.urlBase");
-  const dynamicStreamFieldPath: DynamicStreamPathFn = useCallback(
-    <T extends string>(fieldPath: T) => `formValues.dynamicStreams.${streamNum}.${fieldPath}` as const,
-    [streamNum]
+
+  const dynamicStreamFieldPath = useCallback(
+    (fieldPath?: string) => getStreamFieldPath(streamId, fieldPath),
+    [streamId]
   );
 
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
-  console.log("dynamicStreams", dynamicStreams);
-
-  const handleDelete = () => {
+  const handleDelete = useCallback(() => {
     openConfirmationModal({
       text: "connectorBuilder.deleteDynamicStreamModal.text",
       title: "connectorBuilder.deleteDynamicStreamModal.title",
       submitButtonText: "connectorBuilder.deleteDynamicStreamModal.submitButton",
       onSubmit: () => {
-        const updatedStreams = dynamicStreams.filter((_, index) => index !== streamNum);
-        const streamToSelect = streamNum >= updatedStreams.length ? updatedStreams.length - 1 : streamNum;
-        const viewToSelect = updatedStreams.length === 0 ? "global" : `dynamic_stream_${streamToSelect}`;
-        setValue("formValues.dynamicStreams", updatedStreams);
+        const dynamicStreams: DynamicDeclarativeStream[] = getValues("manifest.dynamic_streams");
+        const updatedStreams = dynamicStreams.filter((_, index) => index !== streamId.index);
+        const streamToSelect = streamId.index >= updatedStreams.length ? updatedStreams.length - 1 : streamId.index;
+        const viewToSelect: BuilderView =
+          updatedStreams.length === 0 ? { type: "global" } : { type: "dynamic_stream", index: streamToSelect };
+        setValue("manifest.dynamic_streams", updatedStreams);
         setValue("view", viewToSelect);
         closeConfirmationModal();
         analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DYNAMIC_STREAM_DELETE, {
           actionDescription: "Dynamic stream deleted",
-          dynamic_stream_name: dynamicStreams[streamNum].dynamicStreamName,
+          dynamic_stream_name: dynamicStreams[streamId.index].name,
         });
       },
     });
-  };
+  }, [analyticsService, closeConfirmationModal, getValues, openConfirmationModal, setValue, streamId]);
+
+  const templateHeaderRef = React.useRef<HTMLDivElement>(null);
+  const scrollToTopOfTemplate = useCallback(() => {
+    if (templateHeaderRef.current) {
+      templateHeaderRef.current.scrollIntoView({ behavior: "auto" });
+    }
+  }, []);
+
+  if (streamId.type !== "dynamic_stream") {
+    return null;
+  }
 
   return (
-    <BuilderConfigView>
-      <FlexContainer justifyContent="space-between" alignItems="center">
-        <BuilderField
-          type="string"
-          path={dynamicStreamFieldPath("dynamicStreamName")}
-          containerClassName={styles.streamNameInput}
-        />
-        <Button variant="danger" onClick={handleDelete}>
-          <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />
-        </Button>
+    <BuilderConfigView className={styles.fullHeight}>
+      <FlexContainer direction="column" gap="2xl" className={styles.fullHeight}>
+        <FlexContainer justifyContent="space-between" alignItems="center">
+          <SchemaFormControl
+            path={dynamicStreamFieldPath("name")}
+            titleOverride={null}
+            className={styles.streamNameInput}
+            placeholder={formatMessage({ id: "connectorBuilder.streamTemplateName.placeholder" })}
+          />
+          <Button variant="danger" onClick={handleDelete}>
+            <FormattedMessage id="connectorBuilder.deleteDynamicStreamModal.title" />
+          </Button>
+        </FlexContainer>
+
+        <FlexContainer direction="column" gap="md">
+          <FlexContainer gap="none">
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="connectorBuilder.dynamicStream.resolver.header" />
+            </Heading>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.dynamicStream.resolver.tooltip" />
+            </InfoTooltip>
+          </FlexContainer>
+
+          <Card>
+            <SchemaFormControl
+              path={dynamicStreamFieldPath("components_resolver")}
+              nonAdvancedFields={NON_ADVANCED_RESOLVER_FIELDS}
+            />
+          </Card>
+        </FlexContainer>
+
+        <FlexContainer direction="column" gap="none" className={styles.fullHeight}>
+          <FlexContainer gap="none" ref={templateHeaderRef}>
+            <Heading as="h2" size="sm">
+              <FormattedMessage id="connectorBuilder.dynamicStream.template.header" />
+            </Heading>
+            <InfoTooltip placement="top">
+              <FormattedMessage id="connectorBuilder.dynamicStream.template.tooltip" />
+            </InfoTooltip>
+          </FlexContainer>
+          <StreamConfigView streamId={streamId} scrollToTop={scrollToTopOfTemplate} />
+        </FlexContainer>
       </FlexContainer>
-
-      <BuilderCard>
-        <BuilderField
-          type="jinja"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.requester.path")}
-          manifestPath="HttpRequester.properties.path"
-          preview={baseUrl ? (value) => `${baseUrl}${value}` : undefined}
-        />
-      </BuilderCard>
-
-      <BuilderCard
-        docLink={links.connectorBuilderRecordSelector}
-        label={getLabelByManifest("RecordSelector")}
-        tooltip={getDescriptionByManifest("RecordSelector")}
-        inputsConfig={{
-          toggleable: false,
-          path: dynamicStreamFieldPath("componentsResolver.retriever.record_selector"),
-          defaultValue: {
-            fieldPath: [],
-            normalizeToSchema: false,
-          },
-          yamlConfig: {
-            builderToManifest: builderRecordSelectorToManifest,
-            manifestToBuilder: manifestRecordSelectorToBuilder,
-          },
-        }}
-      >
-        <BuilderField
-          type="array"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.extractor.field_path")}
-          manifestPath="DpathExtractor.properties.field_path"
-          optional
-        />
-        <BuilderField
-          type="jinja"
-          path={dynamicStreamFieldPath("componentsResolver.retriever.record_selector.record_filter.condition")}
-          label={getLabelByManifest("RecordFilter")}
-          manifestPath="RecordFilter.properties.condition"
-          pattern={formatMessage({ id: "connectorBuilder.condition.pattern" })}
-          optional
-        />
-      </BuilderCard>
     </BuilderConfigView>
   );
 };
+
+const NON_ADVANCED_RESOLVER_FIELDS = [
+  "components_mapping",
+  "retriever.requester.url_base",
+  "retriever.requester.path",
+  "retriever.requester.url",
+  "retriever.requester.http_method",
+  "retriever.requester.authenticator",
+  "retriever.record_selector.extractor",
+  "stream_config",
+];

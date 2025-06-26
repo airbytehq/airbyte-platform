@@ -36,7 +36,7 @@ const keys = ["m", "my", "mx", "mt", "mr", "mb", "ml", "p", "py", "px", "pt", "p
 
 export const Box = forwardRef<HTMLElement, PropsWithChildren<BoxProps>>(
   ({ as = "div", children, className: classNameProp, ...props }, ref) => {
-    const className = classNames(classNameProp, ...keys.map((key) => toClassName(key, props[key])));
+    const className = classNames(classNameProp, styles.box, ...keys.map((key) => toClassName(key, props[key])));
 
     return React.createElement(as, { className, children, "data-testid": props["data-testid"], ref });
   }

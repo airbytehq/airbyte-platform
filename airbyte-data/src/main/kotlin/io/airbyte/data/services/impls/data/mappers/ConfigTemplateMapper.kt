@@ -6,7 +6,6 @@ package io.airbyte.data.services.impls.data.mappers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.commons.json.Jsons
 import io.airbyte.data.repositories.entities.ConfigTemplate
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 
@@ -18,7 +17,7 @@ val objectMapper = ObjectMapper()
 fun EntityConfigTemplate.toConfigModel(): ModelConfigTemplate {
   val connectorSpec =
     this.userConfigSpec.let {
-      Jsons.deserialize(it.toString(), ConnectorSpecification::class.java)
+      objectMapper.readValue(it.toString(), ConnectorSpecification::class.java)
     }
 
   return ModelConfigTemplate(

@@ -8,7 +8,7 @@ import { Option } from "components/ui/ListBox";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { AirbyteStreamConfiguration } from "core/api/types/AirbyteClient";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
+import { useFormMode } from "core/services/ui/FormModeContext";
 
 import { SyncStreamFieldWithId } from "../../ConnectionForm/formConfig";
 import { SyncCatalogUIModel } from "../SyncCatalogTable";
@@ -23,7 +23,7 @@ type HashModeValue = "hashed" | "unhashed";
 
 export const FieldHashMapping: React.FC<FieldHashMappingProps> = ({ row, updateStreamField }) => {
   const { formatMessage } = useIntl();
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const isDisabled = mode === "readonly";
   const { field, streamNode } = row.original;
 

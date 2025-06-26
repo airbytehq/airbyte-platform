@@ -9,6 +9,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
 import java.io.IOException;
@@ -37,6 +38,11 @@ public interface SynchronousSchedulerClient {
                                                     boolean isCustomConnector,
                                                     ResourceRequirements actorDefinitionResourceRequirements,
                                                     WorkloadPriority priority)
+      throws IOException;
+
+  SynchronousResponse<UUID> createDestinationDiscoverJob(DestinationConnection destination,
+                                                         StandardDestinationDefinition destinationDefinition,
+                                                         ActorDefinitionVersion destinationVersion)
       throws IOException;
 
   SynchronousResponse<ConnectorSpecification> createGetSpecJob(String dockerImage, boolean isCustomConnector, final UUID workspaceId)

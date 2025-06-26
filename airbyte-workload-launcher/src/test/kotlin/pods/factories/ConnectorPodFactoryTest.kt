@@ -9,10 +9,10 @@ import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.config.ResourceRequirements
 import io.airbyte.featureflag.TestClient
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
-import io.airbyte.workers.pod.KubeContainerInfo
-import io.airbyte.workers.pod.KubePodInfo
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
+import io.airbyte.workload.launcher.pods.KubeContainerInfo
+import io.airbyte.workload.launcher.pods.KubePodInfo
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
 import io.airbyte.workload.launcher.pods.factories.ResourceRequirementsFactory

@@ -5,6 +5,7 @@ import { FormattedMessage } from "react-intl";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
 import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useFormChangeTrackerService } from "hooks/services/FormChangeTracker";
@@ -13,7 +14,8 @@ import { FormConnectionFormValues } from "../../ConnectionForm/formConfig";
 import { ResponseMessage } from "../../ConnectionForm/ResponseMessage";
 
 export const FormControls: React.FC<React.PropsWithChildren> = ({ children }) => {
-  const { mode, getErrorMessage } = useConnectionFormService();
+  const { getErrorMessage } = useConnectionFormService();
+  const { mode } = useFormMode();
   const { discardRefreshedSchema, schemaHasBeenRefreshed } = useConnectionEditService();
   const { isValid, isDirty, isSubmitting, isSubmitSuccessful, errors } = useFormState<FormConnectionFormValues>();
   const { reset, trigger } = useFormContext<FormConnectionFormValues>();

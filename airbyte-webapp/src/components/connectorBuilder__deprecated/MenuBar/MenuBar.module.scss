@@ -1,0 +1,52 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$grey-100;
+  padding: 7px variables.$spacing-lg;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+}
+
+.backButtonText {
+  color: inherit;
+}
+
+.separator {
+  color: colors.$grey-500;
+}
+
+.rightSide {
+  flex-grow: 0;
+  flex-shrink: 0;
+}
+
+.exitAndName {
+  min-width: 0;
+}
+
+.nameContainer {
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.connectorName {
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
+}
+
+.undoButton {
+  transform: rotateY(180deg);
+}
+
+.helpButton {
+  padding: 0;
+  color: colors.$grey-400;
+
+  &:hover {
+    color: colors.$grey-500;
+    background-color: transparent;
+  }
+}

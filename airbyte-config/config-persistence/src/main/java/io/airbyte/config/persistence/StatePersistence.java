@@ -15,6 +15,8 @@ import io.airbyte.config.StateWrapper;
 import io.airbyte.config.StreamDescriptor;
 import io.airbyte.config.helpers.ProtocolConverters;
 import io.airbyte.config.helpers.StateMessageHelper;
+import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.services.impls.jooq.ConnectionServiceJooqImpl;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
 import io.airbyte.protocol.models.v0.AirbyteGlobalState;
@@ -23,6 +25,8 @@ import io.airbyte.protocol.models.v0.AirbyteStateMessage.AirbyteStateType;
 import io.airbyte.protocol.models.v0.AirbyteStreamState;
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,9 +50,11 @@ import org.jooq.impl.DSL;
 public class StatePersistence {
 
   private final ExceptionWrappingDatabase database;
+  private final ConnectionServiceJooqImpl connectionServiceJooqImpl;
 
-  public StatePersistence(final Database database) {
+  public StatePersistence(final Database database, final ConnectionServiceJooqImpl connectionServiceJooqImpl) {
     this.database = new ExceptionWrappingDatabase(database);
+    this.connectionServiceJooqImpl = connectionServiceJooqImpl;
   }
 
   /**
@@ -125,6 +131,14 @@ public class StatePersistence {
     });
   }
 
+  private Set<StreamDescriptor> getAllStreamsForConnection(final UUID connectionId) throws IOException {
+    try {
+      return new HashSet<>(connectionServiceJooqImpl.getAllStreamsForConnection(connectionId));
+    } catch (final ConfigNotFoundException e) {
+      return Collections.emptySet();
+    }
+  }
+
   public void bulkDelete(final UUID connectionId, final Set<StreamDescriptor> streamsToDelete) throws IOException {
     if (streamsToDelete == null || streamsToDelete.isEmpty()) {
       return;
@@ -146,17 +160,21 @@ public class StatePersistence {
     if (streamsInState.equals(streamsToDelete)) {
       eraseState(connectionId);
     } else {
+      final Set<StreamDescriptor> allStreamsForConnection = getAllStreamsForConnection(connectionId);
+      if (allStreamsForConnection.isEmpty() || allStreamsForConnection.equals(streamsToDelete)) {
+        eraseState(connectionId);
+      } else {
+        final var conditions = streamsToDelete.stream().map(stream -> {
+          var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
+          var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
+          var namespaceCondition = stream.getNamespace() == null
+              ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
+              : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
 
-      final var conditions = streamsToDelete.stream().map(stream -> {
-        var nameCondition = DSL.field(DSL.name(STATE.STREAM_NAME.getName())).eq(stream.getName());
-        var connCondition = DSL.field(DSL.name(STATE.CONNECTION_ID.getName())).eq(connectionId);
-        var namespaceCondition = stream.getNamespace() == null
-            ? DSL.field(DSL.name(STATE.NAMESPACE.getName())).isNull()
-            : DSL.field(DSL.name(STATE.NAMESPACE.getName())).eq(stream.getNamespace());
-
-        return DSL.and(namespaceCondition, nameCondition, connCondition);
-      }).reduce(DSL.noCondition(), DSL::or);
-      this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+          return DSL.and(namespaceCondition, nameCondition, connCondition);
+        }).reduce(DSL.noCondition(), DSL::or);
+        this.database.transaction(ctx -> ctx.deleteFrom(STATE).where(conditions).execute());
+      }
     }
   }
 

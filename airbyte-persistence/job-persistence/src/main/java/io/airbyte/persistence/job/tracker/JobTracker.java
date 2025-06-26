@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -205,15 +206,16 @@ public class JobTracker {
    * Track telemetry for discover.
    *
    * @param jobId job id
-   * @param sourceDefinitionId source definition id
+   * @param actorDefinitionId actor definition id
    * @param workspaceId workspace id
    * @param jobState job state
    * @param jobOutput job output, if available
    */
   public void trackDiscover(final UUID jobId,
-                            final UUID sourceDefinitionId,
+                            final UUID actorDefinitionId,
                             final UUID workspaceId,
                             final UUID actorId,
+                            final ActorType actorType,
                             final JobState jobState,
                             final @Nullable ConnectorJobOutput jobOutput) {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
@@ -221,10 +223,12 @@ public class JobTracker {
     Exceptions.swallow(() -> {
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
+      final Map<String, Object> actorDefMetadata =
+          actorType == ActorType.SOURCE ? generateSourceDefinitionMetadata(actorDefinitionId, workspaceId, actorId)
+              : generateDestinationDefinitionMetadata(actorDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, actorDefMetadata, stateMetadata));
     });
   }
 

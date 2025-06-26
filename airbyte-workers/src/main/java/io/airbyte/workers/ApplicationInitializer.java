@@ -19,6 +19,7 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
+import io.airbyte.workers.temporal.sync.SyncWorkflowV2Impl;
 import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl;
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
@@ -267,7 +268,8 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
       final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       syncWorker.registerWorkflowImplementationTypes(options,
-          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
+          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class),
+          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowV2Impl.class));
       syncWorker.registerActivitiesImplementations(
           syncActivities.orElseThrow().toArray(new Object[] {}));
 

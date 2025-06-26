@@ -145,7 +145,8 @@ public class DestinationDefinitionsHandler {
           .custom(standardDestinationDefinition.getCustom())
           .enterprise(standardDestinationDefinition.getEnterprise())
           .resourceRequirements(apiPojoConverters.scopedResourceReqsToApi(standardDestinationDefinition.getResourceRequirements()))
-          .language(destinationVersion.getLanguage());
+          .language(destinationVersion.getLanguage())
+          .supportsDataActivation(destinationVersion.getSupportsDataActivation());
     } catch (final URISyntaxException | NullPointerException e) {
       throw new InternalServerKnownException("Unable to process retrieved latest destination definitions list", e);
     }
@@ -344,7 +345,8 @@ public class DestinationDefinitionsHandler {
     final StandardDestinationDefinition newDestination = buildDestinationDefinitionUpdate(currentDestination, destinationDefinitionUpdate);
 
     final ActorDefinitionVersion newVersion = actorDefinitionHandlerHelper.defaultDefinitionVersionFromUpdate(
-        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom());
+        currentVersion, ActorType.DESTINATION, destinationDefinitionUpdate.getDockerImageTag(), currentDestination.getCustom(),
+        destinationDefinitionUpdate.getWorkspaceId());
 
     final List<ActorDefinitionBreakingChange> breakingChangesForDef =
         actorDefinitionHandlerHelper.getBreakingChanges(newVersion, ActorType.DESTINATION);

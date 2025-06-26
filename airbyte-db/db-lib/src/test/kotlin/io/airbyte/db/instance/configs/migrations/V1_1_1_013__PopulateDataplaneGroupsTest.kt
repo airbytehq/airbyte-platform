@@ -4,9 +4,9 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.EU_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -37,12 +37,12 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_012__AddUniquenessConstraintToDataplaneClientCredentials()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     dropOrganizationIdFKFromWorkspace(ctx)
     dropOrganizationIdFKFromDataplanegroup(ctx)
     dropUpdatedByFKFromDataplanegroup(ctx)
@@ -50,7 +50,7 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
 
   @Test
   fun testDataplaneGroupsAndDataplanesAreCreated() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     ctx
       .insertInto(
@@ -118,32 +118,32 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
         false,
         OffsetDateTime.now(),
         OffsetDateTime.now(),
-        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, GEOGRAPHY_AUTO),
+        DSL.field<Any>(GEOGRAPHY_TYPE, GEOGRAPHY.dataType, AUTO_DATAPLANE_GROUP),
         UUID.randomUUID(),
       ).execute()
 
     V1_1_1_013__PopulateDataplaneGroups.doMigration(ctx)
 
     val dataplaneGroupNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetchSet(NAME)
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_US))
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_EU))
-    Assertions.assertTrue(dataplaneGroupNames.contains(GEOGRAPHY_AUTO))
+    Assertions.assertTrue(dataplaneGroupNames.contains(US_DATAPLANE_GROUP))
+    Assertions.assertTrue(dataplaneGroupNames.contains(EU_DATAPLANE_GROUP))
+    Assertions.assertTrue(dataplaneGroupNames.contains(AUTO_DATAPLANE_GROUP))
   }
 
   @Test
   fun testDefaultDataplaneCreatedIfNoGeography() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     V1_1_1_013__PopulateDataplaneGroups.doMigration(ctx)
 
     val dataplaneNames = ctx.select(NAME).from(DATAPLANE_GROUP).fetch(NAME)
     Assertions.assertEquals(1, dataplaneNames.size)
-    Assertions.assertEquals(GEOGRAPHY_AUTO, dataplaneNames[0])
+    Assertions.assertEquals(AUTO_DATAPLANE_GROUP, dataplaneNames[0])
   }
 
   @Test
   fun testNoDuplicateDataplaneGroups() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     ctx
       .insertInto(
@@ -200,7 +200,7 @@ internal class V1_1_1_013__PopulateDataplaneGroupsTest : AbstractConfigsDatabase
 
   @Test
   fun testNameConstraintThrowsOnNotAllowedValues() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     Assertions.assertThrows(
       DataAccessException::class.java,
     ) {

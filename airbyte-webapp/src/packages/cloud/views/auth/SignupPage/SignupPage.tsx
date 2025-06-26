@@ -13,10 +13,6 @@ import { Disclaimer } from "../components/Disclaimer";
 import { LoginSignupNavigation } from "../components/LoginSignupNavigation";
 import { LoginButtons } from "../LoginButtons";
 
-interface SignupPageProps {
-  highlightStyle?: React.CSSProperties;
-}
-
 const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   return (
     <FlexContainer gap="sm" alignItems="center" className={styles.detailTextContainer}>
@@ -26,7 +22,7 @@ const Detail: React.FC<React.PropsWithChildren<unknown>> = ({ children }) => {
   );
 };
 
-const SignupPage: React.FC<SignupPageProps> = () => {
+const SignupPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SIGNUP);
 
   return (

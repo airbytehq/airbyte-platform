@@ -17,12 +17,12 @@ import { ScrollParent } from "components/ui/ScrollParent";
 import { Spinner } from "components/ui/Spinner";
 
 import { ConnectionActionsBlock } from "area/connection/components/ConnectionActionsBlock";
-import { HttpError, HttpProblem, useCurrentWorkspace } from "core/api";
+import { HttpError, HttpProblem } from "core/api";
 import { WebBackendConnectionUpdate } from "core/api/types/AirbyteClient";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
+import { useFormMode } from "core/services/ui/FormModeContext";
 import { trackError } from "core/utils/datadog";
 import { useConnectionEditService } from "hooks/services/ConnectionEdit/ConnectionEditService";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 import { useNotificationService } from "hooks/services/Notification";
 
 import styles from "./ConnectionSettingsPage.module.scss";
@@ -38,11 +38,9 @@ export const ConnectionSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.CONNECTIONS_ITEM_SETTINGS);
 
   const { connection, updateConnection } = useConnectionEditService();
-  const { defaultGeography } = useCurrentWorkspace();
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
-
-  const { mode } = useConnectionFormService();
+  const { mode } = useFormMode();
   const simplifiedInitialValues = useInitialFormValues(connection, mode);
 
   const zodValidationSchema = useConnectionValidationZodSchema();
@@ -117,8 +115,7 @@ export const ConnectionSettingsPage: React.FC = () => {
   );
 
   const isDeprecated = connection.status === "deprecated";
-  const hasConfiguredGeography =
-    connection.geography !== undefined && connection.geography !== defaultGeography && connection.geography !== "AUTO";
+  const hasConfiguredGeography = false;
 
   return (
     <ScrollParent>

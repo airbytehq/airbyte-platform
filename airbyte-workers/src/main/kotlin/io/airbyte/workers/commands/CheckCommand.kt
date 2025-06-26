@@ -58,9 +58,10 @@ class CheckCommand(
     val serializedInput = Jsons.serialize(input)
 
     val workspaceId = input.checkConnectionInput.actorContext.workspaceId
+    val organizationId = input.checkConnectionInput.actorContext.organizationId
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForCheck(
-        organizationId = input.checkConnectionInput.actorContext.organizationId,
+        organizationId = organizationId,
         workspaceId = workspaceId,
         actorId = input.checkConnectionInput.actorContext.actorId,
       )
@@ -77,6 +78,8 @@ class CheckCommand(
           input.checkConnectionInput.actorId?.let { WorkloadLabel(Metadata.ACTOR_ID_LABEL_KEY, it.toString()) },
         ),
       workloadInput = serializedInput,
+      workspaceId = workspaceId,
+      organizationId = organizationId,
       logPath = logClientManager.fullLogPath(TemporalUtils.getJobRoot(workspaceRoot, jobId, attemptNumber.toLong())),
       type = WorkloadType.CHECK,
       priority = decode(input.launcherConfig.priority.toString())!!,

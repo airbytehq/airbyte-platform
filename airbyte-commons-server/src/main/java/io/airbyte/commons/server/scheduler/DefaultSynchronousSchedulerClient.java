@@ -4,6 +4,8 @@
 
 package io.airbyte.commons.server.scheduler;
 
+import static io.airbyte.config.helpers.ResourceRequirementsUtils.getResourceRequirementsForJobType;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
@@ -26,9 +28,11 @@ import io.airbyte.config.JobCheckConnectionConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobDiscoverCatalogConfig;
 import io.airbyte.config.JobGetSpecConfig;
+import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.ResourceRequirements;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigInjector;
@@ -131,7 +135,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         () -> temporalClient.submitCheckConnection(UUID.randomUUID(), 0, source.getWorkspaceId(), taskQueue, jobCheckConnectionConfig, context),
         ConnectorJobOutput::getCheckConnection,
         source.getWorkspaceId(),
-        source.getSourceId());
+        source.getSourceId(),
+        ActorType.SOURCE);
   }
 
   @Override
@@ -179,7 +184,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         () -> temporalClient.submitCheckConnection(jobId, 0, destination.getWorkspaceId(), taskQueue, jobCheckConnectionConfig, context),
         ConnectorJobOutput::getCheckConnection,
         destination.getWorkspaceId(),
-        destination.getDestinationId());
+        destination.getDestinationId(),
+        ActorType.DESTINATION);
   }
 
   @Override
@@ -228,7 +234,60 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         () -> temporalClient.submitDiscoverSchema(jobId, 0, source.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context, priority),
         ConnectorJobOutput::getDiscoverCatalogId,
         source.getWorkspaceId(),
-        source.getSourceId());
+        source.getSourceId(),
+        ActorType.SOURCE);
+  }
+
+  @Override
+  public SynchronousResponse<UUID> createDestinationDiscoverJob(final DestinationConnection destination,
+                                                                final StandardDestinationDefinition destinationDefinition,
+                                                                final ActorDefinitionVersion destinationVersion)
+      throws IOException {
+    final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(destinationVersion);
+    final JsonNode configWithOauthParams = oAuthConfigSupplier.injectDestinationOAuthParameters(
+        destination.getDestinationDefinitionId(),
+        destination.getDestinationId(),
+        destination.getWorkspaceId(),
+        destination.getConfiguration());
+    final JsonNode injectedConfig = configInjector.injectConfig(configWithOauthParams, destination.getDestinationDefinitionId());
+
+    final ConfigWithSecretReferences destinationConfig = secretReferenceService.getConfigWithSecretReferences(
+        destination.getDestinationId(),
+        injectedConfig,
+        destination.getWorkspaceId());
+
+    final ResourceRequirements actorDefResourceRequirements =
+        getResourceRequirementsForJobType(destinationDefinition.getResourceRequirements(), JobType.DISCOVER_SCHEMA);
+
+    final JobDiscoverCatalogConfig jobDiscoverCatalogConfig = new JobDiscoverCatalogConfig()
+        .withConnectionConfiguration(destinationConfig)
+        .withDockerImage(dockerImage)
+        .withProtocolVersion(new Version(destinationVersion.getProtocolVersion()))
+        .withSourceId(destination.getDestinationId().toString())
+        .withConfigHash(HASH_FUNCTION.hashBytes(Jsons.serialize(destination.getConfiguration()).getBytes(
+            Charsets.UTF_8)).toString())
+        .withConnectorVersion(destinationVersion.getDockerImageTag())
+        .withIsCustomConnector(destinationDefinition.getCustom())
+        .withResourceRequirements(actorDefResourceRequirements);
+
+    final UUID jobId = UUID.randomUUID();
+    final ConnectorJobReportingContext jobReportingContext =
+        new ConnectorJobReportingContext(jobId, dockerImage, destinationVersion.getReleaseStage(), destinationVersion.getInternalSupportLevel());
+
+    final String taskQueue = TemporalTaskQueueUtils.getTaskQueue(TemporalJobType.DISCOVER_SCHEMA);
+
+    final ActorContext context = contextBuilder.fromDestination(destination);
+
+    return execute(
+        ConfigType.DISCOVER_SCHEMA,
+        jobReportingContext,
+        destination.getDestinationDefinitionId(),
+        () -> temporalClient.submitDiscoverSchema(jobId, 0, destination.getWorkspaceId(), taskQueue, jobDiscoverCatalogConfig, context,
+            WorkloadPriority.HIGH),
+        ConnectorJobOutput::getDiscoverCatalogId,
+        destination.getWorkspaceId(),
+        destination.getDestinationId(),
+        ActorType.DESTINATION);
   }
 
   @Override
@@ -246,7 +305,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
         null,
         () -> temporalClient.submitGetSpec(jobId, 0, workspaceId, jobSpecConfig),
         ConnectorJobOutput::getSpec,
-        null, null);
+        null, null, null);
   }
 
   @VisibleForTesting
@@ -256,19 +315,20 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                      final Supplier<TemporalResponse<ConnectorJobOutput>> executor,
                                      final Function<ConnectorJobOutput, T> outputMapper,
                                      @Nullable final UUID workspaceId,
-                                     @Nullable final UUID actorId) {
+                                     @Nullable final UUID actorId,
+                                     @Nullable final ActorType actorType) {
     final long createdAt = Instant.now().toEpochMilli();
     final UUID jobId = jobContext.jobId();
     try {
-      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, JobState.STARTED, null);
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, JobState.STARTED, null);
       final TemporalResponse<ConnectorJobOutput> temporalResponse = executor.get();
       final Optional<ConnectorJobOutput> jobOutput = temporalResponse.getOutput();
       final JobState outputState = temporalResponse.getMetadata().isSucceeded() ? JobState.SUCCEEDED : JobState.FAILED;
 
-      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, outputState, jobOutput.orElse(null));
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, outputState, jobOutput.orElse(null));
 
       if (outputState == JobState.FAILED && jobOutput.isPresent()) {
-        reportError(configType, jobContext, jobOutput.get(), connectorDefinitionId, workspaceId);
+        reportError(configType, jobContext, jobOutput.get(), connectorDefinitionId, workspaceId, actorType);
       }
 
       final long endedAt = Instant.now().toEpochMilli();
@@ -281,7 +341,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
           createdAt,
           endedAt);
     } catch (final RuntimeException e) {
-      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, JobState.FAILED, null);
+      track(jobId, configType, connectorDefinitionId, workspaceId, actorId, actorType, JobState.FAILED, null);
       throw e;
     }
   }
@@ -294,6 +354,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                          final UUID connectorDefinitionId,
                          @Nullable final UUID workspaceId,
                          @Nullable final UUID actorId,
+                         @Nullable final ActorType actorType,
                          final JobState jobState,
                          final @Nullable ConnectorJobOutput jobOutput) {
     switch (configType) {
@@ -311,7 +372,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
           actorId,
           jobState,
           jobOutput);
-      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, actorId, jobState, jobOutput);
+      case DISCOVER_SCHEMA -> jobTracker.trackDiscover(jobId, connectorDefinitionId, workspaceId, actorId, actorType, jobState, jobOutput);
       case GET_SPEC -> {
         // skip tracking for get spec to avoid noise.
       }
@@ -325,7 +386,8 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
                                   final ConnectorJobReportingContext jobContext,
                                   final T jobOutput,
                                   final UUID connectorDefinitionId,
-                                  final UUID workspaceId) {
+                                  final UUID workspaceId,
+                                  @Nullable final ActorType actorType) {
     Exceptions.swallow(() -> {
       switch (configType) {
         case CHECK_CONNECTION_SOURCE -> jobErrorReporter.reportSourceCheckJobFailure(
@@ -340,6 +402,7 @@ public class DefaultSynchronousSchedulerClient implements SynchronousSchedulerCl
             jobContext);
         case DISCOVER_SCHEMA -> jobErrorReporter.reportDiscoverJobFailure(
             connectorDefinitionId,
+            actorType,
             workspaceId,
             ((ConnectorJobOutput) jobOutput).getFailureReason(),
             jobContext);

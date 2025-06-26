@@ -2,7 +2,7 @@
 @use "scss/variables";
 
 .listboxOptions {
-  min-width: variables.$min-width-listbox-options-list;
+  width: variables.$min-width-listbox-options-list;
   border-radius: variables.$border-radius-lg;
   box-shadow: variables.$box-shadow-menu;
   display: flex;
@@ -11,6 +11,11 @@
   background: colors.$foreground;
   max-height: variables.$height-long-listbox-options-list;
   overflow: auto;
+
+  // remove default browser styles for ul
+  margin-block-start: 0;
+  margin-block-end: 0;
+  padding-inline-start: 0;
 
   &:focus-visible {
     outline: none;

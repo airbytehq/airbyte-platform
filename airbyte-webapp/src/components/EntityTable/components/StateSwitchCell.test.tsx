@@ -2,6 +2,7 @@ import { CellContext } from "@tanstack/react-table";
 import { render } from "@testing-library/react";
 
 import { TestSuspenseBoundary, TestWrapper } from "test-utils";
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 
 import { StateSwitchCell } from "./StateSwitchCell";
@@ -13,6 +14,7 @@ jest.mock("core/api", () => ({
     mutateAsync: jest.fn(),
     isLoading: false,
   })),
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 jest.mock("core/utils/rbac", () => ({

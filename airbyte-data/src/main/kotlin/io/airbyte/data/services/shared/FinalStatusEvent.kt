@@ -6,7 +6,7 @@ package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.config.JobConfig
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import io.micronaut.data.annotation.TypeDef
 import io.micronaut.data.model.DataType
 

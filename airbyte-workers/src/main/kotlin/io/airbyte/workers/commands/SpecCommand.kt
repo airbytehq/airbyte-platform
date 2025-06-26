@@ -41,16 +41,22 @@ class SpecCommand(
     val jobId = input.jobRunConfig.jobId
     val workloadId = workloadIdGenerator.generateSpecWorkloadId(jobId)
     val serializedInput = Jsons.serialize(input)
+    val workspaceId = input.launcherConfig.workspaceId
+    // todo: add org id to the input or fetch it and pipe through
+    val organizationId = null
+
     val dataplaneGroup =
       dataplaneGroupResolver.resolveForSpec(
         organizationId = null,
-        workspaceId = input.launcherConfig.workspaceId,
+        workspaceId = workspaceId,
       )
 
     return WorkloadCreateRequest(
       workloadId = workloadId,
       labels = listOf(WorkloadLabel(Metadata.JOB_LABEL_KEY, jobId)),
       workloadInput = serializedInput,
+      workspaceId = workspaceId,
+      organizationId = organizationId,
       logPath = logClientManager.fullLogPath(Path.of(workloadId)),
       type = WorkloadType.SPEC,
       priority = WorkloadPriority.HIGH,

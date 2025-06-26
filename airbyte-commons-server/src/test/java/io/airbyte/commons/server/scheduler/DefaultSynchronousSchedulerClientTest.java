@@ -41,6 +41,7 @@ import io.airbyte.config.JobGetSpecConfig;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionOutput;
+import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.WorkloadPriority;
 import io.airbyte.config.persistence.ConfigInjector;
 import io.airbyte.config.secrets.ConfigWithSecretReferences;
@@ -95,6 +96,9 @@ class DefaultSynchronousSchedulerClientTest {
       .withDestinationId(UUID1)
       .withDestinationDefinitionId(UUID2)
       .withConfiguration(CONFIGURATION);
+  private static final StandardDestinationDefinition DESTINATION_DEFINITION = new StandardDestinationDefinition()
+      .withDestinationDefinitionId(UUID2)
+      .withCustom(false);
   private static final ActorDefinitionVersion ACTOR_DEFINITION_VERSION = new ActorDefinitionVersion()
       .withDockerRepository(DOCKER_REPOSITORY)
       .withDockerImageTag(DOCKER_IMAGE_TAG)
@@ -161,7 +165,7 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobReportingContext jobContext =
           new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
       final SynchronousResponse<UUID> response = schedulerClient
-          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
+          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID, ActorType.SOURCE);
 
       assertNotNull(response);
       assertEquals(discoveredCatalogId, response.getOutput());
@@ -171,8 +175,10 @@ class DefaultSynchronousSchedulerClientTest {
       assertTrue(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.SUCCEEDED),
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.SUCCEEDED),
           eq(jobOutput));
       verifyNoInteractions(jobErrorReporter);
     }
@@ -190,7 +196,7 @@ class DefaultSynchronousSchedulerClientTest {
       final ConnectorJobReportingContext jobContext =
           new ConnectorJobReportingContext(UUID.randomUUID(), SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
       final SynchronousResponse<UUID> response = schedulerClient
-          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID);
+          .execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function, mapperFunction, WORKSPACE_ID, ACTOR_ID, ActorType.SOURCE);
 
       assertNotNull(response);
       assertNull(response.getOutput());
@@ -200,8 +206,10 @@ class DefaultSynchronousSchedulerClientTest {
       assertFalse(response.getMetadata().isSucceeded());
       assertEquals(LOG_PATH, response.getMetadata().getLogPath());
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.FAILED),
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.FAILED),
           eq(failedJobOutput));
     }
 
@@ -217,10 +225,12 @@ class DefaultSynchronousSchedulerClientTest {
       assertThrows(
           RuntimeException.class,
           () -> schedulerClient.execute(ConfigType.DISCOVER_SCHEMA, jobContext, sourceDefinitionId, function,
-              mapperFunction, WORKSPACE_ID, ACTOR_ID));
+              mapperFunction, WORKSPACE_ID, ACTOR_ID, ActorType.SOURCE));
 
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.STARTED), eq(null));
-      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(JobState.FAILED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.STARTED), eq(null));
+      verify(jobTracker).trackDiscover(any(UUID.class), eq(sourceDefinitionId), eq(WORKSPACE_ID), eq(ACTOR_ID), eq(ActorType.SOURCE),
+          eq(JobState.FAILED), eq(null));
       verifyNoInteractions(jobErrorReporter);
     }
 
@@ -311,6 +321,19 @@ class DefaultSynchronousSchedulerClientTest {
           schedulerClient.createDiscoverSchemaJob(SOURCE_CONNECTION, ACTOR_DEFINITION_VERSION, false, null, WorkloadPriority.HIGH);
       assertEquals(expectedCatalogId, response.getOutput());
       verify(configInjector).injectConfig(any(), eq(SOURCE_CONNECTION.getSourceDefinitionId()));
+    }
+
+    @Test
+    void testCreateDestinationDiscoverJob() throws IOException {
+      final UUID expectedCatalogId = UUID.randomUUID();
+      final ConnectorJobOutput jobOutput = new ConnectorJobOutput().withDiscoverCatalogId(expectedCatalogId);
+      when(
+          temporalClient.submitDiscoverSchema(any(UUID.class), eq(0), eq(WORKSPACE_ID), eq(DISCOVER_TASK_QUEUE), any(JobDiscoverCatalogConfig.class),
+              any(ActorContext.class), any()))
+                  .thenReturn(new TemporalResponse<>(jobOutput, createMetadata(true)));
+      final SynchronousResponse<UUID> response =
+          schedulerClient.createDestinationDiscoverJob(DESTINATION_CONNECTION, DESTINATION_DEFINITION, ACTOR_DEFINITION_VERSION);
+      assertEquals(expectedCatalogId, response.getOutput());
     }
 
     @Test

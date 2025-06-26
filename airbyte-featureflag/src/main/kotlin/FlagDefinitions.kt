@@ -13,7 +13,7 @@ object LogConnectorMessages : EnvVar(envVar = "LOG_CONNECTOR_MESSAGES")
 
 object RemoveValidationLimit : Temporary<Boolean>(key = "validation.removeValidationLimit", default = false)
 
-object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = false)
+object FieldSelectionEnabled : Temporary<Boolean>(key = "connection.columnSelection", default = true)
 
 object CheckWithCatalog : Temporary<Boolean>(key = "check-with-catalog", default = false)
 
@@ -67,9 +67,13 @@ object HideActorDefinitionFromList : Permanent<Boolean>(key = "connectors.hideAc
 
 object EnableAsyncProfiler : Permanent<Boolean>(key = "platform.enable.async.profiler", default = false)
 
-object SingleContainerTest : Temporary<Boolean>(key = "platform.single-container-test", default = false)
+object ProfilingMode : Permanent<String>(key = "platform.async.profiler.mode", default = "cpu")
 
 object SocketTest : Temporary<Boolean>(key = "platform.socket-test", default = false)
+
+object SocketFormat : Temporary<String>(key = "platform.socket-format", default = "")
+
+object SocketCount : Temporary<Int>(key = "platform.socket-count", default = -1)
 
 object PauseSyncsWithUnsupportedActors : Temporary<Boolean>(key = "connectors.pauseSyncsWithUnsupportedActors", default = true)
 
@@ -82,8 +86,6 @@ object SourceResourceOverrides : Temporary<String>(key = "source-resource-overri
 object ConnectorApmEnabled : Permanent<Boolean>(key = "connectors.apm-enabled", default = false)
 
 object BillingMigrationMaintenance : Temporary<Boolean>(key = "billing.migrationMaintenance", default = false)
-
-object CoRoutineBufferedReplicationWorker : Temporary<Boolean>(key = "platform.coroutine-buffered-replication-worker", default = false)
 
 // NOTE: this is deprecated in favor of FieldSelectionEnabled and will be removed once that flag is fully deployed.
 object FieldSelectionWorkspaces : EnvVar(envVar = "FIELD_SELECTION_WORKSPACES") {
@@ -198,4 +200,18 @@ object PersistSecretConfigsAndReferences : Temporary<Boolean>(key = "platform.pe
 
 object ReadSecretReferenceIdsInConfigs : Temporary<Boolean>(key = "platform.read-secret-reference-ids-in-configs", default = false)
 
+object EnableDefaultSecretStorage : Temporary<Boolean>(key = "platform.use-default-secret-storage", default = false)
+
+object CleanupDanglingSecretConfigs : Temporary<Boolean>(key = "platform.cleanup-dangling-secret-configs", default = false)
+
 object CanCleanWorkloadQueue : Temporary<Boolean>(key = "platform.can-clean-workload-queue", default = false)
+
+object StoreAuditLogs : Temporary<Boolean>(key = "platform.store-audit-logs", default = false)
+
+object UseCommandCheck : Temporary<Boolean>(key = "platform.use-command-check", default = false)
+
+object UseSyncV2 : Temporary<Boolean>(key = "platform.use-sync-v2", default = false)
+
+object EnableDestinationCatalogValidation : Temporary<Boolean>(key = "platform.enable-destination-catalog-validation", default = false)
+
+object IgnoreTokenRoleClaims : Temporary<Boolean>(key = "platform.ignore-token-role-claims", default = false)

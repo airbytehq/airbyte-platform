@@ -20,6 +20,7 @@ import io.airbyte.config.JsonsSchemaConstants.FORMAT_DATE
 import io.airbyte.config.JsonsSchemaConstants.FORMAT_DATE_TIME
 import io.airbyte.config.JsonsSchemaConstants.FORMAT_TIME
 import io.airbyte.config.JsonsSchemaConstants.PROPERTIES
+import io.airbyte.config.JsonsSchemaConstants.REQUIRED
 import io.airbyte.config.JsonsSchemaConstants.TYPE
 import io.airbyte.config.JsonsSchemaConstants.TYPE_ARRAY
 import io.airbyte.config.JsonsSchemaConstants.TYPE_BOOLEAN
@@ -36,6 +37,14 @@ val log = KotlinLogging.logger {}
 @Singleton
 class FieldGenerator {
   fun getFieldsFromSchema(schema: JsonNode): List<Field> {
+    val required = schema.get(REQUIRED)
+    val requiredProperties: List<String> =
+      if (required != null && required.isArray) {
+        removeNullFromArray(required as ArrayNode)
+      } else {
+        listOf()
+      }
+
     val properties = schema.get(PROPERTIES)
     if (properties != null && properties.isObject) {
       val arrProperties = properties as ObjectNode
@@ -43,6 +52,7 @@ class FieldGenerator {
         Field(
           name = key,
           type = getFieldTypeFromNode(value),
+          required = requiredProperties.contains(key),
         )
       }
     } else {

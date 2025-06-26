@@ -27,6 +27,7 @@ private val logger = KotlinLogging.logger {}
  * `micronaut.security.oauth2.clients.keycloak.*` properties that this interceptor requires.
  */
 @Singleton
+@Requires(property = "micronaut.security.enabled", value = "true")
 @Requires(property = "micronaut.security.oauth2.clients.keycloak.client-id", pattern = ".+")
 @Requires(property = "micronaut.security.oauth2.clients.keycloak.client-secret", pattern = ".+")
 @Requires(property = "micronaut.security.oauth2.clients.keycloak.openid.issuer", pattern = ".+")

@@ -12,11 +12,11 @@ import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.text.Names
 import io.airbyte.config.helpers.FieldGenerator
 import io.airbyte.mappers.helpers.createHashingMapper
-import io.airbyte.protocol.models.Field
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AirbyteCatalog
 import io.airbyte.protocol.models.v0.AirbyteStream
 import io.airbyte.protocol.models.v0.CatalogHelpers
+import io.airbyte.protocol.models.v0.Field
 import io.airbyte.protocol.models.v0.SyncMode
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
@@ -112,9 +112,11 @@ class CatalogClientConvertersTest {
         io.airbyte.api.client.model.generated.SyncMode.FULL_REFRESH,
         io.airbyte.api.client.model.generated.DestinationSyncMode.APPEND,
         listOf(ID_FIELD_NAME),
+        null,
         listOf(),
         Names.toAlphanumericAndUnderscore(STREAM_NAME),
         true,
+        null,
         null,
         null,
         null,

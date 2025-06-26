@@ -4,12 +4,12 @@
 
 package io.airbyte.workload.launcher.pods.factories
 
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
-import io.airbyte.workers.pod.ContainerConstants.DESTINATION_CONTAINER_NAME
-import io.airbyte.workers.pod.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
-import io.airbyte.workers.pod.ContainerConstants.SOURCE_CONTAINER_NAME
 import io.airbyte.workers.pod.FileConstants.DEST_DIR
 import io.airbyte.workers.pod.FileConstants.SOURCE_DIR
+import io.airbyte.workload.launcher.constants.ContainerConstants.DESTINATION_CONTAINER_NAME
+import io.airbyte.workload.launcher.constants.ContainerConstants.ORCHESTRATOR_CONTAINER_NAME
+import io.airbyte.workload.launcher.constants.ContainerConstants.SOURCE_CONTAINER_NAME
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
 import io.fabric8.kubernetes.api.model.Container
 import io.fabric8.kubernetes.api.model.ContainerBuilder
 import io.fabric8.kubernetes.api.model.EnvVar

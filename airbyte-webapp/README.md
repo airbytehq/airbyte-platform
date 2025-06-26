@@ -80,9 +80,9 @@ they're testing, using the `.test.ts` extension.
 ### End-to-end (e2e) tests with Cypress
 
 There are two separate e2e test suites: one for the open-source build of Airbyte (located
-in `cypress/e2e/`), and one for Airbyte Cloud (located in `cypress/cloud-e2e/`). The
-Airbyte Cloud e2e tests are open-source, but due to their proprietary nature can only be
-run successfully from within the private Airbyte VPN.
+in `cypress/e2e/`).
+
+🚧 We are in the process of migrating e2e tests to Playwright. Our Playwright suite can be found in `/playwright` along with a separate README for running and debugging them.
 
 #### Using local k8s and `make` (recommended)
 
@@ -124,42 +124,6 @@ connector builder server can access it under its container name.
 The tests in here are instrumenting an Electron instance to test the full functionality of
 Airbyte from the frontend, so other components of the platform (scheduler, worker,
 connector builder server) are also tested in a rudimentary way.
-
-#### Cloud e2e tests
-
-:rotating_light::construction:The Airbyte Cloud e2e tests will only run successfully from
-within the private Airbyte VPN.:construction::rotating_light:
-
-The e2e tests can be run against either a local cloud UI or a full-stack Cloud deployment.
-
-##### Test setup
-
-Pre-configured credentials in dev/stage cloud environments can be found in Lastpass,
-`Integration Test Airbyte Login`. To make these credentials (or any others) visible to the
-test suite, they can be assigned to shell variables prefixed with `CYPRESS_`—so, for
-example, to log in with the email `readme-contrived-example@email-client.biz`, you would
-put a line like the following in your shell config:
-
-```sh
-export CYPRESS_TEST_USER_EMAIL="readme-contrived-example@email-client.biz"
-export CYPRESS_TEST_USER_PW="<contrived example password>"
-```
-
-If you like to track your dotfiles in a git repo, I hope it's obvious that these should
-not be committed.
-
-##### Quickstart
-
-For interactive, visual browser-based testing, complete with "Inspect element":
-
-1. configure credentials for a test user in the `CYPRESS_TEST_USER_EMAIL` and `CYPRESS_TEST_USER_PW` environment variables
-2. `pnpm cloud-test:dev`
-3. in the cypress UI, select "E2E testing" and then your browser of choice to launch the test runner
-4. select a spec file to run its tests. Any edits to that spec file, or any cypress support file, will automatically rerun the tests.
-
-For headless, CI-style testing:
-
-1. `pnpm cloud-test` (see caveat #1, however)
 
 ##### Caveats
 

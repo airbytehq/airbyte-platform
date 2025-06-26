@@ -44,7 +44,7 @@ export const VersionModal: React.FC<{
           </FlexContainer>
         ) : (
           <FlexContainer direction="column" data-testid="versions-list">
-            {(displayedVersion === undefined || previousManifestDraft) && (
+            {(displayedVersion === "draft" || previousManifestDraft) && (
               <Message type="warning" text={<FormattedMessage id="connectorBuilder.versionModal.warning" />} />
             )}
             {previousManifestDraft && (
@@ -52,7 +52,7 @@ export const VersionModal: React.FC<{
                 type="button"
                 onClick={() => {
                   setDisplayedVersion(
-                    undefined,
+                    "draft",
                     previousManifestDraft.manifest,
                     previousManifestDraft.componentsFileContent
                   );

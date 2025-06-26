@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AirbyteStream;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptFailureSummary;
@@ -64,9 +65,9 @@ import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.persistence.job.JobPersistence;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.tracker.JobTracker.JobState;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.util.Arrays;
@@ -329,12 +330,12 @@ class JobTrackerTest {
         .thenReturn(new StandardWorkspace().withWorkspaceId(WORKSPACE_ID).withName(WORKSPACE_NAME));
 
     assertDiscoverCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, jobState, output),
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, WORKSPACE_ID, SOURCE_ID, ActorType.SOURCE, jobState, output),
         metadata,
         true);
     when(actorDefinitionVersionHelper.getSourceVersion(sourceDefinition, null, null)).thenReturn(sourceVersion);
     assertDiscoverCorrectMessageForEachState(
-        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, jobState, output),
+        (jobState, output) -> jobTracker.trackDiscover(JOB_ID, UUID1, null, null, null, jobState, output),
         metadata,
         false);
   }

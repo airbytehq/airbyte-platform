@@ -180,4 +180,44 @@ class StreamRefreshesRepositoryTest : RepositoryTestSetup() {
         }.toSet(),
     )
   }
+
+  @Test
+  fun `saveStreamsToRefresh does not save refreshes for streams that already have pending refreshes`() {
+    val refreshType = RefreshStream.RefreshType.TRUNCATE
+    val streams1 =
+      listOf(
+        StreamDescriptor().withName("stream1").withNamespace("ns1"),
+        StreamDescriptor().withName("stream2").withNamespace("ns2"),
+        StreamDescriptor().withName("stream1").withNamespace(null),
+      )
+
+    val repository = getRepository(StreamRefreshesRepository::class.java)
+    repository.saveStreamsToRefresh(connectionId1, streams1, refreshType)
+
+    val streams2 =
+      listOf(
+        StreamDescriptor().withName("stream1").withNamespace("ns1"),
+        StreamDescriptor().withName("stream2").withNamespace("ns2"),
+        StreamDescriptor().withName("stream2").withNamespace("different"),
+        StreamDescriptor().withName("stream3").withNamespace("ns3"),
+      )
+    repository.saveStreamsToRefresh(connectionId1, streams2, refreshType)
+
+    val persisted: List<StreamRefresh> = repository.findByConnectionId(connectionId1)
+    assertEquals(
+      listOf(
+        StreamRefresh(null, connectionId1, "stream1", "ns1", null, RefreshType.TRUNCATE),
+        StreamRefresh(null, connectionId1, "stream2", "ns2", null, RefreshType.TRUNCATE),
+        StreamRefresh(null, connectionId1, "stream1", null, null, RefreshType.TRUNCATE),
+        StreamRefresh(null, connectionId1, "stream2", "different", null, RefreshType.TRUNCATE),
+        StreamRefresh(null, connectionId1, "stream3", "ns3", null, RefreshType.TRUNCATE),
+      ),
+      persisted
+        .map {
+          it.id = null
+          it.createdAt = null
+          it
+        },
+    )
+  }
 }

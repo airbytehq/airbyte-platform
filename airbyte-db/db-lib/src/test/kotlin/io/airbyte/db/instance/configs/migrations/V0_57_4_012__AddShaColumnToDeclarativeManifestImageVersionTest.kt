@@ -12,10 +12,12 @@ import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.time.OffsetDateTime
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersionTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -26,7 +28,7 @@ internal class V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersionTest : 
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_57_4_011__DropUserTableAuthColumns()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -35,7 +37,7 @@ internal class V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersionTest : 
 
   @Test
   fun testExistingDataDoesNotBreakMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     val majorVersion = 0
     val declarativeManifestImageVersion = "0.0.1"

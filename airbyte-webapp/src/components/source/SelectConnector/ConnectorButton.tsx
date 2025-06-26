@@ -43,7 +43,7 @@ export const ConnectorButton = <T extends ConnectorDefinitionOrEnterpriseStub>({
       <FlexContainer alignItems="center" className={styles.iconAndName}>
         <ConnectorIcon icon={definition.icon} className={styles.icon} />
         <Text
-          size="lg"
+          size="sm"
           className={classNames(styles.text, {
             [styles.twoMaxLines]: maxLines === 2,
             [styles.threeMaxLines]: maxLines === 3,

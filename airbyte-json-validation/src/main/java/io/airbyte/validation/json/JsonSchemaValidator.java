@@ -18,6 +18,7 @@ import com.networknt.schema.SpecVersion;
 import com.networknt.schema.ValidationContext;
 import com.networknt.schema.ValidationMessage;
 import io.airbyte.commons.string.Strings;
+import jakarta.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Validate a JSON object against a JSONSchema schema.
  */
+@Singleton
 public class JsonSchemaValidator {
 
   private static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaValidator.class);

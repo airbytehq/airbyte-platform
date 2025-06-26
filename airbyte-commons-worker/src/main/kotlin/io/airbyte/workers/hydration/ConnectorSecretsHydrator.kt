@@ -15,11 +15,11 @@ import io.airbyte.config.secrets.SecretsHelpers
 import io.airbyte.config.secrets.SecretsRepositoryReader
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence
 import io.airbyte.config.secrets.persistence.SecretPersistence
+import io.airbyte.domain.models.SecretStorage
 import io.airbyte.metrics.MetricClient
 import io.airbyte.workers.helper.toConfigModel
 import io.airbyte.workers.helper.toModel
 import java.io.IOException
-import java.lang.RuntimeException
 import java.util.UUID
 
 /**
@@ -33,8 +33,12 @@ class ConnectorSecretsHydrator(
   private val metricClient: MetricClient,
 ) {
   private fun getPersistenceByStorageId(secretStorageId: UUID): SecretPersistence {
-    val secretStorage = airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId))
-    return RuntimeSecretPersistence(secretStorage.toConfigModel(), metricClient)
+    val secretStorageRead = airbyteApiClient.secretStorageApi.getSecretStorage(SecretStorageIdRequestBody(secretStorageId))
+    return if (secretStorageRead.id == SecretStorage.DEFAULT_SECRET_STORAGE_ID.value) {
+      defaultSecretPersistence
+    } else {
+      RuntimeSecretPersistence(secretStorageRead.toConfigModel(), metricClient)
+    }
   }
 
   private fun getLegacyPersistenceByOrgId(organizationId: UUID): SecretPersistence {

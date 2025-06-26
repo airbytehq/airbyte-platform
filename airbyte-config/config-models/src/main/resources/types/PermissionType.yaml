@@ -16,3 +16,4 @@ enum:
   - workspace_editor # Permission to create and edit connections within the workspace, but cannot update workspace name or delete the workspace
   - workspace_runner # Permission to read connections, sync details, logs within the workspace, run/cancel jobs but cannot modify anything else
   - workspace_reader # Permission to read connections, sync details, logs within the workspace, but cannot modify anything
+  - dataplane

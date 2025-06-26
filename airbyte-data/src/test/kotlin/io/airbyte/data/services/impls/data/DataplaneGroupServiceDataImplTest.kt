@@ -4,8 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.data.exceptions.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup
@@ -23,6 +22,7 @@ import java.util.Optional
 import java.util.UUID
 
 private val MOCK_ORGANIZATION_ID = UUID.randomUUID()
+private val MOCK_NAME = "test"
 
 class DataplaneGroupServiceDataImplTest {
   private val dataplaneGroupRepository = mockk<DataplaneGroupRepository>()
@@ -88,75 +88,75 @@ class DataplaneGroupServiceDataImplTest {
   }
 
   @Test
-  fun `test get dataplane group by organization id and geography`() {
+  fun `test get dataplane group by organization id and name`() {
     val mockOrganizationId = UUID.randomUUID()
-    val mockGeography = GEOGRAPHY_US
+    val mockName = MOCK_NAME
     val mockDataplaneGroupId = UUID.randomUUID()
 
     val dataplaneGroup =
       DataplaneGroup(
         id = mockDataplaneGroupId,
         organizationId = mockOrganizationId,
-        name = mockGeography,
+        name = mockName,
         enabled = true,
         tombstone = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
 
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) } returns listOf(dataplaneGroup)
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) } returns listOf(dataplaneGroup)
 
     val retrievedDataplaneGroup =
       dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(
         mockOrganizationId,
-        mockGeography,
+        mockName,
       )
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
 
-    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) }
   }
 
   @Test
-  fun `test get dataplane group by organization id and geography throws when not found`() {
+  fun `test get dataplane group by organization id and name throws when not found`() {
     val mockOrganizationId = UUID.randomUUID()
-    val mockGeography = GEOGRAPHY_US
+    val mockName = MOCK_NAME
 
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) } returns emptyList()
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockName) } returns emptyList()
 
     assertThrows<NoSuchElementException> {
-      dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockGeography)
+      dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockName)
     }
 
-    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }
-    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockName) }
   }
 
   @Test
-  fun `test get dataplane group by organization id and geography falls back to default org when not found`() {
+  fun `test get dataplane group by organization id and name falls back to default org when not found`() {
     val mockOrganizationId = UUID.randomUUID()
     val mockDataplaneGroupId = UUID.randomUUID()
-    val mockGeography = GEOGRAPHY_US
+    val mockName = MOCK_NAME
 
     val dataplaneGroup =
       DataplaneGroup(
         id = mockDataplaneGroupId,
         organizationId = DEFAULT_ORGANIZATION_ID,
-        name = mockGeography,
+        name = mockName,
         enabled = true,
         tombstone = false,
         createdAt = OffsetDateTime.now(),
         updatedAt = OffsetDateTime.now(),
       )
 
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) } returns emptyList()
-    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) } returns listOf(dataplaneGroup)
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) } returns emptyList()
+    every { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockName) } returns listOf(dataplaneGroup)
 
-    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockGeography)
+    val retrievedDataplaneGroup = dataplaneGroupServiceDataImpl.getDataplaneGroupByOrganizationIdAndName(mockOrganizationId, mockName)
     assertEquals(dataplaneGroup.toConfigModel(), retrievedDataplaneGroup)
 
-    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockGeography) }
-    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockGeography) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(mockOrganizationId, mockName) }
+    verify { dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(DEFAULT_ORGANIZATION_ID, mockName) }
   }
 
   @Test
@@ -193,7 +193,7 @@ class DataplaneGroupServiceDataImplTest {
 
   @Test
   fun `validateDataplaneGroupName throws if name conflicts with default org`() {
-    val conflictingName = GEOGRAPHY_US
+    val conflictingName = MOCK_NAME
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(), // not default

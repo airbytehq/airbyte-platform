@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { getByTestId, screen, waitFor, getByRole, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { BroadcastChannel } from "broadcast-channel";
 import React from "react";
 
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { render, useMockIntersectionObserver } from "test-utils/testutils";
 
 import { OAUTH_BROADCAST_CHANNEL_NAME } from "area/connector/utils/oauthConstants";
@@ -11,6 +13,7 @@ import { useCompleteOAuth } from "core/api";
 import { DestinationDefinitionSpecificationRead, OAuthConsentRead } from "core/api/types/AirbyteClient";
 import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { AirbyteJSONSchema } from "core/jsonSchema/types";
+import * as EmbeddedContext from "core/services/embedded";
 import { FeatureItem } from "core/services/features";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
 
@@ -31,6 +34,7 @@ jest.mock("core/api", () => ({
     completeSourceOAuth: () => Promise.resolve({}),
     completeDestinationOAuth: () => Promise.resolve({}),
   })),
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 jest.mock("../ConnectorDocumentationLayout/DocumentationPanelContext", () => {
@@ -63,11 +67,12 @@ const connectorDefinition = {
 } as ConnectorDefinition;
 
 const selectDropdownOption = (container: HTMLElement, dropdownContainerTestId: string, option: string) => {
-  const dropdownContainer = getByTestId(container, dropdownContainerTestId);
-  const selectButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
-  fireEvent.click(selectButton);
+  const dropdownControlButton = getByTestId(container, `${dropdownContainerTestId}-listbox-button`);
+  fireEvent.click(dropdownControlButton);
 
-  const listBoxOption = getByRole(dropdownContainer, "option", { name: option });
+  const dropdownOptionsMenu = getByTestId(container, `${dropdownContainerTestId}-listbox-options`);
+
+  const listBoxOption = getByRole(dropdownOptionsMenu, "option", { name: option });
   fireEvent.click(listBoxOption);
 };
 
@@ -1024,6 +1029,7 @@ describe("Connector form", () => {
           });
         },
       });
+      jest.spyOn(EmbeddedContext, "useIsAirbyteEmbeddedContext").mockReturnValue(false);
       const container = await renderNewOAuthForm();
 
       await executeOAuthFlow(container);

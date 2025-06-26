@@ -14,6 +14,7 @@ dependencies {
   implementation(libs.spotbugs.annotations)
   implementation(libs.guava)
 
+  implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-oauth"))
@@ -51,4 +52,5 @@ dependencies {
   testImplementation(libs.assertj.core)
 
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockito.kotlin)
 }

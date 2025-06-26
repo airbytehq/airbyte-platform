@@ -17,4 +17,8 @@ interface DataplaneRepository : PageableRepository<Dataplane, UUID> {
   fun findAllByDataplaneGroupIdOrderByUpdatedAtDesc(organizationId: UUID): List<Dataplane>
 
   fun findAllByDataplaneGroupIdAndTombstoneFalseOrderByUpdatedAtDesc(organizationId: UUID): List<Dataplane>
+
+  fun findAllByTombstone(withTombstone: Boolean): List<Dataplane>
+
+  fun findByServiceAccountId(serviceAccountId: UUID): Dataplane?
 }

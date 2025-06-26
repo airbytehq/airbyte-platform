@@ -33,6 +33,7 @@ interface IProps {
     workspaceId: string;
     definitionId: string;
   };
+  onCreateConfigTemplate?: () => void;
 }
 
 export const Controls: React.FC<IProps> = ({
@@ -46,6 +47,7 @@ export const Controls: React.FC<IProps> = ({
   onCancelClick,
   leftSlot = null,
   onCopyConfig,
+  onCreateConfigTemplate,
   ...restProps
 }) => {
   const showTestCard =
@@ -71,6 +73,11 @@ export const Controls: React.FC<IProps> = ({
             </Button>
           )}
         </FlexItem>
+        {onCreateConfigTemplate && (
+          <Button type="button" variant="secondary" onClick={onCreateConfigTemplate} icon="file">
+            <FormattedMessage id="settings.embedded.templateCreateButton" />
+          </Button>
+        )}
         {onCopyConfig && (
           <CopyButton
             content={() => {
@@ -92,12 +99,18 @@ export const Controls: React.FC<IProps> = ({
             <FormattedMessage id="connectorForm.copyConfig" />
           </CopyButton>
         )}
+
         {isEditMode && (
           <Button type="button" variant="secondary" disabled={isSubmitting || !dirty} onClick={onCancelClick}>
             <FormattedMessage id="form.cancel" />
           </Button>
         )}
-        <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting || (isEditMode && !dirty)}>
+        <Button
+          type="submit"
+          data-testid={`${isEditMode ? "edit" : "create"}-${formType}-button`}
+          isLoading={isSubmitting}
+          disabled={isSubmitting || (isEditMode && !dirty)}
+        >
           {isEditMode ? (
             <FormattedMessage id="form.saveChangesAndTest" />
           ) : (

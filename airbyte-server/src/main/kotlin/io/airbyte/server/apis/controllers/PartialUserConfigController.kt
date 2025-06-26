@@ -3,8 +3,7 @@
  */
 
 package io.airbyte.server.apis.controllers
-
-import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.api.generated.PartialUserConfigsApi
 import io.airbyte.api.model.generated.ConfigTemplateRead
 import io.airbyte.api.model.generated.ListPartialUserConfigsRequest
 import io.airbyte.api.model.generated.PartialUserConfigCreate
@@ -13,15 +12,17 @@ import io.airbyte.api.model.generated.PartialUserConfigRead
 import io.airbyte.api.model.generated.PartialUserConfigReadList
 import io.airbyte.api.model.generated.PartialUserConfigRequestBody
 import io.airbyte.api.model.generated.PartialUserConfigUpdate
+import io.airbyte.api.model.generated.SourceRead
 import io.airbyte.commons.auth.generated.Intent
 import io.airbyte.commons.auth.permissions.RequiresIntent
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.config.PartialUserConfig
 import io.airbyte.config.PartialUserConfigWithActorDetails
-import io.airbyte.config.PartialUserConfigWithConfigTemplateAndActorDetails
+import io.airbyte.config.PartialUserConfigWithFullDetails
 import io.airbyte.data.services.PartialUserConfigService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.server.handlers.PartialUserConfigHandler
+import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Body
 import io.micronaut.http.annotation.Controller
 import io.micronaut.http.annotation.Post
@@ -33,46 +34,44 @@ import java.util.UUID
 class PartialUserConfigController(
   private val partialUserConfigHandler: PartialUserConfigHandler,
   private val partialUserConfigService: PartialUserConfigService,
-) {
+) : PartialUserConfigsApi {
   @Post("/list")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun listPartialUserConfigs(
+  override fun listPartialUserConfigs(
     @Body listPartialUserConfigRequestBody: ListPartialUserConfigsRequest,
   ): PartialUserConfigReadList = partialUserConfigService.listPartialUserConfigs(listPartialUserConfigRequestBody.workspaceId).toApiModel()
 
   @Post("/create")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun createPartialUserConfig(
+  override fun createPartialUserConfig(
     @Body partialUserConfigCreate: PartialUserConfigCreate,
-  ): PartialUserConfigRead =
-    partialUserConfigWithTemplateAndActorDetailsToApiModel(
-      partialUserConfigHandler.createPartialUserConfig(partialUserConfigCreate.toConfigModel()),
-    )
+  ): SourceRead =
+    partialUserConfigHandler.createSourceFromPartialConfig(partialUserConfigCreate.toConfigModel(), partialUserConfigCreate.connectionConfiguration)
 
   @Post("/update")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun updatePartialUserConfig(
+  override fun updatePartialUserConfig(
     @Body partialUserConfigUpdate: PartialUserConfigUpdate,
-  ): PartialUserConfigRead =
-    partialUserConfigWithTemplateAndActorDetailsToApiModel(
-      partialUserConfigHandler.updatePartialUserConfig(partialUserConfigUpdate.toConfigModel()),
-    )
+  ): SourceRead =
+    partialUserConfigHandler.updateSourceFromPartialConfig(partialUserConfigUpdate.toConfigModel(), partialUserConfigUpdate.connectionConfiguration)
 
   @Post("/get")
   @ExecuteOn(AirbyteTaskExecutors.IO)
-  fun getPartialUserConfig(
+  override fun getPartialUserConfig(
     @Body partialUserConfigRequestBody: PartialUserConfigRequestBody,
-  ): PartialUserConfigRead =
-    partialUserConfigWithTemplateAndActorDetailsToApiModel(
-      partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId),
-    )
+  ): PartialUserConfigRead = partialUserConfigHandler.getPartialUserConfig(partialUserConfigRequestBody.partialUserConfigId).toApiModel()
+
+  @Post("/delete")
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun deletePartialUserConfig(
+    @Body partialUserConfigIdRequestBody: PartialUserConfigRequestBody,
+  ) = partialUserConfigHandler.deletePartialUserConfig(partialUserConfigIdRequestBody.partialUserConfigId)
 
   private fun PartialUserConfigCreate.toConfigModel(): PartialUserConfig =
     PartialUserConfig(
       id = UUID.randomUUID(),
       workspaceId = this.workspaceId,
       configTemplateId = this.configTemplateId,
-      connectionConfiguration = this.connectionConfiguration,
     )
 
   private fun PartialUserConfigUpdate.toConfigModel(): PartialUserConfig {
@@ -82,7 +81,6 @@ class PartialUserConfigController(
       id = partialUserConfigId,
       workspaceId = existingPartialUserConfig.partialUserConfig.workspaceId,
       configTemplateId = existingPartialUserConfig.partialUserConfig.configTemplateId,
-      connectionConfiguration = this.connectionConfiguration,
     )
   }
 
@@ -93,27 +91,40 @@ class PartialUserConfigController(
           .partialUserConfigId(partialUserConfig.partialUserConfig.id)
           .configTemplateIcon(partialUserConfig.actorIcon)
           .configTemplateName(partialUserConfig.actorName)
+          .configTemplateId(partialUserConfig.configTemplateId)
       }
     return PartialUserConfigReadList().partialUserConfigs(items)
   }
 
-  private fun partialUserConfigWithTemplateAndActorDetailsToApiModel(
-    partialUserConfig: PartialUserConfigWithConfigTemplateAndActorDetails,
-  ): PartialUserConfigRead =
-    PartialUserConfigRead()
-      .id(
-        partialUserConfig.partialUserConfig.id,
-      ).actorId(partialUserConfig.partialUserConfig.actorId)
-      .connectionConfiguration(partialUserConfig.partialUserConfig.connectionConfiguration)
-      .configTemplate(
-        ConfigTemplateRead()
-          .id(
-            partialUserConfig.configTemplate.id,
-          ).configTemplateSpec(
-            partialUserConfig.configTemplate.userConfigSpec.let {
-              objectMapper.valueToTree<JsonNode>(it)
-            },
-          ).icon(partialUserConfig.actorIcon)
-          .name(partialUserConfig.actorName),
+  private fun PartialUserConfigWithFullDetails.toApiModel(): PartialUserConfigRead {
+    val partialUserConfig =
+      PartialUserConfigRead()
+        .id(
+          this.partialUserConfig.id,
+        ).actorId(this.partialUserConfig.actorId)
+        .connectionConfiguration(this.connectionConfiguration)
+        .configTemplate(
+          ConfigTemplateRead()
+            .id(
+              this.configTemplate.id,
+            ).configTemplateSpec(
+              this.configTemplate.userConfigSpec.let {
+                objectMapper.valueToTree(it)
+              },
+            ).icon(this.actorIcon)
+            .name(this.actorName)
+            .sourceDefinitionId(this.configTemplate.actorDefinitionId),
+        )
+
+    if (this.configTemplate.advancedAuth != null) {
+      partialUserConfig.configTemplate.advancedAuth(
+        ConfigTemplateAdvancedAuthHelper.mapAdvancedAuth(this.configTemplate.advancedAuth!!),
       )
+      partialUserConfig.configTemplate.advancedAuthGlobalCredentialsAvailable(
+        this.configTemplate.advancedAuthGlobalCredentialsAvailable,
+      )
+    }
+
+    return partialUserConfig
+  }
 }

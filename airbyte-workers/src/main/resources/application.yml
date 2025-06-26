@@ -34,9 +34,22 @@ micronaut:
         host: ${STATSD_HOST:localhost}
         port: ${STATSD_PORT:8125}
   security:
-    enabled: false
+    enabled: ${API_AUTHORIZATION_ENABLED:false}
+    # the rest of this section is ignored if enabled=false
+    filter:
+      enabled: false
+    oauth2:
+      clients:
+        keycloak:
+          client-id: ${KEYCLOAK_CLIENT_ID:}
+          client-secret: ${KEYCLOAK_CLIENT_SECRET:}
+          client-credentials:
+            enabled: true
+          openid:
+            issuer: ${KEYCLOAK_INTERNAL_REALM_ISSUER:}
 
 airbyte:
+  airbyte-url: ${AIRBYTE_URL:}
   license-key: ${AIRBYTE_LICENSE_KEY:empty}
   activity:
     initial-delay: ${ACTIVITY_INITIAL_DELAY_BETWEEN_ATTEMPTS_SECONDS:30}

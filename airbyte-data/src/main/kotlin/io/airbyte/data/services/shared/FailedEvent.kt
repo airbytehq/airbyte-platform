@@ -6,7 +6,7 @@ package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.config.FailureReason
-import io.airbyte.protocol.models.StreamDescriptor
+import io.airbyte.protocol.models.v0.StreamDescriptor
 import java.util.Optional
 
 @JsonInclude(JsonInclude.Include.NON_NULL)

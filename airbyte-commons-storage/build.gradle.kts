@@ -28,6 +28,7 @@ dependencies {
   implementation(libs.bundles.logback)
   implementation(libs.jackson.annotations)
   implementation(libs.jackson.databind)
+  implementation(libs.kotlin.coroutines)
 
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

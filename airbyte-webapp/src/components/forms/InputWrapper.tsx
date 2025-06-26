@@ -1,7 +1,8 @@
 import type { OmittableProperties, InputControlProps } from "./FormControl";
 
-import { useCallback } from "react";
+import { useState } from "react";
 import { useFormContext, useWatch } from "react-hook-form";
+import { useUpdateEffect } from "react-use";
 
 import { Input } from "components/ui/Input";
 
@@ -12,47 +13,63 @@ export const InputWrapper = <T extends FormValues>({
   name,
   type,
   hasError,
-  onChange,
+  onBlur,
   ...rest
 }: Omit<InputControlProps<T>, OmittableProperties>) => {
-  const { setValue } = useFormContext<T>();
+  const { register } = useFormContext<T>();
+  const {
+    onChange,
+    onBlur: onBlurRegister,
+    ...restRegister
+  } = register(name, {
+    setValueAs: (v) => {
+      if (type !== "number") {
+        return v;
+      }
+      if (v === null) {
+        return null;
+      }
+      if (typeof v === "string" && v.trim() === "") {
+        return null;
+      }
+      return isNaN(Number(v)) ? v : Number(v);
+    },
+  });
+
   // If we don't watch the name explicitly, the input will not update
   // when its value is changed as a result of setting a parent object value.
-  const value = useWatch({ name });
+  const formValue = useWatch({ name });
+  const [inputValue, setInputValue] = useState<string | undefined>(formValue ?? "");
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      onChange?.(e);
-
-      const value = e.target.value;
-      if (type !== "number") {
-        setValue(name, value as T[typeof name], { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+  useUpdateEffect(() => {
+    if (type === "number") {
+      const formValueNumber = Number(formValue);
+      const inputValueNumber = Number(inputValue);
+      // Prevents typing "12e1" causing the input to change to "120" immediately
+      if (!isNaN(formValueNumber) && !isNaN(inputValueNumber) && formValueNumber === inputValueNumber) {
         return;
       }
+      setInputValue(formValue ?? "");
+    } else {
+      setInputValue(formValue ?? "");
+    }
+  }, [formValue]);
 
-      if (value === "") {
-        // If empty, set the value to null, to distinguish it from an empty string.
-        // The type cast is needed because React Hook Form expects a value of the field's type
-        // but we're intentionally setting it to null to remove it.
-        setValue(name, null as T[typeof name], { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-      } else {
-        // Otherwise parse it as a number
-        const numberValue = Number(value);
-        setValue(name, numberValue as T[typeof name], { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-      }
-    },
-    [name, onChange, setValue, type]
-  );
-
-  // Don't use register here, since that causes incomplete numeric values like "12e" to be cleared out
-  // before the user has a chance to complete the input, like "12e3"
   return (
     <Input
       {...rest}
-      value={value ?? ""}
-      onChange={handleChange}
+      {...restRegister}
+      onChange={(e) => {
+        setInputValue(e.target.value);
+        onChange(e);
+      }}
+      onBlur={(e) => {
+        onBlurRegister(e);
+        onBlur?.(e);
+      }}
+      value={inputValue}
       name={name}
-      type={type}
+      type={type === "number" ? "text" : type}
       error={hasError}
       id={controlId}
     />

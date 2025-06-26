@@ -94,7 +94,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class, JsonValidationException::class)
     override fun getSourceConsentUrl(
       workspaceId: UUID,
-      sourceDefinitionId: UUID,
+      sourceDefinitionId: UUID?,
       redirectUrl: String,
       inputOAuthConfiguration: JsonNode,
       oauthConfigSpecification: OAuthConfigSpecification?,
@@ -135,7 +135,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class, JsonValidationException::class)
     override fun getDestinationConsentUrl(
       workspaceId: UUID,
-      destinationDefinitionId: UUID,
+      destinationDefinitionId: UUID?,
       redirectUrl: String,
       inputOAuthConfiguration: JsonNode,
       oauthConfigSpecification: OAuthConfigSpecification?,
@@ -172,7 +172,7 @@ abstract class BaseOAuth2Flow
      */
     @Throws(IOException::class)
     protected abstract fun formatConsentUrl(
-      definitionId: UUID,
+      definitionId: UUID?,
       clientId: String,
       redirectUrl: String,
       inputOAuthConfiguration: JsonNode,
@@ -190,7 +190,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class)
     override fun completeSourceOAuth(
       workspaceId: UUID,
-      sourceDefinitionId: UUID,
+      sourceDefinitionId: UUID?,
       queryParams: Map<String, Any>,
       redirectUrl: String,
       oauthParamConfig: JsonNode,
@@ -232,7 +232,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class, JsonValidationException::class)
     override fun completeSourceOAuth(
       workspaceId: UUID,
-      sourceDefinitionId: UUID,
+      sourceDefinitionId: UUID?,
       queryParams: Map<String, Any>,
       redirectUrl: String,
       inputOAuthConfiguration: JsonNode,
@@ -264,7 +264,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class)
     override fun completeDestinationOAuth(
       workspaceId: UUID,
-      destinationDefinitionId: UUID,
+      destinationDefinitionId: UUID?,
       queryParams: Map<String, Any>,
       redirectUrl: String,
       oauthParamConfig: JsonNode,
@@ -306,7 +306,7 @@ abstract class BaseOAuth2Flow
     @Throws(IOException::class, JsonValidationException::class)
     override fun completeDestinationOAuth(
       workspaceId: UUID,
-      destinationDefinitionId: UUID,
+      destinationDefinitionId: UUID?,
       queryParams: Map<String, Any>,
       redirectUrl: String,
       inputOAuthConfiguration: JsonNode,

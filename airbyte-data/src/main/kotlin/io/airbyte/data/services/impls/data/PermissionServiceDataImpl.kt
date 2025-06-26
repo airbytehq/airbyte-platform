@@ -4,12 +4,14 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
+import io.airbyte.commons.auth.roles.OrganizationAuthRole
+import io.airbyte.commons.auth.roles.WorkspaceAuthRole
 import io.airbyte.config.ConfigSchema
 import io.airbyte.config.Permission
 import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
+import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
 import io.airbyte.data.services.PermissionRedundantException
 import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.RemoveLastOrgAdminPermissionException
@@ -36,6 +38,16 @@ open class PermissionServiceDataImpl(
 
   override fun getPermissionsForUser(userId: UUID): List<Permission> = permissionRepository.findByUserId(userId).map { it.toConfigModel() }
 
+  override fun getPermissionsByAuthUserId(authUserId: String): List<Permission> =
+    permissionRepository.queryByAuthUser(authUserId).map {
+      it.toConfigModel()
+    }
+
+  override fun getPermissionsByServiceAccountId(serviceAccountId: UUID): List<Permission> =
+    permissionRepository.findByServiceAccountId(serviceAccountId).map {
+      it.toConfigModel()
+    }
+
   @Transactional("config")
   override fun deletePermission(permissionId: UUID) {
     val permissionsToDelete = permissionRepository.findByIdIn(listOf(permissionId))
@@ -45,7 +57,12 @@ open class PermissionServiceDataImpl(
       throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId")
     }
 
-    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+    val user = permissionsToDelete.first().userId
+    if (user == null) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permission: $permissionId")
+    }
+
+    val userPermissions = getPermissionsForUser(user)
     val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
     permissionRepository.deleteByIdIn(listOf(permissionId) + workspacePermissionsToDelete)
   }
@@ -59,11 +76,17 @@ open class PermissionServiceDataImpl(
       throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permissions not found: $permissionIds")
     }
 
+    val user = permissionsToDelete.first().userId
+    if (user == null) {
+      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permissions: $permissionIds")
+    }
+
     if (permissionsToDelete.map { it.userId }.toSet().size > 1) {
       // Guard against the state where we're deleting multiple permissions for different users
       throw IllegalStateException("Permissions to delete must all belong to the same user.")
     }
-    val userPermissions = getPermissionsForUser(permissionsToDelete.first().userId)
+
+    val userPermissions = getPermissionsForUser(user)
     val workspacePermissionsToDelete = cascadeOrganizationPermissionDeletes(permissionsToDelete, userPermissions)
     permissionRepository.deleteByIdIn(permissionIds + workspacePermissionsToDelete)
   }
@@ -86,6 +109,23 @@ open class PermissionServiceDataImpl(
   }
 
   @Transactional("config")
+  override fun createServiceAccountPermission(permission: Permission): Permission {
+    if (permission.userId != null) {
+      throw InvalidServiceAccountPermissionRequestException(
+        "Service account permission can not be created when given a user id. Provide a service account id instead.",
+      )
+    }
+
+    if (permission.serviceAccountId == null) {
+      throw InvalidServiceAccountPermissionRequestException(
+        "Missing service account id from request: $permission",
+      )
+    }
+
+    return permissionRepository.save(permission.toEntity()).toConfigModel()
+  }
+
+  @Transactional("config")
   override fun updatePermission(permission: Permission) {
     // throw early if the update would remove the last org admin
     throwIfUpdateWouldRemoveLastOrgAdmin(permission)
@@ -103,6 +143,8 @@ open class PermissionServiceDataImpl(
 
     permissionRepository.update(permission.toEntity()).toConfigModel()
   }
+
+  override fun getMemberCountsForOrganizationList(orgIds: List<UUID>): List<OrgMemberCount> = permissionRepository.getMemberCountByOrgIdList(orgIds)
 
   private fun deletePermissionsMadeRedundantByPermission(
     permission: Permission,
@@ -212,15 +254,16 @@ open class PermissionServiceDataImpl(
   private fun getAuthority(permissionType: Permission.PermissionType): Int =
     when (permissionType) {
       Permission.PermissionType.INSTANCE_ADMIN -> throw IllegalArgumentException("INSTANCE_ADMIN permissions are not supported")
-      Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.authority
-      Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.authority
-      Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.authority
-      Permission.PermissionType.ORGANIZATION_READER -> OrganizationAuthRole.ORGANIZATION_READER.authority
-      Permission.PermissionType.ORGANIZATION_MEMBER -> OrganizationAuthRole.ORGANIZATION_MEMBER.authority
-      Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
-      Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.authority
-      Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.authority
-      Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.authority
-      Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.authority
+      Permission.PermissionType.DATAPLANE -> throw IllegalArgumentException("DATAPLANE permissions are not supported")
+      Permission.PermissionType.ORGANIZATION_ADMIN -> OrganizationAuthRole.ORGANIZATION_ADMIN.getAuthority()
+      Permission.PermissionType.ORGANIZATION_EDITOR -> OrganizationAuthRole.ORGANIZATION_EDITOR.getAuthority()
+      Permission.PermissionType.ORGANIZATION_RUNNER -> OrganizationAuthRole.ORGANIZATION_RUNNER.getAuthority()
+      Permission.PermissionType.ORGANIZATION_READER -> OrganizationAuthRole.ORGANIZATION_READER.getAuthority()
+      Permission.PermissionType.ORGANIZATION_MEMBER -> OrganizationAuthRole.ORGANIZATION_MEMBER.getAuthority()
+      Permission.PermissionType.WORKSPACE_OWNER -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
+      Permission.PermissionType.WORKSPACE_ADMIN -> WorkspaceAuthRole.WORKSPACE_ADMIN.getAuthority()
+      Permission.PermissionType.WORKSPACE_EDITOR -> WorkspaceAuthRole.WORKSPACE_EDITOR.getAuthority()
+      Permission.PermissionType.WORKSPACE_RUNNER -> WorkspaceAuthRole.WORKSPACE_RUNNER.getAuthority()
+      Permission.PermissionType.WORKSPACE_READER -> WorkspaceAuthRole.WORKSPACE_READER.getAuthority()
     }
 }

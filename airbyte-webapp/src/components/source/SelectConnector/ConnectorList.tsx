@@ -20,7 +20,7 @@ interface ConnectorListProps {
   noSearchResultsContent: React.ReactNode;
   suggestedConnectorDefinitionIds?: string[];
   onConnectorButtonClick: (definition: ConnectorDefinitionOrEnterpriseStub) => void;
-  onOpenRequestConnectorModal: () => void;
+  onOpenRequestConnectorModal?: () => void;
   showConnectorBuilderButton?: boolean;
 }
 
@@ -78,7 +78,7 @@ export const ConnectorList: React.FC<ConnectorListProps> = ({
           })}
 
           {showConnectorBuilderButton && <BuilderConnectorButton layout="vertical" />}
-          <RequestNewConnectorButton onClick={onOpenRequestConnectorModal} />
+          {!!onOpenRequestConnectorModal && <RequestNewConnectorButton onClick={onOpenRequestConnectorModal} />}
         </div>
       ) : (
         <FlexContainer className={styles.connectorList} direction="column" gap="sm">
@@ -104,7 +104,9 @@ export const ConnectorList: React.FC<ConnectorListProps> = ({
           {showConnectorBuilderButton && (
             <BuilderConnectorButton className={styles.connectorListButton} layout="horizontal" />
           )}
-          <RequestNewConnectorButton className={styles.connectorListButton} onClick={onOpenRequestConnectorModal} />
+          {!!onOpenRequestConnectorModal && (
+            <RequestNewConnectorButton className={styles.connectorListButton} onClick={onOpenRequestConnectorModal} />
+          )}
         </FlexContainer>
       )}
     </FlexContainer>

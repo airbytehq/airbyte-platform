@@ -4,7 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
-import io.airbyte.config.persistence.OrganizationPersistence
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.db.factory.FlywayFactory.create
 import io.airbyte.db.instance.configs.AbstractConfigsDatabaseTest
 import io.airbyte.db.instance.configs.ConfigsDatabaseMigrator
@@ -31,13 +31,13 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V1_1_0_009__AddPausedReasonToConnectorRollout()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    val context = getDslContext()
+    val context = dslContext!!
     createTagTable(context)
 
     // Create a workspace to add the tags to
@@ -54,14 +54,14 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
         "default",
         "default",
         true,
-        OrganizationPersistence.DEFAULT_ORGANIZATION_ID,
+        DEFAULT_ORGANIZATION_ID,
       ).execute()
   }
 
   @AfterEach
   fun teardown() {
     // Fully tear down db after each test
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     dslContext.dropSchemaIfExists("public").cascade().execute()
     dslContext.createSchema("public").execute()
     dslContext.setSchema("public").execute()
@@ -69,7 +69,7 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
 
   @Test
   fun testCanInsertTag() {
-    val context = getDslContext()
+    val context = dslContext!!
     val tagId = UUID.randomUUID()
 
     Assertions.assertDoesNotThrow {
@@ -91,7 +91,7 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
 
   @Test
   fun testDuplicateTestNameConstraint() {
-    val context = getDslContext()
+    val context = dslContext!!
     val tagName = "Some tag"
 
     val firstTagId = UUID.randomUUID()
@@ -135,7 +135,7 @@ internal class V1_1_0_010__CreateTagTableTest : AbstractConfigsDatabaseTest() {
 
   @Test
   fun testValidHexConstraint() {
-    val context = getDslContext()
+    val context = dslContext!!
     val tagId = UUID.randomUUID()
 
     val e: Exception =

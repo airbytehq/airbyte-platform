@@ -54,11 +54,6 @@ object ConnectionUpdateMapper {
       connectionUpdateOss.prefix = connectionPatchRequest.prefix
     }
 
-    // set geography
-    if (connectionPatchRequest.dataResidency != null) {
-      connectionUpdateOss.geography = connectionPatchRequest.dataResidency
-    }
-
     // set schedule
     if (connectionPatchRequest.schedule != null) {
       connectionUpdateOss.scheduleType = ConnectionScheduleType.fromValue(connectionPatchRequest.schedule!!.scheduleType.toString())

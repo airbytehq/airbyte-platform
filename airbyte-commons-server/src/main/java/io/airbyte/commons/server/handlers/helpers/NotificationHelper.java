@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers.helpers;
 
+import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
 import io.airbyte.config.Notification;
@@ -21,7 +22,6 @@ import io.airbyte.notification.messages.ConnectionInfo;
 import io.airbyte.notification.messages.SchemaUpdateNotification;
 import io.airbyte.notification.messages.SourceInfo;
 import io.airbyte.notification.messages.WorkspaceInfo;
-import io.airbyte.persistence.job.WebUrlHelper;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

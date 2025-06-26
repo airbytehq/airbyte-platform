@@ -4,8 +4,6 @@ import isEqual from "lodash/isEqual";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 
-import { builderInputsToSpec } from "components/connectorBuilder/types";
-
 import { useBuilderProjectUpdateTestingValues } from "core/api";
 import { ConnectorBuilderProjectTestingValues } from "core/api/types/AirbyteClient";
 import { Spec } from "core/api/types/ConnectorManifest";
@@ -39,15 +37,11 @@ import { useBuilderWatch } from "./useBuilderWatch";
  * @returns the testingValuesDirty flag
  */
 export const useUpdateTestingValuesOnChange = () => {
-  const { projectId, jsonManifest } = useConnectorBuilderFormState();
-  const formValues = useBuilderWatch("formValues");
+  const { projectId } = useConnectorBuilderFormState();
   const mode = useBuilderWatch("mode");
   const { setValue, getValues } = useFormContext();
   const testingValues = useBuilderWatch("testingValues");
-  const spec = useMemo(
-    () => (mode === "ui" ? builderInputsToSpec(formValues.inputs) : jsonManifest.spec),
-    [formValues.inputs, jsonManifest.spec, mode]
-  );
+  const spec = useBuilderWatch("manifest.spec");
   const specRef = useRef<Spec | undefined>(spec);
   const testingValuesRef = useRef<ConnectorBuilderProjectTestingValues | undefined>(testingValues);
 

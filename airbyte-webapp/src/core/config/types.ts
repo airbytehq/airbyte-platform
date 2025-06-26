@@ -1,19 +1,4 @@
-export interface AirbyteWebappConfig {
-  keycloakBaseUrl: string;
-  segmentToken?: string;
-  hockeyStackApiKey?: string;
+export interface BuildConfig {
   apiUrl: string;
-  connectorBuilderApiUrl: string;
-  version?: string;
-  cloudApiUrl: string;
-  cloudPublicApiUrl?: string;
-  zendeskKey?: string;
-  launchDarkly?: string;
-  datadog: {
-    applicationId?: string;
-    clientToken?: string;
-    site?: string;
-    service?: string;
-    env?: string;
-  };
+  keycloakBaseUrl: string;
 }

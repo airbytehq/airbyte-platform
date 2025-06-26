@@ -44,17 +44,6 @@
   white-space: nowrap;
 }
 
-.form {
-  display: flex;
-  gap: variables.$spacing-md;
-  align-items: center;
-  flex-wrap: wrap;
-
-  p {
-    white-space: nowrap;
-  }
-}
-
 // will change library component behavior in https://github.com/airbytehq/airbyte-internal-issues/issues/11277
 // for now setting this as a one off
 .disabled.disabled {

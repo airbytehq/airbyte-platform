@@ -7,7 +7,7 @@ import { FieldPath, useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { CompleteOAuthResponseAuthPayload } from "core/api/types/AirbyteClient";
-import { ConnectorDefinition, ConnectorDefinitionSpecificationRead } from "core/domain/connector";
+import { ConnectorDefinitionSpecificationRead } from "core/domain/connector";
 import { useRunOauthFlow, useRunOauthFlowBuilder } from "hooks/services/useConnectorAuth";
 import { useAuthentication } from "views/Connector/ConnectorForm/useAuthentication";
 
@@ -16,10 +16,7 @@ import { useConnectorForm } from "../../../connectorFormContext";
 import { ConnectorFormValues } from "../../../types";
 import { makeConnectionConfigurationPath, serverProvidedOauthPaths, userProvidedOauthInputPaths } from "../../../utils";
 
-export function useFormOauthAdapter(
-  connector: ConnectorDefinitionSpecificationRead,
-  connectorDefinition?: ConnectorDefinition
-): {
+export function useFormOauthAdapter(connector: ConnectorDefinitionSpecificationRead): {
   loading: boolean;
   done?: boolean;
   hasRun: boolean;
@@ -61,7 +58,7 @@ export function useFormOauthAdapter(
     setHasRun(true);
   };
 
-  const { run, loading, done } = useRunOauthFlow({ connector, connectorDefinition, onDone });
+  const { run, loading, done } = useRunOauthFlow({ connector, onDone });
 
   const { hasAuthFieldValues } = useAuthentication();
 

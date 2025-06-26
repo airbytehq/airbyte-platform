@@ -7,7 +7,7 @@ import { Heading } from "components/ui/Heading";
 import { Separator } from "components/ui/Separator";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { FeatureItem, useFeature } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
@@ -19,7 +19,7 @@ import { UpdateOrganizationSettingsForm } from "../../UpdateOrganizationSettings
 export const GeneralOrganizationSettingsPage: React.FC = () => {
   useTrackPage(PageTrackingCodes.SETTINGS_ORGANIZATION);
   const { formatMessage } = useIntl();
-  const { workspaceId, organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const isDownloadDiagnosticsFlagEnabled = useExperiment("settings.downloadDiagnostics");
   const isDownloadDiagnosticsFeatureEnabled = useFeature(FeatureItem.DiagnosticsExport);
 
@@ -27,7 +27,7 @@ export const GeneralOrganizationSettingsPage: React.FC = () => {
   // effectively: flag controls OSS+Cloud, feature controls SME
   const isDownloadDiagnosticsEnabled = isDownloadDiagnosticsFlagEnabled || isDownloadDiagnosticsFeatureEnabled;
 
-  const canDownloadDiagnostics = useIntent("DownloadDiagnostics", { workspaceId }) && isDownloadDiagnosticsEnabled;
+  const canDownloadDiagnostics = useIntent("DownloadDiagnostics", { organizationId }) && isDownloadDiagnosticsEnabled;
 
   return (
     <FlexContainer direction="column" gap="xl">

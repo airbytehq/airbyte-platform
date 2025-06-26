@@ -5,9 +5,9 @@
 package io.airbyte.workload.launcher.config
 
 import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
 import io.airbyte.workers.pod.FileConstants
-import io.airbyte.workers.pod.KubeContainerInfo
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
+import io.airbyte.workload.launcher.pods.KubeContainerInfo
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.CHECK_OPERATION_NAME
 import io.airbyte.workload.launcher.pods.factories.ConnectorPodFactory.Companion.DISCOVER_OPERATION_NAME

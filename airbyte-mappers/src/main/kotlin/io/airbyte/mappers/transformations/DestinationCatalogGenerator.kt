@@ -5,7 +5,7 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
-import io.airbyte.commons.json.Jsons
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.Field
@@ -23,6 +23,7 @@ val log = KotlinLogging.logger {}
 @Singleton
 class DestinationCatalogGenerator(
   val mappers: List<Mapper<out MapperConfig>>,
+  private val objectMapper: ObjectMapper,
 ) {
   private val mappersByName = mappers.associateBy { it.name }
 
@@ -48,7 +49,7 @@ class DestinationCatalogGenerator(
    * It won't modify tbe input catalog, it creates a copy of the configure catalog, then mutate the copy and then returns it.
    */
   fun generateDestinationCatalog(inputCatalog: ConfiguredAirbyteCatalog): CatalogGenerationResult {
-    val resultCatalog = Jsons.clone(inputCatalog)
+    val resultCatalog = objectMapper.readValue(objectMapper.writeValueAsString(inputCatalog), ConfiguredAirbyteCatalog::class.java)
 
     return resultCatalog.streams.fold(CatalogGenerationResult(resultCatalog, mapOf())) { acc, it ->
       val errors = applyCatalogMapperTransformations(it)
@@ -70,7 +71,7 @@ class DestinationCatalogGenerator(
       } 
       """.trimIndent()
     stream.fields = updateFields.fields
-    stream.stream.jsonSchema = Jsons.deserialize(jsonSchema)
+    stream.stream.jsonSchema = objectMapper.readValue(jsonSchema, JsonNode::class.java)
     stream.cursorField = updateFields.cursor
     stream.primaryKey = updateFields.primaryKey
     stream.stream.sourceDefinedPrimaryKey = updateFields.sourceDefinedPrimaryKey
@@ -154,12 +155,12 @@ class DestinationCatalogGenerator(
     fields: List<Field>,
     jsonSchema: JsonNode,
   ): String =
-    Jsons.serialize(
+    objectMapper.writeValueAsString(
       fields.associate {
         if (arrayOf(FieldType.OBJECT, FieldType.ARRAY, FieldType.MULTI, FieldType.UNKNOWN).contains(it.type)) {
           Pair(it.name, jsonSchema.get(PROPERTIES).get(it.name))
         } else {
-          Pair(it.name, Jsons.jsonNode(it.type.toMap()))
+          Pair(it.name, objectMapper.valueToTree(it.type.toMap()))
         }
       },
     )

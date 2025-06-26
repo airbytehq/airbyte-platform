@@ -131,7 +131,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(false)
-        .supportsFileTransfer(false);
+        .supportsFileTransfer(false)
+        .supportsDataActivation(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mSourceService).getSourceConnection(sourceId);
@@ -171,7 +172,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(false)
-        .supportsFileTransfer(false);
+        .supportsFileTransfer(false)
+        .supportsDataActivation(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -210,7 +212,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(actorDefinitionVersion.getSupportsRefreshes())
-        .supportsFileTransfer(false);
+        .supportsFileTransfer(false)
+        .supportsDataActivation(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mDestinationService).getDestinationConnection(destinationId);
@@ -243,7 +246,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportsRefreshes(false)
         .breakingChanges(breakingChanges)
-        .supportsFileTransfer(false);
+        .supportsFileTransfer(false)
+        .supportsDataActivation(false);
 
     assertEquals(expectedRead, actorDefinitionVersionRead);
     verify(mActorDefinitionHandlerHelper).getVersionBreakingChanges(actorDefinitionVersion);
@@ -262,7 +266,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportRefreshes(false)
-        .supportFileTransfer(false);
+        .supportFileTransfer(false)
+        .supportDataActivation(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

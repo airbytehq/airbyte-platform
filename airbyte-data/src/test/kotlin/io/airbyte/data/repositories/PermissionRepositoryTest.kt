@@ -27,6 +27,7 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest() {
       jooqDslContext.alterTable(Tables.PERMISSION).dropForeignKey(Keys.PERMISSION__PERMISSION_USER_ID_FKEY.constraint()).execute()
       jooqDslContext.alterTable(Tables.PERMISSION).dropForeignKey(Keys.PERMISSION__PERMISSION_WORKSPACE_ID_FKEY.constraint()).execute()
       jooqDslContext.alterTable(Tables.PERMISSION).dropForeignKey(Keys.PERMISSION__PERMISSION_ORGANIZATION_ID_FKEY.constraint()).execute()
+      jooqDslContext.alterTable(Tables.PERMISSION).dropForeignKey(Keys.PERMISSION__PERMISSION_SERVICE_ACCOUNT_ID_FKEY.constraint()).execute()
     }
   }
 
@@ -157,5 +158,54 @@ internal class PermissionRepositoryTest : AbstractConfigRepositoryTest() {
 
     assertEquals(1, permissionRepository.count())
     assertEquals(permission3.id, permissionRepository.findAll().first().id)
+  }
+
+  @Test
+  fun `findByServiceAccountId returns a permission based on service account id when an org id is provided`() {
+    val serviceAccountId = UUID.randomUUID()
+    val permission =
+      Permission(
+        id = UUID.randomUUID(),
+        organizationId = UUID.randomUUID(),
+        serviceAccountId = serviceAccountId,
+        permissionType = PermissionType.dataplane,
+      )
+
+    permissionRepository.save(permission)
+
+    val result = permissionRepository.findByServiceAccountId(serviceAccountId)
+    assertEquals(1, result.size)
+
+    val returned = result.first()
+    assertEquals(permission.id, returned.id)
+    assertEquals(permission.serviceAccountId, returned.serviceAccountId)
+    assertEquals(permission.permissionType, returned.permissionType)
+    assertEquals(permission.organizationId, returned.organizationId)
+    assertNull(returned.workspaceId)
+    assertNull(returned.userId)
+  }
+
+  @Test
+  fun `findByServiceAccountId returns a permission based on service account id when org id and workspace id are null`() {
+    val serviceAccountId = UUID.randomUUID()
+    val permission =
+      Permission(
+        id = UUID.randomUUID(),
+        serviceAccountId = serviceAccountId,
+        permissionType = PermissionType.dataplane,
+      )
+
+    permissionRepository.save(permission)
+
+    val result = permissionRepository.findByServiceAccountId(serviceAccountId)
+    assertEquals(1, result.size)
+
+    val returned = result.first()
+    assertEquals(permission.id, returned.id)
+    assertEquals(permission.serviceAccountId, returned.serviceAccountId)
+    assertEquals(permission.permissionType, returned.permissionType)
+    assertNull(returned.organizationId)
+    assertNull(returned.workspaceId)
+    assertNull(returned.userId)
   }
 }

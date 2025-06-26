@@ -25,21 +25,20 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
   } = props;
 
   const buttonStyles = {
-    [styles.full]: full,
-    [styles.isLoading]: isLoading,
-    [styles.sizeL]: size === "lg",
-    [styles.sizeS]: size === "sm",
-    [styles.sizeXS]: size === "xs",
-    [styles.typeDanger]: variant === "danger",
-    [styles.typeClear]: variant === "clear",
-    [styles.typeMagic]: variant === "magic",
-    [styles.typeLight]: variant === "light",
-    [styles.typePrimary]: variant === "primary",
-    [styles.typeSecondary]: variant === "secondary",
-    [styles.typeClearDark]: variant === "clearDark",
-    [styles.typePrimaryDark]: variant === "primaryDark",
-    [styles.typeSecondaryDark]: variant === "secondaryDark",
-    [styles.link]: variant === "link",
+    [styles["button--full-width"]]: full,
+    [styles["button--loading"]]: isLoading,
+    [styles["button--size-sm"]]: size === "sm",
+    [styles["button--size-xs"]]: size === "xs",
+    [styles["button--danger"]]: variant === "danger",
+    [styles["button--clear"]]: variant === "clear",
+    [styles["button--clear-danger"]]: variant === "clearDanger",
+    [styles["button--magic"]]: variant === "magic",
+    [styles["button--primary"]]: variant === "primary",
+    [styles["button--secondary"]]: variant === "secondary",
+    [styles["button--clear-dark"]]: variant === "clearDark",
+    [styles["button--primary-dark"]]: variant === "primaryDark",
+    [styles["button--secondary-dark"]]: variant === "secondaryDark",
+    [styles["button--link"]]: variant === "link",
   };
 
   const widthStyle: React.CSSProperties = width ? { width: `${width}px` } : {};
@@ -52,26 +51,42 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, r
       disabled={disabled || isLoading}
       {...buttonProps}
     >
-      {isLoading && <Icon type="loading" className={classNames(styles.buttonIcon, styles.loadingIcon)} />}
-      {icon &&
-        iconPosition === "left" &&
-        React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
-          className: classNames(iconClassName, styles.buttonIcon, {
-            [styles.positionLeft]: true,
-            [styles.isRegularIcon]: true,
-            [styles.withLabel]: Boolean(children),
-          }),
-        })}
-      <span className={styles.childrenContainer}>{children}</span>
-      {icon &&
-        iconPosition === "right" &&
-        React.cloneElement(<Icon type={icon} size={iconSize} color={iconColor} className={iconClassName} />, {
-          className: classNames(iconClassName, styles.buttonIcon, {
-            [styles.positionRight]: true,
-            [styles.isRegularIcon]: true,
-            [styles.withLabel]: Boolean(children),
-          }),
-        })}
+      {isLoading && (
+        <Icon type="loading" className={classNames(styles.button__icon, styles["button__icon--loading"])} />
+      )}
+      {icon && iconPosition === "left" && (
+        <Icon
+          type={icon}
+          size={iconSize}
+          color={iconColor}
+          className={classNames(
+            styles.button__icon,
+            styles["button__icon--regular"],
+            styles["button__icon--left"],
+            {
+              [styles["button__icon--with-label"]]: Boolean(children),
+            },
+            iconClassName
+          )}
+        />
+      )}
+      <span className={styles.button__children}>{children}</span>
+      {icon && iconPosition === "right" && (
+        <Icon
+          type={icon}
+          size={iconSize}
+          color={iconColor}
+          className={classNames(
+            styles.button__icon,
+            styles["button__icon--regular"],
+            styles["button__icon--right"],
+            {
+              [styles["button__icon--with-label"]]: Boolean(children),
+            },
+            iconClassName
+          )}
+        />
+      )}
     </button>
   );
 });

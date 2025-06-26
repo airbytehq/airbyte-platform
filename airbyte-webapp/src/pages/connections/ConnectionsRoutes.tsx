@@ -4,21 +4,26 @@ import { useEffectOnce } from "react-use";
 
 import { LoadingPage } from "components";
 
+import { CreateConnectionRouteWrapper } from "area/dataActivation/components/CreateConnectionRouteWrapper";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
+import { useExperiment } from "hooks/services/Experiment";
 
 import { ConnectionRoutePaths, RoutePaths } from "../routePaths";
 
-const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConfigureConnectionPage = React.lazy(() => import("./ConfigureConnectionPage"));
-const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
+const ConfigureDataActivationConnectionPage = React.lazy(() => import("./ConfigureDataActivationConnectionPage"));
+const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
 const ConnectionPage = React.lazy(() => import("./ConnectionPage"));
 const ConnectionReplicationPage = React.lazy(() => import("./ConnectionReplicationPage"));
 const ConnectionSettingsPage = React.lazy(() => import("./ConnectionSettingsPage"));
+const ConnectionTimelinePage = React.lazy(() => import("./ConnectionTimelinePage"));
 const ConnectionTransformationPage = React.lazy(() => import("./ConnectionTransformationPage"));
-const ConnectionMappingsPage = React.lazy(() => import("./ConnectionMappingsPage"));
+const CreateConnectionPage = React.lazy(() => import("./CreateConnectionPage"));
+const DataActivationMappingPage = React.lazy(() => import("./DataActivationMappingPage"));
 
 const AllConnectionsPage = React.lazy(() => import("./AllConnectionsPage"));
 const StreamStatusPage = React.lazy(() => import("./StreamStatusPage"));
+
 export const JobHistoryToTimelineRedirect = () => {
   const location = useLocation();
   const createLink = useCurrentWorkspaceLink();
@@ -58,6 +63,8 @@ export const JobHistoryToTimelineRedirect = () => {
 };
 
 export const ConnectionsRoutes: React.FC = () => {
+  const dataActivationEnabled = useExperiment("connection.dataActivationUI");
+
   return (
     <Suspense fallback={<LoadingPage />}>
       <Routes>
@@ -66,6 +73,15 @@ export const ConnectionsRoutes: React.FC = () => {
           path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.Configure}/*`}
           element={<ConfigureConnectionPage />}
         />
+        {dataActivationEnabled && (
+          <Route
+            path={`${ConnectionRoutePaths.ConnectionNew}/${ConnectionRoutePaths.ConfigureDataActivation}`}
+            element={<CreateConnectionRouteWrapper />}
+          >
+            <Route index element={<DataActivationMappingPage />} />
+            <Route path={ConnectionRoutePaths.ConfigureContinued} element={<ConfigureDataActivationConnectionPage />} />
+          </Route>
+        )}
         <Route path={ConnectionRoutePaths.ConnectionNew} element={<CreateConnectionPage />} />
         <Route path={ConnectionRoutePaths.Root} element={<ConnectionPage />}>
           <Route path={ConnectionRoutePaths.Status} element={<StreamStatusPage />} />

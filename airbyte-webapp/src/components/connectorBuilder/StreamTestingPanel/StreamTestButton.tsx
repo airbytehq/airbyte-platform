@@ -48,11 +48,7 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
   const mode = useBuilderWatch("mode");
   const testStreamId = useBuilderWatch("testStreamId");
   const { hasErrors, validateAndTouch } = useBuilderErrors();
-  const relevantViews: BuilderView[] = [
-    "global",
-    "inputs",
-    testStreamId.type === "stream" ? testStreamId.index : `dynamic_stream_${testStreamId.index}`,
-  ];
+  const relevantViews: BuilderView[] = [{ type: "global" }, { type: "inputs" }, testStreamId];
 
   useHotkeys(
     ["ctrl+enter", "meta+enter"],
@@ -64,19 +60,33 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
 
   const isLoading = isStreamTestQueued || isStreamTestRunning;
 
+  function getTooltipContent() {
+    if (testStreamId.type === "stream" || testStreamId.type === "generated_stream") {
+      return isLoading ? (
+        <FormattedMessage id="connectorBuilder.testRead.running" />
+      ) : (
+        <FlexContainer direction="column" gap="md" alignItems="center">
+          <FormattedMessage id="connectorBuilder.testRead" />
+          <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
+          {isStreamTestStale && <FormattedMessage id="connectorBuilder.testRead.stale" />}
+        </FlexContainer>
+      );
+    }
+    return isLoading ? (
+      <FormattedMessage id="connectorBuilder.dynamicStreamPreview.running" />
+    ) : (
+      <FlexContainer direction="column" gap="md" alignItems="center">
+        <FormattedMessage id="connectorBuilder.dynamicStreamPreview" />
+        <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
+      </FlexContainer>
+    );
+  }
+
   let buttonDisabled = forceDisabled || false;
   let showWarningIcon = false;
-  let tooltipContent = isLoading ? (
-    <FormattedMessage id="connectorBuilder.testRead.running" />
-  ) : (
-    <FlexContainer direction="column" gap="md" alignItems="center">
-      <FormattedMessage id="connectorBuilder.testRead" />
-      <HotkeyLabel keys={[getCtrlOrCmdKey(), "Enter"]} />
-      {isStreamTestStale && <FormattedMessage id="connectorBuilder.testRead.stale" />}
-    </FlexContainer>
-  );
+  let tooltipContent = getTooltipContent();
 
-  if (mode === "yaml" && !yamlIsValid) {
+  if (mode === "yaml" && (!yamlIsValid || hasResolveErrors)) {
     buttonDisabled = true;
     showWarningIcon = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlTest" />;
@@ -116,7 +126,13 @@ export const StreamTestButton: React.FC<StreamTestButtonProps> = ({
       isLoading={isLoading}
       variant={variant}
     >
-      <FormattedMessage id="connectorBuilder.testButton" />
+      <FormattedMessage
+        id={
+          testStreamId.type === "stream" || testStreamId.type === "generated_stream"
+            ? "connectorBuilder.testButton"
+            : "connectorBuilder.testButtonDynamic"
+        }
+      />
     </Button>
   );
 

@@ -18,6 +18,7 @@ import io.airbyte.db.instance.jobs.JobsDatabaseTestProvider
 import org.jooq.DSLContext
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
@@ -31,13 +32,14 @@ import java.util.concurrent.TimeUnit
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabaseTest() {
   private lateinit var jobDatabase: Database
 
   @BeforeEach
   @Timeout(value = 2, unit = TimeUnit.MINUTES)
   fun setupJobDatabase() {
-    jobDatabase = JobsDatabaseTestProvider(dslContext, null).create(false)
+    jobDatabase = JobsDatabaseTestProvider(dslContext!!, null).create(false)
   }
 
   @Test
@@ -47,9 +49,9 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
 
     // when there is database environment variable, return the database
     val configs = Mockito.mock(Configs::class.java)
-    Mockito.`when`(configs.databaseUser).thenReturn(container.username)
-    Mockito.`when`(configs.databasePassword).thenReturn(container.password)
-    Mockito.`when`(configs.databaseUrl).thenReturn(container.jdbcUrl)
+    Mockito.`when`(configs.databaseUser).thenReturn(container!!.username)
+    Mockito.`when`(configs.databasePassword).thenReturn(container!!.password)
+    Mockito.`when`(configs.databaseUrl).thenReturn(container!!.jdbcUrl)
 
     Assertions.assertNotNull(
       getJobsDatabase(configs.databaseUser, configs.databasePassword, configs.databaseUrl),

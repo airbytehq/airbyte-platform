@@ -4,7 +4,7 @@
 
 package io.airbyte.server.apis.publicapi.services
 
-import io.airbyte.commons.constants.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -57,7 +57,7 @@ class RegionServiceImpl(
           kotlin
             .runCatching { dataplaneGroupService.listDataplaneGroups(listOf(DEFAULT_ORGANIZATION_ID, organizationId), false) }
             .onFailure {
-              logger.error { "${"Error listing regions"}" }
+              logger.error { "Error listing regions" }
               ConfigClientErrorHandler.handleError(it)
             }.getOrNull()
         },
@@ -77,7 +77,7 @@ class RegionServiceImpl(
         .apply {
           name = regionCreateRequest.name
           organizationId = regionCreateRequest.organizationId
-          enabled = regionCreateRequest.enabled
+          enabled = regionCreateRequest.enabled ?: true
         }
 
     val created =

@@ -1,0 +1,29 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.logo {
+  height: 28px;
+}
+
+.header {
+  background-color: colors.$foreground;
+  border-bottom: variables.$border-thin solid colors.$dark-blue-40;
+  padding: variables.$spacing-md;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.headerSection {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.steps {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}

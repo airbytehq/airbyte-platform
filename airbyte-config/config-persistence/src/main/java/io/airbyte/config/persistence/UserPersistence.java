@@ -4,6 +4,7 @@
 
 package io.airbyte.config.persistence;
 
+import static io.airbyte.commons.ConstantsKt.DEFAULT_USER_ID;
 import static io.airbyte.config.persistence.PermissionPersistenceHelper.ORG_PERMISSION_ID_ALIAS;
 import static io.airbyte.config.persistence.PermissionPersistenceHelper.ORG_PERMISSION_ORG_ID_ALIAS;
 import static io.airbyte.config.persistence.PermissionPersistenceHelper.ORG_PERMISSION_TYPE_ALIAS;
@@ -58,12 +59,6 @@ public class UserPersistence {
   private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
 
   public static final String PRIMARY_KEY = "id";
-
-  /**
-   * Each installation of Airbyte comes with a default user. The ID of this user is hardcoded to the 0
-   * UUID so that it can be consistently retrieved.
-   */
-  public static final UUID DEFAULT_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
 
   private final ExceptionWrappingDatabase database;
 
@@ -275,14 +270,6 @@ public class UserPersistence {
    * @throws IOException in case of a db error
    */
   public Optional<AuthenticatedUser> getUserByAuthId(final String userAuthId) throws IOException {
-    final var resultFromAuthUsersTable = getUserByAuthIdFromAuthUserTable(userAuthId);
-    if (resultFromAuthUsersTable.isEmpty()) {
-      log.warn("User with auth user id {} not found in auth_user table", userAuthId);
-    }
-    return resultFromAuthUsersTable;
-  }
-
-  public Optional<AuthenticatedUser> getUserByAuthIdFromAuthUserTable(final String userAuthId) throws IOException {
     final var result = database.query(ctx -> ctx
         .select(
             AUTH_USER.AUTH_USER_ID,

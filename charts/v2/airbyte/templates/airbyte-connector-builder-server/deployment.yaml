@@ -65,15 +65,26 @@ spec:
 
         {{- include "airbyte.common.envs" . | nindent 8 }}
         {{- include "airbyte.connectorBuilder.envs" . | nindent 8 }}
+        {{- include "airbyte.logging.envs" . | nindent 8 }}
         {{- include "airbyte.metrics.envs" . | nindent 8 }}
         {{- include "airbyte.micronaut.envs" . | nindent 8 }}
         {{- include "airbyte.tracking.envs" . | nindent 8 }}
 
+        {{- if .Values.global.datadog.enabled }}
+        - name: DD_SERVICE
+          value: {{ include "airbyte.componentNameWithAirbytePrefix" . }}
+        {{- include "airbyte.datadog.envs" . | nindent 8 }}
+        {{- include "airbyte.otel.envs" . | nindent 8 }}
+        {{- end}}
+
         {{- if (eq .Values.global.edition "enterprise") }}
         {{- include "airbyte.enterprise.envs" . | nindent 8 }}
+        {{- include "airbyte.auth.identityProvider.envs" . | nindent 8 }}
         {{- end }}
 
-        {{- if not (or (eq .Values.global.edition "community") (eq .Values.global.edition "pro") (eq .Values.global.edition "enterprise")) }}
+        {{- if (eq .Values.global.edition "cloud")  }}
+        {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
+        {{- include "airbyte.keycloak.envs" . | nindent 8 }}
         {{- include "airbyte.stripe.envs" . | nindent 8 }}
         {{- end }}
 
@@ -129,7 +140,7 @@ spec:
           containerPort: 8080
           protocol: TCP
         {{- if .Values.connectorBuilderServer.debug.enabled }}
-        - name: debug 
+        - name: debug
           containerPort: {{ .Values.connectorBuilderServer.debug.remoteDebugPort }}
           protocol: TCP
         {{- end}}

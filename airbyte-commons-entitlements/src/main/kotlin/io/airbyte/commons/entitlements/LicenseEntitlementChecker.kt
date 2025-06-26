@@ -17,7 +17,6 @@ enum class Entitlement {
   SOURCE_CONNECTOR,
   DESTINATION_CONNECTOR,
   CONFIG_TEMPLATE_ENDPOINTS,
-  ACTOR_CONFIG_WITH_SECRET_COORDINATES,
 }
 
 /**
@@ -61,7 +60,6 @@ open class LicenseEntitlementChecker(
   ): Boolean =
     when (entitlement) {
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS -> checkConfigTemplateEntitlement(organizationId)
-      Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES -> checkActorConfigWithSecretCoordinatesEntitlement(organizationId)
       else -> {
         false
       }
@@ -107,9 +105,6 @@ open class LicenseEntitlementChecker(
     }
 
   private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
-
-  private fun checkActorConfigWithSecretCoordinatesEntitlement(organizationId: UUID): Boolean =
-    entitlementProvider.hasConfigWithSecretCoordinatesEntitlements(organizationId)
 
   private fun checkConnectorEntitlements(
     organizationId: UUID,

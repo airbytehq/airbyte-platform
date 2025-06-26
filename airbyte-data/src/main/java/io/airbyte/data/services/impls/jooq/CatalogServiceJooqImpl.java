@@ -7,6 +7,7 @@ package io.airbyte.data.services.impls.jooq;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_CATALOG_FETCH_EVENT;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.hash.HashFunction;
@@ -14,6 +15,7 @@ import com.google.common.hash.Hashing;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorCatalog;
+import io.airbyte.config.ActorCatalog.CatalogType;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
 import io.airbyte.config.ConfigSchema;
@@ -21,7 +23,9 @@ import io.airbyte.data.exceptions.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
+import io.airbyte.db.instance.configs.jooq.generated.enums.ActorCatalogType;
 import io.airbyte.protocol.models.v0.AirbyteCatalog;
+import io.airbyte.protocol.models.v0.DestinationCatalog;
 import jakarta.inject.Named;
 import jakarta.inject.Singleton;
 import java.io.IOException;
@@ -172,15 +176,37 @@ public class CatalogServiceJooqImpl implements CatalogService {
    * @throws IOException - error while interacting with db
    */
   @Override
-  public UUID writeActorCatalogFetchEvent(AirbyteCatalog catalog,
-                                          UUID actorId,
-                                          String connectorVersion,
-                                          String configurationHash)
+  public UUID writeActorCatalogWithFetchEvent(AirbyteCatalog catalog,
+                                              UUID actorId,
+                                              String connectorVersion,
+                                              String configurationHash)
       throws IOException {
     final OffsetDateTime timestamp = OffsetDateTime.now();
     final UUID fetchEventID = UUID.randomUUID();
     return database.transaction(ctx -> {
-      final UUID catalogId = getOrInsertActorCatalog(catalog, ctx, timestamp);
+      final UUID catalogId = getOrInsertSourceActorCatalog(catalog, ctx, timestamp);
+      ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_CATALOG_ID, catalogId)
+          .set(ACTOR_CATALOG_FETCH_EVENT.CONFIG_HASH, configurationHash)
+          .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_VERSION, connectorVersion)
+          .set(ACTOR_CATALOG_FETCH_EVENT.MODIFIED_AT, timestamp)
+          .set(ACTOR_CATALOG_FETCH_EVENT.CREATED_AT, timestamp).execute();
+      return catalogId;
+    });
+  }
+
+  @Override
+  public UUID writeActorCatalogWithFetchEvent(DestinationCatalog catalog,
+                                              UUID actorId,
+                                              String connectorVersion,
+                                              String configurationHash)
+      throws IOException {
+    final OffsetDateTime timestamp = OffsetDateTime.now();
+    final UUID fetchEventID = UUID.randomUUID();
+    return database.transaction(ctx -> {
+      final UUID catalogId = getOrInsertDestinationActorCatalog(catalog, ctx, timestamp);
       ctx.insertInto(ACTOR_CATALOG_FETCH_EVENT)
           .set(ACTOR_CATALOG_FETCH_EVENT.ID, fetchEventID)
           .set(ACTOR_CATALOG_FETCH_EVENT.ACTOR_ID, actorId)
@@ -237,23 +263,37 @@ public class CatalogServiceJooqImpl implements CatalogService {
    * @param timestamp - timestamp
    * @return the db identifier for the cached catalog.
    */
-  private UUID getOrInsertActorCatalog(final AirbyteCatalog airbyteCatalog,
-                                       final DSLContext context,
-                                       final OffsetDateTime timestamp) {
+  private UUID getOrInsertSourceActorCatalog(final AirbyteCatalog airbyteCatalog,
+                                             final DSLContext context,
+                                             final OffsetDateTime timestamp) {
 
     final String canonicalCatalogHash = generateCanonicalHash(airbyteCatalog);
-    UUID catalogId = lookupCatalogId(canonicalCatalogHash, airbyteCatalog, context);
+    final JsonNode catalogJson = Jsons.jsonNode(airbyteCatalog);
+    UUID catalogId = lookupCatalogId(canonicalCatalogHash, catalogJson, context);
     if (catalogId != null) {
       return catalogId;
     }
 
     final String oldCatalogHash = generateOldHash(airbyteCatalog);
-    catalogId = lookupCatalogId(oldCatalogHash, airbyteCatalog, context);
+    catalogId = lookupCatalogId(oldCatalogHash, catalogJson, context);
     if (catalogId != null) {
       return catalogId;
     }
 
-    return insertCatalog(airbyteCatalog, canonicalCatalogHash, context, timestamp);
+    return insertCatalog(catalogJson, canonicalCatalogHash, CatalogType.SOURCE_CATALOG, context, timestamp);
+  }
+
+  private UUID getOrInsertDestinationActorCatalog(final DestinationCatalog destinationCatalog,
+                                                  final DSLContext context,
+                                                  final OffsetDateTime timestamp) {
+    final String canonicalCatalogHash = generateCanonicalHash(destinationCatalog);
+    final JsonNode catalogJson = Jsons.jsonNode(destinationCatalog);
+    UUID catalogId = lookupCatalogId(canonicalCatalogHash, catalogJson, context);
+    if (catalogId != null) {
+      return catalogId;
+    }
+
+    return insertCatalog(catalogJson, canonicalCatalogHash, CatalogType.DESTINATION_CATALOG, context, timestamp);
   }
 
   private String generateCanonicalHash(final AirbyteCatalog airbyteCatalog) {
@@ -267,11 +307,22 @@ public class CatalogServiceJooqImpl implements CatalogService {
     }
   }
 
-  private UUID lookupCatalogId(final String catalogHash, final AirbyteCatalog airbyteCatalog, final DSLContext context) {
+  private String generateCanonicalHash(final DestinationCatalog destinationCatalog) {
+    final HashFunction hashFunction = Hashing.murmur3_32_fixed();
+    try {
+      return hashFunction.hashBytes(Jsons.canonicalJsonSerialize(destinationCatalog)
+          .getBytes(Charsets.UTF_8)).toString();
+    } catch (final IOException e) {
+      LOGGER.error("Failed to serialize DestinationCatalog to canonical JSON", e);
+      return null;
+    }
+  }
+
+  private UUID lookupCatalogId(final String catalogHash, final JsonNode catalog, final DSLContext context) {
     if (catalogHash == null) {
       return null;
     }
-    return findAndReturnCatalogId(catalogHash, airbyteCatalog, context);
+    return findAndReturnCatalogId(catalogHash, catalog, context);
   }
 
   private String generateOldHash(final AirbyteCatalog airbyteCatalog) {
@@ -279,42 +330,40 @@ public class CatalogServiceJooqImpl implements CatalogService {
     return hashFunction.hashBytes(Jsons.serialize(airbyteCatalog).getBytes(Charsets.UTF_8)).toString();
   }
 
-  private UUID insertCatalog(final AirbyteCatalog airbyteCatalog,
+  private UUID insertCatalog(final JsonNode catalog,
                              final String catalogHash,
+                             final CatalogType catalogType,
                              final DSLContext context,
                              final OffsetDateTime timestamp) {
     final UUID catalogId = UUID.randomUUID();
     context.insertInto(ACTOR_CATALOG)
         .set(ACTOR_CATALOG.ID, catalogId)
-        .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(airbyteCatalog)))
+        .set(ACTOR_CATALOG.CATALOG, JSONB.valueOf(Jsons.serialize(catalog)))
         .set(ACTOR_CATALOG.CATALOG_HASH, catalogHash)
+        .set(ACTOR_CATALOG.CATALOG_TYPE, ActorCatalogType.valueOf(catalogType.toString()))
         .set(ACTOR_CATALOG.CREATED_AT, timestamp)
         .set(ACTOR_CATALOG.MODIFIED_AT, timestamp).execute();
     return catalogId;
   }
 
-  private UUID findAndReturnCatalogId(final String catalogHash, final AirbyteCatalog airbyteCatalog, final DSLContext context) {
-    final Map<UUID, AirbyteCatalog> catalogs = findCatalogByHash(catalogHash, context);
-    for (final Map.Entry<UUID, AirbyteCatalog> entry : catalogs.entrySet()) {
-      if (entry.getValue().equals(airbyteCatalog)) {
+  private UUID findAndReturnCatalogId(final String catalogHash, final JsonNode catalog, final DSLContext context) {
+    final Map<UUID, JsonNode> catalogs = findCatalogByHash(catalogHash, context);
+    for (final Map.Entry<UUID, JsonNode> entry : catalogs.entrySet()) {
+      if (entry.getValue().equals(catalog)) {
         return entry.getKey();
       }
     }
     return null;
   }
 
-  private Map<UUID, AirbyteCatalog> findCatalogByHash(final String catalogHash, final DSLContext context) {
+  private Map<UUID, JsonNode> findCatalogByHash(final String catalogHash, final DSLContext context) {
     final Result<Record2<UUID, JSONB>> records = context.select(ACTOR_CATALOG.ID, ACTOR_CATALOG.CATALOG)
         .from(ACTOR_CATALOG)
         .where(ACTOR_CATALOG.CATALOG_HASH.eq(catalogHash)).fetch();
 
-    final Map<UUID, AirbyteCatalog> result = new HashMap<>();
+    final Map<UUID, JsonNode> result = new HashMap<>();
     for (final Record record : records) {
-      // We do not apply the on-the-fly migration here because the only caller is getOrInsertActorCatalog
-      // which is using this to figure out if the catalog has already been inserted. Migrating on the fly
-      // here will cause us to add a duplicate each time we check for existence of a catalog.
-      final AirbyteCatalog catalog = Jsons.deserialize(record.get(ACTOR_CATALOG.CATALOG).toString(), AirbyteCatalog.class);
-      result.put(record.get(ACTOR_CATALOG.ID), catalog);
+      result.put(record.get(ACTOR_CATALOG.ID), Jsons.deserialize(record.get(ACTOR_CATALOG.CATALOG).toString()));
     }
     return result;
   }

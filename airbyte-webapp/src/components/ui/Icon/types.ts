@@ -165,4 +165,5 @@ export interface IconProps {
   color?: IconColor;
   withBackground?: boolean;
   title?: string;
+  onClick?: () => void;
 }

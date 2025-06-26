@@ -437,13 +437,13 @@ public class DestinationHandler {
 
     if (secretStorageId.isPresent()) {
       final ConfigWithProcessedSecrets reprocessedConfig = SecretReferenceHelpers.INSTANCE.processConfigSecrets(
-          updatedConfig, spec.getConnectionSpecification(), secretStorageId.orElse(null));
+          updatedConfig, spec.getConnectionSpecification(), secretStorageId.get());
       updatedConfig = secretReferenceService.createAndInsertSecretReferencesWithStorageId(
           reprocessedConfig,
           destinationId,
           workspaceId,
           secretStorageId.get(),
-          currentUserService.getCurrentUser().getUserId());
+          currentUserService.getCurrentUserIdIfExists().orElse(null));
     }
 
     destinationConnection.setConfiguration(updatedConfig);
@@ -522,20 +522,15 @@ public class DestinationHandler {
 
     // remove secrets from config before returning the read
     final DestinationConnection dci = Jsons.clone(destinationConnection);
-    final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(destinationConnection.getWorkspaceId());
-    if (includeSecretCoordinates
-        && !this.licenseEntitlementChecker.checkEntitlements(organizationId, Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES)) {
-      throw new IllegalArgumentException("ACTOR_CONFIG_WITH_SECRET_COORDINATES not entitled for this organization");
-    }
     final ConfigWithSecretReferences configWithRefs =
         this.secretReferenceService.getConfigWithSecretReferences(dci.getDestinationId(), dci.getConfiguration(),
             destinationConnection.getWorkspaceId());
+    final JsonNode inlinedConfigWithRefs = InlinedConfigWithSecretRefsKt.toInlined(configWithRefs);
     final JsonNode sanitizedConfig =
         includeSecretCoordinates
-            ? secretsProcessor.simplifySecretsForOutput(
-                InlinedConfigWithSecretRefsKt.toInlined(configWithRefs),
-                spec.getConnectionSpecification())
-            : secretsProcessor.prepareSecretsForOutput(configWithRefs.getConfig(), spec.getConnectionSpecification());
+            ? secretsProcessor.simplifySecretsForOutput(configWithRefs, spec.getConnectionSpecification(),
+                airbyteEdition != Configs.AirbyteEdition.CLOUD)
+            : secretsProcessor.prepareSecretsForOutput(inlinedConfigWithRefs, spec.getConnectionSpecification());
     dci.setConfiguration(sanitizedConfig);
 
     final StandardDestinationDefinition standardDestinationDefinition =

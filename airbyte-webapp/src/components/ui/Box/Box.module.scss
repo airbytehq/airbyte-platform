@@ -31,6 +31,8 @@ $sizeMap: (
 );
 
 .box {
+  display: block;
+
   @each $marginKey, $marginValue in $marginDirectionMap {
     @each $sizeKey, $sizeVariable in $sizeMap {
       &--#{$marginKey}-#{$sizeKey} {

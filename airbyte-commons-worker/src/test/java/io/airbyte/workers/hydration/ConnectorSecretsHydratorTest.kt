@@ -189,7 +189,10 @@ class ConnectorSecretsHydratorTest {
     val orgId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    val secretStorage = mockk<SecretStorageRead>()
+    val secretStorage =
+      mockk<SecretStorageRead> {
+        every { id } returns secretStorageId
+      }
     val secretStorageConfig = mockk<io.airbyte.config.SecretPersistenceConfig>()
 
     mockkStatic("io.airbyte.workers.helper.SecretPersistenceConfigConvertersKt")

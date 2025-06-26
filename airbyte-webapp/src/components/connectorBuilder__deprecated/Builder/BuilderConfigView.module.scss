@@ -1,0 +1,19 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+
+  // make sure the container grows with the content so padding is applied correctly, but at least cover the full height of the form
+  height: fit-content;
+  min-height: 100%;
+  width: 100%;
+  min-width: 525px;
+}
+
+.heading {
+  text-align: center;
+  font-size: variables.$font-size-lg;
+}

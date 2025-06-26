@@ -9,9 +9,9 @@ import io.airbyte.commons.storage.STORAGE_MOUNT
 import io.airbyte.commons.storage.STORAGE_VOLUME_NAME
 import io.airbyte.featureflag.PlaneName
 import io.airbyte.featureflag.TestClient
-import io.airbyte.workers.context.WorkloadSecurityContextProvider
-import io.airbyte.workers.pod.KubeContainerInfo
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.context.WorkloadSecurityContextProvider
+import io.airbyte.workload.launcher.pods.KubeContainerInfo
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.InitContainerFactory
 import io.airbyte.workload.launcher.pods.factories.NodeSelectionFactory
 import io.airbyte.workload.launcher.pods.factories.ProfilerContainerFactory
@@ -247,8 +247,6 @@ class ReplicationPodFactoryTest {
       isFileTransfer: Boolean = false,
       workspaceId: UUID = UUID.randomUUID(),
       enableAsyncProfiler: Boolean = false,
-      singleConnectorTest: Boolean = false,
-      socketTest: Boolean = false,
     ) = factory.create(
       podName,
       allLabels,
@@ -266,8 +264,6 @@ class ReplicationPodFactoryTest {
       isFileTransfer,
       workspaceId,
       enableAsyncProfiler,
-      singleConnectorTest,
-      socketTest,
     )
 
     fun createResetWithDefaults(

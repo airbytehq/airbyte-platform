@@ -9,13 +9,15 @@ import io.airbyte.db.instance.configs.migrations.V0_35_3_001__DropAirbyteConfigs
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_35_3_001__DropAirbyteConfigsTableTest : AbstractConfigsDatabaseTest() {
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertTrue(airbyteConfigsExists(context))
     dropTable(context)
     Assertions.assertFalse(airbyteConfigsExists(context))

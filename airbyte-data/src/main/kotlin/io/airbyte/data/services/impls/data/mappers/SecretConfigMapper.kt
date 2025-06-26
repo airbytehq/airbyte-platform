@@ -6,7 +6,6 @@ package io.airbyte.data.services.impls.data.mappers
 
 import io.airbyte.domain.models.SecretConfigCreate
 import io.airbyte.domain.models.SecretConfigId
-import java.lang.IllegalStateException
 import io.airbyte.data.repositories.entities.SecretConfig as EntitySecretConfig
 import io.airbyte.domain.models.SecretConfig as ModelSecretConfig
 
@@ -35,7 +34,7 @@ object SecretConfigMapper {
       externalCoordinate = this.externalCoordinate,
       tombstone = false,
       airbyteManaged = this.airbyteManaged,
-      createdBy = this.createdBy.value,
-      updatedBy = this.createdBy.value,
+      createdBy = this.createdBy?.value,
+      updatedBy = this.createdBy?.value,
     )
 }

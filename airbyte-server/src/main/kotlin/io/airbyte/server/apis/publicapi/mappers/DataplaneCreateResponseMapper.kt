@@ -12,7 +12,8 @@ object DataplaneCreateResponseMapper {
     if (dataplaneCreateResponse == null) return null
 
     return DataplaneCreateResponseBody(
-      dataplaneId = dataplaneCreateResponse.dataplaneId.toString(),
+      regionId = dataplaneCreateResponse.regionId,
+      dataplaneId = dataplaneCreateResponse.dataplaneId,
       clientId = dataplaneCreateResponse.clientId,
       clientSecret = dataplaneCreateResponse.clientSecret,
     )

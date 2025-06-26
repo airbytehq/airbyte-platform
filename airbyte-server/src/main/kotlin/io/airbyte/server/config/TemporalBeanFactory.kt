@@ -11,11 +11,9 @@ import io.airbyte.commons.server.scheduler.SynchronousSchedulerClient
 import io.airbyte.commons.temporal.TemporalClient
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.persistence.ConfigInjector
-import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
-import io.airbyte.data.services.WorkspaceService
 import io.airbyte.domain.services.secrets.SecretReferenceService
 import io.airbyte.persistence.job.errorreporter.JobErrorReporter
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier
@@ -56,12 +54,4 @@ class TemporalBeanFactory {
       contextBuilder,
       secretReferenceService,
     )
-
-  @Singleton
-  fun contextBuilder(
-    workspaceService: WorkspaceService?,
-    destinationService: DestinationService?,
-    connectionService: ConnectionService?,
-    sourceService: SourceService?,
-  ): ContextBuilder = ContextBuilder(workspaceService, destinationService, connectionService, sourceService)
 }

@@ -55,6 +55,7 @@ const streamZodSchema = z.object({
 const streamConfigZodSchema = z.object({
   syncMode: z.nativeEnum(SyncMode),
   destinationSyncMode: z.nativeEnum(DestinationSyncMode),
+  namespace: z.string().optional(),
   cursorField: z.array(z.string()).optional(),
   selected: z.boolean().optional(),
   suggested: z.boolean().optional(),
@@ -62,6 +63,7 @@ const streamConfigZodSchema = z.object({
   selectedFields: z.array(fieldSchema).optional(),
   hashedFields: z.array(fieldSchema).optional(),
   includeFiles: z.boolean().optional(),
+  destinationObjectName: z.string().optional(),
   mappers: z.array(mapperSchema).optional(),
   aliasName: z.string().optional(),
   primaryKey: z.array(z.array(z.string())).optional(),

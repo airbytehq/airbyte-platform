@@ -408,6 +408,7 @@ public class WebBackendConnectionsHandler {
         .namespaceFormat(connectionRead.getNamespaceFormat())
         .prefix(connectionRead.getPrefix())
         .syncCatalog(connectionRead.getSyncCatalog())
+        .destinationCatalogId(connectionRead.getDestinationCatalogId())
         .status(connectionRead.getStatus())
         .schedule(connectionRead.getSchedule())
         .scheduleType(connectionRead.getScheduleType())
@@ -415,8 +416,8 @@ public class WebBackendConnectionsHandler {
         .source(source)
         .destination(destination)
         .operations(operations.getOperations())
+        .dataplaneGroupId(connectionRead.getDataplaneGroupId())
         .resourceRequirements(connectionRead.getResourceRequirements())
-        .geography(connectionRead.getGeography())
         .notifySchemaChanges(connectionRead.getNotifySchemaChanges())
         .notifySchemaChangesByEmail(connectionRead.getNotifySchemaChangesByEmail())
         .createdAt(connectionRead.getCreatedAt())
@@ -507,8 +508,7 @@ public class WebBackendConnectionsHandler {
     final SourceDiscoverSchemaRequestBody discoverSchemaReadReq = new SourceDiscoverSchemaRequestBody()
         .sourceId(sourceId)
         .disableCache(true)
-        .connectionId(connectionId)
-        .notifySchemaChange(false);
+        .connectionId(connectionId);
     final SourceDiscoverSchemaRead schemaRead = schedulerHandler.discoverSchemaForSourceFromSourceId(discoverSchemaReadReq);
     return Optional.ofNullable(schemaRead);
   }
@@ -584,6 +584,7 @@ public class WebBackendConnectionsHandler {
         outputStreamConfig.setIncludeFiles(originalConfiguredStream.getConfig().getIncludeFiles());
         outputStreamConfig.setFieldSelectionEnabled(originalStreamConfig.getFieldSelectionEnabled());
         outputStreamConfig.setMappers(originalStreamConfig.getMappers());
+        outputStreamConfig.setDestinationObjectName(originalStreamConfig.getDestinationObjectName());
 
         // TODO(pedro): Handle other mappers that are no longer valid
         // Add hashed field configs that are still present in the schema
@@ -870,7 +871,8 @@ public class WebBackendConnectionsHandler {
     connectionCreate.status(webBackendConnectionCreate.getStatus());
     connectionCreate.resourceRequirements(webBackendConnectionCreate.getResourceRequirements());
     connectionCreate.sourceCatalogId(webBackendConnectionCreate.getSourceCatalogId());
-    connectionCreate.geography(webBackendConnectionCreate.getGeography());
+    connectionCreate.destinationCatalogId(webBackendConnectionCreate.getDestinationCatalogId());
+    connectionCreate.dataplaneGroupId(webBackendConnectionCreate.getDataplaneGroupId());
     connectionCreate.notifySchemaChanges(webBackendConnectionCreate.getNotifySchemaChanges());
     connectionCreate.nonBreakingChangesPreference(webBackendConnectionCreate.getNonBreakingChangesPreference());
     connectionCreate.backfillPreference(webBackendConnectionCreate.getBackfillPreference());
@@ -905,7 +907,8 @@ public class WebBackendConnectionsHandler {
     connectionPatch.status(webBackendConnectionPatch.getStatus());
     connectionPatch.resourceRequirements(webBackendConnectionPatch.getResourceRequirements());
     connectionPatch.sourceCatalogId(webBackendConnectionPatch.getSourceCatalogId());
-    connectionPatch.geography(webBackendConnectionPatch.getGeography());
+    connectionPatch.destinationCatalogId(webBackendConnectionPatch.getDestinationCatalogId());
+    connectionPatch.dataplaneGroupId(webBackendConnectionPatch.getDataplaneGroupId());
     connectionPatch.notifySchemaChanges(webBackendConnectionPatch.getNotifySchemaChanges());
     connectionPatch.notifySchemaChangesByEmail(webBackendConnectionPatch.getNotifySchemaChangesByEmail());
     connectionPatch.nonBreakingChangesPreference(webBackendConnectionPatch.getNonBreakingChangesPreference());

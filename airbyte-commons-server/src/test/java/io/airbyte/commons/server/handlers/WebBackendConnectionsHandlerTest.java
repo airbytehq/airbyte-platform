@@ -75,7 +75,6 @@ import io.airbyte.api.model.generated.WebBackendConnectionRequestBody;
 import io.airbyte.api.model.generated.WebBackendConnectionUpdate;
 import io.airbyte.api.model.generated.WebBackendOperationCreateOrUpdate;
 import io.airbyte.api.model.generated.WebBackendWorkspaceState;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
@@ -117,6 +116,7 @@ import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
+import io.airbyte.data.services.PartialUserConfigService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.DestinationAndDefinition;
@@ -129,10 +129,10 @@ import io.airbyte.mappers.transformations.DestinationCatalogGenerator;
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator.CatalogGenerationResult;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.persistence.job.factory.OAuthConfigSupplier;
-import io.airbyte.protocol.models.Field;
 import io.airbyte.protocol.models.JsonSchemaType;
 import io.airbyte.protocol.models.v0.CatalogHelpers;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
+import io.airbyte.protocol.models.v0.Field;
 import io.airbyte.validation.json.JsonSchemaValidator;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
@@ -190,6 +190,7 @@ class WebBackendConnectionsHandlerTest {
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(catalogConverter);
   private ConnectionTimelineEventHelper connectionTimelineEventHelper;
   private CatalogConfigDiffHelper catalogConfigDiffHelper;
+  private PartialUserConfigService partialUserConfigService;
 
   private static final String STREAM1 = "stream1";
   private static final String STREAM2 = "stream2";
@@ -219,6 +220,7 @@ class WebBackendConnectionsHandlerTest {
     connectionTimelineEventHelper = mock(ConnectionTimelineEventHelper.class);
     catalogConfigDiffHelper = mock(CatalogConfigDiffHelper.class);
     licenseEntitlementChecker = mock(LicenseEntitlementChecker.class);
+    partialUserConfigService = mock(PartialUserConfigService.class);
 
     final JsonSchemaValidator validator = mock(JsonSchemaValidator.class);
     final JsonSecretsProcessor secretsProcessor = mock(JsonSecretsProcessor.class);
@@ -285,7 +287,7 @@ class WebBackendConnectionsHandlerTest {
         secretsRepositoryWriter,
         secretStorageService,
         secretReferenceService,
-        currentUserService);
+        currentUserService, partialUserConfigService);
 
     wbHandler = spy(new WebBackendConnectionsHandler(
         actorDefinitionVersionHandler,
@@ -493,6 +495,7 @@ class WebBackendConnectionsHandlerTest {
         .latestSyncJobStatus(JobStatus.SUCCEEDED)
         .isSyncing(false)
         .schemaChange(schemaChange)
+        .dataplaneGroupId(connectionRead.getDataplaneGroupId())
         .resourceRequirements(new ResourceRequirements()
             .cpuRequest(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuRequest())
             .cpuLimit(ConnectionHelpers.TESTING_RESOURCE_REQUIREMENTS.getCpuLimit())
@@ -783,6 +786,7 @@ class WebBackendConnectionsHandlerTest {
     final UUID newDestinationId = UUID.randomUUID();
     final UUID newOperationId = UUID.randomUUID();
     final UUID sourceCatalogId = UUID.randomUUID();
+    final UUID dataplaneGroupId = UUID.randomUUID();
     final WebBackendConnectionCreate input = new WebBackendConnectionCreate()
         .name("testConnectionCreate")
         .namespaceDefinition(Enums.convertTo(standardSync.getNamespaceDefinition(), NamespaceDefinitionType.class))
@@ -795,7 +799,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
-        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
+        .dataplaneGroupId(dataplaneGroupId)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .tags(tags);
 
@@ -813,7 +817,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .syncCatalog(catalog)
         .sourceCatalogId(sourceCatalogId)
-        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
+        .dataplaneGroupId(dataplaneGroupId)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .tags(tags);
 
@@ -834,6 +838,7 @@ class WebBackendConnectionsHandlerTest {
     final ConnectionSchedule schedule = new ConnectionSchedule().units(1L).timeUnit(TimeUnitEnum.MINUTES);
 
     final UUID newOperationId = UUID.randomUUID();
+    final UUID dataplaneGroupId = UUID.randomUUID();
     final WebBackendConnectionUpdate input = new WebBackendConnectionUpdate()
         .namespaceDefinition(Enums.convertTo(standardSync.getNamespaceDefinition(), NamespaceDefinitionType.class))
         .namespaceFormat(standardSync.getNamespaceFormat())
@@ -844,7 +849,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .name(standardSync.getName())
         .syncCatalog(catalog)
-        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
+        .dataplaneGroupId(dataplaneGroupId)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
         .notifySchemaChangesByEmail(true)
@@ -862,7 +867,7 @@ class WebBackendConnectionsHandlerTest {
         .schedule(schedule)
         .name(standardSync.getName())
         .syncCatalog(catalog)
-        .geography(DataplaneConstantsKt.GEOGRAPHY_US)
+        .dataplaneGroupId(dataplaneGroupId)
         .nonBreakingChangesPreference(NonBreakingChangesPreference.DISABLE)
         .notifySchemaChanges(false)
         .notifySchemaChangesByEmail(true)
@@ -879,8 +884,9 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("name", "namespaceDefinition", "namespaceFormat", "prefix", "sourceId", "destinationId", "operationIds",
             "addOperationIdsItem", "removeOperationIdsItem", "syncCatalog", "schedule", "scheduleType", "scheduleData",
-            "status", "resourceRequirements", "sourceCatalogId", "geography", "nonBreakingChangesPreference", "notifySchemaChanges",
-            "notifySchemaChangesByEmail", "backfillPreference", "tags", "addTagsItem", "removeTagsItem");
+            "status", "resourceRequirements", "sourceCatalogId", "destinationCatalogId", "dataplaneGroupId",
+            "nonBreakingChangesPreference", "notifySchemaChanges", "notifySchemaChangesByEmail", "backfillPreference",
+            "tags", "addTagsItem", "removeTagsItem");
 
     final Set<String> methods = Arrays.stream(ConnectionCreate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionCreate.class)
@@ -902,8 +908,9 @@ class WebBackendConnectionsHandlerTest {
     final Set<String> handledMethods =
         Set.of("schedule", "connectionId", "syncCatalog", "namespaceDefinition", "namespaceFormat", "prefix", "status",
             "operationIds", "addOperationIdsItem", "removeOperationIdsItem", "resourceRequirements", "name",
-            "sourceCatalogId", "scheduleType", "scheduleData", "geography", "breakingChange", "notifySchemaChanges", "notifySchemaChangesByEmail",
-            "nonBreakingChangesPreference", "backfillPreference", "tags", "addTagsItem", "removeTagsItem");
+            "sourceCatalogId", "destinationCatalogId", "scheduleType", "scheduleData", "dataplaneGroupId", "breakingChange",
+            "notifySchemaChanges", "notifySchemaChangesByEmail", "nonBreakingChangesPreference", "backfillPreference",
+            "tags", "addTagsItem", "removeTagsItem");
 
     final Set<String> methods = Arrays.stream(ConnectionUpdate.class.getMethods())
         .filter(method -> method.getReturnType() == ConnectionUpdate.class)
@@ -1502,6 +1509,19 @@ class WebBackendConnectionsHandlerTest {
 
     // Use new value for include files
     assertEquals(includeFiles, actual.getStreams().getFirst().getConfig().getIncludeFiles());
+  }
+
+  @Test
+  void testUpdateSchemaWithDestinationObjectName() {
+    final AirbyteCatalog configured = ConnectionHelpers.generateBasicApiCatalog();
+    configured.getStreams().getFirst().getConfig()
+        .destinationObjectName("configured_object_name");
+
+    final AirbyteCatalog discovered = ConnectionHelpers.generateBasicApiCatalog();
+
+    final AirbyteCatalog actual = wbHandler.updateSchemaWithRefreshedDiscoveredCatalog(configured, discovered, discovered);
+
+    assertEquals("configured_object_name", actual.getStreams().getFirst().getConfig().getDestinationObjectName());
   }
 
   @ParameterizedTest

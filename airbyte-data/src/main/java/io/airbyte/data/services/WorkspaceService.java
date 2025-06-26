@@ -30,8 +30,6 @@ public interface WorkspaceService {
 
   List<StandardWorkspace> listStandardWorkspaces(boolean includeTombstone) throws IOException;
 
-  List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
-
   Stream<StandardWorkspace> listWorkspaceQuery(Optional<List<UUID>> workspaceId, boolean includeTombstone) throws IOException;
 
   List<StandardWorkspace> listStandardWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
@@ -58,7 +56,7 @@ public interface WorkspaceService {
 
   void writeWorkspaceServiceAccountNoSecrets(WorkspaceServiceAccount workspaceServiceAccount) throws IOException;
 
-  String getGeographyForWorkspace(UUID workspaceId) throws IOException;
+  String getDataplaneGroupNameForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
 

@@ -1,9 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
 import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
+import { Box } from "components/ui/Box";
 
 import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
 import { useFeature, FeatureItem } from "core/services/features";
@@ -11,14 +12,16 @@ import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
 
 import { RegionsTable } from "./components/RegionsTable";
+import { ssoRefinementFunction, SSOSettings, ssoValidationSchema } from "./components/SSOSettings";
+
 const ORGANIZATION_UPDATE_NOTIFICATION_ID = "organization-update-notification";
 
-const organizationValidationSchema = z.object({
+const baseOrganizationValidationSchema = z.object({
   organizationName: z.string().trim().nonempty("form.empty.error"),
   email: z.string().email("form.email.error"),
 });
 
-type OrganizationFormValues = z.infer<typeof organizationValidationSchema>;
+export type BaseOrganizationFormValues = z.infer<typeof baseOrganizationValidationSchema>;
 
 export const UpdateOrganizationSettingsForm: React.FC = () => {
   const { organizationId } = useCurrentWorkspace();
@@ -29,11 +32,20 @@ export const UpdateOrganizationSettingsForm: React.FC = () => {
 const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }) => {
   const organization = useOrganization(organizationId);
   const { mutateAsync: updateOrganization } = useUpdateOrganization();
-  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataGeographies);
+  const supportsRegionsTable = useFeature(FeatureItem.AllowChangeDataplanes);
+  const supportsSSO = useFeature(FeatureItem.AllowUpdateSSOConfig);
 
   const { formatMessage } = useIntl();
   const { registerNotification, unregisterNotificationById } = useNotificationService();
   const canUpdateOrganization = useIntent("UpdateOrganization", { organizationId });
+
+  const organizationValidationSchema = useMemo(() => {
+    return supportsSSO
+      ? baseOrganizationValidationSchema.extend(ssoValidationSchema.shape).superRefine(ssoRefinementFunction)
+      : baseOrganizationValidationSchema;
+  }, [supportsSSO]);
+
+  type OrganizationFormValues = z.infer<typeof organizationValidationSchema>;
 
   const onSubmit = async (values: OrganizationFormValues) => {
     await updateOrganization({
@@ -67,21 +79,37 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         });
       }}
       zodSchema={organizationValidationSchema}
-      defaultValues={{ organizationName: organization.organizationName, email: organization.email }}
+      defaultValues={{
+        organizationName: organization.organizationName,
+        email: organization.email,
+        ...(supportsSSO && {
+          // TODO: replace with actual values when API is ready
+          emailDomain: "",
+          clientId: "",
+          clientSecret: "",
+          discoveryEndpoint: "",
+          subdomain: "",
+        }),
+      }}
       disabled={!canUpdateOrganization}
     >
-      <FormControl<OrganizationFormValues>
+      <FormControl<BaseOrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.organizationName" })}
         fieldType="input"
         name="organizationName"
       />
-      <FormControl<OrganizationFormValues>
+      <FormControl<BaseOrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.email" })}
         fieldType="input"
         name="email"
         labelTooltip={formatMessage({ id: "settings.organizationSettings.email.description" })}
       />
-      {supportsRegionsTable && <RegionsTable />}
+      {(supportsRegionsTable || supportsSSO) && (
+        <Box mb="lg">
+          {supportsRegionsTable && <RegionsTable />}
+          {supportsSSO && <SSOSettings />}
+        </Box>
+      )}
       {canUpdateOrganization && <FormSubmissionButtons noCancel justify="flex-start" submitKey="form.saveChanges" />}
     </Form>
   );

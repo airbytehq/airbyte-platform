@@ -4,6 +4,7 @@
 
 package io.airbyte.config
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
@@ -52,7 +53,11 @@ data class ConfiguredAirbyteStream
     // TODO this should become required, for backwards compat, generate from stream?
     var fields: List<Field>? = null,
     var mappers: List<MapperConfig> = listOf(),
-    var includesFiles: Boolean = false,
+    // Because this was introduced with a typo
+    @JsonAlias("includesFiles")
+    var includeFiles: Boolean = false,
+    @JsonProperty("destination_object_name")
+    var destinationObjectName: String? = null,
   ) : Serializable {
     fun withStream(stream: AirbyteStream): ConfiguredAirbyteStream {
       this.stream = stream
@@ -94,6 +99,11 @@ data class ConfiguredAirbyteStream
       return this
     }
 
+    fun withDestinationObjectName(destinationObjectName: String?): ConfiguredAirbyteStream =
+      apply {
+        this.destinationObjectName = destinationObjectName
+      }
+
     @get:JsonIgnore
     val streamDescriptor: StreamDescriptor
       get() = stream.streamDescriptor
@@ -117,7 +127,11 @@ data class ConfiguredAirbyteStream
       var syncId: Long? = null,
       var fields: List<Field>? = null,
       var mappers: List<MapperConfig> = listOf(),
-      var includesFiles: Boolean? = null,
+      // Because this was introduced with a typo
+      @JsonAlias("includesFiles")
+      var includeFiles: Boolean? = null,
+      @JsonProperty("destination_object_name")
+      var destinationObjectName: String? = null,
     ) {
       fun stream(stream: AirbyteStream) = apply { this.stream = stream }
 
@@ -139,7 +153,9 @@ data class ConfiguredAirbyteStream
 
       fun mappers(mappers: List<MapperConfig>) = apply { this.mappers = mappers }
 
-      fun includeFiles(includeFiles: Boolean) = apply { this.includesFiles = includeFiles }
+      fun includeFiles(includeFiles: Boolean) = apply { this.includeFiles = includeFiles }
+
+      fun destinationObjectName(destinationObjectName: String?) = apply { this.destinationObjectName = destinationObjectName }
 
       fun build(): ConfiguredAirbyteStream =
         ConfiguredAirbyteStream(
@@ -153,7 +169,8 @@ data class ConfiguredAirbyteStream
           syncId = syncId,
           fields = fields,
           mappers = mappers,
-          includesFiles = includesFiles ?: false,
+          includeFiles = includeFiles ?: false,
+          destinationObjectName = destinationObjectName,
         )
     }
 

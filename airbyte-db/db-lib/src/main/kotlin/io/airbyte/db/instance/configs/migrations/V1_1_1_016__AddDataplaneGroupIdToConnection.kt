@@ -4,6 +4,7 @@
 
 package io.airbyte.db.instance.configs.migrations
 
+import io.airbyte.config.Configs.AirbyteEdition
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context
@@ -45,15 +46,36 @@ class V1_1_1_016__AddDataplaneGroupIdToConnection : BaseJavaMigration() {
         .execute()
     }
 
+    private fun fromEnv(): AirbyteEdition? =
+      when (System.getenv("AIRBYTE_EDITION")?.uppercase()) {
+        "CLOUD" -> AirbyteEdition.CLOUD
+        "COMMUNITY" -> AirbyteEdition.COMMUNITY
+        "ENTERPRISE" -> AirbyteEdition.ENTERPRISE
+        else -> null
+      }
+
     fun populateDataplaneGroupIds(ctx: DSLContext) {
       log.info { "Updating connections with dataplane_group_id" }
       // Update connection table with corresponding dataplane_group_id
-      ctx
-        .update(CONNECTION)
-        .set(CONNECTION_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
-        .from(DATAPLANE_GROUP)
-        .where(CONNECTION_GEOGRAPHY.cast(SQLDataType.VARCHAR).eq(DATAPLANE_GROUP_NAME))
-        .execute()
+      when (fromEnv()) {
+        AirbyteEdition.CLOUD -> {
+          ctx
+            .update(CONNECTION)
+            .set(CONNECTION_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
+            .from(DATAPLANE_GROUP)
+            .where(CONNECTION_GEOGRAPHY.cast(SQLDataType.VARCHAR).eq(DATAPLANE_GROUP_NAME))
+            .execute()
+        }
+        else -> {
+          // Only one dataplane group exists in non-cloud deploys that are running this migration,
+          // so we don't have to match on `CONNECTION_GEOGRAPHY`
+          ctx
+            .update(CONNECTION)
+            .set(CONNECTION_DATAPLANE_GROUP_ID, DATAPLANE_GROUP_PK)
+            .from(DATAPLANE_GROUP)
+            .execute()
+        }
+      }
     }
 
     fun addNotNullConstraint(ctx: DSLContext) {

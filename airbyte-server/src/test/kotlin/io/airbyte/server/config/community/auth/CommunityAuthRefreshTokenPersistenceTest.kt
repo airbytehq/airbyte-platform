@@ -5,9 +5,9 @@
 package io.airbyte.server.config.community.auth
 
 import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.commons.server.support.RbacRoleHelper
+import io.airbyte.commons.DEFAULT_USER_ID
+import io.airbyte.commons.auth.roles.AuthRole
 import io.airbyte.config.AuthRefreshToken
-import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.services.AuthRefreshTokenService
 import io.micronaut.security.authentication.Authentication
 import io.micronaut.security.token.event.RefreshTokenGeneratedEvent
@@ -51,8 +51,8 @@ class CommunityAuthRefreshTokenPersistenceTest {
     StepVerifier
       .create(result)
       .assertNext { authentication ->
-        assertEquals(UserPersistence.DEFAULT_USER_ID.toString(), authentication.name)
-        assertTrue(authentication.roles.containsAll(RbacRoleHelper.getInstanceAdminRoles()))
+        assertEquals(DEFAULT_USER_ID.toString(), authentication.name)
+        assertTrue(authentication.roles.containsAll(AuthRole.getInstanceAdminRoles()))
         assertEquals(sessionId, authentication.attributes[SESSION_ID])
       }.verifyComplete()
   }

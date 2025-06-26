@@ -16,6 +16,11 @@ import { PartialUserConfigEditForm } from "./components/PartialUserConfigEditFor
 import { PartialUserConfigList } from "./components/PartialUserConfigList";
 import styles from "./EmbeddedSourcePage.module.scss";
 import { useEmbeddedSourceParams } from "./hooks/useEmbeddedSourceParams";
+
+/**
+ * The EmbeddedSourceCreatePage component is rendered inside of the embedded widget.
+ * It allows users to create or edit partial user configurations.
+ */
 export const EmbeddedSourceCreatePage: React.FC = () => {
   const {
     workspaceId,
@@ -67,7 +72,7 @@ export const EmbeddedSourceCreatePage: React.FC = () => {
             </Box>
           }
         />
-        <PartialUserConfigEditForm />
+        <PartialUserConfigEditForm selectedPartialConfigId={selectedPartialConfigId} />
       </EmbeddedSourcePageWrapper>
     );
   }

@@ -5,6 +5,7 @@
 package io.airbyte.data.repositories
 
 import io.airbyte.data.repositories.entities.DataplaneGroup
+import io.micronaut.data.annotation.Query
 import io.micronaut.data.jdbc.annotation.JdbcRepository
 import io.micronaut.data.model.query.builder.sql.Dialect
 import io.micronaut.data.repository.PageableRepository
@@ -22,4 +23,13 @@ interface DataplaneGroupRepository : PageableRepository<DataplaneGroup, UUID> {
   ): List<DataplaneGroup>
 
   fun findAllByOrganizationIdInAndTombstoneFalseOrderByUpdatedAtDesc(organizationIds: List<UUID>): List<DataplaneGroup>
+
+  @Query(
+    """
+      SELECT dg.organization_id
+      FROM dataplane_group dg
+      WHERE dg.id = :dataplaneGroup
+    """,
+  )
+  fun getOrganizationIdFromDataplaneGroup(dataplaneGroup: UUID): UUID
 }

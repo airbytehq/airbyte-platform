@@ -11,19 +11,19 @@ import io.airbyte.api.model.generated.WebBackendCheckUpdatesRead
 import io.airbyte.api.model.generated.WebBackendConnectionRead
 import io.airbyte.api.model.generated.WebBackendConnectionReadList
 import io.airbyte.api.model.generated.WebBackendConnectionRequestBody
-import io.airbyte.api.model.generated.WebBackendGeographiesListResult
 import io.airbyte.api.model.generated.WebBackendWorkspaceStateResult
-import io.airbyte.api.problems.throwable.generated.ForbiddenProblem
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.api.server.generated.models.WebappConfigResponse
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.WebBackendCheckUpdatesHandler
 import io.airbyte.commons.server.handlers.WebBackendConnectionsHandler
-import io.airbyte.commons.server.handlers.WebBackendGeographiesHandler
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.persistence.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.handlers.WebBackendCronExpressionHandler
 import io.airbyte.server.status
 import io.airbyte.server.statusException
+import io.micronaut.context.annotation.Property
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.HttpStatus
 import io.micronaut.http.client.HttpClient
@@ -33,14 +33,16 @@ import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import io.mockk.every
 import io.mockk.mockk
 import jakarta.inject.Inject
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @MicronautTest(rebuildContext = true)
+@Property(name = "AIRBYTE_EDITION", value = "CoMMuniTY")
 internal class WebBackendApiControllerTest {
   @Inject
-  lateinit var apiAuthorizationHelper: ApiAuthorizationHelper
+  lateinit var roleResolver: RoleResolver
 
   @Inject
   lateinit var webBackendConnectionsHandler: WebBackendConnectionsHandler
@@ -49,23 +51,14 @@ internal class WebBackendApiControllerTest {
   lateinit var webBackendCheckUpdatesHandler: WebBackendCheckUpdatesHandler
 
   @Inject
-  lateinit var webBackendGeographiesHandler: WebBackendGeographiesHandler
-
-  @Inject
   @Client("/")
   lateinit var client: HttpClient
-
-  @MockBean(ApiAuthorizationHelper::class)
-  fun apiAuthorizationHelper(): ApiAuthorizationHelper = mockk(relaxed = true)
 
   @MockBean(WebBackendConnectionsHandler::class)
   fun webBackendConnectionsHandler(): WebBackendConnectionsHandler = mockk()
 
   @MockBean(WebBackendCheckUpdatesHandler::class)
   fun webBackendCheckUpdatesHandler(): WebBackendCheckUpdatesHandler = mockk()
-
-  @MockBean(WebBackendGeographiesHandler::class)
-  fun webBackendGeographiesHandler(): WebBackendGeographiesHandler = mockk()
 
   @MockBean(WebBackendCronExpressionHandler::class)
   fun webBackendCronExpressionHandler(): WebBackendCronExpressionHandler = mockk()
@@ -108,31 +101,29 @@ internal class WebBackendApiControllerTest {
 
     // This only impacts calls where withRefreshCatalog(true) is present
     // first two calls succeed, third call will fail
+    val editorRole = setOf(AuthRoleConstants.ADMIN)
     every {
-      apiAuthorizationHelper.checkWorkspacesPermissions(any(), any(), any(), any())
-    } returns Unit andThen Unit andThenThrows ForbiddenProblem()
+      roleResolver.resolveRoles(any(), any(), any(), any(), any())
+    } returns editorRole andThen editorRole andThen emptySet<String>()
 
     val path = "/api/v1/web_backend/connections/get"
 
     // first call doesn't activate checkWorkspacePermissions because withRefreshedCatalog is false
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, WebBackendConnectionRequestBody())))
 
-//    // second call activates checkWorkspacePermissions because withRefreshedCatalog is true, and passes
-//    // the check
+    // second call activates checkWorkspacePermissions because withRefreshedCatalog is true, and passes the check
     assertStatus(
       HttpStatus.OK,
       client.status(HttpRequest.POST(path, WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
     )
-//
-//    // third call activates checkWorkspacePermissions because withRefreshedCatalog is true, passes it,
-//    // but then fails on the 404
+
+    // third call activates checkWorkspacePermissions because withRefreshedCatalog is true, passes it, but then fails on the 404
     assertStatus(
       HttpStatus.NOT_FOUND,
       client.statusException(HttpRequest.POST(path, WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
     )
-//
-//    // fourth call activates checkWorkspacePermissions because withRefreshedCatalog is true, but fails
-//    // the check, so 403s
+
+    // fourth call activates checkWorkspacePermissions because withRefreshedCatalog is true, but fails the check, so 403s
     assertStatus(
       HttpStatus.FORBIDDEN,
       client.statusException(HttpRequest.POST(path, WebBackendConnectionRequestBody().connectionId(UUID.randomUUID()).withRefreshedCatalog(true))),
@@ -156,14 +147,6 @@ internal class WebBackendApiControllerTest {
   }
 
   @Test
-  fun testWebBackendListGeographies() {
-    every { webBackendGeographiesHandler.listGeographies(any()) } returns WebBackendGeographiesListResult()
-
-    val path = "/api/v1/web_backend/geographies/list"
-    assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
-  }
-
-  @Test
   fun testWebBackendUpdateConnection() {
     every { webBackendConnectionsHandler.webBackendUpdateConnection(any()) } returns WebBackendConnectionRead() andThenThrows
       ConfigNotFoundException("", "")
@@ -171,5 +154,14 @@ internal class WebBackendApiControllerTest {
     val path = "/api/v1/web_backend/connections/update"
     assertStatus(HttpStatus.OK, client.status(HttpRequest.POST(path, SourceIdRequestBody())))
     assertStatus(HttpStatus.NOT_FOUND, client.statusException(HttpRequest.POST(path, SourceDefinitionIdRequestBody())))
+  }
+
+  @Test
+  fun `test config`() {
+    val path = "/api/v1/web_backend/config"
+    val response = client.toBlocking().exchange(HttpRequest.GET<Any>(path), WebappConfigResponse::class.java)
+    assertStatus(HttpStatus.OK, response.status)
+    // verify casing of edition is lowercase
+    assertEquals("community", response.body.get().edition)
   }
 }
