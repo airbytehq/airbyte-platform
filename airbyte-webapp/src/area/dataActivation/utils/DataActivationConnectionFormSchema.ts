@@ -44,10 +44,22 @@ const destinationAppendDedupSyncMode = z.object({
   primaryKey: z.string().nonempty("form.empty.error"),
 });
 
+const destinationUpdateSyncMode = z.object({
+  destinationSyncMode: z.literal(DestinationSyncMode.update),
+  primaryKey: z.string().nonempty("form.empty.error"),
+});
+
+const destinationSoftDeleteSyncMode = z.object({
+  destinationSyncMode: z.literal(DestinationSyncMode.soft_delete),
+  primaryKey: z.string().nonempty("form.empty.error"),
+});
+
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
   noDestinationSyncModeSelected,
   destinationAppendSyncMode,
   destinationAppendDedupSyncMode,
+  destinationUpdateSyncMode,
+  destinationSoftDeleteSyncMode,
 ]);
 
 const DataActivationStreamSchema = z

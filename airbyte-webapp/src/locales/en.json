@@ -790,6 +790,8 @@
   "connection.dataActivation.destinationSyncMode": "insertion method",
   "connection.dataActivation.append": "Insert",
   "connection.dataActivation.append_dedup": "Upsert",
+  "connection.dataActivation.update": "Update",
+  "connection.dataActivation.soft_delete": "Soft delete",
   "connection.dataActivation.save": "Save",
   "connection.selectSyncMode": "Select sync mode",
   "connection.syncMode": "sync mode",
