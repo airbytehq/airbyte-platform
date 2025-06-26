@@ -5,6 +5,7 @@
 package io.airbyte.commons.protocol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -12,7 +13,6 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.protocol.serde.AirbyteMessageDeserializer;
 import io.airbyte.commons.protocol.serde.AirbyteMessageSerializer;
 import io.airbyte.commons.version.Version;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,17 +42,17 @@ class AirbyteMessageSerDeProviderTest {
 
   @Test
   void testGetDeserializer() {
-    assertEquals(Optional.of(deserV0), serDeProvider.getDeserializer(new Version("0.1.0")));
-    assertEquals(Optional.of(deserV0), serDeProvider.getDeserializer(new Version("0.2.0")));
-    assertEquals(Optional.of(deserV1), serDeProvider.getDeserializer(new Version("1.1.0")));
-    assertEquals(Optional.empty(), serDeProvider.getDeserializer(new Version("2.0.0")));
+    assertEquals(deserV0, serDeProvider.getDeserializer(new Version("0.1.0")));
+    assertEquals(deserV0, serDeProvider.getDeserializer(new Version("0.2.0")));
+    assertEquals(deserV1, serDeProvider.getDeserializer(new Version("1.1.0")));
+    assertNull(serDeProvider.getDeserializer(new Version("2.0.0")));
   }
 
   @Test
   void testGetSerializer() {
-    assertEquals(Optional.of(serV0), serDeProvider.getSerializer(new Version("0.1.0")));
-    assertEquals(Optional.of(serV1), serDeProvider.getSerializer(new Version("1.0.0")));
-    assertEquals(Optional.empty(), serDeProvider.getSerializer(new Version("3.2.0")));
+    assertEquals(serV0, serDeProvider.getSerializer(new Version("0.1.0")));
+    assertEquals(serV1, serDeProvider.getSerializer(new Version("1.0.0")));
+    assertNull(serDeProvider.getSerializer(new Version("3.2.0")));
   }
 
   @Test

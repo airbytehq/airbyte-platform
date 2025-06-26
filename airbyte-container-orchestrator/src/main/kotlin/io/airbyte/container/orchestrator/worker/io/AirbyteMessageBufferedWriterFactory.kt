@@ -38,7 +38,7 @@ class AirbyteMessageBufferedWriterFactory(
     logger.info { "Writing messages to protocol version ${protocolVersion.serialize()}$additionalMessage" }
     return AirbyteMessageBufferedWriter(
       writer = bufferedWriter,
-      serDeProvider.getSerializer(protocolVersion).orElseThrow(),
+      serDeProvider.getSerializer(protocolVersion) ?: throw IllegalStateException("Serializer not found for version $protocolVersion"),
       migratorFactory.getAirbyteMessageMigrator(protocolVersion),
       Optional.ofNullable(configuredAirbyteCatalog),
     )

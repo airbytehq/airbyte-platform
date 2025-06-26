@@ -26,21 +26,21 @@ public class CatalogDiffConverters {
 
   public static StreamTransform streamTransformToApi(final io.airbyte.commons.protocol.transformmodels.StreamTransform transform) {
     return new StreamTransform()
-        .transformType(Enums.convertTo(transform.getTransformType(), StreamTransform.TransformTypeEnum.class))
-        .streamDescriptor(ApiConverters.toApi(transform.getStreamDescriptor()))
+        .transformType(Enums.convertTo(transform.transformType, StreamTransform.TransformTypeEnum.class))
+        .streamDescriptor(ApiConverters.toApi(transform.streamDescriptor))
         .updateStream(updateStreamToApi(transform).orElse(null));
   }
 
   @SuppressWarnings("LineLength")
   public static Optional<StreamTransformUpdateStream> updateStreamToApi(final io.airbyte.commons.protocol.transformmodels.StreamTransform transform) {
-    if (transform.getTransformType() == StreamTransformType.UPDATE_STREAM) {
+    if (transform.transformType == StreamTransformType.UPDATE_STREAM) {
       return Optional.of(new StreamTransformUpdateStream()
-          .streamAttributeTransforms(transform.getUpdateStreamTransform()
+          .streamAttributeTransforms(transform.updateStreamTransform
               .getAttributeTransforms()
               .stream()
               .map(CatalogDiffConverters::streamAttributeTransformToApi)
               .toList())
-          .fieldTransforms(transform.getUpdateStreamTransform()
+          .fieldTransforms(transform.updateStreamTransform
               .getFieldTransforms()
               .stream()
               .map(CatalogDiffConverters::fieldTransformToApi)
@@ -60,8 +60,8 @@ public class CatalogDiffConverters {
 
   public static FieldTransform fieldTransformToApi(final io.airbyte.commons.protocol.transformmodels.FieldTransform transform) {
     return new FieldTransform()
-        .transformType(Enums.convertTo(transform.getTransformType(), FieldTransform.TransformTypeEnum.class))
-        .fieldName(transform.getFieldName())
+        .transformType(Enums.convertTo(transform.transformType, FieldTransform.TransformTypeEnum.class))
+        .fieldName(transform.fieldName)
         .breaking(transform.breaking())
         .addField(addFieldToApi(transform).orElse(null))
         .removeField(removeFieldToApi(transform).orElse(null))
@@ -80,28 +80,28 @@ public class CatalogDiffConverters {
   }
 
   private static Optional<FieldAdd> addFieldToApi(final io.airbyte.commons.protocol.transformmodels.FieldTransform transform) {
-    if (transform.getTransformType() == FieldTransformType.ADD_FIELD) {
+    if (transform.transformType == FieldTransformType.ADD_FIELD) {
       return Optional.of(new FieldAdd()
-          .schema(transform.getAddFieldTransform().getSchema()));
+          .schema(transform.addFieldTransform.getSchema()));
     } else {
       return Optional.empty();
     }
   }
 
   private static Optional<FieldRemove> removeFieldToApi(final io.airbyte.commons.protocol.transformmodels.FieldTransform transform) {
-    if (transform.getTransformType() == FieldTransformType.REMOVE_FIELD) {
+    if (transform.transformType == FieldTransformType.REMOVE_FIELD) {
       return Optional.of(new FieldRemove()
-          .schema(transform.getRemoveFieldTransform().getSchema()));
+          .schema(transform.removeFieldTransform.getSchema()));
     } else {
       return Optional.empty();
     }
   }
 
   private static Optional<FieldSchemaUpdate> updateFieldToApi(final io.airbyte.commons.protocol.transformmodels.FieldTransform transform) {
-    if (transform.getTransformType() == FieldTransformType.UPDATE_FIELD_SCHEMA) {
+    if (transform.transformType == FieldTransformType.UPDATE_FIELD_SCHEMA) {
       return Optional.of(new FieldSchemaUpdate()
-          .oldSchema(transform.getUpdateFieldTransform().getOldSchema())
-          .newSchema(transform.getUpdateFieldTransform().getNewSchema()));
+          .oldSchema(transform.updateFieldTransform.getOldSchema())
+          .newSchema(transform.updateFieldTransform.getNewSchema()));
     } else {
       return Optional.empty();
     }

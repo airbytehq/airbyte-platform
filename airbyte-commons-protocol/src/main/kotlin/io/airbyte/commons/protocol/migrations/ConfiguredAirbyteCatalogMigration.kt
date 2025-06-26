@@ -2,24 +2,22 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.commons.protocol.migrations;
+package io.airbyte.commons.protocol.migrations
 
 /**
  * Migrate between different version sof airbyte catalog.
  *
  * @param <PreviousVersion> previous version
  * @param <CurrentVersion> current version
- */
-@SuppressWarnings("InterfaceTypeParameterName")
-public interface ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersion> extends Migration {
-
+</CurrentVersion></PreviousVersion> */
+interface ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersion> : Migration {
   /**
    * Downgrades a ConfiguredAirbyteCatalog from the new version to the old version.
    *
    * @param message the ConfiguredAirbyteCatalog to downgrade
    * @return the downgraded ConfiguredAirbyteCatalog
    */
-  PreviousVersion downgrade(final CurrentVersion message);
+  fun downgrade(message: CurrentVersion): PreviousVersion
 
   /**
    * Upgrades a ConfiguredAirbyteCatalog from the old version to the new version.
@@ -27,6 +25,5 @@ public interface ConfiguredAirbyteCatalogMigration<PreviousVersion, CurrentVersi
    * @param message the ConfiguredAirbyteCatalog to upgrade
    * @return the upgraded ConfiguredAirbyteCatalog
    */
-  CurrentVersion upgrade(final PreviousVersion message);
-
+  fun upgrade(message: PreviousVersion): CurrentVersion
 }

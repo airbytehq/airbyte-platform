@@ -44,7 +44,7 @@ class CatalogDiffHelpersTest {
 
   // handy for debugging test only.
   private static final Comparator<StreamTransform> STREAM_TRANSFORM_COMPARATOR =
-      Comparator.comparing(StreamTransform::getTransformType);
+      Comparator.comparing(c -> c.transformType);
   private static final String CAD = "CAD";
   private static final String ITEMS = "items";
   private static final String SOME_ARRAY = "someArray";
@@ -166,7 +166,7 @@ class CatalogDiffHelpersTest {
 
     Assertions.assertThat(actualDiff).hasSize(1);
     Assertions.assertThat(actualDiff).first()
-        .has(new Condition<StreamTransform>(streamTransform -> streamTransform.getTransformType() == StreamTransformType.UPDATE_STREAM,
+        .has(new Condition<StreamTransform>(streamTransform -> streamTransform.transformType == StreamTransformType.UPDATE_STREAM,
             "Check update"));
   }
 

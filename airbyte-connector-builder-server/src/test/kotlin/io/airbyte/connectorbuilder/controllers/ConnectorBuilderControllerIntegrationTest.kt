@@ -61,7 +61,11 @@ internal class ConnectorBuilderControllerIntegrationTest {
     healthHandler = mockk()
     writer = MockAirbyteFileWriterImpl()
 
-    val serDeProvider = AirbyteMessageSerDeProvider(listOf(AirbyteMessageV0Deserializer()), listOf(AirbyteMessageV0Serializer()))
+    val serDeProvider =
+      AirbyteMessageSerDeProvider(
+        listOf(AirbyteMessageV0Deserializer()),
+        listOf(AirbyteMessageV0Serializer()),
+      )
     serDeProvider.initialize()
     val airbyteMessageMigrator = AirbyteMessageMigrator(listOf())
     airbyteMessageMigrator.initialize()
