@@ -14,6 +14,8 @@ import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezone
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationUnderOneHourNotAllowedProblem;
+import io.airbyte.commons.entitlements.EntitlementService;
+import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.helpers.CronExpressionHelper;
 import io.airbyte.config.BasicSchedule;
@@ -49,15 +51,18 @@ public class ConnectionScheduleHelper {
   private final ApiPojoConverters apiPojoConverters;
   private final CronExpressionHelper cronExpressionHelper;
   private final FeatureFlagClient featureFlagClient;
+  private final EntitlementService entitlementService;
   private final WorkspaceHelper workspaceHelper;
 
   public ConnectionScheduleHelper(final ApiPojoConverters apiPojoConverters,
                                   final CronExpressionHelper cronExpressionHelper,
                                   final FeatureFlagClient featureFlagClient,
+                                  final EntitlementService entitlementService,
                                   final WorkspaceHelper workspaceHelper) {
     this.apiPojoConverters = apiPojoConverters;
     this.cronExpressionHelper = cronExpressionHelper;
     this.featureFlagClient = featureFlagClient;
+    this.entitlementService = entitlementService;
     this.workspaceHelper = workspaceHelper;
   }
 
@@ -121,7 +126,9 @@ public class ConnectionScheduleHelper {
         final UUID workspaceId = workspaceHelper.getWorkspaceForSourceId(standardSync.getSourceId());
         final UUID organizationId = workspaceHelper.getOrganizationForWorkspace(workspaceId);
         final boolean canSyncUnderOneHour = featureFlagClient.boolVariation(SubOneHourSyncSchedules.INSTANCE, new Multi(
-            List.of(new Organization(organizationId), new Workspace(workspaceId))));
+            List.of(new Organization(organizationId), new Workspace(workspaceId))))
+            || entitlementService.checkEntitlement(organizationId, PlatformSubOneHourSyncFrequency.INSTANCE).isEntitled();
+
         validateCronFrequency(cronExpression, canSyncUnderOneHour);
 
         validateCronExpressionAndTimezone(cronTimeZone, cronExpression, connectionId);

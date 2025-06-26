@@ -96,7 +96,10 @@ import io.airbyte.api.problems.throwable.generated.StreamDoesNotSupportFileTrans
 import io.airbyte.commons.converters.CommonConvertersKt;
 import io.airbyte.commons.converters.ConnectionHelper;
 import io.airbyte.commons.entitlements.Entitlement;
+import io.airbyte.commons.entitlements.EntitlementService;
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker;
+import io.airbyte.commons.entitlements.models.EntitlementResult;
+import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.jackson.MoreMappers;
 import io.airbyte.commons.json.Jsons;
@@ -288,6 +291,7 @@ class ConnectionsHandlerTest {
   private EventRunner eventRunner;
   private ConnectionHelper connectionHelper;
   private TestClient featureFlagClient;
+  private EntitlementService entitlementService;
   private ActorDefinitionVersionHelper actorDefinitionVersionHelper;
   private ActorDefinitionVersionUpdater actorDefinitionVersionUpdater;
   private ConnectorDefinitionSpecificationHandler connectorDefinitionSpecificationHandler;
@@ -449,6 +453,7 @@ class ConnectionsHandlerTest {
     contextBuilder = mock(ContextBuilder.class);
 
     featureFlagClient = mock(TestClient.class);
+    entitlementService = mock(EntitlementService.class);
     metricClient = mock(MetricClient.class);
     secretsRepositoryWriter = mock(SecretsRepositoryWriter.class);
     secretStorageService = mock(SecretStorageService.class);
@@ -500,7 +505,8 @@ class ConnectionsHandlerTest {
         secretReferenceService,
         currentUserService, partialUserConfigService);
 
-    connectionSchedulerHelper = new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
+    connectionSchedulerHelper =
+        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper);
     matchSearchHandler =
         new MatchSearchHandler(destinationHandler, sourceHandler, sourceService, destinationService, connectionService, apiPojoConverters);
     featureFlagClient = mock(TestClient.class);
@@ -1759,6 +1765,8 @@ class ConnectionsHandlerTest {
             .withManual(false);
 
         when(connectionService.getStandardSync(standardSync.getConnectionId())).thenReturn(standardSync);
+        when(entitlementService.checkEntitlement(any(), any()))
+            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
 
         final ConnectionRead actualConnectionRead = connectionsHandler.updateConnection(connectionUpdate, null, false);
 

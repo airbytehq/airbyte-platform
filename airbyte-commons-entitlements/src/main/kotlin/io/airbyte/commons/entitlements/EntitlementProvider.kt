@@ -19,6 +19,7 @@ import io.micronaut.context.annotation.Requires
 import jakarta.inject.Singleton
 import java.util.UUID
 
+@Deprecated("Please use EntitlementService in place of this")
 interface EntitlementProvider {
   fun hasEnterpriseConnectorEntitlements(
     organizationId: UUID,

@@ -41,6 +41,8 @@ airbyte:
     update-definitions:
       enabled: ${UPDATE_DEFINITIONS_CRON_ENABLED:false}
   edition: ${AIRBYTE_EDITION:COMMUNITY}
+  entitlement:
+    client: ${ENTITLEMENT_CLIENT:}
   feature-flag:
     client: ${FEATURE_FLAG_CLIENT:}
     path: ${FEATURE_FLAG_PATH:/flags}

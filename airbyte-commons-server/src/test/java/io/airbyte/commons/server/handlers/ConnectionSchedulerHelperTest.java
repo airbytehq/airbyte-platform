@@ -22,6 +22,9 @@ import io.airbyte.api.problems.throwable.generated.CronValidationInvalidExpressi
 import io.airbyte.api.problems.throwable.generated.CronValidationInvalidTimezoneProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingComponentProblem;
 import io.airbyte.api.problems.throwable.generated.CronValidationMissingCronProblem;
+import io.airbyte.commons.entitlements.EntitlementService;
+import io.airbyte.commons.entitlements.models.EntitlementResult;
+import io.airbyte.commons.entitlements.models.PlatformSubOneHourSyncFrequency;
 import io.airbyte.commons.server.converters.ApiPojoConverters;
 import io.airbyte.commons.server.handlers.helpers.CatalogConverter;
 import io.airbyte.commons.server.handlers.helpers.ConnectionScheduleHelper;
@@ -40,12 +43,15 @@ import java.util.Collections;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class ConnectionSchedulerHelperTest {
 
   private ConnectionScheduleHelper connectionScheduleHelper;
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
   private final CronExpressionHelper cronExpressionHelper = new CronExpressionHelper();
+  final EntitlementService entitlementService = mock(EntitlementService.class);
 
   private static final String EXPECTED_CRON_TIMEZONE = "UTC";
   private static final String EXPECTED_CRON_EXPRESSION = "0 0 12 * * ?";
@@ -59,7 +65,7 @@ class ConnectionSchedulerHelperTest {
     when(workspaceHelper.getOrganizationForWorkspace(WORKSPACE_ID)).thenReturn(ORGANIZATION_ID);
     final FeatureFlagClient featureFlagClient = mock(TestClient.class);
     connectionScheduleHelper =
-        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, workspaceHelper);
+        new ConnectionScheduleHelper(apiPojoConverters, cronExpressionHelper, featureFlagClient, entitlementService, workspaceHelper);
   }
 
   @Test
@@ -92,6 +98,9 @@ class ConnectionSchedulerHelperTest {
 
   @Test
   void testPopulateSyncScheduleFromCron() throws JsonValidationException, ConfigNotFoundException {
+    when(entitlementService.checkEntitlement(any(), any()))
+        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
+
     final StandardSync actual = new StandardSync();
     connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, new ConnectionScheduleData()
@@ -104,8 +113,12 @@ class ConnectionSchedulerHelperTest {
     assertNull(actual.getSchedule());
   }
 
-  @Test
-  void testScheduleValidation() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void testScheduleValidation(Boolean hasEntitlement) {
+    when(entitlementService.checkEntitlement(any(), any()))
+        .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), hasEntitlement, null));
+
     final StandardSync actual = new StandardSync();
     assertThrows(JsonValidationException.class, () -> connectionScheduleHelper.populateSyncFromScheduleTypeAndData(actual,
         ConnectionScheduleType.CRON, null));
@@ -694,6 +707,10 @@ class ConnectionSchedulerHelperTest {
     for (final String expectedTimezone : timezoneStrings) {
       try {
         final StandardSync actual = new StandardSync();
+
+        when(entitlementService.checkEntitlement(any(), any()))
+            .thenReturn(new EntitlementResult(PlatformSubOneHourSyncFrequency.INSTANCE.getId(), true, null));
+
         // NOTE: this method call is the one that parses the given timezone string
         // and will throw an exception if it isn't supported. This method is called
         // on the API handler path.
