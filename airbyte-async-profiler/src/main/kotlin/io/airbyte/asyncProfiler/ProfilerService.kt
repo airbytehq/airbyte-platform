@@ -122,22 +122,38 @@ open class ProfilerService(
     outputPath: String,
     chosenEvent: String,
     pid: Int,
-  ): List<String> =
-    listOf(
-      scriptFile.absolutePath,
-      "-f",
-      outputPath,
-      "-e",
-      chosenEvent,
-      "-d",
-      SECONDS_IN_24_HRS,
-      "-i",
-      SAMPLING_INTERVAL,
-      "-t",
-      "-o",
-      "tree",
-      pid.toString(),
+  ): List<String> {
+    val baseCommand =
+      mutableListOf(
+        scriptFile.absolutePath,
+        "-f",
+        outputPath,
+        "-e",
+        chosenEvent,
+        "-d",
+        SECONDS_IN_24_HRS,
+      )
+
+    if (chosenEvent == "wall" || chosenEvent == "lock") {
+      baseCommand.addAll(
+        listOf(
+          "-i",
+          SAMPLING_INTERVAL,
+          "-t",
+        ),
+      )
+    }
+
+    baseCommand.addAll(
+      listOf(
+        "-o",
+        "tree",
+        pid.toString(),
+      ),
     )
+
+    return baseCommand
+  }
 
   private fun logProfilerOutput(
     process: Process,
