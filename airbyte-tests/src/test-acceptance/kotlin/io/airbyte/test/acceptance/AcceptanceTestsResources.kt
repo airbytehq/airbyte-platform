@@ -24,8 +24,8 @@ import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
-import io.airbyte.featureflag.tests.TestFlagsSetter
 import io.airbyte.test.utils.AcceptanceTestHarness
+import io.airbyte.test.utils.AcceptanceTestUtils
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertRawDestinationContains
@@ -345,10 +345,9 @@ class AcceptanceTestsResources {
   fun init() {
     val airbyteApiClient =
       createAirbyteApiClient(
-        AIRBYTE_SERVER_HOST + "/api",
+        AcceptanceTestUtils.getAirbyteApiUrl(),
         Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE),
       )
-    val testFlagsSetter = TestFlagsSetter(AIRBYTE_SERVER_HOST)
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.
     // NOTE: we want to sometimes use a pre-configured workspace e.g., if we run against a production
@@ -394,7 +393,7 @@ class AcceptanceTestsResources {
     LOGGER.info("pg source definition: {}", sourceDef.dockerImageTag)
     LOGGER.info("pg destination definition: {}", destinationDef.dockerImageTag)
 
-    testHarness = AcceptanceTestHarness(apiClient = airbyteApiClient, defaultWorkspaceId = workspaceId, testFlagsSetter = testFlagsSetter)
+    testHarness = AcceptanceTestHarness(apiClient = airbyteApiClient, defaultWorkspaceId = workspaceId)
 
     testHarness.ensureCleanSlate()
   }
@@ -425,7 +424,6 @@ class AcceptanceTestsResources {
     // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
     const val CLOUD_API_USER_HEADER_VALUE: String = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID: String = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
-    val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
     val POSTGRES_SOURCE_DEF_ID: UUID = UUID.fromString("decd338e-5647-4c0b-adf4-da0e75f5a750")
     val POSTGRES_DEST_DEF_ID: UUID = UUID.fromString("25c5221d-dce2-4163-ade9-739ef790f503")
     const val KUBE: String = "KUBE"

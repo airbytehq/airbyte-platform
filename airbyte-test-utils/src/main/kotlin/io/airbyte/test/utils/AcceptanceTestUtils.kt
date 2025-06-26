@@ -54,6 +54,15 @@ object AcceptanceTestUtils {
   fun isEnterprise(): Boolean = System.getenv().getOrDefault(IS_ENTERPRISE, "false") == "true"
 
   @JvmStatic
+  fun getAirbyteApiUrl(): String {
+    val host = System.getenv("AIRBYTE_SERVER_HOST")
+    if (host.isNullOrBlank()) {
+      throw Exception("AIRBYTE_SERVER HOST is required")
+    }
+    return "$host/api"
+  }
+
+  @JvmStatic
   @JvmOverloads
   fun createAirbyteApiClient(
     basePath: String,
