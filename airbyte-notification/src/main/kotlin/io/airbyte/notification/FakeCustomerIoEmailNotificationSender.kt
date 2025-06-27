@@ -7,6 +7,7 @@ package io.airbyte.notification
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import okhttp3.OkHttpClient
+import java.util.UUID
 
 private val log = KotlinLogging.logger { }
 
@@ -15,7 +16,10 @@ private val log = KotlinLogging.logger { }
  */
 @Singleton
 class FakeCustomerIoEmailNotificationSender internal constructor() : CustomerIoEmailNotificationSender(OkHttpClient(), "") {
-  override fun callCustomerIoSendNotification(custumerIoPayload: String) {
+  override fun callCustomerIoSendNotification(
+    custumerIoPayload: String,
+    workspaceId: UUID?,
+  ) {
     log.info { "FakeCustomerIoEmailNotificationSender: callCustomerIoSendNotification: $custumerIoPayload" }
   }
 }

@@ -285,7 +285,7 @@ internal class SlackNotificationClientTest {
         diff,
       )
     Assertions.assertTrue(
-      client.notifySchemaPropagated(notification, recipient),
+      client.notifySchemaPropagated(notification, recipient, UUID.randomUUID()),
     )
   }
 
@@ -318,7 +318,7 @@ internal class SlackNotificationClientTest {
         diff,
       )
 
-    Assertions.assertTrue(client.notifySchemaDiffToApply(notification, recipient))
+    Assertions.assertTrue(client.notifySchemaDiffToApply(notification, recipient, UUID.randomUUID()))
   }
 
   @Test
@@ -350,7 +350,7 @@ internal class SlackNotificationClientTest {
         diff,
       )
 
-    Assertions.assertTrue(client.notifySchemaDiffToApplyWhenPropagationDisabled(notification, recipient))
+    Assertions.assertTrue(client.notifySchemaDiffToApplyWhenPropagationDisabled(notification, recipient, UUID.randomUUID()))
   }
 
   @Test

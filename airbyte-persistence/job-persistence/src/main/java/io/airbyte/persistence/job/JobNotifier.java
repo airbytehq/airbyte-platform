@@ -104,7 +104,7 @@ public class JobNotifier {
       final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
       notifyJob(action, job, attemptStats, workspace);
     } catch (final Exception e) {
-      LOGGER.error("Unable to read configuration:", e);
+      LOGGER.error("Unable to read configuration for jobId {}:", job.getId(), e);
     }
   }
 
@@ -229,21 +229,22 @@ public class JobNotifier {
 
   private void sendNotification(final NotificationItem notificationItem,
                                 final String notificationTrigger,
-                                final ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification) {
+                                final ThrowingFunction<NotificationClient, Boolean, Exception> executeNotification,
+                                final UUID workspaceId) {
     if (notificationItem == null) {
       // Note: we may be able to implement a log notifier to log notification message only.
-      LOGGER.info("No notification item found for the desired notification event found. Skipping notification.");
+      LOGGER.info("No notification item found for the desired notification event found. Skipping notification for workspaceId {}.", workspaceId);
       return;
     }
     final List<NotificationClient> notificationClients = getNotificationClientsFromNotificationItem(notificationItem);
     for (final NotificationClient notificationClient : notificationClients) {
       try {
         if (!executeNotification.apply(notificationClient)) {
-          LOGGER.warn("Failed to successfully notify: {}", notificationItem);
+          LOGGER.warn("Failed to successfully notify workspaceId {}: {}", workspaceId, notificationItem);
         }
         submitToMetricClient(notificationTrigger, notificationClient.getNotificationClientType());
       } catch (final Exception ex) {
-        LOGGER.error("Failed to notify: {} due to an exception. Not blocking.", notificationItem, ex);
+        LOGGER.error("Failed to notify workspaceId {}: {} due to an exception. Not blocking.", workspaceId, notificationItem, ex);
         // Do not block.
       }
     }
@@ -315,22 +316,22 @@ public class JobNotifier {
       if (FAILURE_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnFailure();
         sendNotification(notificationItem, FAILURE_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobFailure(summary, workspace.getEmail()));
+            (notificationClient) -> notificationClient.notifyJobFailure(summary, workspace.getEmail()), workspace.getWorkspaceId());
       } else if (SUCCESS_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSuccess();
         sendNotification(notificationItem, SUCCESS_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyJobSuccess(summary, workspace.getEmail()));
+            (notificationClient) -> notificationClient.notifyJobSuccess(summary, workspace.getEmail()), workspace.getWorkspaceId());
       } else if (CONNECTION_DISABLED_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabled();
         sendNotification(notificationItem, CONNECTION_DISABLED_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisabled(summary, workspace.getEmail()));
+            (notificationClient) -> notificationClient.notifyConnectionDisabled(summary, workspace.getEmail()), workspace.getWorkspaceId());
       } else if (CONNECTION_DISABLED_WARNING_NOTIFICATION.equalsIgnoreCase(action)) {
         notificationItem = notificationSettings.getSendOnSyncDisabledWarning();
         sendNotification(notificationItem, CONNECTION_DISABLED_WARNING_NOTIFICATION,
-            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(summary, workspace.getEmail()));
+            (notificationClient) -> notificationClient.notifyConnectionDisableWarning(summary, workspace.getEmail()), workspace.getWorkspaceId());
       }
     } else {
-      LOGGER.warn("Unable to send notification:  notification settings are not present.");
+      LOGGER.warn("Unable to send notification for worskpace ID {}:  notification settings are not present.", workspace.getWorkspaceId());
     }
 
     return notificationItem;

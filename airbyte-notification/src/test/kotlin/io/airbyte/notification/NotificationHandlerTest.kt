@@ -64,16 +64,16 @@ class NotificationHandlerTest {
       customerIoConfig
     }
 
-    justRun { webhookNotificationSender.sendNotification(any(), any(), any()) }
-    justRun { customerIoNotificationSender.sendNotification(any(), any(), any()) }
+    justRun { webhookNotificationSender.sendNotification(any(), any(), any(), any()) }
+    justRun { customerIoNotificationSender.sendNotification(any(), any(), any(), any()) }
 
     notificationHandler.sendNotification(connectionId, subject, message, listOf(NotificationType.WEBHOOK, NotificationType.CUSTOMERIO))
 
     verify {
       webhookConfigFetcher.fetchConfig(connectionId)
       customerIoConfigFetcher.fetchConfig(connectionId)
-      webhookNotificationSender.sendNotification(webhookConfig, subject, message)
-      customerIoNotificationSender.sendNotification(customerIoConfig, subject, message)
+      webhookNotificationSender.sendNotification(webhookConfig, subject, message, null)
+      customerIoNotificationSender.sendNotification(customerIoConfig, subject, message, null)
     }
   }
 

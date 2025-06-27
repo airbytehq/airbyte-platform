@@ -12,6 +12,7 @@ import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.io.IOException
+import java.util.UUID
 
 internal class CustomerIoNotificationSenderTest {
   private val okHttpClient: OkHttpClient = Mockito.mock(OkHttpClient::class.java)
@@ -33,7 +34,7 @@ internal class CustomerIoNotificationSenderTest {
     Mockito
       .`when`(okHttpClient.newCall(org.mockito.kotlin.anyOrNull()))
       .thenReturn(call)
-    customerIoEmailNotificationSender.sendNotification(CustomerIoEmailConfig("to"), "subject", "message")
+    customerIoEmailNotificationSender.sendNotification(CustomerIoEmailConfig("to"), "subject", "message", UUID.randomUUID())
 
     Mockito.verify(okHttpClient).newCall(org.mockito.kotlin.anyOrNull())
   }
@@ -60,6 +61,7 @@ internal class CustomerIoNotificationSenderTest {
           CustomerIoEmailConfig("to"),
           "subject",
           "message",
+          UUID.randomUUID(),
         )
       }.isInstanceOf(RuntimeException::class.java)
       .hasCauseInstanceOf(IOException::class.java)

@@ -12,12 +12,14 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.util.UUID
 
 interface NotificationSender<T> {
   fun sendNotification(
     config: T,
     subject: String,
     message: String,
+    workspaceId: UUID?,
   )
 
   fun notificationType(): NotificationType
@@ -35,6 +37,7 @@ class WebhookNotificationSender(
     config: WebhookConfig,
     subject: String,
     message: String,
+    workspaceId: UUID?,
   ) {
     val requestBody: RequestBody = """{"text": "$message"}""".toRequestBody("application/json".toMediaType())
 
