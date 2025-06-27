@@ -11,7 +11,6 @@ import io.airbyte.api.client.model.generated.DestinationDefinitionCreate
 import io.airbyte.api.client.model.generated.DestinationDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceDefinitionCreate
 import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
-import io.airbyte.test.utils.AcceptanceTestUtils
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeAll
@@ -25,6 +24,7 @@ import java.net.URI
 import java.net.URISyntaxException
 import java.security.GeneralSecurityException
 import java.util.Map
+import java.util.Optional
 import java.util.UUID
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -104,6 +104,7 @@ internal class VersioningAcceptanceTests {
   companion object {
     lateinit var apiClient2: AirbyteApiClient
     lateinit var workspaceId: UUID
+    private val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
 
     @BeforeAll
     @Throws(
@@ -114,7 +115,7 @@ internal class VersioningAcceptanceTests {
     )
     @JvmStatic
     fun setup() {
-      apiClient2 = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), Map.of())
+      apiClient2 = createAirbyteApiClient(String.format("%s/api", AIRBYTE_SERVER_HOST), Map.of())
 
       val acceptanceTestsResources = AcceptanceTestsResources()
       acceptanceTestsResources.init()

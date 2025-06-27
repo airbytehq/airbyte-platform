@@ -11,7 +11,6 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
@@ -101,6 +100,7 @@ internal class AdvancedAcceptanceTests {
 
     private var testHarness: AcceptanceTestHarness? = null
     private var workspaceId: UUID? = null
+    private val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
 
     @BeforeAll
     @Throws(Exception::class)
@@ -111,7 +111,7 @@ internal class AdvancedAcceptanceTests {
       workspaceId = acceptanceTestsResources.workspaceId
       LOGGER.info("workspaceId = {}", workspaceId)
 
-      val apiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), Map.of())
+      val apiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", Map.of())
 
       // log which connectors are being used.
       val sourceDef =

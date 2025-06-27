@@ -31,17 +31,17 @@ class DefinitionsPublicApiTests {
   private val testResources = AcceptanceTestsResources()
   private val sourceDefinitionsApi =
     PublicSourceDefinitionsApi(
-      basePath = AcceptanceTestUtils.getAirbyteApiUrl(),
+      basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
   private val destinationDefinitionsApi =
     PublicDestinationDefinitionsApi(
-      basePath = AcceptanceTestUtils.getAirbyteApiUrl(),
+      basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
   private val declarativeSourceDefinitionsApi =
     PublicDeclarativeSourceDefinitionsApi(
-      basePath = AcceptanceTestUtils.getAirbyteApiUrl(),
+      basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
 

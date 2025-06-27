@@ -28,7 +28,7 @@ class WorkspacePublicApiTests {
   val testResources = AcceptanceTestsResources()
   val apiClient =
     PublicWorkspacesApi(
-      basePath = AcceptanceTestUtils.getAirbyteApiUrl(),
+      basePath = AcceptanceTestsResources.AIRBYTE_SERVER_HOST + "/api/",
       client = AcceptanceTestUtils.createOkHttpClient(),
     )
 

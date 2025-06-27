@@ -24,7 +24,6 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Databases.listAllTables
@@ -119,6 +118,7 @@ class ConnectorBuilderTests {
 
   companion object {
     private const val ECHO_SERVER_IMAGE = "mendhak/http-https-echo:29"
+    private val airbyteServerHost: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
 
     private var apiClient: AirbyteApiClient? = null
     private var workspaceId: UUID? = null
@@ -229,7 +229,7 @@ class ConnectorBuilderTests {
     @Throws(Exception::class)
     @JvmStatic
     fun init() {
-      apiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), Map.of())
+      apiClient = createAirbyteApiClient(airbyteServerHost + "/api", Map.of())
       workspaceId =
         apiClient!!
           .workspaceApi

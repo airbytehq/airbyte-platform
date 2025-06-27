@@ -19,7 +19,6 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
 import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.TestConnectionCreate
@@ -111,7 +110,7 @@ internal class SchemaManagementTests {
   @Throws(URISyntaxException::class, IOException::class, InterruptedException::class, GeneralSecurityException::class)
   private fun init() {
     // Set up the API client.
-    val airbyteApiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), mapOf(GATEWAY_AUTH_HEADER to AIRBYTE_AUTH_HEADER))
+    val airbyteApiClient = createAirbyteApiClient(AIRBYTE_SERVER_HOST + "/api", mapOf(GATEWAY_AUTH_HEADER to AIRBYTE_AUTH_HEADER))
 
     val workspaceId =
       if (System.getenv()[AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID] == null) {
@@ -399,10 +398,15 @@ internal class SchemaManagementTests {
 
     // NOTE: this is all copied from BasicAcceptanceTests. We should refactor to have this in a single
     // place.
+    private const val IS_GKE = "IS_GKE"
     private const val GATEWAY_AUTH_HEADER = "X-Endpoint-API-UserInfo"
 
     // NOTE: this is just a base64 encoding of a jwt representing a test user in some deployments.
     private const val AIRBYTE_AUTH_HEADER = "eyJ1c2VyX2lkIjogImNsb3VkLWFwaSIsICJlbWFpbF92ZXJpZmllZCI6ICJ0cnVlIn0K"
     private const val AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID = "AIRBYTE_ACCEPTANCE_TEST_WORKSPACE_ID"
+    private val AIRBYTE_SERVER_HOST: String = Optional.ofNullable(System.getenv("AIRBYTE_SERVER_HOST")).orElse("http://localhost:8001")
+    const val A_NEW_COLUMN: String = "a_new_column"
+    const val FIELD_NAME: String = "name"
+    private const val DEFAULT_VALUE = 50
   }
 }
