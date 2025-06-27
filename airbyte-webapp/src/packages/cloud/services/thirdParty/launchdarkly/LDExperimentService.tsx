@@ -62,7 +62,7 @@ const debugFlags = isDevelopment()
   : undefined;
 
 const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string }>> = ({ children, apiKey }) => {
-  const { setFeatureOverwrites } = useFeatureService();
+  const { setFeatureFlagOverwrites } = useFeatureService();
   const ldClient = useRef<LDClient.LDClient>();
   const [state, setState] = useState<LDInitState>("initializing");
   const { user } = useAuthService();
@@ -140,7 +140,7 @@ const LDInitializationWrapper: React.FC<React.PropsWithChildren<{ apiKey: string
         .filter(([_, enabled]) => typeof enabled !== "undefined")
     );
 
-    setFeatureOverwrites(featureSet);
+    setFeatureFlagOverwrites(featureSet);
   };
 
   if (!ldClient.current) {

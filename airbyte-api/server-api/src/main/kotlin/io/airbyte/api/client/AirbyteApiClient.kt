@@ -17,6 +17,7 @@ import io.airbyte.api.client.generated.DeploymentMetadataApi
 import io.airbyte.api.client.generated.DestinationApi
 import io.airbyte.api.client.generated.DestinationDefinitionApi
 import io.airbyte.api.client.generated.DestinationDefinitionSpecificationApi
+import io.airbyte.api.client.generated.EntitlementsApi
 import io.airbyte.api.client.generated.HealthApi
 import io.airbyte.api.client.generated.JobRetryStatesApi
 import io.airbyte.api.client.generated.JobsApi
@@ -86,6 +87,7 @@ open class AirbyteApiClient(
   val destinationDefinitionApi = DestinationDefinitionApi(basePath = basePath, client = httpClient, policy = policy)
   val destinationDefinitionSpecificationApi =
     DestinationDefinitionSpecificationApi(basePath = basePath, client = httpClient, policy = policy)
+  val entitlementsApi = EntitlementsApi(basePath = basePath, client = httpClient, policy = policy)
   val healthApi = HealthApi(basePath = basePath, client = httpClient, policy = policy)
   val jobsApi = JobsApi(basePath = basePath, client = httpClient, policy = policy)
   val jobRetryStatesApi = JobRetryStatesApi(basePath = basePath, client = httpClient, policy = policy)

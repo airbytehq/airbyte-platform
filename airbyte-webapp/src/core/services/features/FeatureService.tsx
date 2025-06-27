@@ -6,7 +6,8 @@ import { FeatureItem, FeatureSet } from "./types";
 
 interface FeatureServiceContext {
   features: FeatureItem[];
-  setFeatureOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
+  setFeatureFlagOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
+  setEntitlementOverwrites: (features: FeatureItem[] | FeatureSet | undefined) => void;
 }
 
 const featureServiceContext = React.createContext<FeatureServiceContext | null>(null);
@@ -39,7 +40,11 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   children,
 }) => {
   const hasWindowOverwrites = isCypress && window.hasOwnProperty("_e2eFeatureOverwrites");
-  const [overwrittenFeatures, setOverwrittenFeaturesState] = useState<FeatureSet>(
+  const [featureFlagOverwrites, setFeatureFlagOverwrites] = useState<FeatureSet>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    hasWindowOverwrites ? (window as any)._e2eFeatureOverwrites : {}
+  );
+  const [entitlementOverwrites, setEntitlementOverwrites] = useState<FeatureSet>(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     hasWindowOverwrites ? (window as any)._e2eFeatureOverwrites : {}
   );
@@ -67,7 +72,8 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
   const combinedFeatures = useMemo(() => {
     const combined: FeatureSet = {
       ...featureSetFromList(defaultFeatures),
-      ...overwrittenFeatures,
+      ...entitlementOverwrites,
+      ...featureFlagOverwrites,
       ...envOverwrites,
     };
 
@@ -75,18 +81,23 @@ export const FeatureService: React.FC<React.PropsWithChildren<FeatureServiceProp
       .filter(([, enabled]) => enabled)
       .map(([id]) => id) as FeatureItem[];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overwrittenFeatures, instanceConfig, ...defaultFeatures]);
+  }, [featureFlagOverwrites, entitlementOverwrites, instanceConfig, ...defaultFeatures]);
 
-  const setFeatureOverwrites = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
-    setOverwrittenFeaturesState(Array.isArray(features) ? featureSetFromList(features) : features);
+  const setFeatureFlagOverwritesState = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
+    setFeatureFlagOverwrites(Array.isArray(features) ? featureSetFromList(features) : features);
+  }, []);
+
+  const setEntitlementOverwritesState = useCallback((features: FeatureItem[] | FeatureSet | undefined = {}) => {
+    setEntitlementOverwrites(Array.isArray(features) ? featureSetFromList(features) : features);
   }, []);
 
   const serviceContext = useMemo(
     (): FeatureServiceContext => ({
       features: combinedFeatures,
-      setFeatureOverwrites,
+      setFeatureFlagOverwrites: setFeatureFlagOverwritesState,
+      setEntitlementOverwrites: setEntitlementOverwritesState,
     }),
-    [combinedFeatures, setFeatureOverwrites]
+    [combinedFeatures, setFeatureFlagOverwritesState, setEntitlementOverwritesState]
   );
 
   return <featureServiceContext.Provider value={serviceContext}>{children}</featureServiceContext.Provider>;

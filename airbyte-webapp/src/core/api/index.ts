@@ -7,4 +7,6 @@ export * from "./errors";
 export * from "./hooks";
 
 // Export getWebappConfig to be used in ConfigContextProvider
-export { getWebappConfig } from "./generated/AirbyteClient";
+export { getWebappConfig, getEntitlements } from "./generated/AirbyteClient";
+
+export { useRequestOptions } from "./useRequestOptions";

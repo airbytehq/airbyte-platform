@@ -7,6 +7,7 @@ import LoadingPage from "components/LoadingPage";
 import MainLayout from "area/layout/MainLayout";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useInvalidateAllWorkspaceScopeOnChange } from "core/api";
+import { AirbyteEntitlementProvider } from "core/services/airbyte/EntitlementService";
 import { useAnalyticsIdentifyUser, useAnalyticsRegisterValues } from "core/services/analytics/useAnalyticsService";
 import { useAuthService } from "core/services/auth";
 import { storeConnectorChatBuilderFromQuery } from "core/utils/connectorChatBuilderStorage";
@@ -57,7 +58,7 @@ const CloudMainViewRoutes = () => {
         <>
           {/* embedded onboarding occurs within an organization, hence the `/organizations` routing here.
               HOWEVER, we do not want it to show the org picker, org sidebar, etc., so it lives outside
-              of the `MainLayout` 
+              of the `MainLayout`
           */}
           <Route path={RoutePaths.EmbeddedOnboarding} element={<EmbeddedOnboardingRedirect />} />
           <Route
@@ -146,45 +147,47 @@ export const Routing: React.FC = () => {
   }
 
   return (
-    <LDExperimentServiceProvider>
-      <Suspense fallback={<LoadingPage />}>
-        <Routes>
-          <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
-          <Route
-            path="*"
-            element={
-              <>
-                {/* All routes for non logged in users */}
-                {!user && (
-                  <AuthLayout>
-                    <Suspense fallback={<LoadingPage />}>
-                      <Routes>
-                        <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
-                        <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
-                        {showEmbeddedContent ? (
-                          <>
-                            <Route path={CloudRoutes.Login} element={<EmbeddedLoginPage />} />
-                            <Route path={CloudRoutes.Signup} element={<EmbeddedSignupPage />} />
-                          </>
-                        ) : (
-                          <>
-                            <Route path={CloudRoutes.Login} element={<LoginPage />} />
-                            <Route path={CloudRoutes.Signup} element={<SignupPage />} />
-                          </>
-                        )}
-                        {/* In case a not logged in user tries to access anything else navigate them to login */}
-                        <Route path="*" element={<Navigate to={loginRedirectTo} />} />
-                      </Routes>
-                    </Suspense>
-                  </AuthLayout>
-                )}
-                {/* Allow all regular routes if the user is logged in */}
-                {user && <CloudMainViewRoutes />}
-              </>
-            }
-          />
-        </Routes>
-      </Suspense>
-    </LDExperimentServiceProvider>
+    <AirbyteEntitlementProvider>
+      <LDExperimentServiceProvider>
+        <Suspense fallback={<LoadingPage />}>
+          <Routes>
+            <Route path={`/${RoutePaths.EmbeddedWidget}`} element={<EmbeddedSourceCreatePage />} />
+            <Route
+              path="*"
+              element={
+                <>
+                  {/* All routes for non logged in users */}
+                  {!user && (
+                    <AuthLayout>
+                      <Suspense fallback={<LoadingPage />}>
+                        <Routes>
+                          <Route path={CloudRoutes.SsoBookmark} element={<SSOBookmarkPage />} />
+                          <Route path={CloudRoutes.Sso} element={<SSOIdentifierPage />} />
+                          {showEmbeddedContent ? (
+                            <>
+                              <Route path={CloudRoutes.Login} element={<EmbeddedLoginPage />} />
+                              <Route path={CloudRoutes.Signup} element={<EmbeddedSignupPage />} />
+                            </>
+                          ) : (
+                            <>
+                              <Route path={CloudRoutes.Login} element={<LoginPage />} />
+                              <Route path={CloudRoutes.Signup} element={<SignupPage />} />
+                            </>
+                          )}
+                          {/* In case a not logged in user tries to access anything else navigate them to login */}
+                          <Route path="*" element={<Navigate to={loginRedirectTo} />} />
+                        </Routes>
+                      </Suspense>
+                    </AuthLayout>
+                  )}
+                  {/* Allow all regular routes if the user is logged in */}
+                  {user && <CloudMainViewRoutes />}
+                </>
+              }
+            />
+          </Routes>
+        </Suspense>
+      </LDExperimentServiceProvider>
+    </AirbyteEntitlementProvider>
   );
 };
