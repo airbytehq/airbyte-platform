@@ -111,7 +111,7 @@ open class DestinationApiController(
     }
 
   @Post(uri = "/write_discover_catalog_result")
-  @Secured(AuthRoleConstants.ADMIN)
+  @Secured(AuthRoleConstants.ADMIN, AuthRoleConstants.DATAPLANE)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun writeDestinationDiscoverCatalogResult(
     @Body discoverWriteRequestBody: DestinationDiscoverSchemaWriteRequestBody,
