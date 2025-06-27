@@ -56,7 +56,7 @@ export const links = {
   connectorSpecificationDocs: `${BASE_DOCS_LINK}/connector-development/connector-specification-reference/#airbyte-modifications-to-jsonschema`,
   schemaChangeManagement: `${BASE_DOCS_LINK}/using-airbyte/schema-change-management`,
   apiAccess: `${BASE_DOCS_LINK}/using-airbyte/configuring-api-access`,
-  deployingViaHttp: `${BASE_DOCS_LINK}/using-airbyte/getting-started/oss-quickstart#running-over-http`,
+  deployingViaHttp: `${BASE_DOCS_LINK}/deploying-airbyte/abctl-ec2#running-over-http`,
   ossAuthentication: `${BASE_DOCS_LINK}/deploying-airbyte/integrations/authentication`,
   featureTalkToSales:
     "https://airbyte.com/company/talk-to-sales?utm_source=airbyte&utm_medium=product&utm_content=feature-{feature}",
