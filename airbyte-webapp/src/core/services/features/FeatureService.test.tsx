@@ -21,11 +21,10 @@ interface FeatureOverwrites {
 const getFeatures = (initialProps: FeatureOverwrites) => {
   return renderHook(
     ({ overwrite }: React.PropsWithChildren<FeatureOverwrites>) => {
-      const { features, setFeatureFlagOverwrites, setEntitlementOverwrites } = useFeatureService();
+      const { features, setFeatureOverwrites } = useFeatureService();
       useEffect(() => {
-        setFeatureFlagOverwrites(overwrite);
-        setEntitlementOverwrites(overwrite);
-      }, [overwrite, setFeatureFlagOverwrites, setEntitlementOverwrites]);
+        setFeatureOverwrites(overwrite);
+      }, [overwrite, setFeatureOverwrites]);
       return features;
     },
     { wrapper, initialProps }
@@ -55,98 +54,6 @@ describe("Feature Service", () => {
       expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
       rerender({ overwrite: undefined });
       expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
-    });
-
-    describe("entitlement overwrites", () => {
-      it("should allow setting entitlement overwrites", () => {
-        const { result } = renderHook(
-          () => {
-            const { features, setEntitlementOverwrites } = useFeatureService();
-            useEffect(() => {
-              setEntitlementOverwrites({ [FeatureItem.AllowUploadCustomImage]: true });
-            }, [setEntitlementOverwrites]);
-            return features;
-          },
-          { wrapper }
-        );
-        expect(result.current.sort()).toEqual([
-          FeatureItem.AllowDBTCloudIntegration,
-          FeatureItem.AllowUploadCustomImage,
-        ]);
-      });
-
-      it("should allow clearing entitlement overwrites", () => {
-        const { result, rerender } = renderHook(
-          ({ overwrite }: { overwrite?: FeatureSet }) => {
-            const { features, setEntitlementOverwrites } = useFeatureService();
-            useEffect(() => {
-              setEntitlementOverwrites(overwrite ?? {});
-            }, [overwrite, setEntitlementOverwrites]);
-            return features;
-          },
-          {
-            wrapper,
-            initialProps: {
-              overwrite: { [FeatureItem.AllowUploadCustomImage]: true } as FeatureSet,
-            },
-          }
-        );
-        expect(result.current.sort()).toEqual([
-          FeatureItem.AllowDBTCloudIntegration,
-          FeatureItem.AllowUploadCustomImage,
-        ]);
-        rerender({ overwrite: {} as FeatureSet });
-        expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
-      });
-
-      it("should merge feature flag and entitlement overwrites", () => {
-        const { result } = renderHook(
-          () => {
-            const { features, setFeatureFlagOverwrites, setEntitlementOverwrites } = useFeatureService();
-            useEffect(() => {
-              setFeatureFlagOverwrites({ [FeatureItem.AllowUploadCustomImage]: true });
-              setEntitlementOverwrites({ [FeatureItem.AllowUpdateConnectors]: true });
-            }, [setFeatureFlagOverwrites, setEntitlementOverwrites]);
-            return features;
-          },
-          { wrapper }
-        );
-        expect(result.current.sort()).toEqual([
-          FeatureItem.AllowDBTCloudIntegration,
-          FeatureItem.AllowUpdateConnectors,
-          FeatureItem.AllowUploadCustomImage,
-        ]);
-      });
-
-      it("should prioritize feature flag overwrites over entitlement overwrites when ff disabled", () => {
-        const { result } = renderHook(
-          () => {
-            const { features, setFeatureFlagOverwrites, setEntitlementOverwrites } = useFeatureService();
-            useEffect(() => {
-              setFeatureFlagOverwrites({ [FeatureItem.AllowDBTCloudIntegration]: false });
-              setEntitlementOverwrites({ [FeatureItem.AllowDBTCloudIntegration]: true });
-            }, [setFeatureFlagOverwrites, setEntitlementOverwrites]);
-            return features;
-          },
-          { wrapper }
-        );
-        expect(result.current.sort()).toEqual([]);
-      });
-
-      it("should prioritize feature flag overwrites over entitlement overwrites when ff enabled", () => {
-        const { result } = renderHook(
-          () => {
-            const { features, setFeatureFlagOverwrites, setEntitlementOverwrites } = useFeatureService();
-            useEffect(() => {
-              setFeatureFlagOverwrites({ [FeatureItem.AllowDBTCloudIntegration]: true });
-              setEntitlementOverwrites({ [FeatureItem.AllowDBTCloudIntegration]: false });
-            }, [setFeatureFlagOverwrites, setEntitlementOverwrites]);
-            return features;
-          },
-          { wrapper }
-        );
-        expect(result.current.sort()).toEqual([FeatureItem.AllowDBTCloudIntegration]);
-      });
     });
 
     describe("env variable overwrites", () => {
