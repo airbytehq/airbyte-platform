@@ -25,6 +25,7 @@ airbyte:
       oidc:
         domain: ${OIDC_DOMAIN:}
         app-name: ${OIDC_APP_NAME:}
+        display-name: ${OIDC_DISPLAY_NAME:}
         client-id: ${OIDC_CLIENT_ID:}
         client-secret: ${OIDC_CLIENT_SECRET:}
     initial-user:
@@ -54,5 +55,6 @@ logger:
     io.fabric8.kubernetes.client: INFO
     io.netty: INFO
     io.temporal: INFO
+    io.airbyte.keycloak: ${LOG_LEVEL:INFO}
 #   Uncomment to help resolve issues with conditional beans
 #      io.micronaut.context.condition: DEBUG
