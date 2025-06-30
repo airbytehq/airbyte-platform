@@ -231,7 +231,7 @@ export const useUpdatePartialUserConfig = () => {
   const { registerNotification } = useNotificationService();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const useSonarServerEnabled = true;
+  const useSonarServerEnabled = useExperiment("embedded.useSonarServer");
   return useMutation(
     (partialUserConfigUpdate: PartialUserConfigUpdate) => {
       if (useSonarServerEnabled) {
