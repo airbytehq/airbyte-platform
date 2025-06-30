@@ -31,8 +31,7 @@ export const createFormDefaultValues = (syncCatalog: AirbyteCatalog): DataActiva
           sourceSyncMode: stream.config.syncMode,
           destinationSyncMode: stream.config.destinationSyncMode,
           fields: inferFieldsFromConfig(stream.config),
-          primaryKey:
-            stream.config.primaryKey && stream.config.primaryKey[0] ? stream.config.primaryKey[0].join(".") : null,
+          matchingKeys: stream.config.primaryKey !== undefined ? stream.config.primaryKey.flat() : null,
           cursorField: stream.config.cursorField ? stream.config.cursorField[0] || null : null,
         };
       }),
@@ -72,6 +71,6 @@ export const EMPTY_STREAM: DataActivationStream = {
   sourceSyncMode: null,
   destinationSyncMode: null,
   fields: [EMPTY_FIELD],
-  primaryKey: null,
+  matchingKeys: null,
   cursorField: null,
 };

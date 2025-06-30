@@ -6,6 +6,10 @@
   grid-template-columns: 30px 1fr 20px 1fr;
   gap: variables.$spacing-md;
 
+  &__addField {
+    grid-column: 1 / -1;
+  }
+
   &__container {
     position: relative;
   }

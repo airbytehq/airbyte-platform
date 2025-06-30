@@ -1,6 +1,6 @@
 @use "scss/variables";
 
-.fieldMappings {
+.fieldMapping {
   &__leftGutter {
     grid-column: 1;
     height: variables.$form-input-height;

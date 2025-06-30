@@ -57,6 +57,8 @@
 
   &__children {
     min-width: 0;
+    display: flex;
+    gap: variables.$spacing-md;
   }
 
   &__caret {

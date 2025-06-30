@@ -1,9 +1,8 @@
 import { useMemo } from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormControl } from "components/forms/FormControl";
-import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -13,48 +12,9 @@ import { Tooltip } from "components/ui/Tooltip";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { AirbyteCatalog, DestinationCatalog } from "core/api/types/AirbyteClient";
 
-import styles from "./FieldMappings.module.scss";
+import styles from "./FieldMapping.module.scss";
 
-interface FieldMappingsProps {
-  destinationCatalog: DestinationCatalog;
-  sourceCatalog: AirbyteCatalog;
-  streamIndex: number;
-}
-
-export const FieldMappings: React.FC<FieldMappingsProps> = ({ destinationCatalog, sourceCatalog, streamIndex }) => {
-  const { control } = useFormContext<DataActivationConnectionFormValues>();
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: `streams.${streamIndex}.fields`,
-  });
-
-  return (
-    <>
-      {fields.map((_field, index) => (
-        <Field
-          destinationCatalog={destinationCatalog}
-          sourceCatalog={sourceCatalog}
-          key={_field.id}
-          streamIndex={streamIndex}
-          fieldIndex={index}
-          removeField={fields.length > 1 ? () => remove(index) : undefined}
-        />
-      ))}
-      <Box py="sm" className={styles.fieldMappings__addField}>
-        <Button
-          icon="plus"
-          variant="secondary"
-          type="button"
-          onClick={() => append({ sourceFieldName: "", destinationFieldName: "" })}
-        >
-          <FormattedMessage id="connection.create.addField" />
-        </Button>
-      </Box>
-    </>
-  );
-};
-
-interface FieldProps {
+interface FieldMappingProps {
   destinationCatalog: DestinationCatalog;
   fieldIndex: number;
   removeField?: () => void;
@@ -62,7 +22,13 @@ interface FieldProps {
   streamIndex: number;
 }
 
-const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sourceCatalog, destinationCatalog }) => {
+export const FieldMapping: React.FC<FieldMappingProps> = ({
+  streamIndex,
+  fieldIndex,
+  removeField,
+  sourceCatalog,
+  destinationCatalog,
+}) => {
   const { formatMessage } = useIntl();
   const sourceStreamDescriptor = useWatch<
     DataActivationConnectionFormValues,
@@ -75,6 +41,9 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
       name: `streams.${streamIndex}.destinationObjectName`,
     }
   );
+  const matchingKeys = useWatch<DataActivationConnectionFormValues, `streams.${number}.matchingKeys`>({
+    name: `streams.${streamIndex}.matchingKeys`,
+  });
   const destinationSyncMode = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationSyncMode`>({
     name: `streams.${streamIndex}.destinationSyncMode`,
   });
@@ -138,14 +107,16 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
       });
   }, [selectedDestinationOperation?.schema?.properties, selectedFieldNames.destinationFields]);
 
+  const isPartOfMatchingKey = matchingKeys?.includes(fields[fieldIndex].destinationFieldName);
+
   return (
     <>
-      <FlexContainer className={styles.fieldMappings__leftGutter} alignItems="center">
+      <FlexContainer className={styles.fieldMapping__leftGutter} alignItems="center">
         <Text size="lg">
           <FormattedMessage id="connection.create.map" />
         </Text>
       </FlexContainer>
-      <div className={styles.fieldMappings__source}>
+      <div className={styles.fieldMapping__source}>
         <FormControl<DataActivationConnectionFormValues>
           options={availableSourceFieldOptions}
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
@@ -153,20 +124,20 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
           reserveSpaceForError={false}
         />
       </div>
-      <div className={styles.fieldMappings__arrow}>
+      <div className={styles.fieldMapping__arrow}>
         <Icon type="arrowRight" size="lg" color="action" />
       </div>
-      <FlexContainer className={styles.fieldMappings__destination} alignItems="flex-start">
+      <FlexContainer className={styles.fieldMapping__destination} alignItems="flex-start">
         <FlexItem grow>
           <FlexContainer direction="column">
             <Tooltip
-              disabled={!!destinationSyncMode}
+              disabled={!!destinationSyncMode && !isPartOfMatchingKey}
               control={
                 <FlexItem grow>
                   <FormControl<DataActivationConnectionFormValues>
                     options={availableDestinationFieldOptions}
                     name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
-                    disabled={!destinationSyncMode}
+                    disabled={!destinationSyncMode || isPartOfMatchingKey}
                     fieldType="dropdown"
                     reserveSpaceForError={false}
                   />
@@ -176,18 +147,27 @@ const Field: React.FC<FieldProps> = ({ streamIndex, fieldIndex, removeField, sou
               {!destinationSyncMode && (
                 <FormattedMessage id="connection.dataActivation.selectDestinationSyncModeFirst" />
               )}
+              {isPartOfMatchingKey && <FormattedMessage id="connection.dataActivation.requiredMatchingKey" />}
             </Tooltip>
           </FlexContainer>
         </FlexItem>
         {removeField && (
-          <div className={styles.fieldMappings__removeField}>
-            <Button
-              variant="clear"
-              icon="trash"
-              type="button"
-              onClick={removeField}
-              aria-label={formatMessage({ id: "connection.create.removeField" })}
-            />
+          <div className={styles.fieldMapping__removeField}>
+            <Tooltip
+              disabled={!isPartOfMatchingKey}
+              control={
+                <Button
+                  disabled={isPartOfMatchingKey}
+                  variant="clear"
+                  icon="trash"
+                  type="button"
+                  onClick={removeField}
+                  aria-label={formatMessage({ id: "connection.create.removeField" })}
+                />
+              }
+            >
+              <FormattedMessage id="connection.dataActivation.requiredMatchingKey" />
+            </Tooltip>
           </div>
         )}
       </FlexContainer>

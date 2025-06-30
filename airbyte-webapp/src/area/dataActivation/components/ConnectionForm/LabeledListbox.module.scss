@@ -1,0 +1,31 @@
+.labeledListbox {
+  min-width: 0;
+
+  &__button {
+    overflow: hidden;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    height: 16px;
+    width: 16px;
+  }
+
+  &__value {
+    flex-shrink: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__label {
+    flex-shrink: 0;
+    margin-right: auto;
+  }
+
+  &__optionLabel {
+    word-break: break-all;
+    margin-right: auto;
+  }
+}

@@ -70,10 +70,10 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
                 return;
               }
               if (value === DestinationSyncMode.append) {
-                setValue(`streams.${streamIndex}.primaryKey`, null);
+                setValue(`streams.${streamIndex}.matchingKeys`, null);
               }
               if (value === DestinationSyncMode.append_dedup) {
-                setValue(`streams.${streamIndex}.primaryKey`, "");
+                setValue(`streams.${streamIndex}.matchingKeys`, null);
               }
               field.onChange(value);
             }}
