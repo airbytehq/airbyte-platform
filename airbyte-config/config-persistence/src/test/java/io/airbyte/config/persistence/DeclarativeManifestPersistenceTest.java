@@ -21,7 +21,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;

@@ -187,8 +187,8 @@ internal class StreamStatusesHandlerTest {
         .runState(JobStreamStatusRunState.complete)
         .build()
 
-    val jobOne = Job(1, JobConfig.ConfigType.SYNC, connectionId.toString(), null, listOf(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true)
-    val jobTwo = Job(2, JobConfig.ConfigType.SYNC, connectionId.toString(), null, listOf(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true)
+    val jobOne = Job(1, JobConfig.ConfigType.SYNC, connectionId.toString(), JobConfig(), listOf(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true)
+    val jobTwo = Job(2, JobConfig.ConfigType.SYNC, connectionId.toString(), JobConfig(), listOf(), JobStatus.SUCCEEDED, 0L, 0L, 0L, true)
 
     val jobOneBytesCommitted = 12345L
     val jobOneBytesEmitted = 23456L

@@ -47,30 +47,30 @@ fun EntityJobStatus.toConfig(): ModelJobStatus =
 
 fun EntityJobWithAssociations.toConfigModel(): ModelJob =
   ModelJob(
-    this.id!!,
-    this.configType?.toConfig(),
+    this.id,
+    this.configType.toConfig(),
     this.scope,
     Jsons.`object`(this.config, JobConfig::class.java),
     this.attempts?.map { it.toConfigModel() } ?: emptyList(),
-    this.status?.toConfig(),
+    this.status.toConfig(),
     startedAt?.toEpochSecond(),
-    createdAt?.toEpochSecond() ?: 0,
-    updatedAt?.toEpochSecond() ?: 0,
-    this.isScheduled ?: true,
+    createdAt.toEpochSecond(),
+    updatedAt.toEpochSecond(),
+    this.isScheduled,
   )
 
 fun EntityJob.toConfigModel(): ModelJob =
   ModelJob(
-    this.id!!,
-    this.configType?.toConfig(),
+    this.id,
+    this.configType.toConfig(),
     this.scope,
     Jsons.`object`(this.config, JobConfig::class.java),
     emptyList(),
-    this.status?.toConfig(),
+    this.status.toConfig(),
     startedAt?.toEpochSecond(),
-    createdAt?.toEpochSecond() ?: 0,
-    updatedAt?.toEpochSecond() ?: 0,
-    this.isScheduled ?: true,
+    createdAt.toEpochSecond(),
+    updatedAt.toEpochSecond(),
+    this.isScheduled,
   )
 
 fun ModelJob.toEntity(): EntityJob =
@@ -80,9 +80,10 @@ fun ModelJob.toEntity(): EntityJob =
     this.scope,
     Jsons.jsonNode(config),
     Enums.convertTo(this.status, JobStatus::class.java),
-    if (startedAtInSecond.isPresent) OffsetDateTime.ofInstant(Instant.ofEpochSecond(startedAtInSecond.get()), ZoneOffset.UTC) else null,
+    startedAtInSecond?.let { OffsetDateTime.ofInstant(Instant.ofEpochSecond(it), ZoneOffset.UTC) },
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(createdAtInSecond), ZoneOffset.UTC),
     OffsetDateTime.ofInstant(Instant.ofEpochSecond(updatedAtInSecond), ZoneOffset.UTC),
+    false,
   )
 
 fun EntityConfigType.toConfig(): ModelConfigType =

@@ -22,6 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.yaml.Yamls;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
@@ -31,7 +32,7 @@ import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -114,7 +115,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, workspaceId));
   }
 
   /**
@@ -153,7 +154,8 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public StandardWorkspace getWorkspaceBySlug(final String slug, final boolean includeTombstone) throws IOException, ConfigNotFoundException {
-    return getWorkspaceBySlugOptional(slug, includeTombstone).orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, slug));
+    return getWorkspaceBySlugOptional(slug, includeTombstone)
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, slug));
   }
 
   /**
@@ -429,7 +431,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
         .map(DbConverter::buildWorkspaceServiceAccount)
         .stream()
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.WORKSPACE_SERVICE_ACCOUNT, workspaceId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.WORKSPACE_SERVICE_ACCOUNT, workspaceId));
   }
 
   /**
@@ -589,7 +591,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   public SourceConnection getSourceConnection(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
     return listSourceQuery(Optional.of(sourceId))
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceId));
   }
 
   /**

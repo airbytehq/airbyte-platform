@@ -145,7 +145,7 @@ public class ConnectionTimelineEventHelper {
 
   @VisibleForTesting
   LoadedStats buildLoadedStats(final Job job, final List<AttemptStats> attemptStats) {
-    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    final var configuredCatalog = new JobConfigProxy(job.config).getConfiguredCatalog();
     final List<ConfiguredAirbyteStream> streams = configuredCatalog != null ? configuredCatalog.getStreams() : List.of();
 
     long bytesLoaded = 0;
@@ -172,18 +172,18 @@ public class ConnectionTimelineEventHelper {
     try {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
       final FinalStatusEvent event = new FinalStatusEvent(
-          job.getId(),
-          job.getCreatedAtInSecond(),
-          job.getUpdatedAtInSecond(),
+          job.id,
+          job.createdAtInSecond,
+          job.updatedAtInSecond,
           stats.bytes,
           stats.records,
           job.getAttemptsCount(),
-          job.getConfigType().name(),
+          job.configType.name(),
           JobStatus.SUCCEEDED.name(),
           JobConverter.getStreamsAssociatedWithJob(job));
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
-      LOGGER.error("Failed to persist timeline event for job: {}", job.getId(), e);
+      LOGGER.error("Failed to persist timeline event for job: {}", job.id, e);
     }
   }
 
@@ -196,19 +196,19 @@ public class ConnectionTimelineEventHelper {
           lastAttemptFailureSummary.flatMap(summary -> summary.getFailures().stream().findFirst());
       final String jobEventFailureStatus = stats.bytes > 0 ? FinalStatus.INCOMPLETE.name() : FinalStatus.FAILED.name();
       final FailedEvent event = new FailedEvent(
-          job.getId(),
-          job.getCreatedAtInSecond(),
-          job.getUpdatedAtInSecond(),
+          job.id,
+          job.createdAtInSecond,
+          job.updatedAtInSecond,
           stats.bytes,
           stats.records,
           job.getAttemptsCount(),
-          job.getConfigType().name(),
+          job.configType.name(),
           jobEventFailureStatus,
           JobConverter.getStreamsAssociatedWithJob(job),
           firstFailureReasonOfLastAttempt);
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
-      LOGGER.error("Failed to persist timeline event for job: {}", job.getId(), e);
+      LOGGER.error("Failed to persist timeline event for job: {}", job.id, e);
     }
   }
 
@@ -218,18 +218,18 @@ public class ConnectionTimelineEventHelper {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
 
       final FinalStatusEvent event = new FinalStatusEvent(
-          job.getId(),
-          job.getCreatedAtInSecond(),
-          job.getUpdatedAtInSecond(),
+          job.id,
+          job.createdAtInSecond,
+          job.updatedAtInSecond,
           stats.bytes,
           stats.records,
           job.getAttemptsCount(),
-          job.getConfigType().name(),
+          job.configType.name(),
           io.airbyte.config.JobStatus.CANCELLED.name(),
           JobConverter.getStreamsAssociatedWithJob(job));
-      connectionTimelineEventService.writeEvent(UUID.fromString(job.getScope()), event, getCurrentUserIdIfExist());
+      connectionTimelineEventService.writeEvent(UUID.fromString(job.scope), event, getCurrentUserIdIfExist());
     } catch (final Exception e) {
-      LOGGER.error("Failed to persist job cancelled event for job: {}", job.getId(), e);
+      LOGGER.error("Failed to persist job cancelled event for job: {}", job.id, e);
     }
   }
 

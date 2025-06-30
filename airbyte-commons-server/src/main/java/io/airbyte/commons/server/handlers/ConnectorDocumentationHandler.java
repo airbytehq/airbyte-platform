@@ -13,7 +13,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.validation.json.JsonValidationException;
@@ -50,7 +50,7 @@ public class ConnectorDocumentationHandler {
   }
 
   public ConnectorDocumentationRead getConnectorDocumentation(final ConnectorDocumentationRequestBody request)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
     final ActorDefinitionVersion actorDefinitionVersion = request.getActorType().equals(ActorType.SOURCE)
         ? getSourceActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId())
         : getDestinationActorDefinitionVersion(request.getActorDefinitionId(), request.getWorkspaceId(), request.getActorId());
@@ -80,7 +80,7 @@ public class ConnectorDocumentationHandler {
   private ActorDefinitionVersion getDestinationActorDefinitionVersion(final UUID destDefinitionId,
                                                                       final UUID workspaceId,
                                                                       @Nullable final UUID destId)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
     final StandardDestinationDefinition destDefinition = destinationService.getStandardDestinationDefinition(destDefinitionId);
     return actorDefinitionVersionHelper.getDestinationVersion(destDefinition, workspaceId, destId);
   }

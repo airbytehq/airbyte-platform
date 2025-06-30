@@ -9,7 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import org.junit.Test;

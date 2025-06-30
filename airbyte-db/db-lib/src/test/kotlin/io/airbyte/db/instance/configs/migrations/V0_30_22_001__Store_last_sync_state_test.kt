@@ -49,12 +49,12 @@ internal class V0_30_22_001__Store_last_sync_state_test : AbstractConfigsDatabas
 
     // when there is database environment variable, return the database
     val configs = Mockito.mock(Configs::class.java)
-    Mockito.`when`(configs.databaseUser).thenReturn(container!!.username)
-    Mockito.`when`(configs.databasePassword).thenReturn(container!!.password)
-    Mockito.`when`(configs.databaseUrl).thenReturn(container!!.jdbcUrl)
+    Mockito.`when`(configs.getDatabaseUser()).thenReturn(container!!.username)
+    Mockito.`when`(configs.getDatabasePassword()).thenReturn(container!!.password)
+    Mockito.`when`(configs.getDatabaseUrl()).thenReturn(container!!.jdbcUrl)
 
     Assertions.assertNotNull(
-      getJobsDatabase(configs.databaseUser, configs.databasePassword, configs.databaseUrl),
+      getJobsDatabase(configs.getDatabaseUser(), configs.getDatabasePassword(), configs.getDatabaseUrl()),
     )
   }
 

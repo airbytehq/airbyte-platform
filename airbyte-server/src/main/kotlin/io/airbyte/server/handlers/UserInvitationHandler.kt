@@ -19,13 +19,13 @@ import io.airbyte.commons.server.errors.ConflictException
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.config.AuthenticatedUser
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.InvitationStatus
 import io.airbyte.config.Permission
 import io.airbyte.config.User
 import io.airbyte.config.UserInvitation
 import io.airbyte.config.persistence.UserPersistence
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.InvitationDuplicateException
 import io.airbyte.data.services.InvitationPermissionOverlapException
 import io.airbyte.data.services.InvitationStatusUnexpectedException
@@ -305,7 +305,7 @@ class UserInvitationHandler(
           .getOrganization(req.scopeId)
           .orElseThrow {
             ConfigNotFoundException(
-              ConfigSchema.ORGANIZATION,
+              ConfigNotFoundType.ORGANIZATION,
               req.scopeId,
             )
           }.name

@@ -20,7 +20,7 @@ import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
-import io.airbyte.config.JobStatus.TERMINAL_STATUSES
+import io.airbyte.config.JobStatus.Companion.TERMINAL_STATUSES
 import io.airbyte.config.JobSyncConfig
 import io.airbyte.config.JobTypeResourceLimit
 import io.airbyte.config.ResourceRequirements
@@ -69,7 +69,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.server.exceptions.NotFoundException
 import jakarta.inject.Singleton
 import java.util.UUID
-import kotlin.jvm.optionals.getOrNull
 
 val log = KotlinLogging.logger { }
 
@@ -226,7 +225,7 @@ class JobInputService(
     currentJob: Job,
     currentAttempt: Attempt,
   ): JobConfigData {
-    val isDeprecatedFileTransfer = isDeprecatedFileTransfer(currentAttempt.syncConfig.map { it.sourceConfiguration }.getOrNull())
+    val isDeprecatedFileTransfer = isDeprecatedFileTransfer(currentAttempt.syncConfig?.sourceConfiguration)
     return when (currentJob.config.configType) {
       JobConfig.ConfigType.SYNC -> {
         val includeFiles =
@@ -533,8 +532,8 @@ class JobInputService(
       oAuthConfigSupplier.injectDestinationOAuthParameters(
         destinationDefinition.destinationDefinitionId,
         destination!!.destinationId,
-        destination!!.workspaceId,
-        destination!!.configuration,
+        destination.workspaceId,
+        destination.configuration,
       )
 
     return buildJobCheckConnectionConfig(

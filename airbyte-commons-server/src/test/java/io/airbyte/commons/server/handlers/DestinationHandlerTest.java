@@ -126,7 +126,7 @@ class DestinationHandlerTest {
 
   @SuppressWarnings("unchecked")
   @BeforeEach
-  void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void setUp() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.ConfigNotFoundException {
     validator = mock(JsonSchemaValidator.class);
     uuidGenerator = mock(Supplier.class);
     connectionsHandler = mock(ConnectionsHandler.class);
@@ -199,7 +199,7 @@ class DestinationHandlerTest {
 
   @Test
   void testCreateDestination()
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
     // ===== GIVEN =====
     // Create the DestinationCreate request with the necessary fields.
     final DestinationCreate destinationCreate = new DestinationCreate()
@@ -299,7 +299,7 @@ class DestinationHandlerTest {
 
   @Test
   void testCreateDestinationNoEntitlementThrows()
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException {
     when(uuidGenerator.get())
         .thenReturn(destinationConnection.getDestinationId());
     when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
@@ -372,7 +372,7 @@ class DestinationHandlerTest {
 
   @Test
   void testUpdateDestination()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     // ===== GIVEN =====
     // Update the destination name and configuration.
     final String updatedDestName = "my updated dest name";
@@ -498,7 +498,7 @@ class DestinationHandlerTest {
 
   @Test
   void testUpdateDestinationNoEntitlementThrows()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final String updatedDestName = "my updated dest name";
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
@@ -584,7 +584,7 @@ class DestinationHandlerTest {
 
   @Test
   void testUpgradeDestinationVersion()
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.ConfigNotFoundException {
     final DestinationIdRequestBody requestBody = new DestinationIdRequestBody().destinationId(destinationConnection.getDestinationId());
 
     when(destinationService.getDestinationConnection(destinationConnection.getDestinationId()))
@@ -599,7 +599,7 @@ class DestinationHandlerTest {
   }
 
   @Test
-  void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testGetDestination() throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -642,7 +642,7 @@ class DestinationHandlerTest {
 
   @Test
   void testListDestinationForWorkspace()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())
@@ -683,7 +683,7 @@ class DestinationHandlerTest {
 
   @Test
   void testDeleteDestinationAndDeleteSecrets()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final JsonNode newConfiguration = destinationConnection.getConfiguration();
     ((ObjectNode) newConfiguration).put(API_KEY_FIELD, API_KEY_VALUE);
 
@@ -732,7 +732,7 @@ class DestinationHandlerTest {
 
   @Test
   void testSearchDestinations()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationRead expectedDestinationRead = new DestinationRead()
         .name(destinationConnection.getName())
         .destinationDefinitionId(standardDestinationDefinition.getDestinationDefinitionId())

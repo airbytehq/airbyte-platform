@@ -16,16 +16,16 @@ import static org.mockito.Mockito.when;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.AllowedHosts;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConfigOriginType;
 import io.airbyte.config.ConfigResourceType;
-import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigScopeType;
 import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -221,7 +221,7 @@ class ConfigurationDefinitionVersionOverrideProviderTest {
                 .thenReturn(Optional.of(versionConfig));
 
     when(mActorDefinitionService.getActorDefinitionVersion(versionId))
-        .thenThrow(new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, versionId));
+        .thenThrow(new ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, versionId));
 
     assertThrows(RuntimeException.class,
         () -> overrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID));

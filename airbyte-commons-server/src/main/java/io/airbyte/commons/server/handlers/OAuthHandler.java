@@ -32,7 +32,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.errors.BadObjectSchemaKnownException;
 import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.ScopeType;
@@ -48,7 +48,7 @@ import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -159,7 +159,7 @@ public class OAuthHandler {
         new Workspace(sourceOauthConsentRequest.getWorkspaceId()))))) {
       // OAuth temporary disabled for this connector via feature flag
       // Returns a 404 (ConfigNotFoundException) so that the frontend displays the correct error message
-      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM, "OAuth temporarily disabled");
+      throw new ConfigNotFoundException(ConfigNotFoundType.SOURCE_OAUTH_PARAM, "OAuth temporarily disabled");
     }
 
     final StandardSourceDefinition sourceDefinition =
@@ -193,8 +193,8 @@ public class OAuthHandler {
         final SourceConnection sourceConnection;
         try {
           sourceConnection = sourceService.getSourceConnection(sourceOauthConsentRequest.getSourceId());
-        } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-          throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+        } catch (final ConfigNotFoundException e) {
+          throw new ConfigNotFoundException(e.type, e.configId);
         }
 
         final ConfigWithSecretReferences configWithRefs =
@@ -240,7 +240,7 @@ public class OAuthHandler {
         new Workspace(destinationOauthConsentRequest.getWorkspaceId()))))) {
       // OAuth temporary disabled for this connector via feature flag
       // Returns a 404 (ConfigNotFoundException) so that the frontend displays the correct error message
-      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM, "OAuth temporarily disabled");
+      throw new ConfigNotFoundException(ConfigNotFoundType.DESTINATION_OAUTH_PARAM, "OAuth temporarily disabled");
     }
 
     final StandardDestinationDefinition destinationDefinition =
@@ -273,8 +273,8 @@ public class OAuthHandler {
         final DestinationConnection destinationConnection;
         try {
           destinationConnection = destinationService.getDestinationConnection(destinationOauthConsentRequest.getDestinationId());
-        } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-          throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+        } catch (final ConfigNotFoundException e) {
+          throw new ConfigNotFoundException(e.type, e.configId);
         }
 
         final ConfigWithSecretReferences configWithRefs =
@@ -359,8 +359,8 @@ public class OAuthHandler {
         final SourceConnection sourceConnection;
         try {
           sourceConnection = sourceService.getSourceConnection(completeSourceOauthRequest.getSourceId());
-        } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-          throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+        } catch (final ConfigNotFoundException e) {
+          throw new ConfigNotFoundException(e.type, e.configId);
         }
 
         final ConfigWithSecretReferences configWithRefs =
@@ -435,8 +435,8 @@ public class OAuthHandler {
         final DestinationConnection destinationConnection;
         try {
           destinationConnection = destinationService.getDestinationConnection(completeDestinationOAuthRequest.getDestinationId());
-        } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-          throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+        } catch (final ConfigNotFoundException e) {
+          throw new ConfigNotFoundException(e.type, e.configId);
         }
 
         final ConfigWithSecretReferences configWithRefs =
@@ -489,8 +489,8 @@ public class OAuthHandler {
     try {
       sourceConnection = sourceService.getSourceConnection(
           revokeSourceOauthTokensRequest.getSourceId());
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     final JsonNode sourceOAuthParamConfig =
         getSourceOAuthParamConfig(revokeSourceOauthTokensRequest.getWorkspaceId(), revokeSourceOauthTokensRequest.getSourceDefinitionId());
@@ -824,7 +824,7 @@ public class OAuthHandler {
       // Should already be hydrated.
       return MoreOAuthParameters.flattenOAuthConfig(paramOptional.get().getConfiguration());
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.SOURCE_OAUTH_PARAM,
+      throw new ConfigNotFoundException(ConfigNotFoundType.SOURCE_OAUTH_PARAM,
           String.format("workspaceId: %s, sourceDefinitionId: %s", workspaceId, sourceDefinitionId));
     }
   }
@@ -840,7 +840,7 @@ public class OAuthHandler {
       // Should already be hydrated.
       return MoreOAuthParameters.flattenOAuthConfig(paramOptional.get().getConfiguration());
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.DESTINATION_OAUTH_PARAM,
+      throw new ConfigNotFoundException(ConfigNotFoundType.DESTINATION_OAUTH_PARAM,
           String.format("workspaceId: %s, destinationDefinitionId: %s", workspaceId, destinationDefinitionId));
     }
   }
@@ -879,8 +879,8 @@ public class OAuthHandler {
       try {
         final SecretPersistenceConfig secretPersistenceConfig = secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId);
         secretPersistence = new RuntimeSecretPersistence(secretPersistenceConfig, metricClient);
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      } catch (final ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.type, e.configId);
       }
     }
 

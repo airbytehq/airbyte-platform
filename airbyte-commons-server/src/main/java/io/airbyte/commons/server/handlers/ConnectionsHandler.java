@@ -149,7 +149,7 @@ import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.StreamGenerationRepository;
 import io.airbyte.config.persistence.domain.Generation;
 import io.airbyte.config.persistence.helper.CatalogGenerationSetter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEvent;
 import io.airbyte.data.repositories.entities.ConnectionTimelineEventMinimal;
 import io.airbyte.data.services.CatalogService;
@@ -1114,7 +1114,7 @@ public class ConnectionsHandler {
   }
 
   public CatalogDiff getDiff(final ConnectionRead connectionRead, final AirbyteCatalog discoveredCatalog)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
 
     final var catalogWithSelectedFieldsAnnotated = connectionRead.getSyncCatalog();
     final var configuredCatalog = catalogConverter.toConfiguredInternal(catalogWithSelectedFieldsAnnotated);
@@ -1224,23 +1224,23 @@ public class ConnectionsHandler {
     final Job job = jobPersistence.getJob(jobId);
     final List<Generation> generations = streamGenerationRepository.getMaxGenerationOfStreamsForConnectionId(connectionId);
     final Optional<ConfiguredAirbyteCatalog> catalogWithGeneration;
-    if (job.getConfigType() == ConfigType.SYNC) {
+    if (job.configType == ConfigType.SYNC) {
       catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.getCatalog(),
           jobId,
           List.of(),
           generations));
-    } else if (job.getConfigType() == ConfigType.REFRESH) {
+    } else if (job.configType == ConfigType.REFRESH) {
       catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformation(
           standardSync.getCatalog(),
           jobId,
-          job.getConfig().getRefresh().getStreamsToRefresh(),
+          job.config.getRefresh().getStreamsToRefresh(),
           generations));
-    } else if (job.getConfigType() == ConfigType.RESET_CONNECTION || job.getConfigType() == ConfigType.CLEAR) {
+    } else if (job.configType == ConfigType.RESET_CONNECTION || job.configType == ConfigType.CLEAR) {
       catalogWithGeneration = Optional.of(catalogGenerationSetter.updateCatalogWithGenerationAndSyncInformationForClear(
           standardSync.getCatalog(),
           jobId,
-          Set.copyOf(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset()),
+          Set.copyOf(job.config.getResetConnection().getResetSourceConfiguration().getStreamsToReset()),
           generations));
     } else {
       catalogWithGeneration = Optional.empty();
@@ -1313,20 +1313,20 @@ public class ConnectionsHandler {
       final List<Job> jobs = jobPersistence.listJobsLight(REPLICATION_TYPES,
           connectionId.toString(),
           maxJobLookback);
-      final Optional<Job> activeJob = jobs.stream().findFirst().filter(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.getStatus()));
+      final Optional<Job> activeJob = jobs.stream().findFirst().filter(job -> JobStatus.NON_TERMINAL_STATUSES.contains(job.status));
       final boolean isRunning = activeJob.isPresent();
 
       final Optional<Job> lastSucceededOrFailedJob =
-          jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.getStatus()) && job.getStatus() != JobStatus.CANCELLED).findFirst();
-      final Optional<JobStatus> lastSyncStatus = lastSucceededOrFailedJob.map(Job::getStatus);
+          jobs.stream().filter(job -> JobStatus.TERMINAL_STATUSES.contains(job.status) && job.status != JobStatus.CANCELLED).findFirst();
+      final Optional<JobStatus> lastSyncStatus = lastSucceededOrFailedJob.map(j -> j.status);
       final io.airbyte.api.model.generated.JobStatus lastSyncJobStatus = Enums.convertTo(lastSyncStatus.orElse(null),
           io.airbyte.api.model.generated.JobStatus.class);
-      final boolean lastJobWasCancelled = !jobs.isEmpty() && jobs.getFirst().getStatus() == JobStatus.CANCELLED;
+      final boolean lastJobWasCancelled = !jobs.isEmpty() && jobs.getFirst().status == JobStatus.CANCELLED;
       final boolean lastJobWasResetOrClear = !jobs.isEmpty()
-          && (jobs.getFirst().getConfigType() == ConfigType.RESET_CONNECTION || jobs.getFirst().getConfigType() == ConfigType.CLEAR);
+          && (jobs.getFirst().configType == ConfigType.RESET_CONNECTION || jobs.getFirst().configType == ConfigType.CLEAR);
 
-      final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.getStatus() == JobStatus.SUCCEEDED).findFirst();
-      final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(Job::getUpdatedAtInSecond);
+      final Optional<Job> lastSuccessfulJob = jobs.stream().filter(job -> job.status == JobStatus.SUCCEEDED).findFirst();
+      final Optional<Long> lastSuccessTimestamp = lastSuccessfulJob.map(j -> j.updatedAtInSecond);
 
       final ConnectionRead connectionRead = buildConnectionRead(connectionId);
       final boolean hasBreakingSchemaChange = connectionRead.getBreakingChange() != null && connectionRead.getBreakingChange();
@@ -1337,7 +1337,7 @@ public class ConnectionsHandler {
           .lastSuccessfulSync(lastSuccessTimestamp.orElse(null))
           .scheduleData(connectionRead.getScheduleData());
       if (lastSucceededOrFailedJob.isPresent()) {
-        connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().getId());
+        connectionStatus.lastSyncJobId(lastSucceededOrFailedJob.get().id);
         final Optional<Attempt> lastAttempt = lastSucceededOrFailedJob.get().getLastAttempt();
         lastAttempt.ifPresent(attempt -> connectionStatus.lastSyncAttemptNumber(attempt.getAttemptNumber()));
       }
@@ -1345,12 +1345,12 @@ public class ConnectionsHandler {
           .flatMap(Attempt::getFailureSummary)
           .flatMap(s -> s.getFailures().stream().findFirst())
           .map(this::mapFailureReason);
-      if (failureReason.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
+      if (failureReason.isPresent() && lastSucceededOrFailedJob.get().status == JobStatus.FAILED) {
         connectionStatus.setFailureReason(failureReason.get());
       }
 
       boolean hasConfigError = false;
-      if (lastSucceededOrFailedJob.isPresent() && lastSucceededOrFailedJob.get().getStatus() == JobStatus.FAILED) {
+      if (lastSucceededOrFailedJob.isPresent() && lastSucceededOrFailedJob.get().status == JobStatus.FAILED) {
         final Optional<List<io.airbyte.api.model.generated.FailureReason>> failureReasons =
             lastSucceededOrFailedJob.flatMap(Job::getLastFailedAttempt)
                 .flatMap(Attempt::getFailureSummary)
@@ -1495,12 +1495,12 @@ public class ConnectionsHandler {
       final JobWithAttemptsRead jobRead = JobConverter.getJobWithAttemptsRead(job);
       // Construct a timeline event
       final FinalStatusEvent event;
-      if (job.getStatus() == JobStatus.FAILED || job.getStatus() == JobStatus.INCOMPLETE) {
+      if (job.status == JobStatus.FAILED || job.status == JobStatus.INCOMPLETE) {
         // We need to log a failed event with job stats and the first failure reason.
         event = new FailedEvent(
-            job.getId(),
-            job.getCreatedAtInSecond(),
-            job.getUpdatedAtInSecond(),
+            job.id,
+            job.createdAtInSecond,
+            job.updatedAtInSecond,
             jobRead.getAttempts().stream()
                 .mapToLong(attempt -> attempt.getBytesSynced() != null ? attempt.getBytesSynced() : 0)
                 .sum(),
@@ -1508,8 +1508,8 @@ public class ConnectionsHandler {
                 .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
                 .sum(),
             job.getAttemptsCount(),
-            job.getConfigType().name(),
-            job.getStatus().name(),
+            job.configType.name(),
+            job.status.name(),
             JobConverter.getStreamsAssociatedWithJob(job),
             job.getLastAttempt()
                 .flatMap(Attempt::getFailureSummary)
@@ -1517,9 +1517,9 @@ public class ConnectionsHandler {
       } else { // SUCCEEDED and CANCELLED
         // We need to log a timeline event with job stats.
         event = new FinalStatusEvent(
-            job.getId(),
-            job.getCreatedAtInSecond(),
-            job.getUpdatedAtInSecond(),
+            job.id,
+            job.createdAtInSecond,
+            job.updatedAtInSecond,
             jobRead.getAttempts().stream()
                 .mapToLong(attempt -> attempt.getBytesSynced() != null ? attempt.getBytesSynced() : 0)
                 .sum(),
@@ -1527,13 +1527,13 @@ public class ConnectionsHandler {
                 .mapToLong(attempt -> attempt.getRecordsSynced() != null ? attempt.getRecordsSynced() : 0)
                 .sum(),
             job.getAttemptsCount(),
-            job.getConfigType().name(),
-            job.getStatus().name(),
+            job.configType.name(),
+            job.status.name(),
             JobConverter.getStreamsAssociatedWithJob(job));
       }
       // Save an event
       connectionTimelineEventService.writeEventWithTimestamp(
-          UUID.fromString(job.getScope()), event, null, Instant.ofEpochSecond(job.getUpdatedAtInSecond()).atOffset(ZoneOffset.UTC));
+          UUID.fromString(job.scope), event, null, Instant.ofEpochSecond(job.updatedAtInSecond).atOffset(ZoneOffset.UTC));
     });
   }
 
@@ -1576,7 +1576,7 @@ public class ConnectionsHandler {
 
     final List<JobSyncResultRead> result = new ArrayList<>();
     jobs.forEach((job) -> {
-      final Long jobId = job.getId();
+      final Long jobId = job.id;
       final JobRead jobRead = jobIdToJobRead.get(jobId).getJob();
       final JobAggregatedStats aggregatedStats = jobRead.getAggregatedStats();
       final JobSyncResultRead jobResult = new JobSyncResultRead()
@@ -1631,7 +1631,7 @@ public class ConnectionsHandler {
     }
 
     for (final AttemptWithJobInfo attempt : attempts) {
-      final Optional<Long> endedAtOptional = attempt.getAttempt().getEndedAtInSecond();
+      final Optional<Long> endedAtOptional = attempt.attempt.getEndedAtInSecond();
 
       if (endedAtOptional.isPresent()) {
         // Convert the endedAt timestamp from the database to the designated timezone
@@ -1640,7 +1640,7 @@ public class ConnectionsHandler {
             .toLocalDate();
 
         // Merge it with the records synced from the attempt
-        final Optional<JobOutput> attemptOutput = attempt.getAttempt().getOutput();
+        final Optional<JobOutput> attemptOutput = attempt.attempt.getOutput();
         if (attemptOutput.isPresent()) {
           final List<StreamSyncStats> streamSyncStats = attemptOutput.get().getSync().getStandardSyncSummary().getStreamStats();
           for (final StreamSyncStats streamSyncStat : streamSyncStats) {
@@ -1935,7 +1935,7 @@ public class ConnectionsHandler {
   }
 
   private AirbyteCatalog retrieveDiscoveredCatalog(final UUID catalogId, final ActorDefinitionVersion sourceVersion)
-      throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException {
 
     final ActorCatalog catalog = catalogService.getActorCatalogById(catalogId);
     final io.airbyte.protocol.models.v0.AirbyteCatalog persistenceCatalog = Jsons.object(

@@ -16,7 +16,7 @@ import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;

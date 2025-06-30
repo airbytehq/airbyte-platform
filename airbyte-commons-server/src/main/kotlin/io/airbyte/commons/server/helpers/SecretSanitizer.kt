@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers.processConfigSecrets
 import io.airbyte.config.secrets.SecretsRepositoryWriter
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.WorkspaceId

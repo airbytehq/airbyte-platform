@@ -133,7 +133,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `a new connector should always be written`(
     updateAll: Boolean,
@@ -182,7 +182,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `a connector with release candidate should write RC ADVS and ConnectorRollout`(
     updateAll: Boolean,
@@ -292,7 +292,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `applyReleaseCandidates should not write ConnectorRollout if a rollout exists in a non-canceled state`(state: ConnectorEnumRolloutState) {
     mockSeedInitialDefinitions()
@@ -359,7 +359,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `applyReleaseCandidates should write ConnectorRollout if a rollout exists in canceled state`(state: ConnectorEnumRolloutState) {
     mockSeedInitialDefinitions()
@@ -475,7 +475,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `a connector with malformed release candidate should not raise an error`(
     updateAll: Boolean,
@@ -505,7 +505,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `a connector with release candidate with no initial version does not write connector rollout`(
     updateAll: Boolean,
@@ -556,7 +556,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `an existing connector that is not in use should always be updated`(
     updateAll: Boolean,
@@ -631,7 +631,7 @@ internal class ApplyDefinitionsHelperTest {
     IOException::class,
     JsonValidationException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `updateAll should affect whether existing connectors in use have their versions updated`(
     updateAll: Boolean,
@@ -700,7 +700,7 @@ internal class ApplyDefinitionsHelperTest {
     JsonValidationException::class,
     IOException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `new definitions that are incompatible with the protocol version range should not be written`(
     updateAll: Boolean,
@@ -779,7 +779,7 @@ internal class ApplyDefinitionsHelperTest {
     JsonValidationException::class,
     IOException::class,
     ConfigNotFoundException::class,
-    io.airbyte.data.exceptions.ConfigNotFoundException::class,
+    io.airbyte.data.ConfigNotFoundException::class,
   )
   fun `new definitions that are incompatible with the airbyte version range should not be written`(
     updateAll: Boolean,

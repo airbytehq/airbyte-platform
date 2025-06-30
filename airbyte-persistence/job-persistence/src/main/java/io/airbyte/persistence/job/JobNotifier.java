@@ -100,11 +100,11 @@ public class JobNotifier {
 
   private void notifyJob(final String action, final Job job, List<JobPersistence.AttemptStats> attemptStats) {
     try {
-      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.getId());
+      final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(job.id);
       final StandardWorkspace workspace = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true);
       notifyJob(action, job, attemptStats, workspace);
     } catch (final Exception e) {
-      LOGGER.error("Unable to read configuration for jobId {}:", job.getId(), e);
+      LOGGER.error("Unable to read configuration for jobId {}:", job.id, e);
     }
   }
 
@@ -112,7 +112,7 @@ public class JobNotifier {
                          final Job job,
                          final List<JobPersistence.AttemptStats> attempts,
                          final StandardWorkspace workspace) {
-    final UUID connectionId = UUID.fromString(job.getScope());
+    final UUID connectionId = UUID.fromString(job.scope);
     final NotificationSettings notificationSettings = workspace.getNotificationSettings();
     try {
       final StandardSync standardSync = connectionService.getStandardSync(connectionId);
@@ -298,10 +298,10 @@ public class JobNotifier {
         new SourceInfo(source.getSourceId(), source.getName(), webUrlHelper.getSourceUrl(workspaceId, source.getSourceId())),
         new DestinationInfo(destination.getDestinationId(), destination.getName(),
             webUrlHelper.getDestinationUrl(workspaceId, destination.getDestinationId())),
-        job.getId(),
-        job.getStatus() == JobStatus.SUCCEEDED,
-        Instant.ofEpochSecond(job.getCreatedAtInSecond()),
-        Instant.ofEpochSecond(job.getUpdatedAtInSecond()),
+        job.id,
+        job.status == JobStatus.SUCCEEDED,
+        Instant.ofEpochSecond(job.createdAtInSecond),
+        Instant.ofEpochSecond(job.updatedAtInSecond),
         bytesEmitted,
         bytesCommitted,
         recordsEmitted,

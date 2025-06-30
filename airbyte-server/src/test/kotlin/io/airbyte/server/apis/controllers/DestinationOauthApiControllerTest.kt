@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.DestinationOauthConsentRequest
 import io.airbyte.api.model.generated.OAuthConsentRead
 import io.airbyte.api.model.generated.SetInstancewideDestinationOauthParamsRequestBody
 import io.airbyte.commons.server.handlers.OAuthHandler
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

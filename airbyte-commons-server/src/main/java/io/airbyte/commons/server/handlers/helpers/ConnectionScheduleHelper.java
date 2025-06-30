@@ -24,7 +24,7 @@ import io.airbyte.config.Schedule;
 import io.airbyte.config.ScheduleData;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.Multi;
 import io.airbyte.featureflag.Organization;

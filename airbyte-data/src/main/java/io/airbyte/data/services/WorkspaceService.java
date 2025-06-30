@@ -6,7 +6,7 @@ package io.airbyte.data.services;
 
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.validation.json.JsonValidationException;

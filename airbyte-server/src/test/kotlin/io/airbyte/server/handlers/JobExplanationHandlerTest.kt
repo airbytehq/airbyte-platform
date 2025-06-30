@@ -17,7 +17,9 @@ import io.airbyte.config.AttemptStatus
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.FailureReason
 import io.airbyte.config.Job
+import io.airbyte.config.JobConfig
 import io.airbyte.config.JobConfig.ConfigType
+import io.airbyte.config.JobStatus
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
@@ -80,7 +82,7 @@ class JobExplanationHandlerTest {
 
   @Test
   fun `getJobExplanation should return LLM response`() {
-    val job = Job(1, ConfigType.SYNC, connectionId.toString(), null, null, null, null, 13, 37, true)
+    val job = Job(1, ConfigType.SYNC, connectionId.toString(), JobConfig(), listOf(), JobStatus.PENDING, null, 13, 37, true)
 
     val connection =
       StandardSync().also {

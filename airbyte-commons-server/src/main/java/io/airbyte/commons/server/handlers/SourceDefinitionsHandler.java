@@ -41,7 +41,7 @@ import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;

@@ -25,7 +25,7 @@ import io.airbyte.config.ReleaseStage;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SuggestedStreams;
 import io.airbyte.config.SupportLevel;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -229,7 +229,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
   }
 
   @Test
-  void testGetActorDefinitionVersionById() throws IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testGetActorDefinitionVersionById() throws IOException, ConfigNotFoundException {
     final UUID defId = sourceDefinition.getSourceDefinitionId();
     final ActorDefinitionVersion adv = baseActorDefinitionVersion(defId);
     final ActorDefinitionVersion actorDefinitionVersion = actorDefinitionService.writeActorDefinitionVersion(adv);
@@ -245,7 +245,7 @@ class ActorDefinitionVersionPersistenceTest extends BaseConfigDatabaseTest {
     // Test using the definition id to catch any accidental assignment
     final UUID defId = sourceDefinition.getSourceDefinitionId();
 
-    assertThrows(io.airbyte.data.exceptions.ConfigNotFoundException.class, () -> actorDefinitionService.getActorDefinitionVersion(defId));
+    assertThrows(ConfigNotFoundException.class, () -> actorDefinitionService.getActorDefinitionVersion(defId));
   }
 
   @Test

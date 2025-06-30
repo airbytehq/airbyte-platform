@@ -15,7 +15,7 @@ import io.airbyte.config.init.BreakingChangeNotificationHelper.BreakingChangeNot
 import io.airbyte.config.init.SupportStateUpdater.SupportStateUpdate
 import io.airbyte.config.persistence.BreakingChangesHelper
 import io.airbyte.config.persistence.BreakingChangesHelper.WorkspaceBreakingChangeInfo
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService

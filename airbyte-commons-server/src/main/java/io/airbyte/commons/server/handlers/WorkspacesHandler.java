@@ -56,7 +56,7 @@ import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;

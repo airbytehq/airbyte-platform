@@ -4,10 +4,10 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ScopeType
 import io.airbyte.config.UserInvitation
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission
@@ -34,7 +34,7 @@ open class UserInvitationServiceDataImpl(
     userInvitationRepository
       .findByInviteCode(inviteCode)
       .orElseThrow {
-        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }.toConfigModel()
 
   override fun getPendingInvitations(
@@ -78,7 +78,7 @@ open class UserInvitationServiceDataImpl(
     // fetch the invitation by code
     val invitation =
       userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
-        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }
 
     // mark the invitation status as expired if expiresAt is in the past
@@ -121,7 +121,7 @@ open class UserInvitationServiceDataImpl(
   override fun cancelUserInvitation(inviteCode: String): UserInvitation {
     val invitation =
       userInvitationRepository.findByInviteCode(inviteCode).orElseThrow {
-        ConfigNotFoundException(ConfigSchema.USER_INVITATION, inviteCode)
+        ConfigNotFoundException(ConfigNotFoundType.USER_INVITATION, inviteCode)
       }
 
     throwIfNotPending(invitation)

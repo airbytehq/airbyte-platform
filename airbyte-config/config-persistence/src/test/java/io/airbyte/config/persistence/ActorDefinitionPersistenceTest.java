@@ -27,7 +27,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -351,7 +351,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testUpdateDeclarativeActorDefinitionVersions()
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, ConfigNotFoundException {
     final String declarativeDockerRepository = "airbyte/source-declarative-manifest";
     final String previousTag = "0.1.0";
     final String newTag = "0.2.0";

@@ -9,7 +9,7 @@ import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.Tables

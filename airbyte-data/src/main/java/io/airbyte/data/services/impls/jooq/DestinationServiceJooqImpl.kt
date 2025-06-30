@@ -8,10 +8,10 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.StandardDestinationDefinition
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.DestinationService
@@ -98,7 +98,7 @@ class DestinationServiceJooqImpl
         .findFirst()
         .orElseThrow {
           ConfigNotFoundException(
-            ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+            ConfigNotFoundType.STANDARD_DESTINATION_DEFINITION,
             destinationDefinitionId,
           )
         }
@@ -272,7 +272,7 @@ class DestinationServiceJooqImpl
     override fun getDestinationConnection(destinationId: UUID): DestinationConnection =
       listDestinationQuery(Optional.of(destinationId))
         .findFirst()
-        .orElseThrow { ConfigNotFoundException(ConfigSchema.DESTINATION_CONNECTION, destinationId) }
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.DESTINATION_CONNECTION, destinationId) }
 
     /**
      * MUST NOT ACCEPT SECRETS - Should only be called from { @link SecretsRepositoryWriter }

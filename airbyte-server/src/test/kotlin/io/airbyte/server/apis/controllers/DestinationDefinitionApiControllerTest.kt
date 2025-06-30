@@ -17,7 +17,7 @@ import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.errors.ApplicationErrorKnownException
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.validation.ActorDefinitionAccessValidator
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

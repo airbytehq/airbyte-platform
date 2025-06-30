@@ -31,7 +31,7 @@ import io.airbyte.config.User;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.validation.json.JsonValidationException;
 import io.fabric8.kubernetes.api.model.Node;
 import io.fabric8.kubernetes.api.model.NodeList;

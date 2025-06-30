@@ -244,7 +244,7 @@ public class JobsHandlerTest {
 
   @Test
   void persistJobCancellationSuccess() throws Exception {
-    final var mockJob = Mockito.mock(Job.class);
+    final var mockJob = new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), simpleConfig, List.of(), io.airbyte.config.JobStatus.RUNNING, 0L, 0, 0, true);
     when(jobPersistence.getJob(JOB_ID)).thenReturn(mockJob);
 
     jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, failureSummary);
@@ -298,28 +298,20 @@ public class JobsHandlerTest {
                 .withFailureOrigin(FailureOrigin.SOURCE)));
     final String failureReason = "reason";
 
-    final Attempt mAttempt = Mockito.mock(Attempt.class);
-    when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
-    when(mAttempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
-
     final JobSyncConfig jobSyncConfig = new JobSyncConfig()
         .withSourceDefinitionVersionId(UUID.randomUUID())
         .withDestinationDefinitionVersionId(UUID.randomUUID());
 
     final AttemptSyncConfig mSyncConfig = Mockito.mock(AttemptSyncConfig.class);
-    when(mAttempt.getSyncConfig()).thenReturn(Optional.of(mSyncConfig));
+    final Attempt mAttempt =
+        new Attempt(ATTEMPT_NUMBER, JOB_ID, Path.of(""), mSyncConfig, null, AttemptStatus.FAILED, null, failureSummary, 1, 2, null);
 
     final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
     when(mJobConfig.getConfigType()).thenReturn(SYNC);
     when(mJobConfig.getSync()).thenReturn(jobSyncConfig);
 
-    final Job mJob = Mockito.mock(Job.class);
-    when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
-    when(mJob.getConfig()).thenReturn(mJobConfig);
-    when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
-    when(mJob.getConfigType()).thenReturn(SYNC);
-    when(mJob.getId()).thenReturn(JOB_ID);
-    when(mJob.getAttempts()).thenReturn(List.of(mAttempt));
+    final Job mJob =
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), mJobConfig, List.of(mAttempt), io.airbyte.config.JobStatus.FAILED, 0L, 0, 0, true);
 
     when(jobPersistence.getJob(JOB_ID))
         .thenReturn(mJob);
@@ -360,17 +352,13 @@ public class JobsHandlerTest {
                 .withFailureOrigin(FailureOrigin.SOURCE)));
     final String failureReason = "reason";
 
-    final Attempt mAttempt = Mockito.mock(Attempt.class);
-    Mockito.when(mAttempt.getFailureSummary()).thenReturn(Optional.of(failureSummary));
+    final Attempt mAttempt = new Attempt(0, JOB_ID, Path.of(""), null, null, AttemptStatus.FAILED, null, failureSummary, 0, 0, 0L);
 
     final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
     Mockito.when(mJobConfig.getSync()).thenReturn(null);
 
-    final Job mJob = Mockito.mock(Job.class);
-    Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
-    Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
-    Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
-    Mockito.when(mJob.getConfigType()).thenReturn(SYNC);
+    final Job mJob =
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), mJobConfig, List.of(mAttempt), io.airbyte.config.JobStatus.FAILED, 0L, 0, 0, true);
 
     Mockito.when(jobPersistence.getJob(JOB_ID))
         .thenReturn(mJob);
@@ -396,11 +384,8 @@ public class JobsHandlerTest {
     final JobConfig mJobConfig = Mockito.mock(JobConfig.class);
     Mockito.when(mJobConfig.getSync()).thenReturn(null);
 
-    final Job mJob = Mockito.mock(Job.class);
-    Mockito.when(mJob.getScope()).thenReturn(CONNECTION_ID.toString());
-    Mockito.when(mJob.getConfig()).thenReturn(mJobConfig);
-    Mockito.when(mJob.getLastFailedAttempt()).thenReturn(Optional.of(mAttempt));
-    Mockito.when(mJob.getConfigType()).thenReturn(SYNC);
+    final Job mJob =
+        new Job(JOB_ID, SYNC, CONNECTION_ID.toString(), mJobConfig, List.of(mAttempt), io.airbyte.config.JobStatus.CANCELLED, 0L, 0, 0, true);
     Mockito.when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
 
     jobsHandler.persistJobCancellation(CONNECTION_ID, JOB_ID, ATTEMPT_NUMBER, failureSummary);

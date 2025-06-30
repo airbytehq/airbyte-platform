@@ -87,7 +87,7 @@ public class JobsHandler {
       final Job job = jobPersistence.getJob(jobId);
 
       final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (final Attempt attempt : job.getAttempts()) {
+      for (final Attempt attempt : job.attempts) {
         final boolean mergeStatsWithStreamMetadata = featureFlagClient.boolVariation(MergeStreamStatWithMetadata.INSTANCE,
             new Connection(input.getConnectionId()));
         if (mergeStatsWithStreamMetadata) {
@@ -96,24 +96,24 @@ public class JobsHandler {
           attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
         }
       }
-      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
+      if (job.configType.equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.failJob(job, attemptStats);
       }
       connectionTimelineEventHelper.logJobFailureEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
 
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_FAILED_BY_RELEASE_STAGE, job, input);
 
-      final UUID connectionId = UUID.fromString(job.getScope());
+      final UUID connectionId = UUID.fromString(job.scope);
       if (!connectionId.equals(input.getConnectionId())) {
         log.warn("inconsistent connectionId for jobId '{}' (input:'{}', db:'{}')", jobId, input.getConnectionId(), connectionId);
         metricClient.count(OssMetricsRegistry.INCONSISTENT_ACTIVITY_INPUT);
       }
 
-      final JobSyncConfig jobSyncConfig = job.getConfig().getSync();
+      final JobSyncConfig jobSyncConfig = job.config.getSync();
       final UUID destinationDefinitionVersionId;
       final UUID sourceDefinitionVersionId;
       if (jobSyncConfig == null) {
-        final JobResetConnectionConfig resetConfig = job.getConfig().getResetConnection();
+        final JobResetConnectionConfig resetConfig = job.config.getResetConnection();
         // In a reset, we run a fake source
         sourceDefinitionVersionId = null;
         destinationDefinitionVersionId = resetConfig != null ? resetConfig.getDestinationDefinitionVersionId() : null;
@@ -152,12 +152,12 @@ public class JobsHandler {
         }
 
         jobErrorReporter.reportSyncJobFailure(connectionId, failureSummary, jobContext, attemptConfig);
-        log.info("Successfully reported failure for job id '{}' connectionId: '{}'", job.getId(), connectionId);
+        log.info("Successfully reported failure for job id '{}' connectionId: '{}'", job.id, connectionId);
       } else {
-        log.info("Failure summary is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
+        log.info("Failure summary is missing, skipping reporting for jobId '{}', connectionId '{}'", job.id, connectionId);
       }
     } else {
-      log.info("Last failed attempt is missing, skipping reporting for jobId '{}', connectionId '{}'", job.getId(), connectionId);
+      log.info("Last failed attempt is missing, skipping reporting for jobId '{}', connectionId '{}'", job.id, connectionId);
     }
   }
 
@@ -180,7 +180,7 @@ public class JobsHandler {
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.ATTEMPT_SUCCEEDED_BY_RELEASE_STAGE, job);
 
       final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (final Attempt attempt : job.getAttempts()) {
+      for (final Attempt attempt : job.attempts) {
         final boolean mergeStatsWithStreamMetadata = featureFlagClient.boolVariation(MergeStreamStatWithMetadata.INSTANCE,
             new Connection(input.getConnectionId()));
         if (mergeStatsWithStreamMetadata) {
@@ -189,7 +189,7 @@ public class JobsHandler {
           attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
         }
       }
-      if (job.getConfigType().equals(JobConfig.ConfigType.SYNC)) {
+      if (job.configType.equals(JobConfig.ConfigType.SYNC)) {
         jobNotifier.successJob(job, attemptStats);
       }
       connectionTimelineEventHelper.logJobSuccessEventInConnectionTimeline(job, input.getConnectionId(), attemptStats);
@@ -267,7 +267,7 @@ public class JobsHandler {
       // post process
       final var job = jobPersistence.getJob(jobId);
       final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (final Attempt attempt : job.getAttempts()) {
+      for (final Attempt attempt : job.attempts) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       jobCreationAndStatusUpdateHelper.emitJobToReleaseStagesMetric(OssMetricsRegistry.JOB_CANCELLED_BY_RELEASE_STAGE, job);

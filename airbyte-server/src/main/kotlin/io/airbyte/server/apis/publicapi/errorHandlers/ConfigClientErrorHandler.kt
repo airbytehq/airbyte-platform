@@ -86,7 +86,7 @@ object ConfigClientErrorHandler {
   fun handleError(throwable: Throwable) {
     when (throwable) {
       is ConfigNotFoundException -> throw ResourceNotFoundProblem(ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId))
-      is io.airbyte.data.exceptions.ConfigNotFoundException -> throw ResourceNotFoundProblem(
+      is io.airbyte.data.ConfigNotFoundException -> throw ResourceNotFoundProblem(
         ProblemResourceData().resourceType(throwable.type).resourceId(throwable.configId),
       )
 

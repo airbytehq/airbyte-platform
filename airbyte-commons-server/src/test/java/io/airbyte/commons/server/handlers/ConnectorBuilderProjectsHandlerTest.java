@@ -60,7 +60,7 @@ import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjec
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
@@ -81,7 +81,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectorBuilderService;
@@ -710,7 +710,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   void testUpdateTestingValuesOnProjectWithNoExistingValues()
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
     final JsonNode spec = Jsons.deserialize(
         """
@@ -741,7 +741,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   void testUpdateTestingValuesOnProjectWithExistingValues()
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
     final JsonNode newTestingValues = Jsons.deserialize(
         """
@@ -965,7 +965,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProjectForkRequestBody requestBody =
         new ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId);
     when(sourceService.getStandardSourceDefinition(baseActorDefinitionId))
-        .thenThrow(new ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId));
+        .thenThrow(new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId));
 
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody));
   }

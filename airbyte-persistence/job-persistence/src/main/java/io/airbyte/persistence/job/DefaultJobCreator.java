@@ -326,7 +326,7 @@ public class DefaultJobCreator implements JobCreator {
                                                                    final String variant,
                                                                    final Context ffContext) {
     final ResourceRequirements defaultOrchestratorRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType, variant);
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, sourceType.orElse(null), variant);
 
     final var mergedRrsReqs = ResourceRequirementsUtils.mergeResourceRequirements(
         standardSync.getResourceRequirements(),
@@ -343,7 +343,7 @@ public class DefaultJobCreator implements JobCreator {
                                                              final String variant,
                                                              final Context ffContext) {
     final ResourceRequirements defaultSrcRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition), variant);
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, getSourceType(sourceDefinition).orElse(null), variant);
 
     final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirementsForJobType(
         standardSync.getResourceRequirements(),
@@ -364,7 +364,7 @@ public class DefaultJobCreator implements JobCreator {
                                                                   final String variant,
                                                                   final Context ffContext) {
     final ResourceRequirements defaultDstRssReqs =
-        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, sourceType, variant);
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, sourceType.orElse(null), variant);
 
     final var mergedRssReqs = ResourceRequirementsUtils.getResourceRequirementsForJobType(
         standardSync.getResourceRequirements(),

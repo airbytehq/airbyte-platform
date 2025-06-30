@@ -34,6 +34,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
 import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardCheckConnectionInput;
@@ -49,7 +50,7 @@ import io.airbyte.config.secrets.ConfigWithSecretReferences;
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefsKt;
 import io.airbyte.config.secrets.SecretCoordinate.AirbyteManagedSecretCoordinate;
 import io.airbyte.config.secrets.SecretReferenceConfig;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;
@@ -83,7 +84,6 @@ class JobInputHandlerTest {
   private static JobPersistence jobPersistence;
   private static ConfigInjector configInjector;
   private static OAuthConfigSupplier oAuthConfigSupplier;
-  private static Job job;
   private static FeatureFlagClient featureFlagClient;
   private static ActorDefinitionVersionHelper actorDefinitionVersionHelper;
 
@@ -130,13 +130,12 @@ class JobInputHandlerTest {
   private final ApiPojoConverters apiPojoConverters = new ApiPojoConverters(new CatalogConverter(new FieldGenerator(), Collections.emptyList()));
 
   @BeforeEach
-  void init() throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void init() throws IOException, JsonValidationException, ConfigNotFoundException, ConfigNotFoundException {
 
     jobPersistence = mock(JobPersistence.class);
     configInjector = mock(ConfigInjector.class);
 
     oAuthConfigSupplier = mock(OAuthConfigSupplier.class);
-    job = mock(Job.class);
     featureFlagClient = new TestClient(new HashMap<>());
     attemptHandler = mock(AttemptHandler.class);
     stateHandler = mock(StateHandler.class);
@@ -164,7 +163,6 @@ class JobInputHandlerTest {
         scopedConfigurationService,
         secretReferenceService);
 
-    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(configInjector.injectConfig(any(), any())).thenAnswer(i -> i.getArguments()[0]);
     when(secretReferenceService.getConfigWithSecretReferences(any(), any(), any()))
         .thenAnswer(i -> new ConfigWithSecretReferences(i.getArgument(1), Map.of()));
@@ -229,8 +227,9 @@ class JobInputHandlerTest {
         .withConfigType(JobConfig.ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    when(job.getConfig()).thenReturn(jobConfig);
-    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
+    var job = new Job(JOB_ID, JobConfig.ConfigType.RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 1001L, 1000L,
+        1002L, true);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
     final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
         .withConnectionId(CONNECTION_ID)
@@ -307,8 +306,9 @@ class JobInputHandlerTest {
         .withConfigType(JobConfig.ConfigType.RESET_CONNECTION)
         .withResetConnection(jobResetConfig);
 
-    when(job.getConfig()).thenReturn(jobConfig);
-    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
+    var job = new Job(JOB_ID, JobConfig.ConfigType.RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 1001L, 1000L,
+        1002L, true);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
     final StandardSyncInput expectedStandardSyncInput = new StandardSyncInput()
         .withConnectionId(CONNECTION_ID)
@@ -393,8 +393,9 @@ class JobInputHandlerTest {
         .withConfigType(JobConfig.ConfigType.SYNC)
         .withSync(jobSyncConfig);
 
-    when(job.getConfig()).thenReturn(jobConfig);
-    when(job.getScope()).thenReturn(CONNECTION_ID.toString());
+    var job = new Job(JOB_ID, JobConfig.ConfigType.RESET_CONNECTION, CONNECTION_ID.toString(), jobConfig, List.of(), JobStatus.PENDING, 1001L, 1000L,
+        1002L, true);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
     final IntegrationLauncherConfig expectedSourceLauncherConfig = new IntegrationLauncherConfig()
         .withJobId(String.valueOf(JOB_ID))

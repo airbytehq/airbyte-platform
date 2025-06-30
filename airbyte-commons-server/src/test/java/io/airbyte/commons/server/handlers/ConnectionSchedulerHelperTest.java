@@ -34,7 +34,7 @@ import io.airbyte.config.Schedule;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSync.ScheduleType;
 import io.airbyte.config.helpers.FieldGenerator;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.featureflag.FeatureFlagClient;
 import io.airbyte.featureflag.TestClient;
 import io.airbyte.persistence.job.WorkspaceHelper;

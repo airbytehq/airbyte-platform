@@ -39,6 +39,9 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
         scope = scope,
         configType = JobConfigType.sync,
         config = Jsons.jsonNode(mapOf<String, String>()),
+        createdAt = OffsetDateTime.MIN,
+        updatedAt = OffsetDateTime.MIN,
+        isScheduled = false,
       )
 
     val savedJob = jobsRepository.save(job)
@@ -98,6 +101,9 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
         scope = scope,
         configType = JobConfigType.sync,
         config = Jsons.jsonNode(mapOf<String, String>()),
+        createdAt = OffsetDateTime.MIN,
+        updatedAt = OffsetDateTime.MIN,
+        isScheduled = false,
       )
 
     val savedJob = jobsRepository.save(job)
@@ -158,6 +164,8 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
         configType = JobConfigType.sync,
         config = Jsons.jsonNode(mapOf<String, String>()),
         createdAt = OffsetDateTime.MIN,
+        updatedAt = OffsetDateTime.MIN,
+        isScheduled = false,
       )
 
     val job2 =
@@ -168,6 +176,8 @@ internal class JobsWithAttemptsRepositoryTest : AbstractConfigRepositoryTest() {
         configType = JobConfigType.sync,
         config = Jsons.jsonNode(mapOf<String, String>()),
         createdAt = OffsetDateTime.MAX,
+        updatedAt = OffsetDateTime.MIN,
+        isScheduled = false,
       )
 
     val savedJob = jobsRepository.save(job)

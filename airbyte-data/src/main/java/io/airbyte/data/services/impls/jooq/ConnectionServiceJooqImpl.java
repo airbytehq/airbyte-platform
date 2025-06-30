@@ -26,6 +26,7 @@ import com.google.common.collect.Sets;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.ConfigWithMetadata;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -38,7 +39,7 @@ import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
@@ -133,7 +134,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
 
     final boolean foundMoreThanOneConfig = result.size() > 1;
     if (result.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, connectionId.toString());
+      throw new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, connectionId.toString());
     } else if (foundMoreThanOneConfig) {
       throw new IllegalStateException(String.format("Multiple %s configs found for ID %s: %s", ConfigSchema.STANDARD_SYNC, connectionId, result));
     }

@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel

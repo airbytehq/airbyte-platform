@@ -7,7 +7,7 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.model.generated.DestinationDefinitionIdWithWorkspaceId
 import io.airbyte.api.model.generated.DestinationDefinitionSpecificationRead
 import io.airbyte.commons.server.handlers.ConnectorDefinitionSpecificationHandler
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

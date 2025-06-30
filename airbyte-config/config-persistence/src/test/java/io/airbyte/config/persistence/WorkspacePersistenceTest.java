@@ -31,7 +31,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -263,7 +263,7 @@ class WorkspacePersistenceTest extends BaseConfigDatabaseTest {
   // @ValueSource(booleans = {true, false})
   // void testWorkspaceByConnectionId(final boolean isTombstone)
   // throws ConfigNotFoundException, IOException, JsonValidationException,
-  // io.airbyte.data.exceptions.ConfigNotFoundException {
+  // io.airbyte.data.ConfigNotFoundException {
   // final UUID connectionId = UUID.randomUUID();
   // final UUID sourceId = UUID.randomUUID();
   // final StandardSync mSync = new StandardSync()
