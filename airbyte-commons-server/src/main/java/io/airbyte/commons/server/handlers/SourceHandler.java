@@ -690,7 +690,7 @@ public class SourceHandler {
   JsonNode hydrateOAuthResponseSecret(final String secretId, final UUID workspaceId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.Companion.fromFullCoordinate(secretId);
     final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
-    final JsonNode secret = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence);
+    final JsonNode secret = secretsRepositoryReader.fetchJsonSecretFromSecretPersistence(secretCoordinate, secretPersistence);
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }

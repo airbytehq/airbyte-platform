@@ -5,6 +5,7 @@
 package io.airbyte.config.secrets.hydration
 
 import com.fasterxml.jackson.databind.JsonNode
+import io.airbyte.commons.json.Jsons
 import io.airbyte.config.secrets.ConfigWithSecretReferences
 import io.airbyte.config.secrets.InlinedConfigWithSecretRefs
 import io.airbyte.config.secrets.SecretsHelpers
@@ -32,17 +33,22 @@ class RealSecretsHydrator(
   ): JsonNode = SecretsHelpers.combineConfig(InlinedConfigWithSecretRefs(partialConfig).toConfigWithRefs(), runtimeSecretPersistence)
 
   override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode =
-    SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, defaultSecretPersistence)
+    hydrateSecretCoordinateAsJson(secretCoordinate, defaultSecretPersistence)
+
+  override fun hydrateSecretCoordinateAsJson(
+    secretCoordinate: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): JsonNode = Jsons.deserialize(SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence))
 
   override fun hydrateSecretCoordinate(
     secretCoordinate: JsonNode,
     secretPersistence: SecretPersistence,
-  ): JsonNode = SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence)
+  ): String = SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, secretPersistence)
 
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,
     runtimeSecretPersistence: RuntimeSecretPersistence,
-  ): JsonNode = SecretsHelpers.hydrateSecretCoordinate(secretCoordinate, runtimeSecretPersistence)
+  ): JsonNode = hydrateSecretCoordinateAsJson(secretCoordinate, runtimeSecretPersistence)
 
   override fun hydrate(
     config: ConfigWithSecretReferences,

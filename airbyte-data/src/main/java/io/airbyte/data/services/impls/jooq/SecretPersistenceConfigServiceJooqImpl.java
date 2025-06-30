@@ -61,7 +61,7 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
   public SecretPersistenceConfig get(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
     final Optional<SecretPersistenceCoordinate> secretPersistenceCoordinate = getSecretPersistenceCoordinate(scope, scopeId);
     if (secretPersistenceCoordinate.isPresent()) {
-      final JsonNode configuration = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(
+      final JsonNode configuration = secretsRepositoryReader.fetchJsonSecretFromDefaultSecretPersistence(
           SecretCoordinate.Companion.fromFullCoordinate(secretPersistenceCoordinate.get().getCoordinate()));
 
       return new SecretPersistenceConfig()
