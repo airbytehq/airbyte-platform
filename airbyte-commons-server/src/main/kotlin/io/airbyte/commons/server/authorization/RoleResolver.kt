@@ -21,9 +21,6 @@ import io.airbyte.config.Permission
 import io.airbyte.config.Permission.PermissionType
 import io.airbyte.config.helpers.PermissionHelper
 import io.airbyte.data.auth.TokenType
-import io.airbyte.featureflag.FeatureFlagClient
-import io.airbyte.featureflag.IgnoreTokenRoleClaims
-import io.airbyte.featureflag.TokenSubject
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.http.HttpRequest
 import io.micronaut.http.context.ServerRequestContext
@@ -68,7 +65,6 @@ open class RoleResolver(
   private val currentUserService: CurrentUserService,
   private val securityService: SecurityService?,
   private val permissionHandler: PermissionHandler,
-  private val featureFlags: FeatureFlagClient,
 ) {
   data class Subject(
     val id: String,
@@ -79,7 +75,6 @@ open class RoleResolver(
 
   inner class Request internal constructor() {
     var subject: Subject? = null
-    var claimedRoles: Set<String>? = null
     val props: MutableMap<String, String> = mutableMapOf()
     val orgs: MutableSet<UUID> = mutableSetOf()
 
@@ -115,14 +110,6 @@ open class RoleResolver(
     ) = apply {
       // Figure out the subject type and ID.
       subject = Subject(sub, TokenType.fromClaims(claims))
-
-      // Some tokens have roles in the claims.
-      // If the token does have roles in the claims, then those are the only roles
-      // resolved by Request.roles().
-      val roles = (claims["roles"] as? List<*>)?.filterIsInstance<String>()
-      if (roles != null) {
-        claimedRoles = roles.toSet()
-      }
     }
 
     fun withRefsFromCurrentHttpRequest() =
@@ -166,28 +153,6 @@ open class RoleResolver(
     fun roles(): Set<String> {
       // these make null-checking cleaner
       val subject = subject
-      var claimedRoles = claimedRoles
-
-      // We'd like to transition away from tokens that hard-code roles in the claims,
-      // and look them up per-request instead. This will allow for more centralized,
-      // more consistent code for determining roles, and prevents bugs with having
-      // changing the set of roles needed by a token.
-      if (featureFlags.boolVariation(IgnoreTokenRoleClaims, TokenSubject(subject?.id ?: "unknown"))) {
-        claimedRoles = null
-      }
-
-      // This helps when new roles are added to the set of admin roles.
-      // "ADMIN" implies a set of other roles (see AuthRole.getInstanceAdminRoles()).
-      // When a new role is added to that set, any existing tokens in the wild that
-      // contain hard-coded roles will not have this new role. To deal with that,
-      // we regenerate the set of admin roles here.
-      //
-      // TODO Hopefully, in the near future, we'll move away from having hard-coded roles
-      //      in tokens and *always* generate the roles dynamically during the request processing,
-      //      so that this is no longer needed.
-      if (claimedRoles?.contains(AuthRoleConstants.ADMIN) == true) {
-        claimedRoles = AuthRole.getInstanceAdminRoles()
-      }
 
       logger.debug { "Resolving roles for $subject" }
 
@@ -198,9 +163,6 @@ open class RoleResolver(
       if (subject.id.isBlank()) {
         logger.debug { "subject.id is blank, returning empty role set" }
         return emptySet()
-      }
-      if (!claimedRoles.isNullOrEmpty()) {
-        return claimedRoles
       }
 
       return try {
