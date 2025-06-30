@@ -249,7 +249,8 @@ class ConnectorDefinitionSpecificationHandlerTest {
                     .withChangelogUrl(Exceptions.toRuntime(() -> new URI(CONNECTOR_URL)))
                     .withConnectionSpecification(Jsons.jsonNode(new HashMap<>()))
                     .withSupportedDestinationSyncModes(List.of(io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND,
-                        io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.v0.DestinationSyncMode.OVERWRITE)))
+                        io.airbyte.protocol.models.v0.DestinationSyncMode.APPEND_DEDUP, io.airbyte.protocol.models.v0.DestinationSyncMode.OVERWRITE,
+                        io.airbyte.protocol.models.v0.DestinationSyncMode.UPDATE, io.airbyte.protocol.models.v0.DestinationSyncMode.SOFT_DELETE)))
                 .withSupportsRefreshes(supportsRefreshes));
 
     final DestinationDefinitionSpecificationRead response =
@@ -260,10 +261,12 @@ class ConnectorDefinitionSpecificationHandlerTest {
         destinationDefinitionIdWithWorkspaceId.getWorkspaceId());
     if (supportsRefreshes) {
       CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
-          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE, DestinationSyncMode.OVERWRITE_DEDUP));
+          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE, DestinationSyncMode.SOFT_DELETE,
+          DestinationSyncMode.UPDATE, DestinationSyncMode.OVERWRITE_DEDUP));
     } else {
       CollectionAssert.assertThatCollection(response.getSupportedDestinationSyncModes()).containsExactlyInAnyOrderElementsOf(List.of(
-          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE));
+          DestinationSyncMode.APPEND, DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE, DestinationSyncMode.UPDATE,
+          DestinationSyncMode.SOFT_DELETE));
     }
   }
 

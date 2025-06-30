@@ -212,6 +212,8 @@ public class ConnectorDefinitionSpecificationHandler {
           finalSyncModes.add(DestinationSyncMode.OVERWRITE);
           hasOverwrite = true;
         }
+        case UPDATE -> finalSyncModes.add(DestinationSyncMode.UPDATE);
+        case SOFT_DELETE -> finalSyncModes.add(DestinationSyncMode.SOFT_DELETE);
         default -> throw new IllegalStateException("Unexpected value: " + syncMode);
       }
     }
