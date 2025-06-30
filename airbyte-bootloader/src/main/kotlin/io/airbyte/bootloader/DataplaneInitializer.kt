@@ -63,7 +63,7 @@ class DataplaneInitializer(
 
     // Cloud puts dataplane pods in the jobs namespace, so we need to copy the secret containing
     // the dataplane credentials to the jobs namespace.
-    if (edition == AirbyteEdition.CLOUD) {
+    if (edition == AirbyteEdition.CLOUD && jobsNamespace.isNotBlank()) {
       log.info { "Copying secret $secretName to jobs namespace" }
       K8sSecretHelper.copySecretToNamespace(
         k8sClient,
