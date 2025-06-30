@@ -139,8 +139,8 @@ internal class ApplyDefinitionsHelperTest {
     updateAll: Boolean,
     reImport: Boolean,
   ) {
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
@@ -190,8 +190,8 @@ internal class ApplyDefinitionsHelperTest {
   ) {
     mockSeedInitialDefinitions()
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_WITH_RC)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_WITH_RC)
     every { connectorRolloutService.insertConnectorRollout(any()) } returns
       ConnectorRollout(
         id = UUID.randomUUID(),
@@ -296,8 +296,8 @@ internal class ApplyDefinitionsHelperTest {
   )
   fun `applyReleaseCandidates should not write ConnectorRollout if a rollout exists in a non-canceled state`(state: ConnectorEnumRolloutState) {
     mockSeedInitialDefinitions()
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_WITH_RC)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_WITH_RC)
 
     val fakeAdvId = UUID.randomUUID()
     val fakeInitialAdvId = UUID.randomUUID()
@@ -483,7 +483,7 @@ internal class ApplyDefinitionsHelperTest {
   ) {
     mockSeedInitialDefinitions()
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_MALFORMED_RC)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_WITH_MALFORMED_RC)
 
     every {
       actorDefinitionService.writeActorDefinitionVersion(any())
@@ -513,8 +513,8 @@ internal class ApplyDefinitionsHelperTest {
   ) {
     mockSeedInitialDefinitions()
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_WITH_RC)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_WITH_RC)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_WITH_RC)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_WITH_RC)
     every { actorDefinitionService.getDefaultVersionForActorDefinitionIdOptional(any()) } returns Optional.empty()
     every { connectorRolloutService.insertConnectorRollout(any()) } returns
       ConnectorRollout(
@@ -566,8 +566,8 @@ internal class ApplyDefinitionsHelperTest {
     every { actorDefinitionService.actorDefinitionIdsInUse } returns emptySet()
 
     // New definitions come in
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_2)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
@@ -608,8 +608,8 @@ internal class ApplyDefinitionsHelperTest {
     mockSeedInitialDefinitions()
     every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_2)
 
     val versionDefinition1 =
       ActorDefinitionVersion()
@@ -640,8 +640,8 @@ internal class ApplyDefinitionsHelperTest {
     mockSeedInitialDefinitions()
     every { actorDefinitionService.actorDefinitionIdsInUse } returns setOf(POSTGRES_ID, S3_ID)
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES_2)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3_2)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES_2)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3_2)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
@@ -710,8 +710,8 @@ internal class ApplyDefinitionsHelperTest {
     val postgresWithOldProtocolVersion = Jsons.clone(SOURCE_POSTGRES).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
     val s3withOldProtocolVersion = Jsons.clone(DESTINATION_S3).withSpec(ConnectorSpecification().withProtocolVersion("1.0.0"))
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(postgresWithOldProtocolVersion, SOURCE_POSTGRES_2)
-    every { definitionsProvider.destinationDefinitions } returns listOf(s3withOldProtocolVersion, DESTINATION_S3_2)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(postgresWithOldProtocolVersion, SOURCE_POSTGRES_2)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(s3withOldProtocolVersion, DESTINATION_S3_2)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
@@ -793,8 +793,8 @@ internal class ApplyDefinitionsHelperTest {
     } returns ConnectorPlatformCompatibilityValidationResult(false, "S3 Destination 0.1.0 can't be updated")
     every { airbyteCompatibleConnectorsValidator.validate(any(), "0.2.0") } returns ConnectorPlatformCompatibilityValidationResult(true, null)
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES, SOURCE_POSTGRES_2)
-    every { definitionsProvider.destinationDefinitions } returns listOf(DESTINATION_S3, DESTINATION_S3_2)
+    every { definitionsProvider.getSourceDefinitions() } returns listOf(SOURCE_POSTGRES, SOURCE_POSTGRES_2)
+    every { definitionsProvider.getDestinationDefinitions() } returns listOf(DESTINATION_S3, DESTINATION_S3_2)
 
     applyDefinitionsHelper.apply(updateAll, reImport)
     verifyActorDefinitionServiceInteractions()
@@ -883,9 +883,10 @@ internal class ApplyDefinitionsHelperTest {
         .withDockerRepository("airbyte/destination-new")
         .withDestinationDefinitionId(UUID.randomUUID())
 
-    every { definitionsProvider.sourceDefinitions } returns listOf(SOURCE_POSTGRES, malformedRegistrySourceDefinition, anotherNewSourceDefinition)
+    every { definitionsProvider.getSourceDefinitions() } returns
+      listOf(SOURCE_POSTGRES, malformedRegistrySourceDefinition, anotherNewSourceDefinition)
     every {
-      definitionsProvider.destinationDefinitions
+      definitionsProvider.getDestinationDefinitions()
     } returns listOf(DESTINATION_S3, malformedRegistryDestinationDefinition, anotherNewDestinationDefinition)
 
     applyDefinitionsHelper.apply(true)

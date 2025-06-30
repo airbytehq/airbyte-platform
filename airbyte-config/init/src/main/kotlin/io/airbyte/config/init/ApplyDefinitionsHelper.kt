@@ -84,8 +84,8 @@ class ApplyDefinitionsHelper(
     updateAll: Boolean = false,
     reImportVersionInUse: Boolean = false,
   ) {
-    val latestSourceDefinitions = definitionsProvider.sourceDefinitions
-    val latestDestinationDefinitions = definitionsProvider.destinationDefinitions
+    val latestSourceDefinitions = definitionsProvider.getSourceDefinitions()
+    val latestDestinationDefinitions = definitionsProvider.getDestinationDefinitions()
 
     val currentProtocolRange = jobPersistence.currentProtocolVersionRange
     val protocolCompatibleSourceDefinitions =

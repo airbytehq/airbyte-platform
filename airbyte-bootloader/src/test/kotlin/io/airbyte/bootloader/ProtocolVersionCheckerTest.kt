@@ -419,7 +419,7 @@ internal class ProtocolVersionCheckerTest {
             .withDestinationDefinitionId(e.key)
             .withSpec(ConnectorSpecification().withProtocolVersion(e.value.serialize()))
         }.toList()
-    every { definitionsProvider.destinationDefinitions } returns destDefinitions
+    every { definitionsProvider.getDestinationDefinitions() } returns destDefinitions
   }
 
   private fun setNewSourceDefinitions(defs: List<Map.Entry<UUID, Version>>) {
@@ -430,7 +430,7 @@ internal class ProtocolVersionCheckerTest {
             .withSourceDefinitionId(e.key)
             .withSpec(ConnectorSpecification().withProtocolVersion(e.value.serialize()))
         }.toList()
-    every { definitionsProvider.sourceDefinitions } returns sourceDefinitions
+    every { definitionsProvider.getSourceDefinitions() } returns sourceDefinitions
   }
 }
 
