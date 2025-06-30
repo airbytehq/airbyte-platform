@@ -19,4 +19,8 @@
   border-radius: 0 0 variables.$border-radius-sm variables.$border-radius-sm;
   max-height: variables.$height-org-picker-popover-list;
   overflow-y: auto;
+
+  &__singleWorkspace {
+    border: none;
+  }
 }

@@ -1,10 +1,11 @@
-import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery, UseInfiniteQueryResult, useInfiniteQuery } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
 import { useGetWorkspace } from "./workspaces";
+import { ApiCallOptions } from "../apiCall";
 import {
   getOrganization,
   getOrganizationInfo,
@@ -15,17 +16,20 @@ import {
   getOrganizationUsage,
   listWorkspacesInOrganization,
   listOrganizationsByUser,
+  listOrganizationSummaries,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
   ListOrganizationsByUserRequestBody,
+  ListOrganizationSummariesRequestBody,
   OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
   OrganizationInfoRead,
+  ListOrganizationSummariesResponse,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
@@ -44,6 +48,8 @@ export const organizationKeys = {
   workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
   listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
     [...organizationKeys.all, "byUser", requestBody] as const,
+  summaries: (requestBody: ListOrganizationSummariesRequestBody) =>
+    [...organizationKeys.all, "summaries", requestBody] as const,
 };
 
 /**
@@ -154,6 +160,63 @@ export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserR
   return useSuspenseQuery(organizationKeys.listByUser(requestBody), () =>
     listOrganizationsByUser(requestBody, requestOptions)
   );
+};
+
+const listOrgSummariesQueryFn =
+  (requestBody: ListOrganizationSummariesRequestBody, requestOptions: ApiCallOptions) =>
+  async ({ pageParam = 0 }) => {
+    const pageSize = requestBody.pagination.pageSize ?? 10;
+    const rowOffset = pageParam * pageSize;
+    return listOrganizationSummaries(
+      { ...requestBody, pagination: { ...requestBody.pagination, rowOffset } },
+      requestOptions
+    );
+  };
+
+export const useListOrganizationSummaries = (
+  requestBody: ListOrganizationSummariesRequestBody
+): UseInfiniteQueryResult<ListOrganizationSummariesResponse, unknown> => {
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery({
+    queryKey: organizationKeys.summaries(requestBody),
+    queryFn: listOrgSummariesQueryFn(requestBody, requestOptions),
+    suspense: false,
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    getNextPageParam: (lastPage, allPages) => {
+      const pageSize = requestBody.pagination.pageSize ?? 10;
+      const summaries = lastPage.organizationSummaries ?? [];
+      return summaries.length < pageSize ? undefined : allPages.length;
+    },
+    getPreviousPageParam: (firstPage, allPages) => {
+      const pageSize = requestBody.pagination.pageSize ?? 10;
+      const summaries = firstPage.organizationSummaries ?? [];
+      return summaries.length < pageSize ? undefined : allPages.length - 1;
+    },
+  });
+};
+
+export const usePrefetchOrganizationSummaries = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+  const requestBody: ListOrganizationSummariesRequestBody = {
+    userId,
+    nameContains: "",
+    pagination: { pageSize: 10 },
+  };
+
+  return () => {
+    return queryClient.prefetchInfiniteQuery({
+      queryKey: organizationKeys.summaries(requestBody),
+      queryFn: listOrgSummariesQueryFn(requestBody, requestOptions),
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 30,
+    });
+  };
 };
 
 export const useFirstOrg = (): OrganizationRead => {

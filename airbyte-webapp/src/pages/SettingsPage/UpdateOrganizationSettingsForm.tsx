@@ -92,6 +92,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         }),
       }}
       disabled={!canUpdateOrganization}
+      reinitializeDefaultValues
     >
       <FormControl<BaseOrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.organizationName" })}

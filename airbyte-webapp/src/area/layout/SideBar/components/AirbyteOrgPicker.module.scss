@@ -14,7 +14,7 @@
   height: 100%;
   background: none;
   border: none;
-  padding: 0 variables.$spacing-sm;
+  padding: 0 variables.$spacing-sm 0 variables.$spacing-lg;
   cursor: pointer;
   transition: all 0.3s ease-out;
   border-radius: variables.$border-radius-sm;
@@ -53,9 +53,10 @@
 }
 
 .orgPicker__popoverPanel {
-  width: 240px;
+  width: variables.$width-org-picker-popover;
   background: colors.$foreground;
   border-radius: variables.$border-radius-sm;
+  overflow: hidden;
   box-shadow: variables.$box-shadow-raised;
   z-index: z-indices.$dropdownMenu;
 }
