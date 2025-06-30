@@ -56,10 +56,10 @@ public class JobErrorReporter {
   public static final String CONNECTOR_REPOSITORY_META_KEY = "connector_repository";
   public static final String CONNECTOR_DEFINITION_ID_META_KEY = "connector_definition_id";
   public static final String CONNECTOR_RELEASE_STAGE_META_KEY = "connector_release_stage";
-  public static final String CONNECTOR_LANGUAGE_META_KEY = "connector_language";
   private static final String CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY = "connector_internal_support_level";
   private static final String CONNECTOR_COMMAND_META_KEY = "connector_command";
   public static final String JOB_ID_KEY = "job_id";
+  public static final String SOURCE_TYPE_META_KEY = "source_type";
 
   private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
@@ -127,8 +127,7 @@ public class JobErrorReporter {
             final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
             if (sourceVersion.getLanguage() != null) {
-              // Some sources are written in a different language. We require this to correctly configure Sentry.
-              commonMetadata.put(CONNECTOR_LANGUAGE_META_KEY, sourceVersion.getLanguage());
+              commonMetadata.put(SOURCE_TYPE_META_KEY, sourceVersion.getLanguage());
             }
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata,
