@@ -13,11 +13,13 @@ import io.airbyte.api.model.generated.PermissionCheckRead
 import io.airbyte.api.model.generated.PermissionCheckRequest
 import io.airbyte.api.model.generated.PermissionType
 import io.airbyte.api.model.generated.SlugRequestBody
+import io.airbyte.api.model.generated.TimeWindowRequestBody
 import io.airbyte.api.model.generated.WorkspaceCreate
 import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.model.generated.WorkspaceGetDbtJobsRequest
 import io.airbyte.api.model.generated.WorkspaceGetDbtJobsResponse
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback
+import io.airbyte.api.model.generated.WorkspaceIdList
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead
 import io.airbyte.api.model.generated.WorkspaceRead
@@ -231,6 +233,13 @@ open class WorkspaceApiController(
   override fun listWorkspacesByUser(
     @Body request: ListWorkspacesByUserRequestBody,
   ): WorkspaceReadList? = execute { workspacesHandler.listWorkspacesByUser(request) }
+
+  @Post("/list_workspaces_by_most_recently_running_jobs")
+  @Secured(AuthRoleConstants.ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun listActiveWorkspacesByMostRecentlyRunningJobs(
+    @Body timeWindowRequestBody: TimeWindowRequestBody,
+  ): WorkspaceIdList = throw ApiNotImplementedInOssProblem()
 
   @Post("/get_available_dbt_jobs")
   @Secured(AuthRoleConstants.WORKSPACE_EDITOR, AuthRoleConstants.ORGANIZATION_EDITOR)

@@ -5,6 +5,7 @@
 package io.airbyte.data.services;
 
 import io.airbyte.config.StandardWorkspace;
+import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.StandardSyncQuery;
@@ -50,6 +51,12 @@ public interface WorkspaceService {
   int countSourcesForWorkspace(UUID workspaceId) throws IOException;
 
   int countDestinationsForWorkspace(UUID workspaceId) throws IOException;
+
+  WorkspaceServiceAccount getWorkspaceServiceAccountNoSecrets(UUID workspaceId) throws IOException, ConfigNotFoundException;
+
+  void writeWorkspaceServiceAccountNoSecrets(WorkspaceServiceAccount workspaceServiceAccount) throws IOException;
+
+  String getDataplaneGroupNameForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
 
