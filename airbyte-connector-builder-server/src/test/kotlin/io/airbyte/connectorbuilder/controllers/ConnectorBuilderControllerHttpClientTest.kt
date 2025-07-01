@@ -37,7 +37,7 @@ internal class ConnectorBuilderControllerHttpClientTest {
   @MockBean(HealthHandler::class)
   fun healthHandler(): HealthHandler =
     mockk {
-      every { healthCheck } returns
+      every { getHealthCheck() } returns
         mockk {
           every { available } returns AVAILABLE
           every { cdkVersion } returns CDK_VERSION

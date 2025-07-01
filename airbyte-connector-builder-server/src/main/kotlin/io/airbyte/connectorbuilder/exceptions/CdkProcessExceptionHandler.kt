@@ -12,16 +12,16 @@ import io.micronaut.http.server.exceptions.ExceptionHandler
 import jakarta.inject.Singleton
 
 /**
- * Custom Micronaut exception handler for the [ContributionException].
+ * Custom Micronaut exception handler for the [CdkProcessException].
  */
 @Produces
 @Singleton
-@Requires(classes = [ContributionException::class])
-class ContributionExceptionHandler : ExceptionHandler<ContributionException, HttpResponse<*>> {
+@Requires(classes = [CdkProcessException::class])
+class CdkProcessExceptionHandler : ExceptionHandler<CdkProcessException, HttpResponse<*>> {
   val helper: ExceptionHelper = ExceptionHelper()
 
   override fun handle(
     request: HttpRequest<*>,
-    exception: ContributionException,
-  ): HttpResponse<*> = helper.handle(request, exception, exception.httpStatus)
+    exception: CdkProcessException,
+  ): HttpResponse<*> = helper.handle(request, exception)
 }

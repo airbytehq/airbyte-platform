@@ -15,7 +15,7 @@ class HealthControllerTest {
   @Test
   fun `healthCheckDeprecated should return HealthCheckRead`() {
     val healthCheckRead = mockk<HealthCheckRead>()
-    val handler = mockk<HealthHandler> { every { healthCheck } returns healthCheckRead }
+    val handler = mockk<HealthHandler> { every { getHealthCheck() } returns healthCheckRead }
 
     val controller = HealthController(healthHandler = handler)
 

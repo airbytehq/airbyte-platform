@@ -17,11 +17,11 @@ import jakarta.inject.Singleton
 @Produces
 @Singleton
 @Requires(classes = [ManifestParserException::class])
-class ManifestParserExceptionHandler : ExceptionHandler<ManifestParserException?, HttpResponse<*>?> {
+class ManifestParserExceptionHandler : ExceptionHandler<ManifestParserException, HttpResponse<*>> {
   val helper: ExceptionHelper = ExceptionHelper()
 
   override fun handle(
-    request: HttpRequest<*>?,
-    exception: ManifestParserException?,
-  ): HttpResponse<*>? = helper.handle(request, exception)
+    request: HttpRequest<*>,
+    exception: ManifestParserException,
+  ): HttpResponse<*> = helper.handle(request, exception)
 }
