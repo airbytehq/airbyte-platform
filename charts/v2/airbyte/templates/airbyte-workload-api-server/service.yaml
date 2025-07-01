@@ -1,3 +1,4 @@
+{{- if .Values.workloadApiServer.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -20,3 +21,4 @@ spec:
     {{- if .Values.workloadApiServer.extraSelectorLabels }}
     {{ toYaml (mergeOverwrite .Values.workloadApiServer.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
     {{- end }}
+{{- end }}
