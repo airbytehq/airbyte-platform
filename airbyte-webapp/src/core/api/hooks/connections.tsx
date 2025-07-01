@@ -120,7 +120,8 @@ export interface CreateConnectionProps {
   destination: DestinationRead;
   sourceDefinition?: Pick<SourceDefinitionRead, "sourceDefinitionId">;
   destinationDefinition?: { name: string; destinationDefinitionId: string };
-  sourceCatalogId: string | undefined;
+  sourceCatalogId?: string;
+  destinationCatalogId?: string;
 }
 
 export const useListConnectionEventsInfinite = (
@@ -324,6 +325,7 @@ export const useCreateConnection = () => {
       sourceDefinition,
       destinationDefinition,
       sourceCatalogId,
+      destinationCatalogId,
     }: CreateConnectionProps) => {
       const response = await webBackendCreateConnection(
         {
@@ -332,6 +334,7 @@ export const useCreateConnection = () => {
           ...values,
           status: "active",
           sourceCatalogId,
+          destinationCatalogId,
         },
         requestOptions
       );

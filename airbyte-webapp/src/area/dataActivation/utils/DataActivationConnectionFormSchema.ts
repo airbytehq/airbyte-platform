@@ -36,7 +36,7 @@ const noDestinationSyncModeSelected = z.object({
 
 const destinationAppendSyncMode = z.object({
   destinationSyncMode: z.literal(DestinationSyncMode.append),
-  matchingKeys: z.null(),
+  matchingKeys: z.array(z.string()).optional(),
 });
 
 const destinationAppendDedupSyncMode = z.object({
