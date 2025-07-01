@@ -1,0 +1,15 @@
+@use "scss/colors";
+@use "scss/variables";
+@use "scss/mixins";
+
+.titleContainer {
+  padding-top: variables.$spacing-2xl;
+}
+
+.title {
+  color: colors.$grey-400;
+}
+
+.heading {
+  text-align: center;
+}

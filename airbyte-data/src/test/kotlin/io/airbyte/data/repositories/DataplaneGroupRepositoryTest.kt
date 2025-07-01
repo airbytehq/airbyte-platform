@@ -4,9 +4,9 @@
 
 package io.airbyte.data.repositories
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.AUTO_DATAPLANE_GROUP
+import io.airbyte.commons.EU_DATAPLANE_GROUP
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.data.repositories.entities.DataplaneGroup
 import io.airbyte.db.instance.configs.jooq.generated.Keys
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -39,7 +39,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
       )
@@ -55,12 +55,12 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
 
   @Test
   fun `update dataplane group`() {
-    val updatedName = GEOGRAPHY_US
+    val updatedName = US_DATAPLANE_GROUP
     val updatedEnabled = true
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
       )
@@ -82,7 +82,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = UUID.randomUUID(),
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
       )
@@ -97,8 +97,8 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
   fun `find dataplane groups by organization id and name`() {
     val organizationId = UUID.randomUUID()
     val otherOrganizationId = UUID.randomUUID()
-    val matchingName = GEOGRAPHY_AUTO
-    val nonMatchingName = GEOGRAPHY_EU
+    val matchingName = AUTO_DATAPLANE_GROUP
+    val nonMatchingName = EU_DATAPLANE_GROUP
 
     val dataplaneGroup1 =
       DataplaneGroup(
@@ -142,13 +142,12 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
   @Test
   fun `find dataplane groups by organization id and name ignores case`() {
     val organizationId = UUID.randomUUID()
-    val matchingName1 = GEOGRAPHY_AUTO.uppercase()
-    val matchingName2 = GEOGRAPHY_AUTO.lowercase()
+    val matchingName1 = AUTO_DATAPLANE_GROUP.uppercase()
 
     val dataplaneGroup =
       DataplaneGroup(
         organizationId = organizationId,
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = true,
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
@@ -161,14 +160,14 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(1, retrievedDataplaneGroups1.size)
     assertThat(retrievedDataplaneGroups1)
       .extracting("name")
-      .containsExactly(GEOGRAPHY_AUTO)
+      .containsExactly(AUTO_DATAPLANE_GROUP)
 
     val retrievedDataplaneGroups2 = dataplaneGroupRepository.findAllByOrganizationIdAndNameIgnoreCase(organizationId, matchingName1)
 
     assertEquals(1, retrievedDataplaneGroups2.size)
     assertThat(retrievedDataplaneGroups2)
       .extracting("name")
-      .containsExactly(GEOGRAPHY_AUTO)
+      .containsExactly(AUTO_DATAPLANE_GROUP)
   }
 
   @Test
@@ -178,7 +177,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
@@ -186,7 +185,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = GEOGRAPHY_US,
+        name = US_DATAPLANE_GROUP,
         enabled = false,
         tombstone = true,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
@@ -194,7 +193,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = GEOGRAPHY_EU,
+        name = EU_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
@@ -208,7 +207,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(2, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly(GEOGRAPHY_US, GEOGRAPHY_AUTO)
+      .containsExactly(US_DATAPLANE_GROUP, AUTO_DATAPLANE_GROUP)
   }
 
   @Test
@@ -218,7 +217,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup1 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = GEOGRAPHY_AUTO,
+        name = AUTO_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
@@ -226,7 +225,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup2 =
       DataplaneGroup(
         organizationId = organizationId,
-        name = GEOGRAPHY_EU,
+        name = EU_DATAPLANE_GROUP,
         enabled = false,
         tombstone = true,
         updatedAt = OffsetDateTime.now().plusSeconds(1),
@@ -234,7 +233,7 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     val dataplaneGroup3 =
       DataplaneGroup(
         organizationId = otherOrganizationId,
-        name = GEOGRAPHY_US,
+        name = US_DATAPLANE_GROUP,
         enabled = false,
         tombstone = false,
         updatedAt = OffsetDateTime.now(),
@@ -248,6 +247,6 @@ class DataplaneGroupRepositoryTest : AbstractConfigRepositoryTest() {
     assertEquals(1, retrievedDataplaneGroups.size)
     assertThat(retrievedDataplaneGroups)
       .extracting("name")
-      .containsExactly(GEOGRAPHY_AUTO)
+      .containsExactly(AUTO_DATAPLANE_GROUP)
   }
 }

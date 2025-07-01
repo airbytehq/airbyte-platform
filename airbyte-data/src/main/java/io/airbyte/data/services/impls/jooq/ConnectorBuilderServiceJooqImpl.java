@@ -18,11 +18,11 @@ import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActiveDeclarativeManifest;
 import io.airbyte.config.ActorDefinitionConfigInjection;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -96,7 +96,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
           .stream()
           .findFirst();
     });
-    return projectOptional.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, builderProjectId));
+    return projectOptional.orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.CONNECTOR_BUILDER_PROJECT, builderProjectId));
   }
 
   @Override
@@ -653,7 +653,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             .fetch())
         .map(DbConverter::buildDeclarativeManifest)
         .stream().findFirst();
-    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.DECLARATIVE_MANIFEST,
+    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.DECLARATIVE_MANIFEST,
         String.format("actorDefinitionId:%s,version:%s", actorDefinitionId, version)));
   }
 
@@ -681,7 +681,7 @@ public class ConnectorBuilderServiceJooqImpl implements ConnectorBuilderService 
             .fetch())
         .map(DbConverter::buildDeclarativeManifest)
         .stream().findFirst();
-    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.DECLARATIVE_MANIFEST,
+    return declarativeManifest.orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.DECLARATIVE_MANIFEST,
         String.format("ACTIVE_DECLARATIVE_MANIFEST.actor_definition_id:%s and matching DECLARATIVE_MANIFEST.version", actorDefinitionId)));
   }
 

@@ -2,10 +2,11 @@
  * Copyright (c) 2020-2025 Airbyte, Inc., all rights reserved.
  */
 
-package io.airbyte.data.services.impls.jooq
+package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.db.Database
 import io.airbyte.db.instance.configs.jooq.generated.Tables
@@ -79,14 +80,27 @@ class DataplaneGroupServiceTestJooqImpl(
     withTombstone: Boolean,
   ): List<DataplaneGroup> =
     database.query { ctx: DSLContext ->
-      val query =
-        ctx
-          .selectFrom(Tables.DATAPLANE_GROUP)
-          .where(Tables.DATAPLANE_GROUP.ORGANIZATION_ID.`in`(organizationIds))
+      var condition = Tables.DATAPLANE_GROUP.ORGANIZATION_ID.`in`(organizationIds)
 
       if (!withTombstone) {
-        query.and(Tables.DATAPLANE_GROUP.TOMBSTONE.eq(false))
+        condition = condition.and(Tables.DATAPLANE_GROUP.TOMBSTONE.eq(false))
       }
-      query.fetchInto(DataplaneGroup::class.java)
+      ctx
+        .selectFrom(Tables.DATAPLANE_GROUP)
+        .where(condition)
+        .fetchInto(DataplaneGroup::class.java)
+    }
+
+  // Not needed for test implementation
+  override fun getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition: AirbyteEdition): DataplaneGroup = TODO()
+
+  override fun getOrganizationIdFromDataplaneGroup(dataplaneGroupId: UUID): UUID =
+    database.query { ctx: DSLContext ->
+      ctx
+        .select(Tables.DATAPLANE_GROUP.ORGANIZATION_ID)
+        .from(Tables.DATAPLANE_GROUP)
+        .where(Tables.DATAPLANE_GROUP.ID.eq(dataplaneGroupId))
+        .fetchOneInto(UUID::class.java)
+        ?: throw ConfigNotFoundException(DataplaneGroup::class.toString(), dataplaneGroupId.toString())
     }
 }

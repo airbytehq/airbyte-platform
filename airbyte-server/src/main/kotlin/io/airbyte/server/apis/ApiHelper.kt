@@ -19,7 +19,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jooq.exception.DataAccessException
 import java.io.IOException
 import java.util.concurrent.Callable
-import io.airbyte.data.exceptions.ConfigNotFoundException as DataConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException as DataConfigNotFoundException
 
 val logger = KotlinLogging.logger {}
 

@@ -40,7 +40,7 @@ class SlackOAuthFlow : BaseOAuth2Flow {
         .addParameter("client_id", clientId)
         .addParameter("redirect_uri", redirectUrl)
         .addParameter("state", getState())
-        .addParameter("scope", "read")
+        .addParameter("scope", scopes)
         .build()
         .toString()
     } catch (e: URISyntaxException) {
@@ -65,8 +65,24 @@ class SlackOAuthFlow : BaseOAuth2Flow {
     }
   }
 
+  private val scopes: String
+    get() =
+      java.lang.String.join(
+        ",",
+        "channels:history",
+        "channels:join",
+        "channels:read",
+        "groups:read",
+        "groups:history",
+        "users:read",
+        "im:history",
+        "mpim:history",
+        "im:read",
+        "mpim:read",
+      )
+
   companion object {
-    private const val AUTHORIZE_URL = "https://slack.com/oauth/authorize"
-    private const val ACCESS_TOKEN_URL = "https://slack.com/api/oauth.access"
+    private const val AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
+    private const val ACCESS_TOKEN_URL = "https://slack.com/api/oauth.v2.access"
   }
 }

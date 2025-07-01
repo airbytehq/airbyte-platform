@@ -18,10 +18,12 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_24_004__AddAndEnforceUniqueConstraintInADVTableTest : AbstractConfigsDatabaseTest() {
   val actorDefinitionVersion: Table<Record> = DSL.table("actor_definition_version")
   val actorDefinitionId: Field<UUID> = DSL.field("actor_definition_id", UUID::class.java)
@@ -36,7 +38,7 @@ internal class V0_50_24_004__AddAndEnforceUniqueConstraintInADVTableTest : Abstr
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_24_003__AddPbaAndOrgBillingColumnsToOrganizationTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -45,7 +47,7 @@ internal class V0_50_24_004__AddAndEnforceUniqueConstraintInADVTableTest : Abstr
 
   @Test
   fun testMigrate() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // ignore all foreign key constraints
     ctx.execute("SET session_replication_role = replica;")

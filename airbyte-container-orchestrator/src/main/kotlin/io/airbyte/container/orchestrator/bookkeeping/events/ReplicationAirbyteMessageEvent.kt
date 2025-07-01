@@ -6,8 +6,8 @@ package io.airbyte.container.orchestrator.bookkeeping.events
 
 import io.airbyte.api.client.model.generated.StreamStatusIncompleteRunCause
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.workers.context.ReplicationContext
 
 /**
  * Custom event type that contains information about the current {@link AirbyteMessage} being

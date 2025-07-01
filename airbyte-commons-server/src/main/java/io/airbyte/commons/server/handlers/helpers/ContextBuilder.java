@@ -11,7 +11,7 @@ import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -135,6 +135,20 @@ public class ContextBuilder {
         .withWorkspaceId(destination.getWorkspaceId())
         .withOrganizationId(organizationId)
         .withActorType(ActorType.DESTINATION);
+  }
+
+  public ActorContext fromActorDefinitionId(final UUID actorDefinitionId, final ActorType actorType, final UUID workspaceId) {
+    UUID organizationId = null;
+    try {
+      organizationId = workspaceService.getStandardWorkspaceNoSecrets(workspaceId, false).getOrganizationId();
+    } catch (final ConfigNotFoundException | IOException | JsonValidationException e) {
+      log.error("Failed to get organization id for workspace id: {}", workspaceId, e);
+    }
+    return new ActorContext()
+        .withActorDefinitionId(actorDefinitionId)
+        .withWorkspaceId(workspaceId)
+        .withOrganizationId(organizationId)
+        .withActorType(actorType);
   }
 
 }

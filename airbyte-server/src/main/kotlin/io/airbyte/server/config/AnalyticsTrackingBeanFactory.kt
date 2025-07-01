@@ -12,7 +12,7 @@ import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.handlers.DeploymentMetadataHandler
 import io.airbyte.config.Organization
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.WorkspaceService
 import io.airbyte.validation.json.JsonValidationException
@@ -63,8 +63,7 @@ class AnalyticsTrackingBeanFactory {
           NotificationSettingsConverter.toClientApi(workspace.notificationSettings),
           workspace.firstCompletedSync,
           workspace.feedbackDone,
-          workspace.defaultGeography,
-          UUID.randomUUID(),
+          workspace.dataplaneGroupId,
           null,
           workspace.tombstone,
           null,

@@ -10,11 +10,13 @@ import { Action, Namespace, useAnalyticsService } from "core/services/analytics"
 import { useConfirmationModalService } from "hooks/services/ConfirmationModal";
 import {
   useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./PublishButton.module.scss";
 import { PublishModal, PublishType } from "./PublishModal";
+import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
@@ -23,28 +25,23 @@ interface PublishButtonProps {
 }
 
 export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
-  const {
-    yamlIsValid,
-    formValuesValid,
-    permission,
-    resolveErrorMessage,
-    streamNames,
-    isResolving,
-    formValuesDirty,
-    resolvedManifest,
-  } = useConnectorBuilderFormState();
+  const { yamlIsValid } = useConnectorBuilderFormState();
   const {
     streamRead: { isFetching: isReadingStream },
   } = useConnectorBuilderTestRead();
+  const permission = useConnectorBuilderPermission();
+  const { hasErrors } = useBuilderErrors();
+  const hasUiErrors = useMemo(() => hasErrors(), [hasErrors]);
+  const manifest = useBuilderWatch("manifest");
+
   const analyticsService = useAnalyticsService();
   const [openModal, setOpenModal] = useState<PublishType | false>(false);
   const mode = useBuilderWatch("mode");
-  const dynamicStreams = useBuilderWatch("formValues.dynamicStreams");
 
   let buttonDisabled = permission === "readOnly";
   let tooltipContent = undefined;
 
-  if (isResolving || formValuesDirty || isReadingStream) {
+  if (isReadingStream) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.resolvingStreamList" />;
   }
@@ -54,32 +51,31 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
     tooltipContent = <FormattedMessage id="connectorBuilder.invalidYamlPublish" />;
   }
 
-  if (mode === "ui" && !formValuesValid) {
+  if (mode === "ui" && hasUiErrors) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.configErrorsPublish" />;
   }
 
-  if (resolveErrorMessage) {
-    buttonDisabled = true;
-    tooltipContent = <FormattedMessage id="connectorBuilder.resolveErrorPublish" />;
-  }
-
-  if (resolvedManifest.streams?.length === 0 && resolvedManifest.dynamic_streams?.length === 0) {
+  if (manifest?.streams?.length === 0 && manifest?.dynamic_streams?.length === 0) {
     buttonDisabled = true;
     tooltipContent = <FormattedMessage id="connectorBuilder.noStreamsPublish" />;
   }
 
   const { getStreamTestWarnings } = useStreamTestMetadata();
-  const streamsWithWarnings = useMemo(() => {
-    return streamNames
-      .filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0)
-      .map((streamName) => streamName);
-  }, [getStreamTestWarnings, streamNames]);
-  const dynamicStreamsWithWarnings = useMemo(() => {
-    return dynamicStreams
-      .filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
-      .map(({ dynamicStreamName }) => dynamicStreamName);
-  }, [getStreamTestWarnings, dynamicStreams]);
+  const streamsWithWarnings = useMemo(
+    () =>
+      manifest?.streams
+        ?.filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0)
+        ?.map(({ name }) => name) ?? [],
+    [getStreamTestWarnings, manifest?.streams]
+  );
+  const dynamicStreamsWithWarnings = useMemo(
+    () =>
+      manifest?.dynamic_streams
+        ?.filter((_, index) => getStreamTestWarnings({ type: "dynamic_stream", index }).length > 0)
+        ?.map(({ name }) => name) ?? [],
+    [manifest?.dynamic_streams, getStreamTestWarnings]
+  );
   const namesWithWarnings = useMemo(() => {
     return [...dynamicStreamsWithWarnings, ...streamsWithWarnings];
   }, [streamsWithWarnings, dynamicStreamsWithWarnings]);

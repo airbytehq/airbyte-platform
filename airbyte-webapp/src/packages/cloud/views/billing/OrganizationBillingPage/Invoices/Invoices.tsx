@@ -6,7 +6,8 @@ import { DataLoadingError } from "components/ui/DataLoadingError";
 import { FlexContainer } from "components/ui/Flex";
 import { Heading } from "components/ui/Heading";
 
-import { useCurrentWorkspace, useGetInvoices } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetInvoices } from "core/api";
 
 import { InvoiceGrid, InvoiceGridLoadingSkeleton } from "./InvoiceGrid";
 import { useRedirectToCustomerPortal } from "../../../../area/billing/utils/useRedirectToCustomerPortal";
@@ -14,7 +15,7 @@ import { UpdateButton } from "../UpdateButton";
 
 export const Invoices = () => {
   const { redirecting, goToCustomerPortal } = useRedirectToCustomerPortal("portal");
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { data, isLoading, isError } = useGetInvoices(organizationId);
   const invoices = data?.invoices;
 

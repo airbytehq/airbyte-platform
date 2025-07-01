@@ -3,13 +3,14 @@ import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
 
-import { useCurrentWorkspace, useDiagnosticReport } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useDiagnosticReport } from "core/api";
 import { DefaultErrorBoundary } from "core/errors";
 
 const DiagnosticsButtonInner = () => {
   const downloadDiagnosticReport = useDiagnosticReport();
   const [isDownloading, setIsDownloading] = React.useState(false);
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const [error, setError] = React.useState<Error | null>(null);
 
   if (error) {

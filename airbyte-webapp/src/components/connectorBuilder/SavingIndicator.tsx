@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { Button } from "components/ui/Button";
@@ -12,6 +12,7 @@ import {
   ConnectorBuilderPermission,
   SavingState,
   useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./SavingIndicator.module.scss";
@@ -20,7 +21,7 @@ import { VersionModal } from "./VersionModal";
 function getMessage(
   savingState: SavingState,
   permission: ConnectorBuilderPermission,
-  displayedVersion: number | undefined,
+  displayedVersion: number | "draft",
   triggerUpdate: () => void
 ) {
   if (savingState === "invalid") {
@@ -76,17 +77,26 @@ function getMessage(
     <FlexContainer gap="sm" alignItems="center">
       <Icon type="check" />
       <FlexItem>
-        {displayedVersion ? <>v{displayedVersion}</> : <FormattedMessage id="connectorBuilder.loadingState.saved" />}
+        {displayedVersion !== "draft" ? (
+          <>v{displayedVersion}</>
+        ) : (
+          <FormattedMessage id="connectorBuilder.loadingState.saved" />
+        )}
       </FlexItem>
     </FlexContainer>
   );
 }
 
 export const SavingIndicator: React.FC = () => {
-  const { savingState, permission, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
+  const { savingState, triggerUpdate, currentProject, displayedVersion } = useConnectorBuilderFormState();
+  const permission = useConnectorBuilderPermission();
   const [pendingUpdate, setPendingUpdate] = useState(false);
   const [changeInProgress, setChangeInProgress] = useState(false);
   const timeoutRef = useRef<number>();
+
+  const handleClose = useCallback(() => {
+    setChangeInProgress(false);
+  }, []);
 
   useEffect(
     () => () => {
@@ -133,7 +143,7 @@ export const SavingIndicator: React.FC = () => {
       >
         {message}
       </Button>
-      {changeInProgress && <VersionModal onClose={() => setChangeInProgress(false)} project={currentProject} />}
+      {changeInProgress && <VersionModal onClose={handleClose} project={currentProject} />}
     </>
   );
 };

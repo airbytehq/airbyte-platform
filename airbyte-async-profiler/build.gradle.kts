@@ -35,18 +35,8 @@ dependencies {
   implementation(libs.micronaut.jooq)
   implementation("org.apache.commons:commons-compress:1.27.1")
 
-
-
   implementation(project(":oss:airbyte-api:server-api"))
-  implementation(project(":oss:airbyte-api:workload-api"))
-  implementation(project(":oss:airbyte-config:config-secrets"))
-  implementation(project(":oss:airbyte-commons-converters"))
   implementation(project(":oss:airbyte-commons-storage"))
-  implementation(project(":oss:airbyte-commons-worker"))
-  implementation(project(":oss:airbyte-mappers"))
-  implementation(project(":oss:airbyte-metrics:metrics-lib"))
-  implementation(project(":oss:airbyte-worker-models"))
-  implementation(project(":oss:airbyte-commons-protocol"))
 
   runtimeOnly(libs.snakeyaml)
   runtimeOnly(libs.bundles.logback)

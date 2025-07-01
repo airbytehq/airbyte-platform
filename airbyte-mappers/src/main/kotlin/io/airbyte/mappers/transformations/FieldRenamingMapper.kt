@@ -4,21 +4,24 @@
 
 package io.airbyte.mappers.transformations
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.MapperOperationName
-import io.airbyte.config.adapters.AirbyteRecord
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
+import io.airbyte.mappers.adapters.AirbyteRecord
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 
 @Singleton
 @Named("FieldRenamingMapper")
-class FieldRenamingMapper : FilteredRecordsMapper<FieldRenamingMapperConfig>() {
+class FieldRenamingMapper(
+  private val objectMapper: ObjectMapper,
+) : FilteredRecordsMapper<FieldRenamingMapperConfig>() {
   companion object {
     const val ORIGINAL_FIELD_NAME = "originalFieldName"
     const val NEW_FIELD_NAME = "newFieldName"
   }
 
-  private val fieldRenamingMapperSpec = FieldRenamingMapperSpec()
+  private val fieldRenamingMapperSpec = FieldRenamingMapperSpec(objectMapper)
 
   override val name: String
     get() = MapperOperationName.FIELD_RENAMING
@@ -40,7 +43,7 @@ class FieldRenamingMapper : FilteredRecordsMapper<FieldRenamingMapperConfig>() {
     if (record.has(config.config.originalFieldName)) {
       try {
         record.rename(config.config.originalFieldName, config.config.newFieldName)
-      } catch (e: Exception) {
+      } catch (_: Exception) {
         record.trackFieldError(
           config.config.newFieldName,
           AirbyteRecord.Change.NULLED,

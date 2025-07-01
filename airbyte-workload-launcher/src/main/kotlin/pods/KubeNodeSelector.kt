@@ -31,10 +31,12 @@ class KubeNodeSelector(
     val overrides = getNodeSelectorsOverride(connectionId = connectionId)
     return if (!overrides.isNullOrEmpty()) {
       overrides
-    } else if (usesCustomConnector) {
-      workerConfigs.workerIsolatedKubeNodeSelectors ?: workerConfigs.workerKubeNodeSelectors
     } else {
-      workerConfigs.workerKubeNodeSelectors
+      if (usesCustomConnector) {
+        workerConfigs.workerIsolatedKubeNodeSelectors ?: workerConfigs.workerKubeNodeSelectors
+      } else {
+        workerConfigs.workerKubeNodeSelectors
+      }!!
     }
   }
 

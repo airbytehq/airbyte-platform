@@ -34,8 +34,6 @@ import reactor.kotlin.core.publisher.toFlux
 import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.time.Duration
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toJavaDuration
 
 private val logger = KotlinLogging.logger {}
 
@@ -46,8 +44,8 @@ class ClaimedProcessor(
   private val metricClient: MetricClient,
   private val claimProcessorTracker: ClaimProcessorTracker,
   @Value("\${airbyte.workload-launcher.parallelism.default-queue}") parallelism: Int,
-  @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration = 5.seconds.toJavaDuration(),
-  @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration = 60.seconds.toJavaDuration(),
+  @Named("claimedProcessorBackoffDuration") private val backoffDuration: Duration,
+  @Named("claimedProcessorBackoffMaxDelay") private val backoffMaxDelay: Duration,
 ) {
   private val scheduler = Schedulers.newParallel("process-claimed-scheduler", parallelism)
 
@@ -96,7 +94,7 @@ class ClaimedProcessor(
   private fun addTagsToTrace(dataplaneId: String) {
     val commonTags = hashMapOf<String, Any>()
     commonTags[MetricTags.DATA_PLANE_ID_TAG] = dataplaneId
-    ApmTraceUtils.addTagsToTrace(commonTags)
+    ApmTraceUtils.addTagsToTrace(commonTags.toMap())
   }
 
   private fun getWorkloadList(req: WorkloadListRequest): WorkloadListResponse =

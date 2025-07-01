@@ -33,6 +33,9 @@ airbyte:
       enterprise-source-stubs-url: "http://test-url.com"
   api:
     host: https://api.airbyte.com
+  web-app:
+    url: "http://test-url.com"
+    config: null
 
 datasources:
   config:

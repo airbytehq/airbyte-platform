@@ -15,6 +15,7 @@ import { SchemaFormControl } from "./SchemaFormControl";
 import { BaseControlComponentProps } from "./types";
 import { useToggleConfig } from "./useToggleConfig";
 import { useSchemaForm } from "../SchemaForm";
+import { useErrorAtPath } from "../useErrorAtPath";
 
 // Pattern to detect internal keys
 const INTERNAL_KEY_PATTERN = /^_key\d+$/;
@@ -78,7 +79,7 @@ const KeyInput: React.FC<KeyInputProps> = ({ formKey, allFormKeys, onKeyChange }
       <FormLabel label={formatMessage({ id: "form.additionalProperties.key" })} htmlFor={formKey} />
       <Input id={formKey} value={inputValue} onChange={handleChange} onBlur={handleBlur} error={!!errorMessage} />
       {errorMessage && (
-        <Text color="red" size="xs">
+        <Text color="red" size="xs" className={styles.keyErrorMessage}>
           {errorMessage}
         </Text>
       )}
@@ -94,9 +95,10 @@ export const AdditionalPropertiesControl = ({
   hideBorder = false,
 }: BaseControlComponentProps) => {
   const { formatMessage } = useIntl();
-  const { errorAtPath, extractDefaultValuesFromSchema } = useSchemaForm();
+  const { extractDefaultValuesFromSchema } = useSchemaForm();
   const { setValue } = useFormContext();
   const toggleConfig = useToggleConfig(baseProps.name, additionalPropertiesSchema);
+  const error = useErrorAtPath(baseProps.name);
 
   // Get all current key-value pairs
   const rawFormValue = useWatch({ name: baseProps.name });
@@ -157,7 +159,7 @@ export const AdditionalPropertiesControl = ({
 
   const addButton = (
     <Button variant="secondary" onClick={addPair} type="button" icon="plus">
-      <FormattedMessage id="form.addKeyValuePair" defaultMessage="Add Key/Value Pair" />
+      <FormattedMessage id="form.additionalProperties.addKeyValuePair" />
     </Button>
   );
 
@@ -177,7 +179,7 @@ export const AdditionalPropertiesControl = ({
                   // If the additionalPropertiesSchema has no title, show the standard Value title
                   title: additionalPropertiesSchema.title ?? formatMessage({ id: "form.additionalProperties.value" }),
                 }}
-                isRequired={additionalPropertiesSchema.required?.includes(key)}
+                isRequired
               />
             </div>
             <RemoveButton className={styles.removeButton} onClick={() => removePair(key)} />
@@ -195,9 +197,11 @@ export const AdditionalPropertiesControl = ({
       title={baseProps.label}
       tooltip={baseProps.labelTooltip}
       path={baseProps.name}
-      error={errorAtPath(baseProps.name)}
+      error={error}
       toggleConfig={baseProps.optional ? toggleConfig : undefined}
       header={baseProps.header}
+      data-field-path={baseProps["data-field-path"]}
+      disabled={baseProps.disabled}
     >
       {contents}
     </ControlGroup>

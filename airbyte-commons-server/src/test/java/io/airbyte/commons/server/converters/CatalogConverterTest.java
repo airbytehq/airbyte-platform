@@ -104,6 +104,19 @@ class CatalogConverterTest {
   }
 
   @Test
+  void testConvertInternalWithDestinationObjectName() throws JsonValidationException {
+    final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
+    final var apiStream = apiCatalog.getStreams().getFirst();
+    final String destinationObjectName = "test_destination_object_name";
+    apiStream.getConfig().setDestinationObjectName(destinationObjectName);
+
+    final var internalCatalog = catalogConverter.toConfiguredInternal(apiCatalog);
+    assertEquals(1, internalCatalog.getStreams().size());
+    final var internalStream = internalCatalog.getStreams().getFirst();
+    assertEquals(destinationObjectName, internalStream.getDestinationObjectName());
+  }
+
+  @Test
   void testConvertInternalWithHashedFields() throws JsonValidationException {
     final var apiCatalog = ConnectionHelpers.generateApiCatalogWithTwoFields();
     final var apiStream = apiCatalog.getStreams().getFirst();
@@ -142,7 +155,7 @@ class CatalogConverterTest {
     assertNotNull(fields);
     assertEquals(1, fields.size());
 
-    final var expectedField = new Field(FIELD_NAME, FieldType.STRING);
+    final var expectedField = new Field(FIELD_NAME, FieldType.STRING, false);
     assertEquals(expectedField, fields.getFirst());
   }
 

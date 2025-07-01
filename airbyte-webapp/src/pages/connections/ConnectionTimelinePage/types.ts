@@ -85,6 +85,20 @@ const connectorChangeReasons = ["SYSTEM", "USER"] as const;
 // TODO: ask BE team to use already defined types - ConnectorType
 const ConnectorType = ["SOURCE", "DESTINATION"] as const;
 
+/**
+ * RUNNING JOB EVENT TYPE
+ * This is a list of all possible running job events from JobConfigType.
+ * @typedef {import("core/api/types/AirbyteClient").JobConfigType}
+ */
+export const ConnectionRunningEventType = {
+  SYNC_RUNNING: "SYNC_RUNNING",
+  REFRESH_RUNNING: "REFRESH_RUNNING",
+  CLEAR_RUNNING: "CLEAR_RUNNING",
+  CONNECTION_RESET_RUNNING: "CONNECTION_RESET_RUNNING",
+} as const;
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export type ConnectionRunningEventType = (typeof ConnectionRunningEventType)[keyof typeof ConnectionRunningEventType];
+
 // property-specific schemas
 /**
  * @typedef {import("core/api/types/AirbyteClient").StreamDescriptor}
@@ -389,7 +403,7 @@ export const generalEventSchema = z.object({
   connectionId: z.string(),
   user: userInEventSchema.optional(),
   createdAt: z.number().optional(),
-  eventType: z.union([z.nativeEnum(ConnectionEventType), z.literal("RUNNING_JOB")]),
+  eventType: z.union([z.nativeEnum(ConnectionEventType), z.nativeEnum(ConnectionRunningEventType)]),
   summary: z
     .object({
       patches: z.record(z.unknown()).optional(),
@@ -437,7 +451,7 @@ export const jobStartedEventSchema = generalEventSchema.extend({
 });
 
 export const jobRunningSchema = generalEventSchema.extend({
-  eventType: z.enum(["RUNNING_JOB"]),
+  eventType: z.nativeEnum(ConnectionRunningEventType),
   summary: jobRunningSummarySchema,
 });
 
@@ -479,7 +493,7 @@ export const mappingEventSchema = generalEventSchema.extend({
 
 export interface ConnectionTimelineRunningEvent {
   id: string;
-  eventType: "RUNNING_JOB";
+  eventType: ConnectionRunningEventType;
   connectionId: string;
   createdAt: number;
   summary: {
@@ -491,36 +505,35 @@ export interface ConnectionTimelineRunningEvent {
     configType: JobConfigType;
     jobId: number;
   };
-  user: {
-    email: string;
-    name: string;
-    id: string;
-  };
+  user: UserReadInConnectionEvent;
 }
 
 export interface EventTypeToSchema {
-  RUNNING_JOB: z.infer<typeof jobRunningSchema>;
   [ConnectionEventType.SYNC_SUCCEEDED]: z.infer<typeof syncEventSchema>;
   [ConnectionEventType.SYNC_CANCELLED]: z.infer<typeof syncEventSchema>;
   [ConnectionEventType.SYNC_FAILED]: z.infer<typeof syncFailEventSchema>;
   [ConnectionEventType.SYNC_INCOMPLETE]: z.infer<typeof syncFailEventSchema>;
+  [ConnectionEventType.SYNC_STARTED]: z.infer<typeof jobStartedEventSchema>;
+  [ConnectionRunningEventType.SYNC_RUNNING]: z.infer<typeof jobRunningSchema>;
   [ConnectionEventType.REFRESH_SUCCEEDED]: z.infer<typeof refreshEventSchema>;
   [ConnectionEventType.REFRESH_FAILED]: z.infer<typeof refreshEventSchema>;
   [ConnectionEventType.REFRESH_INCOMPLETE]: z.infer<typeof refreshEventSchema>;
   [ConnectionEventType.REFRESH_CANCELLED]: z.infer<typeof refreshEventSchema>;
+  [ConnectionEventType.REFRESH_STARTED]: z.infer<typeof jobStartedEventSchema>;
+  [ConnectionRunningEventType.REFRESH_RUNNING]: z.infer<typeof jobRunningSchema>;
   [ConnectionEventType.CLEAR_SUCCEEDED]: z.infer<typeof clearEventSchema>;
   [ConnectionEventType.CLEAR_FAILED]: z.infer<typeof clearEventSchema>;
   [ConnectionEventType.CLEAR_INCOMPLETE]: z.infer<typeof clearEventSchema>;
   [ConnectionEventType.CLEAR_CANCELLED]: z.infer<typeof clearEventSchema>;
   [ConnectionEventType.CLEAR_STARTED]: z.infer<typeof jobStartedEventSchema>;
-  [ConnectionEventType.REFRESH_STARTED]: z.infer<typeof jobStartedEventSchema>;
-  [ConnectionEventType.SYNC_STARTED]: z.infer<typeof jobStartedEventSchema>;
+  [ConnectionRunningEventType.CLEAR_RUNNING]: z.infer<typeof jobRunningSchema>;
   [ConnectionEventType.CONNECTION_ENABLED]: z.infer<typeof connectionEnabledEventSchema>;
   [ConnectionEventType.CONNECTION_DISABLED]: z.infer<typeof connectionDisabledEventSchema>;
   [ConnectionEventType.CONNECTION_SETTINGS_UPDATE]: z.infer<typeof connectionSettingsUpdateEventSchema>;
+  [ConnectionRunningEventType.CONNECTION_RESET_RUNNING]: z.infer<typeof jobRunningSchema>;
   [ConnectionEventType.SCHEMA_UPDATE]: z.infer<typeof schemaUpdateEventSchema>;
   [ConnectionEventType.CONNECTOR_UPDATE]: z.infer<typeof connectorUpdateEventSchema>;
-  SCHEMA_CONFIG_UPDATE: z.infer<typeof schemaConfigUpdateEventSchema>;
+  [ConnectionEventType.SCHEMA_CONFIG_UPDATE]: z.infer<typeof schemaConfigUpdateEventSchema>;
   MAPPING_CREATE: z.infer<typeof mappingEventSchema>;
   MAPPING_UPDATE: z.infer<typeof mappingEventSchema>;
   MAPPING_DELETE: z.infer<typeof mappingEventSchema>;
@@ -532,22 +545,24 @@ export const eventTypeToSchemaMap: {
     component: React.FC<{ event: EventTypeToSchema[K] }>;
   };
 } = {
-  RUNNING_JOB: { schema: jobRunningSchema, component: RunningJobItem },
   [ConnectionEventType.SYNC_SUCCEEDED]: { schema: syncEventSchema, component: SyncEventItem },
   [ConnectionEventType.SYNC_CANCELLED]: { schema: syncEventSchema, component: SyncEventItem },
   [ConnectionEventType.SYNC_FAILED]: { schema: syncFailEventSchema, component: SyncFailEventItem },
   [ConnectionEventType.SYNC_INCOMPLETE]: { schema: syncFailEventSchema, component: SyncFailEventItem },
+  [ConnectionEventType.SYNC_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
+  [ConnectionRunningEventType.SYNC_RUNNING]: { schema: jobRunningSchema, component: RunningJobItem },
   [ConnectionEventType.REFRESH_SUCCEEDED]: { schema: refreshEventSchema, component: RefreshEventItem },
   [ConnectionEventType.REFRESH_FAILED]: { schema: refreshEventSchema, component: RefreshEventItem },
   [ConnectionEventType.REFRESH_INCOMPLETE]: { schema: refreshEventSchema, component: RefreshEventItem },
   [ConnectionEventType.REFRESH_CANCELLED]: { schema: refreshEventSchema, component: RefreshEventItem },
+  [ConnectionEventType.REFRESH_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
+  [ConnectionRunningEventType.REFRESH_RUNNING]: { schema: jobRunningSchema, component: RunningJobItem },
   [ConnectionEventType.CLEAR_SUCCEEDED]: { schema: clearEventSchema, component: ClearEventItem },
   [ConnectionEventType.CLEAR_FAILED]: { schema: clearEventSchema, component: ClearEventItem },
   [ConnectionEventType.CLEAR_INCOMPLETE]: { schema: clearEventSchema, component: ClearEventItem },
   [ConnectionEventType.CLEAR_CANCELLED]: { schema: clearEventSchema, component: ClearEventItem },
   [ConnectionEventType.CLEAR_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
-  [ConnectionEventType.REFRESH_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
-  [ConnectionEventType.SYNC_STARTED]: { schema: jobStartedEventSchema, component: JobStartEventItem },
+  [ConnectionRunningEventType.CLEAR_RUNNING]: { schema: jobRunningSchema, component: RunningJobItem },
   [ConnectionEventType.CONNECTION_ENABLED]: {
     schema: connectionEnabledEventSchema,
     component: ConnectionEnabledEventItem,
@@ -560,9 +575,13 @@ export const eventTypeToSchemaMap: {
     schema: connectionSettingsUpdateEventSchema,
     component: ConnectionSettingsUpdateEventItem,
   },
+  [ConnectionRunningEventType.CONNECTION_RESET_RUNNING]: { schema: jobRunningSchema, component: RunningJobItem },
   [ConnectionEventType.SCHEMA_UPDATE]: { schema: schemaUpdateEventSchema, component: SchemaUpdateEventItem },
   [ConnectionEventType.CONNECTOR_UPDATE]: { schema: connectorUpdateEventSchema, component: ConnectorUpdateEventItem },
-  SCHEMA_CONFIG_UPDATE: { schema: schemaConfigUpdateEventSchema, component: CatalogChangeEventItem },
+  [ConnectionEventType.SCHEMA_CONFIG_UPDATE]: {
+    schema: schemaConfigUpdateEventSchema,
+    component: CatalogChangeEventItem,
+  },
   MAPPING_CREATE: { schema: mappingEventSchema, component: MappingEventItem },
   MAPPING_UPDATE: { schema: mappingEventSchema, component: MappingEventItem },
   MAPPING_DELETE: { schema: mappingEventSchema, component: MappingEventItem },

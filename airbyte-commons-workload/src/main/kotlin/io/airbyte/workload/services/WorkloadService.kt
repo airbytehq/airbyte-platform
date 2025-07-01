@@ -7,6 +7,7 @@ package io.airbyte.workload.services
 import io.airbyte.commons.enums.convertTo
 import io.airbyte.config.WorkloadPriority
 import io.airbyte.config.WorkloadType
+import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.workload.common.DefaultDeadlineValues
 import io.airbyte.workload.repository.WorkloadQueueRepository
 import io.airbyte.workload.repository.WorkloadRepository
@@ -43,11 +44,14 @@ class WorkloadService(
   private val workloadQueueRepository: WorkloadQueueRepository,
   private val signalSender: SignalSender,
   private val defaultDeadlineValues: DefaultDeadlineValues,
+  private val featureFlagClient: FeatureFlagClient,
 ) {
   fun createWorkload(
     workloadId: String,
     labels: List<WorkloadLabel>?,
     input: String,
+    workspaceId: UUID?,
+    organizationId: UUID?,
     logPath: String,
     mutexKey: String?,
     type: WorkloadType,
@@ -72,6 +76,8 @@ class WorkloadService(
           status = WorkloadStatus.PENDING,
           workloadLabels = labels,
           inputPayload = input,
+          workspaceId = workspaceId,
+          organizationId = organizationId,
           logPath = logPath,
           mutexKey = mutexKey,
           type = type.convertTo(),
@@ -109,25 +115,25 @@ class WorkloadService(
     source: String?,
     reason: String?,
   ) {
-    val workload = getWorkload(workloadId)
-
-    when (workload.status) {
-      WorkloadStatus.PENDING, WorkloadStatus.LAUNCHED, WorkloadStatus.CLAIMED, WorkloadStatus.RUNNING -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.CANCELLED,
-          source,
-          reason,
-          null,
-        )
-        signalSender.sendSignal(workload.type, workload.signalInput)
-
-        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
-      }
-      WorkloadStatus.CANCELLED -> logger.info { "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop" }
-      else -> throw InvalidStatusTransitionException(
-        "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${workload.status}",
-      )
+    val workload = workloadRepository.cancel(workloadId, reason = reason, source = source)
+    if (workload != null) {
+      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+      signalSender.sendSignal(workload.type, workload.signalInput)
+    } else {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+              "Cannot cancel a workload in either success or failure status. Workload id: $workloadId has status: ${w.status}",
+            )
+            WorkloadStatus.CANCELLED ->
+              logger.info {
+                "Workload $workloadId is already cancelled. Cancelling an already cancelled workload is a noop"
+              }
+            else -> logger.error { "Cancelling workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
   }
 
@@ -136,25 +142,114 @@ class WorkloadService(
     source: String?,
     reason: String?,
   ) {
-    val workload = getWorkload(workloadId)
-    when (workload.status) {
-      WorkloadStatus.PENDING, WorkloadStatus.CLAIMED, WorkloadStatus.LAUNCHED, WorkloadStatus.RUNNING -> {
-        workloadRepository.update(
-          workloadId,
-          WorkloadStatus.FAILURE,
-          source,
-          reason,
-          null,
-        )
-        signalSender.sendSignal(workload.type, workload.signalInput)
+    val workload = workloadRepository.fail(workloadId, reason = reason, source = source)
+    if (workload != null) {
+      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+      signalSender.sendSignal(workload.type, workload.signalInput)
+    } else {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.CANCELLED, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+              "Cannot fail a workload in either canceled or success status. Workload id: $workloadId has status: ${w.status}",
+            )
+            WorkloadStatus.FAILURE ->
+              logger.info {
+                "Workload $workloadId is already failed. Failing an already failed workload is a noop"
+              }
+            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    }
+  }
 
-        workloadQueueRepository.ackWorkloadQueueItem(workloadId)
-      }
+  fun launchWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    val workload = workloadRepository.launch(workloadId, deadline)
+    if (workload == null) {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+              "Trying to set a workload in a terminal state (${w.status}) to launched",
+            )
+            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+              "Can't set a workload status to running on a workload that hasn't been claimed",
+            )
+            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    }
+  }
 
-      WorkloadStatus.FAILURE -> logger.info { "Workload $workloadId is already marked as failed. Failing an already failed workload is a noop" }
-      else -> throw InvalidStatusTransitionException(
-        "Tried to fail a workload that is not active. Workload id: $workloadId has status: ${workload.status}",
-      )
+  fun heartbeatWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    val workload = workloadRepository.heartbeat(workloadId, deadline)
+    if (workload == null) {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+              "Heartbeat a workload in a terminal state (${w.status})",
+            )
+            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException("Heartbeat a non claimed workload")
+            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    }
+  }
+
+  fun runningWorkload(
+    workloadId: String,
+    deadline: OffsetDateTime,
+  ) {
+    val workload = workloadRepository.running(workloadId, deadline)
+    if (workload == null) {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE, WorkloadStatus.SUCCESS -> throw InvalidStatusTransitionException(
+              "Trying to set a workload in a terminal state (${w.status}) to running",
+            )
+            WorkloadStatus.PENDING -> throw InvalidStatusTransitionException(
+              "Can't set a workload status to running on a workload that hasn't been claimed",
+            )
+            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
+    }
+  }
+
+  fun succeedWorkload(workloadId: String) {
+    val workload = workloadRepository.succeed(workloadId)
+    if (workload != null) {
+      workloadQueueRepository.ackWorkloadQueueItem(workloadId)
+      signalSender.sendSignal(workload.type, workload.signalInput)
+    } else {
+      workloadRepository
+        .findById(workloadId)
+        .map { w ->
+          when (w.status) {
+            WorkloadStatus.CANCELLED, WorkloadStatus.FAILURE -> throw InvalidStatusTransitionException(
+              "Cannot fail a workload in either canceled or failure status. Workload id: $workloadId has status: ${w.status}",
+            )
+
+            WorkloadStatus.SUCCESS ->
+              logger.info {
+                "Workload $workloadId is already successful. Succeeding an already successful workload is a noop"
+              }
+
+            else -> logger.error { "Failed workload $workloadId failed to update its status, status is ${w.status}" }
+          }
+        }.orElseThrow { NotFoundException("Workload $workloadId not found") }
     }
   }
 

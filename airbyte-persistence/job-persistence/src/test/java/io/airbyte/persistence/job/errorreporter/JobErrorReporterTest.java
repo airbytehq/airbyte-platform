@@ -9,6 +9,7 @@ import static org.mockito.Mockito.mock;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
@@ -20,7 +21,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -220,7 +221,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID);
 
@@ -429,7 +430,7 @@ class JobErrorReporterTest {
     Mockito.when(mWorkspace.getWorkspaceId()).thenReturn(WORKSPACE_ID);
     Mockito.when(workspaceService.getStandardWorkspaceNoSecrets(WORKSPACE_ID, true)).thenReturn(mWorkspace);
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext);
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
@@ -467,7 +468,7 @@ class JobErrorReporterTest {
             .withSourceDefinitionId(SOURCE_DEFINITION_ID)
             .withName(SOURCE_DEFINITION_NAME));
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, null, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, null, failureReason, jobContext);
 
     final Map<String, String> expectedMetadata = Map.ofEntries(
         Map.entry(JOB_ID_KEY, JOB_ID.toString()),
@@ -498,7 +499,7 @@ class JobErrorReporterTest {
     final ConnectorJobReportingContext jobContext =
         new ConnectorJobReportingContext(JOB_ID, SOURCE_DOCKER_IMAGE, SOURCE_RELEASE_STAGE, SOURCE_INTERNAL_SUPPORT_LEVEL);
 
-    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, WORKSPACE_ID, failureReason, jobContext);
+    jobErrorReporter.reportDiscoverJobFailure(SOURCE_DEFINITION_ID, ActorType.SOURCE, WORKSPACE_ID, failureReason, jobContext);
 
     Mockito.verifyNoInteractions(jobErrorReportingClient);
   }

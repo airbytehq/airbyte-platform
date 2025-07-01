@@ -42,7 +42,7 @@ const SubmissionButton: React.FC = () => {
   return (
     <Text align="center">
       <Button
-        size="lg"
+        size="sm"
         type="submit"
         disabled={
           !isDirty ||

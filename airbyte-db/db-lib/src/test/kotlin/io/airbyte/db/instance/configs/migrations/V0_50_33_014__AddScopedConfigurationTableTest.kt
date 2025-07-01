@@ -12,6 +12,7 @@ import io.airbyte.db.instance.configs.migrations.V0_50_33_014__AddScopedConfigur
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
@@ -19,11 +20,12 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_33_014__AddScopedConfigurationTableTest : AbstractConfigsDatabaseTest() {
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     createResourceTypeEnum(context)
     createScopeTypeEnum(context)

@@ -24,7 +24,6 @@ import io.airbyte.metrics.lib.MetricTags
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Named
 import jakarta.inject.Singleton
-import java.util.Optional
 import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
@@ -168,24 +167,22 @@ class JobExplanationHandler(
 
   private fun getFailuresSummaryAsText(attempt: Attempt): String =
     attempt.failureSummary
-      .flatMap { summary ->
+      ?.let { summary ->
         val failures = summary.failures
         if (failures.isNullOrEmpty()) {
-          Optional.empty()
+          null
         } else {
-          Optional.of(
-            failures.joinToString("\n") { failure ->
-              buildString {
-                append("Failure ${failures.indexOf(failure) + 1}: \n")
-                append("External error message: ${truncateLongString(failure.externalMessage)}\n")
-                append("Internal error message: ${truncateLongString(failure.internalMessage)}\n")
-                append("Stack trace: ${truncateLongString(failure.stacktrace)}\n")
-                append("Origin: ${failure.failureOrigin}\n\n")
-              }
-            },
-          )
+          failures.joinToString("\n") { failure ->
+            buildString {
+              append("Failure ${failures.indexOf(failure) + 1}: \n")
+              append("External error message: ${truncateLongString(failure.externalMessage)}\n")
+              append("Internal error message: ${truncateLongString(failure.internalMessage)}\n")
+              append("Stack trace: ${truncateLongString(failure.stacktrace)}\n")
+              append("Origin: ${failure.failureOrigin}\n\n")
+            }
+          }
         }
-      }.orElse("No failures were stored with this job.")
+      } ?: "No failures were stored with this job."
 
   private fun truncateLongString(string: String?): String {
     val limit = 5000

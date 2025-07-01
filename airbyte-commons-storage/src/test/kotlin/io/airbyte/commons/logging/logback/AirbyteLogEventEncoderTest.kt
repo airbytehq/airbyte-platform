@@ -12,6 +12,7 @@ import io.airbyte.commons.logging.LogEvent
 import io.airbyte.commons.logging.LogSource
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -46,7 +47,7 @@ internal class AirbyteLogEventEncoderTest {
     val logLevel = Level.INFO
     val logMessage = "test message"
     val logThreadName = "Test Thread"
-    val exception = RuntimeException("test", NullPointerException("root"))
+    val exception = RuntimeException("test", CancellationException(message = "canceled", cause = NullPointerException("root")))
     val timestamp = 0L
     val event =
       mockk<ILoggingEvent> {

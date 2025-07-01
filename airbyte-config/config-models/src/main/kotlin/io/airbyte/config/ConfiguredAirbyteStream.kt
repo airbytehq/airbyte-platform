@@ -56,6 +56,8 @@ data class ConfiguredAirbyteStream
     // Because this was introduced with a typo
     @JsonAlias("includesFiles")
     var includeFiles: Boolean = false,
+    @JsonProperty("destination_object_name")
+    var destinationObjectName: String? = null,
   ) : Serializable {
     fun withStream(stream: AirbyteStream): ConfiguredAirbyteStream {
       this.stream = stream
@@ -97,6 +99,11 @@ data class ConfiguredAirbyteStream
       return this
     }
 
+    fun withDestinationObjectName(destinationObjectName: String?): ConfiguredAirbyteStream =
+      apply {
+        this.destinationObjectName = destinationObjectName
+      }
+
     @get:JsonIgnore
     val streamDescriptor: StreamDescriptor
       get() = stream.streamDescriptor
@@ -123,6 +130,8 @@ data class ConfiguredAirbyteStream
       // Because this was introduced with a typo
       @JsonAlias("includesFiles")
       var includeFiles: Boolean? = null,
+      @JsonProperty("destination_object_name")
+      var destinationObjectName: String? = null,
     ) {
       fun stream(stream: AirbyteStream) = apply { this.stream = stream }
 
@@ -146,6 +155,8 @@ data class ConfiguredAirbyteStream
 
       fun includeFiles(includeFiles: Boolean) = apply { this.includeFiles = includeFiles }
 
+      fun destinationObjectName(destinationObjectName: String?) = apply { this.destinationObjectName = destinationObjectName }
+
       fun build(): ConfiguredAirbyteStream =
         ConfiguredAirbyteStream(
           stream = stream ?: throw IllegalArgumentException("stream cannot be null"),
@@ -159,6 +170,7 @@ data class ConfiguredAirbyteStream
           fields = fields,
           mappers = mappers,
           includeFiles = includeFiles ?: false,
+          destinationObjectName = destinationObjectName,
         )
     }
 

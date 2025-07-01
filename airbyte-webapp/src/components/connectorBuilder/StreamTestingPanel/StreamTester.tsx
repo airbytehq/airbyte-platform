@@ -16,10 +16,10 @@ import { Text } from "components/ui/Text";
 
 import { HttpError, useCustomComponentsEnabled } from "core/api";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
+import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
 import { links } from "core/utils/links";
 import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
-  useConnectorBuilderFormState,
   useConnectorBuilderTestRead,
   useSelectedPageAndSlice,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
@@ -31,6 +31,7 @@ import { StreamTestButton } from "./StreamTestButton";
 import styles from "./StreamTester.module.scss";
 import { isStreamDynamicStream } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useStreamName } from "../useStreamNames";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
 
 export const StreamTester: React.FC<{
@@ -38,9 +39,7 @@ export const StreamTester: React.FC<{
   setTestingValuesInputOpen: (open: boolean) => void;
 }> = ({ hasTestingValuesErrors, setTestingValuesInputOpen }) => {
   const { formatMessage } = useIntl();
-  const { streamNames, dynamicStreamNames, isResolving, resolveErrorMessage, resolveError } =
-    useConnectorBuilderFormState();
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
+  const generatedStreams = useBuilderWatch("generatedStreams");
   const {
     streamRead: {
       data: streamReadData,
@@ -58,17 +57,14 @@ export const StreamTester: React.FC<{
     cancelStreamRead,
     testStreamRequestType,
   } = useConnectorBuilderTestRead();
+  const { resolveError, isResolving, resolveErrorMessage } = useConnectorBuilderResolve();
   const [showLimitWarning, setShowLimitWarning] = useLocalStorage("connectorBuilderLimitWarning", true);
   const testStreamId = useBuilderWatch("testStreamId");
   const { selectedSlice } = useSelectedPageAndSlice();
   const globalAuxiliaryRequests = streamReadData?.auxiliary_requests;
 
   const streamIsDynamic = isStreamDynamicStream(testStreamId);
-  const streamName = streamIsDynamic
-    ? dynamicStreamNames[testStreamId.index]
-    : testStreamId.type === "generated_stream"
-    ? generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index]?.name
-    : streamNames[testStreamId.index];
+  const streamName = useStreamName(testStreamId) ?? "";
 
   const analyticsService = useAnalyticsService();
 
@@ -94,7 +90,7 @@ export const StreamTester: React.FC<{
     () => getStreamTestMetadataStatus(testStreamId),
     [getStreamTestMetadataStatus, testStreamId]
   );
-  const streamHasCustomType = getStreamHasCustomType(streamName);
+  const streamHasCustomType = getStreamHasCustomType(testStreamId);
   const areCustomComponentsEnabled = useCustomComponentsEnabled();
   const cantProcessCustomComponents = streamHasCustomType && !areCustomComponentsEnabled;
 
@@ -207,7 +203,7 @@ export const StreamTester: React.FC<{
 
   return (
     <div className={styles.container}>
-      {streamName === undefined && isResolving && (
+      {!streamName && isResolving && (
         <Text size="lg" align="center">
           <FormattedMessage id="connectorBuilder.loadingStreamList" />
         </Text>

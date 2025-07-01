@@ -5,6 +5,7 @@
 package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.commons.duration.formatMilli
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.featureflag.DestinationTimeoutSeconds
 import io.airbyte.featureflag.ShouldFailSyncOnDestinationTimeout
 import io.airbyte.metrics.MetricAttribute
@@ -12,7 +13,6 @@ import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
 import io.airbyte.metrics.lib.MetricTags
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
 import java.lang.AutoCloseable

@@ -69,7 +69,7 @@ import io.airbyte.config.helpers.ResourceRequirementsUtils;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StreamResetPersistence;
 import io.airbyte.config.persistence.domain.StreamRefresh;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
@@ -557,7 +557,7 @@ public class SchedulerHandler {
               destination.getWorkspaceId());
 
       final long jobId = jobIdOptional.isEmpty()
-          ? jobPersistence.getLastReplicationJob(standardSync.getConnectionId()).orElseThrow(() -> new RuntimeException("No job available")).getId()
+          ? jobPersistence.getLastReplicationJob(standardSync.getConnectionId()).orElseThrow(() -> new RuntimeException("No job available")).id
           : jobIdOptional.get();
 
       return jobConverter.getJobInfoRead(jobPersistence.getJob(jobId));
@@ -601,7 +601,7 @@ public class SchedulerHandler {
   private JobInfoRead submitCancellationToWorker(final Long jobId) throws IOException {
     final Job job = jobPersistence.getJob(jobId);
 
-    final ManualOperationResult cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.getScope()));
+    final ManualOperationResult cancellationResult = eventRunner.startNewCancellation(UUID.fromString(job.scope));
     log.info("Cancellation result for job {}: failingReason={} errorCode={}",
         jobId, cancellationResult.getFailingReason(), cancellationResult.getErrorCode());
     if (cancellationResult.getFailingReason() != null) {
@@ -609,7 +609,7 @@ public class SchedulerHandler {
     }
     // log connection timeline event (job cancellation).
     final List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-    for (final Attempt attempt : job.getAttempts()) {
+    for (final Attempt attempt : job.attempts) {
       attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
     }
     log.info("Adding connection timeline event for job {} attemptStats={}", jobId, attemptStats);

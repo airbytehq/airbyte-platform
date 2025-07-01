@@ -5,6 +5,7 @@
 package io.airbyte.mappers.transformations
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.MapperConfig
 
@@ -14,4 +15,6 @@ interface MapperSpec<T : MapperConfig> {
   fun jsonSchema(): JsonNode
 
   fun specType(): Class<*>
+
+  fun objectMapper(): ObjectMapper
 }

@@ -4,10 +4,12 @@
 
 package io.airbyte.server.apis.publicapi.controllers
 
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.publicApi.server.generated.apis.PublicOrganizationsApi
@@ -33,15 +35,18 @@ open class OrganizationsController(
   private val trackingHelper: TrackingHelper,
   private val currentUserService: CurrentUserService,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
 ) : PublicOrganizationsApi {
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun createOrUpdateOrganizationOAuthCredentials(
     organizationId: String,
     organizationOAuthCredentialsRequest: OrganizationOAuthCredentialsRequest,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, UUID.fromString(organizationId))
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
+      .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
 
     trackingHelper.callWithTracker(
       {
@@ -65,7 +70,7 @@ open class OrganizationsController(
       },
       ORGANIZATIONS_PATH,
       PUT,
-      userId,
+      currentUserService.currentUser.userId,
     )
     return Response
       .status(Response.Status.OK.statusCode)

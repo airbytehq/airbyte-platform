@@ -10,6 +10,7 @@ import io.airbyte.api.client.WebUrlHelper;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.AttemptFailureSummary;
 import io.airbyte.config.Configs;
 import io.airbyte.config.FailureReason;
@@ -20,7 +21,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -58,6 +59,7 @@ public class JobErrorReporter {
   private static final String CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY = "connector_internal_support_level";
   private static final String CONNECTOR_COMMAND_META_KEY = "connector_command";
   public static final String JOB_ID_KEY = "job_id";
+  public static final String SOURCE_TYPE_META_KEY = "source_type";
 
   private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
@@ -124,6 +126,9 @@ public class JobErrorReporter {
             final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId);
             final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
+            if (sourceVersion.getLanguage() != null) {
+              commonMetadata.put(SOURCE_TYPE_META_KEY, sourceVersion.getLanguage());
+            }
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata,
                     getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage(), sourceVersion.getInternalSupportLevel()));
@@ -201,18 +206,23 @@ public class JobErrorReporter {
    * @param failureReason - failure reason from the Discover job
    * @param jobContext - connector job reporting context
    */
-  public void reportDiscoverJobFailure(final UUID sourceDefinitionId,
+  public void reportDiscoverJobFailure(final UUID actorDefinitionId,
+                                       final ActorType actorType,
                                        @Nullable final UUID workspaceId,
                                        final FailureReason failureReason,
                                        final ConnectorJobReportingContext jobContext)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE) {
+    if (failureReason.getFailureOrigin() != FailureOrigin.SOURCE && failureReason.getFailureOrigin() != FailureOrigin.DESTINATION) {
       return;
     }
     final StandardWorkspace workspace = workspaceId != null ? workspaceService.getStandardWorkspaceNoSecrets(workspaceId, true) : null;
-    final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceDefinitionId);
+    final Map<String, String> actorDefMetadata = actorType == ActorType.DESTINATION
+        ? getDestinationMetadata(destinationService.getStandardDestinationDefinition(actorDefinitionId), jobContext.dockerImage(),
+            jobContext.releaseStage(), jobContext.internalSupportLevel())
+        : getSourceMetadata(sourceService.getStandardSourceDefinition(actorDefinitionId), jobContext.dockerImage(), jobContext.releaseStage(),
+            jobContext.internalSupportLevel());
     final Map<String, String> metadata = MoreMaps.merge(
-        getSourceMetadata(sourceDefinition, jobContext.dockerImage(), jobContext.releaseStage(), jobContext.internalSupportLevel()),
+        actorDefMetadata,
         Map.of(JOB_ID_KEY, jobContext.jobId().toString()));
     reportJobFailureReason(workspace, failureReason, jobContext.dockerImage(), metadata, null);
   }

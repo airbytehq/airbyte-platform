@@ -6,7 +6,7 @@ package io.airbyte.data.services;
 
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WorkspaceServiceAccount;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.validation.json.JsonValidationException;
@@ -29,8 +29,6 @@ public interface WorkspaceService {
   StandardWorkspace getWorkspaceBySlug(String slug, boolean includeTombstone) throws IOException, ConfigNotFoundException;
 
   List<StandardWorkspace> listStandardWorkspaces(boolean includeTombstone) throws IOException;
-
-  List<StandardWorkspace> listAllWorkspacesPaginated(ResourcesQueryPaginated resourcesQueryPaginated) throws IOException;
 
   Stream<StandardWorkspace> listWorkspaceQuery(Optional<List<UUID>> workspaceId, boolean includeTombstone) throws IOException;
 
@@ -58,7 +56,7 @@ public interface WorkspaceService {
 
   void writeWorkspaceServiceAccountNoSecrets(WorkspaceServiceAccount workspaceServiceAccount) throws IOException;
 
-  String getGeographyForWorkspace(UUID workspaceId) throws IOException;
+  String getDataplaneGroupNameForWorkspace(UUID workspaceId) throws IOException;
 
   boolean getWorkspaceHasAlphaOrBetaConnector(UUID workspaceId) throws IOException;
 

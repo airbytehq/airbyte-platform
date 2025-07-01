@@ -35,6 +35,8 @@ import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class SecretReferenceServiceTest {
@@ -46,8 +48,9 @@ class SecretReferenceServiceTest {
 
   @Nested
   inner class GetConfigWithSecretReferences {
-    @Test
-    fun `gets config with referenced secret map`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `gets config with referenced secret map`(readSecretReferenceIdsInConfigs: Boolean) {
       val actorId = UUID.randomUUID()
       val storageId = UUID.randomUUID()
       val workspaceId = UUID.randomUUID()
@@ -83,7 +86,7 @@ class SecretReferenceServiceTest {
       every { apiKeyRef.secretConfig.externalCoordinate } returns "auth-key-coord"
 
       every { workspaceHelper.getOrganizationForWorkspace(any()) } returns workspaceId
-      every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns true
+      every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns readSecretReferenceIdsInConfigs
 
       every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
         listOf(
@@ -91,19 +94,30 @@ class SecretReferenceServiceTest {
           apiKeyRef,
         )
 
-      val expectedReferencedSecretsMap =
-        mapOf(
-          "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), null),
-          "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, urlRefId),
-          "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
-        )
+      val expectedReferencedSecretsMap: Map<String, SecretReferenceConfig>
+      if (readSecretReferenceIdsInConfigs) {
+        expectedReferencedSecretsMap =
+          mapOf(
+            "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), null),
+            "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, urlRefId),
+            "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
+          )
+      } else {
+        // readSecretReferenceIdsInConfigs is off, so we only include the non-persisted refs
+        // (i.e. exclude apiKey and secretUrl because they only have a _secret_reference_id, not a _secret)
+        expectedReferencedSecretsMap =
+          mapOf(
+            "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), null),
+          )
+      }
 
       val actual = secretReferenceService.getConfigWithSecretReferences(ActorId(actorId), jsonConfig, WorkspaceId(workspaceId))
       assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)
     }
 
-    @Test
-    fun `applies non-persisted secret refs over persisted secret refs`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `applies non-persisted secret refs over persisted secret refs`(readSecretReferenceIdsInConfigs: Boolean) {
       val actorId = UUID.randomUUID()
       val storageId = UUID.randomUUID()
       val workspaceId = UUID.randomUUID()
@@ -138,7 +152,7 @@ class SecretReferenceServiceTest {
       every { persistedApiKeyRef.secretConfig.airbyteManaged } returns false
       every { persistedApiKeyRef.secretConfig.externalCoordinate } returns "auth-key-coord"
       every { workspaceHelper.getOrganizationForWorkspace(any()) } returns workspaceId
-      every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns true
+      every { featureFlagClient.boolVariation(ReadSecretReferenceIdsInConfigs, any()) } returns readSecretReferenceIdsInConfigs
 
       every { secretReferenceRepository.listWithConfigByScopeTypeAndScopeId(SecretReferenceScopeType.ACTOR, actorId) } returns
         listOf(
@@ -146,12 +160,23 @@ class SecretReferenceServiceTest {
           persistedApiKeyRef,
         )
 
-      val expectedReferencedSecretsMap =
-        mapOf(
-          "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), storageId, null),
-          "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, urlRefId),
-          "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
-        )
+      val expectedReferencedSecretsMap: Map<String, SecretReferenceConfig>
+      if (readSecretReferenceIdsInConfigs) {
+        expectedReferencedSecretsMap =
+          mapOf(
+            "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), storageId, null),
+            "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, urlRefId),
+            "$.auth.apiKey" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("auth-key-coord"), storageId, apiKeyRefId),
+          )
+      } else {
+        // readSecretReferenceIdsInConfigs is off, so we only include the non-persisted refs
+        // (i.e. exclude apiKey because it only has a _secret_reference_id, not a _secret)
+        expectedReferencedSecretsMap =
+          mapOf(
+            "$.auth.password" to SecretReferenceConfig(SecretCoordinate.AirbyteManagedSecretCoordinate("airbyte_secret_coordinate"), storageId, null),
+            "$.secretUrl" to SecretReferenceConfig(SecretCoordinate.ExternalSecretCoordinate("url-coord"), storageId, urlRefId),
+          )
+      }
 
       val actual = secretReferenceService.getConfigWithSecretReferences(ActorId(actorId), jsonConfig, WorkspaceId(workspaceId))
       assertEquals(expectedReferencedSecretsMap, actual.referencedSecrets)

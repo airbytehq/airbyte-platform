@@ -4,12 +4,13 @@
 
 package io.airbyte.mappers.application
 
-import io.airbyte.commons.timer.Stopwatch
 import io.airbyte.config.MapperConfig
-import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.airbyte.mappers.transformations.Mapper
 import io.github.oshai.kotlinlogging.KotlinLogging
 import jakarta.inject.Singleton
+import kotlin.time.DurationUnit
+import kotlin.time.measureTime
 
 private val log = KotlinLogging.logger {}
 
@@ -19,10 +20,11 @@ class RecordMapper(
 ) {
   private data class MapperStopwatch(
     val mapper: Mapper<out MapperConfig>,
-    val stopwatch: Stopwatch = Stopwatch(),
+    var executionCount: Int = 0,
+    var totalTimeMs: Long = 0L,
   )
 
-  private val mappersByName: Map<String, MapperStopwatch> = mappers.map { MapperStopwatch(it) }.associateBy { it.mapper.name }
+  private val mappersByName: Map<String, MapperStopwatch> = mappers.map { MapperStopwatch(mapper = it) }.associateBy { it.mapper.name }
 
   @Suppress("UNCHECKED_CAST")
   fun <T : MapperConfig> applyMappers(
@@ -31,10 +33,12 @@ class RecordMapper(
   ) {
     try {
       configuredMappers.fold(record) { acc, mapperConfig ->
-        mappersByName[mapperConfig.name()]?.let { (mapper, stopwatch) ->
-          stopwatch.time {
-            (mapper as Mapper<T>).map(mapperConfig, acc)
-          }
+        mappersByName[mapperConfig.name()]?.let { stopwatch ->
+          stopwatch.executionCount++
+          stopwatch.totalTimeMs +=
+            measureTime {
+              (stopwatch.mapper as Mapper<T>).map(mapperConfig, acc)
+            }.toLong(DurationUnit.MILLISECONDS)
         }
         acc
       }
@@ -43,9 +47,9 @@ class RecordMapper(
     }
   }
 
-  fun collectStopwatches(): Map<String, Stopwatch> =
+  fun collectStopwatches(): Map<String, Long> =
     mappersByName
-      .filterValues { it.stopwatch.getExecutionCount() > 0 }
-      .map { Pair(it.key, it.value.stopwatch) }
+      .filterValues { it.executionCount > 0 }
+      .map { Pair(it.key, it.value.totalTimeMs) }
       .toMap()
 }

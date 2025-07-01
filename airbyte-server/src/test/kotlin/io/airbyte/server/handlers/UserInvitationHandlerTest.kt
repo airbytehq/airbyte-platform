@@ -43,6 +43,8 @@ import org.mockito.ArgumentCaptor
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import java.util.Optional
 import java.util.UUID
@@ -245,19 +247,19 @@ internal class UserInvitationHandlerTest {
         Assertions.assertNotNull(capturedUserInvitation.expiresAt)
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor = ArgumentCaptor.forClass(CustomerIoEmailConfig::class.java)
-        val inviteLinkCaptor = ArgumentCaptor.forClass(String::class.java)
+        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
+        val inviteLinkCaptor = org.mockito.kotlin.argumentCaptor<String>()
 
         verify(customerIoEmailNotificationSender!!, Mockito.times(1)).sendInviteToUser(
           emailConfigCaptor.capture(),
-          org.mockito.kotlin.eq(currentUser.name),
+          eq(currentUser.name),
           inviteLinkCaptor.capture(),
         )
 
-        val capturedEmailConfig = emailConfigCaptor.value
+        val capturedEmailConfig = emailConfigCaptor.firstValue
         Assertions.assertEquals(invitedEmail, capturedEmailConfig.to)
 
-        val capturedInviteLink = inviteLinkCaptor.value
+        val capturedInviteLink = inviteLinkCaptor.firstValue
         Assertions.assertEquals(
           webappBaseUrl + UserInvitationHandler.ACCEPT_INVITE_PATH + capturedUserInvitation.inviteCode,
           capturedInviteLink,
@@ -275,9 +277,9 @@ internal class UserInvitationHandlerTest {
 
         // verify we sent an invitation tracking event
         verify(trackingClient!!, Mockito.times(1)).track(
-          org.mockito.kotlin.eq(workspaceId),
-          org.mockito.kotlin.eq(ScopeType.WORKSPACE),
-          org.mockito.kotlin.eq(UserInvitationHandler.USER_INVITED),
+          eq(workspaceId),
+          eq(ScopeType.WORKSPACE),
+          eq(UserInvitationHandler.USER_INVITED),
           org.mockito.kotlin.any<Map<String, Any?>>(),
         )
       }
@@ -350,18 +352,15 @@ internal class UserInvitationHandlerTest {
         }
 
         // make sure the email sender was called with the correct inputs.
-        val emailConfigCaptor =
-          ArgumentCaptor.forClass(
-            CustomerIoEmailConfig::class.java,
-          )
+        val emailConfigCaptor = org.mockito.kotlin.argumentCaptor<CustomerIoEmailConfig>()
         verify(customerIoEmailNotificationSender!!, Mockito.times(1))
           .sendNotificationOnInvitingExistingUser(
             emailConfigCaptor.capture(),
-            org.mockito.kotlin.eq<String>(currentUser.name),
-            org.mockito.kotlin.eq<String>(workspaceName),
+            eq<String>(currentUser.name),
+            eq<String>(workspaceName),
           )
 
-        Assertions.assertEquals(invitedEmail, emailConfigCaptor.value.to)
+        Assertions.assertEquals(invitedEmail, emailConfigCaptor.firstValue.to)
 
         // make sure no other emails are sent.
         Mockito.verifyNoMoreInteractions(customerIoEmailNotificationSender)

@@ -1,11 +1,15 @@
+import { dump } from "js-yaml";
 import { SetValueConfig, useFormContext } from "react-hook-form";
 
 import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
 import {
+  ConnectorManifest,
   DeclarativeStream,
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
 } from "core/api/types/ConnectorManifest";
+
+import { StreamId } from "./types";
 
 export function formatJson(json: unknown, order?: boolean): string {
   return JSON.stringify(order ? orderKeys(json) : json, null, 2);
@@ -108,3 +112,56 @@ export function streamRef(streamName: string) {
 export function streamNameOrDefault(streamName: string | undefined, index: number) {
   return streamName || `stream_${index}`;
 }
+
+const MANIFEST_KEY_ORDER: Array<keyof ConnectorManifest> = [
+  "version",
+  "type",
+  "description",
+  "check",
+  "definitions",
+  "streams",
+  "spec",
+  "metadata",
+  "schemas",
+];
+export function convertJsonToYaml(json: ConnectorManifest): string {
+  const yamlString = dump(json, {
+    noRefs: true,
+    quotingType: '"',
+    sortKeys: (a: keyof ConnectorManifest, b: keyof ConnectorManifest) => {
+      const orderA = MANIFEST_KEY_ORDER.indexOf(a);
+      const orderB = MANIFEST_KEY_ORDER.indexOf(b);
+      if (orderA === -1 && orderB === -1) {
+        return 0;
+      }
+      if (orderA === -1) {
+        return 1;
+      }
+      if (orderB === -1) {
+        return -1;
+      }
+      return orderA - orderB;
+    },
+  });
+
+  // add newlines between root-level fields
+  return yamlString.replace(/^\S+.*/gm, (match, offset) => {
+    return offset > 0 ? `\n${match}` : match;
+  });
+}
+
+export const getStreamFieldPath = <T extends string>(streamId: StreamId, fieldPath?: T, templatePath?: boolean) => {
+  const basePath =
+    streamId.type === "stream"
+      ? `manifest.streams.${streamId.index}`
+      : streamId.type === "dynamic_stream"
+      ? templatePath
+        ? `manifest.dynamic_streams.${streamId.index}.stream_template`
+        : `manifest.dynamic_streams.${streamId.index}`
+      : `generatedStreams.${streamId.dynamicStreamName}.${streamId.index}`;
+
+  if (fieldPath) {
+    return `${basePath}.${fieldPath}`;
+  }
+  return basePath;
+};

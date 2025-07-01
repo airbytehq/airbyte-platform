@@ -1,1 +1,1 @@
-export { ConnectionMappingsPage as default } from "./ConnectionMappingsPage";
+export { ConnectionMappingsRoute as default } from "./ConnectionMappingsPage";

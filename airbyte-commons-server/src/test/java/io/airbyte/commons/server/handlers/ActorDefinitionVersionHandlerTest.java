@@ -36,7 +36,7 @@ import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
 import io.airbyte.config.persistence.ActorDefinitionVersionResolver;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -266,7 +266,8 @@ class ActorDefinitionVersionHandlerTest {
         .dockerRepository(actorDefinitionVersion.getDockerRepository())
         .dockerImageTag(actorDefinitionVersion.getDockerImageTag())
         .supportRefreshes(false)
-        .supportFileTransfer(false);
+        .supportFileTransfer(false)
+        .supportDataActivation(false);
 
     when(mSourceService.getStandardSourceDefinition(actorDefinitionId))
         .thenReturn(Jsons.clone(SOURCE_DEFINITION).withDefaultVersionId(actorDefinitionVersion.getVersionId()));

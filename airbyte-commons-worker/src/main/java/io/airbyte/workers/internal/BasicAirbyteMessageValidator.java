@@ -121,6 +121,11 @@ public class BasicAirbyteMessageValidator {
           return Optional.empty();
         }
       }
+      case DESTINATION_CATALOG -> {
+        if (message.getDestinationCatalog() == null || message.getDestinationCatalog().getOperations() == null) {
+          return Optional.empty();
+        }
+      }
       case CONNECTION_STATUS -> {
         if (message.getConnectionStatus() == null || message.getConnectionStatus().getStatus() == null) {
           return Optional.empty();

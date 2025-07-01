@@ -12,6 +12,7 @@ import io.airbyte.api.model.generated.DataplaneInitResponse
 import io.airbyte.api.model.generated.DataplaneListRequestBody
 import io.airbyte.api.model.generated.DataplaneTokenRequestBody
 import io.airbyte.api.model.generated.DataplaneUpdateRequestBody
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.config.Dataplane
 import io.airbyte.config.DataplaneGroup
 import io.airbyte.data.services.DataplaneGroupService
@@ -32,10 +33,12 @@ class DataplaneControllerTest {
   companion object {
     private val dataplaneService = mockk<ServerDataplaneService>()
     private val dataplaneGroupService = mockk<DataplaneGroupService>()
+    private val roleResolver = mockk<RoleResolver>(relaxed = true)
     private val dataplaneController =
       DataplaneController(
         dataplaneService,
         dataplaneGroupService,
+        roleResolver,
       )
     private val MOCK_DATAPLANE_GROUP_ID = UUID.randomUUID()
   }
@@ -118,7 +121,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneHeartbeatRequestBody()
@@ -143,7 +146,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneInitRequestBody()
@@ -180,7 +183,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneInitRequestBody()
@@ -210,7 +213,7 @@ class DataplaneControllerTest {
     val dataplane = createDataplane(dataplaneId, enabled = dataplaneEnabled)
     val dataplaneGroup = createDataplaneGroup(dataplane.dataplaneGroupId, enabled = dataplaneGroupEnabled)
 
-    every { dataplaneService.getDataplaneFromClientId(clientId) } returns dataplane
+    every { dataplaneService.getDataplaneByServiceAccountId(clientId) } returns dataplane
     every { dataplaneGroupService.getDataplaneGroup(dataplane.dataplaneGroupId) } returns dataplaneGroup
 
     val req = DataplaneHeartbeatRequestBody()

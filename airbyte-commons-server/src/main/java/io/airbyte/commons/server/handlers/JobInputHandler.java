@@ -39,6 +39,7 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobResetConnectionConfig;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
+import io.airbyte.config.JobWebhookConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
 import io.airbyte.config.ResourceRequirements;
@@ -151,17 +152,17 @@ public class JobInputHandler {
       final int attempt = Math.toIntExact(input.getAttemptNumber());
 
       final Job job = jobPersistence.getJob(jobId);
-      final JobSyncConfig config = getJobSyncConfig(jobId, job.getConfig());
+      final JobSyncConfig config = getJobSyncConfig(jobId, job.config);
 
       ActorDefinitionVersion sourceVersion = null;
 
-      final UUID connectionId = UUID.fromString(job.getScope());
+      final UUID connectionId = UUID.fromString(job.scope);
       final StandardSync standardSync = connectionService.getStandardSync(connectionId);
 
       final AttemptSyncConfig attemptSyncConfig = new AttemptSyncConfig();
       getCurrentConnectionState(connectionId).ifPresent(attemptSyncConfig::setState);
 
-      final JobConfig.ConfigType jobConfigType = job.getConfig().getConfigType();
+      final JobConfig.ConfigType jobConfigType = job.config.getConfigType();
 
       if (SYNC_REPLICATION_TYPES.contains(jobConfigType)) {
         final SourceConnection source = sourceService.getSourceConnection(standardSync.getSourceId());
@@ -173,7 +174,7 @@ public class JobInputHandler {
         final JsonNode sourceConfigWithInlinedRefs = InlinedConfigWithSecretRefsKt.toInlined(sourceConfiguration);
         attemptSyncConfig.setSourceConfiguration(sourceConfigWithInlinedRefs);
       } else if (JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
-        final JobResetConnectionConfig resetConnection = job.getConfig().getResetConnection();
+        final JobResetConnectionConfig resetConnection = job.config.getResetConnection();
         final ResetSourceConfiguration resetSourceConfiguration = resetConnection.getResetSourceConfiguration();
         attemptSyncConfig
             .setSourceConfiguration(resetSourceConfiguration == null ? Jsons.emptyObject() : Jsons.jsonNode(resetSourceConfiguration));
@@ -256,10 +257,10 @@ public class JobInputHandler {
       final Integer attemptNumber = input.getAttemptNumber();
 
       final Job job = jobPersistence.getJob(jobId);
-      final JobConfig jobConfig = job.getConfig();
+      final JobConfig jobConfig = job.config;
       final JobSyncConfig jobSyncConfig = getJobSyncConfig(jobId, jobConfig);
 
-      final UUID connectionId = UUID.fromString(job.getScope());
+      final UUID connectionId = UUID.fromString(job.scope);
       final StandardSync standardSync = connectionService.getStandardSync(connectionId);
 
       final DestinationConnection destination = destinationService.getDestinationConnection(standardSync.getDestinationId());
@@ -339,6 +340,38 @@ public class JobInputHandler {
         .jobId(jobId)
         .attemptNumber(attemptNumber)
         .syncConfig(apiPojoConverters.attemptSyncConfigToApi(attemptSyncConfig, connectionId)));
+  }
+
+  public JobWebhookConfig getJobWebhookConfig(final long jobId) throws IOException {
+    final Job job = jobPersistence.getJob(jobId);
+    final JobConfig jobConfig = job.config;
+    if (jobConfig == null) {
+      throw new IllegalStateException("Job config is null");
+    }
+    return getJobWebhookConfig(jobId, jobConfig);
+  }
+
+  private JobWebhookConfig getJobWebhookConfig(final long jobId, final JobConfig jobConfig) {
+    final JobConfig.ConfigType jobConfigType = jobConfig.getConfigType();
+    if (JobConfig.ConfigType.SYNC.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getSync().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getSync().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.RESET_CONNECTION.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getResetConnection().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getResetConnection().getWebhookOperationConfigs());
+    } else if (JobConfig.ConfigType.REFRESH.equals(jobConfigType)) {
+      return new JobWebhookConfig()
+          .withOperationSequence(jobConfig.getRefresh().getOperationSequence())
+          .withWebhookOperationConfigs(jobConfig.getRefresh().getWebhookOperationConfigs());
+    } else {
+      throw new IllegalStateException(
+          String.format("Unexpected config type %s for job %d. The only supported config types for this activity are (%s)",
+              jobConfigType,
+              jobId,
+              REPLICATION_TYPES));
+    }
   }
 
   /**

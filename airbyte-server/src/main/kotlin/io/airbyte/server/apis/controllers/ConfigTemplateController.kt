@@ -20,6 +20,7 @@ import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.data.services.impls.data.mappers.objectMapper
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.persistence.job.WorkspaceHelper
+import io.airbyte.server.helpers.ConfigTemplateAdvancedAuthHelper
 import io.micronaut.http.annotation.Controller
 
 @Controller
@@ -38,7 +39,7 @@ open class ConfigTemplateController(
     )
 
     return configTemplateService
-      .getConfigTemplate(req.configTemplateId)
+      .getConfigTemplate(req.configTemplateId, req.workspaceId)
       .toApiModel()
   }
 
@@ -63,16 +64,29 @@ open class ConfigTemplateController(
   }
 }
 
-private fun ConfigTemplateWithActorDetails.toApiModel() =
-  ConfigTemplateRead()
-    .sourceDefinitionId(this.configTemplate.actorDefinitionId)
-    .configTemplateSpec(
-      this.configTemplate.userConfigSpec.let {
-        objectMapper.valueToTree<JsonNode>(it)
-      },
-    ).icon(this.actorIcon)
-    .name(this.actorName)
-    .id(this.configTemplate.id)
+private fun ConfigTemplateWithActorDetails.toApiModel(): ConfigTemplateRead {
+  val configTemplate =
+    ConfigTemplateRead()
+      .sourceDefinitionId(this.configTemplate.actorDefinitionId)
+      .configTemplateSpec(
+        this.configTemplate.userConfigSpec.let {
+          objectMapper.valueToTree<JsonNode>(it)
+        },
+      ).icon(this.actorIcon)
+      .name(this.actorName)
+      .id(this.configTemplate.id)
+
+  if (this.configTemplate.advancedAuth != null) {
+    configTemplate.advancedAuth(
+      ConfigTemplateAdvancedAuthHelper.mapAdvancedAuth(this.configTemplate.advancedAuth!!),
+    )
+    // Use the appropriate method signature for setting global credentials
+    configTemplate.advancedAuthGlobalCredentialsAvailable(
+      this.configTemplate.advancedAuthGlobalCredentialsAvailable,
+    )
+  }
+  return configTemplate
+}
 
 private fun ConfigTemplateWithActorDetails.toListItem() =
   ConfigTemplateListItem()

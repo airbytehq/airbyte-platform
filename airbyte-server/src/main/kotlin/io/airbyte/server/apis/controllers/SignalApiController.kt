@@ -6,7 +6,7 @@ package io.airbyte.server.apis.controllers
 
 import io.airbyte.api.generated.SignalApi
 import io.airbyte.api.model.generated.SignalInput
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.handlers.SignalHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
 import io.airbyte.server.apis.execute

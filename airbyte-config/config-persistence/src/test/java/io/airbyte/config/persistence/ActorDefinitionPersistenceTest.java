@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,7 +15,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
 import io.airbyte.config.DestinationConnection;
@@ -28,7 +27,7 @@ import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -55,7 +54,6 @@ import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -70,6 +68,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
   private static final String TEST_DEFAULT_MAX_SECONDS = "3600";
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final String DOCKER_IMAGE_TAG = "0.0.1";
+  private static final UUID dataplaneGroupId = UUID.randomUUID();
 
   private ActorDefinitionService actorDefinitionService;
   private SourceServiceJooqImpl sourceService;
@@ -99,17 +98,14 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withOrganizationId(DEFAULT_ORGANIZATION_ID).withName("Test Organization").withEmail("test@test.com"));
 
     dataplaneGroupService = spy(new DataplaneGroupServiceTestJooqImpl(database));
-    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
-        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography)
-          .withEnabled(true)
-          .withTombstone(false));
-    }
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(dataplaneGroupId)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("test")
+        .withEnabled(true)
+        .withTombstone(false));
 
-    connectionService = spy(new ConnectionServiceJooqImpl(database, dataplaneGroupService));
+    connectionService = spy(new ConnectionServiceJooqImpl(database));
 
     sourceService = spy(
         new SourceServiceJooqImpl(
@@ -141,7 +137,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
     workspaceService = spy(
         new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter, secretPersistenceConfigService,
-            metricClient, dataplaneGroupService));
+            metricClient));
   }
 
   @Test
@@ -232,8 +228,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 
@@ -322,8 +317,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withDestinationId(dest.getDestinationId())
         .withConnectionId(connectionId)
         .withSourceId(source.getSourceId())
-        .withBreakingChange(false)
-        .withGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+        .withBreakingChange(false);
 
     connectionService.writeStandardSync(connection);
 
@@ -357,7 +351,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
 
   @Test
   void testUpdateDeclarativeActorDefinitionVersions()
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, ConfigNotFoundException {
     final String declarativeDockerRepository = "airbyte/source-declarative-manifest";
     final String previousTag = "0.1.0";
     final String newTag = "0.2.0";
@@ -570,7 +564,7 @@ class ActorDefinitionPersistenceTest extends BaseConfigDatabaseTest {
         .withSlug("workspace-a-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_AUTO)
+        .withDataplaneGroupId(dataplaneGroupId)
         .withOrganizationId(DEFAULT_ORGANIZATION_ID);
   }
 

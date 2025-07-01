@@ -6,7 +6,6 @@ package io.airbyte.commons.server.handlers
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.airbyte.api.model.generated.DestinationRead
 import io.airbyte.api.model.generated.WorkspaceRead
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.data.repositories.ConnectionTemplateRepository
 import io.airbyte.data.repositories.WorkspaceRepository
 import io.airbyte.data.repositories.entities.ConnectionTemplate
@@ -76,7 +75,6 @@ class EmbeddedWorkspacesHandlerTest {
       null,
       null,
       NonBreakingChangePreferenceType.disable,
-      GEOGRAPHY_AUTO,
     )
 
   private val destinationRead =
@@ -97,7 +95,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test create`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns emptyList()
 
     every {
@@ -127,7 +125,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test get existing workspace`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns listOf(existingWorkspace)
 
     val returnedWorkspaceId = handler.getOrCreate(OrganizationId(organizationId), externalUserId)
@@ -138,7 +136,7 @@ class EmbeddedWorkspacesHandlerTest {
   @Test
   fun `test error if multiple workspaces with externalId`() {
     every {
-      workspaceRepository.findByNameAndOrganizationId(externalUserId, organizationId)
+      workspaceRepository.findByNameAndOrganizationIdAndTombstoneFalse(externalUserId, organizationId)
     } returns listOf(existingWorkspace, anotherExistingWorkspace)
 
     org.junit.jupiter.api.assertThrows<IllegalStateException> {

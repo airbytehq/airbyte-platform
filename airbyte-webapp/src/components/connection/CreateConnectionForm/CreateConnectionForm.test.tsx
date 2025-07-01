@@ -3,6 +3,7 @@ import React from "react";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
+import { mockGetDataplaneGroup } from "test-utils/mock-data/mockDataplaneGroups";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
@@ -49,6 +50,11 @@ jest.mock("core/api", () => ({
     isValid: true,
     cronDescription: "every hour",
     nextExecutions: [],
+  }),
+  useGetDataplaneGroup: () => mockGetDataplaneGroup,
+  useGetWebappConfig: () => ({
+    version: "test-version",
+    edition: "community",
   }),
 }));
 

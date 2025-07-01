@@ -11,7 +11,7 @@ import { ModalBody, ModalFooter } from "components/ui/Modal";
 import { Text } from "components/ui/Text";
 
 import { useFormatError } from "core/errors";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 
 const validationSchema = z.object({
@@ -37,7 +37,7 @@ export const AddCustomDockerImageConnectorModal: React.FC<AddCustomDockerImageCo
   const { formatMessage } = useIntl();
   const [error, setError] = useState<Error>();
   const formatError = useFormatError();
-
+  const isCloudApp = useIsCloudApp();
   return (
     <Form<ConnectorDefinition>
       defaultValues={{
@@ -69,7 +69,7 @@ export const AddCustomDockerImageConnectorModal: React.FC<AddCustomDockerImageCo
           <ConnectorControl
             fieldType="input"
             name="dockerRepository"
-            label={formatMessage({ id: isCloudApp() ? "admin.dockerFullImageName" : "admin.dockerRepository" })}
+            label={formatMessage({ id: isCloudApp ? "admin.dockerFullImageName" : "admin.dockerRepository" })}
           />
           <ConnectorControl
             fieldType="input"

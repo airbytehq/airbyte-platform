@@ -9,7 +9,6 @@ import io.airbyte.featureflag.Context
 import io.airbyte.metrics.MetricAttribute
 import io.airbyte.metrics.MetricClient
 import io.airbyte.metrics.OssMetricsRegistry
-import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.fabric8.kubernetes.client.KubernetesClientTimeoutException
 import io.micronaut.context.annotation.Factory
 import io.micronaut.context.annotation.Value
@@ -95,9 +94,6 @@ class ApplicationBeanFactory {
   @Singleton
   @Named("infraFlagContexts")
   fun staticFlagContext(): List<Context> = emptyList()
-
-  @Singleton
-  fun connectorApmSupportHelper(): ConnectorApmSupportHelper = ConnectorApmSupportHelper()
 
   @Singleton
   @Named("claimedProcessorBackoffDuration")

@@ -39,6 +39,7 @@ object ConnectorRolloutActivityHelpers {
       expiresAt = rolloutRead.expiresAt,
       errorMsg = rolloutRead.errorMsg,
       failedReason = rolloutRead.failedReason,
+      pausedReason = rolloutRead.pausedReason,
       actorSelectionInfo = mapActorSelectionInfo(rolloutRead.actorSelectionInfo),
       actorSyncs = mapActorSyncs(rolloutRead.actorSyncs),
     )

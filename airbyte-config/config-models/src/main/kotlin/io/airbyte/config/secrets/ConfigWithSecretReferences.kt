@@ -7,8 +7,13 @@ package io.airbyte.config.secrets
 import com.fasterxml.jackson.databind.JsonNode
 
 data class ConfigWithSecretReferences(
-  // what is persisted in DB, with pointers to references
-  val config: JsonNode,
-  // references point to secrets ({$.password -> secret_123})
+  /**
+   * Original configuration before fetching secret references.
+   * You should almost never use this directly. To get an inlined representation that considers secret references, see .toInlined()
+   */
+  val originalConfig: JsonNode,
+  /**
+   * Map of secret coordinates to slot into the configuration.
+   */
   val referencedSecrets: Map<String, SecretReferenceConfig>,
 )

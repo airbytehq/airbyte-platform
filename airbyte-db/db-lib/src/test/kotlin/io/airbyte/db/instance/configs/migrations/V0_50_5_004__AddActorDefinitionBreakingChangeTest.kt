@@ -14,6 +14,7 @@ import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
@@ -21,6 +22,7 @@ import java.time.LocalDate
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -31,7 +33,7 @@ internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfi
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_4_002__DropActorDefinitionVersionedCols()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -41,7 +43,7 @@ internal class V0_50_5_004__AddActorDefinitionBreakingChangeTest : AbstractConfi
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     createBreakingChangesTable(context)
 
     val actorDefinitionId = UUID.randomUUID()

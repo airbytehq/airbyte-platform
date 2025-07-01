@@ -4,11 +4,13 @@ import React, { HTMLAttributes } from "react";
 import styles from "./FlexItem.module.scss";
 
 interface FlexItemProps {
+  as?: "div" | "span";
   className?: string;
   /**
    * Sets `flex-grow` to 1 if truthy
    */
   grow?: boolean;
+  noShrink?: boolean;
   /**
    * The `align-self` css property
    */
@@ -21,8 +23,10 @@ interface FlexItemProps {
  * in case no special flex properties are required.
  */
 export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttributes<HTMLDivElement>>> = ({
+  as = "div",
   className,
   grow,
+  noShrink,
   alignSelf,
   children,
   ...otherProps
@@ -30,6 +34,7 @@ export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttr
   const fullClassName = classNames(
     {
       [styles.grow]: grow,
+      [styles.noShrink]: noShrink,
       [styles.alignSelfStart]: alignSelf === "flex-start",
       [styles.alignSelfEnd]: alignSelf === "flex-end",
       [styles.alignSelfCenter]: alignSelf === "center",
@@ -38,9 +43,9 @@ export const FlexItem: React.FC<React.PropsWithChildren<FlexItemProps & HTMLAttr
     className
   );
 
-  return (
-    <div className={fullClassName} {...otherProps}>
-      {children}
-    </div>
-  );
+  return React.createElement(as, {
+    ...otherProps,
+    className: fullClassName,
+    children,
+  });
 };

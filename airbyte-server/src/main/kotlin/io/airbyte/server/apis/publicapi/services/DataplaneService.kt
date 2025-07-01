@@ -73,6 +73,7 @@ class DataplaneServiceImpl(
 
     val newDataplane =
       io.airbyte.config.Dataplane().apply {
+        id = UUID.randomUUID()
         dataplaneGroupId = dataplaneCreateRequest.regionId
         name = dataplaneCreateRequest.name
         enabled = dataplaneCreateRequest.enabled ?: true
@@ -82,13 +83,12 @@ class DataplaneServiceImpl(
       trackingHelper.callWithTracker(
         {
           runCatching {
-            val createdDataplane = dataplaneDataService.writeDataplane(newDataplane)
-            val dataplaneAuth = dataplaneService.createCredentials(createdDataplane.id)
+            val dataplaneWithServiceAccount = dataplaneDataService.createDataplaneAndServiceAccount(newDataplane)
             DataplaneCreateResponse()
-              .regionId(createdDataplane.dataplaneGroupId)
-              .dataplaneId(createdDataplane.id)
-              .clientId(dataplaneAuth.clientId)
-              .clientSecret(dataplaneAuth.clientSecret)
+              .regionId(dataplaneWithServiceAccount.dataplane.dataplaneGroupId)
+              .dataplaneId(dataplaneWithServiceAccount.dataplane.id)
+              .clientId(dataplaneWithServiceAccount.serviceAccount.id.toString())
+              .clientSecret(dataplaneWithServiceAccount.serviceAccount.secret)
           }.onFailure {
             log.error("Error creating dataplane", it)
             ConfigClientErrorHandler.handleError(it)
@@ -138,7 +138,7 @@ class DataplaneServiceImpl(
     val result =
       trackingHelper.callWithTracker(
         {
-          runCatching { dataplaneDataService.writeDataplane(updated) }
+          runCatching { dataplaneDataService.updateDataplane(updated) }
             .onFailure {
               log.error("Error updating dataplane", it)
               ConfigClientErrorHandler.handleError(it)

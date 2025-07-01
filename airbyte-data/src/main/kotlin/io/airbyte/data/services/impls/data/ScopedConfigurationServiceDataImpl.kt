@@ -4,12 +4,12 @@
 
 package io.airbyte.data.services.impls.data
 
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.ScopedConfiguration
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ScopedConfigurationRepository
 import io.airbyte.data.services.ScopedConfigurationService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
@@ -28,7 +28,7 @@ class ScopedConfigurationServiceDataImpl(
     repository
       .findById(configId)
       .orElseThrow {
-        ConfigNotFoundException(ConfigSchema.SCOPED_CONFIGURATION, configId)
+        ConfigNotFoundException(ConfigNotFoundType.SCOPED_CONFIGURATION, configId)
       }.toConfigModel()
 
   override fun getScopedConfiguration(

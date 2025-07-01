@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Document</title>
+  <style>
+      body {
+          font-family: Arial, sans-serif;
+          margin: 20px;
+          background-color: #f0f0f0;
+      }
+      .container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+          background-color: white;
+          border-radius: 5px;
+      }
+      .header {
+          color: #333;
+          text-align: center;
+      }
+      .content-section {
+          margin: 20px 0;
+      }
+      .test-button {
+          background-color: #007bff;
+          color: white;
+          padding: 10px 20px;
+          border: none;
+          cursor: pointer;
+      }
+      .test-button:hover {
+          background-color: #0056b3;
+      }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1 class="header">Unit Test Sample Page</h1>
+  <div class="content-section">
+    <p id="test-paragraph">This is a paragraph for testing purposes.</p>
+    <ul class="test-list">
+      <li data-test="item1">First item</li>
+      <li data-test="item2">Second item</li>
+      <li data-test="item3">Third item</li>
+    </ul>
+  </div>
+  <form id="test-form">
+    <input type="text" id="test-input" placeholder="Enter text">
+    <button type="submit" class="test-button">Submit</button>
+  </form>
+  <div class="content-section">
+    <img src="placeholder.jpg" alt="Test Image" class="test-image">
+  </div>
+</div>
+<script>
+  document.getElementById('test-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const input = document.getElementById('test-input').value;
+    console.log('Form submitted with value:', input);
+  });
+</script>
+</body>
+</html>

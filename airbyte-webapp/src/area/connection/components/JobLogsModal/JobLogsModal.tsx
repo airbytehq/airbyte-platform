@@ -75,7 +75,7 @@ const JobLogsModalInner: React.FC<JobLogsModalProps> = ({ jobId, initialAttemptI
         <FlexContainer alignItems="center">
           <div className={styles.attemptDropdown}>
             <ListBox
-              className={styles.attemptDropdown__listbox}
+              buttonClassName={styles.attemptDropdown__listbox}
               selectedValue={selectedAttemptId}
               options={attemptListboxOptions}
               onSelect={setSelectedAttemptId}

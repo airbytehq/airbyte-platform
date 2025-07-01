@@ -279,12 +279,6 @@ data class ImageVersion(
   override val kind = "image-version"
 }
 
-data class Geography(
-  override val key: String,
-) : Context {
-  override val kind: String = "geography"
-}
-
 /**
  * Context for representing a plane by name.
  *
@@ -379,6 +373,18 @@ data class CloudProviderRegion(
   companion object {
     const val AWS_US_EAST_1 = "us-east-1"
   }
+}
+
+data class SecretStorage(
+  override val key: String,
+) : Context {
+  override val kind: String = "secret-storage"
+}
+
+data class TokenSubject(
+  override val key: String,
+) : Context {
+  override val kind: String = "token-subject"
 }
 
 /**

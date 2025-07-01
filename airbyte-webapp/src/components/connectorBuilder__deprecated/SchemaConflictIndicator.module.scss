@@ -1,0 +1,9 @@
+@use "scss/colors";
+
+.schemaConflictWarningIcon {
+  color: colors.$yellow-400;
+}
+
+.schemaConflictErrorIcon {
+  color: colors.$red;
+}

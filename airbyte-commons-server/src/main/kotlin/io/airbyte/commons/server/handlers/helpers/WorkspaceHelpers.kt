@@ -9,8 +9,6 @@ import io.airbyte.api.model.generated.WorkspaceCreateWithId
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.NotificationMissingUrlProblem
 import io.airbyte.api.problems.throwable.generated.NotificationRequiredProblem
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_US
 import io.airbyte.commons.server.converters.NotificationConverter
 import io.airbyte.commons.server.converters.NotificationSettingsConverter
 import io.airbyte.commons.server.converters.WorkspaceWebhookConfigsConverter
@@ -19,6 +17,7 @@ import io.airbyte.config.Notification
 import io.airbyte.config.Organization
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.helpers.patchNotificationSettingsWithDefaultValue
+import io.airbyte.data.services.DataplaneGroupService
 import java.util.Optional
 import java.util.UUID
 import java.util.function.Supplier
@@ -30,9 +29,12 @@ fun buildStandardWorkspace(
   workspaceCreateWithId: WorkspaceCreateWithId,
   organization: Organization,
   uuidSupplier: Supplier<UUID>,
+  dataplaneGroupService: DataplaneGroupService,
+  airbyteEdition: AirbyteEdition,
 ): StandardWorkspace {
-  // if not set on the workspaceCreate, set the defaultGeography to AUTO
-  val geography: String = workspaceCreateWithId.defaultGeography ?: GEOGRAPHY_AUTO
+  // if not set on the workspaceCreate, set the dataplaneGroupId to the default
+  val resolvedDataplaneGroupId =
+    workspaceCreateWithId.dataplaneGroupId ?: dataplaneGroupService.getDefaultDataplaneGroupForAirbyteEdition(airbyteEdition).id
 
   return StandardWorkspace().apply {
     workspaceId = workspaceCreateWithId.id ?: uuidSupplier.get()
@@ -48,7 +50,7 @@ fun buildStandardWorkspace(
     notifications = NotificationConverter.toConfigList(workspaceCreateWithId.notifications)
     notificationSettings =
       patchNotificationSettingsWithDefaultValue(NotificationSettingsConverter.toConfig(workspaceCreateWithId.notificationSettings))
-    defaultGeography = geography
+    dataplaneGroupId = resolvedDataplaneGroupId
     webhookOperationConfigs = WorkspaceWebhookConfigsConverter.toPersistenceWrite(workspaceCreateWithId.webhookConfigs, uuidSupplier)
     organizationId = organization.organizationId
     email = workspaceCreateWithId.email
@@ -125,32 +127,4 @@ private fun validateNotificationItem(
       )
     }
   }
-}
-
-/**
- * If the airbyte edition is cloud and the workspace's default geography is AUTO or null, set it to US.
- * If not cloud, set a null default geography to AUTO.
- * This can be removed once default dataplane groups are fully implemented.
- */
-fun getWorkspaceWithFixedGeography(
-  workspace: StandardWorkspace,
-  airbyteEdition: AirbyteEdition,
-): StandardWorkspace {
-  workspace.defaultGeography = getDefaultGeographyForAirbyteEdition(airbyteEdition, workspace.defaultGeography)
-  return workspace
-}
-
-private fun getDefaultGeographyForAirbyteEdition(
-  airbyteEdition: AirbyteEdition,
-  geography: String?,
-): String {
-  if (
-    airbyteEdition == AirbyteEdition.CLOUD &&
-    (geography == null || geography.lowercase() == GEOGRAPHY_AUTO.lowercase())
-  ) {
-    return GEOGRAPHY_US
-  } else if (geography == null) {
-    return GEOGRAPHY_AUTO
-  }
-  return geography
 }

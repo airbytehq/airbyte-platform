@@ -7,17 +7,16 @@ package io.airbyte.container.orchestrator.worker.filter
 import com.fasterxml.jackson.databind.node.ObjectNode
 import io.airbyte.config.ConfiguredAirbyteCatalog
 import io.airbyte.config.ConfiguredAirbyteStream
+import io.airbyte.container.orchestrator.worker.RecordSchemaValidator
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.container.orchestrator.worker.util.ReplicationMetricReporter
 import io.airbyte.featureflag.FieldSelectionEnabled
 import io.airbyte.featureflag.RemoveValidationLimit
 import io.airbyte.persistence.job.models.ReplicationInput
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.RecordSchemaValidator
-import io.airbyte.workers.WorkerMetricReporter
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 import io.github.oshai.kotlinlogging.KotlinLogging
-import jakarta.inject.Singleton
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
@@ -49,10 +48,9 @@ private fun getUnexpectedFieldNames(
 /**
  * Handles FieldSelection.
  */
-@Singleton
 class FieldSelector(
   private val recordSchemaValidator: RecordSchemaValidator,
-  private val metricReporter: WorkerMetricReporter,
+  private val metricReporter: ReplicationMetricReporter,
   replicationInput: ReplicationInput,
   replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
 ) {
@@ -67,8 +65,8 @@ class FieldSelector(
    * validationErrors must be a ConcurrentHashMap as they are updated and read in different threads
    * concurrently for performance.
    */
-  private val validationErrors: ConcurrentMap<AirbyteStreamNameNamespacePair?, Pair<Set<String?>?, Int?>?>? = ConcurrentHashMap()
-  private val uncountedValidationErrors: ConcurrentMap<AirbyteStreamNameNamespacePair, Set<String>> = ConcurrentHashMap()
+  private val validationErrors: ConcurrentMap<AirbyteStreamNameNamespacePair, Pair<MutableSet<String>, Int>?> = ConcurrentHashMap()
+  private val uncountedValidationErrors: ConcurrentMap<AirbyteStreamNameNamespacePair, MutableSet<String>> = ConcurrentHashMap()
   private val streamToSelectedFields = mutableMapOf<AirbyteStreamNameNamespacePair, List<String>>()
   private val streamToAllFields = mutableMapOf<AirbyteStreamNameNamespacePair, Set<String>>()
   private val unexpectedFields = mutableMapOf<AirbyteStreamNameNamespacePair, MutableSet<String>>()
@@ -134,13 +132,13 @@ class FieldSelector(
       logger.info { "Schema validation was performed without limit." }
       uncountedValidationErrors.forEach { stream, errors ->
         logger.warn { "Schema validation errors found for stream $stream. Error messages: $errors" }
-        metricReporter.trackSchemaValidationErrors(stream, errors)
+        metricReporter.trackSchemaValidationErrors(stream, errors.toMutableSet())
       }
     } else {
       logger.info { "Schema validation was performed to a max of 10 records with errors per stream." }
-      validationErrors?.forEach { stream, errorPair ->
+      validationErrors.forEach { stream, errorPair ->
         logger.warn { "Schema validation errors found for stream $stream. Error messages: ${errorPair?.first}" }
-        metricReporter.trackSchemaValidationErrors(stream, errorPair?.first)
+        metricReporter.trackSchemaValidationErrors(stream, errorPair?.first?.toMutableSet())
       }
     }
     unexpectedFields.forEach { stream, unexpectedFieldNames ->
@@ -217,7 +215,7 @@ class FieldSelector(
     val record = message.record
     val messageStream = AirbyteStreamNameNamespacePair.fromRecordMessage(record)
     // avoid noise by validating only if the stream has less than 10 records with validation errors
-    val streamHasLessThenTenErrs = validationErrors?.get(messageStream) == null || validationErrors.get(messageStream)?.second!! < 10
+    val streamHasLessThenTenErrs = validationErrors[messageStream] == null || validationErrors[messageStream]?.second!! < 10
     if (streamHasLessThenTenErrs) {
       recordSchemaValidator.validateSchema(record, messageStream, validationErrors)
       val unexpectedFieldNames = getUnexpectedFieldNames(record, streamToAllFields.getOrDefault(messageStream, emptySet()))

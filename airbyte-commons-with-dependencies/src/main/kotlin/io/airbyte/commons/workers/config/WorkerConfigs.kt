@@ -10,20 +10,18 @@ import io.airbyte.config.ResourceRequirements
 import io.airbyte.config.ResourceRequirementsType
 import io.airbyte.config.TolerationPOJO
 import io.airbyte.config.provider.ResourceRequirementsProvider
-import io.airbyte.config.provider.ResourceRequirementsProvider.DEFAULT_VARIANT
+import io.airbyte.config.provider.ResourceRequirementsProvider.Companion.DEFAULT_VARIANT
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import java.util.EnumMap
-import java.util.Optional
 import java.util.regex.Pattern
-import kotlin.jvm.optionals.getOrNull
 
 /** Configuration object for a worker. */
 data class WorkerConfigs(
   val resourceRequirements: ResourceRequirements,
   val workerKubeTolerations: List<TolerationPOJO>,
-  val workerKubeNodeSelectors: Map<String, String>,
+  val workerKubeNodeSelectors: Map<String, String>?,
   val workerIsolatedKubeNodeSelectors: Map<String, String>?,
   val workerKubeAnnotations: Map<String, String>,
   val workerKubeLabels: Map<String, String>,
@@ -36,13 +34,13 @@ data class WorkerConfigs(
   @InternalForTesting
   internal constructor(configs: Configs) : this(
     resourceRequirements = ResourceRequirements(),
-    workerKubeTolerations = configs.jobKubeTolerations,
-    workerKubeNodeSelectors = configs.jobKubeNodeSelectors,
-    workerIsolatedKubeNodeSelectors = configs.useCustomKubeNodeSelector.takeIf { it }.let { configs.isolatedJobKubeNodeSelectors },
-    workerKubeAnnotations = configs.jobKubeAnnotations,
-    workerKubeLabels = configs.jobKubeLabels,
-    jobImagePullSecrets = configs.jobKubeMainContainerImagePullSecrets,
-    jobImagePullPolicy = configs.jobKubeMainContainerImagePullPolicy,
+    workerKubeTolerations = configs.getJobKubeTolerations(),
+    workerKubeNodeSelectors = configs.getJobKubeNodeSelectors(),
+    workerIsolatedKubeNodeSelectors = configs.getUseCustomKubeNodeSelector().takeIf { it }?.let { configs.getIsolatedJobKubeNodeSelectors() },
+    workerKubeAnnotations = configs.getJobKubeAnnotations(),
+    workerKubeLabels = configs.getJobKubeLabels(),
+    jobImagePullSecrets = configs.getJobKubeMainContainerImagePullSecrets(),
+    jobImagePullPolicy = configs.getJobKubeMainContainerImagePullPolicy(),
   )
 }
 
@@ -129,15 +127,15 @@ class WorkerConfigsProvider(
 
   override fun getResourceRequirements(
     type: ResourceRequirementsType,
-    subType: Optional<String>,
+    subType: String?,
   ): ResourceRequirements = getResourceRequirements(type, subType, DEFAULT_VARIANT)
 
   override fun getResourceRequirements(
     type: ResourceRequirementsType,
-    subType: Optional<String>,
+    subType: String?,
     variant: String,
   ): ResourceRequirements {
-    val typedSubType: ResourceSubType = subType.getOrNull()?.let { ResourceSubType.fromValue(it) } ?: ResourceSubType.DEFAULT
+    val typedSubType: ResourceSubType = subType?.let { ResourceSubType.fromValue(it) } ?: ResourceSubType.DEFAULT
 
     val key =
       KubeResourceKey(

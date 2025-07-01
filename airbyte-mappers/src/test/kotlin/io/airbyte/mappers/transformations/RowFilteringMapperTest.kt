@@ -4,15 +4,14 @@
 
 package io.airbyte.mappers.transformations
 
+import TEST_OBJECT_MAPPER
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.contains
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
-import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
-import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.config.mapper.configs.RowFilteringMapperConfig
-import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions
@@ -20,7 +19,6 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
-import java.time.Instant
 
 @MicronautTest
 class RowFilteringMapperTest {
@@ -29,21 +27,12 @@ class RowFilteringMapperTest {
 
   companion object {
     private const val CONDITIONS = "conditions"
-    private const val NAMESPACE = "NAMESPACE"
-    private const val STREAM = "STREAM"
   }
 
-  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord =
-    AirbyteJsonRecordAdapter(
-      AirbyteMessage()
-        .withType(AirbyteMessage.Type.RECORD)
-        .withRecord(
-          AirbyteRecordMessage()
-            .withNamespace(NAMESPACE)
-            .withStream(STREAM)
-            .withEmittedAt(Instant.now().toEpochMilli())
-            .withData(Jsons.jsonNode(recordData)),
-        ),
+  private fun getRecord(recordData: MutableMap<String, Any>): AirbyteRecord =
+    TestRecordAdapter(
+      streamDescriptor = StreamDescriptor(),
+      data = recordData,
     )
 
   private fun assertNoChangesMadeToRecord(
@@ -75,15 +64,15 @@ class RowFilteringMapperTest {
                 }
             }
             """
-    val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
+    val rowFilteringMapperConfig = TEST_OBJECT_MAPPER.readValue(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
       mapper
         .spec()
-        .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
+        .deserialize(TEST_OBJECT_MAPPER.readValue(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
     val recordToExcludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "active",
         "otherField" to "otherValue",
       )
@@ -95,7 +84,7 @@ class RowFilteringMapperTest {
     assertNoChangesMadeToRecord(recordToExclude, recordToExcludeData)
 
     val recordToIncludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "inactive",
         "otherField" to "otherValue2",
       )
@@ -121,15 +110,15 @@ class RowFilteringMapperTest {
                 }
             }
             """
-    val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
+    val rowFilteringMapperConfig = TEST_OBJECT_MAPPER.readValue(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
       mapper
         .spec()
-        .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
+        .deserialize(TEST_OBJECT_MAPPER.readValue(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
     val recordToIncludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "active",
         "otherField" to "otherValue",
       )
@@ -141,7 +130,7 @@ class RowFilteringMapperTest {
     assertNoChangesMadeToRecord(recordToInclude, recordToIncludeData)
 
     val recordToExcludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "inactive",
         "otherField" to "otherValue2",
       )
@@ -183,15 +172,15 @@ class RowFilteringMapperTest {
                 }
             }
             """
-    val rowFilteringMapperConfig = Jsons.deserialize(jsonString, RowFilteringMapperConfig::class.java)
+    val rowFilteringMapperConfig = TEST_OBJECT_MAPPER.readValue(jsonString, RowFilteringMapperConfig::class.java)
     val rowFilteringMapperConfigDeserializedFromSpec =
       mapper
         .spec()
-        .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
+        .deserialize(TEST_OBJECT_MAPPER.readValue(jsonString, ConfiguredMapper::class.java))
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
     val recordToIncludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "active",
         "region" to "us",
         "otherField" to "otherValue",
@@ -204,7 +193,7 @@ class RowFilteringMapperTest {
     assertNoChangesMadeToRecord(recordToInclude, recordToIncludeData)
 
     val recordToExcludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "active",
         "region" to "eu",
         "otherField" to "otherValue2",
@@ -258,19 +247,19 @@ class RowFilteringMapperTest {
     }
             """
     val rowFilteringMapperConfig =
-      Jsons.deserialize(
+      TEST_OBJECT_MAPPER.readValue(
         jsonString,
         RowFilteringMapperConfig::class.java,
       )
     val rowFilteringMapperConfigDeserializedFromSpec =
       mapper
         .spec()
-        .deserialize(Jsons.deserialize(jsonString, ConfiguredMapper::class.java))
+        .deserialize(TEST_OBJECT_MAPPER.readValue(jsonString, ConfiguredMapper::class.java))
 
     Assertions.assertEquals(rowFilteringMapperConfig, rowFilteringMapperConfigDeserializedFromSpec)
 
     val recordToExcludeData1 =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "active",
         "region" to "us",
         "otherField" to "otherValue",
@@ -283,7 +272,7 @@ class RowFilteringMapperTest {
     assertNoChangesMadeToRecord(recordToExclude1, recordToExcludeData1)
 
     val recordToExcludeData2 =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "inactive",
         "region" to "eu",
         "otherField" to "otherValue2",
@@ -296,7 +285,7 @@ class RowFilteringMapperTest {
     assertNoChangesMadeToRecord(recordToExclude2, recordToExcludeData2)
 
     val recordToIncludeData =
-      mapOf(
+      mutableMapOf<String, Any>(
         "status" to "inactive",
         "region" to "asia",
         "otherField" to "otherValue3",
@@ -327,7 +316,7 @@ class RowFilteringMapperTest {
           ?: throw IllegalArgumentException("File not found: RowFilteringMapperConfigExamples.json")
 
       val configExamples =
-        Jsons.deserialize(
+        TEST_OBJECT_MAPPER.readValue(
           File(resource.toURI()),
           object : TypeReference<List<ConfiguredMapper>>() {},
         )
@@ -343,7 +332,7 @@ class RowFilteringMapperTest {
     @Test
     fun `should throw exception when config is missing expected attribute`() {
       val configuredMapper =
-        Jsons.deserialize(
+        TEST_OBJECT_MAPPER.readValue(
           """
             {
                 "name": "row-filtering",

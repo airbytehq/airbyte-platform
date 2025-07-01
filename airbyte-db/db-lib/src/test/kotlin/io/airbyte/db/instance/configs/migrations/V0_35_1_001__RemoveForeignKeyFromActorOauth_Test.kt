@@ -21,7 +21,7 @@ internal class V0_35_1_001__RemoveForeignKeyFromActorOauth_Test : AbstractConfig
   @Test
   @Throws(IOException::class, SQLException::class)
   fun testCompleteMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
     SetupForNormalizedTablesTest.setup(context)
 
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

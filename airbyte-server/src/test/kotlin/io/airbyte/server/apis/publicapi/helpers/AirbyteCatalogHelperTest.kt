@@ -213,7 +213,7 @@ internal class AirbyteCatalogHelperTest {
 
   @ParameterizedTest
   @EnumSource(ConnectionSyncModeEnum::class)
-  internal fun `test that when a stream configuration is updated, the corret sync modes are set based on the stream configuration`(
+  internal fun `test that when a stream configuration is updated, the correct sync modes are set based on the stream configuration`(
     connectionSyncMode: ConnectionSyncModeEnum,
   ) {
     val cursorField = "cursor"
@@ -230,7 +230,14 @@ internal class AirbyteCatalogHelperTest {
       AirbyteCatalogHelper.getValidConfiguredStreams(
         createAirbyteCatalog(jsonSchema = cursorPrimaryKeyJsonSchema()),
         StreamConfigurations(listOf(streamConfiguration)),
-        listOf(DestinationSyncMode.APPEND_DEDUP, DestinationSyncMode.OVERWRITE_DEDUP, DestinationSyncMode.APPEND, DestinationSyncMode.OVERWRITE),
+        listOf(
+          DestinationSyncMode.APPEND_DEDUP,
+          DestinationSyncMode.OVERWRITE_DEDUP,
+          DestinationSyncMode.APPEND,
+          DestinationSyncMode.OVERWRITE,
+          DestinationSyncMode.UPDATE,
+          DestinationSyncMode.SOFT_DELETE,
+        ),
       )
 
     assertEquals(true, configuredStreams.first().config.selected)
@@ -581,6 +588,24 @@ internal class AirbyteCatalogHelperTest {
       )
     assertEquals(1, combinedSyncModes.size)
     assertEquals(listOf(ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE).first(), combinedSyncModes.first())
+  }
+
+  @Test
+  internal fun `test that the updated configuration includes destination object names`() {
+    val streamConfiguration =
+      StreamConfiguration(
+        name = "name1",
+        destinationObjectName = "destination_object_name",
+      )
+
+    val configuredStreams =
+      AirbyteCatalogHelper.getValidConfiguredStreams(
+        createAirbyteCatalog(true, jsonSchema = cursorPrimaryKeyJsonSchema()),
+        StreamConfigurations(listOf(streamConfiguration)),
+        listOf(DestinationSyncMode.APPEND_DEDUP),
+      )
+
+    assertEquals("destination_object_name", configuredStreams.first().config.destinationObjectName)
   }
 
   @Test
@@ -1070,6 +1095,10 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> SyncMode.INCREMENTAL
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> SyncMode.FULL_REFRESH
+      ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.FULL_REFRESH_UPDATE -> SyncMode.FULL_REFRESH
+      ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE -> SyncMode.INCREMENTAL
+      ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE -> SyncMode.FULL_REFRESH
     }
 
   private fun getDestinationSyncMode(connectionSyncMode: ConnectionSyncModeEnum): DestinationSyncMode =
@@ -1079,5 +1108,9 @@ internal class AirbyteCatalogHelperTest {
       ConnectionSyncModeEnum.INCREMENTAL_APPEND -> DestinationSyncMode.APPEND
       ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY -> DestinationSyncMode.APPEND_DEDUP
       ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED -> DestinationSyncMode.OVERWRITE_DEDUP
+      ConnectionSyncModeEnum.INCREMENTAL_UPDATE -> DestinationSyncMode.UPDATE
+      ConnectionSyncModeEnum.FULL_REFRESH_UPDATE -> DestinationSyncMode.UPDATE
+      ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE -> DestinationSyncMode.SOFT_DELETE
+      ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE -> DestinationSyncMode.SOFT_DELETE
     }
 }

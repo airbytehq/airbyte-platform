@@ -19,6 +19,7 @@ import io.airbyte.workers.temporal.discover.catalog.DiscoverCatalogWorkflowImpl;
 import io.airbyte.workers.temporal.scheduling.ConnectionManagerWorkflowImpl;
 import io.airbyte.workers.temporal.spec.SpecWorkflowImpl;
 import io.airbyte.workers.temporal.sync.SyncWorkflowImpl;
+import io.airbyte.workers.temporal.sync.SyncWorkflowV2Impl;
 import io.airbyte.workers.temporal.workflows.ConnectorCommandWorkflowImpl;
 import io.airbyte.workers.temporal.workflows.DiscoverCatalogAndAutoPropagateWorkflowImpl;
 import io.airbyte.workers.tracing.StorageObjectGetInterceptor;
@@ -183,7 +184,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
   private void registerUiCommandsWorker(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfiguration) {
     final Worker uiCommandsWorker =
-        factory.newWorker(temporalQueueConfiguration.getUiCommandsQueue(), getWorkerOptions(maxWorkersConfiguration.getMaxCheckWorkers()));
+        factory.newWorker(temporalQueueConfiguration.getUiCommandsQueue(), getWorkerOptions(maxWorkersConfiguration.maxCheckWorkers));
     final WorkflowImplementationOptions workflowOptions = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
 
@@ -213,7 +214,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
                                          final MaxWorkersConfig maxWorkersConfig) {
     final Worker connectionUpdaterWorker =
         factory.newWorker(TemporalJobType.CONNECTION_UPDATER.toString(),
-            getWorkerOptions(maxWorkersConfig.getMaxSyncWorkers()));
+            getWorkerOptions(maxWorkersConfig.maxSyncWorkers));
     final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
     connectionUpdaterWorker
@@ -263,11 +264,12 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     for (final String taskQueue : taskQueues) {
       log.info("Registering sync workflow for task queue '{}'...", taskQueue);
       final Worker syncWorker = factory.newWorker(taskQueue,
-          getWorkerOptions(maxWorkersConfig.getMaxSyncWorkers()));
+          getWorkerOptions(maxWorkersConfig.maxSyncWorkers));
       final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       syncWorker.registerWorkflowImplementationTypes(options,
-          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class));
+          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowImpl.class),
+          temporalProxyHelper.proxyWorkflowClass(SyncWorkflowV2Impl.class));
       syncWorker.registerActivitiesImplementations(
           syncActivities.orElseThrow().toArray(new Object[] {}));
 

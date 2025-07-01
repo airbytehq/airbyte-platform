@@ -14,7 +14,7 @@ interface ListItemButtonProps {
 
 export const ListItemButton: React.FC<ListItemButtonProps> = ({ label, onClick, icon, configured }) => {
   return (
-    <button className={styles.button} onClick={onClick}>
+    <button className={styles.button} onClick={onClick} title={label}>
       {configured && (
         <div className={styles.configuredIcon}>
           <Icon type="successOutline" size="xl" color="primary" />

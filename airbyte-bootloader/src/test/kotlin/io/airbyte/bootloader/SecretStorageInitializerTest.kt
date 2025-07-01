@@ -4,8 +4,8 @@
 
 package io.airbyte.bootloader
 
-import io.airbyte.config.persistence.OrganizationPersistence
-import io.airbyte.config.persistence.UserPersistence
+import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
+import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.config.secrets.persistence.SecretPersistence.ImplementationTypes
 import io.airbyte.data.services.SecretStorageService
 import io.airbyte.domain.models.PatchField
@@ -28,8 +28,8 @@ import java.util.UUID
 class SecretStorageInitializerTest {
   private val secretStorageService = mockk<SecretStorageService>(relaxed = true)
   private val defaultId = SecretStorage.DEFAULT_SECRET_STORAGE_ID
-  private val defaultOrgId = OrganizationPersistence.DEFAULT_ORGANIZATION_ID
-  private val defaultUserId = UserPersistence.DEFAULT_USER_ID
+  private val defaultOrgId = DEFAULT_ORGANIZATION_ID
+  private val defaultUserId = DEFAULT_USER_ID
   private val defaultDescriptor = "Default Secret Storage"
 
   @BeforeEach

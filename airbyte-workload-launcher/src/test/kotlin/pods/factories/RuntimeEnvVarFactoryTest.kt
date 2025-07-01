@@ -20,11 +20,11 @@ import io.airbyte.featureflag.Workspace
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.helper.ConnectorApmSupportHelper
 import io.airbyte.workers.pod.Metadata.AWS_ASSUME_ROLE_EXTERNAL_ID
-import io.airbyte.workers.pod.ResourceConversionUtils
 import io.airbyte.workload.launcher.constants.EnvVarConstants
+import io.airbyte.workload.launcher.helper.ConnectorApmSupportHelper
 import io.airbyte.workload.launcher.model.toEnvVarList
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactory.Companion.MYSQL_SOURCE_NAME
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.CONTAINER_ORCH_JAVA_OPTS
 import io.airbyte.workload.launcher.pods.factories.RuntimeEnvVarFactoryTest.Fixtures.WORKLOAD_ID
@@ -339,9 +339,9 @@ class RuntimeEnvVarFactoryTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  fun `builds expected env vars for check connector container`(useRuntimeSecretPersistence: Boolean) {
+  fun `builds expected env vars for check connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
-    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
@@ -349,7 +349,7 @@ class RuntimeEnvVarFactoryTest {
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
-        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.CHECK.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
@@ -359,9 +359,9 @@ class RuntimeEnvVarFactoryTest {
 
   @ParameterizedTest
   @ValueSource(booleans = [true, false])
-  fun `builds expected env vars for discover connector container`(useRuntimeSecretPersistence: Boolean) {
+  fun `builds expected env vars for discover connector container`(flagValue: Boolean) {
     every { factory.resolveAwsAssumedRoleEnvVars(any()) } returns connectorAwsAssumedRoleSecretEnvList
-    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns useRuntimeSecretPersistence
+    every { ffClient.boolVariation(UseRuntimeSecretPersistence, any()) } returns flagValue
     val config =
       IntegrationLauncherConfig()
         .withWorkspaceId(workspaceId)
@@ -369,7 +369,7 @@ class RuntimeEnvVarFactoryTest {
 
     assertEquals(
       connectorAwsAssumedRoleSecretEnvList +
-        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, useRuntimeSecretPersistence.toString(), null) +
+        EnvVar(EnvVarConstants.USE_RUNTIME_SECRET_PERSISTENCE, flagValue.toString(), null) +
         EnvVar(AirbyteEnvVar.AIRBYTE_ENABLE_UNSAFE_CODE.toString(), false.toString(), null) +
         EnvVar(AirbyteEnvVar.OPERATION_TYPE.toString(), WorkloadType.DISCOVER.toString(), null) +
         EnvVar(AirbyteEnvVar.WORKLOAD_ID.toString(), WORKLOAD_ID, null),
@@ -450,6 +450,7 @@ class RuntimeEnvVarFactoryTest {
         .withConnectionId(UUID.randomUUID())
         .withUseFileTransfer(useFileTransfer)
         .withConnectionContext(ConnectionContext().withOrganizationId(UUID.randomUUID()))
+        .withSourceLauncherConfig(IntegrationLauncherConfig().withWorkspaceId(workspaceId))
     val result = factory.orchestratorEnvVars(input, WORKLOAD_ID)
 
     assertEquals(

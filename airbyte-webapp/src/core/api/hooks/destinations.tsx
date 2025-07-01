@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
 import { ConnectionConfiguration } from "area/connector/types";
@@ -10,6 +10,7 @@ import { useCurrentWorkspace } from "./workspaces";
 import {
   createDestination,
   deleteDestination,
+  discoverCatalogForDestination,
   getDestination,
   listDestinationsForWorkspace,
   updateDestination,
@@ -25,6 +26,8 @@ export const destinationsKeys = {
   lists: () => [...destinationsKeys.all, "list"] as const,
   list: (filters: string) => [...destinationsKeys.lists(), { filters }] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
+  discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
+  cachedDiscover: (destinationId: string) => [...destinationsKeys.all, "cachedDiscover", destinationId] as const,
 };
 
 interface ValuesProps {
@@ -43,7 +46,7 @@ interface DestinationList {
   destinations: DestinationRead[];
 }
 
-const useDestinationList = (): DestinationList => {
+export const useDestinationList = (): DestinationList => {
   const requestOptions = useRequestOptions();
   const workspace = useCurrentWorkspace();
 
@@ -52,7 +55,7 @@ const useDestinationList = (): DestinationList => {
   );
 };
 
-const useGetDestination = <T extends string | undefined | null>(
+export const useGetDestination = <T extends string | undefined | null>(
   destinationId: T
 ): T extends string ? DestinationRead : DestinationRead | undefined => {
   const requestOptions = useRequestOptions();
@@ -74,7 +77,7 @@ export const useInvalidateDestination = <T extends string | undefined | null>(de
   }, [queryClient, destinationId]);
 };
 
-const useCreateDestination = () => {
+export const useCreateDestination = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const workspace = useCurrentWorkspace();
@@ -110,7 +113,7 @@ const useCreateDestination = () => {
   );
 };
 
-const useDeleteDestination = () => {
+export const useDeleteDestination = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const analyticsService = useAnalyticsService();
@@ -146,7 +149,7 @@ const useDeleteDestination = () => {
   );
 };
 
-const useUpdateDestination = () => {
+export const useUpdateDestination = () => {
   const requestOptions = useRequestOptions();
   const queryClient = useQueryClient();
   const onError = useRequestErrorHandler("destinations.updateError");
@@ -172,4 +175,25 @@ const useUpdateDestination = () => {
   );
 };
 
-export { useDestinationList, useGetDestination, useCreateDestination, useDeleteDestination, useUpdateDestination };
+export const useDiscoverDestination = (destinationId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    destinationsKeys.discover(destinationId),
+    async () => {
+      return discoverCatalogForDestination({ destinationId, disableCache: true }, requestOptions);
+    },
+    {
+      cacheTime: 0, // As soon as the query is not used, it should be removed from the cache
+      staleTime: 1000 * 60 * 20, // A discovered schema should be valid for max 20 minutes on the client before refetching
+    }
+  );
+};
+
+export const useCachedDestinationCatalog = (destinationId: string) => {
+  const requestOptions = useRequestOptions();
+
+  return useSuspenseQuery(destinationsKeys.cachedDiscover(destinationId), () =>
+    discoverCatalogForDestination({ destinationId, disableCache: false }, requestOptions)
+  );
+};

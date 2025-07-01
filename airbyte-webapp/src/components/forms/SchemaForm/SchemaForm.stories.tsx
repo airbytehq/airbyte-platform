@@ -1,9 +1,12 @@
 import { StoryObj } from "@storybook/react";
 import { FromSchema } from "json-schema-to-ts";
-import { FieldValues, FormProvider, useForm, useFormState, useWatch } from "react-hook-form";
+import { useState } from "react";
+import { useFormState, useWatch } from "react-hook-form";
 
 import { formatJson } from "components/connectorBuilder/utils";
+import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
+import { FlexContainer } from "components/ui/Flex";
 
 import { ConfirmationModalService } from "hooks/services/ConfirmationModal";
 import { NotificationService } from "hooks/services/Notification";
@@ -605,134 +608,6 @@ export const DeclarativeComponentSchema = () => {
   );
 };
 
-export const NestedSchemaForm = () => {
-  const nestedSchema = {
-    type: "object",
-    properties: {
-      name: { type: "string" },
-      age: { type: "number" },
-      friends: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            friendName: { type: "string", linkable: true },
-          },
-          required: ["friendName"],
-        },
-      },
-    },
-    required: ["name", "age"],
-  } as const;
-
-  const methods = useForm<FieldValues>({
-    defaultValues: {
-      record: {
-        id: "abc123",
-        user: {
-          name: "John Doe",
-          age: 30,
-        },
-      },
-    },
-    mode: "onChange",
-  });
-
-  const processSubmission = (values: FieldValues) => {
-    console.log("submitted values", values);
-  };
-
-  return (
-    <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(processSubmission)}>
-        <SchemaForm schema={nestedSchema} nestedUnderPath="record.user" refTargetPath="record.definitions.shared">
-          <Card>
-            <SchemaFormControl path="record.user" />
-          </Card>
-        </SchemaForm>
-        <ShowFormValues />
-      </form>
-    </FormProvider>
-  );
-};
-
-export const NestedDeclarativeComponentSchema = () => {
-  const methods = useForm<FieldValues>({
-    defaultValues: {
-      state: {
-        view: "global",
-        manifest: {
-          type: "DeclarativeSource",
-          check: {
-            streams: [],
-          },
-          version: "1.0.0",
-          streams: [
-            {
-              name: "pokemon",
-              type: "DeclarativeStream",
-              retriever: {
-                type: "SimpleRetriever",
-                decoder: {
-                  type: "JsonDecoder",
-                },
-                paginator: {
-                  type: "DefaultPaginator",
-                  page_size_option: {
-                    type: "RequestOption",
-                    field_name: "limit",
-                    inject_into: "request_parameter",
-                  },
-                  page_token_option: {
-                    type: "RequestOption",
-                    field_name: "offset",
-                    inject_into: "request_parameter",
-                  },
-                  pagination_strategy: {
-                    type: "OffsetIncrement",
-                    page_size: 10,
-                  },
-                },
-                requester: {
-                  type: "HttpRequester",
-                  url_base: "https://pokeapi.co/api/v2/",
-                  path: "pokemon",
-                  http_method: "GET",
-                },
-                record_selector: {
-                  type: "RecordSelector",
-                  extractor: {
-                    type: "DpathExtractor",
-                    field_path: ["results"],
-                  },
-                },
-              },
-            },
-          ],
-        },
-      },
-    },
-    mode: "onChange",
-  });
-
-  const processSubmission = (values: FieldValues) => {
-    console.log("submitted values", values);
-  };
-
-  return (
-    <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(processSubmission)}>
-        <SchemaForm schema={declarativeComponentSchema} nestedUnderPath="state.manifest">
-          <Card>
-            <SchemaFormControl path="state.manifest.streams.0" />
-          </Card>
-        </SchemaForm>
-        <ShowFormValues />
-      </form>
-    </FormProvider>
-  );
-};
-
 export const Test = () => {
   return (
     <SchemaForm
@@ -740,15 +615,15 @@ export const Test = () => {
         type: "object",
         properties: {
           test: {
-            type: "object",
-            additionalProperties: {
+            type: "array",
+            items: {
               type: "object",
               properties: {
                 name: { type: "string" },
-                age: { type: "number" },
               },
-              required: ["name", "age"],
+              required: ["name"],
             },
+            minItems: 2,
           },
         },
         required: ["test"],
@@ -849,6 +724,141 @@ export const AdditionalPropertiesTrue = () => {
         <ShowFormValues />
       </Card>
     </SchemaForm>
+  );
+};
+
+export const DeprecatedFields = () => {
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          new_field: {
+            type: "string",
+            title: "New Field",
+          },
+          old_field: {
+            type: "string",
+            title: "Old Field",
+            deprecated: true,
+            deprecated_message: "Use New Field instead",
+          },
+          multi_option: {
+            type: "object",
+            oneOf: [
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option1"],
+                  },
+                  name: {
+                    type: "string",
+                  },
+                },
+                title: "Option 1",
+              },
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option2"],
+                  },
+                  age: {
+                    type: "number",
+                  },
+                },
+                title: "Option 2",
+                deprecated: true,
+                deprecated_message: "Use Option 1 or Option 3 instead",
+              },
+              {
+                type: "object",
+                properties: {
+                  type: {
+                    type: "string",
+                    enum: ["Option3"],
+                  },
+                  height: {
+                    type: "number",
+                  },
+                },
+                title: "Option 3",
+              },
+            ],
+          },
+        },
+      }}
+      initialValues={{
+        old_field: "old value",
+        multi_option: {
+          type: "Option2",
+        },
+      }}
+    >
+      <Card>
+        <SchemaFormControl />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+      </Card>
+    </SchemaForm>
+  );
+};
+
+export const SeparateFieldTabs = () => {
+  const [selectedStream, setSelectedStream] = useState<number>(0);
+
+  return (
+    <SchemaForm
+      schema={{
+        type: "object",
+        properties: {
+          streams: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string" },
+              },
+              required: ["name"],
+            },
+          },
+        },
+        required: ["test"],
+      }}
+      initialValues={{
+        streams: [
+          {
+            name: "Stream 1",
+          },
+          {
+            name: "Stream 2",
+          },
+        ],
+      }}
+      onSubmit={async (values) => console.log("submitted values", values)}
+    >
+      <Card>
+        <StreamSelectButtons setSelectedStream={setSelectedStream} />
+        <SchemaFormControl path={`streams.${selectedStream}`} />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+        <ShowFormValues />
+      </Card>
+    </SchemaForm>
+  );
+};
+
+const StreamSelectButtons = ({ setSelectedStream }: { setSelectedStream: (index: number) => void }) => {
+  const values = useWatch();
+  return (
+    <FlexContainer>
+      {values.streams.map((_stream: { name: string }, index: number) => (
+        <Button key={index} onClick={() => setSelectedStream(index)}>
+          Stream {index + 1}
+        </Button>
+      ))}
+    </FlexContainer>
   );
 };
 

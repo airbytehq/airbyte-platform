@@ -12,14 +12,10 @@ import { ExternalLink } from "components/ui/Link";
 import { SearchInput } from "components/ui/SearchInput";
 import { Text } from "components/ui/Text";
 
-import {
-  useCurrentOrganizationInfo,
-  useCurrentWorkspace,
-  useListUserInvitations,
-  useListUsersInOrganization,
-} from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useListUserInvitations, useListUsersInOrganization, useOrganization } from "core/api";
 import { FeatureItem, useFeature } from "core/services/features";
-import { isCloudApp } from "core/utils/app";
+import { useIsCloudApp } from "core/utils/app";
 import { links } from "core/utils/links";
 import { useIntent } from "core/utils/rbac";
 import { useExperiment } from "hooks/services/Experiment";
@@ -33,20 +29,20 @@ import { OrganizationUsersTable } from "./OrganizationUsersTable";
 const SEARCH_PARAM = "search";
 
 export const OrganizationAccessManagementSection: React.FC = () => {
-  const workspace = useCurrentWorkspace();
-  const organization = useCurrentOrganizationInfo();
+  const organizationId = useCurrentOrganizationId();
+  const organization = useOrganization(organizationId);
   const canUpdateOrganizationPermissions = useIntent("UpdateOrganizationPermissions", {
-    organizationId: organization.organizationId,
+    organizationId,
   });
   const allowExternalInvitations = useFeature(FeatureItem.ExternalInvitations);
 
   const { openModal } = useModalService();
 
-  const { users } = useListUsersInOrganization(workspace.organizationId);
+  const { users } = useListUsersInOrganization(organizationId);
 
   const pendingInvitations = useListUserInvitations({
     scopeType: "organization",
-    scopeId: organization.organizationId,
+    scopeId: organizationId,
   });
 
   const unifiedOrganizationUsers = unifyOrganizationUserData(users, pendingInvitations);
@@ -57,7 +53,8 @@ export const OrganizationAccessManagementSection: React.FC = () => {
   const debouncedUserFilter = useDeferredValue(userFilter);
   const { formatMessage } = useIntl();
   const allowOrganizationInvites = useExperiment("settings.organizationRbacImprovements");
-  const showInviteUsers = !organization?.sso && allowExternalInvitations && allowOrganizationInvites;
+  const showInviteUsers = !organization?.ssoRealm && allowExternalInvitations && allowOrganizationInvites;
+  const isCloud = useIsCloudApp();
 
   const onOpenInviteUsersModal = () =>
     openModal<void>({
@@ -94,7 +91,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
           <SearchInput value={userFilter} onChange={(e) => setUserFilter(e.target.value)} />
         </FlexItem>
         <FlexContainer alignItems="baseline">
-          {organization?.sso && (
+          {organization?.ssoRealm && (
             <Badge variant="blue">
               <FlexContainer gap="xs" alignItems="center">
                 <Icon type="check" size="xs" />
@@ -104,7 +101,7 @@ export const OrganizationAccessManagementSection: React.FC = () => {
               </FlexContainer>
             </Badge>
           )}
-          {!organization?.sso && isCloudApp() && (
+          {!organization?.ssoRealm && isCloud && (
             <ExternalLink href={links.contactSales}>
               <Text size="sm" color="blue">
                 <FormattedMessage id="settings.accessManagement.enableSso" />

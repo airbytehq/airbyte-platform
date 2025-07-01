@@ -142,7 +142,7 @@ describe("SchemaForm", () => {
 
     // Check that all fields are rendered correctly
     expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Age Optional" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
   });
 
@@ -183,7 +183,7 @@ describe("SchemaForm", () => {
     await userEvent.type(screen.getByRole("textbox", { name: "Name" }), "John");
 
     // Fill in the optional age field
-    await userEvent.type(screen.getByRole("spinbutton", { name: "Age Optional" }), "30");
+    await userEvent.type(screen.getByRole("textbox", { name: "Age Optional" }), "30");
 
     // Toggle the active switch
     await userEvent.click(screen.getByRole("checkbox", { name: "Active Optional" }));
@@ -273,7 +273,7 @@ describe("SchemaForm", () => {
     // Check that fields for the new item appear
     await waitFor(() => {
       expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Age Optional" })).toBeInTheDocument();
     });
 
     // Fill in the required field
@@ -343,7 +343,7 @@ describe("SchemaForm", () => {
 
     // Only the name field should be rendered
     expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-    expect(screen.queryByRole("spinbutton", { name: "Age Optional" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Age Optional" })).not.toBeInTheDocument();
     expect(screen.queryByRole("checkbox", { name: "Active Optional" })).not.toBeInTheDocument();
   });
 
@@ -431,8 +431,8 @@ describe("SchemaForm", () => {
     const nameInput = screen.getByRole("textbox", { name: "Name Optional" });
     expect(nameInput).toHaveValue("Default Name");
 
-    const countInput = screen.getByRole("spinbutton", { name: "Count Optional" });
-    expect(countInput).toHaveValue(5);
+    const countInput = screen.getByRole("textbox", { name: "Count Optional" });
+    expect(countInput).toHaveValue("5");
 
     // Verify the isActive checkbox is checked by default
     const activeCheckbox = screen.getByRole("checkbox", { name: "Active Optional" });
@@ -486,20 +486,37 @@ describe("SchemaForm", () => {
       </SchemaForm>
     );
 
-    // Fill in valid values
-    const ageInput = screen.getByRole("spinbutton", { name: "Age" });
-    const scoreInput = screen.getByRole("spinbutton", { name: "Score" });
+    const ageInput = screen.getByRole("textbox", { name: "Age" });
+    const scoreInput = screen.getByRole("textbox", { name: "Score" });
 
+    // Fill in invalid values
+    await userEvent.clear(ageInput);
+    await userEvent.type(ageInput, "17");
+
+    await userEvent.clear(scoreInput);
+    await userEvent.type(scoreInput, "11");
+
+    const submitButton = screen.getByRole("button", { name: "Submit" });
+    await userEvent.click(submitButton);
+
+    // Verify that form was not submitted, which means validation failed
+    await waitFor(() => {
+      expect(mockOnSubmit).not.toHaveBeenCalled();
+    });
+
+    // Fill in valid values
     await userEvent.clear(ageInput);
     await userEvent.type(ageInput, "25");
 
     await userEvent.clear(scoreInput);
     await userEvent.type(scoreInput, "7.5");
 
-    // We won't actually submit the form since it doesn't work well in tests
-    // Just verify that inputs have the correct values
-    expect(ageInput).toHaveValue(25);
-    expect(scoreInput).toHaveValue(7.5);
+    await userEvent.click(submitButton);
+
+    // Verify that form was submitted, which means validation passed
+    await waitFor(() => {
+      expect(mockOnSubmit).toHaveBeenCalled();
+    });
   });
 
   it("validates string fields with format constraints", async () => {
@@ -821,7 +838,7 @@ describe("SchemaForm", () => {
 
       // Check that all fields are rendered
       expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Age Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
     });
@@ -840,7 +857,7 @@ describe("SchemaForm", () => {
 
       // Check that only remaining fields are rendered (email and isActive)
       expect(screen.getByRole("textbox", { name: "Name" })).toBeInTheDocument();
-      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Age Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
       expect(screen.getByRole("checkbox", { name: "Active Optional" })).toBeInTheDocument();
     });
@@ -964,7 +981,7 @@ describe("SchemaForm", () => {
       // Source fields should be rendered directly
       expect(screen.getByRole("textbox", { name: "Name Optional" })).toBeInTheDocument();
       expect(screen.getByRole("textbox", { name: "Email Optional" })).toBeInTheDocument();
-      expect(screen.getByRole("spinbutton", { name: "Age Optional" })).toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Age Optional" })).toBeInTheDocument();
 
       // Verify the source.name field has the expected value
       const nameField = screen.getByRole("textbox", { name: "Name Optional" });
@@ -1238,7 +1255,7 @@ describe("SchemaForm", () => {
           ],
         },
       },
-      required: ["primaryKey"],
+      required: [],
     } as const;
 
     it("handles simple array of strings correctly", async () => {
@@ -1378,6 +1395,8 @@ describe("SchemaForm", () => {
         </SchemaForm>
       );
 
+      await userEvent.click(screen.getByRole("checkbox", { name: "PrimaryKey" }));
+
       // Check that the select for options is rendered
       await waitFor(() => {
         expect(screen.getByRole("button", { name: "Single Key" })).toBeInTheDocument();
@@ -1409,6 +1428,45 @@ describe("SchemaForm", () => {
         expect(submitData.primaryKey).toContain("key-part1");
         expect(submitData.primaryKey).toContain("key-part2");
       });
+    });
+  });
+
+  it("validates fields that are not actively rendered", async () => {
+    const schema = {
+      type: "object",
+      properties: {
+        streams: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: { type: "string", title: "Name" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+    } as const;
+
+    const mockOnSubmit = jest.fn().mockResolvedValue(undefined);
+
+    await render(
+      <SchemaForm
+        schema={schema}
+        initialValues={{ streams: [{ name: "Stream 0" }, { name: "" }] }}
+        onSubmit={mockOnSubmit}
+      >
+        <SchemaFormControl path="streams.0" />
+        <FormSubmissionButtons allowInvalidSubmit allowNonDirtySubmit />
+      </SchemaForm>
+    );
+
+    const submitButton = screen.getByRole("button", { name: "Submit" });
+    await userEvent.click(submitButton);
+
+    // should not submit because the unrendered second stream has an error
+    await waitFor(() => {
+      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
   });
 });

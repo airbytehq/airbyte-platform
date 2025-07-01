@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.UserInvitationCreateRequestBody
 import io.airbyte.api.model.generated.UserInvitationCreateResponse
 import io.airbyte.api.model.generated.UserInvitationListRequestBody
 import io.airbyte.api.model.generated.UserInvitationRead
-import io.airbyte.commons.auth.AuthRoleConstants
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.server.errors.OperationNotAllowedException
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.server.apis.execute

@@ -1,0 +1,26 @@
+@use "scss/variables";
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+
+  // Calculate viewport height minus the heights of the header and footer to ensure
+  // the full modal doesn't grow past the screen height
+  max-height: calc(100vh - 130px);
+}
+
+.footer {
+  width: 100%;
+}
+
+.stateEditorContainer {
+  min-height: 50px;
+  height: 200px;
+  overflow: hidden;
+  resize: vertical;
+}
+
+.button {
+  padding: variables.$spacing-md !important;
+}

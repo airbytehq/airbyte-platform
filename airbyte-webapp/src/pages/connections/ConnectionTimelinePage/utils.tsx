@@ -7,14 +7,17 @@ import { Text } from "components/ui/Text";
 import {
   CatalogDiff,
   ConnectionEventType,
+  ConnectionSyncProgressRead,
   FieldTransform,
   FieldTransformTransformType,
+  JobConfigType,
   StreamFieldStatusChanged,
   StreamTransform,
   StreamTransformTransformType,
 } from "core/api/types/AirbyteClient";
 
 import { CatalogConfigDiffExtended } from "./components/CatalogChangeEventItem";
+import { ConnectionRunningEventType, ConnectionTimelineRunningEvent } from "./types";
 
 /**
  * GENERAL TIMELINE UTILITIES
@@ -66,6 +69,43 @@ export const getStatusIcon = (jobStatus: "failed" | "incomplete" | "cancelled" |
     return "statusCancelled";
   }
   return "statusSuccess";
+};
+
+/**
+ * Create a purely FE running event from a job
+ */
+export const createRunningEventFromJob = (
+  syncProgressData: ConnectionSyncProgressRead,
+  connectionId: string
+): ConnectionTimelineRunningEvent => {
+  const jobMapping: Record<
+    keyof Pick<typeof JobConfigType, "sync" | "refresh" | "clear" | "reset_connection">,
+    ConnectionRunningEventType
+  > = {
+    [JobConfigType.sync]: ConnectionRunningEventType.SYNC_RUNNING,
+    [JobConfigType.refresh]: ConnectionRunningEventType.REFRESH_RUNNING,
+    [JobConfigType.clear]: ConnectionRunningEventType.CLEAR_RUNNING,
+    [JobConfigType.reset_connection]: ConnectionRunningEventType.CONNECTION_RESET_RUNNING,
+  };
+
+  const eventType = jobMapping[syncProgressData.configType as keyof typeof jobMapping];
+
+  return {
+    id: "running",
+    eventType,
+    connectionId,
+    createdAt: syncProgressData.syncStartedAt ?? Date.now() / 1000,
+    summary: {
+      streams: syncProgressData.streams.map((stream) => ({
+        streamName: stream.streamName,
+        streamNamespace: stream.streamNamespace,
+        configType: stream.configType,
+      })),
+      configType: syncProgressData.configType,
+      jobId: syncProgressData.jobId ?? 0,
+    },
+    user: { email: "", name: "", id: "", isDeleted: false },
+  };
 };
 
 /**

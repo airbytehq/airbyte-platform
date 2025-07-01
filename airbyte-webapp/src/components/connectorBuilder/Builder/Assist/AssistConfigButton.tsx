@@ -2,6 +2,7 @@ import { useFloating, offset, flip, autoUpdate } from "@floating-ui/react-dom";
 import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import { useIntl, FormattedMessage } from "react-intl";
 
+import { FormControl } from "components/forms/FormControl";
 import { Badge } from "components/ui/Badge";
 import { Button, ButtonProps } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
@@ -18,7 +19,6 @@ import { useExperiment } from "hooks/services/Experiment";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./AssistConfigButton.module.scss";
-import { BuilderField } from "../BuilderField";
 
 type ChangeEventFunction = (e: React.ChangeEvent<HTMLInputElement>) => void;
 
@@ -27,23 +27,21 @@ export const AssistForm: React.FC = () => {
 
   return (
     <FlexContainer direction="column" gap="lg" className={styles.assistForm}>
-      <BuilderField
-        type="string"
-        optional
+      <FormControl
+        fieldType="input"
+        name="manifest.metadata.assist.docsUrl"
         label={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.label" })}
         placeholder={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.placeholder" })}
-        tooltip={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.tooltip" })}
-        manifestPath="metadata.assist.docsUrl"
-        path="formValues.assist.docsUrl"
+        labelTooltip={formatMessage({ id: "connectorBuilder.assist.config.docsUrl.tooltip" })}
+        reserveSpaceForError={false}
       />
-      <BuilderField
-        type="string"
-        optional
+      <FormControl
+        fieldType="input"
+        name="manifest.metadata.assist.openapiSpecUrl"
         label={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.label" })}
         placeholder={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.placeholder" })}
-        tooltip={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.tooltip" })}
-        manifestPath="metadata.assist.openapiSpecUrl"
-        path="formValues.assist.openapiSpecUrl"
+        labelTooltip={formatMessage({ id: "connectorBuilder.assist.config.openapiSpecUrl.tooltip" })}
+        reserveSpaceForError={false}
       />
     </FlexContainer>
   );

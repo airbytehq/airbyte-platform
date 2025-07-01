@@ -46,7 +46,7 @@ open class BillingController : BillingApi {
     @Body organizationIdRequestBody: OrganizationIdRequestBody,
   ): PaymentInformationRead = throw ApiNotImplementedInOssProblem()
 
-  @RequiresIntent(Intent.ManageOrganizationBilling)
+  @RequiresIntent(Intent.ViewOrganizationBilling)
   @Post("/subscription_info")
   @ExecuteOn(AirbyteTaskExecutors.IO)
   override fun getSubscriptionInfo(

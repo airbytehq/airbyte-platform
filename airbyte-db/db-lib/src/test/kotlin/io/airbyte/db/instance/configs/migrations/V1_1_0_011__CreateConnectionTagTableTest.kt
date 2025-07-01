@@ -28,19 +28,19 @@ internal class V1_1_0_011__CreateConnectionTagTableTest : AbstractConfigsDatabas
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V1_1_0_010__CreateTagTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V1_1_0_011__CreateConnectionTagTable.migrate(ctx)
   }
 
   @AfterEach
   fun teardown() {
     // Fully tear down db after each test
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     dslContext.dropSchemaIfExists("public").cascade().execute()
     dslContext.createSchema("public").execute()
     dslContext.setSchema("public").execute()
@@ -48,7 +48,7 @@ internal class V1_1_0_011__CreateConnectionTagTableTest : AbstractConfigsDatabas
 
   @Test
   fun testInsertConnectionTag() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val tagId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
 
@@ -73,7 +73,7 @@ internal class V1_1_0_011__CreateConnectionTagTableTest : AbstractConfigsDatabas
 
   @Test
   fun testUniqueTagConnectionConstraint() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val tagId = UUID.randomUUID()
     val connectionId = UUID.randomUUID()
 

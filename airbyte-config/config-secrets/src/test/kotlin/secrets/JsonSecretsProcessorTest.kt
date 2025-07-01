@@ -9,7 +9,9 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.google.common.collect.ImmutableMap
 import io.airbyte.commons.constants.AirbyteSecretConstants
+import io.airbyte.commons.constants.AirbyteSecretConstants.AIRBYTE_SECRET_COORDINATE_PREFIX
 import io.airbyte.commons.json.Jsons
+import io.airbyte.domain.models.SecretStorage
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -17,6 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.io.IOException
+import java.util.UUID
 import java.util.stream.Stream
 
 internal class JsonSecretsProcessorTest {
@@ -784,14 +787,15 @@ internal class JsonSecretsProcessorTest {
   }
 
   @Test
-  fun testSimplifySecrets() {
+  fun `test simplify secrets with default secret storage is default and showing coordinates from the default manager is disabled`() {
+    val secretCoordinate = "external_secret_123abc"
     val secretPayload =
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap
           .builder<Any, Any>()
           .put(
             "_secret",
-            "airbyte_secret_123abc",
+            secretCoordinate,
           ).build(),
       )
     val src =
@@ -807,7 +811,19 @@ internal class JsonSecretsProcessorTest {
             secretPayload,
           ).build(),
       )
-    val actual = processor.simplifySecretsForOutput(src, SCHEMA_ONE_LAYER)
+
+    val secretReferenceConfig =
+      SecretReferenceConfig(
+        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
+        SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
+      )
+    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val configWIthSecretReferences =
+      ConfigWithSecretReferences(
+        src,
+        referencedSecrets,
+      )
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
     val expected =
       Jsons.jsonNode<ImmutableMap<Any, Any>>(
         ImmutableMap
@@ -818,7 +834,169 @@ internal class JsonSecretsProcessorTest {
           ).put(FIELD_2, 2)
           .put(
             SECRET_1,
-            "airbyte_secret_coordinate::airbyte_secret_123abc",
+            "**********",
+          ).build(),
+      )
+    Assertions.assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `test simplify secrets with non-default secret storage and showing coordinates from the default manager is disabled`() {
+    val secretCoordinate = "external_secret_123abc"
+    val secretPayload =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            "_secret",
+            secretCoordinate,
+          ).build(),
+      )
+    val src =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            secretPayload,
+          ).build(),
+      )
+
+    val secretReferenceConfig =
+      SecretReferenceConfig(
+        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
+        UUID.randomUUID(),
+      )
+    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val configWIthSecretReferences =
+      ConfigWithSecretReferences(
+        src,
+        referencedSecrets,
+      )
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, false)
+    val expected =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
+          ).build(),
+      )
+    Assertions.assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `test simplify secrets for output with default secret storage and showing coordinates from the default manager is enabled`() {
+    val secretCoordinate = "external_secret_123abc"
+    val secretPayload =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            "_secret",
+            secretCoordinate,
+          ).build(),
+      )
+    val src =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            secretPayload,
+          ).build(),
+      )
+
+    val secretReferenceConfig =
+      SecretReferenceConfig(
+        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
+        SecretStorage.DEFAULT_SECRET_STORAGE_ID.value,
+      )
+    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val configWIthSecretReferences =
+      ConfigWithSecretReferences(
+        src,
+        referencedSecrets,
+      )
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
+    val expected =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
+          ).build(),
+      )
+    Assertions.assertEquals(expected, actual)
+  }
+
+  @Test
+  fun `test simplify secrets for output exposes with non default storage and showing coordinates from the default manager is enabled`() {
+    val secretCoordinate = "external_secret_123abc"
+    val secretPayload =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            "_secret",
+            secretCoordinate,
+          ).build(),
+      )
+    val src =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            secretPayload,
+          ).build(),
+      )
+
+    val secretReferenceConfig =
+      SecretReferenceConfig(
+        SecretCoordinate.ExternalSecretCoordinate(secretCoordinate),
+        UUID.randomUUID(),
+      )
+    val referencedSecrets = ImmutableMap.of("$.$SECRET_1", secretReferenceConfig).toMap()
+    val configWIthSecretReferences =
+      ConfigWithSecretReferences(
+        src,
+        referencedSecrets,
+      )
+    val actual = processor.simplifySecretsForOutput(configWIthSecretReferences, SCHEMA_ONE_LAYER, true)
+    val expected =
+      Jsons.jsonNode<ImmutableMap<Any, Any>>(
+        ImmutableMap
+          .builder<Any, Any>()
+          .put(
+            FIELD_1,
+            VALUE_1,
+          ).put(FIELD_2, 2)
+          .put(
+            SECRET_1,
+            "${AIRBYTE_SECRET_COORDINATE_PREFIX}$secretCoordinate",
           ).build(),
       )
     Assertions.assertEquals(expected, actual)

@@ -3,6 +3,7 @@ import React, { Suspense } from "react";
 import { VirtuosoMockContext } from "react-virtuoso";
 
 import { mockConnection } from "test-utils/mock-data/mockConnection";
+import { mockGetDataplaneGroup } from "test-utils/mock-data/mockDataplaneGroups";
 import {
   mockDestinationDefinition,
   mockDestinationDefinitionSpecification,
@@ -14,6 +15,7 @@ import {
   mockSourceDefinitionVersion,
 } from "test-utils/mock-data/mockSource";
 import { mockTheme } from "test-utils/mock-data/mockTheme";
+import { mockWebappConfig } from "test-utils/mock-data/mockWebappConfig";
 import { mockWorkspace } from "test-utils/mock-data/mockWorkspace";
 import { mockWorkspaceId } from "test-utils/mock-data/mockWorkspaceId";
 import { TestWrapper, useMockIntersectionObserver } from "test-utils/testutils";
@@ -52,6 +54,8 @@ jest.mock("core/api", () => ({
     cronDescription: "every hour",
     nextExecutions: [],
   }),
+  useGetDataplaneGroup: () => mockGetDataplaneGroup,
+  useGetWebappConfig: () => mockWebappConfig,
 }));
 
 jest.mock("core/utils/rbac", () => ({

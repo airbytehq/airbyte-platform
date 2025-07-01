@@ -92,7 +92,7 @@ export const SettingsPage: React.FC = () => {
           )}
         </SettingsNavigationBlock>
         {multiWorkspaceUI && (canViewOrganizationSettings || canViewWorkspaceSettings) && (
-          <SettingsNavigationBlock title={formatMessage({ id: "settings.organizationSettings" })}>
+          <SettingsNavigationBlock title={formatMessage({ id: "settings.organization" })}>
             {canViewOrganizationSettings && (
               <>
                 <SettingsLink
@@ -109,6 +109,7 @@ export const SettingsPage: React.FC = () => {
                 )}
               </>
             )}
+            {/* NOTE: Keep these here or move to the side bar? */}
             {showLicenseUi && (
               <SettingsLink
                 iconType="license"

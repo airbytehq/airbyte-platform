@@ -15,13 +15,13 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.data.repositories.ConfigTemplateRepository
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConfigTemplateService
+import io.airbyte.data.services.OAuthService
 import io.airbyte.data.services.SourceService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
-import io.github.oshai.kotlinlogging.KotlinLogging
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -36,14 +36,13 @@ import java.util.UUID
 
 typealias EntityConfigTemplate = io.airbyte.data.repositories.entities.ConfigTemplate
 
-private val logger = KotlinLogging.logger {}
-
 class ConfigTemplateServiceDataImplTest {
   private lateinit var service: ConfigTemplateService
   private lateinit var configTemplateService: ConfigTemplateService
   private lateinit var actorDefinitionService: ActorDefinitionService
   private lateinit var repository: ConfigTemplateRepository
   private lateinit var sourceService: SourceService
+  private lateinit var oauthService: OAuthService
   private lateinit var validator: JsonSchemaValidator
 
   private val objectMapper: ObjectMapper = ObjectMapper()
@@ -74,9 +73,10 @@ class ConfigTemplateServiceDataImplTest {
     actorDefinitionService = mockk<ActorDefinitionService>()
     repository = mockk<ConfigTemplateRepository>()
     sourceService = mockk<SourceService>()
+    oauthService = mockk<OAuthService>()
     validator = JsonSchemaValidator()
 
-    service = ConfigTemplateServiceDataImpl(repository, actorDefinitionService, sourceService, validator)
+    service = ConfigTemplateServiceDataImpl(repository, actorDefinitionService, sourceService, oauthService, validator)
 
     every { sourceService.getStandardSourceDefinition(actorDefinitionId, false) } returns sourceDefinition
     every { sourceService.listStandardSourceDefinitions(false) } returns listOf(sourceDefinition)

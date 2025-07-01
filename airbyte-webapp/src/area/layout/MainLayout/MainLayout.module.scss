@@ -1,0 +1,24 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.wrapper {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 680px;
+}
+
+.mainViewContainer {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.content {
+  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+
+  // prevents this div from overflowing when its children grow too large, as this overrides the default min-width:auto behavior of flexbox
+  min-width: 0;
+}

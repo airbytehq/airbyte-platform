@@ -7,7 +7,7 @@ package io.airbyte.data.services;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import java.io.IOException;
 import java.util.List;

@@ -1,4 +1,3 @@
-import { nextButton } from "@cy/pages/connection/createConnectionPageObject";
 import * as statusPage from "@cy/pages/connection/statusPageObject";
 import {
   DestinationRead,
@@ -9,16 +8,9 @@ import {
 } from "@src/core/api/types/AirbyteClient";
 
 import {
-  enterConnectionName,
-  selectScheduleType,
-  setupDestinationNamespaceSourceFormat,
-} from "pages/connection/connectionFormPageObject";
-import { openCreateConnection } from "pages/destinationPage";
-
-import {
   getConnectionCreateRequest,
+  getE2ETestingCreateDestinationBody,
   getFakerCreateSourceBody,
-  getLocalJSONCreateDestinationBody,
   getPokeApiCreateSourceBody,
   getPostgresCreateDestinationBody,
   getPostgresCreateSourceBody,
@@ -28,58 +20,7 @@ import {
   requestSourceDiscoverSchema,
   requestWorkspaceId,
 } from "./api";
-import { appendRandomString, submitButtonClick } from "./common";
-import { createLocalJsonDestination, createPostgresDestination } from "./destination";
-import { createDummyApiSource, createPokeApiSource, createPostgresSource } from "./source";
-
-export const createTestConnection = (sourceName: string, destinationName: string) => {
-  cy.intercept("/api/v1/sources/discover_schema").as("discoverSchema");
-  cy.intercept("/api/v1/web_backend/connections/create").as("createConnection");
-
-  switch (true) {
-    case sourceName.includes("PokeAPI"):
-      createPokeApiSource(sourceName, "luxray");
-      break;
-
-    case sourceName.includes("Postgres"):
-      createPostgresSource(sourceName);
-      break;
-
-    case sourceName.includes("dummy"):
-      createDummyApiSource(sourceName);
-      break;
-
-    default:
-      createPostgresSource(sourceName);
-  }
-
-  switch (true) {
-    case destinationName.includes("Postgres"):
-      createPostgresDestination(destinationName);
-      break;
-    case destinationName.includes("JSON"):
-      createLocalJsonDestination(destinationName);
-      break;
-    default:
-      createLocalJsonDestination(destinationName);
-  }
-
-  cy.get("a[data-testid='connections-step']").click();
-  openCreateConnection();
-
-  cy.get("div").contains(sourceName).click();
-  cy.wait("@discoverSchema", { timeout: 60000 });
-
-  cy.get(nextButton).click();
-
-  enterConnectionName("Connection name");
-  selectScheduleType("Manual");
-  setupDestinationNamespaceSourceFormat(true);
-
-  submitButtonClick();
-
-  cy.wait("@createConnection", { requestTimeout: 10000 });
-};
+import { appendRandomString } from "./common";
 
 export const startManualSync = () => {
   cy.get("[data-testid='manual-sync-button']").click();
@@ -125,10 +66,12 @@ export const createPostgresSourceViaApi = () => {
   return mySource;
 };
 
-export const createJsonDestinationViaApi = () => {
+export const createE2ETestingDestinationViaApi = () => {
   let destination: DestinationRead;
   return requestWorkspaceId().then(() => {
-    const destinationRequestBody = getLocalJSONCreateDestinationBody(appendRandomString("Local JSON Destination"));
+    const destinationRequestBody = getE2ETestingCreateDestinationBody(
+      appendRandomString("End-to-End Testing (/dev/null) Destination")
+    );
     requestCreateDestination(destinationRequestBody).then((destinationResponse) => {
       destination = destinationResponse;
     });

@@ -165,21 +165,24 @@ class ProtocolVersionChecker(
   private fun getActorVersions(actorType: ActorType): Sequence<Map.Entry<UUID, Version>> =
     when (actorType) {
       ActorType.SOURCE ->
-        definitionsProvider.sourceDefinitions
+        definitionsProvider
+          .getSourceDefinitions()
           .asSequence()
           .map { def ->
             def.sourceDefinitionId to AirbyteProtocolVersion.getWithDefault(def.spec.protocolVersion)
           }
 
       ActorType.DESTINATION ->
-        definitionsProvider.destinationDefinitions
+        definitionsProvider
+          .getDestinationDefinitions()
           .asSequence()
           .map { def ->
             def.destinationDefinitionId to AirbyteProtocolVersion.getWithDefault(def.spec.protocolVersion)
           }
 
       else ->
-        definitionsProvider.destinationDefinitions
+        definitionsProvider
+          .getDestinationDefinitions()
           .asSequence()
           .map { def ->
             def.destinationDefinitionId to AirbyteProtocolVersion.getWithDefault(def.spec.protocolVersion)

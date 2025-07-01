@@ -21,7 +21,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -109,7 +109,7 @@ class DeclarativeManifestPersistenceTest extends BaseConfigDatabaseTest {
     sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService, metricClient, dataplaneGroupService);
+        secretPersistenceConfigService, metricClient);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
     organizationService.writeOrganization(MockData.defaultOrganization());
   }

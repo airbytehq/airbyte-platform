@@ -48,7 +48,7 @@ public class StreamResetRecordsHelper {
 
     try {
       final Job job = jobPersistence.getJob(jobId);
-      final ConfigType configType = job.getConfig().getConfigType();
+      final ConfigType configType = job.config.getConfigType();
       if (!ConfigType.RESET_CONNECTION.equals(configType)) {
         log.info("deleteStreamResetRecordsForJob was called for job {} with config type {}. Returning, as config type is not {}.",
             jobId,
@@ -57,7 +57,7 @@ public class StreamResetRecordsHelper {
         return;
       }
 
-      final List<StreamDescriptor> resetStreams = job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset();
+      final List<StreamDescriptor> resetStreams = job.config.getResetConnection().getResetSourceConfiguration().getStreamsToReset();
       log.info("Deleting the following streams for reset job {} from the stream_reset table: {}", jobId, resetStreams);
       streamResetPersistence.deleteStreamResets(connectionId, resetStreams);
     } catch (final IOException e) {

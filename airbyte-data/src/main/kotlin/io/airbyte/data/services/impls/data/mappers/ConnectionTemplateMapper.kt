@@ -30,7 +30,6 @@ fun EntityConnectionTemplate.toConfigModel(): ModelConnectionTemplate =
     scheduleData = if (this.scheduleData != null) Jsons.deserialize(this.scheduleData.toString(), ScheduleData::class.java) else null,
     resourceRequirements = Jsons.deserialize(this.resourceRequirements.toString(), ResourceRequirements::class.java),
     nonBreakingChangesPreference = NonBreakingChangesPreference.valueOf(this.nonBreakingChangesPreference.literal.uppercase()),
-    defaultGeography = this.defaultGeography,
     syncOnCreate = this.syncOnCreate,
   )
 

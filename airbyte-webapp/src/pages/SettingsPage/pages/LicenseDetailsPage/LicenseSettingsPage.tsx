@@ -46,7 +46,7 @@ const LicenseTile: React.FC<{
         </InfoTooltip>
       </Heading>
 
-      <Text size="xl">{tileContent}</Text>
+      <Heading as="h3">{tileContent}</Heading>
     </BorderedTile>
   );
 };
@@ -93,7 +93,7 @@ export const LicenseSettingsPage: React.FC = () => {
           <Heading as="h2" size="sm">
             <FormattedMessage id="settings.license.plan" />
           </Heading>
-          <Text size="xl">
+          <Text size="lg">
             <FormattedMessage id="settings.license.plan.selfManagedEnterprise" />
           </Text>
         </BorderedTile>

@@ -4,7 +4,7 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -19,7 +19,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
@@ -30,7 +29,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.SupportLevel;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.ConnectorBuilderService;
@@ -112,19 +111,16 @@ class ConnectorBuilderProjectPersistenceTest extends BaseConfigDatabaseTest {
 
     organizationService.writeOrganization(MockData.defaultOrganization());
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
-        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography)
-          .withEnabled(true)
-          .withTombstone(false));
-    }
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(UUID.randomUUID())
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("test")
+        .withEnabled(true)
+        .withTombstone(false));
     sourceService = new SourceServiceJooqImpl(database, featureFlagClient,
         secretPersistenceConfigService, connectionService, actorDefinitionVersionUpdater, metricClient);
     workspaceService = new WorkspaceServiceJooqImpl(database, featureFlagClient, secretsRepositoryReader, secretsRepositoryWriter,
-        secretPersistenceConfigService, metricClient, dataplaneGroupService);
+        secretPersistenceConfigService, metricClient);
     connectorBuilderService = new ConnectorBuilderServiceJooqImpl(database);
   }
 

@@ -1,5 +1,3 @@
-import { config } from "core/config";
-
 import { HockeyStackAnalyticsObject } from "./HockeyStackAnalytics";
 import { Action, EventParams, Namespace } from "./types";
 
@@ -17,6 +15,10 @@ export class AnalyticsService {
       ...this.context,
       ...context,
     };
+  }
+
+  public hasContext(key: string): boolean {
+    return this.context[key] !== undefined;
   }
 
   public removeFromContext(...keys: string[]) {
@@ -45,8 +47,6 @@ export class AnalyticsService {
     this.getSegmentAnalytics()?.track(`Airbyte.UI.${namespace}.${action}`, {
       ...params,
       ...this.context,
-      airbyte_version: config.version,
-      environment: config.version === "dev" ? "dev" : "prod",
     });
   }
 

@@ -93,6 +93,7 @@ spec:
         {{- end }}
 
         {{- if (eq .Values.global.edition "cloud") }}
+        {{- include "airbyte.featureFlags.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.envs" . | nindent 8 }}
         {{- include "airbyte.temporal.cloud.credentials.envs" . | nindent 8 }}
         {{- end }}

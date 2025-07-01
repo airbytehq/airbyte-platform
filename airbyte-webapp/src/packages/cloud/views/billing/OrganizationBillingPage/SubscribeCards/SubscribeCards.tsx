@@ -5,10 +5,12 @@ import { FormattedMessage } from "react-intl";
 import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
+import { Heading } from "components/ui/Heading";
 import { ExternalLink } from "components/ui/Link";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganizationInfo } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useOrgInfo } from "core/api";
 import { links } from "core/utils/links";
 import { useRedirectToCustomerPortal } from "packages/cloud/area/billing/utils/useRedirectToCustomerPortal";
 
@@ -38,11 +40,11 @@ const CloudCard: React.FC<{ disabled: boolean }> = ({ disabled }) => {
   return (
     <Card variant="primary">
       <FlexContainer justifyContent="space-between" alignItems="center">
-        <Text size="xl">
+        <Heading as="h3" size="md">
           <FormattedMessage id="plans.cloud.title" />
-        </Text>
-        <FlexContainer>
-          <Text size="xl" className={styles.subscribe__price}>
+        </Heading>
+        <FlexContainer alignItems="center">
+          <Text size="lg">
             <FormattedMessage id="plans.cloud.price" />
           </Text>
           <Button
@@ -85,9 +87,9 @@ const TeamsCard: React.FC = () => {
   return (
     <Card variant="clear">
       <FlexContainer justifyContent="space-between" alignItems="center">
-        <Text size="xl">
+        <Heading as="h3" size="md">
           <FormattedMessage id="plans.teams.title" />
-        </Text>
+        </Heading>
         <ExternalLink variant="button" href={links.contactSales}>
           <FormattedMessage id="plans.teams.contact" />
         </ExternalLink>
@@ -110,13 +112,14 @@ const TeamsCard: React.FC = () => {
 };
 
 export const SubscribeCards: React.FC = () => {
-  const { billing } = useCurrentOrganizationInfo();
+  const organizationId = useCurrentOrganizationId();
+  const { billing } = useOrgInfo(organizationId);
   return (
     <Box className={styles.subscribe} p="xl">
       <FlexContainer direction="column" gap="xl">
-        <Text size="xl" as="span" className={styles.subscribe__title}>
+        <Heading as="h2" size="md">
           <FormattedMessage id="settings.organization.billing.subscribeTitle" />
-        </Text>
+        </Heading>
         <FlexContainer wrap="wrap" className={styles.subscribe__cards}>
           <CloudCard disabled={billing?.paymentStatus === "locked"} />
           <TeamsCard />

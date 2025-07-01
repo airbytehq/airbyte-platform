@@ -35,33 +35,33 @@ val NON_TERMINAL_STATUSES = JobStatus.entries.toSet().minus(TERMINAL_STATUSES)
 open class Job(
   @field:Id
   @AutoPopulated
-  var id: Long? = null,
+  var id: Long,
   @field:TypeDef(type = DataType.OBJECT)
-  var configType: JobConfigType? = null,
-  var scope: String? = null,
+  var configType: JobConfigType,
+  var scope: String,
   @field:TypeDef(type = DataType.JSON)
-  var config: JsonNode? = null,
+  var config: JsonNode,
   @field:TypeDef(type = DataType.OBJECT)
-  var status: JobStatus? = null,
+  var status: JobStatus,
   var startedAt: java.time.OffsetDateTime? = null,
   @DateCreated
-  var createdAt: java.time.OffsetDateTime? = null,
+  var createdAt: java.time.OffsetDateTime,
   @DateUpdated
-  var updatedAt: java.time.OffsetDateTime? = null,
-  var isScheduled: Boolean? = null,
+  var updatedAt: java.time.OffsetDateTime,
+  var isScheduled: Boolean,
 )
 
 @MappedEntity("jobs")
 class JobWithAttempts(
-  id: Long? = null,
-  configType: JobConfigType? = null,
-  scope: String? = null,
-  config: JsonNode? = null,
-  status: JobStatus? = null,
+  id: Long,
+  configType: JobConfigType,
+  scope: String,
+  config: JsonNode,
+  status: JobStatus,
   startedAt: java.time.OffsetDateTime? = null,
-  createdAt: java.time.OffsetDateTime? = null,
-  updatedAt: java.time.OffsetDateTime? = null,
-  isScheduled: Boolean? = null,
+  createdAt: java.time.OffsetDateTime,
+  updatedAt: java.time.OffsetDateTime,
+  isScheduled: Boolean,
   @Relation(
     value = Relation.Kind.ONE_TO_MANY,
     mappedBy = "job",

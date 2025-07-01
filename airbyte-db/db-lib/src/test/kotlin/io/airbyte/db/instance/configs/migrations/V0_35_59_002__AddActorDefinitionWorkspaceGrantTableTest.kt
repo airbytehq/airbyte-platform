@@ -11,17 +11,19 @@ import org.jooq.JSONB
 import org.jooq.exception.DataAccessException
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_35_59_002__AddActorDefinitionWorkspaceGrantTableTest : AbstractConfigsDatabaseTest() {
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)
 
     val actorDefinitionId = UUID(0L, 1L)

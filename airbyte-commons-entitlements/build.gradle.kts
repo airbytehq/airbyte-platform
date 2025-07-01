@@ -24,6 +24,12 @@ dependencies {
   implementation(libs.micronaut.inject)
   implementation(libs.micronaut.cache.caffeine)
 
+  // Required for stigg
+  implementation(libs.stigg.api.client)
+  implementation(libs.apollo.runtime)
+  implementation(libs.apollo.api.jvm)
+  implementation(libs.apollo.adapters.jvm)
+
   kspTest(platform(libs.micronaut.platform))
   kspTest(libs.bundles.micronaut.test.annotation.processor)
 

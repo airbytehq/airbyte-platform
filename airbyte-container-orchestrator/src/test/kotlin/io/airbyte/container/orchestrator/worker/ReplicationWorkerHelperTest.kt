@@ -10,17 +10,16 @@ import io.airbyte.config.ConfiguredAirbyteStream
 import io.airbyte.config.MapperConfig
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.StreamDescriptor
-import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageTracker
 import io.airbyte.container.orchestrator.bookkeeping.SyncStatsTracker
 import io.airbyte.container.orchestrator.bookkeeping.events.ReplicationAirbyteMessageEventPublishingHelper
 import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusTracker
-import io.airbyte.container.orchestrator.persistence.SyncPersistence
 import io.airbyte.container.orchestrator.tracker.AnalyticsMessageTracker
 import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.tracker.ThreadedTimeTracker
 import io.airbyte.container.orchestrator.worker.filter.FieldSelector
+import io.airbyte.container.orchestrator.worker.model.adapter.AirbyteJsonRecordAdapter
 import io.airbyte.mappers.application.RecordMapper
 import io.airbyte.mappers.transformations.DestinationCatalogGenerator
 import io.airbyte.metrics.MetricClient
@@ -61,9 +60,6 @@ class ReplicationWorkerHelperTest {
 
   @MockK(relaxed = true)
   lateinit var messageTracker: AirbyteMessageTracker
-
-  @MockK(relaxed = true)
-  lateinit var syncPersistence: SyncPersistence
 
   @MockK(relaxed = true)
   lateinit var eventPublisher: ReplicationAirbyteMessageEventPublishingHelper
@@ -114,7 +110,6 @@ class ReplicationWorkerHelperTest {
       DestinationCatalogGenerator.CatalogGenerationResult(configuredCatalog, emptyMap())
     }
 
-    every { messageTracker.syncStatsTracker } returns syncStatsTracker
     every { syncStatsTracker.getTotalBytesEmitted() } returns 0L
     every { syncStatsTracker.getTotalRecordsEmitted() } returns 0L
   }
@@ -249,11 +244,11 @@ class ReplicationWorkerHelperTest {
           fieldSelector,
           mapper,
           messageTracker,
-          syncPersistence,
           eventPublisher,
           timeTracker,
           analyticsTracker,
           streamStatusCompletionTracker,
+          syncStatsTracker,
           streamStatusTracker,
           recordMapper,
           replicationWorkerState,

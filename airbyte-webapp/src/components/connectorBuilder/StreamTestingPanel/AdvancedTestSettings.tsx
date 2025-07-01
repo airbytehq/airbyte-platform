@@ -12,7 +12,6 @@ import { TestReadContext, useConnectorBuilderTestRead } from "services/connector
 
 import styles from "./AdvancedTestSettings.module.scss";
 import { BuilderField } from "../Builder/BuilderField";
-import { zodJsonString } from "../useBuilderValidationSchema";
 
 const MAX_RECORD_LIMIT = 5000;
 const MAX_PAGE_LIMIT = 20;
@@ -32,7 +31,25 @@ const testLimitsValidation = z.object({
   pageLimit: z.coerce.number().min(1).max(MAX_PAGE_LIMIT),
   sliceLimit: z.coerce.number().min(1).max(MAX_SLICE_LIMIT),
   streamLimit: z.coerce.number().min(1).max(MAX_STREAM_LIMIT),
-  testState: zodJsonString.optional(),
+  testState: z
+    .string()
+    .refine(
+      (val) => {
+        if (!val) {
+          return true;
+        }
+        try {
+          JSON.parse(val);
+          return true;
+        } catch {
+          return false;
+        }
+      },
+      {
+        message: "connectorBuilder.invalidJSON",
+      }
+    )
+    .optional(),
 });
 
 interface AdvancedTestSettingsProps {

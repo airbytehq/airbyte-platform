@@ -24,6 +24,7 @@ export const ArrayWrapper = <T extends FormValues>({
       render={({ field }) => (
         <TagInput
           {...rest}
+          id={controlId}
           itemType={itemType}
           name={name}
           fieldValue={value ?? []}

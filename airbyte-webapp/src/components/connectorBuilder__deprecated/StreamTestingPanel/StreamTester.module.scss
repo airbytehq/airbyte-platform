@@ -1,0 +1,99 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-lg;
+  min-height: 0;
+  width: 100%;
+  font-size: variables.$font-size-md;
+}
+
+.resizablePanelsContainer {
+  flex: 1;
+  min-height: 0;
+
+  // required to hide the connector logs splitter underneath the resizable panel overlay
+  z-index: 0;
+}
+
+:export {
+  testIconHeight: 17px;
+}
+
+.fetchingSpinner {
+  margin: auto;
+}
+
+.listErrorDisplay {
+  padding: variables.$spacing-lg;
+  display: flex;
+  flex-direction: column;
+  gap: variables.$spacing-md;
+  background-color: colors.$blue-50;
+  border-radius: variables.$border-radius-sm;
+}
+
+.splitterContainer {
+  background-color: colors.$grey-50;
+  padding: variables.$spacing-sm variables.$spacing-md;
+  margin: 1px 0;
+  border-radius: variables.$border-radius-xs;
+}
+
+.splitterHandleWrapper {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+
+.splitterHandle {
+  width: 30px;
+  height: 3px;
+  background-color: colors.$grey-300;
+  border-radius: variables.$border-radius-md;
+  margin: auto;
+}
+
+// When fully minimizing a react-reflex panel, its height is slightly less than 1px instead of exactly 0px.
+// This 1px-tall div is therefore needed to block content from showing through when panels are fully minimized.
+.secondaryPanel::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background-color: colors.$foreground;
+}
+
+// Specificity hack: this style overrides an inner component's `margin-bottom` which is
+// defined with an additional `:not(last-child)` pseudoselector and therefore has higher
+// specificity than a single class selector.
+.traceback.traceback {
+  margin-bottom: 0;
+}
+
+.dynamicStreamButtonContainer {
+  display: flex;
+  flex-direction: row;
+  gap: variables.$spacing-md;
+
+  :last-child {
+    flex-grow: 1;
+  }
+}
+
+.pulsate {
+  @include mixins.pulsate(variables.$spacing-lg, variables.$border-radius-sm);
+
+  & > * {
+    // keep content visible above the pulses
+    display: inline-block;
+    position: relative;
+    z-index: 1;
+  }
+}

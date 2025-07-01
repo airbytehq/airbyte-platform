@@ -27,7 +27,7 @@ internal class V1_1_1_006__AddComponentsToDeclarativeManifestTest : AbstractConf
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V1_1_1_003__AddConnectionTagIndex()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -36,7 +36,7 @@ internal class V1_1_1_006__AddComponentsToDeclarativeManifestTest : AbstractConf
 
   @Test
   fun testAddComponentsColumns() {
-    val context = getDslContext()
+    val context = dslContext!!
     val actorDefinitionId = UUID.randomUUID()
 
     // Create a project before migration

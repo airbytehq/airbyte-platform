@@ -4,12 +4,11 @@
 
 package io.airbyte.config.persistence;
 
-import static io.airbyte.config.persistence.OrganizationPersistence.DEFAULT_ORGANIZATION_ID;
+import static io.airbyte.commons.ConstantsKt.DEFAULT_ORGANIZATION_ID;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
@@ -77,6 +76,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   private static final String STREAM_STATE_2 = "\"state s2\"";
   private static final String GLOBAL_STATE = "\"my global state\"";
   private static final String STATE = "state";
+  private static final UUID DATAPLANE_GROUP_ID = UUID.randomUUID();
 
   private ConnectionService connectionService;
   private SourceService sourceService;
@@ -87,7 +87,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
   void beforeEach() throws DatabaseInitializationException, IOException, JsonValidationException, SQLException {
     truncateAllTables();
 
-    statePersistence = new StatePersistence(database);
+    statePersistence = new StatePersistence(database, new ConnectionServiceJooqImpl(database));
 
     final var featureFlagClient = mock(TestClient.class);
     final var secretsRepositoryReader = mock(SecretsRepositoryReader.class);
@@ -100,15 +100,12 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
     organizationService.writeOrganization(MockData.defaultOrganization());
 
     final DataplaneGroupService dataplaneGroupService = new DataplaneGroupServiceTestJooqImpl(database);
-    for (final String geography : Arrays.asList(DataplaneConstantsKt.GEOGRAPHY_EU, DataplaneConstantsKt.GEOGRAPHY_US,
-        DataplaneConstantsKt.GEOGRAPHY_AUTO)) {
-      dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
-          .withId(UUID.randomUUID())
-          .withOrganizationId(DEFAULT_ORGANIZATION_ID)
-          .withName(geography)
-          .withEnabled(true)
-          .withTombstone(false));
-    }
+    dataplaneGroupService.writeDataplaneGroup(new DataplaneGroup()
+        .withId(DATAPLANE_GROUP_ID)
+        .withOrganizationId(DEFAULT_ORGANIZATION_ID)
+        .withName("test")
+        .withEnabled(true)
+        .withTombstone(false));
 
     connectionService = mock(ConnectionService.class);
     final var actorDefinitionVersionUpdater = new ActorDefinitionVersionUpdater(
@@ -117,7 +114,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         new ActorDefinitionServiceJooqImpl(database),
         mock(ScopedConfigurationService.class),
         connectionTimelineEventService);
-    connectionService = new ConnectionServiceJooqImpl(database, dataplaneGroupService);
+    connectionService = new ConnectionServiceJooqImpl(database);
     sourceService = new SourceServiceJooqImpl(
         database,
         featureFlagClient,
@@ -138,8 +135,7 @@ class StatePersistenceTest extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        dataplaneGroupService);
+        metricClient);
 
     connectionId = setupTestData();
 

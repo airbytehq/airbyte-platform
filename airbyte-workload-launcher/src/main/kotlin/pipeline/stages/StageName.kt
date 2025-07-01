@@ -10,5 +10,6 @@ enum class StageName {
   BUILD,
   LOAD_SHED,
   MUTEX,
+  ARCHITECTURE,
   LAUNCH,
 }

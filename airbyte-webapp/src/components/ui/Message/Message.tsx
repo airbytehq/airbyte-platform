@@ -25,6 +25,7 @@ export interface MessageProps {
   iconOverride?: keyof typeof ICON_MAPPING;
   textClassName?: string;
   isExpandable?: boolean;
+  header?: React.ReactNode;
 }
 
 const ICON_MAPPING: Readonly<Record<MessageType, IconType>> = {
@@ -68,6 +69,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
   iconOverride,
   textClassName,
   isExpandable = false,
+  header,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -124,6 +126,7 @@ export const Message: React.FC<React.PropsWithChildren<MessageProps>> = ({
       className={classNames(className, styles.messageContainer, STYLES_BY_TYPE[type])}
       data-testid={testId}
     >
+      {header}
       <FlexContainer alignItems="flex-start" gap="xs">
         {mainMessage}
       </FlexContainer>

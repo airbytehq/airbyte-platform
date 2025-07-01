@@ -4,18 +4,17 @@
 
 package io.airbyte.mappers.transformations
 
+import TEST_OBJECT_MAPPER
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.module.kotlin.contains
-import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConfiguredMapper
 import io.airbyte.config.Field
 import io.airbyte.config.FieldType
-import io.airbyte.config.adapters.AirbyteJsonRecordAdapter
-import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.adapters.TestRecordAdapter
 import io.airbyte.config.mapper.configs.FieldRenamingConfig
 import io.airbyte.config.mapper.configs.FieldRenamingMapperConfig
-import io.airbyte.protocol.models.v0.AirbyteMessage
-import io.airbyte.protocol.models.v0.AirbyteRecordMessage
+import io.airbyte.mappers.adapters.AirbyteRecord
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
 import jakarta.inject.Inject
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -25,7 +24,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import java.io.File
-import java.time.Instant
 
 @MicronautTest
 class FieldRenamingMapperTest {
@@ -34,17 +32,10 @@ class FieldRenamingMapperTest {
   @Inject
   lateinit var mapper: FieldRenamingMapper
 
-  private fun getRecord(recordData: Map<String, Any>): AirbyteRecord =
-    AirbyteJsonRecordAdapter(
-      AirbyteMessage()
-        .withType(AirbyteMessage.Type.RECORD)
-        .withRecord(
-          AirbyteRecordMessage()
-            .withNamespace("NAMESPACE")
-            .withStream("STREAM")
-            .withEmittedAt(Instant.now().toEpochMilli())
-            .withData(Jsons.jsonNode(recordData)),
-        ),
+  private fun getRecord(recordData: MutableMap<String, Any>): AirbyteRecord =
+    TestRecordAdapter(
+      streamDescriptor = StreamDescriptor(),
+      data = recordData,
     )
 
   private fun createConfiguredMapper(config: FieldRenamingConfig): FieldRenamingMapperConfig = FieldRenamingMapperConfig(mapperType, null, config)
@@ -145,7 +136,7 @@ class FieldRenamingMapperTest {
         javaClass.classLoader.getResource("FieldRenamingMapperConfigExamples.json")
           ?: throw IllegalArgumentException("File not found: FieldRenamingMapperConfigExamples.json")
 
-      val configExamples = Jsons.deserialize(File(resource.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
+      val configExamples = TEST_OBJECT_MAPPER.readValue(File(resource.toURI()), object : TypeReference<List<ConfiguredMapper>>() {})
 
       configExamples.forEachIndexed { index, configExample ->
         try {
@@ -158,7 +149,7 @@ class FieldRenamingMapperTest {
 
     @Test
     fun `should throw exception when config is missing original field name`() {
-      val configuredMapper = ConfiguredMapper(mapperType, Jsons.jsonNode(mapOf("newFieldName" to "newField")))
+      val configuredMapper = ConfiguredMapper(mapperType, TEST_OBJECT_MAPPER.valueToTree(mapOf("newFieldName" to "newField")))
       val exception =
         assertThrows(IllegalArgumentException::class.java) {
           mapper.spec().deserialize(configuredMapper)
@@ -169,7 +160,7 @@ class FieldRenamingMapperTest {
 
     @Test
     fun `should throw exception when config is missing new field name`() {
-      val configuredMapper = ConfiguredMapper(mapperType, Jsons.jsonNode(mapOf("originalFieldName" to "oldField")))
+      val configuredMapper = ConfiguredMapper(mapperType, TEST_OBJECT_MAPPER.valueToTree(mapOf("originalFieldName" to "oldField")))
       val exception =
         assertThrows(IllegalArgumentException::class.java) {
           mapper.spec().deserialize(configuredMapper)

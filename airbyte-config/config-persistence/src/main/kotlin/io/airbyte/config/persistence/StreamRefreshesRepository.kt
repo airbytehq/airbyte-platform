@@ -42,15 +42,23 @@ fun StreamRefreshesRepository.saveStreamsToRefresh(
   streamDescriptors: List<StreamDescriptor>,
   refreshType: RefreshStream.RefreshType = RefreshStream.RefreshType.MERGE,
 ) {
+  // don't create refreshes for streams already pending refresh
+  val exists =
+    findByConnectionId(connectionId)
+      .map { StreamDescriptor().withName(it.streamName).withNamespace(it.streamNamespace) }
+      .toSet()
+
   val refreshes =
-    streamDescriptors.map { s ->
-      StreamRefresh(
-        connectionId = connectionId,
-        streamName = s.name,
-        streamNamespace = s.namespace,
-        refreshType = refreshType.toDBO(),
-      )
-    }
+    streamDescriptors
+      .filterNot { exists.contains(it) }
+      .map { s ->
+        StreamRefresh(
+          connectionId = connectionId,
+          streamName = s.name,
+          streamNamespace = s.namespace,
+          refreshType = refreshType.toDBO(),
+        )
+      }
   saveAll(refreshes)
 }
 

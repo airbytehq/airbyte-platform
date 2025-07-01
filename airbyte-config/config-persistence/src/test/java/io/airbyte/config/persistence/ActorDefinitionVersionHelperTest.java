@@ -72,7 +72,7 @@ class ActorDefinitionVersionHelperTest {
       .withSpec(SPEC_2);
 
   @BeforeEach
-  void setup() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void setup() throws ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     mConfigOverrideProvider = mock(ConfigurationDefinitionVersionOverrideProvider.class);
     when(mConfigOverrideProvider.getOverride(any(), any(), any())).thenReturn(Optional.empty());
 
@@ -84,7 +84,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetSourceVersion()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -98,7 +98,7 @@ class ActorDefinitionVersionHelperTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void testGetSourceVersionWithConfigOverride(final boolean isOverrideApplied)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     when(mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID))
         .thenReturn(Optional.of(new ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, isOverrideApplied)));
 
@@ -116,7 +116,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetSourceVersionForWorkspace()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -127,7 +127,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetSourceVersionForWorkspaceWithConfigOverride()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     when(mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null))
         .thenReturn(Optional.of(new ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)));
 
@@ -143,7 +143,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersion()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -156,7 +156,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersionWithConfigOverride()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     when(mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, ACTOR_ID))
         .thenReturn(Optional.of(new ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)));
 
@@ -174,7 +174,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersionForWorkspace()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(DEFAULT_VERSION_ID);
@@ -185,7 +185,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDestinationVersionForWorkspaceWithConfigOverride()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     when(mConfigOverrideProvider.getOverride(ACTOR_DEFINITION_ID, WORKSPACE_ID, null))
         .thenReturn(Optional.of(new ActorDefinitionVersionWithOverrideStatus(OVERRIDDEN_VERSION, true)));
 
@@ -201,7 +201,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDefaultSourceVersion()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardSourceDefinition sourceDefinition = new StandardSourceDefinition()
         .withSourceDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);
@@ -214,7 +214,7 @@ class ActorDefinitionVersionHelperTest {
 
   @Test
   void testGetDefaultDestinationVersion()
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final StandardDestinationDefinition destinationDefinition = new StandardDestinationDefinition()
         .withDestinationDefinitionId(ACTOR_DEFINITION_ID)
         .withDefaultVersionId(ACTOR_DEFINITION_VERSION_ID);

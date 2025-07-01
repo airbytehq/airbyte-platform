@@ -24,8 +24,8 @@ class WorkerConfigsTest {
   fun setup() {
     configs =
       mockk<EnvConfigs>(relaxed = true) {
-        every { jobKubeNodeSelectors } returns DEFAULT_NODE_SELECTORS
-        every { jobKubeMainContainerImagePullPolicy } returns "pull-policy"
+        every { getJobKubeNodeSelectors() } returns DEFAULT_NODE_SELECTORS
+        every { getJobKubeMainContainerImagePullPolicy() } returns "pull-policy"
       }
   }
 

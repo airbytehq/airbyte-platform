@@ -20,7 +20,7 @@ class JobsDatabaseMigrationDevCenter :
   override fun getMigrator(
     database: Database,
     flyway: Flyway,
-  ): FlywayDatabaseMigrator = JobsDatabaseMigrator(database, flyway)
+  ): FlywayDatabaseMigrator = JobsDatabaseMigrator(database!!, flyway)
 
   override fun getFlyway(dataSource: DataSource): Flyway =
     create(

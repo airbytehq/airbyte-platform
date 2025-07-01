@@ -1,16 +1,14 @@
 import classNames from "classnames";
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 import { useController } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
 import { ControlLabels } from "components/LabeledControl";
 import { LabeledSwitch } from "components/LabeledSwitch";
-import { Button } from "components/ui/Button";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { ComboBox, OptionsConfig, MultiComboBox, Option } from "components/ui/ComboBox";
 import DatePicker from "components/ui/DatePicker";
-import { FlexContainer } from "components/ui/Flex";
 import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
 import { TagInput } from "components/ui/TagInput";
@@ -24,6 +22,7 @@ import { useConnectorBuilderFormManagementState } from "services/connectorBuilde
 import styles from "./BuilderField.module.scss";
 import { JinjaInput } from "./JinjaInput";
 import { getLabelAndTooltip } from "./manifestHelpers";
+import { SecretField } from "./SecretField";
 import { useWatchWithPreview } from "../useBuilderWatch";
 
 interface EnumFieldProps {
@@ -348,6 +347,7 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       {props.type === "secret" && (
         <SecretField
           name={path}
+          id={`secret-input-${path}`}
           value={fieldValue as string}
           onUpdate={(val) => {
             // Remove the value instead of setting it to the empty string, as secret persistence
@@ -386,84 +386,6 @@ const InnerBuilderField: React.FC<BuilderFieldProps> = ({
       )}
       {preview && !hasError && <div className={styles.inputPreview}>{preview(fieldValue)}</div>}
     </ControlLabels>
-  );
-};
-
-interface SecretFieldProps {
-  name: string;
-  value: string;
-  onUpdate: (value: string) => void;
-  disabled?: boolean;
-  error?: boolean;
-}
-const SecretField: React.FC<SecretFieldProps> = ({ name, value, onUpdate, disabled, error }) => {
-  const [editingValue, setEditingValue] = useState<string | undefined>(undefined);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const pushUpdate = useCallback(() => {
-    onUpdate(editingValue ?? "");
-    setEditingValue(undefined);
-    if (inputRef.current) {
-      inputRef.current.blur();
-    }
-  }, [editingValue, onUpdate]);
-
-  const isDisabled = disabled || (!!value && editingValue === undefined);
-  return (
-    <FlexContainer gap="sm">
-      <Input
-        ref={inputRef}
-        name={name}
-        onChange={(e) => {
-          setEditingValue(e.target.value);
-        }}
-        type="password"
-        value={editingValue ?? value}
-        error={error}
-        readOnly={isDisabled}
-        disabled={isDisabled}
-        onBlur={(e) => {
-          if (e.target.parentElement?.parentElement?.contains(e.relatedTarget)) {
-            return;
-          }
-          if (editingValue === undefined) {
-            return;
-          }
-          if (!value) {
-            onUpdate(editingValue);
-          }
-          setEditingValue(undefined);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            pushUpdate();
-          }
-        }}
-      />
-      {value && editingValue === undefined && (
-        <Button size="sm" className={styles.secretButton} variant="secondary" onClick={() => setEditingValue("")}>
-          <FormattedMessage id="form.edit" />
-        </Button>
-      )}
-      {value && editingValue !== undefined && (
-        <>
-          <Button type="button" size="sm" variant="secondary" onClick={() => setEditingValue(undefined)}>
-            <FormattedMessage id="form.cancel" />
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              onUpdate(editingValue ?? "");
-              setEditingValue(undefined);
-            }}
-          >
-            <FormattedMessage id="form.done" />
-          </Button>
-        </>
-      )}
-    </FlexContainer>
   );
 };
 

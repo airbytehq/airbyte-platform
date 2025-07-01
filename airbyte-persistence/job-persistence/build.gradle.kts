@@ -52,4 +52,5 @@ dependencies {
   testImplementation(libs.assertj.core)
 
   testImplementation(libs.junit.pioneer)
+  testImplementation(libs.mockito.kotlin)
 }

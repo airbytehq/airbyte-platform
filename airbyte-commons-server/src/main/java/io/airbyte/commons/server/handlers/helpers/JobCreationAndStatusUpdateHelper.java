@@ -124,7 +124,7 @@ public class JobCreationAndStatusUpdateHelper {
 
   public Optional<Job> findPreviousJob(final List<Job> jobs, final long targetJobId) {
     final Optional<Job> targetJob = jobs.stream()
-        .filter(j -> j.getId() == targetJobId)
+        .filter(j -> j.id == targetJobId)
         .findFirst();
 
     // Target job not found or list is empty.
@@ -133,13 +133,13 @@ public class JobCreationAndStatusUpdateHelper {
     }
 
     return jobs.stream()
-        .filter(job -> !Objects.equals(job.getId(), targetJobId)) // Not our target job.
-        .filter(job -> job.getCreatedAtInSecond() < targetJob.get().getCreatedAtInSecond()) // Precedes target job.
-        .reduce((a, b) -> a.getCreatedAtInSecond() > b.getCreatedAtInSecond() ? a : b); // Get latest.
+        .filter(job -> !Objects.equals(job.id, targetJobId)) // Not our target job.
+        .filter(job -> job.createdAtInSecond < targetJob.get().createdAtInSecond) // Precedes target job.
+        .reduce((a, b) -> a.createdAtInSecond > b.createdAtInSecond ? a : b); // Get latest.
   }
 
   public boolean didJobSucceed(final Job job) {
-    return job.getStatus().equals(io.airbyte.config.JobStatus.SUCCEEDED);
+    return job.status.equals(io.airbyte.config.JobStatus.SUCCEEDED);
   }
 
   public void failNonTerminalJobs(final UUID connectionId) throws IOException {
@@ -149,10 +149,10 @@ public class JobCreationAndStatusUpdateHelper {
         io.airbyte.config.JobStatus.NON_TERMINAL_STATUSES);
 
     for (final Job job : jobs) {
-      final long jobId = job.getId();
+      final long jobId = job.id;
 
       // fail all non-terminal attempts
-      for (final Attempt attempt : job.getAttempts()) {
+      for (final Attempt attempt : job.attempts) {
         if (Attempt.isAttemptInTerminalState(attempt)) {
           continue;
         }
@@ -167,7 +167,7 @@ public class JobCreationAndStatusUpdateHelper {
       jobPersistence.failJob(jobId);
 
       List<JobPersistence.AttemptStats> attemptStats = new ArrayList<>();
-      for (Attempt attempt : job.getAttempts()) {
+      for (Attempt attempt : job.attempts) {
         attemptStats.add(jobPersistence.getAttemptStats(jobId, attempt.getAttemptNumber()));
       }
       final Job failedJob = jobPersistence.getJob(jobId);
@@ -179,14 +179,14 @@ public class JobCreationAndStatusUpdateHelper {
   }
 
   private String parseIsJobRunningOnCustomConnectorForMetrics(final Job job) {
-    if (job.getConfig() == null || job.getConfig().getSync() == null) {
+    if (job.config == null || job.config.getSync() == null) {
       return "null";
     }
-    if (job.getConfig().getSync().getIsSourceCustomConnector() == null
-        || job.getConfig().getSync().getIsDestinationCustomConnector() == null) {
+    if (job.config.getSync().getIsSourceCustomConnector() == null
+        || job.config.getSync().getIsDestinationCustomConnector() == null) {
       return "null";
     }
-    return String.valueOf(job.getConfig().getSync().getIsSourceCustomConnector() || job.getConfig().getSync().getIsDestinationCustomConnector());
+    return String.valueOf(job.config.getSync().getIsSourceCustomConnector() || job.config.getSync().getIsDestinationCustomConnector());
   }
 
   private void emitAttemptEvent(final OssMetricsRegistry metric,
@@ -196,13 +196,13 @@ public class JobCreationAndStatusUpdateHelper {
       throws IOException {
     final List<ReleaseStage> releaseStages = getJobToReleaseStages(job);
     final var releaseStagesOrdered = orderByReleaseStageAsc(releaseStages);
-    final var connectionId = job.getScope() == null ? null : UUID.fromString(job.getScope());
-    final var geography = connectionService.getDataplaneGroupNameForConnection(connectionId);
+    final var connectionId = job.scope == null ? null : UUID.fromString(job.scope);
+    final var dataplaneGroupName = connectionService.getDataplaneGroupNameForConnection(connectionId);
     final var parsedAttemptNumber = parseAttemptNumberOrNull(attemptNumber);
 
     final List<MetricAttribute> baseMetricAttributes = new ArrayList<>();
-    if (geography != null) {
-      baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, geography));
+    if (dataplaneGroupName != null) {
+      baseMetricAttributes.add(new MetricAttribute(MetricTags.GEOGRAPHY, dataplaneGroupName));
     }
     if (parsedAttemptNumber != null) {
       baseMetricAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_NUMBER, parsedAttemptNumber));
@@ -274,15 +274,15 @@ public class JobCreationAndStatusUpdateHelper {
         .findFirst());
 
     final List<MetricAttribute> additionalAttributes = new ArrayList<>();
-    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.getStatus().toString()));
+    additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_OUTCOME, attempt.status().toString()));
     failureOrigin.ifPresent(o -> {
       additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_ORIGIN, o));
     });
     failureType.ifPresent(t -> {
       additionalAttributes.add(new MetricAttribute(MetricTags.FAILURE_TYPE, t));
     });
-    if (attempt.getProcessingTaskQueue() != null) {
-      additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.getProcessingTaskQueue()));
+    if (attempt.processingTaskQueue() != null) {
+      additionalAttributes.add(new MetricAttribute(MetricTags.ATTEMPT_QUEUE, attempt.processingTaskQueue()));
     }
     externalMsg.ifPresent(e -> {
       additionalAttributes.add(new MetricAttribute(MetricTags.EXTERNAL_MESSAGE, e));
@@ -294,7 +294,7 @@ public class JobCreationAndStatusUpdateHelper {
     try {
       emitAttemptEvent(OssMetricsRegistry.ATTEMPTS_COMPLETED, job, attempt.getAttemptNumber(), additionalAttributes);
     } catch (final IOException e) {
-      log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.getId());
+      log.info("Failed to record attempt completed metric for attempt {} of job {}", attempt.getAttemptNumber(), job.id);
     }
   }
 
@@ -313,19 +313,19 @@ public class JobCreationAndStatusUpdateHelper {
    */
   private List<MetricAttribute> linkAttrsFromJob(final Job job) {
     final List<MetricAttribute> attrs = new ArrayList<>();
-    if (job.getConfigType() == SYNC) {
-      final var config = job.getConfig().getSync();
+    if (job.configType == SYNC) {
+      final var config = job.config.getSync();
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
-    } else if (job.getConfigType() == REFRESH) {
-      final var config = job.getConfig().getRefresh();
+    } else if (job.configType == REFRESH) {
+      final var config = job.config.getRefresh();
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
-    } else if (job.getConfigType() == RESET_CONNECTION) {
-      final var config = job.getConfig().getResetConnection();
+    } else if (job.configType == RESET_CONNECTION) {
+      final var config = job.config.getResetConnection();
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     }
 
-    if (job.getScope() != null) {
-      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.getScope()));
+    if (job.scope != null) {
+      attrs.add(new MetricAttribute(MetricTags.CONNECTION_ID, job.scope));
     }
 
     return attrs;
@@ -336,18 +336,18 @@ public class JobCreationAndStatusUpdateHelper {
    */
   private List<MetricAttribute> imageAttrsFromJob(final Job job) {
     final List<MetricAttribute> attrs = new ArrayList<>();
-    if (job.getConfigType() == SYNC) {
-      final var config = job.getConfig().getSync();
+    if (job.configType == SYNC) {
+      final var config = job.config.getSync();
       attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
-    } else if (job.getConfigType() == REFRESH) {
-      final var config = job.getConfig().getRefresh();
+    } else if (job.configType == REFRESH) {
+      final var config = job.config.getRefresh();
       attrs.add(new MetricAttribute(MetricTags.SOURCE_IMAGE, config.getSourceDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
-    } else if (job.getConfigType() == RESET_CONNECTION) {
-      final var config = job.getConfig().getResetConnection();
+    } else if (job.configType == RESET_CONNECTION) {
+      final var config = job.config.getResetConnection();
       attrs.add(new MetricAttribute(MetricTags.DESTINATION_IMAGE, config.getDestinationDockerImage()));
       attrs.add(new MetricAttribute(MetricTags.WORKSPACE_ID, config.getWorkspaceId().toString()));
     }
@@ -357,16 +357,16 @@ public class JobCreationAndStatusUpdateHelper {
 
   @VisibleForTesting
   public List<ReleaseStage> getJobToReleaseStages(final Job job) throws IOException {
-    if (job == null || job.getConfig() == null || job.getConfig().getConfigType() == null) {
+    if (job == null || job.config == null || job.config.getConfigType() == null) {
       return Collections.emptyList();
     }
 
-    final List<UUID> actorDefVersionIds = switch (job.getConfig().getConfigType()) {
-      case SYNC -> List.of(job.getConfig().getSync().getDestinationDefinitionVersionId(), job.getConfig().getSync().getSourceDefinitionVersionId());
-      case RESET_CONNECTION -> List.of(job.getConfig().getResetConnection().getDestinationDefinitionVersionId());
-      case REFRESH -> List.of(job.getConfig().getRefresh().getSourceDefinitionVersionId(),
-          job.getConfig().getRefresh().getDestinationDefinitionVersionId());
-      default -> throw new IllegalArgumentException("Unexpected config type: " + job.getConfigType());
+    final List<UUID> actorDefVersionIds = switch (job.config.getConfigType()) {
+      case SYNC -> List.of(job.config.getSync().getDestinationDefinitionVersionId(), job.config.getSync().getSourceDefinitionVersionId());
+      case RESET_CONNECTION -> List.of(job.config.getResetConnection().getDestinationDefinitionVersionId());
+      case REFRESH -> List.of(job.config.getRefresh().getSourceDefinitionVersionId(),
+          job.config.getRefresh().getDestinationDefinitionVersionId());
+      default -> throw new IllegalArgumentException("Unexpected config type: " + job.configType);
     };
 
     return actorDefinitionService.getActorDefinitionVersions(actorDefVersionIds).stream().map(ActorDefinitionVersion::getReleaseStage).toList();
@@ -379,14 +379,14 @@ public class JobCreationAndStatusUpdateHelper {
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobSuccessWithAttemptNumberRequest input)
       throws IOException {
     List<MetricAttribute> additionalAttributes = new ArrayList<>();
-    if (job.getConfigType() == SYNC) {
-      final var sync = job.getConfig().getSync();
+    if (job.configType == SYNC) {
+      final var sync = job.config.getSync();
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, sync.getWorkspaceId().toString()));
-    } else if (job.getConfigType() == REFRESH) {
-      final var refresh = job.getConfig().getRefresh();
+    } else if (job.configType == REFRESH) {
+      final var refresh = job.config.getRefresh();
       additionalAttributes.add(new MetricAttribute(MetricTags.WORKSPACE_ID, refresh.getWorkspaceId().toString()));
     }
     additionalAttributes.addAll(imageAttrsFromJob(job));
@@ -395,8 +395,8 @@ public class JobCreationAndStatusUpdateHelper {
 
   public void emitJobToReleaseStagesMetric(final OssMetricsRegistry metric, final Job job, final JobFailureRequest input) throws IOException {
     final List<MetricAttribute> additionalAttributes = new ArrayList<>();
-    if (job.getConfigType() == SYNC) {
-      final var sync = job.getConfig().getSync();
+    if (job.configType == SYNC) {
+      final var sync = job.config.getSync();
       additionalAttributes.add(new MetricAttribute(MetricTags.SOURCE_IMAGE_IS_DEFAULT, String.valueOf(sync.getSourceDockerImageIsDefault())));
       additionalAttributes
           .add(new MetricAttribute(MetricTags.DESTINATION_IMAGE_IS_DEFAULT, String.valueOf(sync.getDestinationDockerImageIsDefault())));

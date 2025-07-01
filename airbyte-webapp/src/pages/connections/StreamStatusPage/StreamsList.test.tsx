@@ -92,7 +92,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Synced", "Queued for next sync"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["1,000 loaded", "-"],
-      expectedFreshness: ["a minute ago", "-"],
+      expectedFreshness: ["a minute ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {
@@ -120,7 +120,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["500 extracted", "Starting…"],
-      expectedFreshness: ["-", "-"],
+      expectedFreshness: ["a few seconds ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {
@@ -148,7 +148,7 @@ describe("StreamsList", () => {
       expectedStatus: ["Queued", "Syncing"],
       expectedNames: ["test-stream-1", "test-stream-2"],
       expectedLatestSyncStats: ["500 extracted", "Starting…"],
-      expectedFreshness: ["-", "-"],
+      expectedFreshness: ["a few seconds ago", "a few seconds ago"],
       expectedLoadingAttributes: ["false", "false"],
     },
     {

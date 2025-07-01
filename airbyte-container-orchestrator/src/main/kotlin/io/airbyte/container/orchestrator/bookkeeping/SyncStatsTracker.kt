@@ -4,11 +4,11 @@
 
 package io.airbyte.container.orchestrator.bookkeeping
 
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
 import io.airbyte.protocol.models.v0.AirbyteEstimateTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
 import io.airbyte.protocol.models.v0.AirbyteStreamNameNamespacePair
-import io.airbyte.workers.context.ReplicationInputFeatureFlagReader
 
 /**
  * Track stats during a sync.
@@ -20,6 +20,8 @@ interface SyncStatsTracker {
    * Update the stats count with data from recordMessage.
    */
   fun updateStats(recordMessage: AirbyteRecordMessage)
+
+  fun updateStatsFromDestination(recordMessage: AirbyteRecordMessage)
 
   /**
    * There are several assumptions here:

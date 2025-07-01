@@ -1368,3 +1368,253 @@ components:
           items:
             type: string
             format: uuid
+    DestinationDiscoverNotSupportedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:destination/discover-not-supported
+            title:
+              type: string
+              default: Destination does not support discover
+            detail:
+              type: string
+              default: The destination does not support the discover operation.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationDiscoverData"
+    ProblemDestinationDiscoverData:
+      type: object
+      required:
+        - destinationId
+        - destinationVersion
+        - destinationDefinitionId
+      properties:
+        destinationId:
+          type: string
+          format: uuid
+          description: The ID of the destination that doesn't support discover
+        destinationVersion:
+          type: string
+          description: The version of the destination that doesn't support discover
+        destinationDefinitionId:
+          type: string
+          format: uuid
+          description: The ID of the destination definition that doesn't support discover
+    DestinationCatalogNotFoundProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 404
+            type:
+              type: string
+              default: error:destination/catalog-not-found
+            title:
+              type: string
+              default: Destination catalog not found
+            detail:
+              type: string
+              default: This connection has not been configured with a destination catalog.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogNotFoundData"
+    ProblemDestinationCatalogNotFoundData:
+      type: object
+      required:
+        - connectionId
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+    DestinationCatalogMissingObjectNameProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/missing-object-name
+            title:
+              type: string
+              default: Configured stream missing destination object name
+            detail:
+              type: string
+              default: Configured stream must have a destination object name.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogStreamData"
+    DestinationCatalogInvalidOperationProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/invalid-operation
+            title:
+              type: string
+              default: Invalid destination operation configuration
+            detail:
+              type: string
+              default: Configured stream's destination object name and sync mode does not match any destination operation.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogOperationData"
+    DestinationCatalogMissingRequiredFieldProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/missing-required-field
+            title:
+              type: string
+              default: Configured stream missing required field
+            detail:
+              type: string
+              default: Configured stream is missing a required field for the destination operation.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogRequiredFieldData"
+    DestinationCatalogInvalidAdditionalFieldProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/invalid-additional-field
+            title:
+              type: string
+              default: Invalid additional field in configured stream
+            detail:
+              type: string
+              default: Source field is not present in destination operation and schema does not allow additional properties.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogAdditionalFieldData"
+    DestinationCatalogRequiredProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 400
+            type:
+              type: string
+              default: error:connection/destination-catalog/required
+            title:
+              type: string
+              default: Destination catalog is required
+            detail:
+              type: string
+              default: A destination catalog is required for data activation connections.
+            data:
+              $ref: "#/components/schemas/ProblemDestinationCatalogRequiredData"
+    ProblemDestinationCatalogStreamData:
+      type: object
+      required:
+        - streamName
+      properties:
+        streamName:
+          type: string
+          description: Name of the configured stream
+        streamNamespace:
+          type: string
+          description: Namespace of the configured stream
+    ProblemDestinationCatalogOperationData:
+      type: object
+      required:
+        - streamName
+        - destinationObjectName
+        - syncMode
+      properties:
+        streamName:
+          type: string
+          description: Name of the configured stream
+        streamNamespace:
+          type: string
+          description: Namespace of the configured stream
+        destinationObjectName:
+          type: string
+          description: The destination object name that could not be matched
+        syncMode:
+          type: string
+          description: The sync mode that could not be matched
+    ProblemDestinationCatalogRequiredFieldData:
+      type: object
+      required:
+        - streamName
+        - fieldName
+        - destinationOperationName
+      properties:
+        streamName:
+          type: string
+          description: Name of the configured stream
+        streamNamespace:
+          type: string
+          description: Namespace of the configured stream
+        fieldName:
+          type: string
+          description: Name of the missing required field
+        destinationOperationName:
+          type: string
+          description: Name of the destination operation requiring the field
+    ProblemDestinationCatalogAdditionalFieldData:
+      type: object
+      required:
+        - streamName
+        - fieldName
+        - destinationOperationName
+      properties:
+        streamName:
+          type: string
+          description: Name of the configured stream
+        streamNamespace:
+          type: string
+          description: Namespace of the configured stream
+        fieldName:
+          type: string
+          description: Name of the additional field that is not allowed
+        destinationOperationName:
+          type: string
+          description: Name of the destination operation that does not allow additional properties
+    ProblemDestinationCatalogRequiredData:
+      type: object
+      required:
+        - destinationId
+      properties:
+        destinationId:
+          type: string
+          format: uuid
+          description: The ID of the destination

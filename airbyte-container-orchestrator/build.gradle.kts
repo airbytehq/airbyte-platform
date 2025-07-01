@@ -42,6 +42,7 @@ dependencies {
   implementation(libs.kubernetes.client)
   implementation(libs.bundles.datadog)
   implementation(libs.kotlin.coroutines)
+  implementation(libs.kotlin.coroutines.sl4j)
 
   implementation(project(":oss:airbyte-api:server-api"))
   implementation(project(":oss:airbyte-api:workload-api"))
@@ -90,7 +91,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.container_orchestrator.Application"
+    mainClass = "io.airbyte.container.orchestrator.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {

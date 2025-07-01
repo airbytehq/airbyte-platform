@@ -12,21 +12,21 @@
  * * This will remove properties that are undefined
  * * This will not remove properties that are null
  */
-export function removeEmptyProperties<T>(obj: T) {
+export function removeEmptyProperties<T>(obj: T, removeNull = false) {
   if (typeof obj !== "object" || obj === null) {
     return obj;
   }
   if (Array.isArray(obj)) {
-    obj.forEach((item) => removeEmptyProperties(item));
+    obj.forEach((item) => removeEmptyProperties(item, removeNull));
     return obj;
   }
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       const val = (obj as Record<string, unknown>)[key];
-      if (val === undefined || (typeof val === "string" && val.trim() === "")) {
+      if (val === undefined || (typeof val === "string" && val.trim() === "") || (removeNull && val === null)) {
         delete (obj as Record<string, unknown>)[key];
       } else if (typeof val === "object") {
-        removeEmptyProperties(val);
+        removeEmptyProperties(val, removeNull);
       }
     }
   }

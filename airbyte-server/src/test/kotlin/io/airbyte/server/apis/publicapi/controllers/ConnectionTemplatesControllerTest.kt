@@ -5,9 +5,7 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.ConnectionTemplate
@@ -16,7 +14,6 @@ import io.airbyte.config.JobSyncConfig.NamespaceDefinitionType
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.config.StandardSync.ScheduleType
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.ConnectionTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
@@ -38,16 +35,14 @@ class ConnectionTemplatesControllerTest {
   private val objectMapper: ObjectMapper = ObjectMapper()
 
   private val currentUserService: CurrentUserService = mockk()
-  private val apiAuthorizationHelper: ApiAuthorizationHelper = mockk()
   private val trackingHelper: TrackingHelper = mockk()
   private val licenseEntitlementChecker: LicenseEntitlementChecker = mockk()
   private val connectionTemplateService: ConnectionTemplateService = mockk()
   private val controller =
-    ConnectionTemplatesController(currentUserService, apiAuthorizationHelper, trackingHelper, licenseEntitlementChecker, connectionTemplateService)
+    ConnectionTemplatesController(currentUserService, trackingHelper, licenseEntitlementChecker, connectionTemplateService)
 
   val destinationName = "destination_name"
   val actorDefinitionId = ActorDefinitionId(UUID.randomUUID())
-  val destinationType = "s3"
   val destinationConfig = objectMapper.readTree("{}")
   val organizationId = OrganizationId(UUID.randomUUID())
   val namespaceDefinitionType = NamespaceDefinitionType.DESTINATION
@@ -58,14 +53,13 @@ class ConnectionTemplatesControllerTest {
   val cronScheduleData = ScheduleData().withCron(Cron().withCronExpression(cronExpression).withCronTimeZone("UTC"))
   val resourceRequirements = null
   val ignoreNonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE
-  val defaultGeography = GEOGRAPHY_AUTO
 
   @BeforeEach
   fun setup() {
     every { currentUserService.currentUser } returns AuthenticatedUser()
     every { currentUserService.currentUser.userId } returns UUID.randomUUID()
-    every { apiAuthorizationHelper.isUserOrganizationAdminOrThrow(any(), any()) } returns Unit
     every { licenseEntitlementChecker.ensureEntitled(any(), any()) } returns Unit
+    every { licenseEntitlementChecker.ensureEntitled(any(), any(), any()) } returns Unit
   }
 
   @Test
@@ -84,7 +78,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -92,7 +85,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -100,7 +93,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -110,7 +102,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         prefix = prefix,
       )
@@ -118,81 +109,6 @@ class ConnectionTemplatesControllerTest {
     val response = controller.createConnectionTemplate(requestBody)
 
     assertEquals(response.id, connectionTemplate.id)
-  }
-
-  @Test
-  fun `test create endpoint with destination type`() {
-    val connectionTemplate =
-      ConnectionTemplate(
-        id = UUID.randomUUID(),
-        organizationId = organizationId,
-        destinationName = destinationName,
-        destinationActorDefinitionId = actorDefinitionId.value,
-        destinationConfiguration = destinationConfig,
-        namespaceDefinitionType = namespaceDefinitionType,
-        namespaceFormat = namespaceFormat,
-        prefix = prefix,
-        scheduleType = ScheduleType.CRON,
-        scheduleData = DEFAULT_CRON_SCHEDULE,
-        resourceRequirements = resourceRequirements,
-        nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
-        syncOnCreate = false,
-      )
-
-    every {
-      connectionTemplateService.createTemplate(
-        any(),
-        eq(destinationName),
-        eq(ActorDefinitionIdOrType.Type(destinationType)),
-        eq(destinationConfig),
-        namespaceDefinitionType,
-        namespaceFormat,
-        prefix,
-        DEFAULT_CRON_SCHEDULE,
-        isNull(),
-        ignoreNonBreakingChangesPreference,
-        defaultGeography,
-        false,
-      )
-    } returns connectionTemplate
-
-    val requestBody =
-      ConnectionTemplateCreateRequestBody(
-        organizationId.value,
-        destinationName,
-        destinationConfig,
-        destinationType,
-        null,
-        io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
-        namespaceFormat,
-        prefix,
-        defaultGeography = defaultGeography,
-        syncOnCreate = false,
-      )
-
-    val response = controller.createConnectionTemplate(requestBody)
-
-    assertEquals(response.id, connectionTemplate.id)
-  }
-
-  @Test
-  fun `test create endpoint with both destination actor definition ID and actor type`() {
-    val requestBody =
-      ConnectionTemplateCreateRequestBody(
-        organizationId.value,
-        destinationType,
-        destinationConfig,
-        destinationType,
-        actorDefinitionId.value,
-        io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
-        namespaceFormat,
-        prefix,
-      )
-
-    org.junit.jupiter.api.assertThrows<IllegalArgumentException> {
-      controller.createConnectionTemplate(requestBody)
-    }
   }
 
   @Test
@@ -211,7 +127,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -219,7 +134,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         NamespaceDefinitionType.SOURCE,
         namespaceFormat,
@@ -227,7 +142,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_COLUMNS,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -237,7 +151,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.SOURCE,
         namespaceFormat,
@@ -267,7 +180,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.PROPAGATE_FULLY,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -275,7 +187,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat,
@@ -283,7 +195,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.PROPAGATE_FULLY,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -293,7 +204,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.CUSTOMFORMAT,
         namespaceFormat,
@@ -322,7 +232,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -330,7 +239,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         namespaceDefinitionType,
         namespaceFormat,
@@ -338,7 +247,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         ignoreNonBreakingChangesPreference,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -348,7 +256,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
         namespaceFormat,
@@ -377,7 +284,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = DEFAULT_CRON_SCHEDULE,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = NonBreakingChangesPreference.DISABLE,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -385,7 +291,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         namespaceDefinitionType,
         namespaceFormat,
@@ -393,7 +299,6 @@ class ConnectionTemplatesControllerTest {
         DEFAULT_CRON_SCHEDULE,
         isNull(),
         NonBreakingChangesPreference.DISABLE,
-        isNull(),
         true,
       )
     } returns connectionTemplate
@@ -403,7 +308,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         io.airbyte.publicApi.server.generated.models.NamespaceDefinitionType.DESTINATION,
         namespaceFormat,
@@ -432,7 +336,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = cronScheduleData,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -440,7 +343,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -448,7 +351,6 @@ class ConnectionTemplatesControllerTest {
         eq(cronScheduleData),
         isNull(),
         eq(ignoreNonBreakingChangesPreference),
-        isNull(),
         eq(true),
       )
     } returns connectionTemplate
@@ -458,7 +360,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.CRON, cronExpression),
       )
@@ -484,7 +385,6 @@ class ConnectionTemplatesControllerTest {
         scheduleData = null,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = true,
       )
 
@@ -492,7 +392,7 @@ class ConnectionTemplatesControllerTest {
       connectionTemplateService.createTemplate(
         any(),
         eq(destinationName),
-        eq(ActorDefinitionIdOrType.DefinitionId(actorDefinitionId)),
+        any(),
         eq(destinationConfig),
         eq(NamespaceDefinitionType.CUSTOMFORMAT),
         isNull(),
@@ -500,7 +400,6 @@ class ConnectionTemplatesControllerTest {
         isNull(),
         isNull(),
         eq(ignoreNonBreakingChangesPreference),
-        isNull(),
         eq(true),
       )
     } returns connectionTemplate
@@ -510,7 +409,6 @@ class ConnectionTemplatesControllerTest {
         organizationId.value,
         destinationName,
         destinationConfig,
-        null,
         actorDefinitionId.value,
         schedule = AirbyteApiConnectionSchedule(scheduleType = ScheduleTypeEnum.MANUAL),
       )

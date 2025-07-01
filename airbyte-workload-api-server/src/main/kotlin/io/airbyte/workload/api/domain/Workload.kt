@@ -17,6 +17,8 @@ data class Workload(
   var status: WorkloadStatus? = null,
   var labels: MutableList<WorkloadLabel> = mutableListOf(),
   var inputPayload: String = "",
+  var workspaceId: UUID? = null,
+  var organizationId: UUID? = null,
   var logPath: String = "",
   var mutexKey: String? = null,
   var type: WorkloadType = WorkloadType.SYNC,

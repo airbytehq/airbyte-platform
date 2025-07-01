@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ConnectorRolloutRepository
 import io.airbyte.data.services.impls.data.mappers.EntityConnectorRollout
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
@@ -173,7 +173,7 @@ internal class ConnectorRolloutServiceDataImplTest {
   }
 
   @Test
-  fun `should throw exception if incomplete rollout exists for actor definition id`() {
+  fun `should cancel existing rollout if incomplete rollout exists for actor definition id`() {
     val actorDefinitionId = UUID.randomUUID()
 
     val newRollout = createMockConnectorRollout(UUID.randomUUID(), actorDefinitionId, UUID.randomUUID())
@@ -192,19 +192,11 @@ internal class ConnectorRolloutServiceDataImplTest {
       )
     } returns listOf(existingRollout)
 
-    val exception =
-      assertThrows<RuntimeException> {
-        connectorRolloutService.insertConnectorRollout(newRollout.toConfigModel())
-      }
+    every { connectorRolloutRepository.save(any()) } returns existingRollout
 
-    assertEquals(
-      "A connector rollout is incomplete (current state: ${existingRollout.state.name}) " +
-        "for this actor definition id ${existingRollout.actorDefinitionId} " +
-        "on version ${existingRollout.releaseCandidateVersionId} ",
-      exception.message,
-    )
+    connectorRolloutService.insertConnectorRollout(newRollout.toConfigModel())
 
-    verify(exactly = 0) { connectorRolloutRepository.save(any()) }
+    verify(exactly = 2) { connectorRolloutRepository.save(any()) }
   }
 
   @Test

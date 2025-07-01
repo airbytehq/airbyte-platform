@@ -14,6 +14,7 @@ export const enum Namespace {
   FORM = "Form",
   ENTERPRISE_SOURCE_STUB = "EnterpriseSourceStub",
   CONNECTIONS = "Connections",
+  EMBEDDED = "Embedded",
 }
 
 export const enum Action {
@@ -83,6 +84,7 @@ export const enum Action {
   MERGE_SCHEMA = "MergeSchema",
   UI_INCOMPATIBLE_YAML_IMPORTED = "UiIncompatibleYamlImported",
   UI_COMPATIBLE_YAML_IMPORTED = "UiCompatibleYamlImported",
+  YAML_IMPORTED = "YamlImported",
   INVALID_YAML_UPLOADED = "InvalidYamlUploaded",
   START_FROM_SCRATCH = "StartFromScratch",
   CHANGE_PROJECT_VERSION = "ChangeProjectVersion",
@@ -108,6 +110,12 @@ export const enum Action {
   CONNECTIONS_GRAPH_DRAWER_LOADED = "ConnectionGraphDrawerLoaded",
   SYNC_FAILURE_EXPLANATION_OPENED = "SyncFailureExplanationOpened",
   REFRESH_FAILURE_EXPLANATION_OPENED = "RefreshFailureExplanationOpened",
+
+  // Embedded Onboarding Actions
+  DESTINATION_SELECTED = "DestinationSelected",
+  CONNECTION_TEMPLATE_CREATED = "ConnectionTemplateCreated",
+  CONNECTION_TEMPLATE_CREATE_FAILED = "ConnectionTemplateCreateFailed",
+  BACK_TO_SELECT_DESTINATION = "BackToSelectDestination",
 }
 
 export type EventParams = Record<string, unknown>;

@@ -32,7 +32,7 @@ import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.WebhookConfig;
 import io.airbyte.config.WebhookOperationConfigs;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -89,7 +89,7 @@ class OperationsHandlerTest {
 
   @Test
   void testCreateWebhookOperation()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)
@@ -140,7 +140,7 @@ class OperationsHandlerTest {
 
   @Test
   void testUpdateWebhookOperation()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
     when(uuidGenerator.get()).thenReturn(WEBHOOK_OPERATION_ID);
     final OperatorWebhook webhookConfig = new OperatorWebhook()
         .webhookConfigId(WEBHOOK_CONFIG_ID)

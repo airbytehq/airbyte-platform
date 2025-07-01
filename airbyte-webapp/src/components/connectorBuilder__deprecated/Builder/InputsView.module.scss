@@ -1,0 +1,81 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.itemLabel {
+  flex-grow: 1;
+
+  & > div {
+    margin-bottom: 0;
+  }
+}
+
+.itemButton {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.inputsDescription {
+  margin-top: variables.$spacing-lg;
+  margin-bottom: variables.$spacing-lg;
+  white-space: pre-line;
+}
+
+.addInputButton {
+  margin-top: variables.$spacing-lg;
+  align-self: center;
+}
+
+.inputCard {
+  display: flex;
+  align-items: center;
+  padding: variables.$spacing-sm variables.$spacing-md variables.$spacing-md;
+  gap: variables.$spacing-md;
+
+  &[aria-pressed="true"] {
+    background-color: colors.$blue-40;
+    cursor: grabbing;
+    box-shadow: variables.$box-shadow-raised;
+  }
+}
+
+.fieldset {
+  all: unset;
+  width: 100%;
+
+  &[disabled] {
+    *:hover {
+      cursor: default;
+    }
+  }
+}
+
+.fullWidth {
+  width: 100%;
+}
+
+.dragHandle {
+  cursor: grab;
+  outline: none;
+
+  &:focus-visible {
+    outline: auto; /* Keeps accessibility intact */
+  }
+
+  &:hover {
+    color: colors.$grey-400;
+  }
+}
+
+.dragging {
+  cursor: grabbing;
+  color: colors.$grey-400;
+}
+
+.inputControl {
+  padding-bottom: 0;
+}
+
+.unsupportedInputTypeAction {
+  color: colors.$dark-blue;
+}

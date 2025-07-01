@@ -41,7 +41,7 @@ import io.airbyte.config.SyncStats;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.StatePersistence;
 import io.airbyte.config.persistence.helper.GenerationBumper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.StreamAttemptMetadata;
@@ -124,7 +124,7 @@ public class AttemptHandler {
     final Path logFilePath = jobRoot.resolve(DEFAULT_LOG_FILENAME);
     final int persistedAttemptNumber = jobPersistence.createAttempt(jobId, logFilePath);
 
-    final UUID connectionId = UUID.fromString(job.getScope());
+    final UUID connectionId = UUID.fromString(job.scope);
     final StandardSync standardSync = connectionService.getStandardSync(connectionId);
     final StandardDestinationDefinition standardDestinationDefinition =
         destinationService.getDestinationDefinitionFromDestination(standardSync.getDestinationId());
@@ -151,40 +151,40 @@ public class AttemptHandler {
   void updateGenerationAndStateForSubsequentAttempts(final Job job, final boolean supportRefreshes) throws IOException {
     // We cannot easily do this in a transaction as the attempt and state tables are in separate logical
     // databases.
-    final boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.getScope()));
+    final boolean enableResumableFullRefresh = featureFlagClient.boolVariation(EnableResumableFullRefresh.INSTANCE, new Connection(job.scope));
     final boolean evaluateResumableFlag = enableResumableFullRefresh && supportRefreshes;
-    final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.getConfig()).getConfiguredCatalog(),
-        job.getId(),
+    final var stateToClear = getFullRefreshStreamsToClear(new JobConfigProxy(job.config).getConfiguredCatalog(),
+        job.id,
         evaluateResumableFlag);
 
-    generationBumper.updateGenerationForStreams(UUID.fromString(job.getScope()), job.getId(), List.of(), stateToClear);
+    generationBumper.updateGenerationForStreams(UUID.fromString(job.scope), job.id, List.of(), stateToClear);
     if (!stateToClear.isEmpty()) {
-      statePersistence.bulkDelete(UUID.fromString(job.getScope()), stateToClear);
+      statePersistence.bulkDelete(UUID.fromString(job.scope), stateToClear);
     }
   }
 
   @VisibleForTesting
   void updateGenerationAndStateForFirstAttempt(final Job job, final UUID connectionId, final boolean supportRefreshes) throws IOException {
-    if (job.getConfigType() == JobConfig.ConfigType.REFRESH) {
+    if (job.configType == JobConfig.ConfigType.REFRESH) {
       if (!supportRefreshes) {
         throw new IllegalStateException("Trying to create a refresh attempt for a destination which doesn't support refreshes");
       }
-      final Set<StreamDescriptor> streamToReset = getFullRefresh(job.getConfig().getRefresh().getConfiguredAirbyteCatalog(), true);
-      streamToReset.addAll(job.getConfig().getRefresh().getStreamsToRefresh().stream().map(RefreshStream::getStreamDescriptor)
+      final Set<StreamDescriptor> streamToReset = getFullRefresh(job.config.getRefresh().getConfiguredAirbyteCatalog(), true);
+      streamToReset.addAll(job.config.getRefresh().getStreamsToRefresh().stream().map(RefreshStream::getStreamDescriptor)
           .collect(Collectors.toSet()));
-      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), streamToReset);
+      generationBumper.updateGenerationForStreams(connectionId, job.id, List.of(), streamToReset);
 
-      statePersistence.bulkDelete(UUID.fromString(job.getScope()), streamToReset);
-    } else if (job.getConfigType() == JobConfig.ConfigType.SYNC) {
-      final Set<StreamDescriptor> fullRefreshes = getFullRefresh(job.getConfig().getSync().getConfiguredAirbyteCatalog(), true);
-      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), fullRefreshes);
+      statePersistence.bulkDelete(UUID.fromString(job.scope), streamToReset);
+    } else if (job.configType == JobConfig.ConfigType.SYNC) {
+      final Set<StreamDescriptor> fullRefreshes = getFullRefresh(job.config.getSync().getConfiguredAirbyteCatalog(), true);
+      generationBumper.updateGenerationForStreams(connectionId, job.id, List.of(), fullRefreshes);
 
-      statePersistence.bulkDelete(UUID.fromString(job.getScope()), fullRefreshes);
-    } else if (job.getConfigType() == JobConfig.ConfigType.CLEAR || job.getConfigType() == JobConfig.ConfigType.RESET_CONNECTION) {
-      final Set<StreamDescriptor> resetStreams = Set.copyOf(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset());
+      statePersistence.bulkDelete(UUID.fromString(job.scope), fullRefreshes);
+    } else if (job.configType == JobConfig.ConfigType.CLEAR || job.configType == JobConfig.ConfigType.RESET_CONNECTION) {
+      final Set<StreamDescriptor> resetStreams = Set.copyOf(job.config.getResetConnection().getResetSourceConfiguration().getStreamsToReset());
 
-      generationBumper.updateGenerationForStreams(connectionId, job.getId(), List.of(), resetStreams);
-      statePersistence.bulkDelete(UUID.fromString(job.getScope()), resetStreams);
+      generationBumper.updateGenerationForStreams(connectionId, job.id, List.of(), resetStreams);
+      statePersistence.bulkDelete(UUID.fromString(job.scope), resetStreams);
     }
   }
 

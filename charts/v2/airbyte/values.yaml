@@ -12,7 +12,7 @@ global:
     type: hybrid # "control-plane" | "data-plane" | "hybrid"
     secretName: ""
 
-    controlPlane: 
+    controlPlane:
       bootstrap:
         dataPlane:
           secretName: ""
@@ -35,7 +35,7 @@ global:
   image:
     # Docker registry to pull platform images from, e.g. http://my-registry:8000/
     registry: ""
-    # Image tag to use for airbyte images. 
+    # Image tag to use for airbyte images.
     # Does not include non-airbyte images such as temporal, minio, etc.
     tag: ""
 
@@ -57,7 +57,7 @@ global:
       emailSecretKey: ""
       # -- The key within `passwordSecretName` where the initial user's password is stored
       passwordSecretKey: ""
-    
+
     # -- SSO Identify Provider configuration; (requires Enterprise)
     identityProvider:
       # -- Secret name where the OIDC configuration is stored
@@ -66,7 +66,7 @@ global:
       type: "" # one of: "oidc" or "generic-oidc"
 
       # -- OIDC configuration (required if `auth.identityProvider.type` is "oidc")
-      #oidc: 
+      #oidc:
       #  # -- OIDC application domain
       #  domain: ""
       #  # -- OIDC application name
@@ -105,12 +105,24 @@ global:
 
   api:
     authHeaderName: X-Airbyte-Auth
-    
+
+  aws:
+    assumeRole:
+      accessKeyId: ""
+      accessKeyIdSecretKey: ""
+      secretAcessKey: ""
+      secretAccessKeySecretKey: ""
+
   # -- Environment variables
   env_vars: {}
 
   # -- Secrets
   secrets: {}
+
+  # -- CloudSQLProxy configuration
+
+  cloudSqlProxy:
+    enabled: false
 
   # -- Database configuration
   database:
@@ -123,10 +135,10 @@ global:
     host: ""
 
     # -- The database port
-    port: 
+    port:
 
     # -- The database name
-    database: ""
+    name: ""
 
     # -- The database user
     user: ""
@@ -141,7 +153,7 @@ global:
   migrations:
     runAtStartup: true
 
-    configDb: 
+    configDb:
       minimumFlywayMigrationVersion: ""
 
     jobsDb:
@@ -154,15 +166,16 @@ global:
 
     # Minio
     minio:
-      accessKeyId: minio 
+      accessKeyId: minio
       secretAccessKey: minio123
 
-    bucket: 
+    bucket:
       log: airbyte-bucket
+      auditLogging: airbyte-bucket
       state: airbyte-bucket
       workloadOutput: airbyte-bucket
       activityPayload: airbyte-bucket
-    
+
     # S3
     #s3:
     #  region: "" ## e.g. us-east-1
@@ -197,20 +210,20 @@ global:
     #      value: engineering
     #  kms: ## Optional - ARN for KMS Decryption.
 
-    #googleSecretManager: 
+    #googleSecretManager:
     #  projectId: <project-id>
     #  credentialsSecretKey: gcp.json
 
-    #azureKeyVault: 
+    #azureKeyVault:
     #  tenantId: ""
-    #  vaultUrl: "" 
+    #  vaultUrl: ""
     #  clientId: ""
     #  clientIdSecretKey: ""
     #  clientSecret: ""
     #  clientSecretSecretKey: ""
     #  tags: ""
 
-    #vault: 
+    #vault:
     #  address: ""
     #  prefix: ""
     #  authToken: ""
@@ -225,8 +238,8 @@ global:
     seedProvider: local
 
   connectorRollout:
-    expirationSeconds: 
-    waitBetweenRolloutSeconds: 
+    expirationSeconds:
+    waitBetweenRolloutSeconds:
     waitBetweenSyncResultsQueriesSeconds:
 
   workloads:
@@ -277,7 +290,7 @@ global:
           request: 5G
           limit: 5G
 
-  featureFlags:  
+  featureFlags:
     secretName: ""
     client: configfile
 
@@ -315,7 +328,7 @@ global:
         protocol: grpc
         timeout: 30000
         metricExportInterval: 10000
-    
+
   # Jobs resource requests and limits, see http://kubernetes.io/docs/user-guide/compute-resources/
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -368,10 +381,10 @@ global:
         enabled: false
 
       scheduling:
-        check: 
+        check:
           nodeSelectors: {}
           runtimeClassName: ""
-        discover: 
+        discover:
           nodeSelectors: {}
           runtimeClassName: ""
         isolated:
@@ -440,7 +453,7 @@ global:
 
       googleHttpClient:
         enabled: false
-      
+
       httpUrlConnection:
         enabled: false
 
@@ -527,7 +540,7 @@ webapp:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -732,11 +745,31 @@ server:
   # -- Number of server replicas
   replicaCount: 1
 
+  auditLoggingEnabled: false
+
   serviceAccountName:
 
   deploymentStrategyType: Recreate
 
-  applications: ""
+  configDbMaxPoolSize: ""
+  connectorDatadogSupportNames: ""
+  httpIdleTimeout: ""
+
+  openai:
+    syncAssistantApiKey: ""
+    syncAssistantApiKeySecretKey: ""
+
+  publicApiExecutor:
+    numThreads: ""
+
+  scheduler:
+    numThreads: ""
+
+  warehouseExports:
+    projectId: ""
+    bucketName: ""
+
+  data: {}
 
   image:
     # -- The repository to use for the airbyte server image.
@@ -765,7 +798,7 @@ server:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -926,6 +959,18 @@ server:
     enabled: false
     remoteDebugPort: 5005
 
+  webapp:
+    datadogApplicationId: ""
+    datadogClientToken: ""
+    datadogEnv: ""
+    datadogService: ""
+    datadogSite: ""
+    hockeystackApiKey: ""
+    launchdarklyKey: ""
+    osanoKey: ""
+    segmentToken: ""
+    zendeskKey: ""
+
 ## @section Worker Parameters
 
 worker:
@@ -955,7 +1000,7 @@ worker:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1091,7 +1136,7 @@ workloadLauncher:
 
   controlPlane:
     tokenEndpoint: ""
-  
+
   dataPlane:
     secretName: ""
     clientId: ""
@@ -1117,7 +1162,7 @@ workloadLauncher:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1403,6 +1448,10 @@ connectorRolloutWorker:
   activityInitialDelayBetweenAttemptsSeconds: ""
   activityMaxDelayBetweenAttemptsSeconds: ""
 
+  githubToken: ""
+  githubTokenSecretKey: ""
+
+
 ## @section Metrics parameters
 metrics:
   enabled: false
@@ -1432,7 +1481,7 @@ metrics:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1560,7 +1609,7 @@ airbyteBootloader:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -1721,7 +1770,7 @@ temporal:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(temporal)
     runAsUser: 1000
@@ -1944,7 +1993,7 @@ temporalUi:
   extraContainers: []
 
   env_vars: {}
-  
+
   debug:
     enabled: false
     remoteDebugPort: 5005
@@ -1977,7 +2026,7 @@ postgresql:
     fsGroup: 70
   containerSecurityContext:
     # -- Ensures the container will run with a non-root user
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=70(postgres)
     runAsUser: 70
@@ -2076,7 +2125,7 @@ cron:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2251,7 +2300,7 @@ connectorBuilderServer:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2341,6 +2390,9 @@ connectorBuilderServer:
 
   aiAssistUrlBase: ""
 
+  githubToken: ""
+  githubTokenSecretKey: ""
+
 keycloak:
   enabled: false
   env_vars: {}
@@ -2401,7 +2453,7 @@ keycloak:
       image: "postgres:13-alpine"
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -2410,9 +2462,9 @@ keycloak:
       drop: ["ALL"]
     seccompProfile:
       type: RuntimeDefault
-    
+
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(keycloak)
     runAsUser: 1000
@@ -2495,7 +2547,7 @@ keycloakSetup:
     fsGroup: 1000
 
   initContainerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     runAsUser: 1000
     runAsGroup: 1000
@@ -2506,7 +2558,7 @@ keycloakSetup:
       type: RuntimeDefault
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2560,7 +2612,7 @@ workloadApiServer:
     fsGroup: 1000
 
   containerSecurityContext:
-    allowPrivilegeEscalation: false 
+    allowPrivilegeEscalation: false
     runAsNonRoot: true
     # uid=1000(airbyte)
     runAsUser: 1000
@@ -2804,3 +2856,5 @@ featureflagServer:
 testWebapp:
   image:
     repository: airbyte/utils
+  # -- Node labels for pod assignment, see https://kubernetes.io/docs/user-guide/node-selection/
+  nodeSelector: {}

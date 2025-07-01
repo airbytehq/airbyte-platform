@@ -28,6 +28,7 @@ create table "public"."actor_catalog" (
   "catalog_hash" varchar(32) not null,
   "created_at" timestamp(6) with time zone not null,
   "modified_at" timestamp(6) with time zone not null default current_timestamp,
+  "catalog_type" "public"."actor_catalog_type" not null,
   constraint "actor_catalog_pkey" primary key ("id")
 );
 create table "public"."actor_catalog_fetch_event" (
@@ -106,6 +107,7 @@ create table "public"."actor_definition_version" (
   "language" varchar(256),
   "supports_file_transfer" boolean not null default false,
   "supports_data_activation" boolean not null default false,
+  "connector_ipc_options" jsonb,
   constraint "actor_definition_version_pkey" primary key ("id"),
   constraint "actor_definition_version_actor_definition_id_version_key" unique ("actor_definition_id", "docker_image_tag")
 );
@@ -210,7 +212,7 @@ create table "public"."connection" (
   "non_breaking_change_preference" "non_breaking_change_preference_type" not null default cast('ignore' as non_breaking_change_preference_type),
   "breaking_change" boolean not null default false,
   "field_selection_data" jsonb,
-  "dataplane_group_id" uuid not null,
+  "destination_catalog_id" uuid,
   constraint "connection_pkey" primary key ("id")
 );
 create table "public"."connection_operation" (
@@ -246,7 +248,6 @@ create table "public"."connection_template" (
   "tombstone" boolean not null default false,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
-  "default_geography" varchar(2147483647),
   "sync_on_create" boolean not null default true,
   constraint "connection_template_pkey" primary key ("id")
 );
@@ -308,6 +309,7 @@ create table "public"."dataplane" (
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "tombstone" boolean not null default false,
+  "service_account_id" uuid,
   constraint "dataplane_pkey" primary key ("id"),
   constraint "dataplane_dataplane_group_id_name_key" unique ("dataplane_group_id", "name")
 );
@@ -421,12 +423,13 @@ create table "public"."partial_user_config" (
 );
 create table "public"."permission" (
   "id" uuid not null,
-  "user_id" uuid not null,
+  "user_id" uuid,
   "workspace_id" uuid,
   "created_at" timestamp(6) with time zone not null default current_timestamp,
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   "organization_id" uuid,
   "permission_type" "public"."permission_type" not null,
+  "service_account_id" uuid,
   constraint "permission_pkey" primary key ("id"),
   constraint "permission_unique_user_organization" unique ("user_id", "organization_id"),
   constraint "permission_unique_user_workspace" unique ("user_id", "workspace_id")
@@ -514,6 +517,15 @@ create table "public"."secret_storage" (
   "updated_at" timestamp(6) with time zone not null default current_timestamp,
   constraint "secret_storage_pkey" primary key ("id"),
   constraint "secret_storage_scope_id_scope_type_storage_type_descriptor_key" unique ("scope_id", "scope_type", "storage_type", "descriptor")
+);
+create table "public"."service_accounts" (
+  "id" uuid not null,
+  "name" varchar(2147483647) not null,
+  "secret" varchar(2147483647) not null,
+  "managed" boolean not null,
+  "created_at" timestamp(6) with time zone not null default current_timestamp,
+  "updated_at" timestamp(6) with time zone not null default current_timestamp,
+  constraint "service_accounts_pkey" primary key ("id")
 );
 create table "public"."sso_config" (
   "id" uuid not null,
@@ -624,6 +636,8 @@ create table "public"."workload" (
   "signal_input" text,
   "dataplane_group" varchar(256),
   "priority" int,
+  "workspace_id" uuid,
+  "organization_id" uuid,
   constraint "workload_pkey" primary key ("id")
 );
 create table "public"."workload_label" (
@@ -702,6 +716,7 @@ create index "organization_payment_config_grace_period_end_at_idx" on "public"."
 create index "organization_payment_config_payment_provider_id_idx" on "public"."organization_payment_config"("payment_provider_id" asc);
 create index "organization_payment_config_payment_status_idx" on "public"."organization_payment_config"("payment_status" asc);
 create index "permission_organization_id_idx" on "public"."permission"("organization_id" asc);
+create index "permission_service_account_id_index" on "public"."permission"("service_account_id" asc);
 create index "permission_user_id_idx" on "public"."permission"("user_id" asc);
 create index "permission_workspace_id_idx" on "public"."permission"("workspace_id" asc);
 create index "connection_idx" on "public"."schema_management"("connection_id" asc);
@@ -758,6 +773,7 @@ alter table "public"."commands" add constraint "commands_workspace_id_fkey" fore
 alter table "public"."config_template" add constraint "config_template_actor_definition_id_fkey" foreign key ("actor_definition_id") references "public"."actor_definition" ("id");
 alter table "public"."config_template" add constraint "config_template_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."connection" add constraint "connection_actor_catalog_id_fk" foreign key ("source_catalog_id") references "public"."actor_catalog" ("id");
+alter table "public"."connection" add constraint "connection_destination_catalog_id_fkey" foreign key ("destination_catalog_id") references "public"."actor_catalog" ("id");
 alter table "public"."connection" add constraint "connection_destination_id_fkey" foreign key ("destination_id") references "public"."actor" ("id");
 alter table "public"."connection" add constraint "connection_source_id_fkey" foreign key ("source_id") references "public"."actor" ("id");
 alter table "public"."connection_operation" add constraint "connection_operation_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
@@ -774,6 +790,7 @@ alter table "public"."connector_rollout" add constraint "fk_initial_version_id" 
 alter table "public"."connector_rollout" add constraint "fk_release_candidate_version_id" foreign key ("release_candidate_version_id") references "public"."actor_definition_version" ("id");
 alter table "public"."connector_rollout" add constraint "fk_updated_by" foreign key ("updated_by") references "public"."user" ("id");
 alter table "public"."dataplane" add constraint "dataplane_dataplane_group_id_fkey" foreign key ("dataplane_group_id") references "public"."dataplane_group" ("id");
+alter table "public"."dataplane" add constraint "dataplane_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."dataplane_client_credentials" add constraint "dataplane_client_credentials_dataplane_id_fkey" foreign key ("dataplane_id") references "public"."dataplane" ("id");
 alter table "public"."dataplane_group" add constraint "dataplane_group_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
 alter table "public"."notification_configuration" add constraint "notification_configuration_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");
@@ -784,6 +801,7 @@ alter table "public"."partial_user_config" add constraint "partial_user_config_a
 alter table "public"."partial_user_config" add constraint "partial_user_config_template_id_fkey" foreign key ("config_template_id") references "public"."config_template" ("id");
 alter table "public"."partial_user_config" add constraint "partial_user_config_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."permission" add constraint "permission_organization_id_fkey" foreign key ("organization_id") references "public"."organization" ("id");
+alter table "public"."permission" add constraint "permission_service_account_id_fkey" foreign key ("service_account_id") references "public"."service_accounts" ("id");
 alter table "public"."permission" add constraint "permission_user_id_fkey" foreign key ("user_id") references "public"."user" ("id");
 alter table "public"."permission" add constraint "permission_workspace_id_fkey" foreign key ("workspace_id") references "public"."workspace" ("id");
 alter table "public"."schema_management" add constraint "schema_management_connection_id_fkey" foreign key ("connection_id") references "public"."connection" ("id");

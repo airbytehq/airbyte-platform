@@ -4,6 +4,7 @@
 
 package io.airbyte.container.orchestrator.worker
 
+import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.PerformanceMetrics
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.container.orchestrator.persistence.SyncPersistence
@@ -11,7 +12,6 @@ import io.airbyte.container.orchestrator.tracker.StreamStatusCompletionTracker
 import io.airbyte.container.orchestrator.worker.io.AirbyteDestination
 import io.airbyte.container.orchestrator.worker.io.AirbyteSource
 import io.airbyte.persistence.job.models.ReplicationInput
-import io.airbyte.workers.RecordSchemaValidator
 import io.airbyte.workers.exception.WorkerException
 import io.mockk.clearAllMocks
 import io.mockk.coVerify
@@ -26,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.nio.file.Path
+import java.util.concurrent.Executors
 
 internal class ReplicationWorkerTest {
   private lateinit var mockSource: AirbyteSource
@@ -40,8 +41,12 @@ internal class ReplicationWorkerTest {
   private lateinit var mockBufferConfig: BufferConfiguration
   private lateinit var mockStreamStatusCompletionTracker: StreamStatusCompletionTracker
 
+  private lateinit var mockReplicationMdcScopeBuilder: MdcScope.Builder
   private lateinit var mockReplicationInput: ReplicationInput
   private lateinit var mockPath: Path
+
+  private lateinit var startJobs: List<ReplicationTask>
+  private lateinit var syncJobs: List<ReplicationTask>
 
   @BeforeEach
   fun setup() {
@@ -56,6 +61,7 @@ internal class ReplicationWorkerTest {
     mockWorkerState = mockk(relaxed = true)
     mockBufferConfig = mockk(relaxed = true)
     mockStreamStatusCompletionTracker = mockk(relaxed = true)
+    mockReplicationMdcScopeBuilder = mockk(relaxed = true)
 
     // Setup context fields
     every { mockContext.replicationWorkerHelper } returns mockWorkerHelper
@@ -77,6 +83,14 @@ internal class ReplicationWorkerTest {
 
     // For path
     mockPath = mockk(relaxed = true)
+
+    // For replication tasks
+    startJobs = listOf(mockk<ReplicationTask>(relaxed = true))
+    syncJobs =
+      listOf(
+        mockk<ReplicationTask>(relaxed = true),
+        mockk<ReplicationTask>(relaxed = true),
+      )
   }
 
   @AfterEach
@@ -102,10 +116,14 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          startReplicationJobs = startJobs,
+          syncReplicationJobs = syncJobs,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       // When
-      val result = worker.run(mockReplicationInput, mockPath)
+      val result = worker.run(mockPath)
 
       // Then
       // Confirm normal flow
@@ -113,8 +131,9 @@ internal class ReplicationWorkerTest {
       verify(exactly = 1) { mockWorkerHelper.initialize(mockPath) }
 
       // 2) Start source & destination
-      verify(exactly = 1) { mockWorkerHelper.startDestination(eq(mockDestination), eq(mockPath)) }
-      verify(exactly = 1) { mockWorkerHelper.startSource(eq(mockSource), eq(mockReplicationInput), eq(mockPath)) }
+      startJobs.forEach { job ->
+        coVerify(exactly = 1) { job.run() }
+      }
 
       // 3) Mark replication running
       verify(exactly = 1) { mockWorkerState.markReplicationRunning(any()) }
@@ -153,12 +172,29 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          startReplicationJobs =
+            listOf(
+              DestinationStarter(
+                destination = mockDestination,
+                jobRoot = mockPath,
+                context = mockContext,
+              ),
+              SourceStarter(
+                source = mockSource,
+                jobRoot = mockPath,
+                replicationInput = mockReplicationInput,
+                context = mockContext,
+              ),
+            ),
+          syncReplicationJobs = syncJobs,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
       // Because we have a top-level try-catch that rethrows as WorkerException, we expect that
       val ex =
         assertThrows<WorkerException> {
-          worker.run(mockReplicationInput, mockPath)
+          worker.run(mockPath)
         }
       assertTrue(ex.message!!.contains("Sync failed"))
 
@@ -190,9 +226,21 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          startReplicationJobs = startJobs,
+          syncReplicationJobs =
+            listOf(
+              DestinationReader(
+                destination = mockDestination,
+                replicationWorkerState = mockWorkerState,
+                replicationWorkerHelper = mockWorkerHelper,
+              ),
+            ),
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
-      worker.run(mockReplicationInput, mockPath)
+      worker.run(mockPath)
+
       // Confirm trackFailure was invoked
       verify(exactly = 1) { mockWorkerState.trackFailure(any(), any(), any()) }
       verify(exactly = 1) { mockWorkerState.markFailed() }
@@ -225,9 +273,13 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          startReplicationJobs = startJobs,
+          syncReplicationJobs = syncJobs,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
-      val result = worker.run(mockReplicationInput, mockPath)
+      val result = worker.run(mockPath)
 
       // We do not call endOfReplication() because cancelled = true
       verify(exactly = 0) { mockWorkerHelper.endOfReplication() }
@@ -261,9 +313,13 @@ internal class ReplicationWorkerTest {
           workloadHeartbeatSender = mockWorkloadHeartbeatSender,
           recordSchemaValidator = mockRecordSchemaValidator,
           context = mockContext,
+          startReplicationJobs = startJobs,
+          syncReplicationJobs = syncJobs,
+          replicationWorkerDispatcher = Executors.newFixedThreadPool(4),
+          replicationLogMdcBuilder = mockReplicationMdcScopeBuilder,
         )
 
-      val result = worker.run(mockReplicationInput, mockPath)
+      val result = worker.run(mockPath)
       assertEquals(expectedOutput, result)
     }
 }

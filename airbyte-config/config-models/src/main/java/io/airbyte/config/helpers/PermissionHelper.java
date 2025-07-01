@@ -90,7 +90,9 @@ public class PermissionHelper {
 
       // Workspace reader grants access to just the workspace reader permission.
       Map.entry(PermissionType.WORKSPACE_READER, Set.of(
-          PermissionType.WORKSPACE_READER)));
+          PermissionType.WORKSPACE_READER)),
+
+      Map.entry(PermissionType.DATAPLANE, Set.of(PermissionType.DATAPLANE)));
 
   public static boolean definedPermissionGrantsTargetPermission(final PermissionType definedPermission, final PermissionType targetPermission) {
     return GRANTED_PERMISSION_TYPES_BY_DEFINED_PERMISSION_TYPE.get(definedPermission).contains(targetPermission);

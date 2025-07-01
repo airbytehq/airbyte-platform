@@ -12,7 +12,7 @@ import io.airbyte.commons.json.*;
 import io.airbyte.config.*;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.secrets.*;
-import io.airbyte.data.exceptions.*;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.*;
 import io.airbyte.featureflag.*;
 import io.airbyte.metrics.*;

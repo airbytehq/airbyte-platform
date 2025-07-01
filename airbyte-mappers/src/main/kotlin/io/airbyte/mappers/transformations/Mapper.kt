@@ -5,7 +5,7 @@
 package io.airbyte.mappers.transformations
 
 import io.airbyte.config.MapperConfig
-import io.airbyte.config.adapters.AirbyteRecord
+import io.airbyte.mappers.adapters.AirbyteRecord
 
 interface Mapper<T : MapperConfig> {
   val name: String

@@ -19,7 +19,7 @@ export const CatalogListBox = <T,>({ ...rest }: CatalogListBoxProps<T>) => {
   );
 
   const ControlButton = React.forwardRef<HTMLButtonElement, ListBoxControlButtonProps<T>>((props, ref) => (
-    <Button {...props} type="button" variant="clear" icon="caretDown" iconPosition="right" ref={ref} />
+    <Button {...props} type="button" variant="clear" ref={ref} />
   ));
   ControlButton.displayName = "ControlButton";
 
@@ -27,7 +27,7 @@ export const CatalogListBox = <T,>({ ...rest }: CatalogListBoxProps<T>) => {
     <ListBox<T>
       {...(rest as ListBoxProps<T>)}
       controlButtonAs={ControlButton}
-      controlButton={controlButtonContent}
+      controlButtonContent={controlButtonContent}
       buttonClassName={styles.button}
       optionClassName={styles.option}
     />

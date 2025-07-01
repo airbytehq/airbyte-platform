@@ -83,6 +83,7 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
+        false,
       )
 
     val name = "name"
@@ -113,6 +114,7 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
+        false,
       )
 
     val name = "name"
@@ -136,6 +138,7 @@ class StatsTrackerTest {
       StreamStatsTracker(
         mockk(),
         mockk(),
+        false,
       )
 
     val name = "name"

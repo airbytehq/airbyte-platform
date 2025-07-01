@@ -28,7 +28,7 @@ import io.airbyte.config.Schedule
 import io.airbyte.config.ScopedConfiguration
 import io.airbyte.config.StandardDestinationDefinition
 import io.airbyte.config.StandardSourceDefinition
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService
@@ -1053,6 +1053,88 @@ class RolloutActorFinderTest {
 
     assertEquals(1, filteredCandidates.size)
     assertTrue(filteredCandidates.any { it.scopeMap[ConfigScopeType.ORGANIZATION] == ORGANIZATION_ID_2 })
+
+    verify { organizationCustomerAttributesService.getOrganizationTiers() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `test filterByTier excludes no organizations when no filter is present`(actorType: ActorType) {
+    val organizationTiers =
+      mapOf(
+        ORGANIZATION_ID_1 to CustomerTier.TIER_0,
+        ORGANIZATION_ID_2 to CustomerTier.TIER_2,
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns organizationTiers
+
+    val candidates =
+      listOf(
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_2),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to null),
+        ),
+      )
+
+    val filteredCandidates =
+      rolloutActorFinder.filterByTier(
+        createMockConnectorRollout(UUID.randomUUID()),
+        candidates,
+        emptyList(),
+      )
+
+    assertEquals(3, filteredCandidates.size)
+
+    verify { organizationCustomerAttributesService.getOrganizationTiers() }
+  }
+
+  @ParameterizedTest
+  @EnumSource(ActorType::class)
+  fun `test filterByTier includes organizations with null tier with Tier 2`(actorType: ActorType) {
+    val organizationTiers =
+      mapOf(
+        ORGANIZATION_ID_1 to null,
+        ORGANIZATION_ID_2 to CustomerTier.TIER_2,
+      )
+    every { organizationCustomerAttributesService.getOrganizationTiers() } returns organizationTiers
+
+    val candidates =
+      listOf(
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_1),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to ORGANIZATION_ID_2),
+        ),
+        ConfigScopeMapWithId(
+          id = UUID.randomUUID(),
+          scopeMap = mapOf(ConfigScopeType.ORGANIZATION to null),
+        ),
+      )
+
+    val filteredCandidates =
+      rolloutActorFinder.filterByTier(
+        createMockConnectorRollout(UUID.randomUUID()),
+        candidates,
+        listOf(
+          CustomerTierFilter(
+            AttributeName.TIER,
+            Operator.IN,
+            listOf(CustomerTier.TIER_2),
+          ),
+        ),
+      )
+
+    assertEquals(2, filteredCandidates.size)
 
     verify { organizationCustomerAttributesService.getOrganizationTiers() }
   }

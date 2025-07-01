@@ -1,5 +1,5 @@
 import { ComponentProps, useMemo } from "react";
-import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { Controller, useFormContext } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
 import { FormConnectionFormValues } from "components/connection/ConnectionForm/formConfig";
@@ -16,7 +16,6 @@ import { Text } from "components/ui/Text";
 import { NonBreakingChangesPreference } from "core/api/types/AirbyteClient";
 import { useFormMode } from "core/services/ui/FormModeContext";
 import { links } from "core/utils/links";
-import { useConnectionFormService } from "hooks/services/ConnectionForm/ConnectionFormService";
 
 import { InputContainer } from "./InputContainer";
 
@@ -25,19 +24,8 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
   disabled,
 }) => {
   const { formatMessage } = useIntl();
-  const { connection } = useConnectionFormService();
   const { mode } = useFormMode();
   const { setValue, control } = useFormContext<FormConnectionFormValues>();
-
-  const watchedNonBreakingChangesPreference = useWatch<FormConnectionFormValues>({
-    name: "nonBreakingChangesPreference",
-  });
-
-  const showAutoPropagationMessage =
-    mode === "edit" &&
-    watchedNonBreakingChangesPreference !== connection.nonBreakingChangesPreference &&
-    (watchedNonBreakingChangesPreference === "propagate_columns" ||
-      watchedNonBreakingChangesPreference === "propagate_fully");
 
   const preferenceOptions = useMemo<
     ComponentProps<typeof RadioButtonTiles<NonBreakingChangesPreference>>["options"]
@@ -62,66 +50,74 @@ export const SimplfiedSchemaChangesFormField: React.FC<{ isCreating: boolean; di
     <Controller
       name="nonBreakingChangesPreference"
       control={control}
-      render={({ field }) => (
-        <FormFieldLayout alignItems="flex-start" nextSizing>
-          <ControlLabels
-            label={
-              <FlexContainer direction="column" gap="sm">
-                <Text bold>
-                  <FormattedMessage
-                    id={
-                      isCreating
-                        ? "connectionForm.nonBreakingChangesPreference.autopropagation.labelCreating"
-                        : "connectionForm.nonBreakingChangesPreference.autopropagation.label"
-                    }
-                  />
-                </Text>
-                <Text size="sm" color="grey">
-                  <FormattedMessage
-                    id="connectionForm.nonBreakingChangesPreference.autopropagation.message"
-                    values={{
-                      lnk: (children: React.ReactNode) => (
-                        <ExternalLink href={links.schemaChangeManagement}>{children}</ExternalLink>
-                      ),
-                    }}
-                  />
-                </Text>
-              </FlexContainer>
-            }
-          />
-          {isCreating ? (
-            <RadioButtonTiles
-              direction="column"
-              name="nonBreakingChangesPreference"
-              options={preferenceOptions}
-              selectedValue={field.value ?? ""}
-              onSelectRadioButton={(value) => setValue("nonBreakingChangesPreference", value, { shouldDirty: true })}
+      render={({ field, fieldState, formState }) => {
+        const defaultValue = formState.defaultValues?.nonBreakingChangesPreference;
+        const showAutoPropagationMessage =
+          mode === "edit" &&
+          fieldState.isDirty &&
+          field.value !== defaultValue &&
+          (field.value === "propagate_columns" || field.value === "propagate_fully");
+        return (
+          <FormFieldLayout alignItems="flex-start" nextSizing>
+            <ControlLabels
+              label={
+                <FlexContainer direction="column" gap="sm">
+                  <Text bold>
+                    <FormattedMessage
+                      id={
+                        isCreating
+                          ? "connectionForm.nonBreakingChangesPreference.autopropagation.labelCreating"
+                          : "connectionForm.nonBreakingChangesPreference.autopropagation.label"
+                      }
+                    />
+                  </Text>
+                  <Text size="sm" color="grey">
+                    <FormattedMessage
+                      id="connectionForm.nonBreakingChangesPreference.autopropagation.message"
+                      values={{
+                        lnk: (children: React.ReactNode) => (
+                          <ExternalLink href={links.schemaChangeManagement}>{children}</ExternalLink>
+                        ),
+                      }}
+                    />
+                  </Text>
+                </FlexContainer>
+              }
             />
-          ) : (
-            <InputContainer>
-              <ListBox
-                isDisabled={disabled}
+            {isCreating ? (
+              <RadioButtonTiles
+                direction="column"
+                name="nonBreakingChangesPreference"
                 options={preferenceOptions}
-                onSelect={(value: NonBreakingChangesPreference) =>
-                  setValue("nonBreakingChangesPreference", value, { shouldDirty: true })
-                }
-                selectedValue={field.value}
-                data-testid="nonBreakingChangesPreference"
+                selectedValue={field.value ?? ""}
+                onSelectRadioButton={(value) => setValue("nonBreakingChangesPreference", value, { shouldDirty: true })}
               />
-            </InputContainer>
-          )}
-          {showAutoPropagationMessage && (
-            <Box mt="md">
-              <Message
-                type="info"
-                text={
-                  <FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.messageOnChange" />
-                }
-              />
-            </Box>
-          )}
-        </FormFieldLayout>
-      )}
+            ) : (
+              <InputContainer>
+                <ListBox
+                  isDisabled={disabled}
+                  options={preferenceOptions}
+                  onSelect={(value: NonBreakingChangesPreference) =>
+                    setValue("nonBreakingChangesPreference", value, { shouldDirty: true })
+                  }
+                  selectedValue={field.value}
+                  data-testid="nonBreakingChangesPreference"
+                />
+              </InputContainer>
+            )}
+            {showAutoPropagationMessage && (
+              <Box mt="md">
+                <Message
+                  type="info"
+                  text={
+                    <FormattedMessage id="connectionForm.nonBreakingChangesPreference.autopropagation.messageOnChange" />
+                  }
+                />
+              </Box>
+            )}
+          </FormFieldLayout>
+        );
+      }}
     />
   );
 };

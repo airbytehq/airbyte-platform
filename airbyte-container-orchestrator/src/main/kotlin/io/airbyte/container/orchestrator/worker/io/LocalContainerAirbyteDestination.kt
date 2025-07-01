@@ -9,13 +9,12 @@ import dev.failsafe.Failsafe
 import dev.failsafe.function.CheckedRunnable
 import io.airbyte.commons.io.IOs
 import io.airbyte.commons.io.LineGobbler
-import io.airbyte.commons.logging.LogSource
 import io.airbyte.commons.logging.MdcScope
 import io.airbyte.config.WorkerDestinationConfig
+import io.airbyte.container.orchestrator.tracker.MessageMetricsTracker
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.workers.exception.WorkerException
 import io.airbyte.workers.internal.AirbyteStreamFactory
-import io.airbyte.workers.internal.MessageMetricsTracker
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.io.BufferedWriter
 import java.io.IOException
@@ -25,6 +24,7 @@ import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 
 private val logger = KotlinLogging.logger {}
+private const val CALLER = "airbyte-destination"
 
 class LocalContainerAirbyteDestination(
   private val streamFactory: AirbyteStreamFactory,
@@ -32,20 +32,12 @@ class LocalContainerAirbyteDestination(
   private val messageWriterFactory: AirbyteMessageBufferedWriterFactory,
   private val destinationTimeoutMonitor: DestinationTimeoutMonitor,
   private val containerIOHandle: ContainerIOHandle,
+  private val containerLogMdcBuilder: MdcScope.Builder,
   private val flushImmediately: Boolean = false,
 ) : AirbyteDestination {
   private val inputHasEnded = AtomicBoolean(false)
   private lateinit var messageIterator: Iterator<AirbyteMessage>
   private lateinit var writer: AirbyteMessageBufferedWriter<AirbyteMessage>
-
-  companion object {
-    const val CALLER = "airbyte-destination"
-
-    val containerLogMdcBuilder: MdcScope.Builder =
-      MdcScope
-        .Builder()
-        .setExtraMdcEntries(LogSource.DESTINATION.toMdc())
-  }
 
   override fun close() {
     emitDestinationMessageCountMetrics()

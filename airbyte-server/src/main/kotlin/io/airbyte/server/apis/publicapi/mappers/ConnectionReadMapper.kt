@@ -12,9 +12,6 @@ import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
 import io.airbyte.api.model.generated.SyncMode
 import io.airbyte.api.model.generated.Tag
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_US
-import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.publicApi.server.generated.models.ConnectionResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionScheduleResponse
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -41,7 +38,6 @@ object ConnectionReadMapper {
   fun from(
     connectionRead: ConnectionRead,
     workspaceId: UUID?,
-    airbyteEdition: AirbyteEdition,
   ): ConnectionResponse {
     val streamConfigurations =
       connectionRead.syncCatalog?.let { catalog ->
@@ -87,13 +83,6 @@ object ConnectionReadMapper {
           },
       )
 
-    val resolvedDataResidency =
-      if (airbyteEdition == AirbyteEdition.CLOUD) {
-        connectionRead.geography?.lowercase() ?: GEOGRAPHY_US.lowercase()
-      } else {
-        GEOGRAPHY_AUTO.lowercase()
-      }
-
     return ConnectionResponse(
       connectionId = connectionRead.connectionId.toString(),
       name = connectionRead.name,
@@ -102,7 +91,6 @@ object ConnectionReadMapper {
       workspaceId = workspaceId.toString(),
       status = ConnectionStatusEnum.valueOf(connectionRead.status.toString().uppercase()),
       schedule = connectionScheduleResponse,
-      dataResidency = resolvedDataResidency,
       configurations = streamConfigurations,
       nonBreakingSchemaUpdatesBehavior = connectionRead.nonBreakingChangesPreference?.let { n -> convertNonBreakingChangesPreference(n) },
       namespaceDefinition = connectionRead.namespaceDefinition?.let { n -> convertNamespaceDefinitionType(n) },
@@ -196,6 +184,14 @@ object ConnectionReadMapper {
               DestinationSyncMode.OVERWRITE_DEDUP,
               ConnectionSyncModeEnum.FULL_REFRESH_OVERWRITE_DEDUPED,
             ),
+            Pair(
+              DestinationSyncMode.UPDATE,
+              ConnectionSyncModeEnum.FULL_REFRESH_UPDATE,
+            ),
+            Pair(
+              DestinationSyncMode.SOFT_DELETE,
+              ConnectionSyncModeEnum.FULL_REFRESH_SOFT_DELETE,
+            ),
           ),
         SyncMode.INCREMENTAL to
           mapOf(
@@ -206,6 +202,14 @@ object ConnectionReadMapper {
             Pair(
               DestinationSyncMode.APPEND_DEDUP,
               ConnectionSyncModeEnum.INCREMENTAL_DEDUPED_HISTORY,
+            ),
+            Pair(
+              DestinationSyncMode.UPDATE,
+              ConnectionSyncModeEnum.INCREMENTAL_UPDATE,
+            ),
+            Pair(
+              DestinationSyncMode.SOFT_DELETE,
+              ConnectionSyncModeEnum.INCREMENTAL_SOFT_DELETE,
             ),
           ),
       )

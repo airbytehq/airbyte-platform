@@ -116,6 +116,7 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.junit.pioneer)
+  testImplementation(variantOf(libs.opentracing.util) { classifier("tests") })
 
   testRuntimeOnly(libs.junit.jupiter.engine)
 

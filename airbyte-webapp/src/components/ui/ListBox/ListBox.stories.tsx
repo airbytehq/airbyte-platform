@@ -39,7 +39,7 @@ const options = [
   {
     label: "one",
     value: 1,
-    icon: <Icon type="pencil" />,
+    icon: "pencil",
   },
   {
     label: "two",
@@ -73,6 +73,19 @@ Placement.decorators = [
     </FlexContainer>
   ),
 ];
+
+export const WithCustomOptionIcon = Template.bind({});
+WithCustomOptionIcon.args = {
+  options: [
+    ...options,
+    {
+      label: "four",
+      value: 4,
+      icon: <Icon type="check" color="success" size="lg" />,
+    },
+  ],
+  adaptiveWidth: false,
+};
 
 export const TextWrap = Template.bind({});
 TextWrap.args = {

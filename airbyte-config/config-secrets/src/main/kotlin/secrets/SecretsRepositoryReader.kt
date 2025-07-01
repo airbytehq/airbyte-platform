@@ -30,35 +30,25 @@ open class SecretsRepositoryReader(
    * @param secretCoordinate secret coordinate
    * @return JsonNode representing the fetched secret
    */
-  fun fetchSecretFromDefaultSecretPersistence(secretCoordinate: SecretCoordinate): JsonNode {
+  fun fetchJsonSecretFromDefaultSecretPersistence(secretCoordinate: SecretCoordinate): JsonNode {
     val node = JsonNodeFactory.instance.objectNode()
     node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
     return secretsHydrator.hydrateSecretCoordinateFromDefaultSecretPersistence(node)
   }
 
-  /**
-   * Given a secret coordinate, fetch the secret.
-   *
-   * @param secretCoordinate secret coordinate
-   * @return JsonNode representing the fetched secret
-   */
-  @Deprecated(
-    "Use fetchSecretFromSecretPersistence instead",
-    ReplaceWith("fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence)", "io.airbyte.config.secrets.SecretsRepositoryReader"),
-  )
-  fun fetchSecretFromRuntimeSecretPersistence(
+  fun fetchJsonSecretFromSecretPersistence(
     secretCoordinate: SecretCoordinate,
-    runtimeSecretPersistence: RuntimeSecretPersistence,
+    secretPersistence: SecretPersistence,
   ): JsonNode {
     val node = JsonNodeFactory.instance.objectNode()
     node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
-    return secretsHydrator.hydrateSecretCoordinateFromRuntimeSecretPersistence(node, runtimeSecretPersistence)
+    return secretsHydrator.hydrateSecretCoordinateAsJson(node, secretPersistence)
   }
 
   fun fetchSecretFromSecretPersistence(
     secretCoordinate: SecretCoordinate,
     secretPersistence: SecretPersistence,
-  ): JsonNode {
+  ): String {
     val node = JsonNodeFactory.instance.objectNode()
     node.put(SECRET_KEY, secretCoordinate.fullCoordinate)
     return secretsHydrator.hydrateSecretCoordinate(node, secretPersistence)

@@ -1,21 +1,13 @@
 import isObject from "lodash/isObject";
-import isString from "lodash/isString";
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 import { FieldErrors, useFormContext, useFormState } from "react-hook-form";
 
 import { assertNever } from "core/utils/asserts";
-import {
-  BuilderView,
-  useConnectorBuilderFormManagementState,
-} from "services/connectorBuilder/ConnectorBuilderStateService";
+import { BuilderView } from "services/connectorBuilder/ConnectorBuilderStateService";
 
-import {
-  BuilderState,
-  BuilderStreamTab,
-  DeclarativeOAuthAuthenticatorType,
-  extractInterpolatedConfigKey,
-} from "./types";
+import { BuilderState, BuilderStreamTab } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
+import { useFocusField } from "./useFocusField";
 
 const EMPTY_ERROR_REPORT: ErrorReport = {
   global: [],
@@ -93,49 +85,48 @@ function isViewInViewList(view: BuilderView, viewList: BuilderView[]): boolean {
 export const useBuilderErrors = () => {
   const { trigger } = useFormContext<BuilderState>();
   const { errors } = useFormState<BuilderState>();
-  const errorsRef = useRef(errors);
-  errorsRef.current = errors;
   const view = useBuilderWatch("view");
-  const formValues = useBuilderWatch("formValues");
-
-  const { setScrollToField } = useConnectorBuilderFormManagementState();
   const { setValue, getValues } = useFormContext();
+  const focusField = useFocusField();
 
   // Returns true if the react hook form has errors, and false otherwise.
   // If limitToViews is provided, the error check is limited to only those views.
-  const hasErrors = useCallback((limitToViews?: BuilderView[], limitToStreamTab?: BuilderStreamTab): boolean => {
-    const builderViewToErrorPaths = getBuilderViewToErrorPaths(errorsRef.current);
-    const viewFilteredViewToErrorPaths = limitToViews
-      ? limitErrorReportByView(builderViewToErrorPaths, limitToViews)
-      : builderViewToErrorPaths;
+  const hasErrors = useCallback(
+    (limitToViews?: BuilderView[], limitToStreamTab?: BuilderStreamTab): boolean => {
+      const builderViewToErrorPaths = getBuilderViewToErrorPaths(errors);
+      const viewFilteredViewToErrorPaths = limitToViews
+        ? limitErrorReportByView(builderViewToErrorPaths, limitToViews)
+        : builderViewToErrorPaths;
 
-    if (limitToStreamTab) {
-      return Object.values(viewFilteredViewToErrorPaths.stream).some((errorPaths) =>
-        errorPaths.some((errorPath) => getStreamTabFromErrorPath(errorPath) === limitToStreamTab)
-      );
-    }
+      if (limitToStreamTab) {
+        return Object.values(viewFilteredViewToErrorPaths.stream).some((errorPaths) =>
+          errorPaths.some((errorPath) => getStreamTabFromErrorPath(errorPath) === limitToStreamTab)
+        );
+      }
 
-    const entries = Object.entries(viewFilteredViewToErrorPaths);
-    for (let i = 0; i < entries.length; i++) {
-      const [viewType, errors] = entries[i];
-      if (viewType === "global" || viewType === "inputs" || viewType === "components") {
-        if (errors.length > 0) {
+      const entries = Object.entries(viewFilteredViewToErrorPaths);
+      for (let i = 0; i < entries.length; i++) {
+        const [viewType, errors] = entries[i];
+        if (viewType === "global" || viewType === "inputs" || viewType === "components") {
+          if (errors.length > 0) {
+            return true;
+          }
+        }
+        // errors is a Record<number, string[]>
+        const nestedErrors = Object.values(errors);
+        if (nestedErrors.length > 0) {
           return true;
         }
       }
-      // errors is a Record<number, string[]>
-      const nestedErrors = Object.values(errors);
-      if (nestedErrors.length > 0) {
-        return true;
-      }
-    }
 
-    return false;
-  }, []);
+      return false;
+    },
+    [errors]
+  );
 
   const getErrorPathAndView = useCallback(
     (limitToViews?: BuilderView[]): { view: BuilderView; errorPath: string } | undefined => {
-      const builderViewToErrorPaths = getBuilderViewToErrorPaths(errorsRef.current);
+      const builderViewToErrorPaths = getBuilderViewToErrorPaths(errors);
 
       // if already on a view with an error, scroll to the first erroring field
       if (
@@ -165,93 +156,59 @@ export const useBuilderErrors = () => {
 
       return undefined;
     },
-    [view]
+    [view, errors]
   );
 
-  const getOauthErrorPathAndView = useCallback(
-    (limitToViews?: BuilderView[]): { view: BuilderView; errorPath: string } | undefined => {
-      if (!limitToViews || isViewInViewList({ type: "global" }, limitToViews)) {
-        const authenticator = formValues?.global?.authenticator;
-        if (!isString(authenticator) && authenticator?.type === DeclarativeOAuthAuthenticatorType) {
-          const testingValues = getValues("testingValues") ?? {};
+  const highlightErrorField = useCallback(
+    (errorPath: string) => {
+      focusField(errorPath);
 
-          const tokenType: "refresh" | "access" = !!authenticator.refresh_token_updater ? "refresh" : "access";
-          const tokenConfigKey = extractInterpolatedConfigKey(
-            tokenType === "refresh" ? authenticator.refresh_token : authenticator.access_token_value
-          );
-
-          if (!tokenConfigKey || !(tokenConfigKey in testingValues)) {
-            return {
-              view: { type: "global" },
-              errorPath: "formValues.global.authenticator.declarative_oauth_flow",
-            };
-          }
-        }
-      }
-
-      return undefined;
+      // Mark the field as touched to show error message
+      setValue(errorPath, getValues(errorPath), { shouldTouch: true });
     },
-    [formValues?.global?.authenticator, getValues]
+    [focusField, getValues, setValue]
   );
 
   const validateAndTouch = useCallback(
     (callback?: () => void, limitToViews?: BuilderView[]) => {
       trigger().then((isValid) => {
         if (isValid) {
-          const oAuthErrorPathAndView = getOauthErrorPathAndView(limitToViews);
-          if (oAuthErrorPathAndView) {
-            setValue("view", oAuthErrorPathAndView.view);
-            setScrollToField(oAuthErrorPathAndView.errorPath);
-            return;
-          }
           callback?.();
           return;
         }
 
-        // Mark the manifest as touched to show error messages on all fields
-        setValue("manifest", getValues("manifest"), { shouldTouch: true });
-
         const errorPathAndView = getErrorPathAndView(limitToViews);
         if (errorPathAndView) {
-          setValue("view", errorPathAndView.view);
-          setScrollToField(errorPathAndView.errorPath);
-          setValue("streamTab", getStreamTabFromErrorPath(errorPathAndView.errorPath));
+          highlightErrorField(errorPathAndView.errorPath);
           return;
         }
 
-        const oAuthErrorPathAndView = getOauthErrorPathAndView(limitToViews);
-        if (oAuthErrorPathAndView) {
-          setValue("view", oAuthErrorPathAndView.view);
-          setScrollToField(oAuthErrorPathAndView.errorPath);
-          setValue("streamTab", getStreamTabFromErrorPath(oAuthErrorPathAndView.errorPath));
-          return;
-        }
         callback?.();
       });
     },
-    [getErrorPathAndView, getOauthErrorPathAndView, setScrollToField, setValue, trigger, getValues]
+    [trigger, getErrorPathAndView, highlightErrorField]
   );
 
-  return { hasErrors, validateAndTouch };
+  const getErrorPaths = useCallback(
+    (view: BuilderView) => {
+      return getErrorPathsForView(getBuilderViewToErrorPaths(errors), view);
+    },
+    [errors]
+  );
+
+  return { hasErrors, validateAndTouch, getErrorPaths };
 };
 
 const getStreamTabFromErrorPath = (errorPath: string): BuilderStreamTab | undefined => {
-  const pattern = /^formValues\.streams\.\d+\.([^.]+)/;
-  const match = errorPath.match(pattern);
-  const streamField = match ? match[1] : null;
-  if (!streamField) {
-    return undefined;
+  const field = document.querySelector(`[data-field-path="${errorPath}"]`);
+  if (field) {
+    const tabContainer = field.closest("[data-stream-tab]");
+    if (tabContainer) {
+      return tabContainer.getAttribute("data-stream-tab") as BuilderStreamTab;
+    }
   }
-  if (streamField === "schema") {
-    return "schema";
-  }
-  if (streamField === "pollingRequester") {
-    return "polling";
-  }
-  if (streamField === "downloadRequester") {
-    return "download";
-  }
-  return "requester";
+
+  return undefined;
 };
 
 interface ErrorReport {
@@ -264,7 +221,7 @@ interface ErrorReport {
   unknown: string[];
 }
 
-const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>) => {
+const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>): ErrorReport => {
   const result: ErrorReport = structuredClone(EMPTY_ERROR_REPORT);
 
   const isRecord = (value: unknown): value is Record<string, unknown> => {
@@ -280,24 +237,17 @@ const getBuilderViewToErrorPaths = (errors: FieldErrors<BuilderState>) => {
       const value = obj[key];
 
       if (isError(value)) {
-        // "global" or stream number if under formValues, or "inputs" if under testingValues
         const view: BuilderView | { type: "unknown" } =
-          currentPath[0] === "formValues"
-            ? currentPath[1] === "global"
-              ? { type: "global" }
-              : currentPath[1] === "streams"
-              ? { type: "stream", index: Number(currentPath[2]) }
-              : currentPath[1] === "dynamicStreams"
-              ? { type: "dynamic_stream", index: Number(currentPath[2]) }
-              : { type: "unknown" }
-            : currentPath[0] === "testingValues"
+          currentPath[0] === "testingValues"
             ? { type: "inputs" }
             : currentPath[0] === "manifest"
             ? currentPath[1] === "streams"
               ? { type: "stream", index: Number(currentPath[2]) }
               : currentPath[1] === "dynamic_streams"
               ? { type: "dynamic_stream", index: Number(currentPath[2]) }
-              : { type: "unknown" }
+              : currentPath[1] === "spec"
+              ? { type: "inputs" }
+              : { type: "global" }
             : { type: "unknown" };
         const fullPath = [...currentPath, key].join(".");
         if (typeof view === "object" && "index" in view) {

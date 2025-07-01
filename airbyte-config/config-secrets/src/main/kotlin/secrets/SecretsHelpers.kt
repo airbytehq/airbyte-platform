@@ -234,7 +234,7 @@ object SecretsHelpers {
       return JsonNodeFactory.instance.objectNode()
     }
 
-    var config = configWithRefs.config
+    var config = configWithRefs.originalConfig
     for ((hydrationPath, secretRefConfig) in configWithRefs.referencedSecrets) {
       val secretPersistence = resolvePersistence(secretRefConfig.secretStorageId)
       val secretValue = getOrThrowSecretValue(secretPersistence, secretRefConfig.secretCoordinate)
@@ -485,17 +485,17 @@ object SecretsHelpers {
    * @param secretCoordinateAsJson The co-ordinate at which we expect the secret value to be present
    * in the secret persistence
    * @param readOnlySecretPersistence The secret persistence
-   * @return Original secret value as JsonNode
+   * @return Original secret value
    */
   fun hydrateSecretCoordinate(
     secretCoordinateAsJson: JsonNode,
     readOnlySecretPersistence: ReadOnlySecretPersistence,
-  ): JsonNode {
+  ): String {
     val secretCoordinate: SecretCoordinate =
       getCoordinateFromTextNode(
         secretCoordinateAsJson[COORDINATE_FIELD],
       )
-    return Jsons.deserialize(getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate))
+    return getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate)
   }
 
   /**
@@ -753,4 +753,37 @@ object SecretsHelpers {
       return configCopy
     }
   }
+
+  /**
+   * Merge nodes but don't merge keys with secret JSON values.
+   */
+  fun mergeNodesExceptForSecrets(
+    mainNode: JsonNode,
+    updateNode: JsonNode,
+  ): JsonNode {
+    val fieldNames = updateNode.fieldNames()
+    while (fieldNames.hasNext()) {
+      val fieldName = fieldNames.next()
+      val jsonNode = mainNode[fieldName]
+      // if field exists and is an embedded object
+      if (isStandardObjectNode(jsonNode)) {
+        mergeNodesExceptForSecrets(jsonNode, updateNode[fieldName])
+      } else {
+        // if the value of the JsonNode in `fieldName` is either a secret or a plain value
+        // we replace it with the passed in value
+        if (mainNode is ObjectNode) {
+          // Overwrite field
+          val value = updateNode[fieldName]
+          mainNode.replace(fieldName, value)
+        }
+      }
+    }
+    return mainNode
+  }
+
+  /**
+   * Checks if the given JsonNode is a regular object. If it's a secret node, returns false.
+   */
+  private fun isStandardObjectNode(node: JsonNode?): Boolean =
+    node != null && node.isObject && node[COORDINATE_FIELD] == null && node[SECRET_REF_ID_FIELD] == null
 }

@@ -4,8 +4,6 @@
 
 package io.airbyte.data.services.impls.data.mappers
 
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
-import io.airbyte.commons.constants.GEOGRAPHY_EU
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.BasicSchedule
 import io.airbyte.config.ConnectionTemplate
@@ -62,7 +60,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography = GEOGRAPHY_AUTO,
         syncOnCreate = true,
       )
 
@@ -82,7 +79,6 @@ class ConnectionTemplateTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_AUTO,
         syncOnCreate = true,
       )
 
@@ -106,7 +102,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(basicScheduleData),
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography = GEOGRAPHY_AUTO,
         syncOnCreate = true,
       )
 
@@ -126,7 +121,6 @@ class ConnectionTemplateTest {
         scheduleData = basicScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_AUTO,
         syncOnCreate = true,
       )
 
@@ -150,7 +144,6 @@ class ConnectionTemplateTest {
         null,
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -170,7 +163,6 @@ class ConnectionTemplateTest {
         scheduleData = null,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -194,7 +186,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.disable,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -214,7 +205,6 @@ class ConnectionTemplateTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = disableNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -238,7 +228,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.propagate_columns,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -258,7 +247,6 @@ class ConnectionTemplateTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = propagateColumnsNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -282,7 +270,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.propagate_fully,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -302,7 +289,6 @@ class ConnectionTemplateTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = propagateFullyNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -326,7 +312,6 @@ class ConnectionTemplateTest {
         Jsons.jsonNode(cronScheduleData),
         Jsons.jsonNode(resourceRequirements),
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 
@@ -346,7 +331,6 @@ class ConnectionTemplateTest {
         scheduleData = cronScheduleData,
         resourceRequirements = resourceRequirements,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = GEOGRAPHY_EU,
         syncOnCreate = false,
       )
 

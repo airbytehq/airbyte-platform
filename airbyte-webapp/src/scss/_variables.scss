@@ -46,7 +46,7 @@ $width-login-form: 409px;
 $width-modal-sm: 492px;
 $width-modal-md: 585px;
 $width-modal-lg: 940px;
-$width-modal-xl: 1008px;
+$width-modal-xl: 1080px;
 
 // large total width - sidebar width - main layout padding-left - main layout padding-right
 $min-width-wide-table-container: 1280px - $width-side-menu - $spacing-xl - $spacing-xl;
@@ -59,6 +59,10 @@ $height-breadcrumb: 45px;
 
 $height-soft-edge: 15px;
 
+$height-org-picker: 58px;
+$height-org-picker-search: 52px;
+$width-org-picker-popover: 240px;
+$height-org-picker-popover-list: calc($width-org-picker-popover * 1.618 - $height-org-picker-search); // golden ratio
 $button-height-xs: 32px;
 $button-height-sm: 36px;
 $button-height-lg: 44px;

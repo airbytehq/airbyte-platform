@@ -17,11 +17,11 @@ import java.util.Optional
  *
  * @param <T> type of protocol object.
 </T> */
-class AirbyteMessageBufferedWriter<T>(
+class AirbyteMessageBufferedWriter<T : Any>(
   private val writer: BufferedWriter,
   private val serializer: AirbyteMessageSerializer<T>,
   private val migrator: AirbyteMessageVersionedMigrator<T>,
-  private val configuredAirbyteCatalog: Optional<ConfiguredAirbyteCatalog>?,
+  private val configuredAirbyteCatalog: Optional<ConfiguredAirbyteCatalog>,
 ) {
   @Throws(IOException::class)
   fun write(message: AirbyteMessage) {

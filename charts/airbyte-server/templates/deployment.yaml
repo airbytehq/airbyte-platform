@@ -69,7 +69,7 @@ spec:
         {{- else if and (eq .Values.global.edition "community") .Values.global.auth.enabled }}
         # Self-Managed Enterprise should always have API_AUTHORIZATION_ENABLED set to true, even
         # if global.auth.enabled is not set to true. This can be simplified in the future, once
-        # globa.auth.enabled is changed to always default to true across all editions of Airbyte.
+        # global.auth.enabled is changed to always default to true across all editions of Airbyte.
         - name: API_AUTHORIZATION_ENABLED
           value: "true"
         {{- end }}

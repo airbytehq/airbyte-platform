@@ -13,7 +13,7 @@ import java.util.UUID
 class DataplaneResponseMapperTest {
   @Test
   fun `Should map a Dataplane from the config model to a DataplaneResponse in the public API`() {
-    val now = Instant.now().epochSecond
+    val now = 1748886193L
     val dataplane =
       Dataplane().apply {
         id = UUID.randomUUID()
@@ -31,8 +31,7 @@ class DataplaneResponseMapperTest {
     assertEquals(dataplane.name, mapped.name)
     assertEquals(dataplane.enabled, mapped.enabled)
 
-    val expectedInstant = Instant.ofEpochSecond(now).toString()
-    assertEquals(expectedInstant, mapped.createdAt)
-    assertEquals(expectedInstant, mapped.updatedAt)
+    assertEquals(now, Instant.parse(mapped.createdAt).epochSecond)
+    assertEquals(now, Instant.parse(mapped.updatedAt).epochSecond)
   }
 }

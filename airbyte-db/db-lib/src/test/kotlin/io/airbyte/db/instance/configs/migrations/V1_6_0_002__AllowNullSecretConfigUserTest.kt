@@ -37,7 +37,7 @@ internal class V1_6_0_002__AllowNullSecretConfigUserTest : AbstractConfigsDataba
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_031__AllowNullPartialUserConfigConfiguration()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
@@ -45,7 +45,7 @@ internal class V1_6_0_002__AllowNullSecretConfigUserTest : AbstractConfigsDataba
 
   @Test
   fun `allows null created_by and updated_by column values now`() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // Run the migration
     V1_6_0_002__AllowNullSecretConfigUser.dropExtraForeignKeyConstraint(ctx)

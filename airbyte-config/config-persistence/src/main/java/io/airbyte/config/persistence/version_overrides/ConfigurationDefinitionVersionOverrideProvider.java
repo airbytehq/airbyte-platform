@@ -11,7 +11,7 @@ import io.airbyte.config.ConfigScopeType;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper.ActorDefinitionVersionWithOverrideStatus;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.WorkspaceService;

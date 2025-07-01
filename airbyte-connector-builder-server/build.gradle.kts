@@ -1,4 +1,4 @@
-import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import io.airbyte.gradle.tasks.DockerBuildxTask
 import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
 
 plugins {
@@ -33,6 +33,7 @@ dependencies {
   implementation(libs.bundles.micronaut.cache)
   implementation(libs.micronaut.http)
   implementation(libs.micronaut.security)
+  implementation(libs.micronaut.security.jwt)
   implementation(libs.jakarta.annotation.api)
   implementation(libs.jakarta.validation.api)
   implementation(libs.jakarta.ws.rs.api)
@@ -43,6 +44,7 @@ dependencies {
 
   // Internal dependencies)
   implementation(project(":oss:airbyte-commons"))
+  implementation(project(":oss:airbyte-commons-auth"))
   implementation(project(":oss:airbyte-commons-micronaut"))
   implementation(project(":oss:airbyte-commons-protocol"))
   implementation(project(":oss:airbyte-commons-server"))
@@ -76,12 +78,13 @@ dependencies {
   testImplementation(libs.bundles.junit)
   testImplementation(libs.assertj.core)
   testImplementation(libs.mockk)
+  testImplementation(libs.mockito.kotlin)
   testImplementation(libs.junit.pioneer)
 }
 
 airbyte {
   application {
-    mainClass = "io.airbyte.connectorbuilder.MicronautConnectorBuilderServerRunner"
+    mainClass = "io.airbyte.connectorbuilder.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
     localEnvVars.putAll(
       mapOf(
@@ -184,7 +187,7 @@ val copyPythonDeps =
     into("${project.layout.buildDirectory.get()}/airbyte/docker/")
   }
 //
-tasks.named<DockerBuildImage>("dockerBuildImage") {
+tasks.named<DockerBuildxTask>("dockerBuildImage") {
   // Set build args
   // Current CDK version(used by the Connector Builder and workers running Connector Builder connectors
   val cdkVersion: String = File((ext["ossRootProject"] as Project).projectDir, "airbyte-connector-builder-resources/CDK_VERSION").readText().trim()

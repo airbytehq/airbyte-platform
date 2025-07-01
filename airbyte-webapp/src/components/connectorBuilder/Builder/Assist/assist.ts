@@ -1,14 +1,13 @@
 import merge from "lodash/merge";
 
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { convertToBuilderFormValuesSync } from "components/connectorBuilder/convertManifestToBuilderForm";
-import { BuilderFormValues } from "components/connectorBuilder/types";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { HttpError, useAssistApiMutation, useAssistApiProxyQuery } from "core/api";
 import { KnownExceptionInfo } from "core/api/types/ConnectorBuilderClient";
 import {
+  ConnectorManifest,
   DatetimeBasedCursor,
   DeclarativeComponentSchema,
   HttpRequesterAuthenticator,
@@ -29,7 +28,7 @@ export type AssistKey =
   | "request_options"
   | "incremental_sync";
 
-export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): BuilderFormValues => {
+export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResponse): ConnectorManifest => {
   const update = updates.manifest_update;
   const updatedManifest: DeclarativeComponentSchema = {
     type: "DeclarativeSource",
@@ -73,8 +72,7 @@ export const convertToAssistFormValuesSync = (updates: BuilderAssistManifestResp
       },
     },
   };
-  const updatedForm = convertToBuilderFormValuesSync(updatedManifest);
-  return updatedForm;
+  return updatedManifest;
 };
 
 export interface BuilderAssistCoreParams {
@@ -165,7 +163,8 @@ const useAssistGlobalContext = (): { params: Record<string, unknown> } => {
 };
 
 const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequiredParams: boolean } => {
-  const { assistEnabled, projectId, assistSessionId, jsonManifest } = useConnectorBuilderFormState();
+  const { assistEnabled, projectId, assistSessionId } = useConnectorBuilderFormState();
+  const manifest = useBuilderWatch("manifest");
   // session id on form
   const params = {
     docs_url: useBuilderWatch("formValues.assist.docsUrl"),
@@ -173,7 +172,7 @@ const useAssistProjectContext = (): { params: Record<string, unknown>; hasRequir
     app_name: useBuilderWatch("name") || "Connector",
     url_base: useBuilderWatch("formValues.global.urlBase"),
     project_id: projectId,
-    manifest: jsonManifest,
+    manifest,
     session_id: assistSessionId,
   };
   const hasBase = hasOneOf(params, ["docs_url", "openapi_spec_url"]);

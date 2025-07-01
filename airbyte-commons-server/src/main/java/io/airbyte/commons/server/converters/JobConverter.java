@@ -84,7 +84,7 @@ public class JobConverter {
   public JobInfoRead getJobInfoRead(final Job job) {
     return new JobInfoRead()
         .job(getJobWithAttemptsRead(job).getJob())
-        .attempts(job.getAttempts().stream().map(this::getAttemptInfoRead).collect(Collectors.toList()));
+        .attempts(job.attempts.stream().map(this::getAttemptInfoRead).collect(Collectors.toList()));
   }
 
   public JobInfoLightRead getJobInfoLightRead(final Job job) {
@@ -115,27 +115,27 @@ public class JobConverter {
   public static JobWithAttemptsRead getJobWithAttemptsRead(final Job job) {
     return new JobWithAttemptsRead()
         .job(getJobRead(job))
-        .attempts(job.getAttempts().stream()
+        .attempts(job.attempts.stream()
             .sorted(Comparator.comparingInt(Attempt::getAttemptNumber))
             .map(JobConverter::getAttemptRead)
             .toList());
   }
 
   public static JobRead getJobRead(final Job job) {
-    final String configId = job.getScope();
-    final JobConfigType configType = Enums.convertTo(job.getConfigType(), JobConfigType.class);
+    final String configId = job.scope;
+    final JobConfigType configType = Enums.convertTo(job.configType, JobConfigType.class);
 
     return new JobRead()
-        .id(job.getId())
+        .id(job.id)
         .configId(configId)
         .configType(configType)
         .enabledStreams(extractEnabledStreams(job))
         .resetConfig(extractResetConfigIfReset(job).orElse(null))
         .refreshConfig(extractRefreshConfigIfNeeded(job).orElse(null))
-        .createdAt(job.getCreatedAtInSecond())
-        .updatedAt(job.getUpdatedAtInSecond())
-        .startedAt(job.getStartedAtInSecond().isPresent() ? job.getStartedAtInSecond().get() : null)
-        .status(Enums.convertTo(job.getStatus(), JobStatus.class));
+        .createdAt(job.createdAtInSecond)
+        .updatedAt(job.updatedAtInSecond)
+        .startedAt(job.startedAtInSecond)
+        .status(Enums.convertTo(job.status, JobStatus.class));
   }
 
   /**
@@ -145,16 +145,16 @@ public class JobConverter {
    * @param job - job
    * @return List of the streams associated with the job
    */
-  public static List<io.airbyte.protocol.models.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
+  public static List<io.airbyte.protocol.models.v0.StreamDescriptor> getStreamsAssociatedWithJob(final Job job) {
     final JobRead jobRead = getJobRead(job);
-    switch (job.getConfigType()) {
+    switch (job.configType) {
       case REFRESH -> {
-        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+        return jobRead.getRefreshConfig().getStreamsToRefresh().stream().map(streamDescriptor -> new io.airbyte.protocol.models.v0.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
       }
       case CLEAR, RESET_CONNECTION -> {
-        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.StreamDescriptor()
+        return jobRead.getResetConfig().getStreamsToReset().stream().map(streamDescriptor -> new io.airbyte.protocol.models.v0.StreamDescriptor()
             .withName(streamDescriptor.getName())
             .withNamespace(streamDescriptor.getNamespace())).collect(Collectors.toList());
       }
@@ -172,13 +172,13 @@ public class JobConverter {
    * @return api representation of reset config
    */
   private static Optional<ResetConfig> extractResetConfigIfReset(final Job job) {
-    if (job.getConfigType() == ConfigType.RESET_CONNECTION) {
-      final ResetSourceConfiguration resetSourceConfiguration = job.getConfig().getResetConnection().getResetSourceConfiguration();
+    if (job.configType == ConfigType.RESET_CONNECTION) {
+      final ResetSourceConfiguration resetSourceConfiguration = job.config.getResetConnection().getResetSourceConfiguration();
       if (resetSourceConfiguration == null) {
         return Optional.empty();
       }
       return Optional.ofNullable(
-          new ResetConfig().streamsToReset(job.getConfig().getResetConnection().getResetSourceConfiguration().getStreamsToReset()
+          new ResetConfig().streamsToReset(job.config.getResetConnection().getResetSourceConfiguration().getStreamsToReset()
               .stream()
               .map(ApiConverters::toApi)
               .toList()));
@@ -195,8 +195,8 @@ public class JobConverter {
    * @return api representation of refresh config
    */
   public static Optional<JobRefreshConfig> extractRefreshConfigIfNeeded(final Job job) {
-    if (job.getConfigType() == ConfigType.REFRESH) {
-      final List<StreamDescriptor> refreshedStreams = job.getConfig().getRefresh().getStreamsToRefresh()
+    if (job.configType == ConfigType.REFRESH) {
+      final List<StreamDescriptor> refreshedStreams = job.config.getRefresh().getStreamsToRefresh()
           .stream().flatMap(refreshStream -> Stream.ofNullable(refreshStream.getStreamDescriptor()))
           .map(ApiConverters::toApi)
           .toList();
@@ -210,7 +210,7 @@ public class JobConverter {
   }
 
   public AttemptInfoRead getAttemptInfoRead(final Attempt attempt) {
-    final AttemptInfoReadLogs attemptInfoReadLogs = getAttemptLogs(attempt.getLogPath(), attempt.getJobId());
+    final AttemptInfoReadLogs attemptInfoReadLogs = getAttemptLogs(attempt.logPath(), attempt.jobId());
     return new AttemptInfoRead()
         .attempt(getAttemptRead(attempt))
         .logType(CollectionUtils.isNotEmpty(attemptInfoReadLogs.getEvents()) ? LogFormatType.STRUCTURED : LogFormatType.FORMATTED)
@@ -225,7 +225,7 @@ public class JobConverter {
   public static AttemptRead getAttemptRead(final Attempt attempt) {
     return new AttemptRead()
         .id((long) attempt.getAttemptNumber())
-        .status(Enums.convertTo(attempt.getStatus(), AttemptStatus.class))
+        .status(Enums.convertTo(attempt.status(), AttemptStatus.class))
         .bytesSynced(attempt.getOutput() // TODO (parker) remove after frontend switches to totalStats
             .map(JobOutput::getSync)
             .map(StandardSyncOutput::getStandardSyncSummary)
@@ -238,8 +238,8 @@ public class JobConverter {
             .orElse(null))
         .totalStats(getTotalAttemptStats(attempt))
         .streamStats(getAttemptStreamStats(attempt))
-        .createdAt(attempt.getCreatedAtInSecond())
-        .updatedAt(attempt.getUpdatedAtInSecond())
+        .createdAt(attempt.createdAtInSecond())
+        .updatedAt(attempt.updatedAtInSecond())
         .endedAt(attempt.getEndedAtInSecond().orElse(null))
         .failureSummary(getAttemptFailureSummary(attempt));
   }
@@ -292,7 +292,7 @@ public class JobConverter {
     }
     return new AttemptFailureSummary()
         .failures(failureSummary.getFailures().stream()
-            .map(failureReason -> getFailureReason(failureReason, TimeUnit.SECONDS.toMillis(attempt.getUpdatedAtInSecond())))
+            .map(failureReason -> getFailureReason(failureReason, TimeUnit.SECONDS.toMillis(attempt.updatedAtInSecond())))
             .toList())
         .partialSuccess(failureSummary.getPartialSuccess());
   }
@@ -350,7 +350,7 @@ public class JobConverter {
   }
 
   private static List<StreamDescriptor> extractEnabledStreams(final Job job) {
-    final var configuredCatalog = new JobConfigProxy(job.getConfig()).getConfiguredCatalog();
+    final var configuredCatalog = new JobConfigProxy(job.config).getConfiguredCatalog();
     return configuredCatalog != null
         ? configuredCatalog.getStreams().stream()
             .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace())).collect(Collectors.toList())

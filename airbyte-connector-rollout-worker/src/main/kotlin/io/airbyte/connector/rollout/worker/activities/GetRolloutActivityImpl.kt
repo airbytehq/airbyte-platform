@@ -36,7 +36,9 @@ class GetRolloutActivityImpl(
     return try {
       val response: ConnectorRolloutReadResponse = client.getConnectorRolloutById(body)
       logger.info { "ConnectorRolloutReadResponse = ${response.data}" }
-      ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
+      val mappedResponse = ConnectorRolloutActivityHelpers.mapToConnectorRollout(response.data)
+      logger.info { "ConnectorRolloutReadResponse: actorSyncs.size=${mappedResponse.actorSyncs?.size}" }
+      mappedResponse
     } catch (e: IOException) {
       throw Activity.wrap(e)
     } catch (e: ClientException) {

@@ -3,15 +3,14 @@ import { useIntl } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { Heading } from "components/ui/Heading";
-import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps, Option } from "components/ui/ListBox";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
-import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./StreamSelector.module.scss";
 import { StreamId } from "../types";
 import { useBuilderWatch } from "../useBuilderWatch";
+import { useStreamNames } from "../useStreamNames";
 
 interface StreamSelectorProps {
   className?: string;
@@ -32,27 +31,20 @@ interface BaseSelectorOption {
 
 type SelectorOption = BaseSelectorOption | GeneratedStreamOption;
 
-const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => {
-  return (
-    <>
-      {selectedOption && (
-        <Heading className={styles.label} as="h1" size="sm">
-          {selectedOption.label}
-        </Heading>
-      )}
-      <Icon className={styles.caret} type="caretDown" color="primary" />
-    </>
-  );
-};
+const ControlButton: React.FC<ListBoxControlButtonProps<SelectorOption>> = ({ selectedOption }) => (
+  <Heading className={styles.label} as="h1" size="sm">
+    {selectedOption?.label ?? ""}
+  </Heading>
+);
 
-export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => {
+export const StreamSelector: React.FC<StreamSelectorProps> = () => {
   const analyticsService = useAnalyticsService();
   const { formatMessage } = useIntl();
   const { setValue } = useFormContext();
   const view = useBuilderWatch("view");
   const testStreamId = useBuilderWatch("testStreamId");
-  const generatedStreams = useBuilderWatch("formValues.generatedStreams");
-  const { streamNames, dynamicStreamNames } = useConnectorBuilderFormState();
+  const generatedStreams = useBuilderWatch("generatedStreams");
+  const { streamNames, dynamicStreamNames } = useStreamNames();
 
   if (streamNames.length === 0 && dynamicStreamNames.length === 0) {
     return (
@@ -142,12 +134,11 @@ export const StreamSelector: React.FC<StreamSelectorProps> = ({ className }) => 
 
   return (
     <ListBox
-      className={className}
       options={options}
       selectedValue={selectedValue}
       onSelect={handleStreamSelect}
       buttonClassName={styles.button}
-      controlButton={ControlButton}
+      controlButtonContent={ControlButton}
     />
   );
 };

@@ -11,7 +11,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import io.airbyte.commons.constants.DataplaneConstantsKt;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.DataplaneGroup;
@@ -25,7 +24,7 @@ import io.airbyte.config.SupportLevel;
 import io.airbyte.config.Tag;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectionService;
@@ -33,6 +32,7 @@ import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.ScopedConfigurationService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
+import io.airbyte.data.services.impls.data.DataplaneGroupServiceTestJooqImpl;
 import io.airbyte.db.instance.configs.jooq.generated.tables.records.TagRecord;
 import io.airbyte.featureflag.HeartbeatMaxSecondsBetweenMessages;
 import io.airbyte.featureflag.SourceDefinition;
@@ -62,6 +62,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
   private final UUID SOURCE_DEFINITION_ID = UUID.randomUUID();
   private final UUID DESTINATION_DEFINITION_ID = UUID.randomUUID();
   private final String DOCKER_IMAGE_TAG = "0.0.1";
+  private final UUID DATAPLANE_GROUP_ID = UUID.randomUUID();
   private Organization organization;
   private StandardWorkspace workspace;
   private StandardSourceDefinition sourceDefinition;
@@ -106,8 +107,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         secretsRepositoryReader,
         secretsRepositoryWriter,
         secretPersistenceConfigService,
-        metricClient,
-        this.dataplaneGroupServiceDataImpl);
+        metricClient);
     this.organizationServiceJooqImpl = new OrganizationServiceJooqImpl(database);
   }
 
@@ -287,9 +287,9 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
 
   private DataplaneGroup createBaseDataplaneGroup() {
     return new DataplaneGroup()
-        .withId(UUID.randomUUID())
+        .withId(DATAPLANE_GROUP_ID)
         .withOrganizationId(ORGANIZATION_ID)
-        .withName(DataplaneConstantsKt.GEOGRAPHY_US)
+        .withName("test")
         .withEnabled(true)
         .withTombstone(false);
   }
@@ -302,7 +302,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID);
   }
 
   private StandardWorkspace createSecondWorkspace() {
@@ -313,7 +313,7 @@ public class JooqTestDbSetupHelper extends BaseConfigDatabaseTest {
         .withSlug("second-workspace-slug")
         .withInitialSetupComplete(false)
         .withTombstone(false)
-        .withDefaultGeography(DataplaneConstantsKt.GEOGRAPHY_US);
+        .withDataplaneGroupId(DATAPLANE_GROUP_ID);
   }
 
   private static ActorDefinitionVersion createBaseActorDefVersion(final UUID actorDefId, final String dockerImageTag) {

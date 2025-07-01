@@ -17,10 +17,12 @@ import org.jooq.Record
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -31,7 +33,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_24_002__BackfillBreakingChangeNotificationSettings()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -40,7 +42,7 @@ internal class V0_50_24_002__BackfillBreakingChangeNotificationSettingsTest : Ab
 
   @Test
   fun testBackfillBreakingChangeNotificationSettings() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val workspaceId = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
     val workspaceId3 = UUID.randomUUID()

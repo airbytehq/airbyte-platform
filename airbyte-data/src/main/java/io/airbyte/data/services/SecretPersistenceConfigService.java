@@ -8,7 +8,7 @@ import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType;
 import io.airbyte.config.SecretPersistenceCoordinate;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;

@@ -10,14 +10,15 @@ import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentWorkspace, useGetOrganizationSubscriptionInfo } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetOrganizationSubscriptionInfo } from "core/api";
 import { links } from "core/utils/links";
 
 import { CancelSubscription } from "./CancelSubscription";
 import styles from "./Subscription.module.scss";
 
 export const Subscription: React.FC = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { data: subscription, isLoading, isError } = useGetOrganizationSubscriptionInfo(organizationId);
 
   return (

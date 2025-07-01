@@ -9,12 +9,12 @@ import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorDefinitionVersion
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConnectorRegistryEntryMetrics
 import io.airbyte.config.ScopedResourceRequirements
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardSourceDefinition
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ConnectionService
 import io.airbyte.data.services.SecretPersistenceConfigService
@@ -107,7 +107,7 @@ class SourceServiceJooqImpl(
   ): StandardSourceDefinition? =
     sourceDefQuery(Optional.of(sourceDefinitionId), includeTombstones)!!
       .findFirst()
-      .orElseThrow { ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, sourceDefinitionId) }
+      .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, sourceDefinitionId) }
 
   /**
    * Get source definition form source.
@@ -277,7 +277,7 @@ class SourceServiceJooqImpl(
     val sourceConnection =
       listSourceQuery(Optional.of(sourceId))
         .findFirst()
-        .orElseThrow({ ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId) })
+        .orElseThrow({ ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceId) })
 
     return sourceConnection
   }

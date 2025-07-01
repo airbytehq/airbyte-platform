@@ -17,7 +17,7 @@ import {
   DEFAULT_JSON_MANIFEST_STREAM,
   DEFAULT_JSON_MANIFEST_VALUES,
   DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
-} from "components/connectorBuilder/types";
+} from "components/connectorBuilder/constants";
 import { Form, FormControl } from "components/forms";
 import { HeadTitle } from "components/HeadTitle";
 import { Badge } from "components/ui/Badge";

@@ -107,6 +107,8 @@ tags:
     description: Public job-related endpoints.
   - name: Jobs
     description: Job management endpoints.
+  - name: entitlements
+    description: Entitlement management endpoints
 
 paths:
   /v1/workspaces/create:
@@ -171,25 +173,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/workspaces/list_all_paginated:
-    post:
-      tags:
-        - workspace
-      summary: List all workspaces registered in the current Airbyte deployment. This function also supports searching by keyword and pagination.
-      operationId: listAllWorkspacesPaginated
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ListResourcesForWorkspacesRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceReadList"
   /v1/workspaces/list_paginated:
     post:
       tags:
@@ -1563,13 +1546,33 @@ paths:
       tags:
         - source
         - internal
-      summary: Should only called from worker, to write result from discover activity back to DB.
+      summary: Should only be called from job pods, to write result from discover activity back to DB.
       operationId: writeDiscoverCatalogResult
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/SourceDiscoverSchemaWriteRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverCatalogResult"
+  /v1/destinations/write_discover_catalog_result:
+    post:
+      tags:
+        - destination
+        - internal
+      summary: Should only be called from job pods, to write result from destination discover activity back to DB.
+      operationId: writeDestinationDiscoverCatalogResult
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaWriteRequestBody"
         required: true
       responses:
         "200":
@@ -2029,6 +2032,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DestinationRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/discover_schema:
+    post:
+      tags:
+        - destination
+      summary: Discover the catalog for a destination
+      operationId: discoverCatalogForDestination
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DestinationDiscoverSchemaRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/destinations/get_catalog_for_connection:
+    post:
+      tags:
+        - destination
+      summary: Get the destination catalog for a connection
+      operationId: getCatalogForConnection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConnectionIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DestinationDiscoverRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
         "422":
@@ -3511,30 +3560,23 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/web_backend/geographies/list:
-    post:
+  /v1/web_backend/config:
+    get:
+      summary: Fetch webapp configuration
       tags:
         - web_backend
-      description: Returns all available geographies in which a data sync can run.
-      summary: |
-        Returns available geographies can be selected to run data syncs in a particular geography.
-        The 'auto' entry indicates that the sync will be automatically assigned to a geography according
-        to the platform default behavior. Entries other than 'auto' are two-letter country codes that
-        follow the ISO 3166-1 alpha-2 standard.
-      operationId: webBackendListGeographies
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WebBackendGeographiesListRequest"
-        required: true
+      operationId: getWebappConfig
+      # This route is unsecured to be available during initial load of the webapp
+      security: []
       responses:
         "200":
-          description: Successful operation
+          description: Successfully returned webapp configuration.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/WebBackendGeographiesListResult"
+                $ref: "#/components/schemas/WebappConfigResponse"
+        "401":
+          description: Webapp configuration failed.
   /v1/jobs/create:
     post:
       tags:
@@ -3892,6 +3934,39 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InternalOperationResult"
+  /v1/jobs/getWebhookConfig:
+    post:
+      tags:
+        - jobs
+        - internal
+      summary: Get a webhook config for a job.
+      operationId: getWebhookConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - jobId
+              properties:
+                jobId:
+                  type: integer
+                  format: int64
+        required: true
+      responses:
+        "200":
+          description: Successful Operation
+          content:
+            application/json:
+              schema:
+                title: GetWebhookConfigResponse
+                type: object
+                required:
+                  - value
+                properties:
+                  value:
+                    type: string
+
   /v1/jobs/job_failure:
     post:
       tags:
@@ -4115,29 +4190,6 @@ paths:
           $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
-  /v1/users/list_by_workspace_id:
-    post:
-      tags:
-        - user
-      summary: List all users in a workspace
-      operationId: listUsersInWorkspace
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WorkspaceIdRequestBody"
-        required: true
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceUserReadList"
-        "404":
-          $ref: "#/components/responses/NotFoundResponse"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
 
   /v1/users/list_access_info_by_workspace_id:
     post:
@@ -4348,6 +4400,67 @@ paths:
       responses:
         "200":
           description: Successful operation
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/create:
+    post:
+      tags:
+        - secret_storage
+      summary: Create secret storage
+      operationId: createSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageCreateRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/list:
+    post:
+      tags:
+        - secret_storage
+      summary: List all secret storages for a given scope
+      operationId: listSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageListRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecretStorageReadList"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/secret_storage/delete:
+    post:
+      tags:
+        - secret_storage
+      summary: Delete secret storage by its id
+      operationId: deleteSecretStorage
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecretStorageIdRequestBody"
+        required: true
+      responses:
+        "204":
+          description: Successful operation
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/secret_storage/get:
@@ -5184,6 +5297,51 @@ paths:
                 $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/list_summaries:
+    post:
+      tags:
+        - organization
+      summary: Retrieve a paginated list of organizations with an optional filter, containing a summary of various org data
+      operationId: listOrganizationSummaries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListOrganizationSummariesRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrganizationSummariesResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/organizations/get_organization_info:
+    post:
+      tags:
+        - organization
+      summary: Retrieve an organization's basic organization info that is accessible for all organization members.
+      operationId: getOrgInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/deployment/metadata:
     post:
       summary: Provides the Airbyte deployment metadata.
@@ -5439,7 +5597,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_by_actor_definition_id:
     post:
       requestBody:
@@ -5463,7 +5620,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_all:
     post:
       responses:
@@ -5723,6 +5879,55 @@ paths:
       tags:
         - connector_rollout
 
+  # Entitlements
+  /v1/entitlements/is_entitled:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIsEntitledRequestBody"
+      responses:
+        "200":
+          description: Whether the organization is entitled to the specified resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Determine whether the organization is entitled to the specified resource
+      operationId: checkEntitlement
+      tags:
+        - entitlements
+
+  /v1/entitlements/get_entitlements:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetEntitlementsByOrganizationIdRequestBody"
+      responses:
+        "200":
+          description: A list of entitlements for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetEntitlementsByOrganizationIdResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Gets a list of entitlements for the organization
+      operationId: getEntitlements
+      tags:
+        - entitlements
+
   # User Invitations
   /v1/user_invitations/create:
     post:
@@ -5965,7 +6170,7 @@ paths:
       description: >
         Expected input is an id and either an actor_id to run a check for an existing actor or
         an actor_definition_id, a workspace_id and a config to validate a config for a given actor definition.
-      tags: [command]
+      tags: [command, internal]
       operationId: runCheckCommand
       requestBody:
         content:
@@ -5980,21 +6185,20 @@ paths:
                   description: a command id which acts as an idempotency key.
                 workspace_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 actor_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 actor_definition_id:
                   type: string
-                  format: UUID
+                  format: uuid
                 config:
                   type: object
-                jobId:
+                job_id:
                   type: string
                   description: internal usage
-                attemptNumber:
-                  type: number
-                  description: internal usage
+                attempt_number:
+                  $ref: "#/components/schemas/AttemptNumber"
                 priority:
                   type: string
                   description: internal usage
@@ -6009,6 +6213,94 @@ paths:
               schema:
                 type: object
                 title: RunCheckCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/run/discover:
+    post:
+      summary: Run a Discover command for a Connector
+      tags: [command, internal]
+      operationId: runDiscoverCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunDiscoverCommandRequest
+              required: [id, actor_id]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                actor_id:
+                  type: string
+                  format: uuid
+                jobId:
+                  type: string
+                  description: internal usage
+                attemptNumber:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                priority:
+                  type: string
+                  description: internal usage
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunDiscoverCommandResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+
+  /v1/commands/run/replicate:
+    post:
+      summary: Run a Replicate command for a Connection
+      tags: [command, internal]
+      operationId: runReplicateCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RunReplicateCommandRequest
+              required: [id, connection_id, job_id, attempt_number]
+              properties:
+                id:
+                  type: string
+                  description: a command id which acts as an idempotency key.
+                connection_id:
+                  type: string
+                  format: uuid
+                job_id:
+                  type: string
+                  description: internal usage
+                attempt_number:
+                  description: internal usage
+                  $ref: "#/components/schemas/AttemptNumber"
+                applied_catalog_diff:
+                  description: internal usage
+                  $ref: "#/components/schemas/CatalogDiff"
+                signal_input:
+                  type: string
+                  description: internal usage
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: RunReplicateCommandResponse
                 required: [id]
                 properties:
                   id:
@@ -6044,8 +6336,86 @@ paths:
                   status:
                     type: string
                     enum: [succeeded, failed]
+                  message:
+                    type: string
                   failureReason:
                     $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/discover:
+    post:
+      summary: Get the status of a discover command
+      tags: [command]
+      operationId: getDiscoverCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: DiscoverCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: DiscoverCommandOutputResponse
+                required: [id, status]
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+                    enum: [succeeded, failed]
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
+                  catalogId:
+                    type: string
+                    format: uuid
+                  catalogDiff:
+                    $ref: "#/components/schemas/CatalogDiff"
+                  failureReason:
+                    $ref: "#/components/schemas/FailureReason"
+
+  /v1/commands/output/replicate:
+    post:
+      summary: Get the status of a replicate command
+      tags: [command]
+      operationId: getReplicateCommandOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: ReplicateCommandOutputRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: ReplicateCommandOutputResponse
+                required: [id]
+                properties:
+                  id:
+                    type: string
+                  attempt_summary:
+                    type: object
+                  failures:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/FailureReason"
+                  catalog:
+                    $ref: "#/components/schemas/AirbyteCatalog"
 
   /v1/commands/status:
     post:
@@ -6078,6 +6448,60 @@ paths:
                     type: string
                     enum: [pending, running, completed, cancelled]
 
+  /v1/commands/get:
+    post:
+      summary: Get the a command record
+      tags: [command, internal]
+      operationId: getCommand
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: CommandGetRequest
+              required: [id]
+              properties:
+                id:
+                  type: string
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                title: CommandGetResponse
+                required:
+                  - id
+                  - workload_id
+                  - command_input
+                  - command_type
+                  - workspace_id
+                  - organization_id
+                  - created_at
+                  - updated_at
+                properties:
+                  id:
+                    type: string
+                  workload_id:
+                    type: string
+                  command_type:
+                    type: string
+                  command_input:
+                    type: string
+                  workspace_id:
+                    type: string
+                    format: uuid
+                  organization_id:
+                    type: string
+                    format: uuid
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+
   /v1/commands/cancel:
     post:
       summary: Get the status of command
@@ -6105,6 +6529,30 @@ paths:
                 properties:
                   id:
                     type: string
+
+  /v1/workload_output/write:
+    post:
+      summary: Write the output of a workload
+      tags:
+        - workload_output
+      operationId: writeWorkloadOutput
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              title: WorkloadOutputWriteRequest
+              required:
+                - workloadId
+                - output
+              properties:
+                workloadId:
+                  type: string
+                output:
+                  type: string
+      responses:
+        "204":
+          description: Successfully wrote output
 
   /v1/dataplane_group/create:
     post:
@@ -6465,11 +6913,11 @@ paths:
           $ref: "#/components/responses/InvalidInputResponse"
   /v1/partial_user_configs/update:
     post:
-      summary: Update a part
+      summary: Update a partial user config
       tags:
         - partial_user_configs
         - embedded
-      operationId: updateUserConfig
+      operationId: updatePartialUserConfig
       requestBody:
         content:
           application/json:
@@ -6482,7 +6930,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PartialUserConfigWithSource"
+                $ref: "#/components/schemas/SourceRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/partial_user_configs/delete:
+    post:
+      summary: Tombstone a partial user config
+      tags:
+        - partial_user_configs
+        - embedded
+      operationId: deletePartialUserConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartialUserConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: The resource was deleted successfully.
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -8367,7 +8833,7 @@ paths:
       x-sdk-alias: listConnections
       x-sdk-group: Connections
       summary: List connections
-      x-sdk-entity-operation: Connection#list
+      x-sdk-entity-operation: Connections#read
       parameters:
         - name: workspaceIds
           description: The UUIDs of the workspaces you wish to list connections for. Empty list will retrieve all allowed workspaces.
@@ -9190,6 +9656,50 @@ paths:
         - public
         - embedded_widget
 
+  /public/v1/embedded/organizations:
+    get:
+      summary: List organizations that a user has access to that have embedded enabled.
+      tags:
+        - public
+        - embedded_widget
+      operationId: listEmbeddedOrganizationsByUser
+      x-sdk-alias: listEmbeddedOrganizationsByUser
+      x-sdk-group: EmbeddedWidget
+      responses:
+        "200":
+          description: Successfully retrieved organizations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmbeddedOrganizationsList"
+        "403":
+          $ref: "#/components/responses/ForbiddenResponse"
+
+  /v1/service_accounts/token:
+    post:
+      summary: Get an access token for a service account.
+      tags:
+        - service_accounts
+      operationId: getServiceAccountToken
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: "#/components/schemas/ServiceAccountTokenRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successfully retrieved access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessToken"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -9525,6 +10035,7 @@ components:
         - TIER_0
         - TIER_1
         - TIER_2
+        - ALL
 
     ConnectorRolloutListRequestBody:
       type: object
@@ -9873,6 +10384,51 @@ components:
           type: boolean
           default: true
 
+    # ENTITLEMENTS
+    OrganizationIsEntitledRequestBody:
+      type: object
+      required:
+        - organization_id
+        - feature_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        feature_id:
+          type: string
+
+    OrganizationIsEntitledResponse:
+      type: object
+      required:
+        - feature_id
+        - is_entitled
+      properties:
+        feature_id:
+          type: string
+        is_entitled:
+          type: boolean
+        access_denied_reason:
+          type: string
+
+    GetEntitlementsByOrganizationIdRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+
+    GetEntitlementsByOrganizationIdResponse:
+      type: object
+      required:
+        - entitlements
+      properties:
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+
     # WORKSPACE
     WorkspaceId:
       type: string
@@ -9906,8 +10462,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -9943,8 +10500,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         displaySetupWizard:
           type: boolean
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -10175,8 +10733,6 @@ components:
           type: boolean
         feedbackDone:
           type: boolean
-        defaultGeography:
-          type: string
         dataplaneGroupId:
           type: string
           format: uuid
@@ -10313,8 +10869,9 @@ components:
           $ref: "#/components/schemas/NotificationSettings"
         notificationsConfig:
           $ref: "#/components/schemas/NotificationsConfig"
-        defaultGeography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         webhookConfigs:
           type: array
           items:
@@ -10469,23 +11026,6 @@ components:
           type: boolean
         hasDestinations:
           type: boolean
-    WebBackendGeographiesListRequest:
-      type: object
-      required:
-        - organizationId
-      properties:
-        organizationId:
-          type: string
-          format: uuid
-    WebBackendGeographiesListResult:
-      type: object
-      required:
-        - geographies
-      properties:
-        geographies:
-          type: array
-          items:
-            type: string
     # SLUG
     SlugRequestBody:
       type: object
@@ -10500,7 +11040,12 @@ components:
       format: uuid
     DeclarativeManifest:
       x-sdk-component: true
-      x-speakeasy-type-override: any
+      x-speakeasy-type-override: "any"
+      x-speakeasy-terraform-custom-type:
+        imports:
+          - github.com/hashicorp/terraform-plugin-framework-jsontypes/jsontypes
+        schemaType: "jsontypes.NormalizedType{}"
+        valueType: jsontypes.Normalized
       description: Low code CDK manifest JSON object
       type: object
     DeclarativeManifestBaseImageRead:
@@ -11410,10 +11955,17 @@ components:
           format: uuid
         disable_cache:
           type: boolean
-        notifySchemaChange:
-          type: boolean
         priority:
           $ref: "#/components/schemas/WorkloadPriority"
+    DestinationDiscoverSchemaRequestBody:
+      type: object
+      required:
+        - destinationId
+      properties:
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        disableCache:
+          type: boolean
     PostprocessDiscoveredCatalogRequestBody:
       type: object
       required:
@@ -11557,7 +12109,20 @@ components:
           type: string
         configurationHash:
           type: string
-
+    DestinationDiscoverSchemaWriteRequestBody:
+      description: write this requested object to the database
+      type: object
+      required:
+        - catalog
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        destinationId:
+          $ref: "#/components/schemas/DestinationId"
+        connectorVersion:
+          type: string
+        configurationHash:
+          type: string
     SourceDiscoverSchemaRead:
       description: Returns the results of a discover catalog job. If the job was not successful, the catalog field will not be present. jobInfo will aways be present and its status be used to determine if the job was successful or not.
       type: object
@@ -11577,6 +12142,43 @@ components:
           type: boolean
         connectionStatus:
           $ref: "#/components/schemas/ConnectionStatus"
+    DestinationDiscoverRead:
+      type: object
+      required:
+        - catalog
+        - catalogId
+      properties:
+        catalog:
+          $ref: "#/components/schemas/DestinationCatalog"
+        catalogId:
+          type: string
+          format: uuid
+    DestinationCatalog:
+      type: object
+      required:
+        - operations
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/DestinationOperation"
+    DestinationOperation:
+      type: object
+      required:
+        - objectName
+        - syncMode
+        - schema
+      properties:
+        objectName:
+          type: string
+        syncMode:
+          $ref: "#/components/schemas/DestinationSyncMode"
+        schema:
+          $ref: "#/components/schemas/StreamJsonSchema"
+        matchingKeys:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldName"
     SourceAutoPropagateChange:
       description:
         Input of the source propagation, it contains the discovered catalog and a list of diff that need to be applied
@@ -11718,6 +12320,9 @@ components:
         language:
           description: The language the connector is written in
           type: string
+        supportsDataActivation:
+          description: Whether the connector supports data activation
+          type: boolean
     DestinationDefinitionReadList:
       type: object
       required:
@@ -12013,6 +12618,8 @@ components:
           type: boolean
         supportsDataActivation:
           type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
     ResolveActorDefinitionVersionResponse:
       type: object
       required:
@@ -12035,6 +12642,11 @@ components:
           type: boolean
         supportDataActivation:
           type: boolean
+        connectorIPCOptions:
+          $ref: "#/components/schemas/ConnectorIPCOptions"
+    ConnectorIPCOptions:
+      description: Connector IPC Options.
+      type: object
     ActorDefinitionBreakingChange:
       type: object
       required:
@@ -12252,8 +12864,12 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        destinationCatalogId:
           type: string
+          format: uuid
+        dataplaneGroupId:
+          type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12313,8 +12929,12 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        destinationCatalogId:
           type: string
+          format: uuid
+        dataplaneGroupId:
+          type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         nonBreakingChangesPreference:
@@ -12376,8 +12996,12 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        destinationCatalogId:
           type: string
+          format: uuid
+        dataplaneGroupId:
+          type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12448,8 +13072,12 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        destinationCatalogId:
           type: string
+          format: uuid
+        dataplaneGroupId:
+          type: string
+          format: uuid
         notifySchemaChanges:
           type: boolean
         notifySchemaChangesByEmail:
@@ -12511,8 +13139,9 @@ components:
         sourceCatalogId:
           type: string
           format: uuid
-        geography:
+        destinationCatalogId:
           type: string
+          format: uuid
         breakingChange:
           type: boolean
         notifySchemaChanges:
@@ -13148,6 +13777,7 @@ components:
         - source
         - destination
         - customformat
+      x-sdk-component: true
     ConnectionAutoPropagateSchemaChange:
       description: Input of the schema propagation, with the catalog to be propagated and the connection to propagate to
       type: object
@@ -13660,6 +14290,49 @@ components:
           type: string
         organizationLimits:
           $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationInfoRead:
+      type: object
+      description: Limited info about an organization that is safe to expose to organization members.
+      required:
+        - organizationId
+        - organizationName
+        - sso
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        sso:
+          type: boolean
+        billing:
+          type: object
+          required:
+            - paymentStatus
+          properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
+            paymentStatus:
+              type: string
+              enum:
+                - uninitialized
+                - okay
+                - grace_period
+                - disabled
+                - locked
+                - manual
+            accountType:
+              type: string
+              enum:
+                - free
+                - internal
+            gracePeriodEndsAt:
+              type: integer
+              format: int64
     OrganizationLimits:
       type: object
       properties:
@@ -13752,6 +14425,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    ListOrganizationSummariesRequestBody:
+      type: object
+      required:
+        - userId
+        - nameContains
+        - pagination
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        nameContains:
+          type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ListOrganizationSummariesResponse:
+      type: object
+      properties:
+        organizationSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationSummary"
+    OrganizationSummary:
+      type: object
+      required:
+        - organization
+        - workspaces
+        - memberCount
+      properties:
+        organization:
+          $ref: "#/components/schemas/OrganizationRead"
+        workspaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceRead"
+        subscription:
+          $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
+        memberCount:
+          type: integer
     IndividualWorkspaceUsageRead:
       type: object
       required:
@@ -14162,6 +14872,9 @@ components:
         suggested:
           description: Does the connector suggest that this stream be enabled by default?
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to. This is used for data activation destinations.
+          type: string
         includeFiles:
           description: Should the sync move raw files from the source to the destination?
           type: boolean
@@ -16094,10 +16807,14 @@ components:
         catalogId:
           type: string
           format: uuid
+        destinationCatalogId:
+          type: string
+          format: uuid
         catalogDiff:
           $ref: "#/components/schemas/CatalogDiff"
-        geography:
+        dataplaneGroupId:
           type: string
+          format: uuid
         schemaChange:
           $ref: "#/components/schemas/SchemaChange"
         notifySchemaChanges:
@@ -16151,6 +16868,7 @@ components:
         - propagate_columns # automatically propagate the changes on selected streams and continue syncing
         - propagate_fully # automatically propagate the changes including new streams and continue syncing
       type: string
+      x-sdk-component: true
     SchemaChangeBackfillPreference:
       enum:
         - enabled # when a column is added or changed via auto-propagation, the stream will be backfilled
@@ -16178,6 +16896,8 @@ components:
         #- upsert_dedup # TODO chris: SCD Type 1 can be implemented later
         - append_dedup # SCD Type 1 & 2
         - overwrite_dedup
+        - update
+        - soft_delete
     AirbyteArchive:
       type: string
       format: binary
@@ -16593,6 +17313,38 @@ components:
           $ref: "#/components/schemas/WorkspaceId"
         metadata:
           $ref: "#/components/schemas/StreamStatusRateLimitedMetadata"
+    WebappConfigResponse:
+      type: object
+      required:
+        - version
+        - edition
+      properties:
+        version:
+          type: string
+        edition:
+          type: string
+        datadogApplicationId:
+          type: string
+        datadogClientToken:
+          type: string
+        datadogSite:
+          type: string
+        datadogService:
+          type: string
+        datadogEnv:
+          type: string
+        hockeystackApiKey:
+          type: string
+        keycloakBaseUrl:
+          type: string
+        launchdarklyKey:
+          type: string
+        osanoKey:
+          type: string
+        segmentToken:
+          type: string
+        zendeskKey:
+          type: string
     StreamStatusReadList:
       type: object
       properties:
@@ -16943,6 +17695,35 @@ components:
       properties:
         value:
           type: boolean
+    SecretStorageCreateRequestBody:
+      description: Object representing a secret storage create request
+      required:
+        - descriptor
+        - secretStorageType
+        - config
+        - scope
+        - scopeId
+      properties:
+        descriptor:
+          type: string
+        secretStorageType:
+          $ref: "#/components/schemas/SecretStorageType"
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
+        config:
+          $ref: "#/components/schemas/SecretPersistenceConfigurationJson"
+    SecretStorageListRequestBody:
+      description: Request body for listing secret storage
+      required:
+        - scopeType
+        - scopeId
+      properties:
+        scopeType:
+          $ref: "#/components/schemas/ScopeType"
+        scopeId:
+          $ref: "#/components/schemas/ScopeId"
     CreateOrUpdateSecretsPersistenceConfigRequestBody:
       description: Object representing a secret persistence configuration create/update request
       required:
@@ -17031,6 +17812,15 @@ components:
         - vault
         - aws_secrets_manager
         - azure_key_vault
+    SecretStorageReadList:
+      description: Object representing a list of secret storages
+      required:
+        - secretStorages
+      properties:
+        secretStorages:
+          type: array
+          items:
+            $ref: "#/components/schemas/SecretStorageRead"
     SecretStorageRead:
       description: Object representing a secret storage
       required:
@@ -17340,7 +18130,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnum"
@@ -17376,7 +18166,7 @@ components:
           $ref: "#/components/schemas/AirbyteApiConnectionSchedule"
         dataResidency:
           deprecated: true
-          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. This will be supported on Cloud until May 31, at which time all connections will use the dataResidency of their associated workspace.
+          x-speakeasy-deprecation-message: We no longer support modifying dataResidency on Community and Enterprise connections. All connections will use the dataResidency of their associated workspace.
           type: string
         namespaceDefinition:
           $ref: "#/components/schemas/NamespaceDefinitionEnumNoDefault"
@@ -17610,7 +18400,6 @@ components:
         - workspaceId
         - status
         - schedule
-        - dataResidency
         - configurations
         - createdAt
         - tags
@@ -17633,8 +18422,6 @@ components:
           $ref: "#/components/schemas/ConnectionStatusEnum"
         schedule:
           $ref: "#/components/schemas/ConnectionScheduleResponse"
-        dataResidency:
-          type: string
         nonBreakingSchemaUpdatesBehavior:
           $ref: "#/components/schemas/NonBreakingSchemaUpdatesBehaviorEnum"
         namespaceDefinition:
@@ -18232,7 +19019,6 @@ components:
           - schedule:
               scheduleType: manual
           - status: active
-          - dataResidency: auto
       x-sdk-component: true
     SourcesResponse:
       title: Root Type for SourcesResponse
@@ -18306,8 +19092,6 @@ components:
       properties:
         name:
           type: string
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18315,11 +19099,8 @@ components:
       type: object
       x-sdk-component: true
       required:
-        - name
         - manifest
       properties:
-        version:
-          $ref: "#/components/schemas/ManifestVersion"
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
 
@@ -18357,6 +19138,7 @@ components:
         manifest:
           $ref: "#/components/schemas/DeclarativeManifest"
         version:
+          x-speakeasy-terraform-ignore: true
           $ref: "#/components/schemas/ManifestVersion"
 
     CreateDefinitionRequest:
@@ -18492,6 +19274,9 @@ components:
         includeFiles:
           description: Whether to move raw files from the source to the destination during the sync.
           type: boolean
+        destinationObjectName:
+          description: The name of the destination object that this stream will be written to, used for data activation destinations.
+          type: string
         selectedFields:
           description: By default (if not provided in the request) all fields will be synced. Otherwise, only the fields in this list will be synced.
           $ref: "#/components/schemas/SelectedFields"
@@ -18553,8 +19338,12 @@ components:
         - full_refresh_overwrite
         - full_refresh_overwrite_deduped
         - full_refresh_append
+        - full_refresh_update
+        - full_refresh_soft_delete
         - incremental_append
         - incremental_deduped_history
+        - incremental_update
+        - incremental_soft_delete
       x-sdk-component: true
     ActorTypeEnum:
       description: Whether you're setting this override for a source or destination
@@ -18677,9 +19466,6 @@ components:
         - name
         - enabled
       properties:
-        organization_id:
-          type: string
-          format: UUID
         dataplane_group_id:
           type: string
           format: UUID
@@ -18687,6 +19473,9 @@ components:
           type: string
         enabled:
           type: boolean
+        instanceScope:
+          type: boolean
+          default: false
     DataplaneCreateResponse:
       type: object
       required:
@@ -19059,6 +19848,10 @@ components:
           format: uuid
         configTemplateSpec:
           $ref: "#/components/schemas/SourceDefinitionSpecification"
+        advancedAuth:
+          $ref: "#/components/schemas/AdvancedAuth"
+        advancedAuthGlobalCredentialsAvailable:
+          type: boolean
     ConfigTemplatePublicRead:
       type: object
       required:
@@ -19287,13 +20080,12 @@ components:
         - destinationConfiguration
         - organizationId
         - destinationName
+        - destinationActorDefinitionId
       properties:
         organizationId:
           type: string
           format: uuid
         destinationName:
-          type: string
-        destinationType:
           type: string
         destinationConfiguration:
           $ref: "#/components/schemas/DestinationConfiguration"
@@ -19314,8 +20106,6 @@ components:
           $ref: "#/components/schemas/ResourceRequirements"
         nonBreakingChangesPreference:
           $ref: "#/components/schemas/NonBreakingChangesPreference"
-        defaultGeography:
-          type: string
         syncOnCreate:
           type: boolean
           default: true
@@ -19328,6 +20118,44 @@ components:
         id:
           type: string
           format: uuid
+      x-sdk-component: true
+
+    ServiceAccountTokenRequestBody:
+      required:
+        - service_account_id
+        - secret
+      type: object
+      properties:
+        service_account_id:
+          type: string
+          format: uuid
+        secret:
+          type: string
+
+    EmbeddedOrganizationsList:
+      required:
+        - organizations
+      properties:
+        organizations:
+          type: array
+          items:
+            $ref: "#/components/schemas/EmbeddedOrganizationListItem"
+      x-sdk-component: true
+
+    EmbeddedOrganizationListItem:
+      type: object
+      required:
+        - organizationId
+        - organizationName
+        - permission
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        permission:
+          $ref: "#/components/schemas/PermissionType"
       x-sdk-component: true
 
   responses:
@@ -19363,5 +20191,6 @@ components:
         the `redirect_url`. If a user is redirected to this URL, they'll be prompted by the identity
         provider to authenticate.
       x-sdk-component: true
+
 security:
   - {}

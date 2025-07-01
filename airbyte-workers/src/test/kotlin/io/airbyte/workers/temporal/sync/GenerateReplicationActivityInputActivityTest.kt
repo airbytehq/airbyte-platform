@@ -21,6 +21,7 @@ import io.airbyte.featureflag.TestClient
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig
 import io.airbyte.persistence.job.models.JobRunConfig
 import io.airbyte.workers.models.RefreshSchemaActivityOutput
+import io.airbyte.workers.models.ReplicationFeatureFlags
 import io.mockk.every
 import io.mockk.mockk
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -42,6 +43,7 @@ internal class GenerateReplicationActivityInputActivityTest {
     val resolveActorDefinitionVersionResponse =
       mockk<ResolveActorDefinitionVersionResponse> {
         every { supportRefreshes } returns destinationSupportRefreshes
+        every { connectorIPCOptions } returns null
       }
     val actorDefinitionVersionApiClient =
       mockk<ActorDefinitionVersionApi> {
@@ -71,7 +73,7 @@ internal class GenerateReplicationActivityInputActivityTest {
       }
     val connectionUUID = UUID.randomUUID()
     val destinationConfigurationJson = Jsons.jsonNode("{}")
-    val destinationDockerImage = "airbyte/test:1.2"
+    val image = "airbyte/test:1.2"
     val destinationUUID = UUID.randomUUID()
     val namespaceDefinitionType = JobSyncConfig.NamespaceDefinitionType.SOURCE
     val namespaceFormatString = "test_format"
@@ -94,11 +96,14 @@ internal class GenerateReplicationActivityInputActivityTest {
 
     val destinationLauncherConfig =
       mockk<IntegrationLauncherConfig> {
-        every { dockerImage } returns destinationDockerImage
+        every { dockerImage } returns image
       }
     val jobRunConfig = mockk<JobRunConfig>()
     val refreshSchemaOutput = mockk<RefreshSchemaActivityOutput>()
-    val sourceLauncherConfig = mockk<IntegrationLauncherConfig>()
+    val sourceLauncherConfig =
+      mockk<IntegrationLauncherConfig> {
+        every { dockerImage } returns image
+      }
     val syncInput =
       mockk<StandardSyncInput> {
         every { connectionContext } returns connectionCtx
@@ -199,7 +204,7 @@ internal class GenerateReplicationActivityInputActivityTest {
       }
     val connectionUUID = UUID.randomUUID()
     val destinationConfigurationJson = Jsons.jsonNode("{}")
-    val destinationDockerImage = "airbyte/test:1.2"
+    val image = "airbyte/test:1.2"
     val destinationUUID = UUID.randomUUID()
     val namespaceDefinitionType = JobSyncConfig.NamespaceDefinitionType.SOURCE
     val namespaceFormatString = "test_format"
@@ -223,11 +228,14 @@ internal class GenerateReplicationActivityInputActivityTest {
 
     val destinationLauncherConfig =
       mockk<IntegrationLauncherConfig> {
-        every { dockerImage } returns destinationDockerImage
+        every { dockerImage } returns image
       }
     val jobRunConfig = mockk<JobRunConfig>()
     val refreshSchemaOutput = mockk<RefreshSchemaActivityOutput>()
-    val sourceLauncherConfig = mockk<IntegrationLauncherConfig>()
+    val sourceLauncherConfig =
+      mockk<IntegrationLauncherConfig> {
+        every { dockerImage } returns image
+      }
     val syncInput =
       mockk<StandardSyncInput> {
         every { connectionContext } returns connectionCtx
@@ -303,6 +311,7 @@ internal class GenerateReplicationActivityInputActivityTest {
     val resolveActorDefinitionVersionResponse =
       mockk<ResolveActorDefinitionVersionResponse> {
         every { supportRefreshes } returns destinationSupportRefreshes
+        every { connectorIPCOptions } returns null
       }
     val actorDefinitionVersionApiClient =
       mockk<ActorDefinitionVersionApi> {
@@ -328,7 +337,7 @@ internal class GenerateReplicationActivityInputActivityTest {
       }
     val connectionUUID = UUID.randomUUID()
     val destinationConfigurationJson = Jsons.jsonNode("{}")
-    val destinationDockerImage = "airbyte/test:1.2"
+    val image = "airbyte/test:1.2"
     val destinationUUID = UUID.randomUUID()
     val namespaceDefinitionType = JobSyncConfig.NamespaceDefinitionType.SOURCE
     val namespaceFormatString = "test_format"
@@ -352,11 +361,14 @@ internal class GenerateReplicationActivityInputActivityTest {
 
     val destinationLauncherConfig =
       mockk<IntegrationLauncherConfig> {
-        every { dockerImage } returns destinationDockerImage
+        every { dockerImage } returns image
       }
     val jobRunConfig = mockk<JobRunConfig>()
     val refreshSchemaOutput = mockk<RefreshSchemaActivityOutput>()
-    val sourceLauncherConfig = mockk<IntegrationLauncherConfig>()
+    val sourceLauncherConfig =
+      mockk<IntegrationLauncherConfig> {
+        every { dockerImage } returns image
+      }
     val syncInput =
       mockk<StandardSyncInput> {
         every { connectionContext } returns connectionCtx

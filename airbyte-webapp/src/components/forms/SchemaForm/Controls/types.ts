@@ -11,6 +11,8 @@ export interface BaseControlProps {
   containerControlClassName?: string;
   onlyShowErrorIfTouched?: boolean;
   placeholder?: string;
+  "data-field-path"?: string;
+  disabled?: boolean;
 }
 
 export type OverrideByPath = Record<string, ReactElement | null>;

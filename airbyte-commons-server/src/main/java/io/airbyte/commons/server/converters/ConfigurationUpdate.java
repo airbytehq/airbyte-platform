@@ -14,6 +14,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.persistence.ConfigNotFoundException;
 import io.airbyte.config.secrets.JsonSecretsProcessor;
+import io.airbyte.config.secrets.SecretsHelpers;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.protocol.models.v0.ConnectorSpecification;
@@ -65,13 +66,13 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource;
     try {
       persistedSource = sourceService.getSourceConnection(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedSource.setName(sourceName);
     // get spec
@@ -101,14 +102,14 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource = sourceService.getSourceConnection(sourceId);
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
 
     // Merge update configuration into the persisted configuration
     final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedSource.getConfiguration());
-    final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedSource.getConfiguration(), mergeConfiguration);
+    final JsonNode updatedConfiguration = SecretsHelpers.INSTANCE.mergeNodesExceptForSecrets(persistedSource.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedSource).withConfiguration(updatedConfiguration);
   }
@@ -126,13 +127,13 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
       persistedDestination = destinationService.getDestinationConnection(destinationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedDestination.setName(destName);
     // get spec
@@ -168,14 +169,15 @@ public class ConfigurationUpdate {
     final DestinationConnection persistedDestination;
     try {
       persistedDestination = destinationService.getDestinationConnection(destinationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedDestination.setName(Optional.ofNullable(destinationName).orElse(persistedDestination.getName()));
 
     // Merge update configuration into the persisted configuration
     final JsonNode mergeConfiguration = Optional.ofNullable(newConfiguration).orElse(persistedDestination.getConfiguration());
-    final JsonNode updatedConfiguration = Jsons.mergeNodes(persistedDestination.getConfiguration(), mergeConfiguration);
+    final JsonNode updatedConfiguration =
+        SecretsHelpers.INSTANCE.mergeNodesExceptForSecrets(persistedDestination.getConfiguration(), mergeConfiguration);
 
     return Jsons.clone(persistedDestination).withConfiguration(updatedConfiguration);
   }

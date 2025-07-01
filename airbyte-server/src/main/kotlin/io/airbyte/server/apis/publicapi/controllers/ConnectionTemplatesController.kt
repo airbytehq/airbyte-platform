@@ -5,14 +5,13 @@
 package io.airbyte.server.apis.publicapi.controllers
 
 import com.google.common.annotations.VisibleForTesting
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Cron
 import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.ConnectionTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
@@ -42,7 +41,6 @@ import java.util.UUID
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class ConnectionTemplatesController(
   private val currentUserService: CurrentUserService,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
   private val connectionTemplateService: ConnectionTemplateService,
@@ -53,6 +51,7 @@ open class ConnectionTemplatesController(
     val DEFAULT_CRON_SCHEDULE = ScheduleData().withCron(Cron().withCronExpression("0 0 * * * ?").withCronTimeZone("UTC"))
   }
 
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun publicCreateConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): Response =
     wrap {
       createConnectionTemplate(connectionTemplateCreateRequestBody).ok()
@@ -61,38 +60,24 @@ open class ConnectionTemplatesController(
   @VisibleForTesting
   fun createConnectionTemplate(connectionTemplateCreateRequestBody: ConnectionTemplateCreateRequestBody): ConnectionTemplateCreateResponse {
     // FIXME: we should optionally create the destinations and connections in existing workspaces https://github.com/airbytehq/airbyte-internal-issues/issues/12813
-    val userId: UUID = currentUserService.currentUser.userId
     val organizationId = OrganizationId(connectionTemplateCreateRequestBody.organizationId)
-
-    apiAuthorizationHelper.isUserOrganizationAdminOrThrow(userId, organizationId.value)
 
     licenseEntitlementChecker.ensureEntitled(
       organizationId.value,
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS,
     )
+    licenseEntitlementChecker.ensureEntitled(
+      organizationId.value,
+      Entitlement.DESTINATION_CONNECTOR,
+      connectionTemplateCreateRequestBody.destinationActorDefinitionId,
+    )
 
-    if (connectionTemplateCreateRequestBody.destinationType == null && connectionTemplateCreateRequestBody.destinationActorDefinitionId == null) {
-      throw IllegalArgumentException("Either destinationType or destinationActorDefinitionId must be provided.")
-    }
-
-    if (connectionTemplateCreateRequestBody.destinationType != null && connectionTemplateCreateRequestBody.destinationActorDefinitionId != null) {
-      throw IllegalArgumentException("Only one of destinationType or destinationActorDefinitionId can be provided.")
-    }
-
-    val destinationIdOrType =
-      if (connectionTemplateCreateRequestBody.destinationActorDefinitionId != null) {
-        ActorDefinitionIdOrType.DefinitionId(ActorDefinitionId(connectionTemplateCreateRequestBody.destinationActorDefinitionId!!))
-      } else {
-        ActorDefinitionIdOrType.Type(connectionTemplateCreateRequestBody.destinationType!!)
-      }
-
-    // FIXME this endpoint should check for entitlements on the destination type https://github.com/airbytehq/airbyte-internal-issues/issues/12814
     val namespaceDefinitionType = convertNamespaceDefinitionType(connectionTemplateCreateRequestBody.namespaceDefinitionType)
     val connectionTemplate =
       connectionTemplateService.createTemplate(
         organizationId,
         connectionTemplateCreateRequestBody.destinationName,
-        destinationIdOrType,
+        ActorDefinitionId(connectionTemplateCreateRequestBody.destinationActorDefinitionId),
         connectionTemplateCreateRequestBody.destinationConfiguration,
         namespaceDefinitionType,
         connectionTemplateCreateRequestBody.namespaceFormat,
@@ -100,7 +85,6 @@ open class ConnectionTemplatesController(
         convertScheduleData(connectionTemplateCreateRequestBody.schedule),
         convertResourceRequirements(connectionTemplateCreateRequestBody.resourceRequirements),
         convertNonBreakingChangesPreference(connectionTemplateCreateRequestBody.nonBreakingChangesPreference),
-        connectionTemplateCreateRequestBody.defaultGeography,
         connectionTemplateCreateRequestBody.syncOnCreate ?: true,
       )
 

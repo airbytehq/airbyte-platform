@@ -11,7 +11,7 @@ import io.airbyte.workers.input.getOrchestratorResourceReqs
 import io.airbyte.workers.input.getSourceResourceReqs
 import io.airbyte.workers.models.CheckConnectionInput
 import io.airbyte.workers.models.DiscoverCatalogInput
-import io.airbyte.workers.pod.ResourceConversionUtils
+import io.airbyte.workload.launcher.pods.ResourceConversionUtils
 import jakarta.inject.Named
 import jakarta.inject.Singleton
 import io.airbyte.config.ResourceRequirements as AirbyteResourceRequirements

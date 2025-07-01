@@ -25,20 +25,20 @@ import io.airbyte.api.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.commons.auth.WorkspaceAuthRole
+import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.constants.AirbyteCatalogConstants
 import io.airbyte.commons.json.Jsons
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.ConnectorBuilderProjectsHandler
 import io.airbyte.commons.server.handlers.DeclarativeSourceDefinitionsHandler
 import io.airbyte.commons.server.handlers.DestinationDefinitionsHandler
 import io.airbyte.commons.server.handlers.SourceDefinitionsHandler
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DeclarativeManifest
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ConnectorBuilderService
 import io.airbyte.publicApi.server.generated.apis.PublicDeclarativeSourceDefinitionsApi
 import io.airbyte.publicApi.server.generated.apis.PublicDestinationDefinitionsApi
@@ -68,7 +68,7 @@ import java.util.UUID
 @Controller(API_PATH)
 @Secured(SecurityRule.IS_AUTHENTICATED)
 class DefinitionsController(
-  val apiAuthorizationHelper: ApiAuthorizationHelper,
+  val roleResolver: RoleResolver,
   val currentUserService: CurrentUserService,
   val sourceDefinitionsHandler: SourceDefinitionsHandler,
   val destinationDefinitionsHandler: DestinationDefinitionsHandler,
@@ -107,7 +107,7 @@ class DefinitionsController(
 
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
-    // The "manfiest" field contains the "spec", but it has a snake_case connection_specification
+    // The "manifest" field contains the "spec", but it has a snake_case connection_specification
     // and the platform code needs camelCase connectionSpecification.
     val spec = Jsons.clone(manifest.get("spec")) as ObjectNode
     spec.replace("connectionSpecification", spec.get("connection_specification"))
@@ -133,7 +133,7 @@ class DefinitionsController(
             .manifest(manifest)
             .spec(spec)
             .description("")
-            .version(request.version ?: 1),
+            .version(1),
         ),
     )
 
@@ -172,7 +172,7 @@ class DefinitionsController(
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     // Don't allow deleting declarative source definitions via this endpoint.
     if (def.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
     ensureUserCanWrite(workspaceId, def.custom)
 
@@ -189,7 +189,7 @@ class DefinitionsController(
     val def = sourceDefinitionsHandler.getSourceDefinition(definitionId, false)
     val proj = connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(definitionId)
     if (proj.isEmpty) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
     val projId = proj.get()
 
@@ -229,12 +229,12 @@ class DefinitionsController(
 
     val def = defs.firstOrNull { it.sourceDefinitionId == definitionId }
     if (def == null) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
 
     // Don't allow reading declarative source definitions via this endpoint.
     if (def.dockerRepository == AirbyteCatalogConstants.AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
 
     def.toPublicApiModel().ok()
@@ -268,7 +268,7 @@ class DefinitionsController(
 
     val def = defs.firstOrNull { it.destinationDefinitionId == definitionId }
     if (def == null) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_DESTINATION_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_DESTINATION_DEFINITION, definitionId.toString())
     }
 
     def.toPublicApiModel().ok()
@@ -352,11 +352,18 @@ class DefinitionsController(
   ) = wrap {
     val proj = connectorBuilderService.getConnectorBuilderProjectIdForActorDefinitionId(definitionId)
     if (proj.isEmpty) {
-      throw ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, definitionId.toString())
+      throw ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, definitionId.toString())
     }
     val projId = proj.get()
 
     ensureUserCanWrite(workspaceId)
+
+    val maxVersion =
+      connectorBuilderService
+        .getDeclarativeManifestsByActorDefinitionId(definitionId)
+        .toList()
+        .maxOf { it.version }
+    val nextVersion = maxVersion + 1
 
     val manifest: JsonNode = ObjectMapper().valueToTree(request.manifest)
 
@@ -375,7 +382,7 @@ class DefinitionsController(
             .manifest(manifest)
             .spec(spec)
             .description("")
-            .version(request.version),
+            .version(nextVersion),
         ),
     )
 
@@ -384,7 +391,7 @@ class DefinitionsController(
         ConnectorBuilderProjectIdWithWorkspaceId()
           .workspaceId(workspaceId)
           .builderProjectId(projId)
-          .version(request.version),
+          .version(nextVersion),
       ).toPublicApi()
       .ok()
   }
@@ -437,11 +444,11 @@ class DefinitionsController(
   }
 
   private fun ensureUserCanRead(workspaceId: UUID) {
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.WORKSPACE,
-      listOf(workspaceId.toString()),
-      setOf(WorkspaceAuthRole.WORKSPACE_READER),
-    )
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_READER)
   }
 
   private fun ensureUserCanWrite(
@@ -454,11 +461,11 @@ class DefinitionsController(
       )
     }
 
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      Scope.WORKSPACE,
-      listOf(workspaceId.toString()),
-      setOf(WorkspaceAuthRole.WORKSPACE_EDITOR),
-    )
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.WORKSPACE_ID, workspaceId)
+      .requireRole(AuthRoleConstants.WORKSPACE_EDITOR)
   }
 }
 

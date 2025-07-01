@@ -5,7 +5,6 @@
 package io.airbyte.data.services.impls.data
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.airbyte.commons.constants.GEOGRAPHY_AUTO
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.ConnectionTemplate
 import io.airbyte.config.Cron
@@ -14,7 +13,6 @@ import io.airbyte.config.ScheduleData
 import io.airbyte.config.StandardSync.NonBreakingChangesPreference
 import io.airbyte.config.StandardSync.ScheduleType
 import io.airbyte.data.repositories.ConnectionTemplateRepository
-import io.airbyte.data.services.ActorDefinitionIdOrType
 import io.airbyte.data.services.impls.data.mappers.EntityConnectionTemplate
 import io.airbyte.db.instance.configs.jooq.generated.enums.NonBreakingChangePreferenceType
 import io.airbyte.domain.models.ActorDefinitionId
@@ -40,7 +38,6 @@ class ConnectionTemplateServiceDataImplTest {
   private val namespaceDefinitionType = NamespaceDefinitionType.DESTINATION
   private val ignoreNonBreakingChangesPreference = NonBreakingChangesPreference.IGNORE
   private val connectionTemplateId = UUID.randomUUID()
-  private val defaultGeography = GEOGRAPHY_AUTO
   private val cronScheduleData = ScheduleData().withCron(Cron().withCronExpression("0 0 * * *").withCronTimeZone("UTC"))
   private val syncOnCreate = true
 
@@ -67,7 +64,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -79,7 +75,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,
@@ -87,7 +83,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -105,7 +100,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = null,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = syncOnCreate,
       )
 
@@ -132,7 +126,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -144,7 +137,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,
@@ -152,7 +145,6 @@ class ConnectionTemplateServiceDataImplTest {
         null,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -170,7 +162,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = null,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = syncOnCreate,
       )
 
@@ -197,7 +188,6 @@ class ConnectionTemplateServiceDataImplTest {
         Jsons.jsonNode(cronScheduleData),
         null,
         NonBreakingChangePreferenceType.valueOf(ignoreNonBreakingChangesPreference.value()),
-        defaultGeography,
         syncOnCreate,
       )
 
@@ -209,7 +199,7 @@ class ConnectionTemplateServiceDataImplTest {
       service.createTemplate(
         organizationId,
         destinationName,
-        ActorDefinitionIdOrType.DefinitionId(destinationDefinitionId),
+        destinationDefinitionId,
         destinationConfig,
         namespaceDefinitionType,
         null,
@@ -217,7 +207,6 @@ class ConnectionTemplateServiceDataImplTest {
         cronScheduleData,
         null,
         ignoreNonBreakingChangesPreference,
-        defaultGeography,
         false,
       )
 
@@ -235,7 +224,6 @@ class ConnectionTemplateServiceDataImplTest {
         scheduleData = cronScheduleData,
         resourceRequirements = null,
         nonBreakingChangesPreference = ignoreNonBreakingChangesPreference,
-        defaultGeography = defaultGeography,
         syncOnCreate = false,
       )
 

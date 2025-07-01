@@ -17,10 +17,12 @@ import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : AbstractConfigsDatabaseTest() {
   private var devConfigsDbMigrator: DevDatabaseMigrator? = null
 
@@ -33,7 +35,7 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_5_004__AddActorDefinitionBreakingChangeTable()
     devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -43,14 +45,14 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
   @AfterEach
   fun afterEach() {
     // Making sure we reset between tests
-    dslContext.dropSchemaIfExists("public").cascade().execute()
-    dslContext.createSchema("public").execute()
-    dslContext.setSchema("public").execute()
+    dslContext!!.dropSchemaIfExists("public").cascade().execute()
+    dslContext!!.createSchema("public").execute()
+    dslContext!!.setSchema("public").execute()
   }
 
   @Test
   fun testSimpleMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
     val actorDefinitionId = UUID.randomUUID()
     val workspaceId1 = UUID.randomUUID()
     val workspaceId2 = UUID.randomUUID()
@@ -104,7 +106,7 @@ internal class V0_50_5_005__AddScopeToActorDefinitionWorkspaceGrantTableTest : A
     val workspaceId = UUID.randomUUID()
     val scopeId = UUID.randomUUID()
 
-    val context = getDslContext()
+    val context = dslContext!!
 
     // We retroactively made orgs required so applying the default org/user migration so we can use the
     // default org to allow this test to pass

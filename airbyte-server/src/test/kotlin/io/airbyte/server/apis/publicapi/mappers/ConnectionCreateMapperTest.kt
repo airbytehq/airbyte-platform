@@ -10,7 +10,7 @@ import io.airbyte.api.model.generated.ConnectionScheduleType
 import io.airbyte.api.model.generated.ConnectionStatus
 import io.airbyte.api.model.generated.NamespaceDefinitionType
 import io.airbyte.api.model.generated.NonBreakingChangesPreference
-import io.airbyte.commons.constants.GEOGRAPHY_US
+import io.airbyte.commons.US_DATAPLANE_GROUP
 import io.airbyte.publicApi.server.generated.models.AirbyteApiConnectionSchedule
 import io.airbyte.publicApi.server.generated.models.ConnectionCreateRequest
 import io.airbyte.publicApi.server.generated.models.ConnectionStatusEnum
@@ -39,7 +39,7 @@ class ConnectionCreateMapperTest {
         namespaceDefinition = NamespaceDefinitionEnum.DESTINATION,
         namespaceFormat = "test",
         prefix = "test",
-        dataResidency = GEOGRAPHY_US,
+        dataResidency = US_DATAPLANE_GROUP,
         schedule =
           AirbyteApiConnectionSchedule(
             scheduleType = ScheduleTypeEnum.CRON,
@@ -57,7 +57,6 @@ class ConnectionCreateMapperTest {
         this.namespaceDefinition = NamespaceDefinitionType.DESTINATION
         this.namespaceFormat = "test"
         this.prefix = "test"
-        this.geography = GEOGRAPHY_US
         this.scheduleType = ConnectionScheduleType.CRON
         this.sourceCatalogId = catalogId
         this.syncCatalog = catalog

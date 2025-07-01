@@ -6,6 +6,14 @@ package io.airbyte.connectorbuilder.controllers
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.airbyte.commons.protocol.AirbyteMessageMigrator
+import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
+import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
+import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer
+import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer
+import io.airbyte.commons.resources.Resources
+import io.airbyte.commons.version.AirbyteProtocolVersion
 import io.airbyte.connectorbuilder.api.model.generated.ResolveManifestRequestBody
 import io.airbyte.connectorbuilder.api.model.generated.StreamReadRequestBody
 import io.airbyte.connectorbuilder.commandrunner.MockSynchronousPythonCdkCommandRunner
@@ -23,6 +31,7 @@ import io.airbyte.connectorbuilder.handlers.ResolveManifestHandler
 import io.airbyte.connectorbuilder.handlers.StreamHandler
 import io.airbyte.connectorbuilder.requester.AirbyteCdkRequesterImpl
 import io.airbyte.connectorbuilder.templates.ContributionTemplates
+import io.airbyte.workers.helper.GsonPksExtractor
 import io.airbyte.workers.internal.AirbyteStreamFactory
 import io.airbyte.workers.internal.VersionedAirbyteStreamFactory
 import io.mockk.mockk
@@ -34,11 +43,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayInputStream
-import java.io.File
 import java.io.InputStream
 import java.io.OutputStream
 import java.nio.charset.StandardCharsets
-import java.nio.file.Files
+import java.util.Optional
 
 internal class ConnectorBuilderControllerIntegrationTest {
   private lateinit var healthHandler: HealthHandler
@@ -51,7 +59,30 @@ internal class ConnectorBuilderControllerIntegrationTest {
   fun setup() {
     healthHandler = mockk()
     writer = MockAirbyteFileWriterImpl()
-    streamFactory = VersionedAirbyteStreamFactory.noMigrationVersionedAirbyteStreamFactory(mockk(relaxed = true))
+
+    val serDeProvider =
+      AirbyteMessageSerDeProvider(
+        listOf(AirbyteMessageV0Deserializer()),
+        listOf(AirbyteMessageV0Serializer()),
+      )
+    serDeProvider.initialize()
+    val airbyteMessageMigrator = AirbyteMessageMigrator(listOf())
+    airbyteMessageMigrator.initialize()
+    val configuredAirbyteCatalogMigrator = ConfiguredAirbyteCatalogMigrator(listOf())
+    configuredAirbyteCatalogMigrator.initialize()
+    val migratorFactory = AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator)
+
+    streamFactory =
+      VersionedAirbyteStreamFactory<Any>(
+        serDeProvider = serDeProvider,
+        migratorFactory = migratorFactory,
+        protocolVersion = AirbyteProtocolVersion.DEFAULT_AIRBYTE_PROTOCOL_VERSION,
+        connectionId = Optional.empty(),
+        configuredAirbyteCatalog = Optional.empty(),
+        invalidLineFailureConfiguration = VersionedAirbyteStreamFactory.InvalidLineFailureConfiguration(false),
+        gsonPksExtractor = GsonPksExtractor(),
+        metricClient = mockk(relaxed = true),
+      )
     contributionTemplates = ContributionTemplates()
     assistProxyHandler = mockk()
   }
@@ -65,13 +96,13 @@ internal class ConnectorBuilderControllerIntegrationTest {
   ): ConnectorBuilderController {
     val commandRunner: SynchronousCdkCommandRunner =
       MockSynchronousPythonCdkCommandRunner(
-        writer,
-        streamFactory,
-        shouldThrow,
-        exitCode,
-        inputStream,
-        errorStream,
-        outputStream,
+        writer = writer,
+        streamFactory = streamFactory,
+        shouldThrow = shouldThrow,
+        exitCode = exitCode,
+        inputStream = inputStream,
+        errorStream = errorStream,
+        outputStream = outputStream,
       )
     val requester = AirbyteCdkRequesterImpl(commandRunner)
     return ConnectorBuilderController(
@@ -290,17 +321,13 @@ internal class ConnectorBuilderControllerIntegrationTest {
     @BeforeAll
     @JvmStatic
     fun setUpClass() {
-      val relativeDir = "src/test/java/io/airbyte/connectorbuilder/fixtures"
-      validManifest = ObjectMapper().readTree(readContents("$relativeDir/ValidManifest.json"))
-      streamRead = readContents("$relativeDir/RecordStreamRead.json")
-      recordManifestResolve = readContents("$relativeDir/RecordManifestResolve.json")
-      traceManifestResolve = readContents("$relativeDir/TraceManifestResolve.json")
-      cdkException = readContents("$relativeDir/CdkException.txt")
+      validManifest = ObjectMapper().readTree(readContents("fixtures/ValidManifest.json"))
+      streamRead = readContents("fixtures/RecordStreamRead.json")
+      recordManifestResolve = readContents("fixtures/RecordManifestResolve.json")
+      traceManifestResolve = readContents("fixtures/TraceManifestResolve.json")
+      cdkException = readContents("fixtures/CdkException.txt")
     }
 
-    fun readContents(filepath: String): String {
-      val file = File(filepath)
-      return Files.readString(file.toPath()).replace("\\R".toRegex(), "")
-    }
+    fun readContents(filepath: String): String = Resources.read(filepath).replace("\\R".toRegex(), "")
   }
 }

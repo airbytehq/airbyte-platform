@@ -167,7 +167,7 @@ public class StatsAggregationHelper {
 
     if (hydrateAggregatedStats) {
       Map<Long, Map<StreamNameAndNamespace, SyncMode>> jobToStreamSyncMode = jobs.stream()
-          .collect(Collectors.toMap(Job::getId, JobHistoryHandler::getStreamsToSyncMode));
+          .collect(Collectors.toMap(j -> j.id, JobHistoryHandler::getStreamsToSyncMode));
 
       log.debug("Job to stream sync mode: {}", jobToStreamSyncMode);
       jobReads.forEach(job -> {

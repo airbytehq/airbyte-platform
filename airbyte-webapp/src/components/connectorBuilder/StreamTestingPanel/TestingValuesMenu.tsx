@@ -21,6 +21,7 @@ import { useLocalStorage } from "core/utils/useLocalStorage";
 import {
   useConnectorBuilderFormManagementState,
   useConnectorBuilderFormState,
+  useConnectorBuilderPermission,
   useConnectorBuilderTestRead,
 } from "services/connectorBuilder/ConnectorBuilderStateService";
 import { ConnectorForm } from "views/Connector/ConnectorForm";
@@ -33,10 +34,8 @@ import { applyTestingValuesDefaults } from "../useUpdateTestingValuesOnChange";
 export const TestingValuesMenu: React.FC = () => {
   const { setValue } = useFormContext();
   const mode = useBuilderWatch("mode");
-  const {
-    jsonManifest: { spec },
-    permission,
-  } = useConnectorBuilderFormState();
+  const spec = useBuilderWatch("manifest.spec");
+  const permission = useConnectorBuilderPermission();
   const { isTestingValuesInputOpen: isOpen, setTestingValuesInputOpen: setIsOpen } =
     useConnectorBuilderFormManagementState();
   const {
@@ -214,9 +213,7 @@ const ResetButton: React.FC<{
 export function useTestingValuesErrors(): number {
   const { formatMessage } = useIntl();
   const testingValues = useBuilderWatch("testingValues");
-  const {
-    jsonManifest: { spec },
-  } = useConnectorBuilderFormState();
+  const spec = useBuilderWatch("manifest.spec");
 
   return useMemo(() => {
     try {

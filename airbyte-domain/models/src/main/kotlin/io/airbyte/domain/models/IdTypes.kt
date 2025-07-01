@@ -17,6 +17,11 @@ value class ActorDefinitionId(
 )
 
 @JvmInline
+value class CommandId(
+  val value: String,
+)
+
+@JvmInline
 value class ConnectionId(
   val value: UUID,
 )
@@ -53,5 +58,10 @@ value class UserId(
 
 @JvmInline
 value class ActorId(
+  val value: UUID,
+)
+
+@JvmInline
+value class DestinationCatalogId(
   val value: UUID,
 )

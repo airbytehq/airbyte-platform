@@ -8,12 +8,11 @@ import io.airbyte.api.model.generated.PermissionIdRequestBody
 import io.airbyte.api.model.generated.PermissionUpdate
 import io.airbyte.api.problems.model.generated.ProblemMessageData
 import io.airbyte.api.problems.throwable.generated.BadRequestProblem
-import io.airbyte.commons.auth.OrganizationAuthRole
-import io.airbyte.commons.auth.WorkspaceAuthRole
-import io.airbyte.commons.server.authorization.ApiAuthorizationHelper
-import io.airbyte.commons.server.authorization.Scope
+import io.airbyte.commons.auth.roles.AuthRoleConstants
+import io.airbyte.commons.server.authorization.RoleResolver
 import io.airbyte.commons.server.handlers.PermissionHandler
 import io.airbyte.commons.server.scheduling.AirbyteTaskExecutors
+import io.airbyte.commons.server.support.AuthenticationId
 import io.airbyte.commons.server.support.CurrentUserService
 import io.airbyte.config.Permission
 import io.airbyte.publicApi.server.generated.apis.PublicPermissionsApi
@@ -49,7 +48,7 @@ private val log = KotlinLogging.logger {}
 @Secured(SecurityRule.IS_AUTHENTICATED)
 open class PermissionsController(
   private val trackingHelper: TrackingHelper,
-  private val apiAuthorizationHelper: ApiAuthorizationHelper,
+  private val roleResolver: RoleResolver,
   private val currentUserService: CurrentUserService,
   private val permissionHandler: PermissionHandler,
 ) : PublicPermissionsApi {
@@ -60,19 +59,19 @@ open class PermissionsController(
     val organizationId: UUID? = permissionCreateRequest.organizationId
     // auth check before processing the request
     if (workspaceId != null) { // adding a workspace level permission
-      apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-        // current user should have workspace_admin or a higher role
-        Scope.WORKSPACE,
-        listOf(workspaceId.toString()),
-        setOf(WorkspaceAuthRole.WORKSPACE_ADMIN),
-      )
+      // current user should have workspace_admin or a higher role
+      roleResolver
+        .newRequest()
+        .withCurrentUser()
+        .withRef(AuthenticationId.WORKSPACE_ID, workspaceId.toString())
+        .requireRole(AuthRoleConstants.WORKSPACE_ADMIN)
     } else if (organizationId != null) { // adding an organization level permission
-      apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-        // current user should have organization_admin or a higher role
-        Scope.ORGANIZATION,
-        listOf(organizationId.toString()),
-        setOf(OrganizationAuthRole.ORGANIZATION_ADMIN),
-      )
+      // current user should have organization_admin or a higher role
+      roleResolver
+        .newRequest()
+        .withCurrentUser()
+        .withRef(AuthenticationId.ORGANIZATION_ID, organizationId.toString())
+        .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
     } else {
       val badRequestProblem =
         BadRequestProblem(ProblemMessageData().message("Workspace ID or Organization ID must be provided in order to create a permission."))
@@ -105,15 +104,21 @@ open class PermissionsController(
   @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicDeletePermission(permissionId: String): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    // auth check before processing the request
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      // current user should have at least a workspace_admin role to delete a workspace level permission
-      // or at least an organization_admin role to delete an organization level permission
-      Scope.PERMISSION,
-      listOf(permissionId),
-      setOf(WorkspaceAuthRole.WORKSPACE_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN),
-    )
+    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
+    // current user should have at least a workspace_admin role to delete a workspace level permission
+    // or at least an organization_admin role to delete an organization level permission
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
+      .requireRole(
+        when {
+          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_ADMIN
+          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_ADMIN
+          else -> AuthRoleConstants.INSTANCE_ADMIN
+        },
+      )
+
     // process and monitor the request
     trackingHelper.callWithTracker(
       {
@@ -121,7 +126,7 @@ open class PermissionsController(
       },
       PERMISSIONS_WITH_ID_PATH,
       DELETE,
-      userId,
+      currentUserService.currentUser.userId,
     )
     return Response
       .status(Response.Status.NO_CONTENT.statusCode)
@@ -131,15 +136,22 @@ open class PermissionsController(
   @Path("$PERMISSIONS_PATH/{permissionId}")
   @ExecuteOn(AirbyteTaskExecutors.PUBLIC_API)
   override fun publicGetPermission(permissionId: String): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    // auth check before processing the request
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      // current user should have either at least a workspace_reader role to get a workspace level permission
-      // or at least an organization_read role to read an organization level permission
-      Scope.PERMISSION,
-      listOf(permissionId),
-      setOf(WorkspaceAuthRole.WORKSPACE_READER, OrganizationAuthRole.ORGANIZATION_READER),
-    )
+    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
+
+    // current user should have either at least a workspace_reader role to get a workspace level permission
+    // or at least an organization_read role to read an organization level permission
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
+      .requireRole(
+        when {
+          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_READER
+          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_READER
+          else -> AuthRoleConstants.INSTANCE_ADMIN
+        },
+      )
+
     val permissionResponse =
       trackingHelper.callWithTracker(
         {
@@ -147,7 +159,7 @@ open class PermissionsController(
         },
         PERMISSIONS_WITH_ID_PATH,
         GET,
-        userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)
@@ -176,8 +188,14 @@ open class PermissionsController(
         )
         throw badRequestProblem
       }
+
       // Make sure current user has to be organization_admin to access another user's permissions.
-      apiAuthorizationHelper.isUserOrganizationAdminOrThrow(currentUserId, UUID.fromString(organizationId))
+      roleResolver
+        .newRequest()
+        .withCurrentUser()
+        .withRef(AuthenticationId.ORGANIZATION_ID, organizationId)
+        .requireRole(AuthRoleConstants.ORGANIZATION_ADMIN)
+
       permissionsResponse =
         trackingHelper.callWithTracker(
           {
@@ -212,15 +230,22 @@ open class PermissionsController(
     permissionId: String,
     permissionUpdateRequest: PermissionUpdateRequest,
   ): Response {
-    val userId: UUID = currentUserService.currentUser.userId
-    // auth check before processing the request
-    apiAuthorizationHelper.ensureUserHasAnyRequiredRoleOrThrow(
-      // current user should have either at least a workspace_admin role to update a workspace level permission
-      // or at least an organization_admin role to update an organization level permission
-      Scope.PERMISSION,
-      listOf(permissionId),
-      setOf(WorkspaceAuthRole.WORKSPACE_ADMIN, OrganizationAuthRole.ORGANIZATION_ADMIN),
-    )
+    val permission = permissionHandler.getPermissionById(UUID.fromString(permissionId))
+
+    // current user should have either at least a workspace_admin role to update a workspace level permission
+    // or at least an organization_admin role to update an organization level permission
+    roleResolver
+      .newRequest()
+      .withCurrentUser()
+      .withRef(AuthenticationId.PERMISSION_ID, permissionId)
+      .requireRole(
+        when {
+          permission.workspaceId != null -> AuthRoleConstants.WORKSPACE_ADMIN
+          permission.organizationId != null -> AuthRoleConstants.ORGANIZATION_ADMIN
+          else -> AuthRoleConstants.INSTANCE_ADMIN
+        },
+      )
+
     // process and monitor the request
     val updatePermissionResponse =
       trackingHelper.callWithTracker(
@@ -229,7 +254,7 @@ open class PermissionsController(
         },
         PERMISSIONS_WITH_ID_PATH,
         PATCH,
-        userId,
+        currentUserService.currentUser.userId,
       )
     return Response
       .status(Response.Status.OK.statusCode)

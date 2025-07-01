@@ -6,7 +6,7 @@ package io.airbyte.data.services;
 
 import io.airbyte.config.DestinationOAuthParameter;
 import io.airbyte.config.SourceOAuthParameter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import java.io.IOException;
 import java.util.Optional;
 import java.util.UUID;

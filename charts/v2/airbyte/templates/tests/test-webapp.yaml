@@ -27,3 +27,7 @@ spec:
         memory: "128Mi"
         cpu: "200m"
   restartPolicy: Never
+  {{- with .Values.testWebapp.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 6 }}
+  {{- end }}

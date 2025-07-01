@@ -230,7 +230,7 @@ class WorkloadQueueTableTests {
     val entriesToOverrideAckedDate = workloadQueueRepo.findByDataplaneGroup(dataplaneGroup)
 
     entriesToOverrideAckedDate.forEach {
-      it.ackedAt = OffsetDateTime.now().minusWeeks(1)
+      it.ackedAt = OffsetDateTime.now().minusWeeks(1).minusMinutes(5)
       workloadQueueRepo.update(it)
     }
     workloadQueueRepo.cleanUpAckedEntries(deletionLimit)
@@ -428,6 +428,8 @@ class WorkloadQueueTableTests {
       status: WorkloadStatus = WorkloadStatus.PENDING,
       workloadLabels: List<WorkloadLabel>? = null,
       inputPayload: String = "",
+      workspaceId: UUID? = UUID.randomUUID(),
+      organizationId: UUID? = UUID.randomUUID(),
       logPath: String = "/",
       mutexKey: String = "",
       type: WorkloadType = WorkloadType.SYNC,
@@ -442,6 +444,8 @@ class WorkloadQueueTableTests {
         status = status,
         workloadLabels = workloadLabels,
         inputPayload = inputPayload,
+        workspaceId = workspaceId,
+        organizationId = organizationId,
         logPath = logPath,
         mutexKey = mutexKey,
         type = type,

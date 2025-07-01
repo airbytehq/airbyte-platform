@@ -5,8 +5,11 @@
 package io.airbyte.container.orchestrator.bookkeeping.streamstatus
 
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
-import io.airbyte.api.client.model.generated.StreamStatusRead
+import io.airbyte.container.orchestrator.RateLimitedMessageHelper
 import io.airbyte.container.orchestrator.bookkeeping.events.StreamStatusUpdateEvent
+import io.airbyte.container.orchestrator.worker.ReplicationContextProvider
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
+import io.airbyte.container.orchestrator.worker.util.AirbyteMessageDataExtractor
 import io.airbyte.protocol.models.v0.AirbyteMessage
 import io.airbyte.protocol.models.v0.AirbyteRecordMessage
 import io.airbyte.protocol.models.v0.AirbyteStateMessage
@@ -16,8 +19,6 @@ import io.airbyte.protocol.models.v0.AirbyteStreamStatusReason
 import io.airbyte.protocol.models.v0.AirbyteStreamStatusTraceMessage
 import io.airbyte.protocol.models.v0.AirbyteTraceMessage
 import io.airbyte.protocol.models.v0.StreamDescriptor
-import io.airbyte.workers.context.ReplicationContext
-import io.airbyte.workers.helper.AirbyteMessageDataExtractor
 import io.micronaut.context.event.ApplicationEventPublisher
 import io.mockk.every
 import io.mockk.mockk
@@ -39,16 +40,23 @@ class StreamStatusTrackerTest {
   private lateinit var dataExtractor: AirbyteMessageDataExtractor
   private lateinit var store: StreamStatusStateStore
   private lateinit var eventPublisher: ApplicationEventPublisher<StreamStatusUpdateEvent>
-  private lateinit var apiCache: MutableMap<StreamStatusKey, StreamStatusRead>
+  private lateinit var rateLimitedMessageHelper: RateLimitedMessageHelper
 
   @BeforeEach
   fun setup() {
     dataExtractor = mockk()
     store = mockk()
     eventPublisher = mockk()
-    apiCache = HashMap()
+    rateLimitedMessageHelper = mockk(relaxed = true)
 
-    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, Fixtures.ctx, apiCache)
+    val context =
+      ReplicationContextProvider.Context(
+        configuredCatalog = mockk(),
+        replicationContext = Fixtures.ctx,
+        supportRefreshes = false,
+        replicationInput = mockk(),
+      )
+    tracker = StreamStatusTracker(dataExtractor, store, eventPublisher, context, rateLimitedMessageHelper)
 
     every { dataExtractor.getStreamFromMessage(any()) } returns Fixtures.streamDescriptor1
     every { store.get(any()) } returns null
@@ -166,7 +174,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key1,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -178,7 +186,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key2,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -190,7 +198,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key3,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -204,7 +212,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key4,
             runState = ApiEnum.COMPLETE,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -330,13 +338,15 @@ class StreamStatusTrackerTest {
 
   @Test
   fun setsMetadataForRateLimited() {
+    val quotaReset = 456L
+    val expected = StreamStatusRateLimitedMetadata(quotaReset = quotaReset)
+
+    every { rateLimitedMessageHelper.apiFromProtocol(any()) } returns expected
+    every { rateLimitedMessageHelper.isStreamStatusRateLimitedMessage(any()) } returns true
     every { store.setRunState(any(), any()) } returns StreamStatusValue()
     every { store.setMetadata(any(), any()) } returns StreamStatusValue()
 
-    val quotaReset = 456L
     tracker.track(Fixtures.rateLimitedMsg(quotaReset))
-
-    val expected = StreamStatusRateLimitedMetadata(quotaReset = quotaReset)
 
     verify(exactly = 1) { store.setRunState(Fixtures.key1, ApiEnum.RATE_LIMITED) }
     verify(exactly = 1) { store.setMetadata(Fixtures.key1, eq(expected)) }
@@ -371,7 +381,7 @@ class StreamStatusTrackerTest {
             key = Fixtures.key1,
             runState = updatedRunState,
             ctx = Fixtures.ctx,
-            cache = apiCache,
+            cache = tracker.getResponseCache(),
           ),
         ),
       )
@@ -453,8 +463,6 @@ class StreamStatusTrackerTest {
 
     fun completeValue() = StreamStatusValue(ApiEnum.COMPLETE, 124, sourceComplete = true, streamEmpty = false)
 
-    fun incompleteValue() = StreamStatusValue(ApiEnum.INCOMPLETE, 246, sourceComplete = false, streamEmpty = false)
-
     fun traceMsg(
       type: AirbyteTraceMessage.Type = AirbyteTraceMessage.Type.STREAM_STATUS,
       status: ProtocolEnum = ProtocolEnum.RUNNING,
@@ -508,7 +516,7 @@ class StreamStatusTrackerTest {
             .withEmittedAt(1.0)
             .withStreamStatus(
               AirbyteStreamStatusTraceMessage()
-                .withStatus(AirbyteStreamStatusTraceMessage.AirbyteStreamStatus.RUNNING)
+                .withStatus(ProtocolEnum.RUNNING)
                 .withStreamDescriptor(
                   streamDescriptor1,
                 ).withReasons(

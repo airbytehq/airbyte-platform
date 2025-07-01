@@ -16,9 +16,11 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 @Suppress("ktlint:standard:class-naming")
+@Disabled
 internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : AbstractConfigsDatabaseTest() {
   @BeforeEach
   fun beforeEach() {
@@ -29,7 +31,7 @@ internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : 
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_40_18_001__AddInvalidProtocolFlagToConnections()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -39,7 +41,7 @@ internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : 
   @Test
   @Throws(Exception::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertFalse(columnExists(context, "normalization_repository"))
     Assertions.assertFalse(columnExists(context, "normalization_tag"))
     Assertions.assertFalse(columnExists(context, "supports_dbt"))

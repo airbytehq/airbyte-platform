@@ -16,7 +16,7 @@ import io.airbyte.config.Job;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
@@ -112,10 +112,10 @@ public class WorkspaceHelper {
         if (job == null) {
           throw new ConfigNotFoundException(Job.class.toString(), jobId.toString());
         }
-        if (REPLICATION_TYPES.contains(job.getConfigType())) {
-          return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.getScope()));
+        if (REPLICATION_TYPES.contains(job.configType)) {
+          return getWorkspaceForConnectionIdIgnoreExceptions(UUID.fromString(job.scope));
         } else {
-          throw new IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.getConfigType() + " job was requested!");
+          throw new IllegalArgumentException("Only sync/reset jobs are associated with workspaces! A " + job.configType + " job was requested!");
         }
       }
 
@@ -234,8 +234,8 @@ public class WorkspaceHelper {
       if (e.getCause() instanceof ConfigNotFoundException) {
         throw (ConfigNotFoundException) e.getCause();
       }
-      if (e.getCause() instanceof io.airbyte.data.exceptions.ConfigNotFoundException) {
-        throw (io.airbyte.data.exceptions.ConfigNotFoundException) e.getCause();
+      if (e.getCause() instanceof ConfigNotFoundException) {
+        throw (ConfigNotFoundException) e.getCause();
       }
       if (e.getCause() instanceof JsonValidationException) {
         throw (JsonValidationException) e.getCause();

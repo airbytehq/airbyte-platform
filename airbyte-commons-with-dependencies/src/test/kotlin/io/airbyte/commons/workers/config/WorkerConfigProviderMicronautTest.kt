@@ -12,7 +12,6 @@ import jakarta.inject.Named
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import java.util.Optional
 
 @MicronautTest
 @Suppress("PMD.AvoidDuplicateLiterals")
@@ -74,7 +73,7 @@ class WorkerConfigProviderMicronautTest {
   @Test
   fun `check database source ResourceRequirements`() {
     val resourceRequirements =
-      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database"))
+      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, "database")
 
     assertEquals("1", resourceRequirements.cpuRequest)
     // This is verifying that we are inheriting the value from default.
@@ -84,7 +83,7 @@ class WorkerConfigProviderMicronautTest {
   @Test
   fun `check source ResourceRequirements`() {
     val resourceRequirements =
-      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("any"))
+      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, "any")
 
     assertEquals("0.5", resourceRequirements.cpuRequest)
     // This is verifying that we are inheriting the value from default.
@@ -94,19 +93,19 @@ class WorkerConfigProviderMicronautTest {
   @Test
   fun `test variant lookups`() {
     val testVariant = "micronauttest"
-    val sourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("api"))
+    val sourceApi = workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, "api")
     val sourceDatabase =
-      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, Optional.of("database"))
+      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, "database")
     val testSourceApi =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("api"),
+        "api",
         testVariant,
       )
     val testSourceDatabase =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("database"),
+        "database",
         testVariant,
       )
 
@@ -128,37 +127,37 @@ class WorkerConfigProviderMicronautTest {
     val unknownVariantSourceApi =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("api"),
+        "api",
         "unknownVariant",
       )
     val sourceApi =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("api"),
+        "api",
       )
     assertEquals(sourceApi, unknownVariantSourceApi)
 
     val unknownVariantSourceDatabase =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("database"),
+        "database",
         "unknownVariant",
       )
     val sourceDatabase =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.SOURCE,
-        Optional.of("database"),
+        "database",
       )
     assertEquals(sourceDatabase, unknownVariantSourceDatabase)
 
     // This is a corner case where the variant exists but not the type. We want to make sure
     // it falls back to the default
     val defaultOrchestratorApiReq =
-      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, Optional.of("api"))
+      workerConfigsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, "api")
     val unknownTypeInVariant =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
-        Optional.of("api"),
+        "api",
         "incompletevariant",
       )
     assertEquals(defaultOrchestratorApiReq, unknownTypeInVariant)
@@ -169,14 +168,14 @@ class WorkerConfigProviderMicronautTest {
     val destApi =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.DESTINATION,
-        Optional.of("api"),
+        "api",
       )
     assertEquals("12", destApi.cpuRequest)
 
     val orchestratorApi =
       workerConfigsProvider.getResourceRequirements(
         ResourceRequirementsType.ORCHESTRATOR,
-        Optional.of("api"),
+        "api",
       )
     assertEquals("11", orchestratorApi.cpuRequest)
   }

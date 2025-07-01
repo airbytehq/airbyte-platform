@@ -20,6 +20,7 @@ import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.lang.Exceptions;
 import io.airbyte.commons.map.MoreMaps;
 import io.airbyte.config.ActorDefinitionVersion;
+import io.airbyte.config.ActorType;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptSyncConfig;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
@@ -39,7 +40,7 @@ import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OperationService;
@@ -205,15 +206,16 @@ public class JobTracker {
    * Track telemetry for discover.
    *
    * @param jobId job id
-   * @param sourceDefinitionId source definition id
+   * @param actorDefinitionId actor definition id
    * @param workspaceId workspace id
    * @param jobState job state
    * @param jobOutput job output, if available
    */
   public void trackDiscover(final UUID jobId,
-                            final UUID sourceDefinitionId,
+                            final UUID actorDefinitionId,
                             final UUID workspaceId,
                             final UUID actorId,
+                            final ActorType actorType,
                             final JobState jobState,
                             final @Nullable ConnectorJobOutput jobOutput) {
     final FailureReason failureReason = jobOutput != null ? jobOutput.getFailureReason() : null;
@@ -221,10 +223,12 @@ public class JobTracker {
     Exceptions.swallow(() -> {
       final Map<String, Object> jobMetadata = generateJobMetadata(jobId.toString(), ConfigType.DISCOVER_SCHEMA);
       final Map<String, Object> failureReasonMetadata = generateFailureReasonMetadata(failureReason);
-      final Map<String, Object> sourceDefMetadata = generateSourceDefinitionMetadata(sourceDefinitionId, workspaceId, actorId);
+      final Map<String, Object> actorDefMetadata =
+          actorType == ActorType.SOURCE ? generateSourceDefinitionMetadata(actorDefinitionId, workspaceId, actorId)
+              : generateDestinationDefinitionMetadata(actorDefinitionId, workspaceId, actorId);
       final Map<String, Object> stateMetadata = generateStateMetadata(jobState);
 
-      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, sourceDefMetadata, stateMetadata));
+      track(workspaceId, DISCOVER_EVENT, MoreMaps.merge(jobMetadata, failureReasonMetadata, actorDefMetadata, stateMetadata));
     });
   }
 
@@ -236,15 +240,15 @@ public class JobTracker {
    */
   public void trackSync(final Job job, final JobState jobState) {
     Exceptions.swallow(() -> {
-      final JobConfigProxy jobConfig = new JobConfigProxy(job.getConfig());
-      final ConfigType configType = job.getConfigType();
+      final JobConfigProxy jobConfig = new JobConfigProxy(job.config);
+      final ConfigType configType = job.configType;
       final boolean allowedJob = REPLICATION_TYPES.contains(configType);
       Preconditions.checkArgument(allowedJob, "Job type " + configType + " is not allowed!");
-      final long jobId = job.getId();
+      final long jobId = job.id;
       final Optional<Attempt> lastAttempt = job.getLastAttempt();
       final Optional<AttemptSyncConfig> attemptSyncConfig = lastAttempt.flatMap(Attempt::getSyncConfig);
 
-      final UUID connectionId = UUID.fromString(job.getScope());
+      final UUID connectionId = UUID.fromString(job.scope);
       final UUID workspaceId = workspaceHelper.getWorkspaceForJobIdIgnoreExceptions(jobId);
       final StandardSync standardSync = connectionService.getStandardSync(connectionId);
       final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId);
@@ -257,7 +261,7 @@ public class JobTracker {
       final List<Job> jobsHistory = jobPersistence.listJobsIncludingId(
           Set.of(ConfigType.SYNC, ConfigType.RESET_CONNECTION, ConfigType.REFRESH), connectionId.toString(), jobId, 2);
 
-      final Optional<Job> previousJob = jobsHistory.stream().filter(jobHistory -> jobHistory.getId() != jobId).findFirst();
+      final Optional<Job> previousJob = jobsHistory.stream().filter(jobHistory -> jobHistory.id != jobId).findFirst();
 
       final Map<String, Object> jobMetadata = generateJobMetadata(String.valueOf(jobId), configType, job.getAttemptsCount(), previousJob);
       final Map<String, Object> jobAttemptMetadata = generateJobAttemptMetadata(jobId, jobState);
@@ -575,8 +579,8 @@ public class JobTracker {
     metadata.put("job_id", jobId);
     metadata.put("attempt_id", attempt);
     previousJob.ifPresent(job -> {
-      if (job.getConfigType() != null) {
-        metadata.put("previous_job_type", job.getConfigType());
+      if (job.configType != null) {
+        metadata.put("previous_job_type", job.configType);
       }
     });
     return Collections.unmodifiableMap(metadata);

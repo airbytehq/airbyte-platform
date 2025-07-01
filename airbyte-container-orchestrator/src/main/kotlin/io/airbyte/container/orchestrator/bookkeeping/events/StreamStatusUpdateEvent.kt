@@ -7,7 +7,7 @@ package io.airbyte.container.orchestrator.bookkeeping.events
 import io.airbyte.api.client.model.generated.StreamStatusRateLimitedMetadata
 import io.airbyte.api.client.model.generated.StreamStatusRead
 import io.airbyte.container.orchestrator.bookkeeping.streamstatus.StreamStatusKey
-import io.airbyte.workers.context.ReplicationContext
+import io.airbyte.container.orchestrator.worker.context.ReplicationContext
 import io.airbyte.api.client.model.generated.StreamStatusRunState as ApiEnum
 
 data class StreamStatusUpdateEvent(

@@ -71,7 +71,7 @@ public class ActorDefinitionVersionHandler {
 
   @Trace
   public ActorDefinitionVersionRead getActorDefinitionVersionForSourceId(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException, ConfigNotFoundException {
+      throws JsonValidationException, IOException, io.airbyte.data.ConfigNotFoundException, ConfigNotFoundException {
     final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromSource(sourceConnection.getSourceId());
     final ActorDefinitionVersionWithOverrideStatus versionWithOverrideStatus =
@@ -81,7 +81,7 @@ public class ActorDefinitionVersionHandler {
   }
 
   private ActorDefinitionVersion getDefaultVersion(final ActorType actorType, final UUID actorDefinitionId)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     return switch (actorType) {
       case SOURCE -> actorDefinitionService
           .getActorDefinitionVersion(sourceService.getStandardSourceDefinition(actorDefinitionId).getDefaultVersionId());
@@ -99,7 +99,7 @@ public class ActorDefinitionVersionHandler {
   }
 
   public ResolveActorDefinitionVersionResponse resolveActorDefinitionVersionByTag(final ResolveActorDefinitionVersionRequestBody resolveVersionReq)
-      throws JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException, IOException {
+      throws JsonValidationException, io.airbyte.data.ConfigNotFoundException, IOException {
     final UUID actorDefinitionId = resolveVersionReq.getActorDefinitionId();
     final ActorType actorType = apiPojoConverters.toInternalActorType(resolveVersionReq.getActorType());
     final ActorDefinitionVersion defaultVersion = getDefaultVersion(actorType, actorDefinitionId);
@@ -118,13 +118,16 @@ public class ActorDefinitionVersionHandler {
     final ActorDefinitionVersion resolvedVersion = optResolvedVersion.get();
 
     return new ResolveActorDefinitionVersionResponse().versionId(resolvedVersion.getVersionId()).dockerImageTag(resolvedVersion.getDockerImageTag())
-        .dockerRepository(resolvedVersion.getDockerRepository()).supportRefreshes(resolvedVersion.getSupportsRefreshes())
-        .supportFileTransfer(resolvedVersion.getSupportsFileTransfer());
+        .dockerRepository(resolvedVersion.getDockerRepository())
+        .supportRefreshes(resolvedVersion.getSupportsRefreshes())
+        .supportFileTransfer(resolvedVersion.getSupportsFileTransfer())
+        .supportDataActivation(resolvedVersion.getSupportsDataActivation())
+        .connectorIPCOptions(resolvedVersion.getConnectorIPCOptions());
   }
 
   @Trace
   public ActorDefinitionVersionRead getActorDefinitionVersionForDestinationId(final DestinationIdRequestBody destinationIdRequestBody)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final DestinationConnection destinationConnection = destinationService.getDestinationConnection(destinationIdRequestBody.getDestinationId());
     final StandardDestinationDefinition destinationDefinition =
         destinationService.getDestinationDefinitionFromDestination(destinationConnection.getDestinationId());
@@ -148,7 +151,8 @@ public class ActorDefinitionVersionHandler {
         .lastPublished(apiPojoConverters.toOffsetDateTime(actorDefinitionVersion.getLastPublished()))
         .isVersionOverrideApplied(versionWithOverrideStatus.isOverrideApplied())
         .supportsFileTransfer(actorDefinitionVersion.getSupportsFileTransfer())
-        .supportsDataActivation(actorDefinitionVersion.getSupportsDataActivation());
+        .supportsDataActivation(actorDefinitionVersion.getSupportsDataActivation())
+        .connectorIPCOptions(actorDefinitionVersion.getConnectorIPCOptions());
 
     final Optional<ActorDefinitionVersionBreakingChanges> breakingChanges =
         actorDefinitionHandlerHelper.getVersionBreakingChanges(actorDefinitionVersion);

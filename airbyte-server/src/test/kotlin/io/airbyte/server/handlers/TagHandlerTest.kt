@@ -12,7 +12,7 @@ import io.airbyte.api.problems.throwable.generated.TagInvalidHexColorProblem
 import io.airbyte.api.problems.throwable.generated.TagLimitForWorkspaceReachedProblem
 import io.airbyte.api.problems.throwable.generated.TagNameTooLongProblem
 import io.airbyte.config.Tag
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.TagService
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.data.exceptions.EmptyResultException

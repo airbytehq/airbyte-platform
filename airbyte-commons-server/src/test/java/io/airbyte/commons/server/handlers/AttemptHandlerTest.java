@@ -54,6 +54,7 @@ import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobOutput;
 import io.airbyte.config.JobResetConnectionConfig;
+import io.airbyte.config.JobStatus;
 import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.RefreshConfig;
 import io.airbyte.config.ResetSourceConfiguration;
@@ -186,18 +187,23 @@ class AttemptHandlerTest {
   @ParameterizedTest
   @ValueSource(booleans = {true, false})
   void createAttemptNumberForSync(final boolean enableRfr)
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final int attemptNumber = 0;
     final var connId = UUID.randomUUID();
-    final Job mJob = mock(Job.class);
-    when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
-    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
-    when(mJob.getScope()).thenReturn(connId.toString());
-    when(mJob.getId()).thenReturn(JOB_ID);
 
     final var mConfig = mock(JobConfig.class);
     when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
-    when(mJob.getConfig()).thenReturn(mConfig);
+
+    var job = new Job(JOB_ID,
+        ConfigType.SYNC,
+        connId.toString(),
+        mConfig,
+        List.of(),
+        JobStatus.PENDING,
+        1001L,
+        1000L,
+        1002L,
+        true);
 
     final var mSyncConfig = mock(JobSyncConfig.class);
     when(mConfig.getSync()).thenReturn(mSyncConfig);
@@ -211,7 +217,7 @@ class AttemptHandlerTest {
             SyncMode.FULL_REFRESH,
             DestinationSyncMode.APPEND)));
 
-    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
@@ -241,21 +247,25 @@ class AttemptHandlerTest {
 
   @Test
   void createAttemptNumberForClear()
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final int attemptNumber = 0;
     final var connId = UUID.randomUUID();
-    final Job mJob = mock(Job.class);
-    when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.CLEAR);
-    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
-    when(mJob.getScope()).thenReturn(connId.toString());
-    when(mJob.getId()).thenReturn(JOB_ID);
-
-    final var mConfig = mock(JobConfig.class);
-    when(mConfig.getConfigType()).thenReturn(ConfigType.CLEAR);
-    when(mJob.getConfig()).thenReturn(mConfig);
-
     final var mResetConfig = mock(JobResetConnectionConfig.class);
-    when(mConfig.getResetConnection()).thenReturn(mResetConfig);
+    var config = new JobConfig()
+        .withConfigType(ConfigType.CLEAR)
+        .withResetConnection(mResetConfig);
+
+    var job = new Job(JOB_ID,
+        JobConfig.ConfigType.CLEAR,
+        connId.toString(),
+        config,
+        List.of(),
+        JobStatus.PENDING,
+        1001L,
+        1000L,
+        1002L,
+        true);
+
     when(mResetConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
 
     final var mCatalog = mock(ConfiguredAirbyteCatalog.class);
@@ -267,7 +277,7 @@ class AttemptHandlerTest {
     when(mResetConfig.getResetSourceConfiguration()).thenReturn(new ResetSourceConfiguration().withStreamsToReset(
         List.of(new StreamDescriptor().withName("rfrStream"))));
 
-    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
@@ -291,17 +301,22 @@ class AttemptHandlerTest {
   @ParameterizedTest
   @ValueSource(ints = {0, 2})
   void createAttemptNumberForRefresh(final int attemptNumber)
-      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     final var connId = UUID.randomUUID();
-    final Job mJob = mock(Job.class);
-    when(mJob.getConfigType()).thenReturn(ConfigType.REFRESH);
-    when(mJob.getAttemptsCount()).thenReturn(ATTEMPT_NUMBER);
-    when(mJob.getScope()).thenReturn(connId.toString());
-    when(mJob.getId()).thenReturn(JOB_ID);
 
     final var mConfig = mock(JobConfig.class);
     when(mConfig.getConfigType()).thenReturn(ConfigType.REFRESH);
-    when(mJob.getConfig()).thenReturn(mConfig);
+
+    var job = new Job(JOB_ID,
+        ConfigType.REFRESH,
+        connId.toString(),
+        mConfig,
+        List.of(),
+        JobStatus.PENDING,
+        1001L,
+        1000L,
+        1002L,
+        true);
 
     final var mRefreshConfig = mock(RefreshConfig.class);
     when(mConfig.getRefresh()).thenReturn(mRefreshConfig);
@@ -317,7 +332,7 @@ class AttemptHandlerTest {
         new ConfiguredAirbyteStream(new AirbyteStream("nonRfrStream", Jsons.emptyObject(), List.of(io.airbyte.config.SyncMode.FULL_REFRESH)),
             SyncMode.FULL_REFRESH, DestinationSyncMode.APPEND)));
 
-    when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
     when(path.resolve(Mockito.anyString())).thenReturn(path);
 
     final Path expectedRoot = TemporalUtils.getJobRoot(path, String.valueOf(JOB_ID), ATTEMPT_NUMBER);
@@ -354,13 +369,7 @@ class AttemptHandlerTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
     void getFullRefreshStreamsShouldOnlyReturnFullRefreshStreams(final boolean enableResumableFullRefresh) {
-      final var connId = UUID.randomUUID();
-      final Job mJob = mock(Job.class);
-      when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
-      when(mJob.getScope()).thenReturn(connId.toString());
-
       final var mJobConfig = mock(JobConfig.class);
-      when(mJob.getConfig()).thenReturn(mJobConfig);
 
       final var mSyncConfig = mock(JobSyncConfig.class);
       when(mJobConfig.getSync()).thenReturn(mSyncConfig);
@@ -402,23 +411,28 @@ class AttemptHandlerTest {
     @ParameterizedTest()
     @MethodSource("provideCreateAttemptConfig")
     void createAttemptShouldAlwaysDeleteFullRefreshStreamState(final int attemptNumber, final boolean enableResumableFullRefresh)
-        throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+        throws IOException, ConfigNotFoundException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
       final var connId = UUID.randomUUID();
-      final Job mJob = mock(Job.class);
-      when(mJob.getConfigType()).thenReturn(JobConfig.ConfigType.SYNC);
-      when(mJob.getAttemptsCount()).thenReturn(0);
-      when(mJob.getScope()).thenReturn(connId.toString());
-      when(mJob.getId()).thenReturn(JOB_ID);
 
       final var mConfig = mock(JobConfig.class);
       when(mConfig.getConfigType()).thenReturn(ConfigType.SYNC);
-      when(mJob.getConfig()).thenReturn(mConfig);
+
+      var job = new Job(JOB_ID,
+          ConfigType.SYNC,
+          connId.toString(),
+          mConfig,
+          List.of(),
+          JobStatus.PENDING,
+          1001L,
+          1000L,
+          1002L,
+          true);
 
       final var mDyncConfig = mock(JobSyncConfig.class);
       when(mConfig.getSync()).thenReturn(mDyncConfig);
       when(mDyncConfig.getWorkspaceId()).thenReturn(UUID.randomUUID());
 
-      when(jobPersistence.getJob(JOB_ID)).thenReturn(mJob);
+      when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
       when(path.resolve(Mockito.anyString())).thenReturn(path);
       when(ffClient.boolVariation(any(), any())).thenReturn(true);
@@ -472,8 +486,8 @@ class AttemptHandlerTest {
 
   @Test
   void createAttemptNumberWithUnknownJobId() throws IOException {
-    final Job mJob = mock(Job.class);
-    when(mJob.getAttemptsCount())
+    final Job job = mock(Job.class);
+    when(job.getAttemptsCount())
         .thenReturn(ATTEMPT_NUMBER);
 
     when(jobPersistence.getJob(JOB_ID))
@@ -620,14 +634,18 @@ class AttemptHandlerTest {
             buildStreamForClearStateTest(STREAM_FULL_REFRESH_NOT_RESUMABLE, SyncMode.FULL_REFRESH, false),
             buildStreamForClearStateTest(STREAM_FULL_REFRESH_RESUMABLE, SyncMode.FULL_REFRESH, true)));
 
-    final long jobId = 123L;
     final UUID connectionId = UUID.randomUUID();
-    var job = mock(Job.class);
-    when(job.getId()).thenReturn(jobId);
-    when(job.getScope()).thenReturn(connectionId.toString());
-    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
-    when(job.getConfig())
-        .thenReturn(new JobConfig().withConfigType(ConfigType.SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(configuredCatalog)));
+
+    var job = new Job(JOB_ID,
+        ConfigType.SYNC,
+        connectionId.toString(),
+        new JobConfig().withConfigType(ConfigType.SYNC).withSync(new JobSyncConfig().withConfiguredAirbyteCatalog(configuredCatalog)),
+        List.of(),
+        JobStatus.PENDING,
+        1001L,
+        1000L,
+        1002L,
+        true);
 
     if (attemptNumber == 0) {
       handler.updateGenerationAndStateForFirstAttempt(job, connectionId, supportsRefresh);
