@@ -44,6 +44,7 @@ import io.airbyte.data.services.shared.ConnectionAutoUpdatedReason;
 import io.airbyte.data.services.shared.ConnectionEvent.Type;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
+import io.airbyte.domain.services.storage.ConnectorObjectStorageService;
 import io.airbyte.persistence.job.JobPersistence;
 import java.io.IOException;
 import java.util.HashMap;
@@ -65,6 +66,7 @@ class ConnectionTimelineEventHelperTest {
   private PermissionHandler permissionHandler;
   private UserPersistence userPersistence;
   private ConnectionTimelineEventService connectionTimelineEventService;
+  private ConnectorObjectStorageService connectorObjectStorageService;
   private static final UUID CONNECTION_ID = UUID.randomUUID();
 
   @BeforeEach
@@ -74,13 +76,15 @@ class ConnectionTimelineEventHelperTest {
     permissionHandler = mock(PermissionHandler.class);
     userPersistence = mock(UserPersistence.class);
     connectionTimelineEventService = mock(ConnectionTimelineEventService.class);
+    connectorObjectStorageService = mock(ConnectorObjectStorageService.class);
   }
 
   @Test
   void testGetLoadedStats() {
 
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+        connectionTimelineEventService);
 
     final String userStreamName = "user";
     final SyncMode userStreamMode = SyncMode.FULL_REFRESH;
@@ -165,7 +169,8 @@ class ConnectionTimelineEventHelperTest {
     void notApplicableInOSS() throws IOException {
       // No support email domains. Should show real name as always.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(ossAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+          connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
       when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(false);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
@@ -179,7 +184,8 @@ class ConnectionTimelineEventHelperTest {
     void airbyteSupportInAirbytersInternalWorkspace() throws IOException {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+          connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
       when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
@@ -192,7 +198,8 @@ class ConnectionTimelineEventHelperTest {
     void airbyteSupportInCustomersExternalWorkspace() throws IOException {
       // Should hide real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+          connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(airbyteUser));
       when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
@@ -205,7 +212,8 @@ class ConnectionTimelineEventHelperTest {
     void detectNonAirbyteSupportUserInCloud() throws IOException {
       // Should show real name.
       connectionTimelineEventHelper = new ConnectionTimelineEventHelper(cloudAirbyteSupportEmailDomain,
-          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+          currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+          connectionTimelineEventService);
       when(userPersistence.getUser(any())).thenReturn(Optional.of(externalUser));
       when(permissionHandler.isUserInstanceAdmin(any())).thenReturn(true);
       when(organizationPersistence.getOrganizationByConnectionId(any())).thenReturn(
@@ -220,7 +228,8 @@ class ConnectionTimelineEventHelperTest {
   @Test
   void testLogConnectionSettingsChangedEvent() {
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+        connectionTimelineEventService);
     final UUID connectionId = UUID.randomUUID();
     final UUID dataplaneGroupId = UUID.randomUUID();
     final ConnectionRead originalConnectionRead = new ConnectionRead()
@@ -255,7 +264,8 @@ class ConnectionTimelineEventHelperTest {
   @Test
   void testLogSchemaChangeAutoPropagationEvent() {
     connectionTimelineEventHelper = new ConnectionTimelineEventHelper(Set.of(),
-        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectionTimelineEventService);
+        currentUserService, organizationPersistence, permissionHandler, userPersistence, connectorObjectStorageService,
+        connectionTimelineEventService);
     final UUID connectionId = UUID.randomUUID();
     final CatalogDiff diff = new CatalogDiff().addTransformsItem(new StreamTransform().transformType(TransformTypeEnum.ADD_STREAM));
 

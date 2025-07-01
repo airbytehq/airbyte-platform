@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -33,7 +32,6 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.shared.ConnectionDisabledEvent;
 import io.airbyte.data.services.shared.ConnectionEnabledEvent;
-import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
@@ -41,6 +39,7 @@ import io.airbyte.data.services.shared.FinalStatusEvent.FinalStatus;
 import io.airbyte.data.services.shared.ManuallyStartedEvent;
 import io.airbyte.data.services.shared.SchemaChangeAutoPropagationEvent;
 import io.airbyte.data.services.shared.SchemaConfigUpdateEvent;
+import io.airbyte.domain.services.storage.ConnectorObjectStorageService;
 import io.airbyte.persistence.job.JobPersistence.AttemptStats;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Inject;
@@ -71,6 +70,7 @@ public class ConnectionTimelineEventHelper {
   private final PermissionHandler permissionHandler;
   private final UserPersistence userPersistence;
   private final ConnectionTimelineEventService connectionTimelineEventService;
+  private final ConnectorObjectStorageService connectorObjectStorageService;
 
   @Inject
   public ConnectionTimelineEventHelper(
@@ -79,12 +79,14 @@ public class ConnectionTimelineEventHelper {
                                        final OrganizationPersistence organizationPersistence,
                                        final PermissionHandler permissionHandler,
                                        final UserPersistence userPersistence,
+                                       final ConnectorObjectStorageService connectorObjectStorageService,
                                        final ConnectionTimelineEventService connectionTimelineEventService) {
     this.airbyteSupportEmailDomains = airbyteSupportEmailDomains;
     this.currentUserService = currentUserService;
     this.organizationPersistence = organizationPersistence;
     this.permissionHandler = permissionHandler;
     this.userPersistence = userPersistence;
+    this.connectorObjectStorageService = connectorObjectStorageService;
     this.connectionTimelineEventService = connectionTimelineEventService;
   }
 
@@ -180,7 +182,8 @@ public class ConnectionTimelineEventHelper {
           job.getAttemptsCount(),
           job.configType.name(),
           JobStatus.SUCCEEDED.name(),
-          JobConverter.getStreamsAssociatedWithJob(job));
+          JobConverter.getStreamsAssociatedWithJob(job),
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)); // TODO only include if there are rejected records
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
       LOGGER.error("Failed to persist timeline event for job: {}", job.id, e);
@@ -205,6 +208,7 @@ public class ConnectionTimelineEventHelper {
           job.configType.name(),
           jobEventFailureStatus,
           JobConverter.getStreamsAssociatedWithJob(job),
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job), // TODO only include if there are rejected records
           firstFailureReasonOfLastAttempt);
       connectionTimelineEventService.writeEvent(connectionId, event, null);
     } catch (final Exception e) {
@@ -216,7 +220,7 @@ public class ConnectionTimelineEventHelper {
                                                           final List<AttemptStats> attemptStats) {
     try {
       final LoadedStats stats = buildLoadedStats(job, attemptStats);
-
+      final UUID connectionId = UUID.fromString(job.scope);
       final FinalStatusEvent event = new FinalStatusEvent(
           job.id,
           job.createdAtInSecond,
@@ -226,8 +230,9 @@ public class ConnectionTimelineEventHelper {
           job.getAttemptsCount(),
           job.configType.name(),
           io.airbyte.config.JobStatus.CANCELLED.name(),
-          JobConverter.getStreamsAssociatedWithJob(job));
-      connectionTimelineEventService.writeEvent(UUID.fromString(job.scope), event, getCurrentUserIdIfExist());
+          JobConverter.getStreamsAssociatedWithJob(job),
+          connectorObjectStorageService.getRejectedRecordsForJob(connectionId, job)); // TODO only include if there are rejected records
+      connectionTimelineEventService.writeEvent(connectionId, event, getCurrentUserIdIfExist());
     } catch (final Exception e) {
       LOGGER.error("Failed to persist job cancelled event for job: {}", job.id, e);
     }
@@ -343,17 +348,6 @@ public class ConnectionTimelineEventHelper {
     } catch (final Exception e) {
       LOGGER.error("Failed to persist connection settings changed event for connection: {}", connectionId, e);
     }
-  }
-
-  public Optional<User> getUserAssociatedWithJobTimelineEventType(final JobRead job, final ConnectionEvent.Type eventType) {
-    final Optional<UUID> userId = Optional.ofNullable(connectionTimelineEventService.findAssociatedUserForAJob(job, eventType));
-    return userId.flatMap(id -> {
-      try {
-        return userPersistence.getUser(id);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
   }
 
 }

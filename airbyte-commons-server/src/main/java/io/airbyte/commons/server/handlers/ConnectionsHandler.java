@@ -1511,6 +1511,7 @@ public class ConnectionsHandler {
             job.configType.name(),
             job.status.name(),
             JobConverter.getStreamsAssociatedWithJob(job),
+            null,
             job.getLastAttempt()
                 .flatMap(Attempt::getFailureSummary)
                 .flatMap(summary -> summary.getFailures().stream().findFirst()));
@@ -1529,7 +1530,8 @@ public class ConnectionsHandler {
             job.getAttemptsCount(),
             job.configType.name(),
             job.status.name(),
-            JobConverter.getStreamsAssociatedWithJob(job));
+            JobConverter.getStreamsAssociatedWithJob(job),
+            null);
       }
       // Save an event
       connectionTimelineEventService.writeEventWithTimestamp(
