@@ -1481,6 +1481,10 @@ workloadLauncher.dataPlane:
 workloadLauncher.images:
   keyBasePath: workloadLauncher
   config:
+    - env: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY 
+      keyBasePath: global.image
+      key: registry
+
     - env: CONNECTOR_PROFILER_IMAGE
       key: connectorProfiler.image
       valueExp: include "imageUrl" (list .Values.workloadLauncher.connectorProfiler.image $)

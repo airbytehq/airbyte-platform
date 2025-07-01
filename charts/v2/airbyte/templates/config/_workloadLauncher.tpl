@@ -245,6 +245,24 @@ DATAPLANE_CLIENT_SECRET: {{ include "airbyte.workloadLauncher.dataPlane.clientSe
 {{- end }}
 
 {{/*
+Renders the global.image.registry value
+*/}}
+{{- define "airbyte.workloadLauncher.images.registry" }}
+    {{- .Values.global.image.registry }}
+{{- end }}
+
+{{/*
+Renders the workloadLauncher.images.registry environment variable
+*/}}
+{{- define "airbyte.workloadLauncher.images.registry.env" }}
+- name: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+  valueFrom:
+    configMapKeyRef:
+      name: {{ .Release.Name }}-airbyte-env
+      key: JOB_KUBE_CONNECTOR_IMAGE_REGISTRY
+{{- end }}
+
+{{/*
 Renders the workloadLauncher.connectorProfiler.image value
 */}}
 {{- define "airbyte.workloadLauncher.images.connectorProfiler.image" }}
@@ -338,6 +356,7 @@ Renders the workloadLauncher.images.workloadInit.image environment variable
 Renders the set of all workloadLauncher.images environment variables
 */}}
 {{- define "airbyte.workloadLauncher.images.envs" }}
+{{- include "airbyte.workloadLauncher.images.registry.env" . }}
 {{- include "airbyte.workloadLauncher.images.connectorProfiler.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.connectorSidecar.image.env" . }}
 {{- include "airbyte.workloadLauncher.images.containerOrchestrator.enabled.env" . }}
@@ -349,6 +368,7 @@ Renders the set of all workloadLauncher.images environment variables
 Renders the set of all workloadLauncher.images config map variables
 */}}
 {{- define "airbyte.workloadLauncher.images.configVars" }}
+JOB_KUBE_CONNECTOR_IMAGE_REGISTRY: {{ include "airbyte.workloadLauncher.images.registry" . | quote }}
 CONNECTOR_PROFILER_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorProfiler.image" . | quote }}
 CONNECTOR_SIDECAR_IMAGE: {{ include "airbyte.workloadLauncher.images.connectorSidecar.image" . | quote }}
 CONTAINER_ORCHESTRATOR_ENABLED: {{ include "airbyte.workloadLauncher.images.containerOrchestrator.enabled" . | quote }}
