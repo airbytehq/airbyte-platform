@@ -7,7 +7,7 @@ import { useMount } from "react-use";
 import { LoadingPage } from "components";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { getStreamHash } from "components/connectorBuilder/useStreamTestMetadata";
-import { convertJsonToYaml, streamNameOrDefault } from "components/connectorBuilder/utils";
+import { convertJsonToYaml, getStreamName } from "components/connectorBuilder/utils";
 
 import { HttpError, useBuilderProject, useResolveManifest } from "core/api";
 import { ConnectorBuilderProjectRead } from "core/api/types/AirbyteClient";
@@ -138,9 +138,8 @@ function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedMa
     throw new Error("Persisted manifest streams length doesn't match resolved streams length");
   }
   resolvedManifest.streams.forEach((resolvedStream, i) => {
-    const streamName = streamNameOrDefault(resolvedStream.name, i);
-    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
-    if (persistedManifest.metadata?.testedStreams?.[streamName]) {
+    const streamName = getStreamName(resolvedStream, i);
+    if ((persistedManifest.metadata?.testedStreams as Record<string, unknown>)?.[streamName]) {
       return;
     }
     const streamHash = getStreamHash(resolvedStream);

@@ -31,7 +31,7 @@ import { StreamId } from "../types";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
-import { getStreamFieldPath } from "../utils";
+import { getStreamFieldPath, getStreamName } from "../utils";
 
 interface ViewSelectButtonProps {
   className?: string;
@@ -235,8 +235,8 @@ const useStreamsSidebarData = () => {
   const streamData = useMemo(() => {
     return {
       streams:
-        streams?.map(({ name }, index) => ({
-          name,
+        streams?.map((stream, index) => ({
+          name: getStreamName(stream, index),
           index,
         })) || [],
       dynamicStreams:

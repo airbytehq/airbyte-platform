@@ -45,6 +45,7 @@ import {
   BuilderProjectForDefinitionResponse,
 } from "../types/AirbyteClient";
 import {
+  ConditionalStreamsType,
   DeclarativeComponentSchema,
   DeclarativeComponentSchemaStreamsItem,
   NoPaginationType,
@@ -559,7 +560,10 @@ const transformSlices = (
   streamReadData: ConnectorBuilderProjectStreamRead,
   stream: DeclarativeComponentSchemaStreamsItem
 ): StreamReadTransformedSlices => {
-  if (stream.type === StateDelegatingStreamType.StateDelegatingStream) {
+  if (
+    stream.type === StateDelegatingStreamType.StateDelegatingStream ||
+    stream.type === ConditionalStreamsType.ConditionalStreams
+  ) {
     return streamReadData;
   }
 

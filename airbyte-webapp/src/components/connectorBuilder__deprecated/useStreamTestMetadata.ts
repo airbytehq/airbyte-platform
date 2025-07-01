@@ -29,7 +29,7 @@ import {
   StreamTestResults,
 } from "./types";
 import { useBuilderWatch } from "./useBuilderWatch";
-import { formatJson } from "./utils";
+import { formatJson, getStreamName } from "./utils";
 
 type StreamTestMetadataStatus = {
   isStale: boolean;
@@ -76,7 +76,7 @@ export const useStreamTestMetadata = () => {
 
   const getStreamNameFromIndex = useCallback(
     (streamIndex: number) => {
-      return resolvedManifest?.streams?.[streamIndex]?.name;
+      return getStreamName(resolvedManifest?.streams?.[streamIndex], streamIndex);
     },
     [resolvedManifest]
   );
@@ -91,7 +91,7 @@ export const useStreamTestMetadata = () => {
       const streamTestResults = computeStreamTestResults(streamRead, resolvedTestStream);
 
       const resolvedStream = resolveStreamFromStreamId(streamId);
-      const streamName = resolvedStream?.name ?? "";
+      const streamName = getStreamName(resolvedStream, streamId.index);
 
       const newManifest = merge({}, jsonManifest, {
         metadata: { testedStreams: { [streamName]: streamTestResults } },
@@ -132,7 +132,7 @@ export const useStreamTestMetadata = () => {
         // undefined indicates that the stream has not yet been resolved, so warnings should not be shown
         return undefined;
       }
-      const streamName = resolvedStream.name ?? "";
+      const streamName = getStreamName(resolvedStream, streamId.index);
 
       const metadata = jsonManifest.metadata as BuilderMetadata | undefined;
       if (
@@ -278,7 +278,9 @@ export const useStreamTestMetadata = () => {
 
   const getStreamHasCustomType = useCallback(
     (streamName: string): boolean => {
-      const currentStream = resolvedManifest.streams?.find((stream) => stream?.name === streamName);
+      const currentStream = resolvedManifest.streams?.find(
+        (stream, index) => getStreamName(stream, index) === streamName
+      );
       return hasCustomType(currentStream);
     },
     [resolvedManifest]

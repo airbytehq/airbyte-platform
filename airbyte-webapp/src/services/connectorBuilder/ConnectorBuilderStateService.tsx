@@ -10,14 +10,14 @@ import { useDebounce, useUpdateEffect } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { BuilderState, GeneratedDeclarativeStream, isStreamDynamicStream } from "components/connectorBuilder/types";
+import { BuilderState, GeneratedDeclarativeStream } from "components/connectorBuilder/types";
 import { useBuilderErrors } from "components/connectorBuilder/useBuilderErrors";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useStreamName } from "components/connectorBuilder/useStreamNames";
 import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
-import { convertJsonToYaml, formatJson } from "components/connectorBuilder/utils";
+import { convertJsonToYaml, formatJson, getStreamName } from "components/connectorBuilder/utils";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -54,6 +54,7 @@ import {
   DeclarativeStream,
   InlineSchemaLoaderType,
   InlineSchemaLoader,
+  ConditionalStreamsType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
@@ -556,9 +557,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const streamIsDynamic = isStreamDynamicStream(testStreamId);
+  let streamName: string;
   let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
-  if (streamIsDynamic) {
+  if (testStreamId.type === "dynamic_stream") {
+    streamName = manifest.dynamic_streams?.[testStreamId.index]?.name ?? "";
     const dynamicStream = manifest.dynamic_streams?.[testStreamId.index];
     if (dynamicStream?.components_resolver.type === "HttpComponentsResolver") {
       testStream = {
@@ -570,8 +572,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       };
     }
   } else if (testStreamId.type === "generated_stream") {
+    streamName = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index]?.name ?? "";
     testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
   } else {
+    streamName = getStreamName(manifest.streams?.[testStreamId.index], testStreamId.index);
     testStream = manifest.streams?.[testStreamId.index];
   }
 
@@ -580,7 +584,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     streams: [testStream],
     dynamic_streams: [],
   };
-  const streamName = testStream?.name ?? "";
 
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;
@@ -733,7 +736,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(manifest);
 
-      if (testStreamId.type !== "dynamic_stream") {
+      if (testStreamId.type !== "dynamic_stream" && testStream.type !== ConditionalStreamsType.ConditionalStreams) {
         updateStreamTestResults(result, testStream);
       }
     }
