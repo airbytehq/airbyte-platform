@@ -232,6 +232,9 @@ class AirbyteCdkRequesterImpl(
   ): String {
     val adaptedConfig = Jsons.deserializeIfText(config).deepCopy<JsonNode>()
     (adaptedConfig as ObjectNode).set<JsonNode>(MANIFEST_KEY, Jsons.deserializeIfText(manifest))
+
+    moveNormalizeAndMigrateFlagsToConfig(manifest, adaptedConfig)
+
     if (!StringUtils.isBlank(customComponentsCode)) {
       adaptedConfig.put(CUSTOM_COMPONENT_KEY, customComponentsCode)
       adaptedConfig.set<JsonNode>(CUSTOM_COMPONENT_CHECKSUM_KEY, calculateChecksums(customComponentsCode))
@@ -244,13 +247,16 @@ class AirbyteCdkRequesterImpl(
   @Throws(IOException::class)
   private fun adaptConfig(
     manifest: JsonNode,
-    customComponentsCode: String,
+    customComponentsCode: String?,
     config: JsonNode,
     command: String,
     userProvidedStreamLimit: Int?,
   ): String {
     val adaptedConfig = Jsons.deserializeIfText(config).deepCopy<JsonNode>()
     (adaptedConfig as ObjectNode).set<JsonNode>(MANIFEST_KEY, Jsons.deserializeIfText(manifest))
+
+    moveNormalizeAndMigrateFlagsToConfig(manifest, adaptedConfig)
+
     adaptedConfig.put(COMMAND_KEY, command)
     if (!StringUtils.isBlank(customComponentsCode)) {
       adaptedConfig.put(CUSTOM_COMPONENT_KEY, customComponentsCode)
@@ -285,6 +291,9 @@ class AirbyteCdkRequesterImpl(
   ): String {
     val adaptedConfig = Jsons.deserializeIfText(config).deepCopy<JsonNode>()
     (adaptedConfig as ObjectNode).set<JsonNode>(MANIFEST_KEY, Jsons.deserializeIfText(manifest))
+
+    moveNormalizeAndMigrateFlagsToConfig(manifest, adaptedConfig)
+
     adaptedConfig.put(COMMAND_KEY, command)
     if (!StringUtils.isBlank(customComponentsCode)) {
       adaptedConfig.put(CUSTOM_COMPONENT_KEY, customComponentsCode)
@@ -328,6 +337,29 @@ class AirbyteCdkRequesterImpl(
     return OBJECT_WRITER.writeValueAsString(adaptedConfig)
   }
 
+  private fun moveNormalizeAndMigrateFlagsToConfig(
+    manifest: JsonNode,
+    config: JsonNode,
+  ) {
+    // the hack to include additional flags to control the Form-based UI rendering
+
+    // add `__should_normalize: bool` set by UI and remove it from the manifest for the time of the call
+    if (manifest.has(SHOULD_NORMALIZE_KEY)) {
+      (config as ObjectNode).set<JsonNode>(SHOULD_NORMALIZE_KEY, manifest.get(SHOULD_NORMALIZE_KEY))
+      // remove the flag from the manifest JsonNode once it's there
+      ((config as ObjectNode).get(MANIFEST_KEY) as ObjectNode).remove(SHOULD_NORMALIZE_KEY)
+    }
+
+    // add `__should_migrate: bool` set by UI and remove it from the manifest for the time of the call
+    if (manifest.has(SHOULD_MIGRATE_KEY)) {
+      (config as ObjectNode).set<JsonNode>(SHOULD_MIGRATE_KEY, manifest.get(SHOULD_MIGRATE_KEY))
+      // now remove the flag from the manifest JsonNode once it's there
+      ((config as ObjectNode).get(MANIFEST_KEY) as ObjectNode).remove(SHOULD_MIGRATE_KEY)
+    }
+
+    // end of hack
+  }
+
   private fun <T> convertToList(
     `object`: JsonNode,
     typeReference: TypeReference<List<T>>,
@@ -354,6 +386,8 @@ class AirbyteCdkRequesterImpl(
     private const val RESOLVE_MANIFEST_COMMAND = "resolve_manifest"
     private const val FULL_RESOLVED_MANIFEST_COMMAND = "full_resolve_manifest"
     private const val STREAM_READ_COMMAND = "test_read"
+    private const val SHOULD_NORMALIZE_KEY = "__should_normalize"
+    private const val SHOULD_MIGRATE_KEY = "__should_migrate"
     private val CATALOG_TEMPLATE =
       """
       {
