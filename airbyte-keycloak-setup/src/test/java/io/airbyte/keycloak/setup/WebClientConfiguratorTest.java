@@ -18,7 +18,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.keycloak.admin.client.resource.ClientsResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.ClientRepresentation;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -35,7 +34,6 @@ class WebClientConfiguratorTest {
   private ClientsResource clientsResource;
   @Mock
   private Response response;
-  @InjectMocks
   private WebClientConfigurator webClientConfigurator;
 
   @BeforeEach

@@ -8,6 +8,9 @@ dependencies {
   annotationProcessor(platform(libs.micronaut.platform))
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
 
+  ksp(platform(libs.micronaut.platform))
+  ksp(libs.bundles.micronaut.annotation.processor)
+
   implementation(platform(libs.micronaut.platform))
   implementation(libs.bundles.micronaut)
   implementation(libs.bundles.keycloak.client)
@@ -36,7 +39,7 @@ dependencies {
 
 airbyte {
   application {
-    mainClass = "io.airbyte.keycloak.setup.Application"
+    mainClass = "io.airbyte.keycloak.setup.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {
@@ -51,4 +54,10 @@ val copyScripts = tasks.register<Copy>("copyScripts") {
 
 tasks.named("dockerCopyDistribution") {
   dependsOn(copyScripts)
+}
+
+// The DuplicatesStrategy will be required while this module is mixture of kotlin and java dependencies.
+// Once the code has been migrated to kotlin, this can also be removed.
+tasks.withType<Jar>().configureEach {
+  duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
