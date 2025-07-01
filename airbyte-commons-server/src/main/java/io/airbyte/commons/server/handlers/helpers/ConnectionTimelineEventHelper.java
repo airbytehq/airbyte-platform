@@ -5,7 +5,6 @@
 package io.airbyte.commons.server.handlers.helpers;
 
 import com.google.common.annotations.VisibleForTesting;
-import io.airbyte.api.client.model.generated.JobRead;
 import io.airbyte.api.model.generated.AirbyteCatalogDiff;
 import io.airbyte.api.model.generated.CatalogDiff;
 import io.airbyte.api.model.generated.ConnectionRead;
@@ -33,7 +32,6 @@ import io.airbyte.config.persistence.UserPersistence;
 import io.airbyte.data.services.ConnectionTimelineEventService;
 import io.airbyte.data.services.shared.ConnectionDisabledEvent;
 import io.airbyte.data.services.shared.ConnectionEnabledEvent;
-import io.airbyte.data.services.shared.ConnectionEvent;
 import io.airbyte.data.services.shared.ConnectionSettingsChangedEvent;
 import io.airbyte.data.services.shared.FailedEvent;
 import io.airbyte.data.services.shared.FinalStatusEvent;
@@ -343,17 +341,6 @@ public class ConnectionTimelineEventHelper {
     } catch (final Exception e) {
       LOGGER.error("Failed to persist connection settings changed event for connection: {}", connectionId, e);
     }
-  }
-
-  public Optional<User> getUserAssociatedWithJobTimelineEventType(final JobRead job, final ConnectionEvent.Type eventType) {
-    final Optional<UUID> userId = Optional.ofNullable(connectionTimelineEventService.findAssociatedUserForAJob(job, eventType));
-    return userId.flatMap(id -> {
-      try {
-        return userPersistence.getUser(id);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    });
   }
 
 }
