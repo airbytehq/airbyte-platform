@@ -21,9 +21,9 @@ import static org.jooq.impl.SQLDataType.VARCHAR;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.yaml.Yamls;
 import io.airbyte.config.ConfigNotFoundType;
-import io.airbyte.config.ConfigSchema;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
@@ -694,7 +694,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public void writeWorkspaceWithSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException {
     // Get the schema for the webhook config, so we can split out any secret fields.
-    final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    final JsonNode webhookConfigSchema = Yamls.deserialize(MoreResources.readResource("types/WebhookOperationConfigs.yaml"));
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId());
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();

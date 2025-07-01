@@ -9,7 +9,7 @@ import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.oauth.BaseOAuth2Flow
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonValidationException
@@ -50,7 +50,7 @@ class DeclarativeOAuthFlow : BaseOAuth2Flow {
   ) {
     validateInputOAuthConfiguration(oauthConfigSpecification, inputOAuthConfiguration)
     if (oauthParamConfig == null) {
-      val problem = ProblemResourceData().resourceType(ConfigSchema.SOURCE_OAUTH_PARAM.name)
+      val problem = ProblemResourceData().resourceType(ConfigNotFoundType.SOURCE_OAUTH_PARAM.name)
       throw ResourceNotFoundProblem("Undefined OAuth Parameter.", problem)
     }
   }

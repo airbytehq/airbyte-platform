@@ -12,13 +12,11 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.sql.SQLException
 
 @Suppress("ktlint:standard:class-naming")
-@Disabled
 internal class V0_35_1_001__RemoveForeignKeyFromActorOauth_Test : AbstractConfigsDatabaseTest() {
   @Test
   @Throws(IOException::class, SQLException::class)
