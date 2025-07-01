@@ -232,27 +232,6 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-  /v1/workspaces/list_active_workspaces_by_most_recently_running_jobs:
-    post:
-      summary: Lists workspaces with the most recently running jobs within the given time window
-      tags:
-        - workspace
-      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TimeWindowRequestBody"
-        required: false
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceIdList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/get_available_dbt_jobs:
     post:
       tags:
