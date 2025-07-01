@@ -36,7 +36,7 @@ class RecordSchemaValidator(
       // the platform will attempt to migrate "id" property names to the escaped equivalent of "$id".
       // Copy the schema before modification to ensure that it doesn't mutate the actual catalog schema
       // used elsewhere in the platform.
-      jsonSchemaValidator.initializeSchemaValidator(stream.toString(), updateIdNodePropertyName(schema.deepCopy()))
+      jsonSchemaValidator.initializeSchemaValidator(stream.toString(), updateIdNodePropertyName(schema.deepCopy())!!)
     }
   }
 
@@ -52,7 +52,7 @@ class RecordSchemaValidator(
     schemaValidationExecutorService.execute {
       val errorMessages = jsonSchemaValidator.validateInitializedSchema(airbyteStream.toString(), message.getData())
       if (errorMessages.isNotEmpty()) {
-        updateValidationErrors(errorMessages, airbyteStream, validationErrors)
+        updateValidationErrors(errorMessages.toMutableSet(), airbyteStream, validationErrors)
       }
     }
   }

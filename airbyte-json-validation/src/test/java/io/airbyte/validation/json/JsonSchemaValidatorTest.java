@@ -7,7 +7,6 @@ package io.airbyte.validation.json;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -103,7 +102,7 @@ class JsonSchemaValidatorTest {
     assertTrue(JsonSchemaValidator.getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field2"));
     assertFalse(JsonSchemaValidator.getSchema(schemaFile.toFile(), "InnerObject").get(PROPERTIES).has("field1"));
     // non-existent object
-    assertNull(JsonSchemaValidator.getSchema(schemaFile.toFile(), "NonExistentObject"));
+    assertThrows(IllegalArgumentException.class, () -> JsonSchemaValidator.getSchema(schemaFile.toFile(), "NonExistentObject"));
   }
 
   @Test

@@ -629,7 +629,7 @@ abstract class BaseOAuth2Flow
       ) {
         if (oauthConfigSpecification != null && oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification != null) {
           val validator = JsonSchemaValidator()
-          validator.ensure(oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification, inputOAuthConfiguration)
+          validator.ensure(oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification, inputOAuthConfiguration!!)
         }
       }
 
