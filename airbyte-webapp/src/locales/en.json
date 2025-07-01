@@ -808,7 +808,9 @@
   "connection.selectSyncMode": "Select sync mode",
   "connection.syncMode": "sync mode",
   "connection.sourceFieldName": "Source field name",
+  "connection.sourceFieldNamePlaceholder": "Select source field name",
   "connection.destinationFieldName": "Destination field name",
+  "connection.destinationFieldNamePlaceholder": "Select destination field name",
   "connection.destinationObjectName": "Destination object name",
   "connection.matchingKey": "Matching key",
 

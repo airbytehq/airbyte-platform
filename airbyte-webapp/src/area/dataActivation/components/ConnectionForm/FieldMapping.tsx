@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { useWatch } from "react-hook-form";
+import { Controller, useWatch } from "react-hook-form";
 import { FormattedMessage, useIntl } from "react-intl";
 
-import { FormControl } from "components/forms/FormControl";
 import { Button } from "components/ui/Button";
+import { ComboBox } from "components/ui/ComboBox";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
@@ -117,11 +117,16 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
         </Text>
       </FlexContainer>
       <div className={styles.fieldMapping__source}>
-        <FormControl<DataActivationConnectionFormValues>
-          options={availableSourceFieldOptions}
+        <Controller
           name={`streams.${streamIndex}.fields.${fieldIndex}.sourceFieldName`}
-          fieldType="dropdown"
-          reserveSpaceForError={false}
+          render={({ field }) => (
+            <ComboBox
+              value={field.value}
+              onChange={field.onChange}
+              options={availableSourceFieldOptions}
+              placeholder={formatMessage({ id: "connection.sourceFieldNamePlaceholder" })}
+            />
+          )}
         />
       </div>
       <div className={styles.fieldMapping__arrow}>
@@ -134,12 +139,16 @@ export const FieldMapping: React.FC<FieldMappingProps> = ({
               disabled={!!destinationSyncMode && !isPartOfMatchingKey}
               control={
                 <FlexItem grow>
-                  <FormControl<DataActivationConnectionFormValues>
-                    options={availableDestinationFieldOptions}
+                  <Controller
                     name={`streams.${streamIndex}.fields.${fieldIndex}.destinationFieldName`}
-                    disabled={!destinationSyncMode || isPartOfMatchingKey}
-                    fieldType="dropdown"
-                    reserveSpaceForError={false}
+                    render={({ field }) => (
+                      <ComboBox
+                        value={field.value}
+                        onChange={field.onChange}
+                        options={availableDestinationFieldOptions}
+                        placeholder={formatMessage({ id: "connection.destinationFieldNamePlaceholder" })}
+                      />
+                    )}
                   />
                 </FlexItem>
               }
