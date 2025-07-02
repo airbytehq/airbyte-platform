@@ -25,7 +25,6 @@
   }
 
   &--secondary {
-    border: variables.$border-thin solid colors.$grey-100;
     width: 150px;
 
     input {
@@ -48,10 +47,6 @@
           text-align: center;
         }
       }
-    }
-
-    &.addStreamForMappingComboBox--secondary:hover input::placeholder {
-      color: colors.$grey-400;
     }
 
     &:not(.disabled):hover {

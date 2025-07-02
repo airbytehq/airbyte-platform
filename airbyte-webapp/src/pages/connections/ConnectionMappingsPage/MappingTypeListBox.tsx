@@ -1,7 +1,6 @@
 import { FormattedMessage } from "react-intl";
 
 import { FlexContainer } from "components/ui/Flex";
-import { Icon } from "components/ui/Icon";
 import { ListBox, ListBoxControlButtonProps } from "components/ui/ListBox";
 import { Text } from "components/ui/Text";
 
@@ -75,7 +74,6 @@ export const MappingTypeListBox: React.FC<MappingTypeListBoxProps> = ({
         <Text as="span" color={isDisabled ? "grey300" : "darkBlue"}>
           <FormattedMessage id={mappingTypeLabels[selectedOption.value].title} />
         </Text>
-        <Icon type="caretDown" color="disabled" />
       </FlexContainer>
     );
   };
