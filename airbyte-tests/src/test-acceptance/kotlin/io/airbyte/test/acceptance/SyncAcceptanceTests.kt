@@ -4,16 +4,21 @@
 
 package io.airbyte.test.acceptance
 
+import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.node.ObjectNode
 import com.google.common.collect.ImmutableMap
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.function.CheckedSupplier
 import io.airbyte.api.client.model.generated.CheckConnectionRead
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.ConnectionScheduleData
 import io.airbyte.api.client.model.generated.ConnectionScheduleDataCron
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.JobStatus
+import io.airbyte.api.client.model.generated.SelectedFieldInfo
+import io.airbyte.api.client.model.generated.StreamMapperType
 import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.SyncMode
@@ -26,6 +31,7 @@ import io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
 import io.airbyte.test.utils.Asserts.assertStreamStatuses
+import io.airbyte.test.utils.Databases
 import io.airbyte.test.utils.Databases.listAllTables
 import io.airbyte.test.utils.Databases.retrieveRecordsFromDatabase
 import io.airbyte.test.utils.TestConnectionCreate
@@ -40,10 +46,12 @@ import org.junit.jupiter.api.parallel.ExecutionMode
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.IOException
+import java.security.KeyPairGenerator
 import java.time.Duration
 import java.util.Optional
 import java.util.Set
 import java.util.UUID
+import javax.crypto.Cipher
 
 // TODO switch all the tests back to normal (i.e. non-parameterized) after the sync workflow v2 rollout
 
@@ -236,8 +244,13 @@ internal abstract class SyncAcceptanceTests(
     }
   }
 
+  /**
+   * This test also exercises column selection and mappers.
+   */
   @Test
   @Throws(Exception::class)
+  // Needed for `keyPair.public.encoded.toHexString()`
+  @OptIn(ExperimentalStdlibApi::class)
   fun testCronSync() {
     testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
       val sourceId = testHarness.createPostgresSource().sourceId
@@ -252,20 +265,77 @@ internal abstract class SyncAcceptanceTests(
         )
       val srcSyncMode = SyncMode.FULL_REFRESH
       val dstSyncMode = DestinationSyncMode.OVERWRITE
+
+      val keyPair =
+        KeyPairGenerator
+          .getInstance("RSA")
+          .also { it.initialize(2048) }
+          .generateKeyPair()
+
       val catalog =
         modifyCatalog(
-          discoverResult.catalog,
-          Optional.of(srcSyncMode),
-          Optional.of(dstSyncMode),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.of(true),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
-          Optional.empty(),
+          originalCatalog = discoverResult.catalog,
+          replacementSourceSyncMode = Optional.of(srcSyncMode),
+          replacementDestinationSyncMode = Optional.of(dstSyncMode),
+          replacementSelected = Optional.of(true),
+          replacementFieldSelectionEnabled = Optional.of(true),
+          // Remove the `id` field, keep the `name` field
+          replacementSelectedFields = Optional.of(listOf(SelectedFieldInfo(listOf("name")))),
+          mappers =
+            listOf(
+              // Drop all records except "sherif"
+              ConfiguredStreamMapper(
+                StreamMapperType.ROW_MINUS_FILTERING,
+                Jsons.deserialize(
+                  """
+                  {
+                    "conditions": {
+                      "comparisonValue": "sherif",
+                      "fieldName": "name",
+                      "type": "EQUAL"
+                    }
+                  }
+                  """.trimIndent(),
+                ),
+              ),
+              // run a sequence of mappers against the `name` field
+              ConfiguredStreamMapper(
+                StreamMapperType.FIELD_MINUS_RENAMING,
+                Jsons.deserialize(
+                  """
+                  {
+                    "newFieldName": "name_renamed",
+                    "originalFieldName": "name"
+                  }
+                  """.trimIndent(),
+                ),
+              ),
+              ConfiguredStreamMapper(
+                StreamMapperType.HASHING,
+                Jsons.deserialize(
+                  """
+                  {
+                    "method": "SHA-256",
+                    "targetField": "name_renamed",
+                    "fieldNameSuffix": "_hashed"
+                  }
+                  """.trimIndent(),
+                ),
+              ),
+              ConfiguredStreamMapper(
+                StreamMapperType.ENCRYPTION,
+                Jsons.deserialize(
+                  """
+                  {
+                    "algorithm": "RSA",
+                    "fieldNameSuffix": "_encrypted",
+                    "publicKey": "${keyPair.public.encoded.toHexString()}",
+                    "targetField": "name_renamed_hashed"
+                  }
+                  """.trimIndent(),
+                ),
+              ),
+            ),
         )
       val conn =
         testHarness.createConnection(
@@ -300,16 +370,37 @@ internal abstract class SyncAcceptanceTests(
                 ),
               ).withMaxRetries(AcceptanceTestsResources.MAX_TRIES)
               .build(),
-          ).get<String>(
-            CheckedSupplier<String> {
-              assertSourceAndDestinationDbRawRecordsInSync(
-                testHarness.getSourceDatabase(),
-                testHarness.getDestinationDatabase(),
-                AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-                conn.namespaceFormat!!,
-                false,
-                AcceptanceTestsResources.WITHOUT_SCD_TABLE,
+          ).get(
+            CheckedSupplier {
+              // Can't use any of the utility assertions, because RSA encryption is nondeterministic.
+              // So we'll do this manually.
+              val destinationRecords: List<JsonNode> =
+                Databases.retrieveRawDestinationRecords(
+                  testHarness.getDestinationDatabase(),
+                  conn.namespaceFormat!!,
+                  AcceptanceTestHarness.STREAM_NAME,
+                )
+
+              Assertions.assertEquals(1, destinationRecords.size, "Expected to see exactly one record, got $destinationRecords")
+              val onlyRecord = destinationRecords.first() as ObjectNode
+              Assertions.assertEquals(
+                listOf("name_renamed_hashed_encrypted"),
+                onlyRecord.fieldNames().asSequence().toList(),
+                "Expected record to contain a single field `name_renamed_hashed_encrypted`, got $onlyRecord",
               )
+              val encryptedBytes = onlyRecord["name_renamed_hashed_encrypted"].textValue().hexToByteArray()
+              val decrypted =
+                Cipher
+                  .getInstance("RSA")
+                  .also { it.init(Cipher.DECRYPT_MODE, keyPair.private) }
+                  .doFinal(encryptedBytes)
+                  .toString(Charsets.UTF_8)
+              Assertions.assertEquals(
+                "1ba0292c60f8c80a467157c332f641de05256388dff757bdb773987a39ac35e0",
+                decrypted,
+                """Expected decrypted value to equal sha256("sherif")""",
+              )
+
               "success" // If the assertion throws after all the retries, then retryWithJitter will return null.
             },
           )

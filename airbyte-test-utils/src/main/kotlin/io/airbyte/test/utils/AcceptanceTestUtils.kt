@@ -11,6 +11,7 @@ import io.airbyte.api.client.AirbyteApiClient
 import io.airbyte.api.client.model.generated.AirbyteCatalog
 import io.airbyte.api.client.model.generated.AirbyteStreamAndConfiguration
 import io.airbyte.api.client.model.generated.AirbyteStreamConfiguration
+import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SelectedFieldInfo
 import io.airbyte.api.client.model.generated.SyncMode
@@ -144,6 +145,7 @@ object AcceptanceTestUtils {
     replacementGenerationId: Optional<Long> = Optional.empty(),
     replacementSyncId: Optional<Long> = Optional.empty(),
     streamFilter: Optional<Predicate<AirbyteStreamAndConfiguration>> = Optional.empty(),
+    mappers: List<ConfiguredStreamMapper>? = null,
   ): AirbyteCatalog {
     val updatedStreams: List<AirbyteStreamAndConfiguration> =
       originalCatalog
@@ -153,23 +155,23 @@ object AcceptanceTestUtils {
           val config = s.config
           val newConfig =
             AirbyteStreamConfiguration(
-              replacementSourceSyncMode.orElse(config!!.syncMode),
-              replacementDestinationSyncMode.orElse(config.destinationSyncMode),
-              replacementCursorFields.orElse(config.cursorField),
-              null,
-              replacementPrimaryKeys.orElse(config.primaryKey),
-              config.aliasName,
-              replacementSelected.orElse(config.selected),
-              config.suggested,
-              config.destinationObjectName,
-              config.includeFiles,
-              replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
-              replacementSelectedFields.orElse(config.selectedFields),
-              config.hashedFields,
-              config.mappers,
-              replacementMinimumGenerationId.orElse(config.minimumGenerationId),
-              replacementGenerationId.orElse(config.generationId),
-              replacementSyncId.orElse(config.syncId),
+              syncMode = replacementSourceSyncMode.orElse(config!!.syncMode),
+              destinationSyncMode = replacementDestinationSyncMode.orElse(config.destinationSyncMode),
+              cursorField = replacementCursorFields.orElse(config.cursorField),
+              namespace = null,
+              primaryKey = replacementPrimaryKeys.orElse(config.primaryKey),
+              aliasName = config.aliasName,
+              selected = replacementSelected.orElse(config.selected),
+              suggested = config.suggested,
+              destinationObjectName = config.destinationObjectName,
+              includeFiles = config.includeFiles,
+              fieldSelectionEnabled = replacementFieldSelectionEnabled.orElse(config.fieldSelectionEnabled),
+              selectedFields = replacementSelectedFields.orElse(config.selectedFields),
+              hashedFields = config.hashedFields,
+              mappers = mappers ?: config.mappers,
+              minimumGenerationId = replacementMinimumGenerationId.orElse(config.minimumGenerationId),
+              generationId = replacementGenerationId.orElse(config.generationId),
+              syncId = replacementSyncId.orElse(config.syncId),
             )
           AirbyteStreamAndConfiguration(s.stream, newConfig)
         }?.filter(streamFilter.orElse { _ -> true })
