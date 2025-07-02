@@ -5,7 +5,6 @@
 package io.airbyte.db.instance.configs
 
 import io.airbyte.commons.resources.Resources
-import io.airbyte.config.ConfigSchema
 import io.airbyte.db.Database
 import io.airbyte.db.ExceptionWrappingDatabase
 import io.airbyte.db.factory.DatabaseCheckFactory.Companion.createConfigsDatabaseInitializer
@@ -40,7 +39,7 @@ class ConfigsDatabaseTestProvider(
     val database = Database(dslContext)
 
     if (runMigration) {
-      val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database, flyway)
+      val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
       migrator.createBaseline()
       migrator.migrate()
     } else {
@@ -50,7 +49,7 @@ class ConfigsDatabaseTestProvider(
         ctx
           .insertInto(DSL.table("airbyte_configs"))
           .set(DSL.field("config_id"), UUID.randomUUID().toString())
-          .set(DSL.field("config_type"), ConfigSchema.STATE.name)
+          .set(DSL.field("config_type"), "STATE")
           .set(DSL.field("config_blob"), JSONB.valueOf("{}"))
           .set(DSL.field("created_at"), timestamp)
           .set(DSL.field("updated_at"), timestamp)

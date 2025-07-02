@@ -30,7 +30,7 @@ internal class V0_55_1_002__AddGenerationTableTest : AbstractConfigsDatabaseTest
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_55_1_001__AddRefreshesTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -39,7 +39,7 @@ internal class V0_55_1_002__AddGenerationTableTest : AbstractConfigsDatabaseTest
 
   @Test
   fun test() {
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     val tableExists = generationTableExists(dslContext)
 
     Assertions.assertFalse(tableExists)

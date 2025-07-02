@@ -31,9 +31,12 @@ describe(`${createSyncCatalogFromFormValues.name}`, () => {
           destinationObjectName: "destination_stream_1",
           sourceSyncMode: SyncMode.incremental,
           destinationSyncMode: DestinationSyncMode.append_dedup,
-          fields: [{ sourceFieldName: "name", destinationFieldName: "dest_name" }],
+          fields: [
+            { sourceFieldName: "name", destinationFieldName: "dest_name" },
+            { sourceFieldName: "id", destinationFieldName: "dest_id" },
+          ],
           cursorField: "created_at",
-          primaryKey: "id",
+          matchingKeys: ["dest_id"],
         },
       ],
     };
@@ -65,6 +68,14 @@ describe(`${createSyncCatalogFromFormValues.name}`, () => {
                 mapperConfiguration: {
                   newFieldName: "dest_name",
                   originalFieldName: "name",
+                },
+              },
+              {
+                id: expect.any(String),
+                type: "field-renaming",
+                mapperConfiguration: {
+                  newFieldName: "dest_id",
+                  originalFieldName: "id",
                 },
               },
             ],

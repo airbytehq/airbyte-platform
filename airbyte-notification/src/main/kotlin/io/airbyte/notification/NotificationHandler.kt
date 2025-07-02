@@ -37,13 +37,13 @@ open class NotificationHandler(
       runCatching {
         if (maybeWebhookConfigFetcher != null && maybeWebhookNotificationSender != null && notificationType == NotificationType.WEBHOOK) {
           maybeWebhookConfigFetcher.fetchConfig(connectionId)?.let {
-            maybeWebhookNotificationSender.sendNotification(it, title, message)
+            maybeWebhookNotificationSender.sendNotification(it, title, message, null) // TODO
           }
         }
 
         if (maybeCustomerIoConfigFetcher != null && maybeCustomerIoNotificationSender != null && notificationType == NotificationType.CUSTOMERIO) {
           maybeCustomerIoConfigFetcher.fetchConfig(connectionId)?.let {
-            maybeCustomerIoNotificationSender.sendNotification(it, title, message)
+            maybeCustomerIoNotificationSender.sendNotification(it, title, message, null) // TODO
           }
         }
       }

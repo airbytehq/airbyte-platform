@@ -14,7 +14,6 @@ import io.airbyte.config.AuthenticatedUser
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.UserPersistence
 import io.airbyte.data.auth.TokenType
-import io.airbyte.featureflag.FeatureFlagClient
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.http.HttpRequest
 import io.micronaut.security.utils.SecurityService
@@ -37,7 +36,6 @@ class RoleResolverTest {
   lateinit var securityService: SecurityService
   lateinit var permissionHandler: PermissionHandler
   lateinit var roleResolver: RoleResolver
-  lateinit var featureFlagClient: FeatureFlagClient
 
   @BeforeEach
   fun setUp() {
@@ -46,9 +44,8 @@ class RoleResolverTest {
     currentUserService = mockk()
     permissionHandler = mockk()
     securityService = mockk()
-    featureFlagClient = mockk(relaxed = true)
     val authenticationHeaderResolver = AuthenticationHeaderResolver(workspaceHelper, permissionHandler, userPersistence)
-    roleResolver = RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler, featureFlagClient)
+    roleResolver = RoleResolver(authenticationHeaderResolver, currentUserService, securityService, permissionHandler)
   }
 
   @Test

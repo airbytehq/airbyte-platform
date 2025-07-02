@@ -46,7 +46,7 @@ class DefaultSyncJobFactoryTest {
 
   @Test
   void createSyncJobFromConnectionId()
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID destinationDefinitionId = UUID.randomUUID();
     final UUID connectionId = UUID.randomUUID();

@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.Permission
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.repositories.entities.Dataplane

@@ -32,6 +32,7 @@ export interface Experiments {
   "embedded.operatorOnboarding.destinations": string;
   "embedded.operatorOnboarding": boolean;
   "embedded.templateCreateButton": boolean;
+  "embedded.useSonarServer": boolean;
   "platform.allow-config-template-endpoints": boolean;
   "platform.llm-sync-job-failure-explanation": boolean;
   "platform.use-runtime-secret-persistence": boolean;
@@ -85,6 +86,7 @@ export const defaultExperimentValues: Experiments = {
   "embedded.operatorOnboarding.destinations":
     "4816b78f-1489-44c1-9060-4b19d5fa9362, a7bcc9d8-13b3-4e49-b80d-d020b90045e3",
   "embedded.templateCreateButton": false,
+  "embedded.useSonarServer": false,
   "platform.allow-config-template-endpoints": false,
   "platform.llm-sync-job-failure-explanation": false,
   "platform.use-runtime-secret-persistence": false,

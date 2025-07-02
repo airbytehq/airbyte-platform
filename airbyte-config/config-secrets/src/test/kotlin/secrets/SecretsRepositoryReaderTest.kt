@@ -53,7 +53,7 @@ class SecretsRepositoryReaderTest {
   }
 
   @Test
-  fun `test fetchSecretFromSecretPersistence returns hydrated value`() {
+  fun `test fetchJsonSecretFromSecretPersistence returns hydrated value`() {
     val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test_secret", 1)
     val secretString = """{ "access_token": "xyz", "request_succeeded": true }"""
     val secretValue = Jsons.deserialize(secretString)
@@ -61,10 +61,23 @@ class SecretsRepositoryReaderTest {
 
     secretPersistence.write(secretCoordinate, secretString)
 
-    val result: JsonNode = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence)
+    val result: JsonNode = secretsRepositoryReader.fetchJsonSecretFromSecretPersistence(secretCoordinate, secretPersistence)
 
     Assertions.assertEquals(expectedPayload, result)
     Assertions.assertEquals("xyz", result.get("access_token").asText())
     Assertions.assertEquals(true, result.get("request_succeeded").asBoolean())
+  }
+
+  @Test
+  fun `test fetchSecretFromSecretPersistence returns hydrated value`() {
+    val secretCoordinate = AirbyteManagedSecretCoordinate("airbyte_test_secret", 1)
+    val secretValue = "my-secret-value"
+    val expectedPayload = secretValue
+
+    secretPersistence.write(secretCoordinate, secretValue)
+
+    val result = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence)
+
+    Assertions.assertEquals(expectedPayload, result)
   }
 }

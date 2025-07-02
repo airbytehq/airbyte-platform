@@ -451,19 +451,27 @@ exports[`CreateConnectionForm should render 1`] = `
                             >
                               <span
                                 class="<removed-for-snapshot-test>"
-                                data-type="text"
                               >
-                                <span
+                                <div
                                   class="<removed-for-snapshot-test>"
                                 >
-                                  Streams and fields
-                                </span>
+                                  <span
+                                    class="<removed-for-snapshot-test>"
+                                    data-type="text"
+                                  >
+                                    <span
+                                      class="<removed-for-snapshot-test>"
+                                    >
+                                      Streams and fields
+                                    </span>
+                                  </span>
+                                </div>
+                                <div
+                                  class="<removed-for-snapshot-test>"
+                                  data-icon="chevron-down"
+                                  data-testid="mocksvg"
+                                />
                               </span>
-                              <div
-                                class="<removed-for-snapshot-test>"
-                                data-icon="chevron-down"
-                                data-testid="mocksvg"
-                              />
                             </button>
                             <div
                               style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -879,18 +887,26 @@ exports[`CreateConnectionForm should render 1`] = `
                                     <span
                                       class="<removed-for-snapshot-test>"
                                     >
-                                      <p
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        data-type="text"
                                       >
-                                        Full refresh | Overwrite + Deduped
-                                      </p>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            Full refresh | Overwrite + Deduped
+                                          </p>
+                                        </div>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-icon="chevron-down"
+                                          data-testid="mocksvg"
+                                        />
+                                      </span>
                                     </span>
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                      data-icon="caret-down"
-                                      data-testid="mocksvg"
-                                    />
                                   </button>
                                   <div
                                     style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -1028,18 +1044,26 @@ exports[`CreateConnectionForm should render 1`] = `
                                     <span
                                       class="<removed-for-snapshot-test>"
                                     >
-                                      <p
+                                      <span
                                         class="<removed-for-snapshot-test>"
-                                        data-type="text"
                                       >
-                                        Full refresh | Overwrite + Deduped
-                                      </p>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                        >
+                                          <p
+                                            class="<removed-for-snapshot-test>"
+                                            data-type="text"
+                                          >
+                                            Full refresh | Overwrite + Deduped
+                                          </p>
+                                        </div>
+                                        <div
+                                          class="<removed-for-snapshot-test>"
+                                          data-icon="chevron-down"
+                                          data-testid="mocksvg"
+                                        />
+                                      </span>
                                     </span>
-                                    <div
-                                      class="<removed-for-snapshot-test>"
-                                      data-icon="caret-down"
-                                      data-testid="mocksvg"
-                                    />
                                   </button>
                                   <div
                                     style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"

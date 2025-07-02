@@ -1,39 +1,45 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery, UseInfiniteQueryResult, useInfiniteQuery } from "@tanstack/react-query";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import { useCurrentUser } from "core/services/auth";
 
-import { useGetWorkspace, useCurrentWorkspaceOrUndefined } from "./workspaces";
+import { useGetWorkspace } from "./workspaces";
+import { ApiCallOptions } from "../apiCall";
 import {
   getOrganization,
   getOrganizationInfo,
+  getOrgInfo,
   listUsersInOrganization,
   updateOrganization,
   getOrganizationTrialStatus,
   getOrganizationUsage,
   listWorkspacesInOrganization,
   listOrganizationsByUser,
+  listOrganizationSummaries,
 } from "../generated/AirbyteClient";
 import { OrganizationUpdateRequestBody } from "../generated/AirbyteClient.schemas";
 import { SCOPE_ORGANIZATION, SCOPE_USER } from "../scopes";
 import {
   ConsumptionTimeWindow,
   ListOrganizationsByUserRequestBody,
+  ListOrganizationSummariesRequestBody,
   OrganizationRead,
   OrganizationTrialStatusRead,
   OrganizationUserReadList,
   WorkspaceReadList,
+  OrganizationInfoRead,
+  ListOrganizationSummariesResponse,
 } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
-
 export const organizationKeys = {
   all: [SCOPE_USER, "organizations"] as const,
   lists: () => [...organizationKeys.all, "list"] as const,
   list: (filters: string[]) => [...organizationKeys.lists(), filters] as const,
   info: (organizationId = "<none>") => [...organizationKeys.all, "info", organizationId] as const,
   detail: (organizationId = "<none>") => [...organizationKeys.all, "details", organizationId] as const,
+  orgInfo: (organizationId = "<none>") => [...organizationKeys.all, "orgInfo", organizationId] as const,
   allListUsers: [SCOPE_ORGANIZATION, "users", "list"] as const,
   listUsers: (organizationId: string) => [SCOPE_ORGANIZATION, "users", "list", organizationId] as const,
   trialStatus: (organizationId: string) => [SCOPE_ORGANIZATION, "trial", organizationId] as const,
@@ -42,17 +48,8 @@ export const organizationKeys = {
   workspaces: (organizationId: string) => [SCOPE_ORGANIZATION, "workspaces", "list", organizationId] as const,
   listByUser: (requestBody: ListOrganizationsByUserRequestBody) =>
     [...organizationKeys.all, "byUser", requestBody] as const,
-};
-
-/**
- * Returns the organization ID from either the current workspace or the current organization context.
- * This hook is useful when you need to work with organization data in both workspace and non-workspace contexts.
- */
-export const useMaybeWorkspaceCurrentOrganizationId = () => {
-  const workspace = useCurrentWorkspaceOrUndefined();
-  const currentOrganizationId = useCurrentOrganizationId();
-
-  return workspace?.organizationId ?? currentOrganizationId;
+  summaries: (requestBody: ListOrganizationSummariesRequestBody) =>
+    [...organizationKeys.all, "summaries", requestBody] as const,
 };
 
 /**
@@ -78,6 +75,13 @@ export const useOrganization = (organizationId: string) => {
   const requestOptions = useRequestOptions();
   return useSuspenseQuery(organizationKeys.detail(organizationId), () =>
     getOrganization({ organizationId }, requestOptions)
+  );
+};
+
+export const useOrgInfo = (organizationId: string): OrganizationInfoRead => {
+  const requestOptions = useRequestOptions();
+  return useSuspenseQuery(organizationKeys.orgInfo(organizationId), () =>
+    getOrgInfo({ organizationId }, requestOptions)
   );
 };
 
@@ -137,7 +141,7 @@ export const useOrganizationTrialStatus = (
 
 export const useOrganizationUsage = ({ timeWindow }: { timeWindow: ConsumptionTimeWindow }) => {
   const requestOptions = useRequestOptions();
-  const organizationId = useMaybeWorkspaceCurrentOrganizationId();
+  const organizationId = useCurrentOrganizationId();
 
   return useSuspenseQuery(organizationKeys.usage(organizationId, timeWindow), () =>
     getOrganizationUsage({ organizationId, timeWindow }, requestOptions)
@@ -158,12 +162,82 @@ export const useListOrganizationsByUser = (requestBody: ListOrganizationsByUserR
   );
 };
 
-// Maybe better called useFirstOrg
-export const useCurrentOrganization = (): OrganizationRead => {
+const listOrgSummariesQueryFn =
+  (requestBody: ListOrganizationSummariesRequestBody, requestOptions: ApiCallOptions) =>
+  async ({ pageParam = 0 }) => {
+    const pageSize = requestBody.pagination.pageSize ?? 10;
+    const rowOffset = pageParam * pageSize;
+    return listOrganizationSummaries(
+      { ...requestBody, pagination: { ...requestBody.pagination, rowOffset } },
+      requestOptions
+    );
+  };
+
+export const useListOrganizationSummaries = (
+  requestBody: ListOrganizationSummariesRequestBody
+): UseInfiniteQueryResult<ListOrganizationSummariesResponse, unknown> => {
+  const requestOptions = useRequestOptions();
+
+  return useInfiniteQuery({
+    queryKey: organizationKeys.summaries(requestBody),
+    queryFn: listOrgSummariesQueryFn(requestBody, requestOptions),
+    suspense: false,
+    staleTime: 1000 * 60 * 5,
+    cacheTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    getNextPageParam: (lastPage, allPages) => {
+      const pageSize = requestBody.pagination.pageSize ?? 10;
+      const summaries = lastPage.organizationSummaries ?? [];
+      return summaries.length < pageSize ? undefined : allPages.length;
+    },
+    getPreviousPageParam: (firstPage, allPages) => {
+      const pageSize = requestBody.pagination.pageSize ?? 10;
+      const summaries = firstPage.organizationSummaries ?? [];
+      return summaries.length < pageSize ? undefined : allPages.length - 1;
+    },
+  });
+};
+
+export const usePrefetchOrganizationSummaries = () => {
+  const queryClient = useQueryClient();
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+  const requestBody: ListOrganizationSummariesRequestBody = {
+    userId,
+    nameContains: "",
+    pagination: { pageSize: 10 },
+  };
+
+  return () => {
+    return queryClient.prefetchInfiniteQuery({
+      queryKey: organizationKeys.summaries(requestBody),
+      queryFn: listOrgSummariesQueryFn(requestBody, requestOptions),
+      staleTime: 1000 * 60 * 5,
+      cacheTime: 1000 * 60 * 30,
+    });
+  };
+};
+
+export const useFirstOrg = (): OrganizationRead => {
   const { userId } = useCurrentUser();
   const { organizations } = useListOrganizationsByUser({ userId });
-
-  // NOTE: How do we handle users with multiple orgs?
-  // NOTE: Turns out some users don't have any orgs. We should probably handle this better.
+  // NOTE: Users invited to a workspace may have no organization.
+  // https://github.com/airbytehq/airbyte-internal-issues/issues/13034
   return organizations[0] || {};
+};
+
+export const useOrganizationUserCount = (organizationId: string): number | null => {
+  const requestOptions = useRequestOptions();
+  return (
+    useQuery(
+      [SCOPE_ORGANIZATION, "users", "count", organizationId],
+      async () => {
+        return listUsersInOrganization({ organizationId }, requestOptions);
+      },
+      {
+        select: (data) => data.users.length,
+      }
+    ).data ?? null
+  );
 };

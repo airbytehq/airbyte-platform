@@ -30,7 +30,7 @@ internal class V1_1_0_004__UpdateConfigOriginTypeEnumTest : AbstractConfigsDatab
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     // Initialize the database with migrations up to, but not including, our target migration
     val previousMigration: BaseJavaMigration = V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatch()
@@ -40,7 +40,7 @@ internal class V1_1_0_004__UpdateConfigOriginTypeEnumTest : AbstractConfigsDatab
 
   @Test
   fun testMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     // Insert a record with RELEASE_CANDIDATE before migration
     val releaseCandidateId = insertRecordWithOriginReleaseCandidate(ctx)
     Assertions.assertNotNull(releaseCandidateId)

@@ -10,6 +10,6 @@ import com.fasterxml.jackson.databind.JsonNode
  * Represents the update of a field.
  */
 data class UpdateFieldSchemaTransform(
-  val oldSchema: JsonNode?,
-  val newSchema: JsonNode?,
+  val oldSchema: JsonNode,
+  val newSchema: JsonNode,
 )

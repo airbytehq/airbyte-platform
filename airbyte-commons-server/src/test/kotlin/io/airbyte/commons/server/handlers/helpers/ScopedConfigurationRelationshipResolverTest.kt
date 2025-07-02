@@ -4,13 +4,13 @@
 
 package io.airbyte.commons.server.handlers.helpers
 
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.SourceConnection
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.persistence.WorkspacePersistence
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService
@@ -85,7 +85,7 @@ internal class ScopedConfigurationRelationshipResolverTest {
     val destinationId = UUID.randomUUID()
     val workspaceId = UUID.randomUUID()
 
-    every { sourceService.getSourceConnection(destinationId) } throws ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, destinationId)
+    every { sourceService.getSourceConnection(destinationId) } throws ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, destinationId)
     every { destinationService.getDestinationConnection(destinationId) } returns DestinationConnection().withWorkspaceId(workspaceId)
 
     val parentScopeId = scopedConfigurationRelationshipResolver.getParentScopeId(ConfigScopeType.ACTOR, ConfigScopeType.WORKSPACE, destinationId)

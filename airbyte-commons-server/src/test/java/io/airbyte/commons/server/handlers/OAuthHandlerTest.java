@@ -26,7 +26,7 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SecretPersistenceConfigService;
@@ -329,7 +329,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigNoFeatureFlag()
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()
@@ -349,7 +349,7 @@ class OAuthHandlerTest {
 
   @Test
   void testGetSourceOAuthParamConfigFeatureFlagNoOverride()
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     final UUID sourceDefinitionId = UUID.randomUUID();
     final UUID workspaceId = UUID.randomUUID();
     final SourceOAuthParameter sourceOAuthParameter = new SourceOAuthParameter()

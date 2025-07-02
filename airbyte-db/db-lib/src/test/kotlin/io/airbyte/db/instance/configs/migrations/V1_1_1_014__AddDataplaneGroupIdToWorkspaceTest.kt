@@ -41,12 +41,12 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     val previousMigration: BaseJavaMigration = V1_1_1_013__PopulateDataplaneGroups()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     dropOrganizationIdFKFromWorkspace(ctx)
     dropOrganizationIdFKFromDataplanegroup(ctx)
     dropUpdatedByFKFromDataplanegroup(ctx)
@@ -67,7 +67,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   fun testDataplaneGroupIdIsPopulatedCloud() {
     setEnv("AIRBYTE_EDITION", "CLOUD")
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
     val euDataplaneGroupId = UUID.randomUUID()
     val usWorkspaceId = UUID.randomUUID()
@@ -178,7 +178,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   fun testDataplaneGroupIdIsPopulatedNonCloud() {
     setEnv("AIRBYTE_EDITION", "asdf")
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
     val usWorkspaceId = UUID.randomUUID()
     val euWorkspaceId = UUID.randomUUID()
@@ -295,7 +295,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   fun testDataplaneGroupIdIsPopulatedNullAirbyteEdition() {
     setEnv("AIRBYTE_EDITION", null)
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     val usDataplaneGroupId = UUID.randomUUID()
     val euDataplaneGroupId = UUID.randomUUID()
     val usWorkspaceId = UUID.randomUUID()
@@ -413,7 +413,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
   fun testMigrationThrowsOnCloudWhenDataplaneGroupIdNotFoundForGeography() {
     setEnv("AIRBYTE_EDITION", "CLOUD")
 
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     ctx
       .insertInto(
         WORKSPACE,
@@ -456,7 +456,7 @@ internal class V1_1_1_014__AddDataplaneGroupIdToWorkspaceTest : AbstractConfigsD
 
   @Test
   fun testNameConstraintThrowsOnNotAllowedValues() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     Assertions.assertThrows(
       DataAccessException::class.java,
     ) {

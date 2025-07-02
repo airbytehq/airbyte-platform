@@ -16,3 +16,7 @@ export const apiCall = async <T, U = unknown>(request: RequestOptions<U>, option
 export const connectorBuilderApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
   return fetchApiCall<T>(request, options, buildConfig.apiUrl);
 };
+
+export const sonarApiCall = async <T, U = unknown>(request: RequestOptions<U>, options: ApiCallOptions) => {
+  return fetchApiCall<T>(request, options, "https://api.airbyte.ai");
+};

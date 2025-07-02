@@ -7,7 +7,7 @@ package io.airbyte.commons.server.handlers.helpers
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.persistence.WorkspacePersistence
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.SourceService
 import io.airbyte.data.services.WorkspaceService

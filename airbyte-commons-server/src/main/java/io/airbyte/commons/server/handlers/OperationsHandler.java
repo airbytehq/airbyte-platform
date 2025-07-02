@@ -18,12 +18,12 @@ import io.airbyte.api.model.generated.OperationUpdate;
 import io.airbyte.api.model.generated.OperatorConfiguration;
 import io.airbyte.commons.converters.OperationsConverter;
 import io.airbyte.commons.enums.Enums;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -85,7 +85,7 @@ public class OperationsHandler {
     final StandardWorkspace workspace;
     try {
       workspace = workspaceService.getWorkspaceWithSecrets(operationCreate.getWorkspaceId(), false);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (ConfigNotFoundException e) {
       throw new ConfigNotFoundException("WORKSPACE", operationCreate.getWorkspaceId().toString());
     }
     final StandardSyncOperation standardSyncOperation = toStandardSyncOperation(operationCreate, workspace)
@@ -116,7 +116,7 @@ public class OperationsHandler {
     final StandardWorkspace workspace;
     try {
       workspace = workspaceService.getWorkspaceWithSecrets(standardSyncOperation.getWorkspaceId(), false);
-    } catch (io.airbyte.data.exceptions.ConfigNotFoundException e) {
+    } catch (ConfigNotFoundException e) {
       throw new ConfigNotFoundException("WORKSPACE", standardSyncOperation.getWorkspaceId().toString());
     }
     return persistOperation(updateOperation(operationUpdate, standardSyncOperation, workspace));
@@ -201,7 +201,7 @@ public class OperationsHandler {
       standardSyncOperation.withTombstone(true);
       persistOperation(standardSyncOperation);
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC_OPERATION, operationId.toString());
+      throw new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC_OPERATION, operationId.toString());
     }
   }
 
@@ -211,7 +211,7 @@ public class OperationsHandler {
     if (standardSyncOperation != null) {
       return buildOperationRead(standardSyncOperation);
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC_OPERATION, operationId.toString());
+      throw new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC_OPERATION, operationId.toString());
     }
   }
 

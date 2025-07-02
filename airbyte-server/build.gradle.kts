@@ -140,7 +140,7 @@ val copyWebapp =
     }
 
     dependsOn(
-      project(":oss:airbyte-webapp").tasks.named("assemble"),
+      project(":oss:airbyte-webapp").tasks.named("pnpmBuild"),
       "spotlessStyling",
     )
   }

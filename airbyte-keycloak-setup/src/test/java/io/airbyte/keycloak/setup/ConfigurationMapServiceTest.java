@@ -18,7 +18,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -34,7 +33,6 @@ class ConfigurationMapServiceTest {
   private OidcConfig oidcConfig;
   @Mock
   private AirbyteKeycloakConfiguration keycloakConfiguration;
-  @InjectMocks
   private ConfigurationMapService configurationMapService;
 
   @BeforeEach

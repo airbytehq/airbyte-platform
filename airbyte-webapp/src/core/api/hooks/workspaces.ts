@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { useCallback, useLayoutEffect } from "react";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
@@ -46,7 +46,6 @@ type WorkspacesCount = { count: "zero" } | { count: "one"; workspace: WorkspaceR
 export const useCurrentWorkspace = () => {
   const workspaceId = useCurrentWorkspaceId();
 
-  // NOTE: Do we even want to throw this error?
   if (!workspaceId) {
     throw new Error("Called useCurrentWorkspace outside of a workspace");
   }
@@ -265,5 +264,18 @@ export const useIsForeignWorkspace = () => {
   return !permissions.some(
     (permission) =>
       permission.workspaceId === workspace.workspaceId || permission.organizationId === workspace.organizationId
+  );
+};
+
+// NOTE: This hook is temporary and will be removed in favor of the new organizations with workspaces endpoint
+// https://github.com/airbytehq/airbyte-internal-issues/issues/13405
+export const useListWorkspacesByUser = (nameContains?: string) => {
+  const { userId } = useCurrentUser();
+  const requestOptions = useRequestOptions();
+
+  return useQuery(
+    workspaceKeys.list({ nameContains: nameContains ?? "" }),
+    () => listWorkspacesByUser({ userId, nameContains }, requestOptions),
+    { keepPreviousData: true, select: (data) => data.workspaces ?? [] }
   );
 };

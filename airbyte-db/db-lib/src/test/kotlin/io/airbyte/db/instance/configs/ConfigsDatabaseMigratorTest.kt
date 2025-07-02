@@ -22,13 +22,13 @@ internal class ConfigsDatabaseMigratorTest : AbstractConfigsDatabaseTest() {
 
     val flyway =
       create(
-        getDataSource(),
+        dataSource!!,
         javaClass.simpleName,
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
 
-    val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val migrator: DatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
     migrator.migrate()
 
     val schema = migrator.dumpSchema()

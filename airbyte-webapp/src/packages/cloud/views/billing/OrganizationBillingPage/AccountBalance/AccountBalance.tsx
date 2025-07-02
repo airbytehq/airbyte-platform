@@ -12,12 +12,13 @@ import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 import { Tooltip } from "components/ui/Tooltip";
 
-import { useCurrentWorkspace, useGetOrganizationSubscriptionInfo } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetOrganizationSubscriptionInfo } from "core/api";
 import { CreditBlockRead } from "core/api/types/AirbyteClient";
 import { useFormatCredits } from "core/utils/numberHelper";
 
 export const AccountBalance = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const {
     data: subscriptionInfo,
     isLoading: balanceIsLoading,

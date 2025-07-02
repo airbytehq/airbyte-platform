@@ -14,7 +14,7 @@ import io.airbyte.api.model.generated.DestinationUpdate
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.server.handlers.DestinationHandler
 import io.airbyte.commons.server.handlers.SchedulerHandler
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

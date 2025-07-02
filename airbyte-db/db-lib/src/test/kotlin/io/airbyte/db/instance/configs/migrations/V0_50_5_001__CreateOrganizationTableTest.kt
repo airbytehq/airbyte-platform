@@ -21,7 +21,7 @@ internal class V0_50_5_001__CreateOrganizationTableTest : AbstractConfigsDatabas
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     createOrganization(context)
 
     val organizationId = UUID(0L, 1L)

@@ -1,0 +1,50 @@
+@use "scss/variables";
+@use "scss/colors";
+@use "scss/mixins";
+
+.background {
+  background-color: colors.$backdrop;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.content {
+  max-width: 800px;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  top: calc(variables.$spacing-xl * 3);
+}
+
+.workspacesPage__loadingSpinner {
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.headerRow {
+  padding-bottom: variables.$spacing-xl;
+
+  button {
+    position: relative;
+    top: variables.$spacing-xs;
+  }
+}
+
+.filterButtonsRow {
+  margin-bottom: variables.$spacing-md;
+}
+
+.emptyStateIconBackground {
+  width: 44px;
+  height: 44px;
+  background-color: colors.$blue-40;
+  border-radius: 50%;
+}
+
+.emptyStateIcon {
+  color: colors.$grey-400;
+}

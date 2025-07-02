@@ -1,13 +1,14 @@
 import { useCallback } from "react";
 
-import { useCurrentWorkspace } from "./workspaces";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+
 import { listDataplaneGroups } from "../generated/AirbyteClient";
 import { DataplaneGroupRead } from "../types/AirbyteClient";
 import { useRequestOptions } from "../useRequestOptions";
 import { useSuspenseQuery } from "../useSuspenseQuery";
 
 export const useListDataplaneGroups = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const requestOptions = useRequestOptions();
 
   return useSuspenseQuery(["dataplaneGroups", organizationId], async () => {

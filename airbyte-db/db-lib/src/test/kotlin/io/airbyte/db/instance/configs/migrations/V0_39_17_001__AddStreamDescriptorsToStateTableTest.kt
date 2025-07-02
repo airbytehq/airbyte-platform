@@ -31,7 +31,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
 
   @Test
   fun testSimpleMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // Adding a couple of states
     context
@@ -91,7 +91,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
   fun testUniquenessConstraint() {
     devConfigsDbMigrator!!.migrate()
 
-    val context = getDslContext()
+    val context = dslContext!!
     context
       .insertInto(DSL.table(STATE_TABLE))
       .columns(
@@ -173,7 +173,7 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_39_1_001__CreateStreamReset()
     devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -184,13 +184,13 @@ internal class V0_39_17_001__AddStreamDescriptorsToStateTableTest : AbstractConf
   @AfterEach
   fun afterEach() {
     // Making sure we reset between tests
-    dslContext.dropSchemaIfExists("public").cascade().execute()
-    dslContext.createSchema("public").execute()
-    dslContext.setSchema("public").execute()
+    dslContext!!.dropSchemaIfExists("public").cascade().execute()
+    dslContext!!.createSchema("public").execute()
+    dslContext!!.setSchema("public").execute()
   }
 
   private fun injectMockData() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     val workspaceId = UUID.randomUUID()
     val actorId = UUID.randomUUID()

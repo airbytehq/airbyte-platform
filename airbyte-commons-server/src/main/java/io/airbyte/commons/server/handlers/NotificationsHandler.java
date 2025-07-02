@@ -124,7 +124,7 @@ public class NotificationsHandler {
           isNotificationSent = notificationClient.notifyJobFailure(TEST_FAILURE_SUMMARY, "");
         }
         case CONNECTION_UPDATE -> {
-          isNotificationSent = notificationClient.notifySchemaPropagated(TEST_SCHEMA_UPDATE, "");
+          isNotificationSent = notificationClient.notifySchemaPropagated(TEST_SCHEMA_UPDATE, "", null);
         }
         case SYNC_DISABLED_WARNING -> {
           isNotificationSent = notificationClient.notifyConnectionDisableWarning(TEST_FAILURE_SUMMARY, "");

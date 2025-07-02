@@ -21,6 +21,7 @@ export function createSyncCatalogFromFormValues(
             s.sourceStreamDescriptor.namespace === stream.stream?.namespace
         );
 
+        // All other streams should be unselected, but otherwise untouched
         if (!mappedStream) {
           return {
             config: {
@@ -32,19 +33,21 @@ export function createSyncCatalogFromFormValues(
         }
 
         const selectedFields =
-          mappedStream?.fields.map((field) => ({
+          mappedStream.fields.map((field) => ({
             fieldPath: field.sourceFieldName.split("."),
           })) ?? [];
 
-        const primaryKey =
-          mappedStream?.destinationSyncMode === "append_dedup" ? [mappedStream.primaryKey.split(".")] : undefined;
-        if (primaryKey) {
-          selectedFields.push({
-            fieldPath: primaryKey[0],
+        const primaryKey: string[][] = [];
+        if (mappedStream.destinationSyncMode === "append_dedup") {
+          mappedStream.matchingKeys?.forEach((key) => {
+            const sourceFieldName = mappedStream.fields.find((f) => f.destinationFieldName === key)?.sourceFieldName;
+            if (sourceFieldName) {
+              primaryKey.push([sourceFieldName]);
+            }
           });
         }
 
-        const cursorField = mappedStream?.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
+        const cursorField = mappedStream.sourceSyncMode === "incremental" ? [mappedStream.cursorField] : undefined;
         if (cursorField) {
           selectedFields.push({
             fieldPath: cursorField,
@@ -54,13 +57,13 @@ export function createSyncCatalogFromFormValues(
         return {
           config: {
             ...stream.config,
-            destinationObjectName: mappedStream?.destinationObjectName,
-            destinationSyncMode: mappedStream?.destinationSyncMode ?? stream.config?.destinationSyncMode ?? "append",
+            destinationObjectName: mappedStream.destinationObjectName,
+            destinationSyncMode: mappedStream.destinationSyncMode ?? stream.config?.destinationSyncMode ?? "append",
             primaryKey,
             cursorField,
-            syncMode: mappedStream?.sourceSyncMode ?? stream.config?.syncMode ?? "full_refresh",
+            syncMode: mappedStream.sourceSyncMode ?? stream.config?.syncMode ?? "full_refresh",
             mappers:
-              mappedStream?.fields.map(({ sourceFieldName, destinationFieldName }) => ({
+              mappedStream.fields.map(({ sourceFieldName, destinationFieldName }) => ({
                 id: uuid(),
                 type: StreamMapperType["field-renaming"],
                 mapperConfiguration: {
@@ -74,7 +77,7 @@ export function createSyncCatalogFromFormValues(
           },
           stream: {
             ...stream.stream,
-            name: mappedStream?.sourceStreamDescriptor.name ?? stream.stream?.name ?? "",
+            name: mappedStream.sourceStreamDescriptor.name ?? stream.stream?.name ?? "",
           },
         };
       }) ?? [],

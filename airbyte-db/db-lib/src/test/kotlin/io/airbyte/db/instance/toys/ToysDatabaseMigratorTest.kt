@@ -22,16 +22,16 @@ private const val PRE_MIGRATION_SCHEMA_DUMP = "toys_database/pre_migration_schem
 private const val POST_MIGRATION_SCHEMA_DUMP = "toys_database/schema_dump.txt"
 
 internal class ToysDatabaseMigratorTest : AbstractDatabaseTest() {
-  override fun getDatabase(
+  override fun createDatabase(
     dataSource: DataSource,
     dslContext: DSLContext,
   ): Database = Database(dslContext)
 
   @Test
   fun testMigration() {
-    val dataSource = getDataSource()
+    val dataSource = dataSource!!
 
-    initializeDatabase(getDslContext())
+    initializeDatabase(dslContext!!)
 
     val flyway =
       create(
@@ -40,7 +40,7 @@ internal class ToysDatabaseMigratorTest : AbstractDatabaseTest() {
         ToysDatabaseMigrator.DB_IDENTIFIER,
         ToysDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val migrator: DatabaseMigrator = ToysDatabaseMigrator(database, flyway)
+    val migrator: DatabaseMigrator = ToysDatabaseMigrator(database!!, flyway)
 
     // Compare pre migration baseline schema
     migrator.createBaseline()

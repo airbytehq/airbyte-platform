@@ -142,7 +142,7 @@ const SelectHashingMethod: React.FC<{ disabled: boolean }> = ({ disabled }) => {
       render={({ field }) => (
         <ListBox
           buttonClassName={styles.controlButton}
-          controlButton={SelectHashingMethodControlButton}
+          controlButtonContent={SelectHashingMethodControlButton}
           isDisabled={disabled}
           onSelect={(value) => {
             field.onChange(value);

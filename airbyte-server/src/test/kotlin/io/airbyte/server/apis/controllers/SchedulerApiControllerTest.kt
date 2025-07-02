@@ -8,7 +8,7 @@ import io.airbyte.api.model.generated.CheckConnectionRead
 import io.airbyte.api.model.generated.DestinationCoreConfig
 import io.airbyte.api.model.generated.SourceCoreConfig
 import io.airbyte.commons.server.handlers.SchedulerHandler
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

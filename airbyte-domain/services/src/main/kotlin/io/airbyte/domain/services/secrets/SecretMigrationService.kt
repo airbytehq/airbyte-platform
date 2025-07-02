@@ -127,7 +127,7 @@ class SecretMigrationService(
       val oldSecretConfig = ref.secretConfig
 
       val coordinate = SecretCoordinate.fromFullCoordinate(oldSecretConfig.externalCoordinate)
-      val secretValue = secretsRepositoryReader.fetchSecretFromSecretPersistence(coordinate, fromPersistence).textValue()
+      val secretValue = secretsRepositoryReader.fetchSecretFromSecretPersistence(coordinate, fromPersistence)
 
       val managedCoordinate = coordinate as SecretCoordinate.AirbyteManagedSecretCoordinate
       val newCoordinate = secretsRepositoryWriter.store(managedCoordinate, secretValue, toPersistence)

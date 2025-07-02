@@ -9,14 +9,14 @@ import { Intent, useGeneratedIntent } from "core/utils/rbac";
 import { StatusBanner } from "./StatusBanner";
 
 jest.mock("core/api", () => ({
-  useCurrentOrganization: jest.fn().mockReturnValue({ organizationId: "org-1" }),
+  useCurrentOrganizationId: jest.fn().mockReturnValue("org-1"),
   useGetOrganizationPaymentConfig: jest.fn(),
   useOrganizationTrialStatus: jest.fn(),
   useCurrentWorkspaceOrUndefined: jest.fn().mockReturnValue({
     workspaceId: "workspace-1",
     organizationId: "org-1",
   }),
-  useMaybeWorkspaceCurrentOrganizationId: jest.fn().mockReturnValue("org-1"),
+  useFirstOrg: jest.fn().mockReturnValue({ organizationId: "org-1" }),
 }));
 
 jest.mock("area/workspace/utils", () => ({

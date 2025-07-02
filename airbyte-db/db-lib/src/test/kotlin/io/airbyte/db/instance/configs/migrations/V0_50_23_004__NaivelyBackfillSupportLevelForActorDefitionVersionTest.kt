@@ -32,7 +32,7 @@ internal class V0_50_23_004__NaivelyBackfillSupportLevelForActorDefitionVersionT
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_23_004__NaivelyBackfillSupportLevelForActorDefitionVersion()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -42,7 +42,7 @@ internal class V0_50_23_004__NaivelyBackfillSupportLevelForActorDefitionVersionT
   @Test
   @Throws(Exception::class)
   fun testBackfillSupportLevel() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // ignore all foreign key constraints
     ctx.execute("SET session_replication_role = replica;")
@@ -191,7 +191,7 @@ internal class V0_50_23_004__NaivelyBackfillSupportLevelForActorDefitionVersionT
 
   @Test
   fun testNoDefaultSupportLevel() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // ignore all foreign key constraints
     ctx.execute("SET session_replication_role = replica;")

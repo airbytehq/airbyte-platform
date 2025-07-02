@@ -9,8 +9,6 @@ import io.airbyte.commons.protocol.AirbyteMessageMigrator
 import io.airbyte.commons.protocol.AirbyteMessageSerDeProvider
 import io.airbyte.commons.protocol.AirbyteProtocolVersionedMigratorFactory
 import io.airbyte.commons.protocol.ConfiguredAirbyteCatalogMigrator
-import io.airbyte.commons.protocol.migrations.AirbyteMessageMigration
-import io.airbyte.commons.protocol.migrations.ConfiguredAirbyteCatalogMigration
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Deserializer
 import io.airbyte.commons.protocol.serde.AirbyteMessageV0Serializer
 import io.airbyte.commons.version.AirbyteProtocolVersion
@@ -78,17 +76,23 @@ internal class VersionedAirbyteStreamFactoryTest {
         every { info(message = capture(infoSlot)) } returns Unit
         every { warn(message = capture(warningSlot)) } returns Unit
       }
-    serDeProvider = spyk(AirbyteMessageSerDeProvider(listOf(AirbyteMessageV0Deserializer()), listOf(AirbyteMessageV0Serializer())))
+    serDeProvider =
+      spyk(
+        AirbyteMessageSerDeProvider(
+          listOf(AirbyteMessageV0Deserializer()),
+          listOf(AirbyteMessageV0Serializer()),
+        ),
+      )
     serDeProvider.initialize()
 
     val airbyteMessageMigrator =
       AirbyteMessageMigrator( // TODO once data types v1 is re-enabled, this test should contain the migration
-        mutableListOf<AirbyteMessageMigration<*, *>?>(),
+        mutableListOf(),
       )
     airbyteMessageMigrator.initialize()
     val configuredAirbyteCatalogMigrator =
       ConfiguredAirbyteCatalogMigrator( // TODO once data types v1 is re-enabled, this test should contain the migration
-        mutableListOf<ConfiguredAirbyteCatalogMigration<*, *>?>(),
+        mutableListOf(),
       )
     configuredAirbyteCatalogMigrator.initialize()
     migratorFactory = spyk(AirbyteProtocolVersionedMigratorFactory(airbyteMessageMigrator, configuredAirbyteCatalogMigrator))

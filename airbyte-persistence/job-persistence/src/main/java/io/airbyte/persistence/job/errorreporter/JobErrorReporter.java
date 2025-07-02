@@ -21,7 +21,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -59,6 +59,7 @@ public class JobErrorReporter {
   private static final String CONNECTOR_INTERNAL_SUPPORT_LEVEL_META_KEY = "connector_internal_support_level";
   private static final String CONNECTOR_COMMAND_META_KEY = "connector_command";
   public static final String JOB_ID_KEY = "job_id";
+  public static final String SOURCE_TYPE_META_KEY = "source_type";
 
   private static final Set<FailureType> UNSUPPORTED_FAILURETYPES =
       ImmutableSet.of(FailureType.CONFIG_ERROR, FailureType.MANUAL_CANCELLATION, FailureType.TRANSIENT_ERROR);
@@ -125,6 +126,9 @@ public class JobErrorReporter {
             final StandardSourceDefinition sourceDefinition = sourceService.getSourceDefinitionFromConnection(connectionId);
             final ActorDefinitionVersion sourceVersion = actorDefinitionService.getActorDefinitionVersion(jobContext.sourceVersionId());
             final String dockerImage = ActorDefinitionVersionHelper.getDockerImageName(sourceVersion);
+            if (sourceVersion.getLanguage() != null) {
+              commonMetadata.put(SOURCE_TYPE_META_KEY, sourceVersion.getLanguage());
+            }
             final Map<String, String> metadata =
                 MoreMaps.merge(commonMetadata,
                     getSourceMetadata(sourceDefinition, dockerImage, sourceVersion.getReleaseStage(), sourceVersion.getInternalSupportLevel()));

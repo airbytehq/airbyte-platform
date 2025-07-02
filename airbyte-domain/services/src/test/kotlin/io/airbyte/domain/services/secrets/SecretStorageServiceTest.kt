@@ -305,7 +305,7 @@ class SecretStorageServiceTest {
       val fetchedConfig = Jsons.jsonNode(mapOf("foo" to "bar"))
       // Here we assume that SecretCoordinate.fromFullCoordinate(externalCoordinate) produces a coordinate
       // that when passed to fetchSecretFromDefaultSecretPersistence returns the fetched config.
-      every { secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(any()) } returns fetchedConfig
+      every { secretsRepositoryReader.fetchJsonSecretFromDefaultSecretPersistence(any()) } returns fetchedConfig
 
       val result = service.hydrateStorageConfig(secretStorage)
       result shouldBe SecretStorageWithConfig(secretStorage, fetchedConfig)

@@ -107,6 +107,8 @@ tags:
     description: Public job-related endpoints.
   - name: Jobs
     description: Job management endpoints.
+  - name: entitlements
+    description: Entitlement management endpoints
 
 paths:
   /v1/workspaces/create:
@@ -230,27 +232,6 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-  /v1/workspaces/list_active_workspaces_by_most_recently_running_jobs:
-    post:
-      summary: Lists workspaces with the most recently running jobs within the given time window
-      tags:
-        - workspace
-      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TimeWindowRequestBody"
-        required: false
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceIdList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/get_available_dbt_jobs:
     post:
       tags:
@@ -5295,6 +5276,51 @@ paths:
                 $ref: "#/components/schemas/OrganizationUsageRead"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
+  /v1/organizations/list_summaries:
+    post:
+      tags:
+        - organization
+      summary: Retrieve a paginated list of organizations with an optional filter, containing a summary of various org data
+      operationId: listOrganizationSummaries
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListOrganizationSummariesRequestBody"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrganizationSummariesResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/organizations/get_organization_info:
+    post:
+      tags:
+        - organization
+      summary: Retrieve an organization's basic organization info that is accessible for all organization members.
+      operationId: getOrgInfo
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIdRequestBody"
+        required: true
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationInfoRead"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/deployment/metadata:
     post:
       summary: Provides the Airbyte deployment metadata.
@@ -5550,7 +5576,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_by_actor_definition_id:
     post:
       requestBody:
@@ -5574,7 +5599,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_all:
     post:
       responses:
@@ -5833,6 +5857,55 @@ paths:
       operationId: manualPauseConnectorRollout
       tags:
         - connector_rollout
+
+  # Entitlements
+  /v1/entitlements/is_entitled:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIsEntitledRequestBody"
+      responses:
+        "200":
+          description: Whether the organization is entitled to the specified resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Determine whether the organization is entitled to the specified resource
+      operationId: checkEntitlement
+      tags:
+        - entitlements
+
+  /v1/entitlements/get_entitlements:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetEntitlementsByOrganizationIdRequestBody"
+      responses:
+        "200":
+          description: A list of entitlements for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetEntitlementsByOrganizationIdResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Gets a list of entitlements for the organization
+      operationId: getEntitlements
+      tags:
+        - entitlements
 
   # User Invitations
   /v1/user_invitations/create:
@@ -10290,6 +10363,51 @@ components:
           type: boolean
           default: true
 
+    # ENTITLEMENTS
+    OrganizationIsEntitledRequestBody:
+      type: object
+      required:
+        - organization_id
+        - feature_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        feature_id:
+          type: string
+
+    OrganizationIsEntitledResponse:
+      type: object
+      required:
+        - feature_id
+        - is_entitled
+      properties:
+        feature_id:
+          type: string
+        is_entitled:
+          type: boolean
+        access_denied_reason:
+          type: string
+
+    GetEntitlementsByOrganizationIdRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+
+    GetEntitlementsByOrganizationIdResponse:
+      type: object
+      required:
+        - entitlements
+      properties:
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+
     # WORKSPACE
     WorkspaceId:
       type: string
@@ -14151,6 +14269,49 @@ components:
           type: string
         organizationLimits:
           $ref: "#/components/schemas/OrganizationLimits"
+    OrganizationInfoRead:
+      type: object
+      description: Limited info about an organization that is safe to expose to organization members.
+      required:
+        - organizationId
+        - organizationName
+        - sso
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        organizationName:
+          type: string
+        sso:
+          type: boolean
+        billing:
+          type: object
+          required:
+            - paymentStatus
+          properties:
+            subscriptionStatus:
+              type: string
+              enum:
+                - pre_subscription
+                - unsubscribed
+                - subscribed
+            paymentStatus:
+              type: string
+              enum:
+                - uninitialized
+                - okay
+                - grace_period
+                - disabled
+                - locked
+                - manual
+            accountType:
+              type: string
+              enum:
+                - free
+                - internal
+            gracePeriodEndsAt:
+              type: integer
+              format: int64
     OrganizationLimits:
       type: object
       properties:
@@ -14243,6 +14404,43 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/IndividualWorkspaceUsageRead"
+    ListOrganizationSummariesRequestBody:
+      type: object
+      required:
+        - userId
+        - nameContains
+        - pagination
+      properties:
+        userId:
+          $ref: "#/components/schemas/UserId"
+        nameContains:
+          type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ListOrganizationSummariesResponse:
+      type: object
+      properties:
+        organizationSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationSummary"
+    OrganizationSummary:
+      type: object
+      required:
+        - organization
+        - workspaces
+        - memberCount
+      properties:
+        organization:
+          $ref: "#/components/schemas/OrganizationRead"
+        workspaces:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceRead"
+        subscription:
+          $ref: "#/components/schemas/OrganizationSubscriptionInfoRead"
+        memberCount:
+          type: integer
     IndividualWorkspaceUsageRead:
       type: object
       required:

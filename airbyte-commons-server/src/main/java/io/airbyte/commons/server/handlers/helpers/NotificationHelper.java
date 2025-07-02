@@ -108,12 +108,12 @@ public class NotificationHelper {
               final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
               if (isPropagationDisabled) {
                 sendNotificationMetrics(
-                    slackNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                    slackNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email, workspace.getWorkspaceId()),
                     slackNotificationClient.getNotificationClientType(),
                     NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
               } else {
                 sendNotificationMetrics(
-                    slackNotificationClient.notifySchemaDiffToApply(notification, email),
+                    slackNotificationClient.notifySchemaDiffToApply(notification, email, workspace.getWorkspaceId()),
                     slackNotificationClient.getNotificationClientType(),
                     NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
               }
@@ -122,12 +122,12 @@ public class NotificationHelper {
               final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
               if (isPropagationDisabled) {
                 sendNotificationMetrics(
-                    emailNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email),
+                    emailNotificationClient.notifySchemaDiffToApplyWhenPropagationDisabled(notification, email, workspace.getWorkspaceId()),
                     emailNotificationClient.getNotificationClientType(),
                     NOTIFICATION_TRIGGER_SCHEMA_CHANGED_AND_SYNC_DISABLED);
               } else {
                 sendNotificationMetrics(
-                    emailNotificationClient.notifySchemaDiffToApply(notification, email),
+                    emailNotificationClient.notifySchemaDiffToApply(notification, email, workspace.getWorkspaceId()),
                     emailNotificationClient.getNotificationClientType(),
                     NOTIFICATION_TRIGGER_SCHEMA_DIFF_TO_APPLY);
               }
@@ -177,7 +177,7 @@ public class NotificationHelper {
         switch (type) {
           case SLACK -> {
             final SlackNotificationClient slackNotificationClient = new SlackNotificationClient(item.getSlackConfiguration());
-            if (slackNotificationClient.notifySchemaPropagated(notification, email)) {
+            if (slackNotificationClient.notifySchemaPropagated(notification, email, workspace.getWorkspaceId())) {
               metricClient.count(OssMetricsRegistry.NOTIFICATION_SUCCESS,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, slackNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));
@@ -189,7 +189,7 @@ public class NotificationHelper {
           }
           case CUSTOMERIO -> {
             final CustomerioNotificationClient emailNotificationClient = new CustomerioNotificationClient();
-            if (emailNotificationClient.notifySchemaPropagated(notification, email)) {
+            if (emailNotificationClient.notifySchemaPropagated(notification, email, workspace.getWorkspaceId())) {
               metricClient.count(OssMetricsRegistry.NOTIFICATION_SUCCESS,
                   new MetricAttribute(MetricTags.NOTIFICATION_CLIENT, emailNotificationClient.getNotificationClientType()),
                   new MetricAttribute(MetricTags.NOTIFICATION_TRIGGER, NOTIFICATION_TRIGGER_SCHEMA));

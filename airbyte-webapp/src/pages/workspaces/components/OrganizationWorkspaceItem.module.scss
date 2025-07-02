@@ -1,0 +1,59 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.orgWorkspaceItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: colors.$foreground;
+  border-radius: variables.$border-radius-sm;
+  border: variables.$border-thin solid colors.$border-color;
+  padding: 0 variables.$spacing-xl;
+  height: 54px;
+}
+
+.orgWorkspaceItem__name {
+  font-size: variables.$font-size-lg;
+  font-weight: 500;
+  color: colors.$dark-blue;
+}
+
+.orgWorkspaceItem__meta {
+  display: flex;
+  align-items: center;
+  gap: variables.$spacing-md;
+}
+
+.orgWorkspaceItem__badge {
+  display: flex;
+  align-items: center;
+  border-radius: variables.$border-radius-xs;
+  font-size: variables.$font-size-sm;
+  font-weight: 500;
+  padding: 3px 6px;
+  gap: variables.$spacing-xs;
+}
+
+.orgWorkspaceItem__badge--sync {
+  background: colors.$blue-50;
+  color: colors.$blue-400;
+}
+
+.orgWorkspaceItem__badge--success {
+  background: colors.$green-100;
+  color: colors.$green-700;
+}
+
+.orgWorkspaceItem__badge--error {
+  background: colors.$red-100;
+  color: colors.$red-700;
+}
+
+.orgWorkspaceItem__badge--disabled {
+  background: colors.$dark-blue-40;
+  color: colors.$grey-400;
+}
+
+.orgWorkspaceItem__chevron {
+  margin-left: variables.$spacing-xs;
+}

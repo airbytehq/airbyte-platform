@@ -14,7 +14,7 @@ import io.airbyte.config.ConfigScopeType;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.ScopedConfiguration;
 import io.airbyte.config.SourceConnection;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.ScopedConfigurationService;

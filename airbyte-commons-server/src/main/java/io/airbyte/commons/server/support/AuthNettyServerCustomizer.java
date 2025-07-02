@@ -32,8 +32,9 @@ public class AuthNettyServerCustomizer implements BeanCreatedEventListener<Regis
   private final Integer maxHeaderSize;
   private final Integer maxChunkSize;
 
+  @SuppressWarnings("LineLength")
   public AuthNettyServerCustomizer(final AuthorizationServerHandler authorizationServerHandler,
-                                   @Value("${micronaut.server.netty.aggregator.max-content-length}") final Integer aggregatorMaxContentLength,
+                                   @Value("${micronaut.server.netty.aggregator.max-content-length:52428800}") final Integer aggregatorMaxContentLength,
                                    @Value("${micronaut.server.netty.max-initial-line-length:4096}") final Integer maxInitialLineLength,
                                    @Value("${micronaut.server.netty.max-header-size:8192}") final Integer maxHeaderSize,
                                    @Value("${micronaut.server.netty.max-chunk-size:8192}") final Integer maxChunkSize) {

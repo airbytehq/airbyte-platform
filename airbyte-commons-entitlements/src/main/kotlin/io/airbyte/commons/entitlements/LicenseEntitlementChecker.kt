@@ -17,15 +17,15 @@ enum class Entitlement {
   SOURCE_CONNECTOR,
   DESTINATION_CONNECTOR,
   CONFIG_TEMPLATE_ENDPOINTS,
-  ACTOR_CONFIG_WITH_SECRET_COORDINATES,
 }
 
 /**
  * Consolidates license checks across editions.
  */
+@Deprecated("Please use EntitlementService in place of this")
 @Singleton
 open class LicenseEntitlementChecker(
-  private val entitlementProvider: EntitlementProvider,
+  private val entitlementService: EntitlementService,
   private val sourceService: SourceService,
   private val destinationService: DestinationService,
 ) {
@@ -61,7 +61,6 @@ open class LicenseEntitlementChecker(
   ): Boolean =
     when (entitlement) {
       Entitlement.CONFIG_TEMPLATE_ENDPOINTS -> checkConfigTemplateEntitlement(organizationId)
-      Entitlement.ACTOR_CONFIG_WITH_SECRET_COORDINATES -> checkActorConfigWithSecretCoordinatesEntitlement(organizationId)
       else -> {
         false
       }
@@ -106,10 +105,7 @@ open class LicenseEntitlementChecker(
       ActorType.DESTINATION -> destinationService.getStandardDestinationDefinition(actorDefinitionId).enterprise
     }
 
-  private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean = entitlementProvider.hasConfigTemplateEntitlements(organizationId)
-
-  private fun checkActorConfigWithSecretCoordinatesEntitlement(organizationId: UUID): Boolean =
-    entitlementProvider.hasConfigWithSecretCoordinatesEntitlements(organizationId)
+  private fun checkConfigTemplateEntitlement(organizationId: UUID): Boolean = entitlementService.hasConfigTemplateEntitlements(organizationId)
 
   private fun checkConnectorEntitlements(
     organizationId: UUID,
@@ -117,7 +113,7 @@ open class LicenseEntitlementChecker(
     actorDefinitionIds: List<UUID>,
   ): Map<UUID, Boolean> {
     val enterpriseConnectorIds = actorDefinitionIds.filter { isEnterpriseConnector(actorType, it) }
-    val grantedEnterpriseConnectorMap = entitlementProvider.hasEnterpriseConnectorEntitlements(organizationId, actorType, enterpriseConnectorIds)
+    val grantedEnterpriseConnectorMap = entitlementService.hasEnterpriseConnectorEntitlements(organizationId, actorType, enterpriseConnectorIds)
 
     // non-enterprise connectors are always granted
     return actorDefinitionIds.associateWith { grantedEnterpriseConnectorMap.getOrDefault(it, true) }

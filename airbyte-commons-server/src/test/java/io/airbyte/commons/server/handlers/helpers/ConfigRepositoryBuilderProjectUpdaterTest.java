@@ -19,7 +19,7 @@ import io.airbyte.api.model.generated.ConnectorBuilderProjectDetails;
 import io.airbyte.api.model.generated.ExistingConnectorBuilderProjectWithWorkspaceId;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.config.ConnectorBuilderProject;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectorBuilderService;
 import java.io.IOException;
 import java.util.UUID;

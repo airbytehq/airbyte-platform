@@ -25,6 +25,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.slf4j.MDCContext
+import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import org.slf4j.MDC
 import java.nio.file.Path
@@ -145,13 +146,18 @@ class ReplicationWorker(
     dispatcher: ExecutorCoroutineDispatcher,
     mdc: Map<String, String>,
   ) {
-    coroutineScope {
-      val tasks =
-        syncReplicationJobs.map { job ->
-          AsyncUtils.runAsync(dispatcher, this, mdc) { job.run() }
-        }
-
-      tasks.awaitAll()
-    }
+    // Use supervisorScope instead of coroutineScope so that a failure in one job
+    // doesn't immediately cancel all the other jobs.
+    // This allows other jobs to terminate gracefully, which is necessary
+    // to avoid dropping trace messages.
+    // In particular, if the source connector emits a trace and then immediately exits,
+    // we want to allow the MessageProcessor tak to read that trace message.
+    // Tasks are responsible for calling replicationWorkerState.abort()
+    // to signal other tasks to terminate.
+    supervisorScope {
+      syncReplicationJobs.map { job ->
+        AsyncUtils.runAsync(dispatcher, this, mdc) { job.run() }
+      }
+    }.awaitAll()
   }
 }

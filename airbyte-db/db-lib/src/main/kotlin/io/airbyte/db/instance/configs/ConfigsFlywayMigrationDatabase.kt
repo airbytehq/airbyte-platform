@@ -25,7 +25,7 @@ class ConfigsFlywayMigrationDatabase : FlywayMigrationDatabase() {
   override fun getDatabaseMigrator(
     database: Database,
     flyway: Flyway,
-  ): DatabaseMigrator = ConfigsDatabaseMigrator(database, flyway)
+  ): DatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
   override val installedBy: String
     get() = ConfigsFlywayMigrationDatabase::class.java.simpleName

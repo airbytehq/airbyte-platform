@@ -1,3 +1,4 @@
+{{- if .Values.temporal.enabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -16,3 +17,4 @@ spec:
     {{- if .Values.temporal.extraSelectorLabels }}
     {{ toYaml (mergeOverwrite .Values.temporal.extraSelectorLabels .Values.global.extraSelectorLabels) | nindent 4 }}
     {{- end }}
+{{- end }}

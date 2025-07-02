@@ -32,16 +32,14 @@ import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
 @Suppress("ktlint:standard:class-naming")
-@Disabled
 internal class V0_32_8_001__AirbyteConfigDatabaseDenormalization_Test : AbstractConfigsDatabaseTest() {
   @Test
   fun testCompleteMigration() {
-    val context = getDslContext()
+    val context = dslContext!!
     SetupForNormalizedTablesTest.setup(context)
 
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

@@ -8,7 +8,7 @@ export interface DataActivationStream {
   destinationObjectName: string;
   sourceSyncMode: SyncMode | null;
   destinationSyncMode: DestinationSyncMode | null;
-  primaryKey: string | null;
+  matchingKeys: string[] | null;
   cursorField: string | null;
   fields: DataActivationField[];
 }

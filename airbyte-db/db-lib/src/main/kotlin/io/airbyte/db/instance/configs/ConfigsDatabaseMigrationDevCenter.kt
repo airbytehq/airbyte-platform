@@ -24,7 +24,7 @@ class ConfigsDatabaseMigrationDevCenter :
   override fun getMigrator(
     database: Database,
     flyway: Flyway,
-  ): FlywayDatabaseMigrator = ConfigsDatabaseMigrator(database, flyway)
+  ): FlywayDatabaseMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
   override fun getFlyway(dataSource: DataSource): Flyway =
     create(

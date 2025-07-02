@@ -4,10 +4,10 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Dataplane
 import io.airbyte.config.Permission
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.repositories.DataplaneRepository
 import io.airbyte.data.services.DataplaneService
@@ -63,7 +63,7 @@ open class DataplaneServiceDataImpl(
 
     val group =
       groupRepository.findById(dataplane.dataplaneGroupId).orElseThrow {
-        ConfigNotFoundException(ConfigSchema.DATAPLANE_GROUP, dataplane.dataplaneGroupId.toString())
+        ConfigNotFoundException(ConfigNotFoundType.DATAPLANE_GROUP, dataplane.dataplaneGroupId.toString())
       }
 
     val serviceAccountName = "dataplane-${dataplane.id}"

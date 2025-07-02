@@ -57,6 +57,7 @@ class DestinationReader(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationReader error: " }
+      replicationWorkerState.abort()
       if (e is DestinationException) {
         throw e
       } else if (e !is CancellationException) {
@@ -104,6 +105,7 @@ class DestinationWriter(
       }
     } catch (e: Exception) {
       logger.error(e) { "DestinationWriter error: " }
+      replicationWorkerState.abort()
       handleException(e)
     } finally {
       notifyEndOfInput()
@@ -116,6 +118,7 @@ class DestinationWriter(
     try {
       destination.notifyEndOfInput()
     } catch (e: Exception) {
+      replicationWorkerState.abort()
       handleException(e)
     }
   }
@@ -139,10 +142,20 @@ class MessageProcessor(
   override suspend fun run() {
     logger.info { "MessageProcessor started." }
     try {
-      while (!replicationWorkerState.shouldAbort &&
-        !sourceQueue.isClosedForReceiving() &&
-        (destinationQueue == null || !destinationQueue.isClosedForSending())
-      ) {
+      while (true) {
+        if (replicationWorkerState.shouldAbort) {
+          logger.info { "State set to abort — stopping message processor..." }
+          break
+        }
+        if (sourceQueue.isClosedForReceiving()) {
+          logger.info { "Source queue closed — stopping message processor..." }
+          break
+        }
+        if (destinationQueue?.isClosedForSending() == true) {
+          logger.info { "Destination queue closed — stopping message processor..." }
+          break
+        }
+
         val message = sourceQueue.receive() ?: continue
         val processedMessageOpt = replicationWorkerHelper.processMessageFromSource(message)
 
@@ -197,6 +210,7 @@ class SourceReader(
       }
     } catch (e: Exception) {
       logger.error(e) { "SourceReader error: " }
+      replicationWorkerState.abort()
       if (e is SourceException) {
         throw e
       } else if (e !is CancellationException) {

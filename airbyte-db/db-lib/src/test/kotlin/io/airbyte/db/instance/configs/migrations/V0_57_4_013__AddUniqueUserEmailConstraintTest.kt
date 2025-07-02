@@ -39,7 +39,7 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_57_4_012__AddShaColumnToDeclarativeManifestImageVersion()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -48,13 +48,13 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
     email = UUID.randomUUID().toString() + "@airbyte.io"
 
     // Remove constraint preventing timeline event creation
-    dropTimelineConnectionFK(getDslContext())
+    dropTimelineConnectionFK(dslContext!!)
   }
 
   @Test
   @Order(10)
   fun testSSOUserMigration() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val ssoUserId = UUID.randomUUID()
     createUser(ctx, ssoUserId, email, OffsetDateTime.now())
@@ -74,7 +74,7 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
   @Test
   @Order(10)
   fun testMoreThanOneSSOUserKeepsOldest() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val ssoUserId = UUID.randomUUID()
     createUser(ctx, ssoUserId, email, OffsetDateTime.now())
@@ -95,7 +95,7 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
   @Test
   @Order(10)
   fun testNonSSOKeepOldestUser() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     val userId = UUID.randomUUID()
     createUser(ctx, userId, email, OffsetDateTime.now())
@@ -114,7 +114,7 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
   @Test
   @Order(10)
   fun testUnsetDefaultUserEmail() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     ctx
       .update(USER_TABLE)
@@ -146,7 +146,7 @@ internal class V0_57_4_013__AddUniqueUserEmailConstraintTest : AbstractConfigsDa
   @Test
   @Order(100)
   fun testUniqueConstraint() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     addUniqueUserEmailConstraint(ctx)
 
     val email = "bob@airbyte.io"

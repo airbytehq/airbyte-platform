@@ -95,7 +95,7 @@ open class WorkloadApi(
     ) @Body workloadCreateRequest: WorkloadCreateRequest,
   ): HttpResponse<Any> {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.MUTEX_KEY_TAG to workloadCreateRequest.mutexKey,
         MetricTags.WORKLOAD_ID_TAG to workloadCreateRequest.workloadId,
         MetricTags.WORKLOAD_TYPE_TAG to workloadCreateRequest.type,
@@ -168,7 +168,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadFailureRequest::class))],
     ) @Body workloadFailureRequest: WorkloadFailureRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadFailureRequest.workloadId))
     authorize(workloadId = workloadFailureRequest.workloadId)
     workloadHandler.failWorkload(workloadFailureRequest.workloadId, workloadFailureRequest.source, workloadFailureRequest.reason)
   }
@@ -202,7 +202,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadSuccessRequest::class))],
     ) @Body workloadSuccessRequest: WorkloadSuccessRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadSuccessRequest.workloadId))
     authorize(workloadId = workloadSuccessRequest.workloadId)
     workloadHandler.succeedWorkload(workloadSuccessRequest.workloadId)
   }
@@ -236,7 +236,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadRunningRequest::class))],
     ) @Body workloadRunningRequest: WorkloadRunningRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadRunningRequest.workloadId))
     authorize(workloadId = workloadRunningRequest.workloadId)
     workloadHandler.setWorkloadStatusToRunning(
       workloadRunningRequest.workloadId,
@@ -278,7 +278,7 @@ open class WorkloadApi(
         MetricTags.WORKLOAD_ID_TAG to workloadCancelRequest.workloadId,
         MetricTags.WORKLOAD_CANCEL_REASON_TAG to workloadCancelRequest.reason,
         MetricTags.WORKLOAD_CANCEL_SOURCE_TAG to workloadCancelRequest.source,
-      ) as Map<String, Any>?,
+      ),
     )
     authorize(workloadId = workloadCancelRequest.workloadId)
     workloadHandler.cancelWorkload(workloadCancelRequest.workloadId, workloadCancelRequest.source, workloadCancelRequest.reason)
@@ -319,7 +319,7 @@ open class WorkloadApi(
       mutableMapOf(
         MetricTags.WORKLOAD_ID_TAG to workloadClaimRequest.workloadId,
         MetricTags.DATA_PLANE_ID_TAG to workloadClaimRequest.dataplaneId,
-      ) as Map<String, Any>?,
+      ),
     )
     authorize(workloadId = workloadClaimRequest.workloadId)
     val claimed =
@@ -360,7 +360,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadLaunchedRequest::class))],
     ) @Body workloadLaunchedRequest: WorkloadLaunchedRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadLaunchedRequest.workloadId))
     authorize(workloadId = workloadLaunchedRequest.workloadId)
     workloadHandler.setWorkloadStatusToLaunched(
       workloadLaunchedRequest.workloadId,
@@ -389,7 +389,7 @@ open class WorkloadApi(
   open fun workloadGet(
     @PathParam("workloadId") workloadId: String,
   ): Workload {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadId))
     authorize(workloadId = workloadId)
     return workloadHandler.getWorkload(workloadId)
   }
@@ -423,7 +423,7 @@ open class WorkloadApi(
       content = [Content(schema = Schema(implementation = WorkloadHeartbeatRequest::class))],
     ) @Body workloadHeartbeatRequest: WorkloadHeartbeatRequest,
   ) {
-    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId) as Map<String, Any>?)
+    ApmTraceUtils.addTagsToTrace(mutableMapOf(MetricTags.WORKLOAD_ID_TAG to workloadHeartbeatRequest.workloadId))
     authorize(workloadId = workloadHeartbeatRequest.workloadId)
     workloadHandler.heartbeat(workloadHeartbeatRequest.workloadId, workloadHeartbeatRequest.deadline ?: defaultDeadlineValues.heartbeatDeadline())
   }
@@ -564,7 +564,7 @@ open class WorkloadApi(
     ) @Body req: WorkloadQueuePollRequest,
   ): WorkloadListResponse {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
       ),
     )
@@ -593,7 +593,7 @@ open class WorkloadApi(
     ) @Body req: WorkloadQueueQueryRequest,
   ): WorkloadDepthResponse {
     ApmTraceUtils.addTagsToTrace(
-      mutableMapOf<String, Any?>(
+      mutableMapOf(
         MetricTags.DATA_PLANE_GROUP_TAG to req.dataplaneGroup,
       ),
     )

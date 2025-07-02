@@ -8,8 +8,8 @@ import io.airbyte.api.model.generated.Tag
 import io.airbyte.api.model.generated.TagCreateRequestBody
 import io.airbyte.api.model.generated.TagDeleteRequestBody
 import io.airbyte.api.model.generated.TagUpdateRequestBody
-import io.airbyte.config.ConfigSchema
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.config.ConfigNotFoundType
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.TagService
 import io.micronaut.data.exceptions.DataAccessException
 import io.micronaut.data.exceptions.EmptyResultException
@@ -101,7 +101,7 @@ class TagHandler(
     try {
       tagService.getTag(tagId, workspaceId)
     } catch (e: EmptyResultException) {
-      throw ConfigNotFoundException(ConfigSchema.TAG, "Tag with id $tagId and workspaceId $workspaceId not found.")
+      throw ConfigNotFoundException(ConfigNotFoundType.TAG, "Tag with id $tagId and workspaceId $workspaceId not found.")
     }
   }
 

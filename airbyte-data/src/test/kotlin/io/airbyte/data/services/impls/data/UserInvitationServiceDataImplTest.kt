@@ -5,7 +5,7 @@
 package io.airbyte.data.services.impls.data
 
 import io.airbyte.config.ScopeType
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.repositories.UserInvitationRepository
 import io.airbyte.data.repositories.entities.Permission

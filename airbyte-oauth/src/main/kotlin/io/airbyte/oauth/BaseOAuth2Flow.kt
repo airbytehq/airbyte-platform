@@ -12,7 +12,7 @@ import io.airbyte.api.problems.model.generated.ProblemResourceData
 import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.random.randomAlpha
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.protocol.models.v0.OAuthConfigSpecification
 import io.airbyte.validation.json.JsonSchemaValidator
 import io.airbyte.validation.json.JsonValidationException
@@ -106,7 +106,7 @@ abstract class BaseOAuth2Flow
       if (sourceOAuthParamConfig == null) {
         throw ResourceNotFoundProblem(
           "Undefined OAuth Parameter.",
-          ProblemResourceData().resourceType(ConfigSchema.SOURCE_OAUTH_PARAM.name),
+          ProblemResourceData().resourceType(ConfigNotFoundType.SOURCE_OAUTH_PARAM.name),
         )
       }
 
@@ -147,7 +147,7 @@ abstract class BaseOAuth2Flow
       if (destinationOAuthParamConfig == null) {
         throw ResourceNotFoundProblem(
           "Undefined OAuth Parameter.",
-          ProblemResourceData().resourceType(ConfigSchema.DESTINATION_OAUTH_PARAM.name),
+          ProblemResourceData().resourceType(ConfigNotFoundType.DESTINATION_OAUTH_PARAM.name),
         )
       }
 
@@ -629,7 +629,7 @@ abstract class BaseOAuth2Flow
       ) {
         if (oauthConfigSpecification != null && oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification != null) {
           val validator = JsonSchemaValidator()
-          validator.ensure(oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification, inputOAuthConfiguration)
+          validator.ensure(oauthConfigSpecification.oauthUserInputFromConnectorConfigSpecification, inputOAuthConfiguration!!)
         }
       }
 

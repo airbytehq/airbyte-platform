@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.IOException
+import java.util.UUID
 
 class WebhookNotificationSenderTest {
   private val httpClient: OkHttpClient = mockk()
@@ -51,7 +52,7 @@ class WebhookNotificationSenderTest {
       httpClient.newCall(any())
     } returns successfulCall
 
-    webhookNotificationSender.sendNotification(webhook, subject, message)
+    webhookNotificationSender.sendNotification(webhook, subject, message, UUID.randomUUID())
 
     verify {
       httpClient.newCall(any())
@@ -83,7 +84,7 @@ class WebhookNotificationSenderTest {
     Assertions.assertThrows(
       IOException::class.java,
     ) {
-      webhookNotificationSender.sendNotification(webhook, subject, message)
+      webhookNotificationSender.sendNotification(webhook, subject, message, UUID.randomUUID())
     }
   }
 }

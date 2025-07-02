@@ -1,74 +1,83 @@
+import { useFloating, autoUpdate, offset } from "@floating-ui/react-dom";
+import { Popover, PopoverButton, PopoverPanel } from "@headlessui/react";
 import React from "react";
 import { useIntl } from "react-intl";
 
 import AirbyteLogoIcon from "components/illustrations/airbyte-logo-icon.svg?react";
-import { DropdownMenu, DropdownMenuOptions } from "components/ui/DropdownMenu";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
-import { useCurrentOrganization, useCurrentWorkspaceOrUndefined } from "core/api";
-import { useIsCloudApp } from "core/utils/app";
-import { RoutePaths } from "pages/routePaths";
+import { useCurrentOrganizationId } from "area/organization/utils";
+import { useCurrentWorkspaceOrUndefined, useOrganization } from "core/api";
+import { useFeature } from "core/services/features";
+import { FeatureItem } from "core/services/features/types";
 
 import styles from "./AirbyteOrgPicker.module.scss";
+import { AirbyteOrgPopoverPanel } from "./AirbyteOrgPopoverPanel";
 
 export const AirbyteOrgPicker: React.FC = () => {
   const { formatMessage } = useIntl();
+  const showOSSWorkspaceName = useFeature(FeatureItem.ShowOSSWorkspaceName);
   const workspace = useCurrentWorkspaceOrUndefined();
-  const organization = useCurrentOrganization();
-  const isCloudApp = useIsCloudApp();
-  const workspaceName = isCloudApp ? workspace?.name : workspace && formatMessage({ id: "sidebar.myWorkspace" });
+  const workspaceName = showOSSWorkspaceName
+    ? workspace && formatMessage({ id: "sidebar.myWorkspace" })
+    : workspace?.name;
 
-  const menuOptions: DropdownMenuOptions = [
-    {
-      as: "a",
-      className: styles.orgPicker__dropdownMenuItem,
-      icon: <Icon type="gear" className={styles.orgPicker__gearIcon} aria-hidden="true" />,
-      iconPosition: "right",
-      displayName: organization.organizationName,
-      href: `${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Workspaces}`,
-      internal: true,
-    },
-  ];
+  const currentOrganizationId = useCurrentOrganizationId();
+  const organization = useOrganization(currentOrganizationId);
+
+  const { x, y, reference, floating, strategy } = useFloating({
+    middleware: [offset({ mainAxis: 1, crossAxis: 5 })],
+    whileElementsMounted: autoUpdate,
+    placement: "bottom-start",
+  });
 
   return (
-    <FlexContainer className={styles.orgPicker} justifyContent="space-between" alignItems="center" gap="sm">
-      <DropdownMenu
-        options={menuOptions}
-        placement="bottom-start"
-        displacement={1}
-        textSize="sm"
-        style={{ zIndex: 10000, borderRadius: "0 8px 8px 8px" }}
-      >
-        {({ open }) => (
-          <button
-            className={styles.orgPicker__dropdownButton}
-            aria-expanded={open}
-            aria-haspopup="true"
-            aria-label={formatMessage(
-              { id: "sidebar.workspaceAndOrg" },
-              { workspace: workspaceName, organization: organization.organizationName }
-            )}
+    <Popover className={styles.orgPicker}>
+      {({ close }) => (
+        <>
+          <PopoverButton ref={reference} className={styles.orgPicker__button}>
+            <FlexContainer alignItems="center" gap="sm">
+              <AirbyteLogoIcon className={styles.orgPicker__logo} aria-hidden="true" />
+              <div className={styles.orgPicker__textBlock}>
+                {workspace && (
+                  <Text
+                    size="sm"
+                    color="darkBlue"
+                    bold
+                    className={styles.orgPicker__workspaceName}
+                    title={workspaceName}
+                  >
+                    {workspaceName}
+                  </Text>
+                )}
+                <Text
+                  size="sm"
+                  color={workspace ? "grey400" : "darkBlue"}
+                  className={styles.orgPicker__orgName}
+                  title={organization.organizationName}
+                >
+                  {organization.organizationName}
+                </Text>
+              </div>
+              <Icon type="chevronUpDown" size="xs" color="disabled" />
+            </FlexContainer>
+          </PopoverButton>
+          <PopoverPanel
+            ref={floating}
+            style={{
+              position: strategy,
+              top: y ?? 0,
+              left: x ?? 0,
+            }}
+            className={styles.orgPicker__popoverPanel}
+            data-testid="orgPicker__popoverPanel"
           >
-            <AirbyteLogoIcon className={styles.orgPicker__logo} aria-hidden="true" />
-            <div className={styles.orgPicker__workspace}>
-              <Text size="sm" color="darkBlue" className={styles.orgPicker__workspaceName} title={workspaceName}>
-                {workspaceName}
-              </Text>
-              <Text
-                size="sm"
-                color={workspace ? "grey400" : "darkBlue"}
-                className={styles.orgPicker__orgName}
-                title={organization.organizationName}
-              >
-                {organization.organizationName}
-              </Text>
-            </div>
-            <Icon type="chevronUpDown" className={styles.orgPicker__chevron} aria-hidden="true" />
-          </button>
-        )}
-      </DropdownMenu>
-    </FlexContainer>
+            <AirbyteOrgPopoverPanel closePopover={close} />
+          </PopoverPanel>
+        </>
+      )}
+    </Popover>
   );
 };

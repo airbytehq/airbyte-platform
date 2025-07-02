@@ -1,5 +1,5 @@
 # If Cloud or Pro/Enterprise, render the keycloak service template.
-{{- if or (eq .Values.global.edition "cloud") (eq .Values.global.edition "enterprise") }}
+{{- if and .Values.keycloak.enabled (or (eq .Values.global.edition "cloud") (eq .Values.global.edition "enterprise")) }}
 ---
 apiVersion: v1
 kind: Service

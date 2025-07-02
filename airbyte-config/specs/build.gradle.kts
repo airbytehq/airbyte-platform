@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   api(libs.bundles.micronaut.annotation)
 
@@ -44,6 +45,4 @@ tasks.register<Download>("downloadConnectorRegistry") {
   src("https://connectors.airbyte.com/files/registries/v0/oss_registry.json")
   dest(File(projectDir, "src/main/resources/seed/local_oss_registry.json"))
   overwrite(true)
-  useETag(true)
-  onlyIfModified(true)
 }

@@ -6,8 +6,8 @@ package io.airbyte.commons.server.handlers
 
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.config.ConfigSchema
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.config.ConfigNotFoundType
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.mockk.every
 import io.mockk.mockk
@@ -185,7 +185,7 @@ class EnterpriseSourceStubsHandlerTest {
     every { workspaceHelper.getOrganizationForWorkspace(workspaceId) } returns organizationId
     every {
       licenseEntitlementChecker.checkEntitlement(organizationId, Entitlement.SOURCE_CONNECTOR, definitionId)
-    } throws ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, definitionId.toString())
+    } throws ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, definitionId.toString())
 
     val result = enterpriseSourceHandler.listEnterpriseSourceStubsForWorkspace(workspaceId)
 

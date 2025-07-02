@@ -18,7 +18,7 @@ import { useGetDestinationFromSearchParams, useGetSourceFromSearchParams } from 
 import { DataActivationConnectionFormSchema } from "area/dataActivation/utils";
 import { createSyncCatalogFromFormValues } from "area/dataActivation/utils/createSyncCatalogFromFormValues";
 import { useCurrentWorkspaceLink } from "area/workspace/utils";
-import { CreateConnectionProps, useCreateConnection, useDiscoverSchemaQuery } from "core/api";
+import { CreateConnectionProps, useCreateConnection, useDiscoverDestination, useDiscoverSchemaQuery } from "core/api";
 import { ConnectionScheduleType } from "core/api/types/AirbyteClient";
 import { FormModeProvider } from "core/services/ui/FormModeContext";
 import { trackError } from "core/utils/datadog";
@@ -36,11 +36,12 @@ export const ConfigureDataActivationConnectionPage = () => {
   const createLink = useCurrentWorkspaceLink();
   const navigate = useNavigate();
   const { formatMessage } = useIntl();
-  const source = useGetSourceFromSearchParams();
-  const destination = useGetDestinationFromSearchParams();
   const { mutateAsync: webBackendCreateConnection, isLoading } = useCreateConnection();
   const { registerNotification } = useNotificationService();
+  const source = useGetSourceFromSearchParams();
   const { data: sourceSchema } = useDiscoverSchemaQuery(source.sourceId);
+  const destination = useGetDestinationFromSearchParams();
+  const { data: discoveredDestination } = useDiscoverDestination(destination.destinationId);
 
   const createConnection = async (formValues: FormConnectionFormValues) => {
     if (!sourceSchema) {
@@ -67,6 +68,7 @@ export const ConfigureDataActivationConnectionPage = () => {
         destinationDefinitionId: destination.destinationDefinitionId,
       },
       sourceCatalogId: sourceSchema.catalogId,
+      destinationCatalogId: discoveredDestination?.catalogId,
     };
 
     try {

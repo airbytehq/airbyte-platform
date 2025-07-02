@@ -204,6 +204,12 @@ export default defineConfig({
     // Required to exclude, due to us not being able to convert JSON parameters
     "/public/v1/oauth/callback",
   ]),
+  sonarApi: createApi(
+    // todo: this should be an env variable probably, not a raw hardcoded url
+    "https://airbyte-sonar-prod.s3.us-east-2.amazonaws.com/openapi/latest/app.json",
+    "SonarClient",
+    "sonarApiCall"
+  ),
   connectorBuilder: createApi(
     "../airbyte-connector-builder-server/src/main/openapi/openapi.yaml",
     "ConnectorBuilderClient",

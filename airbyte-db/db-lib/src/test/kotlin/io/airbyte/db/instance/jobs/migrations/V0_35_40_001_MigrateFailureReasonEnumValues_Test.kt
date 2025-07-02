@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test
 internal class V0_35_40_001_MigrateFailureReasonEnumValues_Test : AbstractJobsDatabaseTest() {
   @Test
   fun test() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     V0_35_5_001__Add_failureSummary_col_to_Attempts.migrate(ctx)
 

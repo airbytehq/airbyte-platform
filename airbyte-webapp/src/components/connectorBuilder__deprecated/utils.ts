@@ -2,6 +2,8 @@ import { SetValueConfig, useFormContext } from "react-hook-form";
 
 import { HttpRequest, HttpResponse } from "core/api/types/ConnectorBuilderClient";
 import {
+  ConditionalStreamsType,
+  DeclarativeComponentSchemaStreamsItem,
   DeclarativeStream,
   SimpleRetrieverPartitionRouter,
   SimpleRetrieverPartitionRouterAnyOfItem,
@@ -107,4 +109,11 @@ export function streamRef(streamName: string) {
 
 export function streamNameOrDefault(streamName: string | undefined, index: number) {
   return streamName || `stream_${index}`;
+}
+
+export function getStreamName(stream: DeclarativeComponentSchemaStreamsItem | undefined, index: number) {
+  if (!stream || stream.type === ConditionalStreamsType.ConditionalStreams) {
+    return streamNameOrDefault(undefined, index);
+  }
+  return streamNameOrDefault(stream.name, index);
 }

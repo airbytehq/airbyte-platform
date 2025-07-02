@@ -395,11 +395,12 @@ class DefaultJobCreatorTest {
   }
 
   private void mockResourcesRequirement(final Optional<String> expectedSourceType) {
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
-        .thenReturn(workerResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
+    when(
+        resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType.orElse(null), DEFAULT_VARIANT))
+            .thenReturn(workerResourceRequirements);
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType.orElse(null), DEFAULT_VARIANT))
         .thenReturn(sourceResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType.orElse(null), DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
   }
 
@@ -928,12 +929,11 @@ class DefaultJobCreatorTest {
 
   @Test
   void testCreateResetConnectionJob() throws IOException {
-    final Optional<String> expectedSourceType = Optional.empty();
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, expectedSourceType, DEFAULT_VARIANT))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.ORCHESTRATOR, null, DEFAULT_VARIANT))
         .thenReturn(workerResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, expectedSourceType, DEFAULT_VARIANT))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.SOURCE, null, DEFAULT_VARIANT))
         .thenReturn(sourceResourceRequirements);
-    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, expectedSourceType, DEFAULT_VARIANT))
+    when(resourceRequirementsProvider.getResourceRequirements(ResourceRequirementsType.DESTINATION, null, DEFAULT_VARIANT))
         .thenReturn(destResourceRequirements);
 
     final List<StreamDescriptor> streamsToReset = List.of(STREAM1_DESCRIPTOR, STREAM2_DESCRIPTOR);

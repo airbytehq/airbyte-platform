@@ -28,7 +28,7 @@ internal class V0_57_2_002__AddRateLimitedEnumAndMetadataColToStreamStatusesTest
         JobsDatabaseMigrator.DB_IDENTIFIER,
         JobsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val jobsDatabaseMigrator = JobsDatabaseMigrator(database, flyway)
+    val jobsDatabaseMigrator = JobsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_57_2_001__AddRefreshJobType()
     val devConfigsDbMigrator = DevDatabaseMigrator(jobsDatabaseMigrator, previousMigration.version)
@@ -37,7 +37,7 @@ internal class V0_57_2_002__AddRateLimitedEnumAndMetadataColToStreamStatusesTest
 
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertFalse(metadataColumnExists(context))
     Assertions.assertFalse(rateLimitedEnumExists(context))
     V0_57_2_002__AddRateLimitedEnumAndMetadataColToStreamStatuses.migrate(context)

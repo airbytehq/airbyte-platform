@@ -4,6 +4,7 @@
 
 package io.airbyte.commons.server.handlers
 
+import io.airbyte.api.model.generated.ListOrganizationSummariesRequestBody
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.model.generated.OrganizationCreateRequestBody
 import io.airbyte.api.model.generated.OrganizationIdRequestBody
@@ -11,11 +12,16 @@ import io.airbyte.api.model.generated.OrganizationRead
 import io.airbyte.api.model.generated.OrganizationReadList
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.Pagination
+import io.airbyte.api.model.generated.WorkspaceRead
+import io.airbyte.api.model.generated.WorkspaceReadList
 import io.airbyte.config.Organization
 import io.airbyte.config.persistence.OrganizationPersistence
+import io.airbyte.data.repositories.OrgMemberCount
+import io.airbyte.data.services.PermissionService
 import io.airbyte.data.services.impls.data.OrganizationPaymentConfigServiceDataImpl
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.spyk
 import io.mockk.verify
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
@@ -40,6 +46,8 @@ class OrganizationsHandlerTest {
   private lateinit var uuidSupplier: Supplier<UUID>
   private lateinit var organizationsHandler: OrganizationsHandler
   private lateinit var organizationPaymentConfigService: OrganizationPaymentConfigServiceDataImpl
+  private lateinit var workspacesHandler: WorkspacesHandler
+  private lateinit var permissionService: PermissionService
 
   @BeforeEach
   fun setup() {
@@ -47,13 +55,20 @@ class OrganizationsHandlerTest {
     uuidSupplier = mockk()
     organizationPersistence = mockk()
     organizationPaymentConfigService = mockk(relaxed = true)
+    workspacesHandler = mockk()
+    permissionService = mockk()
 
     organizationsHandler =
-      OrganizationsHandler(
-        organizationPersistence,
-        permissionHandler,
-        uuidSupplier,
-        organizationPaymentConfigService,
+      spyk(
+        OrganizationsHandler(
+          organizationPersistence,
+          permissionHandler,
+          uuidSupplier,
+          organizationPaymentConfigService,
+          workspacesHandler,
+          permissionService,
+        ),
+        recordPrivateCalls = true,
       )
   }
 
@@ -218,5 +233,48 @@ class OrganizationsHandlerTest {
 
     val result = organizationsHandler.listOrganizationsByUser(request)
     assertEquals(expectedList, result)
+  }
+
+  @Test
+  fun `listing organization summaries returns existing summaries`() {
+    val userId = UUID.randomUUID()
+    val orgId = UUID.randomUUID()
+    val workspaceId = UUID.randomUUID()
+
+    val request =
+      ListOrganizationSummariesRequestBody()
+        .userId(userId)
+        .pagination(Pagination().pageSize(10).rowOffset(0))
+
+    val organizationRead =
+      OrganizationRead()
+        .organizationId(orgId)
+        .organizationName("test-org")
+        .email("org@example.com")
+    val orgList = OrganizationReadList().organizations(listOf(organizationRead))
+
+    val workspaceRead =
+      WorkspaceRead()
+        .workspaceId(workspaceId)
+        .organizationId(orgId)
+        .name("test-workspace")
+    val workspaceList = WorkspaceReadList().workspaces(listOf(workspaceRead))
+
+    every { organizationsHandler.listOrganizationsByUser(any()) } returns orgList
+
+    every { workspacesHandler.listWorkspacesByUser(any()) } returns workspaceList
+
+    every { permissionService.getMemberCountsForOrganizationList(listOf(orgId)) } returns listOf(OrgMemberCount(orgId, 5))
+
+    val response = organizationsHandler.getOrganizationSummaries(request)
+
+    assertEquals(1, response.organizationSummaries.size)
+
+    val summary = response.organizationSummaries[0]
+    assertEquals(orgId, summary.organization.organizationId)
+    assertEquals("test-org", summary.organization.organizationName)
+    assertEquals(1, summary.workspaces.size)
+    assertEquals("test-workspace", summary.workspaces[0].name)
+    assertEquals(5, summary.memberCount)
   }
 }

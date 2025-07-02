@@ -48,6 +48,8 @@ internal class JobsRepositoryTest : AbstractConfigRepositoryTest() {
     configType = configType,
     config = config,
     createdAt = nextCreatedAt,
+    updatedAt = nextCreatedAt,
+    isScheduled = false,
   ).also { nextCreatedAt = nextCreatedAt.plusDays(1) }
 
   @Nested

@@ -44,7 +44,7 @@ dependencies {
 airbyte {
   application {
     name = "airbyte-metrics-reporter"
-    mainClass = "io.airbyte.metrics.reporter.Application"
+    mainClass = "io.airbyte.metrics.reporter.ApplicationKt"
     defaultJvmArgs = listOf("-XX:+ExitOnOutOfMemoryError", "-XX:MaxRAMPercentage=75.0")
   }
   docker {

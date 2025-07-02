@@ -31,7 +31,7 @@ internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : 
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_40_18_001__AddInvalidProtocolFlagToConnections()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -41,7 +41,7 @@ internal class V0_40_18_002__AddActorDefinitionNormalizationAndDbtColumnsTest : 
   @Test
   @Throws(Exception::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertFalse(columnExists(context, "normalization_repository"))
     Assertions.assertFalse(columnExists(context, "normalization_tag"))
     Assertions.assertFalse(columnExists(context, "supports_dbt"))

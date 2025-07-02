@@ -29,7 +29,7 @@ import io.airbyte.api.model.generated.PermissionRead;
 import io.airbyte.commons.json.Jsons;
 import io.airbyte.commons.server.handlers.PermissionHandler;
 import io.airbyte.config.persistence.UserPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.persistence.job.WorkspaceHelper;
 import io.airbyte.validation.json.JsonValidationException;
 import java.io.IOException;

@@ -11,9 +11,9 @@ import io.airbyte.api.model.generated.ScopedConfigurationRead
 import io.airbyte.commons.server.errors.BadRequestException
 import io.airbyte.commons.server.handlers.helpers.ScopedConfigurationRelationshipResolver
 import io.airbyte.config.ActorDefinitionVersion
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.ConfigOriginType
 import io.airbyte.config.ConfigResourceType
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.ConfigScopeType
 import io.airbyte.config.Organization
 import io.airbyte.config.ScopedConfiguration
@@ -22,7 +22,7 @@ import io.airbyte.config.StandardSourceDefinition
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.User
 import io.airbyte.config.persistence.UserPersistence
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.DestinationService
 import io.airbyte.data.services.OrganizationService
@@ -505,12 +505,12 @@ internal class ScopedConfigurationHandlerTest {
 
     every { sourceService.getStandardSourceDefinition(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.STANDARD_SOURCE_DEFINITION,
+        ConfigNotFoundType.STANDARD_SOURCE_DEFINITION,
         scopedConfigurationCreate.resourceId,
       )
     every { destinationService.getStandardDestinationDefinition(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.STANDARD_DESTINATION_DEFINITION,
+        ConfigNotFoundType.STANDARD_DESTINATION_DEFINITION,
         scopedConfigurationCreate.resourceId,
       )
 
@@ -596,7 +596,7 @@ internal class ScopedConfigurationHandlerTest {
     every { userPersistence.getUser(any()) } returns Optional.of(User().withEmail("user@airbyte.io"))
     every { actorDefinitionService.getActorDefinitionVersion(any()) } throws
       ConfigNotFoundException(
-        ConfigSchema.ACTOR_DEFINITION_VERSION,
+        ConfigNotFoundType.ACTOR_DEFINITION_VERSION,
         scopedConfigurationCreate.resourceId,
       )
 

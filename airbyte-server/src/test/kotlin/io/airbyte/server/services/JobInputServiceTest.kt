@@ -59,7 +59,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.EnumSource
-import java.util.Optional
 import java.util.UUID
 
 class JobInputServiceTest {
@@ -605,7 +604,7 @@ class JobInputServiceTest {
     val mockAttempt = mockk<Attempt>()
     every { mockAttempt.attemptNumber } returns attemptNumber
     every { mockAttempt.processingTaskQueue } returns "test_queue"
-    every { mockAttempt.syncConfig } returns Optional.of(attemptSyncConfig)
+    every { mockAttempt.syncConfig } returns attemptSyncConfig
 
     val jobConfig = mockk<JobConfig>()
     every { jobConfig.configType } returns configType
@@ -647,10 +646,19 @@ class JobInputServiceTest {
       else -> throw IllegalStateException("$configType not handled by the test setup")
     }
 
-    val mockJob = mockk<Job>()
-    every { mockJob.id } returns jobId
-    every { mockJob.status } returns io.airbyte.config.JobStatus.PENDING
-    every { mockJob.config } returns jobConfig
+    val mockJob =
+      Job(
+        jobId,
+        configType,
+        connectionId.toString(),
+        jobConfig,
+        emptyList(),
+        io.airbyte.config.JobStatus.PENDING,
+        0L,
+        0L,
+        0L,
+        true,
+      )
 
     every { connectionService.getStandardSync(connectionId) } returns mockConnection
     every { sourceService.getSourceConnection(sourceId) } returns mockSource

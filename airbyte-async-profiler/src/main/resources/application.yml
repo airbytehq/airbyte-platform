@@ -19,6 +19,7 @@ airbyte:
   source-keyword: ${SOURCE_KEYWORD:source}
   destination-keyword: ${DESTINATION_KEYWORD:destination}
   orchestrator-keyword: ${ORCHESTRATOR_KEYWORD:orchestrator}
+  profiling-mode: ${PROFILING_MODE:cpu}
   cloud:
     storage:
       type: ${STORAGE_TYPE}

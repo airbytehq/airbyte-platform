@@ -31,18 +31,18 @@ internal class V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatchT
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_64_4_002__AddJobRunnerPermissionTypes()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
     devConfigsDbMigrator.createBaseline()
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     ctx.deleteFrom(USER_INVITATION_TABLE).execute()
   }
 
   @Test
   fun testRemoveInvalidUserInvitation() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     dropConstraintIfExists(ctx)
     createUserInvitation(
       ctx,
@@ -66,7 +66,7 @@ internal class V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatchT
 
   @Test
   fun testDoesNotRemoveValidUserInvitation() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     createUserInvitation(
       ctx,
       V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatch.PermissionType.WORKSPACE_ADMIN,
@@ -89,7 +89,7 @@ internal class V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatchT
 
   @Test
   fun testPreventsInsertionOfInvalidInvites() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
     V1_1_0_001__ConstraintToPreventInvitationScopePermissionMismatch.runMigration(ctx)
     Assertions.assertThrows(
       IntegrityConstraintViolationException::class.java,

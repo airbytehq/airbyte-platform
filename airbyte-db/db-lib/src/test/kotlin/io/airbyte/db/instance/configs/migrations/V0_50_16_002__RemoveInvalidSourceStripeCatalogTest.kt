@@ -32,7 +32,7 @@ internal class V0_50_16_002__RemoveInvalidSourceStripeCatalogTest : AbstractConf
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_16_002__RemoveInvalidSourceStripeCatalog()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -95,7 +95,7 @@ internal class V0_50_16_002__RemoveInvalidSourceStripeCatalogTest : AbstractConf
   @Test
   @Throws(Exception::class)
   fun testRemoveInvalidSourceStripeCatalog() {
-    val ctx = getDslContext()
+    val ctx = dslContext!!
 
     // ignore all foreign key constraints
     ctx.execute("SET session_replication_role = replica;")

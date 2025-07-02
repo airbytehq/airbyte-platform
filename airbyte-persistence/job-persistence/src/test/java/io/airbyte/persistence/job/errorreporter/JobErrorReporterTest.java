@@ -21,7 +21,7 @@ import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.State;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.SourceService;
@@ -221,7 +221,7 @@ class JobErrorReporterTest {
   }
 
   @Test
-  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+  void testReportSyncJobFailureDoesNotThrow() throws ConfigNotFoundException, IOException, ConfigNotFoundException {
     final AttemptFailureSummary mFailureSummary = Mockito.mock(AttemptFailureSummary.class);
     final SyncJobReportingContext jobContext = new SyncJobReportingContext(1L, SOURCE_DEFINITION_VERSION_ID, DESTINATION_DEFINITION_VERSION_ID);
 

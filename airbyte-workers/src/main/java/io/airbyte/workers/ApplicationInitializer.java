@@ -184,7 +184,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
 
   private void registerUiCommandsWorker(final WorkerFactory factory, final MaxWorkersConfig maxWorkersConfiguration) {
     final Worker uiCommandsWorker =
-        factory.newWorker(temporalQueueConfiguration.getUiCommandsQueue(), getWorkerOptions(maxWorkersConfiguration.getMaxCheckWorkers()));
+        factory.newWorker(temporalQueueConfiguration.getUiCommandsQueue(), getWorkerOptions(maxWorkersConfiguration.maxCheckWorkers));
     final WorkflowImplementationOptions workflowOptions = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
 
@@ -214,7 +214,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
                                          final MaxWorkersConfig maxWorkersConfig) {
     final Worker connectionUpdaterWorker =
         factory.newWorker(TemporalJobType.CONNECTION_UPDATER.toString(),
-            getWorkerOptions(maxWorkersConfig.getMaxSyncWorkers()));
+            getWorkerOptions(maxWorkersConfig.maxSyncWorkers));
     final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
         .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
     connectionUpdaterWorker
@@ -264,7 +264,7 @@ public class ApplicationInitializer implements ApplicationEventListener<ServiceR
     for (final String taskQueue : taskQueues) {
       log.info("Registering sync workflow for task queue '{}'...", taskQueue);
       final Worker syncWorker = factory.newWorker(taskQueue,
-          getWorkerOptions(maxWorkersConfig.getMaxSyncWorkers()));
+          getWorkerOptions(maxWorkersConfig.maxSyncWorkers));
       final WorkflowImplementationOptions options = WorkflowImplementationOptions.newBuilder()
           .setFailWorkflowExceptionTypes(NonDeterministicException.class).build();
       syncWorker.registerWorkflowImplementationTypes(options,

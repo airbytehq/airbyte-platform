@@ -71,7 +71,7 @@ import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.helpers.FieldGenerator;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.DestinationService;
@@ -236,7 +236,7 @@ public class WebBackendConnectionsHandler {
 
   private Map<UUID, JobStatusSummary> getLatestJobByConnectionId(final List<UUID> connectionIds) throws IOException {
     return jobHistoryHandler.getLatestSyncJobsForConnections(connectionIds).stream()
-        .collect(Collectors.toMap(JobStatusSummary::connectionId, Function.identity()));
+        .collect(Collectors.toMap(s -> s.connectionId, Function.identity()));
   }
 
   private Map<UUID, JobRead> getRunningJobByConnectionId(final List<UUID> connectionIds) throws IOException {
@@ -334,8 +334,8 @@ public class WebBackendConnectionsHandler {
         .tags(standardSync.getTags().stream().map(this::buildTag).toList());
 
     latestSyncJob.ifPresent(job -> {
-      listItem.setLatestSyncJobCreatedAt(job.createdAt());
-      listItem.setLatestSyncJobStatus(JobStatus.valueOf(job.status().name()));
+      listItem.setLatestSyncJobCreatedAt(job.createdAt);
+      listItem.setLatestSyncJobStatus(JobStatus.valueOf(job.status.name()));
     });
 
     return listItem;
@@ -375,14 +375,14 @@ public class WebBackendConnectionsHandler {
 
   @Trace
   private SourceRead getSourceRead(final UUID sourceId)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, ConfigNotFoundException {
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody().sourceId(sourceId);
     return sourceHandler.getSource(sourceIdRequestBody);
   }
 
   @Trace
   private DestinationRead getDestinationRead(final UUID destinationId)
-      throws JsonValidationException, IOException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException, ConfigNotFoundException {
     final DestinationIdRequestBody destinationIdRequestBody = new DestinationIdRequestBody().destinationId(destinationId);
     return destinationHandler.getDestination(destinationIdRequestBody);
   }

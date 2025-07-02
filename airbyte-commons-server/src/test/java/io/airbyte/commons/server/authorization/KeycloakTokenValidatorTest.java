@@ -14,6 +14,7 @@ import com.auth0.jwt.algorithms.Algorithm;
 import io.airbyte.commons.auth.config.AirbyteKeycloakConfiguration;
 import io.airbyte.commons.auth.roles.AuthRole;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.data.auth.TokenType;
 import io.micronaut.http.HttpHeaders;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.netty.NettyHttpHeaders;
@@ -121,7 +122,7 @@ class KeycloakTokenValidatorTest {
     verifyNoInteractions(authenticationFactory);
 
     StepVerifier.create(responsePublisher)
-        .expectNextMatches(r -> matchSuccessfulResponse(r, clientName, AuthRole.getInstanceAdminRoles()))
+        .expectNextMatches(r -> matchSuccessfulResponseServiceAccount(r, clientName, AuthRole.getInstanceAdminRoles()))
         .verifyComplete();
   }
 
@@ -185,6 +186,14 @@ class KeycloakTokenValidatorTest {
                                           final Collection<String> expectedRoles) {
     return authentication.getName().equals(expectedUserId)
         && authentication.getRoles().containsAll(expectedRoles);
+  }
+
+  private boolean matchSuccessfulResponseServiceAccount(final Authentication authentication,
+                                                        final String expectedUserId,
+                                                        final Collection<String> expectedRoles) {
+    return authentication.getName().equals(expectedUserId)
+        && authentication.getRoles().containsAll(expectedRoles)
+        && TokenType.Companion.fromClaims(authentication.getAttributes()) == TokenType.LEGACY_KEYCLOAK_SERVICE_ACCOUNT;
   }
 
 }

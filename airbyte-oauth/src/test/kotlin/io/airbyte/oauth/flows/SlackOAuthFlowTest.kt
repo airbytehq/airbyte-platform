@@ -14,7 +14,7 @@ class SlackOAuthFlowTest : BaseOAuthFlowTest() {
 
   @Suppress("ktlint:standard:max-line-length")
   override val expectedConsentUrl: String
-    get() = "https://slack.com/oauth/authorize?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=read"
+    get() = "https://slack.com/oauth/v2/authorize?client_id=test_client_id&redirect_uri=https%3A%2F%2Fairbyte.io&state=state&scope=channels%3Ahistory%2Cchannels%3Ajoin%2Cchannels%3Aread%2Cgroups%3Aread%2Cgroups%3Ahistory%2Cusers%3Aread%2Cim%3Ahistory%2Cmpim%3Ahistory%2Cim%3Aread%2Cmpim%3Aread"
 
   override val expectedOutput: Map<String, String>
     get() =

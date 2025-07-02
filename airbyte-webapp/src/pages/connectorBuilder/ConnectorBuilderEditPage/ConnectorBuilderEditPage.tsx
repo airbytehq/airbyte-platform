@@ -133,6 +133,7 @@ const BaseForm = () => {
 
 const Panels = React.memo(() => {
   const mode = useBuilderWatch("mode");
+  const testStreamId = useBuilderWatch("testStreamId");
 
   return useMemo(
     () => (
@@ -149,7 +150,7 @@ const Panels = React.memo(() => {
             minWidth: 350,
           },
           {
-            children: <StreamTestingPanel />,
+            children: <StreamTestingPanel key={JSON.stringify(testStreamId)} />,
             className: styles.rightPanel,
             flex: 0.33,
             minWidth: 250,
@@ -157,7 +158,7 @@ const Panels = React.memo(() => {
         ]}
       />
     ),
-    [mode]
+    [mode, testStreamId]
   );
 });
 Panels.displayName = "Panels";

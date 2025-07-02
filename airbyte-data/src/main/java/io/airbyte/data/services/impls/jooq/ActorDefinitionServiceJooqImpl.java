@@ -20,9 +20,9 @@ import io.airbyte.config.ActorDefinitionBreakingChange;
 import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ActorDefinitionVersion.SupportState;
 import io.airbyte.config.ActorType;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ScopeType;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.shared.ActorWorkspaceOrganizationIds;
 import io.airbyte.db.Database;
@@ -235,7 +235,7 @@ public class ActorDefinitionServiceJooqImpl implements ActorDefinitionService {
     return getActorDefinitionVersions(List.of(actorDefinitionVersionId))
         .stream()
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.ACTOR_DEFINITION_VERSION, actorDefinitionVersionId.toString()));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.ACTOR_DEFINITION_VERSION, actorDefinitionVersionId.toString()));
   }
 
   /**

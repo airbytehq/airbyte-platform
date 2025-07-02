@@ -29,7 +29,7 @@ internal class V0_50_41_004__AddDeadlineColumnToWorkloadTest : AbstractConfigsDa
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_50_41_003__AddBackfillConfigToSchemaManagementTable()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -38,7 +38,7 @@ internal class V0_50_41_004__AddDeadlineColumnToWorkloadTest : AbstractConfigsDa
 
   @Test
   fun test() {
-    val dslContext = getDslContext()
+    val dslContext = dslContext!!
     val workloadIndexesBeforeMigration =
       dslContext
         .select()

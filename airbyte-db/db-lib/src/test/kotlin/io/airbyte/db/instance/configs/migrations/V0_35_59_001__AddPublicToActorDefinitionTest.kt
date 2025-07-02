@@ -22,7 +22,7 @@ internal class V0_35_59_001__AddPublicToActorDefinitionTest : AbstractConfigsDat
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
 
     // necessary to add actor_definition table
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)

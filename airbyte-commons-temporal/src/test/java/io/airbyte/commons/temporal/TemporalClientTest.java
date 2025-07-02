@@ -53,6 +53,7 @@ import io.airbyte.featureflag.TestClient;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.persistence.job.models.IntegrationLauncherConfig;
 import io.airbyte.persistence.job.models.JobRunConfig;
+import io.temporal.api.common.v1.WorkflowExecution;
 import io.temporal.api.enums.v1.WorkflowExecutionStatus;
 import io.temporal.api.workflow.v1.WorkflowExecutionInfo;
 import io.temporal.api.workflowservice.v1.DescribeWorkflowExecutionResponse;
@@ -126,6 +127,7 @@ public class TemporalClientTest {
     when(workflowClient.getOptions()).thenReturn(WorkflowClientOptions.newBuilder().setNamespace(NAMESPACE).build());
     workflowServiceStubs = mock(WorkflowServiceStubs.class);
     when(workflowClient.getWorkflowServiceStubs()).thenReturn(workflowServiceStubs);
+    when(workflowClient.signalWithStart(any())).thenReturn(WorkflowExecution.newBuilder().build());
     workflowServiceBlockingStub = mock(WorkflowServiceBlockingStub.class);
     when(workflowServiceStubs.blockingStub()).thenReturn(workflowServiceBlockingStub);
     streamResetPersistence = mock(StreamResetPersistence.class);

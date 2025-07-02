@@ -26,5 +26,5 @@ class HealthController(
   @Get(produces = [MediaType.APPLICATION_JSON])
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(TaskExecutors.IO)
-  override fun getHealthCheckDeprecated(): HealthCheckRead = healthHandler.healthCheck
+  override fun getHealthCheckDeprecated(): HealthCheckRead = healthHandler.getHealthCheck()
 }

@@ -1,9 +1,10 @@
+import { useMemo } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
-import { FormattedMessage, useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
-import { FormControl } from "components/forms";
 import { FormDevTools } from "components/forms/FormDevTools";
 import { Box } from "components/ui/Box";
+import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer, FlexItem } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -12,9 +13,11 @@ import { Text } from "components/ui/Text";
 import { DataActivationConnectionFormValues } from "area/dataActivation/types";
 import { AirbyteCatalog, DestinationCatalog, DestinationRead, SourceRead } from "core/api/types/AirbyteClient";
 
-import { FieldMappings } from "./FieldMappings";
+import { FieldMapping } from "./FieldMapping";
+import { SelectCursorField } from "./SelectCursorField";
 import { SelectDestinationObjectName } from "./SelectDestinationObjectName";
 import { SelectDestinationSyncMode } from "./SelectDestinationSyncMode";
+import { SelectMatchingKey } from "./SelectMatchingKeys";
 import { SelectSourceStream } from "./SelectSourceStream";
 import { SelectSourceSyncMode } from "./SelectSourceSyncMode";
 import styles from "./StreamMappings.module.scss";
@@ -77,19 +80,20 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
   source,
   sourceCatalog,
 }) => {
-  const { formatMessage } = useIntl();
-
-  const selectedSourceStream = useWatch<DataActivationConnectionFormValues, `streams.${number}.sourceStreamDescriptor`>(
+  const { fields, append, remove } = useFieldArray<DataActivationConnectionFormValues>({
+    name: `streams.${index}.fields`,
+  });
+  const sourceStreamDescriptor = useWatch<
+    DataActivationConnectionFormValues,
+    `streams.${number}.sourceStreamDescriptor`
+  >({
+    name: `streams.${index}.sourceStreamDescriptor`,
+  });
+  const destinationObjectName = useWatch<DataActivationConnectionFormValues, `streams.${number}.destinationObjectName`>(
     {
-      name: `streams.${index}.sourceStreamDescriptor`,
+      name: `streams.${index}.destinationObjectName`,
     }
   );
-  const selectedDestinationObject = useWatch<
-    DataActivationConnectionFormValues,
-    `streams.${number}.destinationObjectName`
-  >({
-    name: `streams.${index}.destinationObjectName`,
-  });
   const sourceSyncMode = useWatch<DataActivationConnectionFormValues, `streams.${number}.sourceSyncMode`>({
     name: `streams.${index}.sourceSyncMode`,
   });
@@ -97,8 +101,14 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
     name: `streams.${index}.destinationSyncMode`,
   });
 
-  const isSourceStreamSelected = !!selectedSourceStream.name;
-  const isDestinationObjectSelected = !!selectedDestinationObject;
+  const isSourceStreamSelected = !!sourceStreamDescriptor.name;
+  const isDestinationObjectSelected = !!destinationObjectName;
+
+  const selectedDestinationOperation = useMemo(() => {
+    return destinationCatalog.operations.find(
+      (operation) => operation.objectName === destinationObjectName && operation.syncMode === destinationSyncMode
+    );
+  }, [destinationCatalog.operations, destinationObjectName, destinationSyncMode]);
 
   return (
     <Card>
@@ -122,13 +132,7 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
           <div className={styles.streamMappings__sourceSettings}>
             <SelectSourceSyncMode streamIndex={index} sourceCatalog={sourceCatalog} />
             {sourceSyncMode === "incremental" && (
-              <FormControl<DataActivationConnectionFormValues>
-                name={`streams.${index}.cursorField`}
-                placeholder={formatMessage({ id: "form.cursorField" })}
-                type="text"
-                fieldType="input"
-                reserveSpaceForError={false}
-              />
+              <SelectCursorField sourceCatalog={sourceCatalog} streamIndex={index} />
             )}
           </div>
         )}
@@ -136,14 +140,8 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
         {isDestinationObjectSelected && (
           <div className={styles.streamMappings__destinationSettings}>
             <SelectDestinationSyncMode streamIndex={index} destinationCatalog={destinationCatalog} />
-            {destinationSyncMode === "append_dedup" && (
-              <FormControl<DataActivationConnectionFormValues>
-                name={`streams.${index}.primaryKey`}
-                placeholder={formatMessage({ id: "connection.matchingKey" })}
-                type="text"
-                fieldType="input"
-                reserveSpaceForError={false}
-              />
+            {selectedDestinationOperation?.matchingKeys && selectedDestinationOperation.matchingKeys.length > 0 && (
+              <SelectMatchingKey destinationCatalog={destinationCatalog} streamIndex={index} appendField={append} />
             )}
           </div>
         )}
@@ -151,10 +149,47 @@ const StreamMapping: React.FC<StreamMappingProps> = ({
         {isSourceStreamSelected && (
           <>
             <div className={styles.streamMappings__divider} />
-            <FieldMappings destinationCatalog={destinationCatalog} sourceCatalog={sourceCatalog} streamIndex={index} />
+            {fields.map((field, fieldIndex) => (
+              <FieldMapping
+                destinationCatalog={destinationCatalog}
+                sourceCatalog={sourceCatalog}
+                key={field.id}
+                streamIndex={index}
+                fieldIndex={fieldIndex}
+                removeField={fields.length > 1 ? () => remove(fieldIndex) : undefined}
+              />
+            ))}
+            <Box py="sm" className={styles.streamMappings__addField}>
+              <Button
+                icon="plus"
+                variant="secondary"
+                type="button"
+                onClick={() => append({ sourceFieldName: "", destinationFieldName: "" })}
+              >
+                <FormattedMessage id="connection.create.addField" />
+              </Button>
+            </Box>
           </>
         )}
       </div>
     </Card>
+  );
+};
+
+export const useSelectedSourceStream = (sourceCatalog: AirbyteCatalog, streamIndex: number) => {
+  const sourceStreamDescriptor = useWatch<
+    DataActivationConnectionFormValues,
+    `streams.${number}.sourceStreamDescriptor`
+  >({
+    name: `streams.${streamIndex}.sourceStreamDescriptor`,
+  });
+  return useMemo(
+    () =>
+      sourceCatalog.streams.find(
+        (stream) =>
+          stream.stream?.name === sourceStreamDescriptor.name &&
+          stream.stream?.namespace === sourceStreamDescriptor.namespace
+      ),
+    [sourceCatalog, sourceStreamDescriptor]
   );
 };

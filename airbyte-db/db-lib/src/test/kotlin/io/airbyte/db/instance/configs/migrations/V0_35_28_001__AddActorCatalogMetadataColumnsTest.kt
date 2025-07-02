@@ -22,7 +22,7 @@ internal class V0_35_28_001__AddActorCatalogMetadataColumnsTest : AbstractConfig
   @Test
   @Throws(SQLException::class, IOException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     V0_32_8_001__AirbyteConfigDatabaseDenormalization.migrate(context)
     V0_35_26_001__PersistDiscoveredCatalog.migrate(context)
     V0_35_28_001__AddActorCatalogMetadataColumns.migrate(context)

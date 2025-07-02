@@ -31,7 +31,7 @@ internal class V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTableTest : Abst
         ConfigsDatabaseMigrator.DB_IDENTIFIER,
         ConfigsDatabaseMigrator.MIGRATION_FILE_LOCATION,
       )
-    val configsDbMigrator = ConfigsDatabaseMigrator(database, flyway)
+    val configsDbMigrator = ConfigsDatabaseMigrator(database!!, flyway)
 
     val previousMigration: BaseJavaMigration = V0_40_3_001__AddProtocolVersionToActorDefinition()
     val devConfigsDbMigrator = DevDatabaseMigrator(configsDbMigrator, previousMigration.version)
@@ -41,7 +41,7 @@ internal class V0_40_3_002__RemoveActorForeignKeyFromOauthParamsTableTest : Abst
   @Test
   @Throws(IOException::class, SQLException::class)
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertTrue(foreignKeyExists(context))
     removeActorDefinitionForeignKey(context)
     Assertions.assertFalse(foreignKeyExists(context))

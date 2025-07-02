@@ -9,7 +9,8 @@ import { Icon } from "components/ui/Icon";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useGetPaymentInformation } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetPaymentInformation } from "core/api";
 import { PaymentMethodRead } from "core/api/types/AirbyteClient";
 
 import styles from "./PaymentMethod.module.scss";
@@ -63,7 +64,7 @@ const CurrentPaymentMethod: React.FC<CurrentPaymentMethodProps> = ({ paymentMeth
 
 export const PaymentMethod = () => {
   const { redirecting, goToCustomerPortal } = useRedirectToCustomerPortal("payment_method");
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const {
     data: paymentInformation,
     isLoading: paymentInformationLoading,

@@ -18,8 +18,8 @@ import io.airbyte.config.ActorCatalog;
 import io.airbyte.config.ActorCatalog.CatalogType;
 import io.airbyte.config.ActorCatalogFetchEvent;
 import io.airbyte.config.ActorCatalogWithUpdatedAt;
-import io.airbyte.config.ConfigSchema;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.config.ConfigNotFoundType;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -74,7 +74,7 @@ public class CatalogServiceJooqImpl implements CatalogService {
     if (!result.isEmpty()) {
       return DbConverter.buildActorCatalog(result.get(0));
     }
-    throw new ConfigNotFoundException(ConfigSchema.ACTOR_CATALOG, actorCatalogId);
+    throw new ConfigNotFoundException(ConfigNotFoundType.ACTOR_CATALOG, actorCatalogId);
   }
 
   /**

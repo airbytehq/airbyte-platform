@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test
 internal class V0_35_5_001__Add_failureSummary_col_to_AttemptsTest : AbstractJobsDatabaseTest() {
   @Test
   fun test() {
-    val context = getDslContext()
+    val context = dslContext!!
     Assertions.assertFalse(failureSummaryColumnExists(context))
     addFailureSummaryColumn(context)
     Assertions.assertTrue(failureSummaryColumnExists(context))

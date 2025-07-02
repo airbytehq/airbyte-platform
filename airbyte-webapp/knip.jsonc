@@ -8,6 +8,7 @@
   "ignore": [
     // Ignore all generated files
     "src/core/api/generated/**",
+    "src/core/api/types/**",
     // Ignore storybook files
     "**/*.stories.tsx",
     "**/*.docs.tsx",

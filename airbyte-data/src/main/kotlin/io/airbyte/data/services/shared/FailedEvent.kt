@@ -6,6 +6,7 @@ package io.airbyte.data.services.shared
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.airbyte.config.FailureReason
+import io.airbyte.domain.models.RejectedRecordsMetadata
 import io.airbyte.protocol.models.v0.StreamDescriptor
 import java.util.Optional
 
@@ -20,6 +21,7 @@ class FailedEvent(
   jobType: String,
   statusType: String,
   streams: List<StreamDescriptor>? = null,
+  rejectedRecords: RejectedRecordsMetadata? = null,
   private val failureReason: Optional<FailureReason>,
 ) : FinalStatusEvent(
     jobId,
@@ -31,6 +33,7 @@ class FailedEvent(
     jobType,
     statusType,
     streams,
+    rejectedRecords,
   ) {
   fun getFailureReason(): Optional<FailureReason> = failureReason
 }

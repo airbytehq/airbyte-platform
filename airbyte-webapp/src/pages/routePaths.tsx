@@ -57,4 +57,5 @@ export enum SettingsRoutePaths {
   WorkspaceMembers = "workspaceMembers",
   Applications = "applications",
   License = "license",
+  User = "user",
 }
