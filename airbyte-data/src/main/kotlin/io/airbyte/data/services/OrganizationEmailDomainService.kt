@@ -8,4 +8,6 @@ import io.airbyte.config.OrganizationEmailDomain
 
 interface OrganizationEmailDomainService {
   fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain>
+
+  fun createEmailDomain(emailDomainConfig: OrganizationEmailDomain)
 }

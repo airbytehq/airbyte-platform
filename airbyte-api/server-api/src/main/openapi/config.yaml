@@ -6930,6 +6930,23 @@ paths:
           description: The resource was deleted successfully.
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/create:
+    post:
+      summary: Onboard a cloud customer to SSO
+      tags:
+        - sso_config
+      operationId: createSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "Org successfully onboarded to sso"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # Airbyte API
   /public:
@@ -20136,6 +20153,32 @@ components:
         permission:
           $ref: "#/components/schemas/PermissionType"
       x-sdk-component: true
+
+    CreateSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+        - clientId
+        - clientSecret
+        - discoveryUrl
+        - emailDomain
+      properties:
+        organizationId:
+          type: string
+          format: UUID
+        companyIdentifier:
+          type: string
+          description: Used to name the keycloak realm
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        discoveryUrl:
+          type: string
+          format: url
+        emailDomain:
+          type: string
 
   responses:
     NotFoundResponse:
