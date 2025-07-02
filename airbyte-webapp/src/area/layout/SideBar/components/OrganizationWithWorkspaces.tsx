@@ -7,7 +7,6 @@ import { Icon } from "components/ui/Icon";
 import { Text } from "components/ui/Text";
 
 import { OrganizationSummary } from "core/api/types/AirbyteClient";
-import { CloudSettingsRoutePaths } from "packages/cloud/views/settings/routePaths";
 import { RoutePaths } from "pages/routePaths";
 
 import styles from "./OrganizationWithWorkspaces.module.scss";
@@ -19,7 +18,7 @@ export const OrganizationWithWorkspaces: ItemContent<OrganizationSummary, null> 
   return (
     <FlexContainer direction="column" gap="none">
       <NavLink
-        to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
+        to={`${RoutePaths.Organization}/${organization.organizationId}/${RoutePaths.Workspaces}`}
         className={styles.organizationName}
       >
         <div className={styles.orgTextBlock}>
