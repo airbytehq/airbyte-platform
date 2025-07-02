@@ -4,13 +4,13 @@
 #
 #    pip-compile
 #
-airbyte-cdk==6.56.7
+airbyte-cdk==6.57.0
     # via -r requirements.in
 airbyte-protocol-models-dataclasses==0.17.1
     # via airbyte-cdk
 annotated-types==0.7.0
     # via pydantic
-anyascii==0.3.2
+anyascii==0.3.3
     # via airbyte-cdk
 anyio==4.9.0
     # via httpx
