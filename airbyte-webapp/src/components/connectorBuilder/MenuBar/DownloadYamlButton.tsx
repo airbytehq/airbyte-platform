@@ -1,6 +1,7 @@
 import snakeCase from "lodash/snakeCase";
 import { FormattedMessage } from "react-intl";
 
+import { useRefsHandler } from "components/forms/SchemaForm/RefsHandler";
 import { Button } from "components/ui/Button";
 import { FlexContainer } from "components/ui/Flex";
 import { Icon } from "components/ui/Icon";
@@ -8,6 +9,7 @@ import { Tooltip } from "components/ui/Tooltip";
 
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { downloadFile, FILE_TYPE_DOWNLOAD } from "core/utils/file";
+import { removeEmptyProperties } from "core/utils/form";
 import { useConnectorBuilderFormState } from "services/connectorBuilder/ConnectorBuilderStateService";
 
 import styles from "./DownloadYamlButton.module.scss";
@@ -24,13 +26,14 @@ export const DownloadYamlButton: React.FC<DownloadYamlButtonProps> = ({ classNam
   const { validateAndTouch } = useBuilderErrors();
   const connectorNameField = useBuilderWatch("name");
   const { yamlIsValid } = useConnectorBuilderFormState();
-  const manifest = useBuilderWatch("manifest");
+  const { exportValuesWithRefs } = useRefsHandler();
   const yaml = useBuilderWatch("yaml");
   const mode = useBuilderWatch("mode");
   const { hasErrors } = useBuilderErrors();
 
   const downloadYaml = () => {
-    const yamlToDownload = mode === "ui" ? convertJsonToYaml(manifest) : yaml;
+    const yamlToDownload =
+      mode === "ui" ? convertJsonToYaml(removeEmptyProperties(exportValuesWithRefs().manifest, true)) : yaml;
     const file = new Blob([yamlToDownload], { type: FILE_TYPE_DOWNLOAD });
     downloadFile(file, connectorNameField ? `${snakeCase(connectorNameField)}.yaml` : "connector_builder.yaml");
     analyticsService.track(Namespace.CONNECTOR_BUILDER, Action.DOWNLOAD_YAML, {

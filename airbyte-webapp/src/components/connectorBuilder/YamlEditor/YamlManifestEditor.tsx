@@ -5,6 +5,7 @@ import React, { useMemo, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormattedMessage } from "react-intl";
 
+import { useRefsHandler } from "components/forms/SchemaForm/RefsHandler";
 import { FlexItem } from "components/ui/Flex";
 import { ExternalLink } from "components/ui/Link";
 import { ButtonTab, Tabs } from "components/ui/Tabs";
@@ -39,7 +40,8 @@ export const YamlManifestEditor: React.FC = () => {
     setYamlIsDirty,
   } = useConnectorBuilderFormState();
   const { resolveManifest } = useConnectorBuilderResolve();
-  const { setValue } = useFormContext();
+  const { setValue, getValues } = useFormContext();
+  const { resetFormAndRefState } = useRefsHandler();
   const yamlManifestValue = useBuilderWatch("yaml");
 
   // Add a simple counter reference to track the latest call
@@ -51,17 +53,25 @@ export const YamlManifestEditor: React.FC = () => {
         // Increment counter to track this call
         const thisCallId = ++lastCallIdRef.current;
 
-        resolveManifest(newManifest).then((resolvedManifest) => {
+        resolveManifest(newManifest, true).then((resolvedManifest) => {
           // Only update state if this is still the latest call
           // This prevents yamlIsDirty from being set back to false when subsequent YAML changes are made
           // while previous resolve calls are still in progress.
           if (thisCallId === lastCallIdRef.current) {
-            setValue("manifest", resolvedManifest.manifest);
+            // shouldNormalize is set to true in the above resolveManifest call, which can result in $refs
+            // pointing to the refTargetPath in the result.
+            // To ensure that the linking behavior works as expected, we must update the refMappings to account
+            // for these $refs, and then manually resolve them when updating the manifest form state.
+            const newBuilderState = {
+              ...getValues(),
+              manifest: resolvedManifest.manifest,
+            };
+            resetFormAndRefState(newBuilderState);
             setYamlIsDirty(false);
           }
         });
       }, 500),
-    [resolveManifest, setValue, setYamlIsDirty]
+    [getValues, resetFormAndRefState, resolveManifest, setYamlIsDirty]
   );
 
   const areCustomComponentsEnabled = useCustomComponentsEnabled();

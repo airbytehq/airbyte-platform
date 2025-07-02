@@ -5,6 +5,7 @@ import { ReactMarkdown } from "react-markdown/lib/react-markdown";
 
 import { LabelInfo } from "components/Label";
 import { Badge } from "components/ui/Badge";
+import { FlexContainer } from "components/ui/Flex";
 import { Tooltip } from "components/ui/Tooltip";
 
 import { ArrayOfObjectsControl } from "./ArrayOfObjectsControl";
@@ -122,10 +123,11 @@ export const SchemaFormControl = ({
         <LabelInfo description={targetSchema.description} examples={targetSchema.examples} />
       ) : undefined,
     optional: isOptional,
-    header: targetSchema.deprecated ? (
-      <DeprecatedBadge message={targetSchema.deprecation_message} />
-    ) : (
-      <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+    header: (
+      <FlexContainer alignItems="center">
+        {targetSchema.deprecated && <DeprecatedBadge message={targetSchema.deprecation_message} />}
+        <LinkComponentsToggle path={path} fieldSchema={targetSchema} />
+      </FlexContainer>
     ),
     containerControlClassName: className,
     onlyShowErrorIfTouched,

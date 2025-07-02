@@ -1,11 +1,13 @@
+import cloneDeep from "lodash/cloneDeep";
 import isBoolean from "lodash/isBoolean";
 import isEqual from "lodash/isEqual";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { get, useFormContext } from "react-hook-form";
-import { useEffectOnce } from "react-use";
+import { FieldValues, get, set, useFormContext } from "react-hook-form";
+
+import { removeEmptyProperties } from "core/utils/form";
 
 import { useSchemaForm } from "./SchemaForm";
-import { convertRefToPath } from "./utils";
+import { convertPathToRef, convertRefToPath, resolveRefs } from "./utils";
 
 // Types for reference management
 export type ReferenceInfo =
@@ -48,6 +50,8 @@ export interface RefsHandlerContextValue {
   removeRef: (sourcePath: string, targetPath: string) => void;
   handleLinkAction: (path: string, overwriteTarget?: boolean) => void;
   handleUnlinkAction: (path: string) => void;
+  exportValuesWithRefs: () => FieldValues;
+  resetFormAndRefState: (values: FieldValues) => void;
 }
 
 // Create the context
@@ -65,15 +69,23 @@ export const useRefsHandler = () => {
 // Provider props type
 export interface RefsHandlerProviderProps {
   values: unknown;
+  refBasePath?: string;
   refTargetPath?: string;
   children: React.ReactNode;
 }
 
 // Create the provider component
-export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ children, values, refTargetPath }) => {
-  const { setValue, getValues, watch } = useFormContext();
-  const [refTargetToSources, setRefTargetToSources] = useState<Map<string, string[]>>(new Map());
-  const [refSourceToTarget, setRefSourceToTarget] = useState<Map<string, string>>(new Map());
+export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({
+  children,
+  values,
+  refBasePath,
+  refTargetPath,
+}) => {
+  const { setValue, getValues, watch, reset } = useFormContext();
+  const [{ refTargetToSources, refSourceToTarget }, setRefMappings] = useState<{
+    refTargetToSources: Map<string, string[]>;
+    refSourceToTarget: Map<string, string>;
+  }>(extractRefMappings(values, refTargetPath, refBasePath));
   const { getSchemaAtPath } = useSchemaForm();
 
   // Get information about a reference at a path
@@ -100,74 +112,27 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
     [refSourceToTarget, refTargetToSources]
   );
 
-  // Extract $ref mappings from the initial values
-  // This should only run once when the form is first rendered
-  useEffectOnce(() => {
-    if (!refTargetPath) {
-      return;
-    }
-
-    const mapping = new Map<string, string[]>();
-    const reverseMapping = new Map<string, string>();
-
-    // Function to extract $refs from an object
-    const extractRefs = (obj: unknown, path = "") => {
-      if (!obj || typeof obj !== "object") {
-        return;
-      }
-
-      if (Array.isArray(obj)) {
-        obj.forEach((item, index) => {
-          extractRefs(item, path ? `${path}.${index}` : `${index}`);
-        });
-        return;
-      }
-
-      // Non-array object
-      const objRecord = obj as Record<string, unknown>;
-
-      if ("$ref" in objRecord && typeof objRecord.$ref === "string") {
-        const targetPath = convertRefToPath(objRecord.$ref);
-
-        // Only process $refs that point within the refTargetPath
-        // and have a value at the target path
-        if (!targetPath.startsWith(refTargetPath) || !getValues(targetPath)) {
-          return;
-        }
-        const refs = mapping.get(targetPath) || [];
-        if (!refs.includes(path)) {
-          refs.push(path);
-          mapping.set(targetPath, refs);
-        }
-        reverseMapping.set(path, targetPath);
-        return;
-      }
-
-      // Continue traversing
-      for (const [key, value] of Object.entries(objRecord)) {
-        const newPath = path ? `${path}.${key}` : key;
-        extractRefs(value, newPath);
-      }
-    };
-
-    extractRefs(values);
-    setRefTargetToSources(mapping);
-    setRefSourceToTarget(reverseMapping);
-  });
-
   // REFERENCE MANAGEMENT
 
   // Add a reference from source to target
   const addRef = useCallback((sourcePath: string, targetPath: string) => {
-    setRefTargetToSources((prev) => {
-      const refs = prev.get(targetPath) || [];
-      if (!refs.includes(sourcePath)) {
-        refs.push(sourcePath);
-        return new Map(prev).set(targetPath, refs);
-      }
-      return prev;
+    setRefMappings((previousMappings) => {
+      const updateRefTargetToSources = (prev: Map<string, string[]>) => {
+        const refs = prev.get(targetPath) || [];
+        if (!refs.includes(sourcePath)) {
+          refs.push(sourcePath);
+          return new Map(prev).set(targetPath, refs);
+        }
+        return prev;
+      };
+
+      const updateRefSourceToTarget = (prev: Map<string, string>) => new Map(prev).set(sourcePath, targetPath);
+
+      return {
+        refTargetToSources: updateRefTargetToSources(previousMappings.refTargetToSources),
+        refSourceToTarget: updateRefSourceToTarget(previousMappings.refSourceToTarget),
+      };
     });
-    setRefSourceToTarget((prev) => new Map(prev).set(sourcePath, targetPath));
   }, []);
 
   // Remove a reference from source to target
@@ -178,28 +143,34 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
       const isLastReference = currentSources.length === 1 && currentSources[0] === sourcePath;
       const shouldClearTarget = refTargetPath && targetPath.startsWith(refTargetPath) && isLastReference;
 
-      // Update references state
-      setRefTargetToSources((prev) => {
-        const refs = prev.get(targetPath) || [];
-        if (refs.includes(sourcePath)) {
+      setRefMappings((previousMappings) => {
+        const updateRefTargetToSources = (prev: Map<string, string[]>) => {
+          const refs = prev.get(targetPath) || [];
+          if (refs.includes(sourcePath)) {
+            const updatedMap = new Map(prev);
+            const updatedRefs = refs.filter((ref) => ref !== sourcePath);
+            if (updatedRefs.length === 0) {
+              updatedMap.delete(targetPath);
+            } else {
+              updatedMap.set(targetPath, updatedRefs);
+            }
+            return updatedMap;
+          }
+          return prev;
+        };
+
+        const updateRefSourceToTarget = (prev: Map<string, string>) => {
           const updatedMap = new Map(prev);
-          const updatedRefs = refs.filter((ref) => ref !== sourcePath);
-          if (updatedRefs.length === 0) {
-            updatedMap.delete(targetPath);
-          } else {
-            updatedMap.set(targetPath, updatedRefs);
+          if (prev.get(sourcePath) === targetPath) {
+            updatedMap.delete(sourcePath);
           }
           return updatedMap;
-        }
-        return prev;
-      });
+        };
 
-      setRefSourceToTarget((prev) => {
-        const updatedMap = new Map(prev);
-        if (prev.get(sourcePath) === targetPath) {
-          updatedMap.delete(sourcePath);
-        }
-        return updatedMap;
+        return {
+          refTargetToSources: updateRefTargetToSources(previousMappings.refTargetToSources),
+          refSourceToTarget: updateRefSourceToTarget(previousMappings.refSourceToTarget),
+        };
       });
 
       // After updating the ref state, process cleanup actions
@@ -297,10 +268,21 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
           }
         });
       }
+
+      // Case 3: Parent of a source changed - remove the ref if no longer equal
+      for (const [sourcePath, targetPath] of refSourceToTarget.entries()) {
+        if (sourcePath.startsWith(name)) {
+          const sourceValue = getValues(sourcePath);
+          const targetValue = getValues(targetPath);
+          if (!isEqual(sourceValue, targetValue)) {
+            removeRef(sourcePath, targetPath);
+          }
+        }
+      }
     });
 
     return () => subscription.unsubscribe();
-  }, [watch, setValue, findRefSourceAndTargetForPath, refTargetToSources]);
+  }, [watch, setValue, findRefSourceAndTargetForPath, refTargetToSources, refSourceToTarget, removeRef, getValues]);
 
   // REFERENCE ACTIONS
 
@@ -314,7 +296,7 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         return null;
       }
 
-      const parentSchema = getSchemaAtPath(parentPath);
+      const parentSchema = getSchemaAtPath(parentPath, true);
 
       // ~ declarative_component_schema type handling ~
       if (
@@ -370,6 +352,29 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
     [getReferenceInfo, removeRef]
   );
 
+  const exportValuesWithRefs = useCallback(() => {
+    const values = cloneDeep(getValues());
+
+    for (const [refSource, refTarget] of refSourceToTarget.entries()) {
+      set(values, refSource, {
+        $ref: convertPathToRef(refTarget, refBasePath),
+      });
+    }
+    return removeEmptyProperties(values, true);
+  }, [getValues, refBasePath, refSourceToTarget]);
+
+  // Useful for when the values of the form need to be fully replaced.
+  // This re-extracts the ref mappings and resets the form state to the new
+  // values with refs pointing to refTargetPath resolved so that linking
+  // behavior continues to work as expected.
+  const resetFormAndRefState = useCallback(
+    (values: FieldValues) => {
+      setRefMappings(extractRefMappings(values, refTargetPath, refBasePath));
+      reset(resolveRefs(values, values, refBasePath, refTargetPath));
+    },
+    [refTargetPath, refBasePath, reset]
+  );
+
   return (
     <RefsHandlerContext.Provider
       value={{
@@ -379,6 +384,8 @@ export const RefsHandlerProvider: React.FC<RefsHandlerProviderProps> = ({ childr
         removeRef,
         handleLinkAction,
         handleUnlinkAction,
+        exportValuesWithRefs,
+        resetFormAndRefState,
       }}
     >
       {children}
@@ -406,4 +413,53 @@ const getRefParentPath = (path: string, pathMap: Map<string, unknown>): string |
   }
 
   return null;
+};
+
+const extractRefMappings = (values: unknown, refTargetPath?: string, refBasePath?: string) => {
+  if (!refTargetPath) {
+    return { refTargetToSources: new Map(), refSourceToTarget: new Map() };
+  }
+
+  const refTargetToSources = new Map<string, string[]>();
+  const refSourceToTarget = new Map<string, string>();
+
+  // Function to extract $refs from an object
+  const extractRefs = (obj: unknown, path = "") => {
+    if (!obj || typeof obj !== "object") {
+      return;
+    }
+
+    if (Array.isArray(obj)) {
+      obj.forEach((item, index) => {
+        extractRefs(item, path ? `${path}.${index}` : `${index}`);
+      });
+      return;
+    }
+
+    // Non-array object
+    const objRecord = obj as Record<string, unknown>;
+
+    if ("$ref" in objRecord && typeof objRecord.$ref === "string") {
+      const targetPath = convertRefToPath(objRecord.$ref, refBasePath);
+      if (!targetPath.startsWith(refTargetPath)) {
+        return;
+      }
+      const refs = refTargetToSources.get(targetPath) || [];
+      if (!refs.includes(path)) {
+        refs.push(path);
+        refTargetToSources.set(targetPath, refs);
+      }
+      refSourceToTarget.set(path, targetPath);
+      return;
+    }
+
+    // Continue traversing
+    for (const [key, value] of Object.entries(objRecord)) {
+      const newPath = path ? `${path}.${key}` : key;
+      extractRefs(value, newPath);
+    }
+  };
+
+  extractRefs(values);
+  return { refTargetToSources, refSourceToTarget };
 };

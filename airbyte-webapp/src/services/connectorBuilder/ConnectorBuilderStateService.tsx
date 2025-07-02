@@ -18,6 +18,7 @@ import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTest
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
 import { convertJsonToYaml, formatJson, getStreamName } from "components/connectorBuilder/utils";
+import { useRefsHandler } from "components/forms/SchemaForm/RefsHandler";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -250,10 +251,12 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setStoredMode(projectId, mode);
   }, [mode]);
 
+  const { exportValuesWithRefs } = useRefsHandler();
+
   const toggleUI = useCallback(
     async (newMode: BuilderState["mode"]) => {
       if (newMode === "yaml") {
-        setValue("yaml", convertJsonToYaml(manifest));
+        setValue("yaml", convertJsonToYaml(exportValuesWithRefs().manifest));
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
@@ -279,7 +282,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     },
     [
       setValue,
-      manifest,
+      exportValuesWithRefs,
       resolveError,
       openConfirmationModal,
       resolveErrorMessage,
@@ -338,22 +341,22 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(manifest);
+      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
       const result = await sendPublishRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(1);
       return result;
     },
-    [manifest, sendPublishRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendPublishRequest, updateYamlCdkVersion]
   );
 
   const releaseNewVersion = useCallback(
     async (options: NewVersionBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(manifest);
+      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
       await sendNewVersionRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(options.version);
     },
-    [manifest, sendNewVersionRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendNewVersionRequest, updateYamlCdkVersion]
   );
 
   const savingState = getSavingState(
@@ -377,24 +380,28 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     if (savingState !== "loading") {
       return;
     }
-    const resolvedProject: BuilderProjectWithManifest = {
+    const updatedProject: BuilderProjectWithManifest = {
       name,
       manifest,
       yamlManifest: convertJsonToYaml(manifest),
       componentsFileContent: customComponentsCode,
     };
+    const manifestWithRefs = exportValuesWithRefs().manifest;
     await updateProject(
       mode === "yaml"
         ? {
-            name,
+            ...updatedProject,
             manifest: load(yaml) as ConnectorManifest,
             yamlManifest: yaml,
-            componentsFileContent: customComponentsCode,
           }
-        : resolvedProject
+        : {
+            ...updatedProject,
+            manifest: manifestWithRefs,
+            yamlManifest: convertJsonToYaml(manifestWithRefs),
+          }
     );
-    setPersistedState(resolvedProject);
-  }, [savingState, mode, name, yaml, customComponentsCode, manifest, updateProject]);
+    setPersistedState(updatedProject);
+  }, [savingState, name, manifest, customComponentsCode, exportValuesWithRefs, updateProject, mode, yaml]);
 
   useDebounce(
     () => {
