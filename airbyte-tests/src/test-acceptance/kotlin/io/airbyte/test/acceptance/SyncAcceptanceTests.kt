@@ -19,6 +19,8 @@ import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.db.Database
+import io.airbyte.featureflag.UseSyncV2
+import io.airbyte.featureflag.Workspace
 import io.airbyte.test.utils.AcceptanceTestHarness
 import io.airbyte.test.utils.AcceptanceTestUtils.IS_GKE
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
@@ -43,6 +45,8 @@ import java.util.Optional
 import java.util.Set
 import java.util.UUID
 
+// TODO switch all the tests back to normal (i.e. non-parameterized) after the sync workflow v2 rollout
+
 /**
  * This class tests sync functionality.
  *
@@ -58,7 +62,9 @@ import java.util.UUID
  */
 @Execution(ExecutionMode.CONCURRENT)
 @Tag("sync")
-internal class SyncAcceptanceTests {
+internal abstract class SyncAcceptanceTests(
+  private val useV2: Boolean,
+) {
   private lateinit var testResources: AcceptanceTestsResources
 
   private lateinit var testHarness: AcceptanceTestHarness
@@ -86,80 +92,84 @@ internal class SyncAcceptanceTests {
     IOException::class,
   )
   fun testSourceCheckConnection() {
-    val sourceId = testHarness.createPostgresSource().sourceId
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      val sourceId = testHarness.createPostgresSource().sourceId
 
-    val checkConnectionRead = testHarness.checkSource(sourceId)
+      val checkConnectionRead = testHarness.checkSource(sourceId)
 
-    Assertions.assertEquals(
-      CheckConnectionRead.Status.SUCCEEDED,
-      checkConnectionRead.status,
-      checkConnectionRead.message,
-    )
+      Assertions.assertEquals(
+        CheckConnectionRead.Status.SUCCEEDED,
+        checkConnectionRead.status,
+        checkConnectionRead.message,
+      )
+    }
   }
 
   @Test
   @Throws(Exception::class)
   fun testCancelSync() {
-    val sourceDefinition =
-      testHarness.createE2eSourceDefinition(
-        workspaceId,
-      )
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      val sourceDefinition =
+        testHarness.createE2eSourceDefinition(
+          workspaceId,
+        )
 
-    val source =
-      testHarness.createSource(
-        E2E_TEST_SOURCE + UUID.randomUUID(),
-        workspaceId,
-        sourceDefinition.sourceDefinitionId,
-        Jsons.jsonNode(
-          ImmutableMap
-            .builder<Any, Any>()
-            .put(TYPE, INFINITE_FEED)
-            .put(MESSAGE_INTERVAL, 1000)
-            .put(MAX_RECORDS, Duration.ofMinutes(5).toSeconds())
-            .build(),
-        ),
-      )
+      val source =
+        testHarness.createSource(
+          E2E_TEST_SOURCE + UUID.randomUUID(),
+          workspaceId,
+          sourceDefinition.sourceDefinitionId,
+          Jsons.jsonNode(
+            ImmutableMap
+              .builder<Any, Any>()
+              .put(TYPE, INFINITE_FEED)
+              .put(MESSAGE_INTERVAL, 1000)
+              .put(MAX_RECORDS, Duration.ofMinutes(5).toSeconds())
+              .build(),
+          ),
+        )
 
-    val sourceId = source.sourceId
-    val destinationId = testHarness.createPostgresDestination().destinationId
-    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
-    val srcSyncMode = SyncMode.FULL_REFRESH
-    val dstSyncMode = DestinationSyncMode.OVERWRITE
-    val catalog =
-      modifyCatalog(
-        discoverResult.catalog,
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-      )
-    val connectionId =
-      testHarness
-        .createConnection(
-          TestConnectionCreate
-            .Builder(
-              sourceId,
-              destinationId,
-              catalog,
-              discoverResult.catalogId!!,
-              testHarness.dataplaneGroupId,
-            ).build(),
-        ).connectionId
-    val connectionSyncRead = testHarness.syncConnection(connectionId)
+      val sourceId = source.sourceId
+      val destinationId = testHarness.createPostgresDestination().destinationId
+      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+      val srcSyncMode = SyncMode.FULL_REFRESH
+      val dstSyncMode = DestinationSyncMode.OVERWRITE
+      val catalog =
+        modifyCatalog(
+          discoverResult.catalog,
+          Optional.of(srcSyncMode),
+          Optional.of(dstSyncMode),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+        )
+      val connectionId =
+        testHarness
+          .createConnection(
+            TestConnectionCreate
+              .Builder(
+                sourceId,
+                destinationId,
+                catalog,
+                discoverResult.catalogId!!,
+                testHarness.dataplaneGroupId,
+              ).build(),
+          ).connectionId
+      val connectionSyncRead = testHarness.syncConnection(connectionId)
 
-    // wait to get out of PENDING
-    val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, Set.of(JobStatus.PENDING))
-    Assertions.assertEquals(JobStatus.RUNNING, jobRead.status)
+      // wait to get out of PENDING
+      val jobRead = testHarness.waitWhileJobHasStatus(connectionSyncRead.job, Set.of(JobStatus.PENDING))
+      Assertions.assertEquals(JobStatus.RUNNING, jobRead.status)
 
-    val resp = testHarness.cancelSync(connectionSyncRead.job.id)
-    Assertions.assertEquals(JobStatus.CANCELLED, resp.job.status)
+      val resp = testHarness.cancelSync(connectionSyncRead.job.id)
+      Assertions.assertEquals(JobStatus.CANCELLED, resp.job.status)
+    }
   }
 
   @Test
@@ -168,159 +178,164 @@ internal class SyncAcceptanceTests {
     Exception::class,
   )
   fun testScheduledSync() {
-    val sourceId = testHarness.createPostgresSource().sourceId
-    val destinationId = testHarness.createPostgresDestination().destinationId
-    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
-    val srcSyncMode = SyncMode.FULL_REFRESH
-    val dstSyncMode = DestinationSyncMode.OVERWRITE
-    val catalog =
-      modifyCatalog(
-        discoverResult.catalog,
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      val sourceId = testHarness.createPostgresSource().sourceId
+      val destinationId = testHarness.createPostgresDestination().destinationId
+      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+      val srcSyncMode = SyncMode.FULL_REFRESH
+      val dstSyncMode = DestinationSyncMode.OVERWRITE
+      val catalog =
+        modifyCatalog(
+          discoverResult.catalog,
+          Optional.of(srcSyncMode),
+          Optional.of(dstSyncMode),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.of(true),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+        )
+
+      val conn =
+        testHarness.createConnection(
+          TestConnectionCreate
+            .Builder(
+              sourceId,
+              destinationId,
+              catalog,
+              discoverResult.catalogId!!,
+              testHarness.dataplaneGroupId,
+            ).setSchedule(ConnectionScheduleType.BASIC, testResources.basicScheduleData)
+            .build(),
+        )
+      val connectionId = conn.connectionId
+      val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
+
+      testResources.waitForSuccessfulJobWithRetries(jobRead)
+
+      assertSourceAndDestinationDbRawRecordsInSync(
+        testHarness.getSourceDatabase(),
+        testHarness.getDestinationDatabase(),
+        AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+        conn.namespaceFormat!!,
+        false,
+        AcceptanceTestsResources.WITHOUT_SCD_TABLE,
       )
-
-    val conn =
-      testHarness.createConnection(
-        TestConnectionCreate
-          .Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.catalogId!!,
-            testHarness.dataplaneGroupId,
-          ).setSchedule(ConnectionScheduleType.BASIC, testResources.basicScheduleData)
-          .build(),
+      assertStreamStatuses(
+        testHarness,
+        workspaceId,
+        connectionId,
+        jobRead.id,
+        StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC,
       )
-    val connectionId = conn.connectionId
-    val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
-
-    testResources.waitForSuccessfulJobWithRetries(jobRead)
-
-    assertSourceAndDestinationDbRawRecordsInSync(
-      testHarness.getSourceDatabase(),
-      testHarness.getDestinationDatabase(),
-      AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-      conn.namespaceFormat!!,
-      false,
-      AcceptanceTestsResources.WITHOUT_SCD_TABLE,
-    )
-    assertStreamStatuses(
-      testHarness,
-      workspaceId,
-      connectionId,
-      jobRead.id,
-      StreamStatusRunState.COMPLETE,
-      StreamStatusJobType.SYNC,
-    )
+    }
   }
 
   @Test
   @Throws(Exception::class)
   fun testCronSync() {
-    val sourceId = testHarness.createPostgresSource().sourceId
-    val destinationId = testHarness.createPostgresDestination().destinationId
-    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      val sourceId = testHarness.createPostgresSource().sourceId
+      val destinationId = testHarness.createPostgresDestination().destinationId
+      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
 
-    // NOTE: this cron should run once every two minutes.
-    val connectionScheduleData =
-      ConnectionScheduleData(
-        null,
-        ConnectionScheduleDataCron("0 */2 * * * ?", "UTC"),
-      )
-    val srcSyncMode = SyncMode.FULL_REFRESH
-    val dstSyncMode = DestinationSyncMode.OVERWRITE
-    val catalog =
-      modifyCatalog(
-        discoverResult.catalog,
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-      )
-    val conn =
-      testHarness.createConnection(
-        TestConnectionCreate
-          .Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.catalogId!!,
-            testHarness.dataplaneGroupId,
-          ).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
-          .build(),
-      )
-
-    val connectionId = conn.connectionId
-    val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
-
-    testResources.waitForSuccessfulJobWithRetries(jobRead)
-
-    // NOTE: this is an unusual use of a retry policy. Sometimes the raw tables haven't been cleaned up
-    // even though the job
-    // is marked successful.
-    val retryAssertOutcome =
-      Failsafe
-        .with<Any, RetryPolicy<Any>>(
-          RetryPolicy
-            .builder<Any>()
-            .withBackoff(
-              Duration.ofSeconds(AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS.toLong()),
-              Duration.ofSeconds(
-                AcceptanceTestsResources.FINAL_INTERVAL_SECS.toLong(),
-              ),
-            ).withMaxRetries(AcceptanceTestsResources.MAX_TRIES)
-            .build(),
-        ).get<String>(
-          CheckedSupplier<String> {
-            assertSourceAndDestinationDbRawRecordsInSync(
-              testHarness.getSourceDatabase(),
-              testHarness.getDestinationDatabase(),
-              AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-              conn.namespaceFormat!!,
-              false,
-              AcceptanceTestsResources.WITHOUT_SCD_TABLE,
-            )
-            "success" // If the assertion throws after all the retries, then retryWithJitter will return null.
-          },
+      // NOTE: this cron should run once every two minutes.
+      val connectionScheduleData =
+        ConnectionScheduleData(
+          null,
+          ConnectionScheduleDataCron("0 */2 * * * ?", "UTC"),
         )
-    Assertions.assertEquals("success", retryAssertOutcome)
+      val srcSyncMode = SyncMode.FULL_REFRESH
+      val dstSyncMode = DestinationSyncMode.OVERWRITE
+      val catalog =
+        modifyCatalog(
+          discoverResult.catalog,
+          Optional.of(srcSyncMode),
+          Optional.of(dstSyncMode),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.of(true),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+        )
+      val conn =
+        testHarness.createConnection(
+          TestConnectionCreate
+            .Builder(
+              sourceId,
+              destinationId,
+              catalog,
+              discoverResult.catalogId!!,
+              testHarness.dataplaneGroupId,
+            ).setSchedule(ConnectionScheduleType.CRON, connectionScheduleData)
+            .build(),
+        )
 
-    assertStreamStatuses(
-      testHarness,
-      workspaceId,
-      connectionId,
-      jobRead.id,
-      StreamStatusRunState.COMPLETE,
-      StreamStatusJobType.SYNC,
-    )
+      val connectionId = conn.connectionId
+      val jobRead = testHarness.getMostRecentSyncForConnection(connectionId)
 
-    testHarness.deleteConnection(connectionId)
+      testResources.waitForSuccessfulJobWithRetries(jobRead)
 
-    // remove connection to avoid exception during tear down
-    testHarness.removeConnection(connectionId)
+      // NOTE: this is an unusual use of a retry policy. Sometimes the raw tables haven't been cleaned up
+      // even though the job
+      // is marked successful.
+      val retryAssertOutcome =
+        Failsafe
+          .with<Any, RetryPolicy<Any>>(
+            RetryPolicy
+              .builder<Any>()
+              .withBackoff(
+                Duration.ofSeconds(AcceptanceTestsResources.JITTER_MAX_INTERVAL_SECS.toLong()),
+                Duration.ofSeconds(
+                  AcceptanceTestsResources.FINAL_INTERVAL_SECS.toLong(),
+                ),
+              ).withMaxRetries(AcceptanceTestsResources.MAX_TRIES)
+              .build(),
+          ).get<String>(
+            CheckedSupplier<String> {
+              assertSourceAndDestinationDbRawRecordsInSync(
+                testHarness.getSourceDatabase(),
+                testHarness.getDestinationDatabase(),
+                AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+                conn.namespaceFormat!!,
+                false,
+                AcceptanceTestsResources.WITHOUT_SCD_TABLE,
+              )
+              "success" // If the assertion throws after all the retries, then retryWithJitter will return null.
+            },
+          )
+      Assertions.assertEquals("success", retryAssertOutcome)
+
+      assertStreamStatuses(
+        testHarness,
+        workspaceId,
+        connectionId,
+        jobRead.id,
+        StreamStatusRunState.COMPLETE,
+        StreamStatusJobType.SYNC,
+      )
+
+      testHarness.deleteConnection(connectionId)
+
+      // remove connection to avoid exception during tear down
+      testHarness.removeConnection(connectionId)
+    }
   }
 
   @Test
-  @Throws(Exception::class)
   fun testIncrementalSync() {
-    testResources.runIncrementalSyncForAWorkspaceId(workspaceId)
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      testResources.runIncrementalSyncForAWorkspaceId(workspaceId)
+    }
   }
 
   @Test
@@ -333,68 +348,70 @@ internal class SyncAcceptanceTests {
     Exception::class,
   )
   fun testMultipleSchemasAndTablesSyncAndReset() {
-    // create tables in another schema
-    // NOTE: this command fails in GKE because we already ran it in a previous test case and we use the
-    // same
-    // database instance across the test suite. To get it to work, we need to do something better with
-    // cleanup.
-    testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql")
+    testHarness.withFlag(UseSyncV2, Workspace(workspaceId), value = useV2).use {
+      // create tables in another schema
+      // NOTE: this command fails in GKE because we already ran it in a previous test case and we use the
+      // same
+      // database instance across the test suite. To get it to work, we need to do something better with
+      // cleanup.
+      testHarness.runSqlScriptInSource("postgres_second_schema_multiple_tables.sql")
 
-    val sourceId = testHarness.createPostgresSource().sourceId
-    val destinationId = testHarness.createPostgresDestination().destinationId
-    val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
-    val srcSyncMode = SyncMode.FULL_REFRESH
-    val dstSyncMode = DestinationSyncMode.OVERWRITE
-    val catalog =
-      modifyCatalog(
-        discoverResult.catalog,
-        Optional.of(srcSyncMode),
-        Optional.of(dstSyncMode),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.of(true),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
-        Optional.empty(),
+      val sourceId = testHarness.createPostgresSource().sourceId
+      val destinationId = testHarness.createPostgresDestination().destinationId
+      val discoverResult = testHarness.discoverSourceSchemaWithId(sourceId)
+      val srcSyncMode = SyncMode.FULL_REFRESH
+      val dstSyncMode = DestinationSyncMode.OVERWRITE
+      val catalog =
+        modifyCatalog(
+          discoverResult.catalog,
+          Optional.of(srcSyncMode),
+          Optional.of(dstSyncMode),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.of(true),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+          Optional.empty(),
+        )
+      val conn =
+        testHarness.createConnectionSourceNamespace(
+          TestConnectionCreate
+            .Builder(
+              sourceId,
+              destinationId,
+              catalog,
+              discoverResult.catalogId!!,
+              testHarness.dataplaneGroupId,
+            ).build(),
+        )
+
+      val connectionId = conn.connectionId
+      val connectionSyncRead = testHarness.syncConnection(connectionId)
+      testHarness.waitForSuccessfulJob(connectionSyncRead.job)
+
+      assertSourceAndDestinationDbRawRecordsInSync(
+        testHarness.getSourceDatabase(),
+        testHarness.getDestinationDatabase(),
+        AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
+        conn.namespaceFormat!!.replace("\${SOURCE_NAMESPACE}", AcceptanceTestHarness.PUBLIC),
+        false,
+        AcceptanceTestsResources.WITHOUT_SCD_TABLE,
       )
-    val conn =
-      testHarness.createConnectionSourceNamespace(
-        TestConnectionCreate
-          .Builder(
-            sourceId,
-            destinationId,
-            catalog,
-            discoverResult.catalogId!!,
-            testHarness.dataplaneGroupId,
-          ).build(),
+      assertSourceAndDestinationDbRawRecordsInSync(
+        testHarness.getSourceDatabase(),
+        testHarness.getDestinationDatabase(),
+        "staging",
+        conn.namespaceFormat!!.replace("\${SOURCE_NAMESPACE}", "staging"),
+        false,
+        false,
       )
-
-    val connectionId = conn.connectionId
-    val connectionSyncRead = testHarness.syncConnection(connectionId)
-    testHarness.waitForSuccessfulJob(connectionSyncRead.job)
-
-    assertSourceAndDestinationDbRawRecordsInSync(
-      testHarness.getSourceDatabase(),
-      testHarness.getDestinationDatabase(),
-      AcceptanceTestHarness.PUBLIC_SCHEMA_NAME,
-      conn.namespaceFormat!!.replace("\${SOURCE_NAMESPACE}", AcceptanceTestHarness.PUBLIC),
-      false,
-      AcceptanceTestsResources.WITHOUT_SCD_TABLE,
-    )
-    assertSourceAndDestinationDbRawRecordsInSync(
-      testHarness.getSourceDatabase(),
-      testHarness.getDestinationDatabase(),
-      "staging",
-      conn.namespaceFormat!!.replace("\${SOURCE_NAMESPACE}", "staging"),
-      false,
-      false,
-    )
-    val connectionResetRead = testHarness.resetConnection(connectionId)
-    testHarness.waitForSuccessfulJob(connectionResetRead.job)
-    assertDestinationDbEmpty(testHarness.getDestinationDatabase())
+      val connectionResetRead = testHarness.resetConnection(connectionId)
+      testHarness.waitForSuccessfulJob(connectionResetRead.job)
+      assertDestinationDbEmpty(testHarness.getDestinationDatabase())
+    }
   }
 
   companion object {
@@ -422,3 +439,7 @@ internal class SyncAcceptanceTests {
     }
   }
 }
+
+internal class SyncAcceptanceTestsLegacy : SyncAcceptanceTests(useV2 = false)
+
+internal class SyncAcceptanceTestsV2 : SyncAcceptanceTests(useV2 = true)
