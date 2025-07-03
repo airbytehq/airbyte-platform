@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { FormattedMessage } from "react-intl";
 
 import { EmptyState } from "components/EmptyState";
@@ -16,9 +17,13 @@ export const ConfigTemplateSelectList: React.FC = () => {
   };
 
   const { configTemplates } = useListConfigTemplates(workspaceId);
-  if (configTemplates.length === 1) {
-    setSelectedTemplate(configTemplates[0].id);
-  }
+
+  useEffect(() => {
+    if (configTemplates.length === 1) {
+      setSelectedTemplate(configTemplates[0].id);
+    }
+  }, [configTemplates, setSelectedTemplate]);
+
   const { partialUserConfigs } = useListPartialUserConfigs(workspaceId);
 
   const items = configTemplates.map((template) => ({

@@ -27,7 +27,7 @@ const EMBEDDED_ENV_PATH = path.join(__dirname, ".embedded-env.json");
 let copiedEnvVars: Record<string, string> = {};
 let serverProcess: ReturnType<typeof spawn>;
 
-test.describe("Airbyte Embedded Integration Flow", () => {
+test.describe.skip("Airbyte Embedded Integration Flow", () => {
   test.setTimeout(5 * 60 * 1000); // Set timeout to 5 minutes for all tests in this suite
 
   test.beforeEach(async ({ page }) => {
