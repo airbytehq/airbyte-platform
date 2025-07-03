@@ -140,7 +140,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
         options: [
           {
             icon: <Icon size="sm" type="import" />,
-            displayName: formatMessage({ id: "connectorBuilder.publishModal.toWorkspace.label" }),
+            displayName: formatMessage({ id: "connectorBuilder.publishModal.toOrganization.label" }),
             value: "workspace",
           },
           {
