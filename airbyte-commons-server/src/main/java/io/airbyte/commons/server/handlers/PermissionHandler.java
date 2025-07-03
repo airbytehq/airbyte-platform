@@ -280,8 +280,8 @@ public class PermissionHandler {
       final UUID requestedWorkspaceOrganizationId;
       try {
         requestedWorkspaceOrganizationId = workspaceService.getStandardWorkspaceNoSecrets(request.getWorkspaceId(), false).getOrganizationId();
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      } catch (final io.airbyte.data.ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.type, e.configId);
       }
       // If the workspace is not in any organization, return true
       if (requestedWorkspaceOrganizationId == null) {

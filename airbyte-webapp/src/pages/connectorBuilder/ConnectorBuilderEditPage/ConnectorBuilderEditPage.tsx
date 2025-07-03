@@ -55,16 +55,17 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
 
   const hasDynamicStreams = Array.isArray(dynamicStreams) && dynamicStreams.length > 0;
   const hasStreams = Array.isArray(streams) && streams.length > 0;
-  const initialTestStreamId = hasStreams
-    ? { type: "stream" as const, index: 0 }
-    : areDynamicStreamsEnabled && hasDynamicStreams
-    ? { type: "dynamic_stream" as const, index: 0 }
-    : { type: "stream" as const, index: 0 };
+  const initialTestStreamId =
+    !hasStreams && areDynamicStreamsEnabled && hasDynamicStreams
+      ? { type: "dynamic_stream" as const, index: 0 }
+      : { type: "stream" as const, index: 0 };
 
   const initialView =
     initialTestStreamId.type === "dynamic_stream"
       ? { type: "dynamic_stream" as const, index: 0 }
-      : { type: "stream" as const, index: 0 };
+      : hasStreams
+      ? { type: "stream" as const, index: 0 }
+      : { type: "global" as const };
 
   const values: BuilderState = {
     mode: initialResolvedManifest !== null ? getStoredMode(projectId) : "yaml",
@@ -87,6 +88,7 @@ const ConnectorBuilderEditPageInner: React.FC = React.memo(() => {
       initialValues={values as unknown as DefaultValues<BuilderState>}
       formClassName={styles.form}
       refTargetPath="manifest.definitions.linked"
+      refBasePath="manifest"
       disableFormControlsUnderPath="generatedStreams"
       onlyShowErrorIfTouched
     >

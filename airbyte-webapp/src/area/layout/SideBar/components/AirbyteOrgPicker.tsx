@@ -10,16 +10,19 @@ import { Text } from "components/ui/Text";
 
 import { useCurrentOrganizationId } from "area/organization/utils";
 import { useCurrentWorkspaceOrUndefined, useOrganization } from "core/api";
-import { useIsCloudApp } from "core/utils/app";
+import { useFeature } from "core/services/features";
+import { FeatureItem } from "core/services/features/types";
 
 import styles from "./AirbyteOrgPicker.module.scss";
 import { AirbyteOrgPopoverPanel } from "./AirbyteOrgPopoverPanel";
 
 export const AirbyteOrgPicker: React.FC = () => {
   const { formatMessage } = useIntl();
-  const isCloud = useIsCloudApp();
+  const showOSSWorkspaceName = useFeature(FeatureItem.ShowOSSWorkspaceName);
   const workspace = useCurrentWorkspaceOrUndefined();
-  const workspaceName = isCloud ? workspace?.name : workspace && formatMessage({ id: "sidebar.myWorkspace" });
+  const workspaceName = showOSSWorkspaceName
+    ? workspace && formatMessage({ id: "sidebar.myWorkspace" })
+    : workspace?.name;
 
   const currentOrganizationId = useCurrentOrganizationId();
   const organization = useOrganization(currentOrganizationId);
@@ -32,7 +35,7 @@ export const AirbyteOrgPicker: React.FC = () => {
 
   return (
     <Popover className={styles.orgPicker}>
-      {() => (
+      {({ close }) => (
         <>
           <PopoverButton ref={reference} className={styles.orgPicker__button}>
             <FlexContainer alignItems="center" gap="sm">
@@ -71,7 +74,7 @@ export const AirbyteOrgPicker: React.FC = () => {
             className={styles.orgPicker__popoverPanel}
             data-testid="orgPicker__popoverPanel"
           >
-            <AirbyteOrgPopoverPanel />
+            <AirbyteOrgPopoverPanel closePopover={close} />
           </PopoverPanel>
         </>
       )}

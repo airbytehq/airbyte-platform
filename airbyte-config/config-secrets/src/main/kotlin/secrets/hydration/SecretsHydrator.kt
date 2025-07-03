@@ -34,10 +34,15 @@ interface SecretsHydrator {
    */
   fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode
 
-  fun hydrateSecretCoordinate(
+  fun hydrateSecretCoordinateAsJson(
     secretCoordinate: JsonNode,
     secretPersistence: SecretPersistence,
   ): JsonNode
+
+  fun hydrateSecretCoordinate(
+    secretCoordinate: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): String
 
   @Deprecated(
     "Use hydrate instead",

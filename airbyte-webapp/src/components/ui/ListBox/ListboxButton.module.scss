@@ -3,6 +3,7 @@
 
 .listboxButton {
   padding: 0 variables.$spacing-md;
+  width: 100%;
   cursor: pointer;
   background-color: initial;
   color: colors.$dark-blue;
@@ -22,20 +23,21 @@
     cursor: not-allowed;
   }
 
-  &[aria-expanded="true"] {
-    border-color: colors.$blue;
-  }
-
   &:hover:not(:disabled) {
     border-color: colors.$grey-300;
   }
 
-  &:focus:not(:disabled) {
+  &[data-focus] {
     border-color: colors.$blue;
+    outline: none;
+  }
+
+  &:focus:not([data-focus]) {
+    outline: none;
   }
 
   &:hover:not(:disabled)[aria-expanded="true"] {
-    border-color: colors.$blue;
+    border-color: colors.$grey-200;
   }
 
   &--error {
@@ -56,6 +58,8 @@
 
   &__children {
     min-width: 0;
+    display: flex;
+    gap: variables.$spacing-md;
   }
 
   &__caret {

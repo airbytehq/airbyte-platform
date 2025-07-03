@@ -19,6 +19,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.apache.http.HttpHeaders
 import java.io.IOException
+import java.util.UUID
 
 private val log = KotlinLogging.logger { }
 
@@ -38,6 +39,7 @@ open class CustomerIoEmailNotificationSender(
     config: CustomerIoEmailConfig,
     subject: String,
     message: String,
+    workspaceId: UUID?,
   ) {
     val formattedMessage = message.replace("\n", "<br>")
     val custumerIoPayload =
@@ -50,7 +52,7 @@ open class CustomerIoEmailNotificationSender(
         subject, // email_body=
         formattedMessage,
       )
-    callCustomerIoSendNotification(custumerIoPayload)
+    callCustomerIoSendNotification(custumerIoPayload, workspaceId)
   }
 
   /**
@@ -73,7 +75,7 @@ open class CustomerIoEmailNotificationSender(
         workspaceName, // invite_url=
         inviteUrl,
       )
-    callCustomerIoSendNotification(custumerIoPayload)
+    callCustomerIoSendNotification(custumerIoPayload, null)
   }
 
   fun sendInviteToUser(
@@ -90,7 +92,7 @@ open class CustomerIoEmailNotificationSender(
         inviterUserName!!, // invite_url=
         inviteUrl!!,
       )
-    callCustomerIoSendNotification(costumerIoPayload)
+    callCustomerIoSendNotification(costumerIoPayload, null)
   }
 
   /**
@@ -111,7 +113,7 @@ open class CustomerIoEmailNotificationSender(
         inviterUserName!!, // workspace_name=
         workspaceName!!,
       )
-    callCustomerIoSendNotification(custumerIoPayload)
+    callCustomerIoSendNotification(custumerIoPayload, null)
   }
 
   /**
@@ -136,10 +138,13 @@ open class CustomerIoEmailNotificationSender(
         // invite_url=
         inviteUrl!!,
       )
-    callCustomerIoSendNotification(custumerIoPayload)
+    callCustomerIoSendNotification(custumerIoPayload, null)
   }
 
-  protected open fun callCustomerIoSendNotification(custumerIoPayload: String) {
+  protected open fun callCustomerIoSendNotification(
+    custumerIoPayload: String,
+    workspaceId: UUID?,
+  ) {
     val requestBody: RequestBody = custumerIoPayload.toRequestBody(JSON)
 
     val request =
@@ -154,13 +159,15 @@ open class CustomerIoEmailNotificationSender(
     try {
       okHttpClient.newCall(request).execute().use { response ->
         if (response.isSuccessful) {
-          log.info("Successful notification ({}): {}", response.code, response.body!!.string())
+          log.info("Successful notification for workspaceId {} ({}): {}", workspaceId, response.code, response.body!!.string())
         } else {
-          throw IOException(String.format("Failed to  notification: code(%s), body(%s)", response.code, response.body!!.string()))
+          throw IOException(
+            String.format("Failed to  notification for workspaceIc {}: code(%s), body(%s)", workspaceId, response.code, response.body!!.string()),
+          )
         }
       }
     } catch (e: Exception) {
-      log.error(e) { "Fail to notify" }
+      log.error(e) { "Fail to notify workspaceId $workspaceId" }
       throw RuntimeException(e)
     }
   }

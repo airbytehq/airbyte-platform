@@ -18,7 +18,7 @@ import io.airbyte.config.Job
 import io.airbyte.config.JobConfig
 import io.airbyte.config.JobStatus
 import io.airbyte.config.Schedule
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater
 import io.airbyte.data.services.ActorDefinitionService
 import io.airbyte.data.services.ConnectionService

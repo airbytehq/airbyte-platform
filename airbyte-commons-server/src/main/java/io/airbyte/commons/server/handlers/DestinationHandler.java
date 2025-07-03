@@ -42,7 +42,7 @@ import io.airbyte.config.secrets.JsonSecretsProcessor;
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -196,8 +196,8 @@ public class DestinationHandler {
           destination.getName(),
           destination.getWorkspaceId(),
           destination.getDestinationId());
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
   }
 

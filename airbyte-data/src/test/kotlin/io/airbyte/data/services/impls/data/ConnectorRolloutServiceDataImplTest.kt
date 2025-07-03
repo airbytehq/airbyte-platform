@@ -4,7 +4,7 @@
 
 package io.airbyte.data.services.impls.data
 
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ConnectorRolloutRepository
 import io.airbyte.data.services.impls.data.mappers.EntityConnectorRollout
 import io.airbyte.data.services.impls.data.mappers.toConfigModel

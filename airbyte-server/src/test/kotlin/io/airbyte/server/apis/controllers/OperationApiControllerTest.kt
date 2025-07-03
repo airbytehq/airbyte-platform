@@ -13,7 +13,7 @@ import io.airbyte.api.model.generated.OperationReadList
 import io.airbyte.api.model.generated.OperationUpdate
 import io.airbyte.api.model.generated.OperatorConfiguration
 import io.airbyte.commons.server.handlers.OperationsHandler
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.server.assertStatus
 import io.airbyte.server.status
 import io.airbyte.server.statusException

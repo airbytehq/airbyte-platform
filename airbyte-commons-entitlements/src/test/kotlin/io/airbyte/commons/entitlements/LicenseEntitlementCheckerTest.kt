@@ -19,10 +19,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import java.util.UUID
 
 class LicenseEntitlementCheckerTest {
-  private val entitlementProvider = mockk<EntitlementProvider>()
+  private val entitlementService = mockk<EntitlementService>()
   private val sourceService = mockk<SourceService>()
   private val destinationService = mockk<DestinationService>()
-  private val entitlementChecker = LicenseEntitlementChecker(entitlementProvider, sourceService, destinationService)
+  private val entitlementChecker = LicenseEntitlementChecker(entitlementService, sourceService, destinationService)
 
   @ParameterizedTest
   @ValueSource(strings = ["SOURCE", "DESTINATION"])
@@ -45,7 +45,7 @@ class LicenseEntitlementCheckerTest {
     mockEnterpriseConnectors(actorType, listOf(notEnterpriseResourceId), false)
 
     every {
-      entitlementProvider.hasEnterpriseConnectorEntitlements(eq(organizationId), eq(actorType), any())
+      entitlementService.hasEnterpriseConnectorEntitlements(eq(organizationId), eq(actorType), any())
     } returns
       mapOf(
         entitledResourceId to true,

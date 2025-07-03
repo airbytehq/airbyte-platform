@@ -8,7 +8,8 @@ import { Heading } from "components/ui/Heading";
 import { LoadingSkeleton } from "components/ui/LoadingSkeleton";
 import { Text } from "components/ui/Text";
 
-import { useCurrentWorkspace, useGetPaymentInformation } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetPaymentInformation } from "core/api";
 
 import styles from "./BillingInformation.module.scss";
 import { useRedirectToCustomerPortal } from "../../../../area/billing/utils/useRedirectToCustomerPortal";
@@ -27,7 +28,7 @@ const formatCityStatePostalCode = (city?: string, state?: string, postalCode?: s
 };
 
 export const BillingInformation = () => {
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { redirecting, goToCustomerPortal } = useRedirectToCustomerPortal("portal");
   const {
     data: paymentInformation,

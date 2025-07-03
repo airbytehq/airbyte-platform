@@ -10,12 +10,8 @@ import { ExternalLink } from "components/ui/Link";
 import { Message } from "components/ui/Message";
 import { Text } from "components/ui/Text";
 
-import {
-  useCurrentOrganizationInfo,
-  useCurrentWorkspace,
-  useGetOrganizationSubscriptionInfo,
-  useOrganization,
-} from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useGetOrganizationSubscriptionInfo, useOrganization, useOrgInfo } from "core/api";
 import { PageTrackingCodes, useTrackPage } from "core/services/analytics";
 import { links } from "core/utils/links";
 import { useFormatCredits } from "core/utils/numberHelper";
@@ -33,9 +29,9 @@ export const OrganizationBillingPage: React.FC = () => {
 
   const { formatCredits } = useFormatCredits();
 
-  const { organizationId } = useCurrentWorkspace();
+  const organizationId = useCurrentOrganizationId();
   const { email } = useOrganization(organizationId);
-  const { billing } = useCurrentOrganizationInfo();
+  const { billing } = useOrgInfo(organizationId);
   const { data: subscriptionInfo } = useGetOrganizationSubscriptionInfo(
     organizationId,
     billing?.subscriptionStatus === "subscribed"

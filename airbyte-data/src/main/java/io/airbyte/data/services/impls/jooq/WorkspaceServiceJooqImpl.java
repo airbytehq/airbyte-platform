@@ -9,9 +9,7 @@ import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINIT
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_VERSION;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.ACTOR_DEFINITION_WORKSPACE_GRANT;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.CONNECTION;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.DATAPLANE_GROUP;
 import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE;
-import static io.airbyte.db.instance.configs.jooq.generated.Tables.WORKSPACE_SERVICE_ACCOUNT;
 import static io.airbyte.db.instance.jobs.jooq.generated.Tables.JOBS;
 import static org.jooq.impl.DSL.asterisk;
 import static org.jooq.impl.DSL.noCondition;
@@ -21,17 +19,17 @@ import static org.jooq.impl.SQLDataType.VARCHAR;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.annotations.VisibleForTesting;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.commons.resources.MoreResources;
 import io.airbyte.commons.yaml.Yamls;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SourceConnection;
 import io.airbyte.config.StandardSync;
 import io.airbyte.config.StandardWorkspace;
-import io.airbyte.config.WorkspaceServiceAccount;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.RuntimeSecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesQueryPaginated;
@@ -52,14 +50,12 @@ import jakarta.inject.Singleton;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jooq.Condition;
-import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.jooq.JoinType;
 import org.jooq.Record;
@@ -114,7 +110,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return listWorkspaceQuery(Optional.of(List.of(workspaceId)), includeTombstone)
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, workspaceId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, workspaceId));
   }
 
   /**
@@ -153,7 +149,8 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
    */
   @Override
   public StandardWorkspace getWorkspaceBySlug(final String slug, final boolean includeTombstone) throws IOException, ConfigNotFoundException {
-    return getWorkspaceBySlugOptional(slug, includeTombstone).orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_WORKSPACE, slug));
+    return getWorkspaceBySlugOptional(slug, includeTombstone)
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.STANDARD_WORKSPACE, slug));
   }
 
   /**
@@ -412,64 +409,6 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Get workspace service account without secrets.
-   *
-   * @param workspaceId workspace id
-   * @return workspace service account
-   * @throws ConfigNotFoundException if the config does not exist
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Override
-  public WorkspaceServiceAccount getWorkspaceServiceAccountNoSecrets(final UUID workspaceId) throws IOException, ConfigNotFoundException {
-    // breaking the pattern of doing a list query, because we never want to list this resource without
-    // scoping by workspace id.
-    return database.query(ctx -> ctx.select(asterisk()).from(WORKSPACE_SERVICE_ACCOUNT)
-        .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceId))
-        .fetch())
-        .map(DbConverter::buildWorkspaceServiceAccount)
-        .stream()
-        .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.WORKSPACE_SERVICE_ACCOUNT, workspaceId));
-  }
-
-  /**
-   * Write workspace service account with no secrets.
-   *
-   * @param workspaceServiceAccount workspace service account
-   * @throws IOException if there is an issue while interacting with db.
-   */
-  @Override
-  public void writeWorkspaceServiceAccountNoSecrets(final WorkspaceServiceAccount workspaceServiceAccount) throws IOException {
-    database.transaction(ctx -> {
-      writeWorkspaceServiceAccount(Collections.singletonList(workspaceServiceAccount), ctx);
-      return null;
-    });
-  }
-
-  /**
-   * Get dataplane group name for the workspace.
-   *
-   * @param workspaceId workspace id
-   * @return dataplaneGroupName
-   * @throws IOException exception while interacting with the db
-   */
-  @Override
-  public String getDataplaneGroupNameForWorkspace(final UUID workspaceId) throws IOException {
-    final List<String> dataplaneGroupName = database.query(ctx -> ctx.select(DATAPLANE_GROUP.NAME)
-        .from(WORKSPACE)
-        .join(DATAPLANE_GROUP)
-        .on(WORKSPACE.DATAPLANE_GROUP_ID.eq(DATAPLANE_GROUP.ID)))
-        .where(WORKSPACE.ID.eq(workspaceId))
-        .fetchInto(String.class);
-
-    if (dataplaneGroupName.isEmpty()) {
-      throw new RuntimeException(String.format("Dataplane group name wasn't resolved for workspaceId %s",
-          workspaceId));
-    }
-    return dataplaneGroupName.getFirst();
-  }
-
-  /**
    * Specialized query for efficiently determining eligibility for the Free Connector Program. If a
    * workspace has at least one Alpha or Beta connector, users of that workspace will be prompted to
    * sign up for the program. This check is performed on nearly every page load so the query needs to
@@ -539,43 +478,6 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   }
 
   /**
-   * Write workspace service account.
-   *
-   * @param configs list of workspace service account
-   * @param ctx database context
-   */
-  private void writeWorkspaceServiceAccount(final List<WorkspaceServiceAccount> configs, final DSLContext ctx) {
-    final OffsetDateTime timestamp = OffsetDateTime.now();
-    configs.forEach((workspaceServiceAccount) -> {
-      final boolean isExistingConfig = ctx.fetchExists(select()
-          .from(WORKSPACE_SERVICE_ACCOUNT)
-          .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceServiceAccount.getWorkspaceId())));
-
-      if (isExistingConfig) {
-        ctx.update(WORKSPACE_SERVICE_ACCOUNT)
-            .set(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID, workspaceServiceAccount.getWorkspaceId())
-            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_ID, workspaceServiceAccount.getServiceAccountId())
-            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_EMAIL, workspaceServiceAccount.getServiceAccountEmail())
-            .set(WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getJsonCredential())))
-            .set(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getHmacKey())))
-            .set(WORKSPACE_SERVICE_ACCOUNT.UPDATED_AT, timestamp)
-            .where(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID.eq(workspaceServiceAccount.getWorkspaceId()))
-            .execute();
-      } else {
-        ctx.insertInto(WORKSPACE_SERVICE_ACCOUNT)
-            .set(WORKSPACE_SERVICE_ACCOUNT.WORKSPACE_ID, workspaceServiceAccount.getWorkspaceId())
-            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_ID, workspaceServiceAccount.getServiceAccountId())
-            .set(WORKSPACE_SERVICE_ACCOUNT.SERVICE_ACCOUNT_EMAIL, workspaceServiceAccount.getServiceAccountEmail())
-            .set(WORKSPACE_SERVICE_ACCOUNT.JSON_CREDENTIAL, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getJsonCredential())))
-            .set(WORKSPACE_SERVICE_ACCOUNT.HMAC_KEY, JSONB.valueOf(Jsons.serialize(workspaceServiceAccount.getHmacKey())))
-            .set(WORKSPACE_SERVICE_ACCOUNT.CREATED_AT, timestamp)
-            .set(WORKSPACE_SERVICE_ACCOUNT.UPDATED_AT, timestamp)
-            .execute();
-      }
-    });
-  }
-
-  /**
    * Returns source with a given id. Does not contain secrets. To hydrate with secrets see { @link
    * SourceService#getSourceConnectionWithSecrets(final UUID sourceId) }.
    *
@@ -589,7 +491,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   public SourceConnection getSourceConnection(final UUID sourceId) throws JsonValidationException, ConfigNotFoundException, IOException {
     return listSourceQuery(Optional.of(sourceId))
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.SOURCE_CONNECTION, sourceId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.SOURCE_CONNECTION, sourceId));
   }
 
   /**
@@ -692,7 +594,7 @@ public class WorkspaceServiceJooqImpl implements WorkspaceService {
   @Override
   public void writeWorkspaceWithSecrets(final StandardWorkspace workspace) throws JsonValidationException, IOException, ConfigNotFoundException {
     // Get the schema for the webhook config, so we can split out any secret fields.
-    final JsonNode webhookConfigSchema = Yamls.deserialize(ConfigSchema.WORKSPACE_WEBHOOK_OPERATION_CONFIGS.getConfigSchemaFile());
+    final JsonNode webhookConfigSchema = Yamls.deserialize(MoreResources.readResource("types/WebhookOperationConfigs.yaml"));
     // Check if there's an existing config, so we can re-use the secret coordinates.
     final Optional<StandardWorkspace> previousWorkspace = getWorkspaceIfExists(workspace.getWorkspaceId());
     Optional<JsonNode> previousWebhookConfigs = Optional.empty();

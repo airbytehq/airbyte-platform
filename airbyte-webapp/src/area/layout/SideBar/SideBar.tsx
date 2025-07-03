@@ -97,19 +97,19 @@ const OrganizationNavItems = () => {
         <NavItem
           icon="stars"
           label={<FormattedMessage id="settings.embedded" />}
-          to={`${basePath + RoutePaths.Settings}/${CloudSettingsRoutePaths.Embedded}`} // Make sure this is correct
+          to={`${basePath + RoutePaths.Settings}/${CloudSettingsRoutePaths.Embedded}`}
           testId="embeddedLink"
         />
       )}
-      {(multiWorkspaceUI && canViewOrganizationSettings && displayOrganizationUsers) ||
-        (isCloudApp && canViewOrganizationSettings && (
-          <NavItem
-            label={<FormattedMessage id="settings.members" />}
-            icon="community"
-            to={basePath + SettingsRoutePaths.OrganizationMembers}
-            testId="organizationMembersLink"
-          />
-        ))}
+      {((multiWorkspaceUI && canViewOrganizationSettings && displayOrganizationUsers) ||
+        (isCloudApp && canViewOrganizationSettings)) && (
+        <NavItem
+          label={<FormattedMessage id="settings.members" />}
+          icon="community"
+          to={basePath + SettingsRoutePaths.OrganizationMembers}
+          testId="organizationMembersLink"
+        />
+      )}
       {isCloudApp && canViewOrganizationSettings && canManageOrganizationBilling && (
         <NavItem
           label={<FormattedMessage id="sidebar.billing" />}
@@ -129,7 +129,7 @@ const OrganizationNavItems = () => {
       <NavItem
         label={<FormattedMessage id="settings.organizationSettings" />}
         icon="gear"
-        to={basePath + RoutePaths.Settings}
+        to={`${basePath + RoutePaths.Settings}/${CloudSettingsRoutePaths.Organization}`}
         testId="orgSettingsLink"
       />
     </MenuContent>

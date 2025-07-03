@@ -24,8 +24,6 @@ import io.airbyte.api.client.model.generated.CheckConnectionRead
 import io.airbyte.api.client.model.generated.ConnectionCreate
 import io.airbyte.api.client.model.generated.ConnectionIdRequestBody
 import io.airbyte.api.client.model.generated.ConnectionRead
-import io.airbyte.api.client.model.generated.ConnectionReadList
-import io.airbyte.api.client.model.generated.ConnectionScheduleData
 import io.airbyte.api.client.model.generated.ConnectionScheduleType
 import io.airbyte.api.client.model.generated.ConnectionState
 import io.airbyte.api.client.model.generated.ConnectionStatus
@@ -47,23 +45,15 @@ import io.airbyte.api.client.model.generated.GetAttemptStatsRequestBody
 import io.airbyte.api.client.model.generated.JobConfigType
 import io.airbyte.api.client.model.generated.JobIdRequestBody
 import io.airbyte.api.client.model.generated.JobInfoRead
-import io.airbyte.api.client.model.generated.JobListForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.JobListRequestBody
 import io.airbyte.api.client.model.generated.JobRead
 import io.airbyte.api.client.model.generated.JobStatus
 import io.airbyte.api.client.model.generated.JobWithAttemptsRead
-import io.airbyte.api.client.model.generated.ListResourcesForWorkspacesRequestBody
 import io.airbyte.api.client.model.generated.LogEvent
 import io.airbyte.api.client.model.generated.LogFormatType
 import io.airbyte.api.client.model.generated.NamespaceDefinitionType
 import io.airbyte.api.client.model.generated.NonBreakingChangesPreference
-import io.airbyte.api.client.model.generated.OperationCreate
 import io.airbyte.api.client.model.generated.OperationIdRequestBody
-import io.airbyte.api.client.model.generated.OperationRead
-import io.airbyte.api.client.model.generated.OperatorConfiguration
-import io.airbyte.api.client.model.generated.OperatorType
-import io.airbyte.api.client.model.generated.OperatorWebhook
-import io.airbyte.api.client.model.generated.OperatorWebhookDbtCloud
 import io.airbyte.api.client.model.generated.Pagination
 import io.airbyte.api.client.model.generated.SchemaChangeBackfillPreference
 import io.airbyte.api.client.model.generated.SourceCreate
@@ -72,22 +62,17 @@ import io.airbyte.api.client.model.generated.SourceDefinitionIdRequestBody
 import io.airbyte.api.client.model.generated.SourceDefinitionIdWithWorkspaceId
 import io.airbyte.api.client.model.generated.SourceDefinitionRead
 import io.airbyte.api.client.model.generated.SourceDefinitionSpecificationRead
-import io.airbyte.api.client.model.generated.SourceDefinitionUpdate
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRead
 import io.airbyte.api.client.model.generated.SourceDiscoverSchemaRequestBody
 import io.airbyte.api.client.model.generated.SourceIdRequestBody
 import io.airbyte.api.client.model.generated.SourceRead
-import io.airbyte.api.client.model.generated.SourceReadList
 import io.airbyte.api.client.model.generated.SourceUpdate
 import io.airbyte.api.client.model.generated.StreamStatusListRequestBody
 import io.airbyte.api.client.model.generated.StreamStatusReadList
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.api.client.model.generated.WebBackendConnectionRead
 import io.airbyte.api.client.model.generated.WebBackendConnectionRequestBody
-import io.airbyte.api.client.model.generated.WebBackendConnectionUpdate
-import io.airbyte.api.client.model.generated.WebBackendOperationCreateOrUpdate
 import io.airbyte.api.client.model.generated.WorkspaceCreateWithId
-import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.commons.resources.MoreResources
@@ -524,12 +509,6 @@ class AcceptanceTestHarness
         },
       )
 
-    // Run check Connection workflow.
-    @Throws(IOException::class)
-    fun checkConnection(sourceId: UUID) {
-      apiClient.sourceApi.checkConnectionToSource(SourceIdRequestBody(sourceId))
-    }
-
     @Throws(IOException::class)
     fun discoverSourceSchemaWithoutCache(sourceId: UUID): AirbyteCatalog? =
       apiClient.sourceApi
@@ -563,48 +542,6 @@ class AcceptanceTestHarness
       destinationDataSource?.let { getDatabase(it) } ?: throw IllegalStateException("Destination database is not initialized")
 
     fun getDatabase(dataSource: DataSource): Database = Database(createDslContext(dataSource, SQLDialect.POSTGRES))
-
-    /**
-     * Assert that the normalized destination matches the input records, only expecting a single id
-     * column.
-     *
-     * @param expectedRecords the records that we expect
-     * @throws Exception while retrieving sources
-     */
-    @Throws(Exception::class)
-    fun assertNormalizedDestinationContainsIdColumn(
-      outputSchema: String?,
-      expectedRecords: List<JsonNode>,
-    ) {
-      val destination = getSourceDatabase()
-      val finalDestinationTable = String.format("%s.%s%s", outputSchema, OUTPUT_STREAM_PREFIX, STREAM_NAME.replace(".", "_"))
-      val destinationRecords = retrieveRecordsFromDatabase(destination, finalDestinationTable)
-
-      Assertions.assertEquals(
-        expectedRecords.size,
-        destinationRecords.size,
-        String.format("source contains: %s record. destination contains: %s", expectedRecords.size, destinationRecords.size),
-      )
-
-      // Assert that each expected record id is present in the actual records.
-      for (expectedRecord in expectedRecords) {
-        Assertions.assertTrue(
-          destinationRecords
-            .stream()
-            .anyMatch { r: JsonNode -> r[COLUMN_ID].asInt() == expectedRecord[COLUMN_ID].asInt() },
-          String.format("destination does not contain record:\n %s \n destination contains:\n %s\n", expectedRecord, destinationRecords),
-        )
-      }
-
-      for (actualRecord in destinationRecords) {
-        val fieldNamesIterator = actualRecord.fieldNames()
-        while (fieldNamesIterator.hasNext()) {
-          val fieldName = fieldNamesIterator.next()
-          // NOTE: we filtered this column out, so we check that it isn't present.
-          Assertions.assertNotEquals(fieldName, COLUMN_NAME)
-        }
-      }
-    }
 
     @Throws(URISyntaxException::class, SQLException::class, IOException::class)
     fun runSqlScriptInSource(resourceName: String) {
@@ -703,71 +640,6 @@ class AcceptanceTestHarness
 
     @Throws(IOException::class)
     fun getConnection(connectionId: UUID): ConnectionRead = apiClient.connectionApi.getConnection(ConnectionIdRequestBody(connectionId))
-
-    @Throws(Exception::class)
-    fun updateConnectionSchedule(
-      connectionId: UUID,
-      newScheduleType: ConnectionScheduleType?,
-      newScheduleData: ConnectionScheduleData?,
-    ) {
-      updateConnection(
-        ConnectionUpdate(
-          connectionId,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          newScheduleType,
-          newScheduleData,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
-      )
-    }
-
-    @Throws(IOException::class, InterruptedException::class)
-    fun updateConnectionCatalog(
-      connectionId: UUID,
-      catalog: AirbyteCatalog?,
-    ) {
-      updateConnection(
-        ConnectionUpdate(
-          connectionId,
-          null,
-          null,
-          null,
-          null,
-          null,
-          catalog,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-        ),
-      )
-    }
 
     @Throws(IOException::class, InterruptedException::class)
     fun updateConnectionSourceCatalogId(
@@ -884,28 +756,6 @@ class AcceptanceTestHarness
       apiClient.destinationApi
         .checkConnectionToDestination(DestinationIdRequestBody(destinationId))
         .status
-
-    @Throws(Exception::class)
-    fun createDbtCloudWebhookOperation(
-      workspaceId: UUID,
-      webhookConfigId: UUID?,
-    ): OperationRead =
-      apiClient.operationApi.createOperation(
-        OperationCreate(
-          workspaceId,
-          "reqres test",
-          OperatorConfiguration(
-            OperatorType.WEBHOOK,
-            OperatorWebhook(
-              webhookConfigId,
-              OperatorWebhook.WebhookType.DBT_CLOUD,
-              OperatorWebhookDbtCloud(123, 456),
-              null,
-              null,
-            ),
-          ),
-        ),
-      )
 
     @Throws(SQLException::class)
     fun retrieveRecordsFromDatabase(
@@ -1025,31 +875,6 @@ class AcceptanceTestHarness
               "E2E Test Source",
               "airbyte/source-e2e-test",
               SOURCE_E2E_TEST_CONNECTOR_VERSION,
-              URI.create("https://example.com"),
-              null,
-              null,
-            ),
-            workspaceId,
-            null,
-            null,
-          ),
-        )
-      sourceDefinitionIds.add(sourceDefinitionRead.sourceDefinitionId)
-      return sourceDefinitionRead
-    }
-
-    @Throws(IOException::class)
-    fun createPostgresSourceDefinition(
-      workspaceId: UUID?,
-      dockerImageTag: String,
-    ): SourceDefinitionRead {
-      val sourceDefinitionRead =
-        apiClient.sourceDefinitionApi.createCustomSourceDefinition(
-          CustomSourceDefinitionCreate(
-            SourceDefinitionCreate(
-              "Custom Postgres Source",
-              "airbyte/source-postgres",
-              dockerImageTag,
               URI.create("https://example.com"),
               null,
               null,
@@ -1207,22 +1032,6 @@ class AcceptanceTestHarness
             ),
           )
         },
-      )
-    }
-
-    @Throws(IOException::class)
-    fun updateSourceDefinitionVersion(
-      sourceDefinitionId: UUID,
-      dockerImageTag: String,
-    ) {
-      apiClient.sourceDefinitionApi.updateSourceDefinition(
-        SourceDefinitionUpdate(
-          sourceDefinitionId,
-          dockerImageTag,
-          defaultWorkspaceId,
-          null,
-          null,
-        ),
       )
     }
 
@@ -1409,21 +1218,6 @@ class AcceptanceTestHarness
       }
     }
 
-    @Throws(IOException::class, InterruptedException::class)
-    fun waitForConnectionState(connectionId: UUID): ConnectionState {
-      var connectionState =
-        Failsafe.with(retryPolicy).get(
-          CheckedSupplier { apiClient.stateApi.getState(ConnectionIdRequestBody(connectionId)) },
-        )
-      var count = 0
-      while (count < FINAL_INTERVAL_SECS && (connectionState.state == null || connectionState.state!!.isNull)) {
-        LOGGER.info("fetching connection state. attempt: {}", count++)
-        connectionState = apiClient.stateApi.getState(ConnectionIdRequestBody(connectionId))
-        Thread.sleep(1000)
-      }
-      return connectionState
-    }
-
     /**
      * Wait until the sync succeeds by polling the Jobs API.
      *
@@ -1444,28 +1238,6 @@ class AcceptanceTestHarness
         Thread.sleep(3000)
       }
       Assertions.assertEquals(JobStatus.SUCCEEDED, job.status)
-    }
-
-    @Throws(Exception::class)
-    fun waitUntilTheNextJobIsStarted(
-      connectionId: UUID,
-      previousJobId: Long,
-    ): JobRead {
-      var mostRecentSyncJob = getMostRecentSyncForConnection(connectionId)
-      var count = 0
-      while (count < MAX_ALLOWED_SECOND_PER_RUN && mostRecentSyncJob.id == previousJobId) {
-        Thread.sleep(Duration.ofSeconds(1).toMillis())
-        mostRecentSyncJob = getMostRecentSyncForConnection(connectionId)
-        ++count
-      }
-      val exceeded120seconds = count >= MAX_ALLOWED_SECOND_PER_RUN
-      if (exceeded120seconds) {
-        // Fail because taking more than FINAL_INTERVAL_SECSseconds to start a job is not expected
-        // Returning the current mostRecentSyncJob here could end up hiding some issues
-        Assertions.fail<Any>("unable to find the next job within FINAL_INTERVAL_SECSseconds")
-      }
-      LOGGER.info("Time to run the job: $count")
-      return mostRecentSyncJob
     }
 
     @Throws(IOException::class)
@@ -1489,61 +1261,6 @@ class AcceptanceTestHarness
       Failsafe.with(retryPolicy).get(
         CheckedSupplier { apiClient.stateApi.getState(ConnectionIdRequestBody(connectionId)) },
       )
-
-    fun webBackendUpdateConnection(update: WebBackendConnectionUpdate) {
-      Failsafe.with(retryPolicy).run(CheckedRunnable { apiClient.webBackendApi.webBackendUpdateConnection(update) })
-    }
-
-    fun listSyncsForWorkspaces(workspaceIds: List<UUID>): List<JobWithAttemptsRead> =
-      Failsafe.with(retryPolicy).get(
-        CheckedSupplier {
-          apiClient.jobsApi
-            .listJobsForWorkspaces(
-              JobListForWorkspacesRequestBody(
-                java.util.List.of(JobConfigType.SYNC),
-                null,
-                workspaceIds,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-              ),
-            ).jobs
-        },
-      )
-
-    fun listAllConnectionsForWorkspace(workspaceId: UUID): ConnectionReadList =
-      Failsafe
-        .with(retryPolicy)
-        .get(CheckedSupplier { apiClient.connectionApi.listAllConnectionsForWorkspace(WorkspaceIdRequestBody(workspaceId, false)) })
-
-    fun listSourcesForWorkspace(workspaceId: UUID): SourceReadList =
-      Failsafe.with(retryPolicy).get(
-        CheckedSupplier { apiClient.sourceApi.listSourcesForWorkspace(WorkspaceIdRequestBody(workspaceId, false)) },
-      )
-
-    fun listSourcesForWorkspacePaginated(workspaceIds: List<UUID>): SourceReadList =
-      Failsafe.with(retryPolicy).get(
-        CheckedSupplier {
-          apiClient.sourceApi.listSourcesForWorkspacePaginated(
-            ListResourcesForWorkspacesRequestBody(workspaceIds, Pagination(1000, 0), null, null),
-          )
-        },
-      )
-
-    fun deleteWorkspace(workspaceId: UUID) {
-      Failsafe.with(retryPolicy).run(CheckedRunnable { apiClient.workspaceApi.deleteWorkspace(WorkspaceIdRequestBody(workspaceId, false)) })
-    }
-
-    fun deleteSourceDefinition(sourceDefinitionId: UUID) {
-      Failsafe
-        .with(retryPolicy)
-        .run(CheckedRunnable { apiClient.sourceDefinitionApi.deleteSourceDefinition(SourceDefinitionIdRequestBody(sourceDefinitionId)) })
-    }
 
     @Throws(IOException::class, InterruptedException::class)
     fun updateSchemaChangePreference(
@@ -1630,82 +1347,14 @@ class AcceptanceTestHarness
         },
       )
 
-    fun setIncrementalAppendSyncMode(
-      airbyteCatalog: AirbyteCatalog,
-      cursorField: List<String>?,
-    ): AirbyteCatalog =
-      AirbyteCatalog(
-        airbyteCatalog.streams
-          .stream()
-          .map { stream: AirbyteStreamAndConfiguration ->
-            AirbyteStreamAndConfiguration(
-              stream.stream,
-              AirbyteStreamConfiguration(
-                SyncMode.INCREMENTAL,
-                DestinationSyncMode.APPEND,
-                cursorField,
-                null,
-                stream.config!!.primaryKey,
-                stream.config!!.aliasName,
-                stream.config!!.selected,
-                stream.config!!.suggested,
-                stream.config!!.destinationObjectName,
-                stream.config!!.includeFiles,
-                stream.config!!.fieldSelectionEnabled,
-                stream.config!!.selectedFields,
-                stream.config!!.hashedFields,
-                stream.config!!.mappers,
-                stream.config!!.minimumGenerationId,
-                stream.config!!.generationId,
-                stream.config!!.syncId,
-              ),
-            )
-          }.collect(Collectors.toList()),
-      )
-
-    fun getUpdateInput(
-      connection: ConnectionRead,
-      catalog: AirbyteCatalog,
-      operation: OperationRead,
-    ): WebBackendConnectionUpdate {
-      setIncrementalAppendSyncMode(catalog, java.util.List.of(COLUMN_ID))
-
-      return WebBackendConnectionUpdate(
-        connection.connectionId,
-        connection.name,
-        connection.namespaceDefinition,
-        connection.namespaceFormat,
-        connection.prefix,
-        catalog,
-        connection.schedule,
-        null,
-        null,
-        connection.status,
-        null,
-        false,
-        java.util.List.of(
-          WebBackendOperationCreateOrUpdate(
-            operation.workspaceId,
-            operation.name,
-            operation.operatorConfiguration,
-            operation.operationId,
-          ),
-        ),
-        connection.sourceCatalogId,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-      )
-    }
-
     fun compareCatalog(actual: AirbyteCatalog?) {
       Assertions.assertEquals(expectedAirbyteCatalog, actual)
     }
 
+    // don't delete this even if it's unused!
+    // this is only useful for testing feature flags, so if we do a good job of cleaning up flags,
+    // this function should have no usages most of the time.
+    // but we should keep it around regardless, so that we can always test flags easily.
     fun <T> withFlag(
       flag: Flag<T>,
       context: Context?,
@@ -1808,7 +1457,6 @@ class AcceptanceTestHarness
       const val JITTER_MAX_INTERVAL_SECS: Int = 10
       const val FINAL_INTERVAL_SECS: Int = 60
       const val MAX_TRIES: Int = 5
-      const val MAX_ALLOWED_SECOND_PER_RUN: Int = 120
 
       private const val CLOUD_SQL_DATABASE_PREFIX = "acceptance_test_"
 

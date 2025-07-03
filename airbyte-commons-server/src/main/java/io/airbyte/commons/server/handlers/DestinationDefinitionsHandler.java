@@ -40,7 +40,7 @@ import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.WorkspaceService;
@@ -270,7 +270,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionRead getDestinationDefinitionForScope(final ActorDefinitionIdWithScope actorDefinitionIdWithScope)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final UUID definitionId = actorDefinitionIdWithScope.getActorDefinitionId();
     final UUID scopeId = actorDefinitionIdWithScope.getScopeId();
     final ScopeType scopeType = ScopeType.fromValue(actorDefinitionIdWithScope.getScopeType().toString());
@@ -325,7 +325,7 @@ public class DestinationDefinitionsHandler {
   }
 
   public DestinationDefinitionRead updateDestinationDefinition(final DestinationDefinitionUpdate destinationDefinitionUpdate)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, ConfigNotFoundException {
     final ConnectorPlatformCompatibilityValidationResult isNewConnectorVersionSupported =
         airbyteCompatibleConnectorsValidator.validate(destinationDefinitionUpdate.getDestinationDefinitionId().toString(),
             destinationDefinitionUpdate.getDockerImageTag());

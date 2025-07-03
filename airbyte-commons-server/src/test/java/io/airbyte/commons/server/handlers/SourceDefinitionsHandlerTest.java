@@ -64,7 +64,7 @@ import io.airbyte.config.init.ConnectorPlatformCompatibilityValidationResult;
 import io.airbyte.config.init.SupportStateUpdater;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
 import io.airbyte.config.specs.RemoteDefinitionsProvider;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.SourceService;
 import io.airbyte.data.services.WorkspaceService;
@@ -587,7 +587,7 @@ class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("getSourceDefinitionForScope should return the source definition if the grant exists")
   void testGetDefinitionWithGrantForScope()
-      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, URISyntaxException, ConfigNotFoundException {
     when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), workspaceId, ScopeType.WORKSPACE.value()))
         .thenReturn(true);
     when(actorDefinitionService.scopeCanUseDefinition(sourceDefinition.getSourceDefinitionId(), organizationId, ScopeType.ORGANIZATION.value()))
@@ -824,7 +824,7 @@ class SourceDefinitionsHandlerTest {
   @Test
   @DisplayName("updateSourceDefinition should correctly update a sourceDefinition")
   void testUpdateSource()
-      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, URISyntaxException, ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
 
@@ -917,7 +917,7 @@ class SourceDefinitionsHandlerTest {
   @DisplayName("updateSourceDefinition should not update a sourceDefinition "
       + "if defaultDefinitionVersionFromUpdate throws unsupported protocol version error")
   void testOutOfProtocolRangeUpdateSource() throws ConfigNotFoundException, IOException,
-      JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      JsonValidationException, ConfigNotFoundException {
     when(airbyteCompatibleConnectorsValidator.validate(anyString(), anyString()))
         .thenReturn(new ConnectorPlatformCompatibilityValidationResult(true, ""));
     when(sourceService.getStandardSourceDefinition(sourceDefinition.getSourceDefinitionId())).thenReturn(sourceDefinition);

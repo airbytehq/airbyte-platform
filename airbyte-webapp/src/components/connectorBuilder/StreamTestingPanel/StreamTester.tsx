@@ -253,7 +253,9 @@ export const StreamTester: React.FC<{
           <Text bold>{resolveErrorMessage}</Text>
           {errorExceptionStack && (
             <Collapsible label={formatMessage({ id: "connectorBuilder.tracebackLabel" })} className={styles.traceback}>
-              <Pre longLines>{errorExceptionStack}</Pre>
+              <Pre longLines>
+                {isString(errorExceptionStack) ? errorExceptionStack : JSON.stringify(errorExceptionStack, null, 2)}
+              </Pre>
             </Collapsible>
           )}
           <Text>

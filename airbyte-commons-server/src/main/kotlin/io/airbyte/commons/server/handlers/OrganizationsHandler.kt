@@ -18,7 +18,7 @@ import io.airbyte.api.model.generated.OrganizationSummary
 import io.airbyte.api.model.generated.OrganizationUpdateRequestBody
 import io.airbyte.api.model.generated.WorkspaceRead
 import io.airbyte.api.model.generated.WorkspaceReadList
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Organization
 import io.airbyte.config.Permission
 import io.airbyte.config.persistence.ConfigNotFoundException
@@ -87,7 +87,7 @@ open class OrganizationsHandler(
     val organization =
       organizationPersistence
         .getOrganization(organizationId)
-        .orElseThrow { ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId) }
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
 
     var hasChanged = false
     if (organization.name != request.organizationName) {
@@ -113,7 +113,7 @@ open class OrganizationsHandler(
     val organization =
       organizationPersistence
         .getOrganization(organizationId)
-        .orElseThrow { ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId) }
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId) }
 
     return buildOrganizationRead(organization)
   }
@@ -212,8 +212,7 @@ open class OrganizationsHandler(
   fun getOrganizationInfo(organizationId: UUID): OrganizationInfoRead {
     val organization = organizationPersistence.getOrganization(organizationId)
     if (organization.isEmpty) {
-      throw io.airbyte.data.exceptions
-        .ConfigNotFoundException(ConfigSchema.ORGANIZATION, organizationId.toString())
+      throw io.airbyte.data.ConfigNotFoundException(ConfigNotFoundType.ORGANIZATION, organizationId.toString())
     }
     return buildOrganizationInfoRead(organization.get())
   }

@@ -26,8 +26,7 @@ import com.google.common.collect.Sets;
 import datadog.trace.api.Trace;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ConfigSchema;
-import io.airbyte.config.ConfigWithMetadata;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConfiguredAirbyteCatalog;
 import io.airbyte.config.ConnectionSummary;
 import io.airbyte.config.JobSyncConfig;
@@ -38,7 +37,7 @@ import io.airbyte.config.StreamDescriptorForDestination;
 import io.airbyte.config.Tag;
 import io.airbyte.config.helpers.CatalogHelpers;
 import io.airbyte.config.helpers.ScheduleHelpers;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ConnectionService;
 import io.airbyte.data.services.shared.StandardSyncQuery;
 import io.airbyte.data.services.shared.StandardSyncsQueryPaginated;
@@ -129,15 +128,16 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
   @Trace
   public StandardSync getStandardSync(final UUID connectionId)
       throws JsonValidationException, IOException, ConfigNotFoundException {
-    final List<ConfigWithMetadata<StandardSync>> result = listStandardSyncWithMetadata(Optional.of(connectionId));
+    final List<StandardSync> result = listStandardSyncWithMetadata(Optional.of(connectionId));
 
     final boolean foundMoreThanOneConfig = result.size() > 1;
     if (result.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC, connectionId.toString());
+      throw new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC, connectionId.toString());
     } else if (foundMoreThanOneConfig) {
-      throw new IllegalStateException(String.format("Multiple %s configs found for ID %s: %s", ConfigSchema.STANDARD_SYNC, connectionId, result));
+      throw new IllegalStateException(
+          String.format("Multiple %s configs found for ID %s: %s", ConfigNotFoundType.STANDARD_SYNC, connectionId, result));
     }
-    return result.get(0).getConfig();
+    return result.get(0);
   }
 
   /**
@@ -162,7 +162,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
    */
   @Override
   public List<StandardSync> listStandardSyncs() throws IOException {
-    return listStandardSyncWithMetadata(Optional.empty()).stream().map(ConfigWithMetadata::getConfig).toList();
+    return listStandardSyncWithMetadata(Optional.empty());
   }
 
   /**
@@ -738,7 +738,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     }
   }
 
-  private List<ConfigWithMetadata<StandardSync>> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
+  private List<StandardSync> listStandardSyncWithMetadata(final Optional<UUID> configId) throws IOException {
     final Result<Record> result = database.query(ctx -> {
       final SelectJoinStep<Record> query = ctx.select(CONNECTION.asterisk(),
           SCHEMA_MANAGEMENT.AUTO_PROPAGATION_STATUS, SCHEMA_MANAGEMENT.BACKFILL_PREFERENCE)
@@ -754,7 +754,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
     final List<UUID> connectionIds = result.map(record -> record.get(CONNECTION.ID));
     final Map<UUID, List<TagRecord>> tagsByConnection = getTagsByConnectionIds(connectionIds);
 
-    final List<ConfigWithMetadata<StandardSync>> standardSyncs = new ArrayList<>();
+    final List<StandardSync> standardSyncs = new ArrayList<>();
     for (final Record record : result) {
       final List<NotificationConfigurationRecord> notificationConfigurationRecords = database.query(ctx -> {
         if (configId.isPresent()) {
@@ -773,12 +773,7 @@ public class ConnectionServiceJooqImpl implements ConnectionService {
       if (ScheduleHelpers.isScheduleTypeMismatch(standardSync)) {
         throw new RuntimeException("unexpected schedule type mismatch");
       }
-      standardSyncs.add(new ConfigWithMetadata<>(
-          record.get(CONNECTION.ID).toString(),
-          ConfigSchema.STANDARD_SYNC.name(),
-          record.get(CONNECTION.CREATED_AT).toInstant(),
-          record.get(CONNECTION.UPDATED_AT).toInstant(),
-          standardSync));
+      standardSyncs.add(standardSync);
     }
     return standardSyncs;
   }

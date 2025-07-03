@@ -108,20 +108,20 @@ class JobConverterTest {
 
   private static Stream<Arguments> getExtractRefreshScenarios() {
     return Stream.of(Arguments.of(
-        new Job(1, ConfigType.SYNC, null, null, null, null, null, 13, 37, true), Optional.empty()),
+        new Job(1, ConfigType.SYNC, "", new JobConfig(), List.of(), JobStatus.SUCCEEDED, 1L, 13, 37, true), Optional.empty()),
+        Arguments.of(new Job(1, ConfigType.RESET_CONNECTION, "", new JobConfig(), List.of(), JobStatus.SUCCEEDED, 1L, 13, 37, true),
+            Optional.empty()),
         Arguments.of(
-            new Job(1, ConfigType.RESET_CONNECTION, null, null, null, null, null, 13, 37, true), Optional.empty()),
-        Arguments.of(
-            new Job(1, ConfigType.REFRESH, null, new JobConfig()
+            new Job(1, ConfigType.REFRESH, "", new JobConfig()
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
                     List.of(new RefreshStream().withStreamDescriptor(new io.airbyte.config.StreamDescriptor().withName("test"))))),
-                null, null, null, 13, 37, true),
+                List.of(), JobStatus.SUCCEEDED, 1L, 13, 37, true),
             Optional.of(new JobRefreshConfig().streamsToRefresh(List.of(new StreamDescriptor().name("test"))))),
         Arguments.of(
-            new Job(1, ConfigType.REFRESH, null, new JobConfig()
+            new Job(1, ConfigType.REFRESH, "", new JobConfig()
                 .withRefresh(new RefreshConfig().withStreamsToRefresh(
                     List.of(new RefreshStream().withStreamDescriptor(null)))),
-                null, null, null, 13, 37, true),
+                List.of(), JobStatus.SUCCEEDED, 1L, 13, 37, true),
             Optional.empty()));
   }
 
@@ -187,7 +187,8 @@ class JobConverterTest {
                 .configType(JobConfigType.SYNC)
                 .enabledStreams(List.of(new StreamDescriptor().name(USERS), new StreamDescriptor().name(ACCOUNTS)))
                 .createdAt(CREATED_AT)
-                .updatedAt(CREATED_AT))
+                .updatedAt(CREATED_AT)
+                .startedAt(CREATED_AT))
             .attempts(List.of(new AttemptInfoRead()
                 .attempt(new AttemptRead()
                     .id((long) ATTEMPT_NUMBER)
@@ -249,24 +250,10 @@ class JobConverterTest {
       logClientManager = mock(LogClientManager.class);
       logUtils = mock(LogUtils.class);
       jobConverter = new JobConverter(logClientManager, logUtils);
-      job = mock(Job.class);
-      final Attempt attempt = mock(Attempt.class);
-      when(job.getId()).thenReturn(JOB_ID);
-      when(job.getConfigType()).thenReturn(JOB_CONFIG.getConfigType());
-      when(job.getScope()).thenReturn(JOB_CONFIG_ID);
-      when(job.getConfig()).thenReturn(JOB_CONFIG);
-      when(job.getStatus()).thenReturn(JOB_STATUS);
-      when(job.getCreatedAtInSecond()).thenReturn(CREATED_AT);
-      when(job.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
-      when(job.getAttempts()).thenReturn(List.of(attempt));
-      when(attempt.getAttemptNumber()).thenReturn(ATTEMPT_NUMBER);
-      when(attempt.getStatus()).thenReturn(ATTEMPT_STATUS);
-      when(attempt.getOutput()).thenReturn(Optional.of(JOB_OUTPUT));
-      when(attempt.getLogPath()).thenReturn(LOG_PATH);
-      when(attempt.getCreatedAtInSecond()).thenReturn(CREATED_AT);
-      when(attempt.getUpdatedAtInSecond()).thenReturn(CREATED_AT);
-      when(attempt.getEndedAtInSecond()).thenReturn(Optional.of(CREATED_AT));
-      when(attempt.getFailureSummary()).thenReturn(Optional.of(FAILURE_SUMMARY));
+      final Attempt attempt = new Attempt(ATTEMPT_NUMBER, JOB_ID, LOG_PATH, null, JOB_OUTPUT, ATTEMPT_STATUS, null, FAILURE_SUMMARY, CREATED_AT,
+          CREATED_AT, CREATED_AT);
+      job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(attempt), JOB_STATUS, CREATED_AT, CREATED_AT, CREATED_AT,
+          true);
     }
 
     @Test

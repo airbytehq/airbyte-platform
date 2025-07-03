@@ -11,7 +11,7 @@ import io.airbyte.api.model.generated.EnterpriseSourceStub
 import io.airbyte.api.model.generated.EnterpriseSourceStubsReadList
 import io.airbyte.commons.entitlements.Entitlement
 import io.airbyte.commons.entitlements.LicenseEntitlementChecker
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton

@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
   annotationProcessor(libs.bundles.micronaut.annotation.processor)
+  ksp(libs.bundles.micronaut.annotation.processor)
 
   implementation(project(":oss:airbyte-commons"))
   implementation(project(":oss:airbyte-config:config-models"))

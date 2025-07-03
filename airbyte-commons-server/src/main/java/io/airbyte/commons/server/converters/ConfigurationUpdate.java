@@ -66,13 +66,13 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection source(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource;
     try {
       persistedSource = sourceService.getSourceConnection(sourceId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedSource.setName(sourceName);
     // get spec
@@ -102,7 +102,7 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public SourceConnection partialSource(final UUID sourceId, final String sourceName, final JsonNode newConfiguration)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing source
     final SourceConnection persistedSource = sourceService.getSourceConnection(sourceId);
     persistedSource.setName(Optional.ofNullable(sourceName).orElse(persistedSource.getName()));
@@ -127,13 +127,13 @@ public class ConfigurationUpdate {
    */
   @SuppressWarnings("PMD.PreserveStackTrace")
   public DestinationConnection destination(final UUID destinationId, final String destName, final JsonNode newConfiguration)
-      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws ConfigNotFoundException, IOException, JsonValidationException, io.airbyte.data.ConfigNotFoundException {
     // get existing destination
     final DestinationConnection persistedDestination;
     try {
       persistedDestination = destinationService.getDestinationConnection(destinationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedDestination.setName(destName);
     // get spec
@@ -169,8 +169,8 @@ public class ConfigurationUpdate {
     final DestinationConnection persistedDestination;
     try {
       persistedDestination = destinationService.getDestinationConnection(destinationId);
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final io.airbyte.data.ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
     persistedDestination.setName(Optional.ofNullable(destinationName).orElse(persistedDestination.getName()));
 

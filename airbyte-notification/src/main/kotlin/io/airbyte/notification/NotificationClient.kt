@@ -9,6 +9,7 @@ import io.airbyte.config.ActorDefinitionBreakingChange
 import io.airbyte.config.ActorType
 import io.airbyte.notification.messages.SchemaUpdateNotification
 import io.airbyte.notification.messages.SyncSummary
+import java.util.UUID
 
 /**
  * Client for trigger notifications (regardless of notification type e.g. slack or email).
@@ -65,16 +66,19 @@ abstract class NotificationClient {
   abstract fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean
 
   abstract fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean
 
   abstract fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean
 
   abstract fun getNotificationClientType(): String

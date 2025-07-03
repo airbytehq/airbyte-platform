@@ -7,7 +7,7 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.config.ConnectorEnumRolloutState
 import io.airbyte.config.ConnectorRollout
 import io.airbyte.config.ConnectorRolloutFinalState
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.ConnectorRolloutRepository
 import io.airbyte.data.services.ConnectorRolloutService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel

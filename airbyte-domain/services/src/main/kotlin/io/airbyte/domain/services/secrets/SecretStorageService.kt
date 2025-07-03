@@ -219,7 +219,7 @@ open class SecretStorageService(
     // the secretStorage's secretConfig should specify an explicit secretStorageId, but we don't yet
     // represent the default secret persistence as a secretStorage in the control plane so we
     // instead just assume the coordinate resides in the default secret persistence.
-    val config = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(SecretCoordinate.fromFullCoordinate(secretCoordinate))
+    val config = secretsRepositoryReader.fetchJsonSecretFromDefaultSecretPersistence(SecretCoordinate.fromFullCoordinate(secretCoordinate))
     return SecretStorageWithConfig(
       secretStorage,
       config,

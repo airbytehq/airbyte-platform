@@ -19,6 +19,7 @@ import { PublishModal, PublishType } from "./PublishModal";
 import { useBuilderErrors } from "../useBuilderErrors";
 import { useBuilderWatch } from "../useBuilderWatch";
 import { useStreamTestMetadata } from "../useStreamTestMetadata";
+import { getStreamName } from "../utils";
 
 interface PublishButtonProps {
   className?: string;
@@ -65,8 +66,8 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
   const streamsWithWarnings = useMemo(
     () =>
       manifest?.streams
-        ?.filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0)
-        ?.map(({ name }) => name) ?? [],
+        ?.map((stream, index) => getStreamName(stream, index))
+        ?.filter((_, index) => getStreamTestWarnings({ type: "stream", index }).length > 0) ?? [],
     [getStreamTestWarnings, manifest?.streams]
   );
   const dynamicStreamsWithWarnings = useMemo(
@@ -136,7 +137,7 @@ export const PublishButton: React.FC<PublishButtonProps> = ({ className }) => {
         options: [
           {
             icon: <Icon size="sm" type="import" />,
-            displayName: formatMessage({ id: "connectorBuilder.publishModal.toWorkspace.label" }),
+            displayName: formatMessage({ id: "connectorBuilder.publishModal.toOrganization.label" }),
             value: "workspace",
           },
           {

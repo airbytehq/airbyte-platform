@@ -49,7 +49,7 @@ internal class ConnectorBuilderController(
   @Get(uri = "/health", produces = [MediaType.APPLICATION_JSON])
   @Secured(SecurityRule.IS_ANONYMOUS)
   @ExecuteOn(TaskExecutors.IO)
-  override fun getHealthCheck(): HealthCheckRead = healthHandler.healthCheck
+  override fun getHealthCheck(): HealthCheckRead = healthHandler.getHealthCheck()
 
   @Post(uri = "/contribute/read", produces = [MediaType.APPLICATION_JSON])
   @Secured(AuthRoleConstants.AUTHENTICATED_USER)

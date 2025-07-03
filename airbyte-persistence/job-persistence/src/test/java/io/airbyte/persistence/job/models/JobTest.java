@@ -13,6 +13,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import io.airbyte.config.Attempt;
 import io.airbyte.config.AttemptStatus;
 import io.airbyte.config.Job;
+import io.airbyte.config.JobConfig;
+import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobStatus;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +35,7 @@ class JobTest {
   }
 
   private static Job jobWithStatus(final JobStatus jobStatus) {
-    return new Job(1L, null, null, null, null, jobStatus, 0L, 0L, 0L, true);
+    return new Job(1L, ConfigType.SYNC, "", new JobConfig(), List.of(), jobStatus, 0L, 0L, 0L, true);
   }
 
   @Test
@@ -49,7 +51,7 @@ class JobTest {
     final List<Attempt> attempts = IntStream.range(0, attemptStatuses.length)
         .mapToObj(idx -> new Attempt(idx + 1, 1L, null, null, null, attemptStatuses[idx], null, null, idx, 0L, null))
         .collect(Collectors.toList());
-    return new Job(1L, null, null, null, attempts, null, 0L, 0L, 0L, true);
+    return new Job(1L, ConfigType.SYNC, "", new JobConfig(), attempts, JobStatus.PENDING, 0L, 0L, 0L, true);
   }
 
   @Test
@@ -61,7 +63,7 @@ class JobTest {
 
     final Job job = jobWithAttemptWithStatus(AttemptStatus.FAILED, AttemptStatus.SUCCEEDED);
     assertTrue(job.getSuccessfulAttempt().isPresent());
-    assertEquals(job.getAttempts().get(1), job.getSuccessfulAttempt().get());
+    assertEquals(job.attempts.get(1), job.getSuccessfulAttempt().get());
   }
 
   @Test

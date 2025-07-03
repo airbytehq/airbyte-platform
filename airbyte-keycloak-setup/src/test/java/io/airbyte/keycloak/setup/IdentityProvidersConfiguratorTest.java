@@ -32,7 +32,6 @@ import org.keycloak.admin.client.resource.IdentityProviderResource;
 import org.keycloak.admin.client.resource.IdentityProvidersResource;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.IdentityProviderRepresentation;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -52,7 +51,6 @@ class IdentityProvidersConfiguratorTest {
   private IdentityProviderResource identityProviderResource;
   @Mock
   private IdentityProviderRepresentation identityProviderRepresentation;
-  @InjectMocks
   private IdentityProvidersConfigurator identityProvidersConfigurator;
 
   @BeforeEach

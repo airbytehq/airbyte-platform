@@ -4,7 +4,6 @@
 
 package io.airbyte.domain.services.secrets
 
-import com.fasterxml.jackson.databind.node.TextNode
 import io.airbyte.commons.json.Jsons
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.ScopeType
@@ -282,14 +281,14 @@ class SecretMigrationServiceTest {
         SecretCoordinate.fromFullCoordinate(sourceSecretConfig.externalCoordinate),
         fromPersistence,
       )
-    } returns TextNode("hunter1")
+    } returns "hunter1"
 
     every {
       secretsRepositoryReader.fetchSecretFromSecretPersistence(
         SecretCoordinate.fromFullCoordinate(destinationSecretConfig.externalCoordinate),
         fromPersistence,
       )
-    } returns TextNode("hunter2")
+    } returns "hunter2"
 
     every {
       secretsRepositoryWriter.store(

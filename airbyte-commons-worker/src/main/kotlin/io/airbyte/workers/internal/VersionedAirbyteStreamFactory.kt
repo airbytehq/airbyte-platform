@@ -193,7 +193,7 @@ class VersionedAirbyteStreamFactory<T>(
 
   @Suppress("UNCHECKED_CAST")
   internal fun initializeForProtocolVersion(protocolVersion: Version) {
-    this.deserializer = serDeProvider.getDeserializer(protocolVersion).orElseThrow() as AirbyteMessageDeserializer<AirbyteMessage>
+    this.deserializer = serDeProvider.getDeserializer(protocolVersion) as AirbyteMessageDeserializer<AirbyteMessage>
     this.migrator = migratorFactory.getAirbyteMessageMigrator(protocolVersion)
     this.protocolVersion = protocolVersion
   }
@@ -249,7 +249,7 @@ class VersionedAirbyteStreamFactory<T>(
   internal fun toAirbyteMessage(line: String): Stream<AirbyteMessage?> {
     logLargeRecordWarning(line)
 
-    var m: Optional<AirbyteMessage?> = deserializer.deserializeExact(line)
+    var m: Optional<AirbyteMessage> = deserializer.deserializeExact(line)
     if (m.isPresent) {
       m = BasicAirbyteMessageValidator.validate(m.get(), configuredAirbyteCatalog)
 
@@ -338,7 +338,7 @@ class VersionedAirbyteStreamFactory<T>(
     }
   }
 
-  internal fun upgradeMessage(msg: AirbyteMessage?): Stream<AirbyteMessage?> {
+  internal fun upgradeMessage(msg: AirbyteMessage): Stream<AirbyteMessage?> {
     try {
       val message: AirbyteMessage = migrator.upgrade(msg, configuredAirbyteCatalog)
       return Stream.of(message)

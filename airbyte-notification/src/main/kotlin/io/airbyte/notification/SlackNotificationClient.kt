@@ -28,6 +28,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.util.Optional
+import java.util.UUID
 
 private val log = KotlinLogging.logger { }
 
@@ -72,6 +73,9 @@ class SlackNotificationClient : NotificationClient {
           summary.jobId.toString(),
         )
     } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, job failure notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
       return false
     }
     val notification =
@@ -84,8 +88,9 @@ class SlackNotificationClient : NotificationClient {
       )
     notification.setData(summary)
     return try {
-      notifyJson(notification.toJsonNode())
+      notifyJson(notification.toJsonNode(), summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending job failure Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
       false
     }
   }
@@ -107,6 +112,9 @@ class SlackNotificationClient : NotificationClient {
           summary.jobId.toString(),
         )
     } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, job success notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
       return false
     }
     val notification =
@@ -119,8 +127,9 @@ class SlackNotificationClient : NotificationClient {
       )
     notification.setData(summary)
     return try {
-      notifyJson(notification.toJsonNode())
+      notifyJson(notification.toJsonNode(), summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending job success Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
       false
     }
   }
@@ -141,6 +150,9 @@ class SlackNotificationClient : NotificationClient {
           summary.connection.id.toString(),
         )
     } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, connection disabled notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
       return false
     }
     val message =
@@ -157,8 +169,10 @@ class SlackNotificationClient : NotificationClient {
           Optional.of(message),
           tag,
         ).toJsonNode(),
+        summary.workspace.id,
       )
     } catch (e: IOException) {
+      log.error(e) { "Error sending connection disabled Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
       false
     }
   }
@@ -179,6 +193,9 @@ class SlackNotificationClient : NotificationClient {
           summary.connection.id.toString(),
         )
     } catch (e: IOException) {
+      log.error(e) {
+        "Error rendering slack notification template, connection disabled warning notification not sent for workspaceId ${summary.workspace.id} jobId ${summary.jobId}"
+      }
       return false
     }
     val message =
@@ -195,8 +212,10 @@ class SlackNotificationClient : NotificationClient {
           Optional.of(message),
           tag,
         ).toJsonNode(),
+        summary.workspace.id,
       )
     } catch (e: IOException) {
+      log.error(e) { "Error sending connection disabled warning Slack notification for workspaceId ${summary.workspace.id} jobId ${summary.jobId}" }
       false
     }
   }
@@ -238,6 +257,7 @@ class SlackNotificationClient : NotificationClient {
   override fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
     val summary = buildSummary(notification.catalogDiff)
 
@@ -261,8 +281,9 @@ class SlackNotificationClient : NotificationClient {
     val webhookUrl = config.webhook
     if (!StringUtils.isEmpty(webhookUrl)) {
       return try {
-        notifyJson(slackNotification.toJsonNode())
+        notifyJson(slackNotification.toJsonNode(), workspaceId)
       } catch (e: IOException) {
+        log.error(e) { "Error sending schema propagation Slack notification for workspaceId $workspaceId" }
         false
       }
     }
@@ -272,8 +293,9 @@ class SlackNotificationClient : NotificationClient {
   override fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
-    log.info { "Sending slack notification to apply schema changes..." }
+    log.info { "Sending slack notification to apply schema changes for workspaceId $workspaceId..." }
     val summary = buildSummary(notification.catalogDiff)
     // The following header and message are consistent with the email notification template.
     val header =
@@ -302,9 +324,9 @@ class SlackNotificationClient : NotificationClient {
     if (!StringUtils.isEmpty(webhookUrl)) {
       try {
         log.info { "Sending JSON..." }
-        return notifyJson(slackNotification.toJsonNode())
+        return notifyJson(slackNotification.toJsonNode(), workspaceId)
       } catch (e: IOException) {
-        log.error(e) { "Failed to send notification" }
+        log.error(e) { "Error sending schema diff to apply Slack notification for workspaceId $workspaceId" }
         return false
       }
     }
@@ -314,8 +336,9 @@ class SlackNotificationClient : NotificationClient {
   override fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
-    log.info { "Sending slack notification to apply schema changes..." }
+    log.info { "Sending slack notification to apply schema changes for workspaceId $workspaceId..." }
     val summary = buildSummary(notification.catalogDiff)
     // The following header and message are consistent with the email notification template.
     val header =
@@ -345,9 +368,9 @@ class SlackNotificationClient : NotificationClient {
     if (!StringUtils.isEmpty(webhookUrl)) {
       try {
         log.info { "Sending JSON..." }
-        return notifyJson(slackNotification.toJsonNode())
+        return notifyJson(slackNotification.toJsonNode(), workspaceId)
       } catch (e: IOException) {
-        log.error(e) { "Failed to send notification" }
+        log.error(e) { "Error sending schema diff to apply propagation disabled Slack notification for workspaceId $workspaceId" }
         return false
       }
     }
@@ -359,11 +382,14 @@ class SlackNotificationClient : NotificationClient {
     val mapper = ObjectMapper()
     val node = mapper.createObjectNode()
     node.put("text", message)
-    return notifyJson(node)
+    return notifyJson(node, null)
   }
 
   @Throws(IOException::class)
-  private fun notifyJson(node: JsonNode): Boolean {
+  private fun notifyJson(
+    node: JsonNode,
+    workspaceId: UUID?,
+  ): Boolean {
     if (StringUtils.isEmpty(config.webhook)) {
       return false
     }
@@ -384,13 +410,21 @@ class SlackNotificationClient : NotificationClient {
     try {
       response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     } catch (e: InterruptedException) {
+      log.error(e) { "Error sending schema diff to apply Slack notification for workspaceId $workspaceId" }
       return false
     }
     if (isSuccessfulHttpResponse(response.statusCode())) {
       log.info { "Successful notification (${response.statusCode()}): {${response.body()}}" }
       return true
     } else {
-      val errorMessage = String.format("Failed to deliver notification (%s): %s [%s]", response.statusCode(), response.body(), node.toString())
+      val errorMessage =
+        String.format(
+          "Failed to deliver notification workspaceId %s (%s): %s [%s]",
+          workspaceId,
+          response.statusCode(),
+          response.body(),
+          node.toString(),
+        )
       throw IOException(errorMessage)
     }
   }

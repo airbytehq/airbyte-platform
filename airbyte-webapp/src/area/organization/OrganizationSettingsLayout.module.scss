@@ -1,0 +1,21 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.settings {
+  width: 100%;
+  height: 100%;
+
+  &__main {
+    overflow: hidden;
+    flex: 1 1 auto;
+    display: flex;
+    gap: variables.$spacing-xl;
+  }
+
+  &__content {
+    overflow-y: auto;
+    position: relative;
+    padding: variables.$spacing-2xl calc(variables.$spacing-2xl * 2);
+    background-color: colors.$foreground;
+  }
+}

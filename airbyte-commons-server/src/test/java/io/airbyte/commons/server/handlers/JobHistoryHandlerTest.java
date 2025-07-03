@@ -225,23 +225,23 @@ class JobHistoryHandlerTest {
   private JobService jobService;
 
   private static JobRead toJobInfo(final Job job) {
-    return new JobRead().id(job.getId())
-        .configId(job.getScope())
-        .enabledStreams(job.getConfig().getSync().getConfiguredAirbyteCatalog().getStreams()
+    return new JobRead().id(job.id)
+        .configId(job.scope)
+        .enabledStreams(job.config.getSync().getConfiguredAirbyteCatalog().getStreams()
             .stream()
             .map(s -> new StreamDescriptor().name(s.getStream().getName()).namespace(s.getStream().getNamespace()))
             .collect(Collectors.toList()))
-        .status(Enums.convertTo(job.getStatus(), io.airbyte.api.model.generated.JobStatus.class))
-        .configType(Enums.convertTo(job.getConfigType(), io.airbyte.api.model.generated.JobConfigType.class))
-        .createdAt(job.getCreatedAtInSecond())
-        .updatedAt(job.getUpdatedAtInSecond());
+        .status(Enums.convertTo(job.status, io.airbyte.api.model.generated.JobStatus.class))
+        .configType(Enums.convertTo(job.configType, io.airbyte.api.model.generated.JobConfigType.class))
+        .createdAt(job.createdAtInSecond)
+        .updatedAt(job.updatedAtInSecond);
   }
 
   private static JobDebugRead toDebugJobInfo(final Job job) {
-    return new JobDebugRead().id(job.getId())
-        .configId(job.getScope())
-        .status(Enums.convertTo(job.getStatus(), io.airbyte.api.model.generated.JobStatus.class))
-        .configType(Enums.convertTo(job.getConfigType(), io.airbyte.api.model.generated.JobConfigType.class))
+    return new JobDebugRead().id(job.id)
+        .configId(job.scope)
+        .status(Enums.convertTo(job.status, io.airbyte.api.model.generated.JobStatus.class))
+        .configType(Enums.convertTo(job.configType, io.airbyte.api.model.generated.JobConfigType.class))
         .sourceDefinition(null)
         .destinationDefinition(null);
 
@@ -258,10 +258,10 @@ class JobHistoryHandlerTest {
   private static AttemptRead toAttemptRead(final Attempt a) {
     return new AttemptRead()
         .id((long) a.getAttemptNumber())
-        .status(Enums.convertTo(a.getStatus(), io.airbyte.api.model.generated.AttemptStatus.class))
+        .status(Enums.convertTo(a.status(), io.airbyte.api.model.generated.AttemptStatus.class))
         .streamStats(null)
-        .createdAt(a.getCreatedAtInSecond())
-        .updatedAt(a.getUpdatedAtInSecond())
+        .createdAt(a.createdAtInSecond())
+        .updatedAt(a.updatedAtInSecond())
         .endedAt(a.getEndedAtInSecond().orElse(null));
   }
 
@@ -588,7 +588,7 @@ class JobHistoryHandlerTest {
   @Test
   @DisplayName("Should return the right info to debug this job")
   void testGetDebugJobInfo()
-      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException, io.airbyte.data.ConfigNotFoundException {
     Job job = new Job(JOB_ID, JOB_CONFIG.getConfigType(), JOB_CONFIG_ID, JOB_CONFIG, List.of(testJobAttempt), JOB_STATUS, null, CREATED_AT,
         CREATED_AT, true);
     final StandardSourceDefinition standardSourceDefinition = new StandardSourceDefinition()
@@ -605,7 +605,7 @@ class JobHistoryHandlerTest {
 
     final StandardSync standardSync = ConnectionHelpers.generateSyncWithSourceId(source.getSourceId());
     final ConnectionRead connectionRead = ConnectionHelpers.generateExpectedConnectionRead(standardSync);
-    when(connectionService.getStandardSync(UUID.fromString(job.getScope()))).thenReturn(standardSync);
+    when(connectionService.getStandardSync(UUID.fromString(job.scope))).thenReturn(standardSync);
 
     final SourceIdRequestBody sourceIdRequestBody = new SourceIdRequestBody();
     sourceIdRequestBody.setSourceId(connectionRead.getSourceId());

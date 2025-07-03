@@ -12,9 +12,6 @@ package io.airbyte.db.instance.configs.migrations
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.enums.Enums
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.AirbyteConfig
-import io.airbyte.config.ConfigSchema
-import io.airbyte.config.ConfigWithMetadata
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.SourceConnection
@@ -23,6 +20,7 @@ import io.airbyte.config.StandardSync
 import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardSyncState
 import io.airbyte.config.StandardWorkspace
+import io.airbyte.db.legacy.ConfigSchema
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
@@ -36,6 +34,7 @@ import org.jooq.Schema
 import org.jooq.impl.DSL
 import org.jooq.impl.SQLDataType
 import org.jooq.impl.SchemaImpl
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID
@@ -1026,7 +1025,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
 
     @JvmStatic
     fun <T> listConfigsWithMetadata(
-      airbyteConfigType: AirbyteConfig,
+      airbyteConfigType: ConfigSchema,
       clazz: Class<T>?,
       ctx: DSLContext,
     ): List<ConfigWithMetadata<T>> {
@@ -1047,7 +1046,7 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
         ctx
           .select(DSL.asterisk())
           .from(DSL.table("airbyte_configs"))
-          .where(configType.eq(airbyteConfigType.name()))
+          .where(configType.eq(airbyteConfigType.name))
           .fetch()
 
       return results
@@ -1063,4 +1062,17 @@ class V0_32_8_001__AirbyteConfigDatabaseDenormalization : BaseJavaMigration() {
         }.collect(Collectors.toList())
     }
   }
+
+  /**
+   * Config with metadata.
+   *
+   * @param <T> config type
+   </T> */
+  data class ConfigWithMetadata<T>(
+    val configId: String,
+    val configType: String,
+    val createdAt: Instant,
+    val updatedAt: Instant,
+    val config: T,
+  )
 }

@@ -53,7 +53,7 @@ import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
 import io.airbyte.config.secrets.persistence.SecretPersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.helpers.ActorDefinitionVersionUpdater;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.PartialUserConfigService;
@@ -185,8 +185,8 @@ public class SourceHandler {
       final SourceConnection sourceConnection;
       try {
         sourceConnection = sourceService.getSourceConnection(partialSourceUpdate.getSourceId());
-      } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-        throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+      } catch (final ConfigNotFoundException e) {
+        throw new ConfigNotFoundException(e.type, e.configId);
       }
       final JsonNode hydratedSecret = hydrateOAuthResponseSecret(partialSourceUpdate.getSecretId(), sourceConnection.getWorkspaceId());
       // add OAuth Response data to connection configuration
@@ -304,19 +304,19 @@ public class SourceHandler {
    * @param sourceIdRequestBody - ID of the source to upgrade
    */
   public void upgradeSourceVersion(final SourceIdRequestBody sourceIdRequestBody)
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final SourceConnection sourceConnection = sourceService.getSourceConnection(sourceIdRequestBody.getSourceId());
     final StandardSourceDefinition sourceDefinition = sourceService.getStandardSourceDefinition(sourceConnection.getSourceDefinitionId());
     actorDefinitionVersionUpdater.upgradeActorVersion(sourceConnection, sourceDefinition);
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody)
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     return getSource(sourceIdRequestBody, false);
   }
 
   public SourceRead getSource(final SourceIdRequestBody sourceIdRequestBody, Boolean includeSecretCoordinates)
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
     return buildSourceRead(sourceIdRequestBody.getSourceId(), includeSecretCoordinates);
   }
 
@@ -435,8 +435,8 @@ public class SourceHandler {
           source.getName(),
           source.getWorkspaceId(),
           source.getSourceId());
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
   }
 
@@ -457,7 +457,7 @@ public class SourceHandler {
   }
 
   private SourceRead buildSourceReadWithStatus(final SourceConnection sourceConnection)
-      throws JsonValidationException, ConfigNotFoundException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, ConfigNotFoundException, IOException, ConfigNotFoundException {
     final SourceRead sourceRead = buildSourceRead(sourceConnection);
     // add source status into sourceRead
     if (sourceService.isSourceActive(sourceConnection.getSourceId())) {
@@ -647,7 +647,7 @@ public class SourceHandler {
 
   protected SourceRead toSourceRead(final SourceConnection sourceConnection,
                                     final StandardSourceDefinition standardSourceDefinition)
-      throws JsonValidationException, IOException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws JsonValidationException, IOException, ConfigNotFoundException {
 
     final ActorDefinitionVersionWithOverrideStatus sourceVersionWithOverrideStatus = actorDefinitionVersionHelper.getSourceVersionWithOverrideStatus(
         standardSourceDefinition, sourceConnection.getWorkspaceId(), sourceConnection.getSourceId());
@@ -690,7 +690,7 @@ public class SourceHandler {
   JsonNode hydrateOAuthResponseSecret(final String secretId, final UUID workspaceId) {
     final SecretCoordinate secretCoordinate = SecretCoordinate.Companion.fromFullCoordinate(secretId);
     final SecretPersistence secretPersistence = secretPersistenceService.getPersistenceFromWorkspaceId(workspaceId);
-    final JsonNode secret = secretsRepositoryReader.fetchSecretFromSecretPersistence(secretCoordinate, secretPersistence);
+    final JsonNode secret = secretsRepositoryReader.fetchJsonSecretFromSecretPersistence(secretCoordinate, secretPersistence);
     final CompleteOAuthResponse completeOAuthResponse = Jsons.object(secret, CompleteOAuthResponse.class);
     return Jsons.jsonNode(completeOAuthResponse.getAuthPayload());
   }

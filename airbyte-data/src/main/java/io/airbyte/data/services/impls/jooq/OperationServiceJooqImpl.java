@@ -13,11 +13,11 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Sets;
 import io.airbyte.commons.enums.Enums;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.OperatorWebhook;
 import io.airbyte.config.StandardSyncOperation;
 import io.airbyte.config.StandardSyncOperation.OperatorType;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.OperationService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -62,7 +62,7 @@ public class OperationServiceJooqImpl implements OperationService {
       throws JsonValidationException, IOException, ConfigNotFoundException {
     return listStandardSyncOperationQuery(Optional.of(operationId))
         .findFirst()
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.STANDARD_SYNC_OPERATION, operationId));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SYNC_OPERATION, operationId));
   }
 
   /**

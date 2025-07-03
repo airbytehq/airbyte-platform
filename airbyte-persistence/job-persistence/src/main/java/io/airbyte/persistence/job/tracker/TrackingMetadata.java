@@ -145,7 +145,7 @@ public class TrackingMetadata {
     if (job == null) {
       return metadata.build();
     }
-    final List<Attempt> attempts = job.getAttempts();
+    final List<Attempt> attempts = job.attempts;
     if (attempts == null || attempts.isEmpty()) {
       return metadata.build();
     }

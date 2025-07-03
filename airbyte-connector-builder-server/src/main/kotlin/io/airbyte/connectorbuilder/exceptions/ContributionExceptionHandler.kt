@@ -17,11 +17,11 @@ import jakarta.inject.Singleton
 @Produces
 @Singleton
 @Requires(classes = [ContributionException::class])
-class ContributionExceptionHandler : ExceptionHandler<ContributionException?, HttpResponse<*>?> {
+class ContributionExceptionHandler : ExceptionHandler<ContributionException, HttpResponse<*>> {
   val helper: ExceptionHelper = ExceptionHelper()
 
   override fun handle(
-    request: HttpRequest<*>?,
-    exception: ContributionException?,
-  ): HttpResponse<*>? = helper.handle(request, exception, exception?.httpStatus)
+    request: HttpRequest<*>,
+    exception: ContributionException,
+  ): HttpResponse<*> = helper.handle(request, exception, exception.httpStatus)
 }

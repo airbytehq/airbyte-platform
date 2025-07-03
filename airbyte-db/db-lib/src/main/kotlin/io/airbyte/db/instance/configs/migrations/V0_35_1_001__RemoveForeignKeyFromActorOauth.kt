@@ -6,11 +6,11 @@ package io.airbyte.db.instance.configs.migrations
 
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.SourceOAuthParameter
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.Companion.actorDefinitionDoesNotExist
 import io.airbyte.db.instance.configs.migrations.V0_32_8_001__AirbyteConfigDatabaseDenormalization.Companion.listConfigsWithMetadata
+import io.airbyte.db.legacy.ConfigSchema
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context

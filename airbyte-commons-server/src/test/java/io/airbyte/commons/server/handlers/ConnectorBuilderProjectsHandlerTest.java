@@ -60,7 +60,7 @@ import io.airbyte.commons.server.handlers.helpers.DeclarativeSourceManifestInjec
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
@@ -81,7 +81,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInnerPagesInner;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectorBuilderService;
@@ -649,6 +649,47 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
     when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
 
+    UUID organizationId = UUID.randomUUID();
+    when(workspaceService.getOrganizationIdFromWorkspaceId(any(UUID.class))).thenReturn(Optional.of(organizationId));
+
+    connectorBuilderProjectsHandler.publishConnectorBuilderProject(
+        anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(workspaceId).name(A_SOURCE_NAME)
+            .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
+
+    verify(manifestInjector, times(1)).addInjectedDeclarativeManifest(A_SPEC);
+    verify(sourceService, times(1)).writeCustomConnectorMetadata(eq(new StandardSourceDefinition()
+        .withSourceDefinitionId(A_SOURCE_DEFINITION_ID)
+        .withName(A_SOURCE_NAME)
+        .withSourceType(SourceType.CUSTOM)
+        .withTombstone(false)
+        .withPublic(false)
+        .withCustom(true)), eq(
+            new ActorDefinitionVersion()
+                .withActorDefinitionId(A_SOURCE_DEFINITION_ID)
+                .withDockerRepository(AIRBYTE_SOURCE_DECLARATIVE_MANIFEST_IMAGE)
+                .withDockerImageTag(A_DECLARATIVE_MANIFEST_IMAGE_VERSION.getImageVersion())
+                .withSpec(adaptedConnectorSpecification)
+                .withSupportLevel(SupportLevel.NONE)
+                .withInternalSupportLevel(100L)
+                .withReleaseStage(ReleaseStage.CUSTOM)
+                .withDocumentationUrl(A_DOCUMENTATION_URL)
+                .withProtocolVersion("0.2.0")),
+        eq(organizationId),
+        eq(ScopeType.ORGANIZATION));
+    verify(connectorBuilderService, times(1)).writeActorDefinitionConfigInjectionsForPath(eq(List.of(A_CONFIG_INJECTION)));
+  }
+
+  @Test
+  void whenNoOrganizationFoundShouldUseWorkspaceScope() throws ConfigNotFoundException, IOException, JsonValidationException {
+    when(uuidSupplier.get()).thenReturn(A_SOURCE_DEFINITION_ID);
+    when(manifestInjector.getManifestConnectorInjections(A_SOURCE_DEFINITION_ID, A_MANIFEST, null)).thenReturn(List.of(A_CONFIG_INJECTION));
+    setupConnectorSpecificationAdapter(A_SPEC, A_DOCUMENTATION_URL);
+
+    final ConnectorBuilderProject project = generateBuilderProject().withBuilderProjectId(A_BUILDER_PROJECT_ID).withWorkspaceId(workspaceId);
+    when(connectorBuilderService.getConnectorBuilderProject(any(UUID.class), any(boolean.class))).thenReturn(project);
+
+    when(workspaceService.getOrganizationIdFromWorkspaceId(any(UUID.class))).thenReturn(Optional.empty());
+
     connectorBuilderProjectsHandler.publishConnectorBuilderProject(
         anyConnectorBuilderProjectRequest().builderProjectId(A_BUILDER_PROJECT_ID).workspaceId(workspaceId).name(A_SOURCE_NAME)
             .initialDeclarativeManifest(anyInitialManifest().manifest(A_MANIFEST).spec(A_SPEC)));
@@ -710,7 +751,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   void testUpdateTestingValuesOnProjectWithNoExistingValues()
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject();
     final JsonNode spec = Jsons.deserialize(
         """
@@ -741,7 +782,7 @@ class ConnectorBuilderProjectsHandlerTest {
 
   @Test
   void testUpdateTestingValuesOnProjectWithExistingValues()
-      throws IOException, JsonValidationException, io.airbyte.data.exceptions.ConfigNotFoundException {
+      throws IOException, JsonValidationException, ConfigNotFoundException {
     final ConnectorBuilderProject project = generateBuilderProject().withTestingValues(testingValuesWithSecretCoordinates);
     final JsonNode newTestingValues = Jsons.deserialize(
         """
@@ -965,7 +1006,7 @@ class ConnectorBuilderProjectsHandlerTest {
     final ConnectorBuilderProjectForkRequestBody requestBody =
         new ConnectorBuilderProjectForkRequestBody().workspaceId(workspaceId).baseActorDefinitionId(baseActorDefinitionId);
     when(sourceService.getStandardSourceDefinition(baseActorDefinitionId))
-        .thenThrow(new ConfigNotFoundException(ConfigSchema.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId));
+        .thenThrow(new ConfigNotFoundException(ConfigNotFoundType.STANDARD_SOURCE_DEFINITION, baseActorDefinitionId));
 
     assertThrows(ConfigNotFoundException.class, () -> connectorBuilderProjectsHandler.createForkedConnectorBuilderProject(requestBody));
   }

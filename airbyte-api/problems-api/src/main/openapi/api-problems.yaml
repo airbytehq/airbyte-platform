@@ -1618,3 +1618,33 @@ components:
           type: string
           format: uuid
           description: The ID of the destination
+    SSOSetupProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-setup
+            title:
+              type: string
+              default: SSO setup configuration error
+            detail:
+              type: string
+              default: An error occurred when performing a SSO setup
+            data:
+              $ref: "#/components/schemas/ProblemSSOSetupData"
+    ProblemSSOSetupData:
+      type: object
+      required:
+        - companyIdentifier
+      properties:
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string

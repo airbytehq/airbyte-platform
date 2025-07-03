@@ -6,8 +6,6 @@ package io.airbyte.db.instance.configs.migrations
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.AirbyteConfig
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.DestinationConnection
 import io.airbyte.config.DestinationOAuthParameter
 import io.airbyte.config.JobSyncConfig
@@ -23,6 +21,7 @@ import io.airbyte.config.StandardSyncOperation
 import io.airbyte.config.StandardSyncState
 import io.airbyte.config.StandardWorkspace
 import io.airbyte.config.State
+import io.airbyte.db.legacy.ConfigSchema
 import io.airbyte.protocol.models.JsonSchemaType
 import io.airbyte.protocol.models.v0.AdvancedAuth
 import io.airbyte.protocol.models.v0.AirbyteCatalog
@@ -88,11 +87,11 @@ object SetupForNormalizedTablesTest {
   private fun <T> createConfigInOldTable(
     context: DSLContext,
     config: T,
-    configType: AirbyteConfig,
+    configType: ConfigSchema,
   ) {
     insertConfigRecord(
       context,
-      configType.name(),
+      configType.name,
       Jsons.jsonNode(config),
       configType.idFieldName,
     )

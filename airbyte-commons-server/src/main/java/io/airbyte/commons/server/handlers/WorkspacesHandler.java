@@ -23,12 +23,10 @@ import io.airbyte.api.model.generated.NotificationConfig;
 import io.airbyte.api.model.generated.NotificationsConfig;
 import io.airbyte.api.model.generated.SlugRequestBody;
 import io.airbyte.api.model.generated.SourceRead;
-import io.airbyte.api.model.generated.TimeWindowRequestBody;
 import io.airbyte.api.model.generated.WebhookNotificationConfig;
 import io.airbyte.api.model.generated.WorkspaceCreate;
 import io.airbyte.api.model.generated.WorkspaceCreateWithId;
 import io.airbyte.api.model.generated.WorkspaceGiveFeedback;
-import io.airbyte.api.model.generated.WorkspaceIdList;
 import io.airbyte.api.model.generated.WorkspaceIdRequestBody;
 import io.airbyte.api.model.generated.WorkspaceOrganizationInfoRead;
 import io.airbyte.api.model.generated.WorkspaceRead;
@@ -56,7 +54,7 @@ import io.airbyte.config.SlackNotificationConfiguration;
 import io.airbyte.config.StandardWorkspace;
 import io.airbyte.config.persistence.OrganizationPersistence;
 import io.airbyte.config.persistence.WorkspacePersistence;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DataplaneGroupService;
 import io.airbyte.data.services.WorkspaceService;
 import io.airbyte.data.services.shared.ResourcesByOrganizationQueryPaginated;
@@ -76,7 +74,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.jetbrains.annotations.NotNull;
 import org.jooq.tools.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -610,11 +607,6 @@ public class WorkspacesHandler {
 
     workspaceService.writeWorkspaceWithSecrets(workspace);
     return WorkspaceConverter.domainToApiModel(workspace);
-  }
-
-  public WorkspaceIdList listActiveWorkspacesByMostRecentlyRunningJobs(@NotNull TimeWindowRequestBody timeWindowRequestBody) throws IOException {
-    final List<UUID> workspaceIds = workspaceService.listActiveWorkspacesByMostRecentlyRunningJobs(timeWindowRequestBody.getTimeWindowInHours());
-    return new WorkspaceIdList().workspaceIds(workspaceIds);
   }
 
 }

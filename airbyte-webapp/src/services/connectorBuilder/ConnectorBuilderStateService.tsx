@@ -10,14 +10,15 @@ import { useDebounce, useUpdateEffect } from "react-use";
 
 import { WaitForSavingModal } from "components/connectorBuilder/Builder/WaitForSavingModal";
 import { CDK_VERSION } from "components/connectorBuilder/cdk";
-import { BuilderState, GeneratedDeclarativeStream, isStreamDynamicStream } from "components/connectorBuilder/types";
+import { BuilderState, GeneratedDeclarativeStream } from "components/connectorBuilder/types";
 import { useBuilderErrors } from "components/connectorBuilder/useBuilderErrors";
 import { useBuilderWatch } from "components/connectorBuilder/useBuilderWatch";
 import { useStreamName } from "components/connectorBuilder/useStreamNames";
 import { useStreamTestMetadata } from "components/connectorBuilder/useStreamTestMetadata";
 import { UndoRedo, useUndoRedo } from "components/connectorBuilder/useUndoRedo";
 import { useUpdateTestingValuesOnChange } from "components/connectorBuilder/useUpdateTestingValuesOnChange";
-import { convertJsonToYaml, formatJson } from "components/connectorBuilder/utils";
+import { convertJsonToYaml, formatJson, getStreamName } from "components/connectorBuilder/utils";
+import { useRefsHandler } from "components/forms/SchemaForm/RefsHandler";
 
 import { useCurrentWorkspaceId } from "area/workspace/utils";
 import {
@@ -54,6 +55,7 @@ import {
   DeclarativeStream,
   InlineSchemaLoaderType,
   InlineSchemaLoader,
+  ConditionalStreamsType,
 } from "core/api/types/ConnectorManifest";
 import { Action, Namespace, useAnalyticsService } from "core/services/analytics";
 import { useConnectorBuilderResolve } from "core/services/connectorBuilder/ConnectorBuilderResolveContext";
@@ -249,10 +251,12 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     setStoredMode(projectId, mode);
   }, [mode]);
 
+  const { exportValuesWithRefs } = useRefsHandler();
+
   const toggleUI = useCallback(
     async (newMode: BuilderState["mode"]) => {
       if (newMode === "yaml") {
-        setValue("yaml", convertJsonToYaml(manifest));
+        setValue("yaml", convertJsonToYaml(exportValuesWithRefs().manifest));
         setYamlIsValid(true);
         setValue("mode", "yaml");
       } else {
@@ -278,7 +282,7 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     },
     [
       setValue,
-      manifest,
+      exportValuesWithRefs,
       resolveError,
       openConfirmationModal,
       resolveErrorMessage,
@@ -337,22 +341,22 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
   const publishProject = useCallback(
     async (options: BuilderProjectPublishBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(manifest);
+      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
       const result = await sendPublishRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(1);
       return result;
     },
-    [manifest, sendPublishRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendPublishRequest, updateYamlCdkVersion]
   );
 
   const releaseNewVersion = useCallback(
     async (options: NewVersionBody) => {
       // update the version so that the manifest reflects which CDK version was used to build it
-      const updatedManifest = updateYamlCdkVersion(manifest);
+      const updatedManifest = updateYamlCdkVersion(exportValuesWithRefs().manifest);
       await sendNewVersionRequest({ ...options, manifest: updatedManifest });
       setDisplayedVersion(options.version);
     },
-    [manifest, sendNewVersionRequest, updateYamlCdkVersion]
+    [exportValuesWithRefs, sendNewVersionRequest, updateYamlCdkVersion]
   );
 
   const savingState = getSavingState(
@@ -376,24 +380,28 @@ export const InternalConnectorBuilderFormStateProvider: React.FC<
     if (savingState !== "loading") {
       return;
     }
-    const resolvedProject: BuilderProjectWithManifest = {
+    const updatedProject: BuilderProjectWithManifest = {
       name,
       manifest,
       yamlManifest: convertJsonToYaml(manifest),
       componentsFileContent: customComponentsCode,
     };
+    const manifestWithRefs = exportValuesWithRefs().manifest;
     await updateProject(
       mode === "yaml"
         ? {
-            name,
+            ...updatedProject,
             manifest: load(yaml) as ConnectorManifest,
             yamlManifest: yaml,
-            componentsFileContent: customComponentsCode,
           }
-        : resolvedProject
+        : {
+            ...updatedProject,
+            manifest: manifestWithRefs,
+            yamlManifest: convertJsonToYaml(manifestWithRefs),
+          }
     );
-    setPersistedState(resolvedProject);
-  }, [savingState, mode, name, yaml, customComponentsCode, manifest, updateProject]);
+    setPersistedState(updatedProject);
+  }, [savingState, name, manifest, customComponentsCode, exportValuesWithRefs, updateProject, mode, yaml]);
 
   useDebounce(
     () => {
@@ -556,9 +564,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     }
   }, [setValue, view]);
 
-  const streamIsDynamic = isStreamDynamicStream(testStreamId);
+  let streamName: string;
   let testStream: DeclarativeComponentSchemaStreamsItem | undefined;
-  if (streamIsDynamic) {
+  if (testStreamId.type === "dynamic_stream") {
+    streamName = manifest.dynamic_streams?.[testStreamId.index]?.name ?? "";
     const dynamicStream = manifest.dynamic_streams?.[testStreamId.index];
     if (dynamicStream?.components_resolver.type === "HttpComponentsResolver") {
       testStream = {
@@ -570,8 +579,10 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       };
     }
   } else if (testStreamId.type === "generated_stream") {
+    streamName = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index]?.name ?? "";
     testStream = generatedStreams?.[testStreamId.dynamicStreamName]?.[testStreamId.index];
   } else {
+    streamName = getStreamName(manifest.streams?.[testStreamId.index], testStreamId.index);
     testStream = manifest.streams?.[testStreamId.index];
   }
 
@@ -580,7 +591,6 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
     streams: [testStream],
     dynamic_streams: [],
   };
-  const streamName = testStream?.name ?? "";
 
   const DEFAULT_PAGE_LIMIT = 5;
   const DEFAULT_SLICE_LIMIT = 5;
@@ -733,7 +743,7 @@ export const ConnectorBuilderTestReadProvider: React.FC<React.PropsWithChildren<
       // update the version so that it is clear which CDK version was used to test the connector
       updateYamlCdkVersion(manifest);
 
-      if (testStreamId.type !== "dynamic_stream") {
+      if (testStreamId.type !== "dynamic_stream" && testStream.type !== ConditionalStreamsType.ConditionalStreams) {
         updateStreamTestResults(result, testStream);
       }
     }

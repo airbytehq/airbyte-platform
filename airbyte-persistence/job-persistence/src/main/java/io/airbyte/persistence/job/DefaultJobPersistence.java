@@ -498,7 +498,7 @@ public class DefaultJobPersistence implements JobPersistence {
     return result
         .stream()
         .filter(record -> record.getValue(ATTEMPT_NUMBER_FIELD) != null)
-        .map(record -> new AttemptWithJobInfo(getAttemptFromRecord(record), getJobFromRecord(record)))
+        .map(record -> AttemptWithJobInfo.fromJob(getAttemptFromRecord(record), getJobFromRecord(record)))
         .collect(Collectors.toList());
   }
 
@@ -509,7 +509,7 @@ public class DefaultJobPersistence implements JobPersistence {
     final Stopwatch jobStopwatch = new Stopwatch();
     final Stopwatch attemptStopwatch = new Stopwatch();
     for (final Record entry : result) {
-      if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
+      if (currentJob == null || currentJob.id != entry.get(JOB_ID, Long.class)) {
         try (var ignored = jobStopwatch.start()) {
           currentJob = getJobFromRecord(entry);
         }
@@ -517,7 +517,7 @@ public class DefaultJobPersistence implements JobPersistence {
       }
       if (entry.getValue(ATTEMPT_NUMBER_FIELD) != null) {
         try (var ignored = attemptStopwatch.start()) {
-          currentJob.getAttempts().add(getAttemptFromRecord(entry));
+          currentJob.attempts.add(getAttemptFromRecord(entry));
         }
       }
     }
@@ -535,12 +535,12 @@ public class DefaultJobPersistence implements JobPersistence {
     final List<Job> jobs = new ArrayList<>();
     Job currentJob = null;
     for (final Record entry : result) {
-      if (currentJob == null || currentJob.getId() != entry.get(JOB_ID, Long.class)) {
+      if (currentJob == null || currentJob.id != entry.get(JOB_ID, Long.class)) {
         currentJob = getJobFromRecord(entry);
         jobs.add(currentJob);
       }
       if (entry.getValue(ATTEMPT_NUMBER_FIELD) != null) {
-        currentJob.getAttempts().add(getAttemptFromRecordLight(entry));
+        currentJob.attempts.add(getAttemptFromRecordLight(entry));
       }
     }
     return jobs;
@@ -689,14 +689,14 @@ public class DefaultJobPersistence implements JobPersistence {
       if (job.isJobInTerminalState()) {
         final var errMsg = String.format(
             "Cannot create an attempt for a job id: %s that is in a terminal state: %s for connection id: %s",
-            job.getId(), job.getStatus(), job.getScope());
+            job.id, job.status, job.scope);
         throw new IllegalStateException(errMsg);
       }
 
       if (job.hasRunningAttempt()) {
         final var errMsg = String.format(
             "Cannot create an attempt for a job id: %s that has a running attempt: %s for connection id: %s",
-            job.getId(), job.getStatus(), job.getScope());
+            job.id, job.status, job.scope);
         throw new IllegalStateException(errMsg);
       }
 
@@ -772,7 +772,7 @@ public class DefaultJobPersistence implements JobPersistence {
     final OffsetDateTime now = OffsetDateTime.ofInstant(timeSupplier.get(), ZoneOffset.UTC);
 
     final Job job = getJob(jobId);
-    final UUID connectionId = UUID.fromString(job.getScope());
+    final UUID connectionId = UUID.fromString(job.scope);
     jobDatabase.transaction(ctx -> {
       ctx.update(ATTEMPTS)
           .set(ATTEMPTS.OUTPUT, JSONB.valueOf(Jsons.serialize(output)))

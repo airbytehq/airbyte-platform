@@ -6,9 +6,9 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.commons.auth.roles.OrganizationAuthRole
 import io.airbyte.commons.auth.roles.WorkspaceAuthRole
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Permission
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.OrgMemberCount
 import io.airbyte.data.repositories.PermissionRepository
 import io.airbyte.data.services.InvalidServiceAccountPermissionRequestException
@@ -31,7 +31,7 @@ open class PermissionServiceDataImpl(
   override fun getPermission(permissionId: UUID): Permission =
     permissionRepository
       .findById(permissionId)
-      .orElseThrow { ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId") }
+      .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "Permission not found: $permissionId") }
       .toConfigModel()
 
   override fun listPermissions(): List<Permission> = permissionRepository.find().map { it.toConfigModel() }
@@ -54,12 +54,12 @@ open class PermissionServiceDataImpl(
     throwIfDeletingLastOrgAdmin(permissionsToDelete)
 
     if (permissionsToDelete.isEmpty()) {
-      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: $permissionId")
+      throw ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "Permission not found: $permissionId")
     }
 
     val user = permissionsToDelete.first().userId
     if (user == null) {
-      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permission: $permissionId")
+      throw ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "User not found for permission: $permissionId")
     }
 
     val userPermissions = getPermissionsForUser(user)
@@ -73,12 +73,12 @@ open class PermissionServiceDataImpl(
     throwIfDeletingLastOrgAdmin(permissionsToDelete)
 
     if (permissionsToDelete.isEmpty()) {
-      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "Permissions not found: $permissionIds")
+      throw ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "Permissions not found: $permissionIds")
     }
 
     val user = permissionsToDelete.first().userId
     if (user == null) {
-      throw ConfigNotFoundException(ConfigSchema.PERMISSION, "User not found for permissions: $permissionIds")
+      throw ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "User not found for permissions: $permissionIds")
     }
 
     if (permissionsToDelete.map { it.userId }.toSet().size > 1) {
@@ -218,7 +218,7 @@ open class PermissionServiceDataImpl(
     val priorPermission =
       permissionRepository
         .findById(updatedPermission.permissionId)
-        .orElseThrow { ConfigNotFoundException(ConfigSchema.PERMISSION, "Permission not found: ${updatedPermission.permissionId}") }
+        .orElseThrow { ConfigNotFoundException(ConfigNotFoundType.PERMISSION, "Permission not found: ${updatedPermission.permissionId}") }
 
     // return early if the permission was not an org admin prior to the update
     if (priorPermission.permissionType != PermissionType.organization_admin) {

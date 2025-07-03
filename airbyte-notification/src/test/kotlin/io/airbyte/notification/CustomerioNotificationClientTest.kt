@@ -58,7 +58,7 @@ internal class CustomerioNotificationClientTest {
     mockWebServer.enqueue(MockResponse())
 
     val result =
-      customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, "{}")
+      customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, "{}", UUID.randomUUID())
 
     Assertions.assertTrue(result)
 
@@ -75,7 +75,7 @@ internal class CustomerioNotificationClientTest {
     mockWebServer.enqueue(MockResponse().setResponseCode(500))
     Assertions.assertThrows(
       IOException::class.java,
-    ) { customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, "") }
+    ) { customerioNotificationClient.sendNotifyRequest(API_ENDPOINT, "", UUID.randomUUID()) }
   }
 
   @Test

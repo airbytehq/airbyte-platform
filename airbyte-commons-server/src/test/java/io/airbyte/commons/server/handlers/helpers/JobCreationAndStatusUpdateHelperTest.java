@@ -90,21 +90,21 @@ class JobCreationAndStatusUpdateHelperTest {
 
     final var result1 = helper.findPreviousJob(jobs, 1);
     assertTrue(result1.isPresent());
-    assertEquals(2, result1.get().getId());
+    assertEquals(2, result1.get().id);
     final var result2 = helper.findPreviousJob(jobs, 2);
     assertTrue(result2.isPresent());
-    assertEquals(3, result2.get().getId());
+    assertEquals(3, result2.get().id);
     final var result3 = helper.findPreviousJob(jobs, 3);
     assertTrue(result3.isEmpty());
     final var result4 = helper.findPreviousJob(jobs, 4);
     assertTrue(result4.isPresent());
-    assertEquals(1, result4.get().getId());
+    assertEquals(1, result4.get().id);
     final var result5 = helper.findPreviousJob(jobs, 5);
     assertTrue(result5.isPresent());
-    assertEquals(4, result5.get().getId());
+    assertEquals(4, result5.get().id);
     final var result6 = helper.findPreviousJob(jobs, 6);
     assertTrue(result6.isPresent());
-    assertEquals(5, result6.get().getId());
+    assertEquals(5, result6.get().id);
     final var result7 = helper.findPreviousJob(jobs, 7);
     assertTrue(result7.isEmpty());
     final var result8 = helper.findPreviousJob(jobs, 8);
@@ -145,19 +145,19 @@ class JobCreationAndStatusUpdateHelperTest {
 
     when(mJobPersistence.listJobsForConnectionWithStatuses(Fixtures.CONNECTION_ID, Job.REPLICATION_TYPES, JobStatus.NON_TERMINAL_STATUSES))
         .thenReturn(List.of(runningJob, pendingJob));
-    when(mJobPersistence.getJob(runningJob.getId())).thenReturn(runningJob);
-    when(mJobPersistence.getJob(pendingJob.getId())).thenReturn(pendingJob);
+    when(mJobPersistence.getJob(runningJob.id)).thenReturn(runningJob);
+    when(mJobPersistence.getJob(pendingJob.id)).thenReturn(pendingJob);
 
     helper.failNonTerminalJobs(Fixtures.CONNECTION_ID);
 
-    verify(mJobPersistence).failJob(runningJob.getId());
-    verify(mJobPersistence).failJob(pendingJob.getId());
-    verify(mJobPersistence).getAttemptStats(runningJob.getId(), attemptNo1);
-    verify(mJobPersistence).getAttemptStats(runningJob.getId(), attemptNo2);
-    verify(mJobPersistence).failAttempt(runningJob.getId(), attemptNo2);
-    verify(mJobPersistence).writeAttemptFailureSummary(eq(runningJob.getId()), eq(attemptNo2), any());
-    verify(mJobPersistence).getJob(runningJob.getId());
-    verify(mJobPersistence).getJob(pendingJob.getId());
+    verify(mJobPersistence).failJob(runningJob.id);
+    verify(mJobPersistence).failJob(pendingJob.id);
+    verify(mJobPersistence).getAttemptStats(runningJob.id, attemptNo1);
+    verify(mJobPersistence).getAttemptStats(runningJob.id, attemptNo2);
+    verify(mJobPersistence).failAttempt(runningJob.id, attemptNo2);
+    verify(mJobPersistence).writeAttemptFailureSummary(eq(runningJob.id), eq(attemptNo2), any());
+    verify(mJobPersistence).getJob(runningJob.id);
+    verify(mJobPersistence).getJob(pendingJob.id);
     verify(mJobNotifier).failJob(eq(runningJob), any());
     verify(mJobNotifier).failJob(eq(pendingJob), any());
     verify(mJobTracker).trackSync(runningJob, JobState.FAILED);
@@ -231,16 +231,23 @@ class JobCreationAndStatusUpdateHelperTest {
 
     private static final long JOB_ID = 123L;
 
+    private static final JobConfig JOB_CONFIG = new JobConfig().withConfigType(SYNC).withSync(new JobSyncConfig()
+        .withSourceDockerImage("sourceDockerImage")
+        .withDestinationDockerImage("destinationDockerImage")
+        .withWorkspaceId(UUID.randomUUID())
+        .withSourceDefinitionVersionId(UUID.randomUUID())
+        .withDestinationDefinitionVersionId(UUID.randomUUID()));
+
     static Job job(final long id, final long createdAt) {
-      return new Job(id, null, null, null, null, null, null, createdAt, 0, true);
+      return new Job(id, SYNC, CONNECTION_ID.toString(), JOB_CONFIG, List.of(), JobStatus.PENDING, null, createdAt, 0, false);
     }
 
     static Job job(final JobStatus status) {
-      return new Job(1, null, null, null, null, status, null, 0, 0, true);
+      return new Job(1, SYNC, CONNECTION_ID.toString(), JOB_CONFIG, List.of(), status, null, 0, 0, true);
     }
 
     static Job job(final long id, final List<Attempt> attempts, final JobStatus status) {
-      return new Job(id, null, null, null, attempts, status, null, 0, 0, true);
+      return new Job(id, SYNC, CONNECTION_ID.toString(), JOB_CONFIG, attempts, status, null, 0, 0, true);
     }
 
     static Attempt attempt(final int number, final long jobId, final AttemptStatus status) {

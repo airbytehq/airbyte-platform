@@ -25,7 +25,7 @@ import io.airbyte.config.SourceOAuthParameter;
 import io.airbyte.config.StandardDestinationDefinition;
 import io.airbyte.config.StandardSourceDefinition;
 import io.airbyte.config.persistence.ActorDefinitionVersionHelper;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.DestinationService;
 import io.airbyte.data.services.OAuthService;
 import io.airbyte.data.services.SourceService;
@@ -212,6 +212,8 @@ public class ConnectorDefinitionSpecificationHandler {
           finalSyncModes.add(DestinationSyncMode.OVERWRITE);
           hasOverwrite = true;
         }
+        case UPDATE -> finalSyncModes.add(DestinationSyncMode.UPDATE);
+        case SOFT_DELETE -> finalSyncModes.add(DestinationSyncMode.SOFT_DELETE);
         default -> throw new IllegalStateException("Unexpected value: " + syncMode);
       }
     }

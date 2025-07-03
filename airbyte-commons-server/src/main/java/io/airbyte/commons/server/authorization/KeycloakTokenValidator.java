@@ -19,6 +19,7 @@ import io.airbyte.commons.auth.config.AuthMode;
 import io.airbyte.commons.auth.roles.AuthRole;
 import io.airbyte.commons.auth.support.JwtTokenParser;
 import io.airbyte.commons.json.Jsons;
+import io.airbyte.data.auth.TokenType;
 import io.airbyte.metrics.MetricAttribute;
 import io.airbyte.metrics.MetricClient;
 import io.airbyte.metrics.OssMetricsRegistry;
@@ -39,6 +40,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
+import kotlin.Pair;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
@@ -130,6 +132,8 @@ public class KeycloakTokenValidator implements TokenValidator<HttpRequest<?>> {
       if (isInternalServiceAccount(userAttributeMap)) {
         log.debug("Performing authentication for internal service account...");
         final String clientName = jwtPayload.get("azp").asText();
+        final Pair<String, String> tokenTypeClaim = TokenType.LEGACY_KEYCLOAK_SERVICE_ACCOUNT.toClaim();
+        userAttributeMap.put(tokenTypeClaim.component1(), tokenTypeClaim.component2());
         metricClient.ifPresent(m -> m.count(OssMetricsRegistry.KEYCLOAK_TOKEN_VALIDATION,
             AUTHENTICATION_SUCCESS_METRIC_ATTRIBUTE,
             new MetricAttribute(MetricTags.USER_TYPE, INTERNAL_SERVICE_ACCOUNT),

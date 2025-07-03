@@ -43,7 +43,7 @@ import io.airbyte.commons.server.handlers.helpers.WorkspaceHelpersKt;
 import io.airbyte.config.Application;
 import io.airbyte.config.AuthUser;
 import io.airbyte.config.AuthenticatedUser;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.Organization;
 import io.airbyte.config.OrganizationEmailDomain;
 import io.airbyte.config.Permission;
@@ -157,7 +157,7 @@ public class UserHandler {
     if (user.isPresent()) {
       return buildUserRead(AuthenticatedUserConverter.toUser(user.get()));
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
+      throw new ConfigNotFoundException(ConfigNotFoundType.USER, String.format("User not found by auth request: %s", userAuthIdRequestBody));
     }
   }
 
@@ -174,14 +174,14 @@ public class UserHandler {
     if (user.isPresent()) {
       return buildUserRead(user.get());
     } else {
-      throw new ConfigNotFoundException(ConfigSchema.USER, String.format("User not found by email request: %s", userEmailRequestBody));
+      throw new ConfigNotFoundException(ConfigNotFoundType.USER, String.format("User not found by email request: %s", userEmailRequestBody));
     }
   }
 
   private UserRead buildUserRead(final UUID userId) throws ConfigNotFoundException, IOException {
     final Optional<User> user = userPersistence.getUser(userId);
     if (user.isEmpty()) {
-      throw new ConfigNotFoundException(ConfigSchema.USER, userId);
+      throw new ConfigNotFoundException(ConfigNotFoundType.USER, userId);
     }
     return buildUserRead(user.get());
   }
@@ -375,7 +375,7 @@ public class UserHandler {
     // refresh the user from the database in case anything changed during permission/workspace
     // modification
     final User updatedUser = userPersistence.getUser(createdUser.getUserId())
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, createdUser.getUserId()));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.USER, createdUser.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
@@ -390,7 +390,7 @@ public class UserHandler {
     userPersistence.replaceAuthUserForUserId(existingUser.getUserId(), incomingJwtUser.getAuthUserId(), incomingJwtUser.getAuthProvider());
 
     final User updatedUser = userPersistence.getUser(existingUser.getUserId())
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, existingUser.getUserId()));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.USER, existingUser.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))
@@ -440,7 +440,7 @@ public class UserHandler {
     // refresh the user from the database in case anything changed during permission/workspace
     // modification
     final User updatedUser = userPersistence.getUser(userRead.getUserId())
-        .orElseThrow(() -> new ConfigNotFoundException(ConfigSchema.USER, userRead.getUserId()));
+        .orElseThrow(() -> new ConfigNotFoundException(ConfigNotFoundType.USER, userRead.getUserId()));
 
     return new UserGetOrCreateByAuthIdResponse()
         .userRead(buildUserRead(updatedUser))

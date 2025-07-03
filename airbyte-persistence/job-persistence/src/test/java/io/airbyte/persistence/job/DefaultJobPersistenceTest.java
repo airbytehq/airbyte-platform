@@ -302,8 +302,8 @@ class DefaultJobPersistenceTest {
 
     final Job updated = jobPersistence.getJob(jobId);
 
-    assertEquals(Optional.of(jobOutput), updated.getAttempts().get(0).getOutput());
-    assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+    assertEquals(Optional.of(jobOutput), updated.attempts.get(0).getOutput());
+    assertNotEquals(created.attempts.get(0).updatedAtInSecond(), updated.attempts.get(0).updatedAtInSecond());
 
     final AttemptStats attemptStats = jobPersistence.getAttemptStats(jobId, attemptNumber);
 
@@ -343,8 +343,8 @@ class DefaultJobPersistenceTest {
     jobPersistence.writeAttemptSyncConfig(jobId, attemptNumber, attemptSyncConfig);
 
     final Job updated = jobPersistence.getJob(jobId);
-    assertEquals(Optional.of(attemptSyncConfig), updated.getAttempts().get(0).getSyncConfig());
-    assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+    assertEquals(Optional.of(attemptSyncConfig), updated.attempts.get(0).getSyncConfig());
+    assertNotEquals(created.attempts.get(0).updatedAtInSecond(), updated.attempts.get(0).updatedAtInSecond());
   }
 
   @Test
@@ -360,8 +360,8 @@ class DefaultJobPersistenceTest {
     jobPersistence.writeAttemptFailureSummary(jobId, attemptNumber, failureSummary);
 
     final Job updated = jobPersistence.getJob(jobId);
-    assertEquals(Optional.of(failureSummary), updated.getAttempts().get(0).getFailureSummary());
-    assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+    assertEquals(Optional.of(failureSummary), updated.attempts.get(0).getFailureSummary());
+    assertNotEquals(created.attempts.get(0).updatedAtInSecond(), updated.attempts.get(0).updatedAtInSecond());
   }
 
   @Test
@@ -380,8 +380,8 @@ class DefaultJobPersistenceTest {
 
     Assertions.assertDoesNotThrow(() -> {
       final Job updated = jobPersistence.getJob(jobId);
-      assertTrue(updated.getAttempts().get(0).getFailureSummary().isPresent());
-      assertNotEquals(created.getAttempts().get(0).getUpdatedAtInSecond(), updated.getAttempts().get(0).getUpdatedAtInSecond());
+      assertTrue(updated.attempts.get(0).getFailureSummary().isPresent());
+      assertNotEquals(created.attempts.get(0).updatedAtInSecond(), updated.attempts.get(0).updatedAtInSecond());
     });
   }
 
@@ -489,10 +489,10 @@ class DefaultJobPersistenceTest {
 
     final List<Job> jobs = jobPersistence.listJobs(ConfigType.SYNC, Instant.EPOCH);
     assertEquals(jobs.size(), 1);
-    assertEquals(jobs.get(0).getId(), syncJobId);
-    assertEquals(jobs.get(0).getAttempts().size(), 2);
-    assertEquals(jobs.get(0).getAttempts().get(0).getAttemptNumber(), 0);
-    assertEquals(jobs.get(0).getAttempts().get(1).getAttemptNumber(), 1);
+    assertEquals(jobs.get(0).id, syncJobId);
+    assertEquals(jobs.get(0).attempts.size(), 2);
+    assertEquals(jobs.get(0).attempts.get(0).getAttemptNumber(), 0);
+    assertEquals(jobs.get(0).attempts.get(1).getAttemptNumber(), 1);
 
     final Path syncJobThirdAttemptLogPath = LOG_PATH.resolve("3");
     final int syncJobAttemptNumber2 = jobPersistence.createAttempt(syncJobId, syncJobThirdAttemptLogPath);
@@ -506,22 +506,22 @@ class DefaultJobPersistenceTest {
     jobPersistence.succeedAttempt(newSyncJobId, newSyncJobAttemptNumber1);
 
     final Long maxEndedAtTimestamp =
-        jobs.get(0).getAttempts().stream().map(c -> c.getEndedAtInSecond().orElseThrow()).max(Long::compareTo).orElseThrow();
+        jobs.get(0).attempts.stream().map(c -> c.getEndedAtInSecond().orElseThrow()).max(Long::compareTo).orElseThrow();
 
     final List<Job> secondQueryJobs = jobPersistence.listJobs(ConfigType.SYNC, Instant.ofEpochSecond(maxEndedAtTimestamp));
     assertEquals(secondQueryJobs.size(), 2);
-    assertEquals(secondQueryJobs.get(0).getId(), syncJobId);
-    assertEquals(secondQueryJobs.get(0).getAttempts().size(), 1);
-    assertEquals(secondQueryJobs.get(0).getAttempts().get(0).getAttemptNumber(), 2);
+    assertEquals(secondQueryJobs.get(0).id, syncJobId);
+    assertEquals(secondQueryJobs.get(0).attempts.size(), 1);
+    assertEquals(secondQueryJobs.get(0).attempts.get(0).getAttemptNumber(), 2);
 
-    assertEquals(secondQueryJobs.get(1).getId(), newSyncJobId);
-    assertEquals(secondQueryJobs.get(1).getAttempts().size(), 2);
-    assertEquals(secondQueryJobs.get(1).getAttempts().get(0).getAttemptNumber(), 0);
-    assertEquals(secondQueryJobs.get(1).getAttempts().get(1).getAttemptNumber(), 1);
+    assertEquals(secondQueryJobs.get(1).id, newSyncJobId);
+    assertEquals(secondQueryJobs.get(1).attempts.size(), 2);
+    assertEquals(secondQueryJobs.get(1).attempts.get(0).getAttemptNumber(), 0);
+    assertEquals(secondQueryJobs.get(1).attempts.get(1).getAttemptNumber(), 1);
 
     Long maxEndedAtTimestampAfterSecondQuery = -1L;
     for (final Job c : secondQueryJobs) {
-      final List<Attempt> attempts = c.getAttempts();
+      final List<Attempt> attempts = c.attempts;
       final Long maxEndedAtTimestampForJob = attempts.stream().map(attempt -> attempt.getEndedAtInSecond().orElseThrow())
           .max(Long::compareTo).orElseThrow();
       if (maxEndedAtTimestampForJob > maxEndedAtTimestampAfterSecondQuery) {
@@ -1102,8 +1102,8 @@ class DefaultJobPersistenceTest {
       jobPersistence.cancelJob(jobId);
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.CANCELLED, updated.getStatus());
-      assertNotEquals(created.getUpdatedAtInSecond(), updated.getUpdatedAtInSecond());
+      assertEquals(JobStatus.CANCELLED, updated.status);
+      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond);
     }
 
     @Test
@@ -1116,7 +1116,7 @@ class DefaultJobPersistenceTest {
       assertDoesNotThrow(() -> jobPersistence.cancelJob(jobId));
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.SUCCEEDED, updated.getStatus());
+      assertEquals(JobStatus.SUCCEEDED, updated.status);
     }
 
   }
@@ -1150,12 +1150,12 @@ class DefaultJobPersistenceTest {
 
       final Job jobAfterOneAttempts = jobPersistence.getJob(jobId);
       assertEquals(0, attemptNumber1);
-      assertEquals(0, jobAfterOneAttempts.getAttempts().get(0).getAttemptNumber());
+      assertEquals(0, jobAfterOneAttempts.attempts.get(0).getAttemptNumber());
 
       final int attemptNumber2 = jobPersistence.createAttempt(jobId, LOG_PATH);
       final Job jobAfterTwoAttempts = jobPersistence.getJob(jobId);
       assertEquals(1, attemptNumber2);
-      assertEquals(Sets.newHashSet(0, 1), jobAfterTwoAttempts.getAttempts().stream().map(Attempt::getAttemptNumber).collect(Collectors.toSet()));
+      assertEquals(Sets.newHashSet(0, 1), jobAfterTwoAttempts.attempts.stream().map(Attempt::getAttemptNumber).collect(Collectors.toSet()));
     }
 
     @Test
@@ -1276,8 +1276,8 @@ class DefaultJobPersistenceTest {
           afterNow);
 
       assertEquals(2, attempts.size());
-      assertEquals(jobId2, attempts.get(0).getJobInfo().getId());
-      assertEquals(jobId3, attempts.get(1).getJobInfo().getId());
+      assertEquals(jobId2, attempts.get(0).jobInfo.id);
+      assertEquals(jobId3, attempts.get(1).jobInfo.id);
     }
 
   }
@@ -1341,8 +1341,8 @@ class DefaultJobPersistenceTest {
       jobPersistence.failJob(jobId);
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.FAILED, updated.getStatus());
-      assertNotEquals(created.getUpdatedAtInSecond(), updated.getUpdatedAtInSecond());
+      assertEquals(JobStatus.FAILED, updated.status);
+      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond);
     }
 
     @Test
@@ -1355,7 +1355,7 @@ class DefaultJobPersistenceTest {
       assertDoesNotThrow(() -> jobPersistence.failJob(jobId));
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.SUCCEEDED, updated.getStatus());
+      assertEquals(JobStatus.SUCCEEDED, updated.status);
     }
 
   }
@@ -1431,7 +1431,7 @@ class DefaultJobPersistenceTest {
 
       // Return the latest sync job even if failed
       jobPersistence.failAttempt(jobId2, attemptNumber);
-      final Attempt attempt = jobPersistence.getJob(jobId2).getAttempts().stream().findFirst().orElseThrow();
+      final Attempt attempt = jobPersistence.getJob(jobId2).attempts.stream().findFirst().orElseThrow();
       jobPersistence.failJob(jobId2);
 
       final Optional<Job> actual = jobPersistence.getLastSyncJob(CONNECTION_ID);
@@ -1568,7 +1568,7 @@ class DefaultJobPersistenceTest {
       // create a running job/attempt for scope2
       final long scope2Job2 = jobPersistence.enqueueJob(SCOPE_2, SYNC_JOB_CONFIG, true).orElseThrow();
       jobPersistence.createAttempt(scope2Job2, LOG_PATH);
-      final Attempt scope2Job2attempt = jobPersistence.getJob(scope2Job2).getAttempts().stream().findFirst().orElseThrow();
+      final Attempt scope2Job2attempt = jobPersistence.getJob(scope2Job2).attempts.stream().findFirst().orElseThrow();
 
       final List<Job> expected = new ArrayList<>();
       expected.add(createJob(scope2Job2, SYNC_JOB_CONFIG, JobStatus.RUNNING, List.of(scope2Job2attempt), afterNow.getEpochSecond(), SCOPE_2, true));
@@ -1615,7 +1615,7 @@ class DefaultJobPersistenceTest {
     void testGetRunningJobForConnection() throws IOException {
       final long scope1Job1 = jobPersistence.enqueueJob(SCOPE_1, SYNC_JOB_CONFIG, true).orElseThrow();
       jobPersistence.createAttempt(scope1Job1, LOG_PATH);
-      final Attempt scope1Job1Attempt = jobPersistence.getJob(scope1Job1).getAttempts().stream().findFirst().orElseThrow();
+      final Attempt scope1Job1Attempt = jobPersistence.getJob(scope1Job1).attempts.stream().findFirst().orElseThrow();
 
       final Instant afterNow = NOW;
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -1632,7 +1632,7 @@ class DefaultJobPersistenceTest {
     void testGetRunningSyncJobsForConnectionsEmptyBecauseOnlyReset() throws IOException {
       final long jobId = jobPersistence.enqueueJob(SCOPE_1, RESET_JOB_CONFIG, true).orElseThrow();
       jobPersistence.createAttempt(jobId, LOG_PATH);
-      final Attempt scope1Job1Attempt = jobPersistence.getJob(jobId).getAttempts().stream().findFirst().orElseThrow();
+      final Attempt scope1Job1Attempt = jobPersistence.getJob(jobId).attempts.stream().findFirst().orElseThrow();
 
       final Instant afterNow = NOW;
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -1666,7 +1666,7 @@ class DefaultJobPersistenceTest {
       jobPersistence.succeedAttempt(jobId1, jobPersistence.createAttempt(jobId1, LOG_PATH));
       final List<AttemptWithJobInfo> attemptsWithJobInfo =
           jobPersistence.listAttemptsWithJobInfo(SYNC_JOB_CONFIG.getConfigType(), Instant.EPOCH, 1000);
-      final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).getAttempt());
+      final List<Attempt> attempts = Collections.singletonList(attemptsWithJobInfo.get(0).attempt);
 
       final Instant afterNow = NOW.plusSeconds(1000);
       when(timeSupplier.get()).thenReturn(afterNow);
@@ -1769,7 +1769,7 @@ class DefaultJobPersistenceTest {
     void testGetJobCountWithCreatedAtStart() throws IOException {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
-      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+      final Long jobCreatedAtSeconds = job.createdAtInSecond;
 
       final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
       final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobCreatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
@@ -1788,7 +1788,7 @@ class DefaultJobPersistenceTest {
     void testGetJobCountCreatedAtEnd() throws IOException {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
-      final Long jobCreatedAtSeconds = job.getCreatedAtInSecond();
+      final Long jobCreatedAtSeconds = job.createdAtInSecond;
 
       final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).minusHours(1);
       final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond(jobCreatedAtSeconds), ZoneOffset.UTC).plusHours(1);
@@ -1807,7 +1807,7 @@ class DefaultJobPersistenceTest {
     void testGetJobCountWithUpdatedAtStart() throws IOException {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
-      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+      final Long jobUpdatedAtSeconds = job.updatedAtInSecond;
 
       final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
       final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
@@ -1826,7 +1826,7 @@ class DefaultJobPersistenceTest {
     void testGetJobCountUpdatedAtEnd() throws IOException {
       final Long jobId = jobPersistence.enqueueJob(SCOPE, CHECK_JOB_CONFIG, true).orElseThrow();
       final Job job = jobPersistence.getJob(jobId);
-      final Long jobUpdatedAtSeconds = job.getUpdatedAtInSecond();
+      final Long jobUpdatedAtSeconds = job.updatedAtInSecond;
 
       final OffsetDateTime oneHourEarlier = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).minusHours(1);
       final OffsetDateTime oneHourLater = OffsetDateTime.ofInstant(Instant.ofEpochSecond((jobUpdatedAtSeconds)), ZoneOffset.UTC).plusHours(1);
@@ -1882,7 +1882,7 @@ class DefaultJobPersistenceTest {
       final int pagesize = 10;
       final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), pagesize);
       assertEquals(pagesize, actualList.size());
-      assertEquals(ids.get(ids.size() - 1), actualList.get(0).getId());
+      assertEquals(ids.get(ids.size() - 1), actualList.get(0).id);
     }
 
     @Test
@@ -1898,7 +1898,7 @@ class DefaultJobPersistenceTest {
       final int pagesize = 200;
       final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), pagesize);
       for (int i = 0; i < 100; i++) {
-        assertEquals(ids.get(ids.size() - (i + 1)), actualList.get(i).getId(), "Job ids should have been in order but weren't.");
+        assertEquals(ids.get(ids.size() - (i + 1)), actualList.get(i).id, "Job ids should have been in order but weren't.");
       }
     }
 
@@ -1986,7 +1986,7 @@ class DefaultJobPersistenceTest {
       final List<Job> actualList = jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), CONNECTION_ID.toString(), 9999);
 
       assertEquals(2, actualList.size());
-      assertEquals(jobId2, actualList.get(0).getId());
+      assertEquals(jobId2, actualList.get(0).id);
     }
 
     @Test
@@ -2011,11 +2011,11 @@ class DefaultJobPersistenceTest {
       final List<Job> updatedAtJobs =
           jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "updatedAt", "ASC");
       assertEquals(1, updatedAtJobs.size());
-      assertEquals(jobId2, updatedAtJobs.get(0).getId());
+      assertEquals(jobId2, updatedAtJobs.get(0).id);
       final List<Job> createdAtJobs =
           jobPersistence.listJobs(Set.of(SPEC_JOB_CONFIG.getConfigType()), configId, 1, 0, null, null, null, null, null, "createdAt", "ASC");
       assertEquals(1, createdAtJobs.size());
-      assertEquals(jobId1, createdAtJobs.get(0).getId());
+      assertEquals(jobId1, createdAtJobs.get(0).id);
     }
 
     @Test
@@ -2052,7 +2052,7 @@ class DefaultJobPersistenceTest {
           null,
           null);
 
-      assertEquals(new HashSet<>(ids), jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+      assertEquals(new HashSet<>(ids), jobs.stream().map(j -> j.id).collect(Collectors.toSet()));
     }
 
     @Test
@@ -2082,7 +2082,7 @@ class DefaultJobPersistenceTest {
           null,
           null);
 
-      assertEquals(idsConnection1, jobs.stream().map(Job::getId).collect(Collectors.toSet()));
+      assertEquals(idsConnection1, jobs.stream().map(j -> j.id).collect(Collectors.toSet()));
     }
 
     @Test
@@ -2109,7 +2109,7 @@ class DefaultJobPersistenceTest {
           null,
           null);
 
-      final Set<Long> actualIds = jobs.stream().map(Job::getId).collect(Collectors.toSet());
+      final Set<Long> actualIds = jobs.stream().map(j -> j.id).collect(Collectors.toSet());
       assertEquals(2, actualIds.size());
       assertFalse(actualIds.contains(jobId3));
       assertTrue(actualIds.contains(jobId1));
@@ -2139,7 +2139,7 @@ class DefaultJobPersistenceTest {
       final List<Job> actualList = jobPersistence.listJobsIncludingId(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()),
           null, ids.get(includingIdIndex), pageSize);
       final List<Long> expectedJobIds = Lists.reverse(ids.subList(ids.size() - pageSize, ids.size()));
-      assertEquals(expectedJobIds, actualList.stream().map(Job::getId).toList());
+      assertEquals(expectedJobIds, actualList.stream().map(j -> j.id).toList());
     }
 
     @Test
@@ -2163,7 +2163,7 @@ class DefaultJobPersistenceTest {
       final List<Job> actualList = jobPersistence.listJobsIncludingId(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()),
           CONNECTION_ID.toString(), ids.get(includingIdIndex), pageSize);
       final List<Long> expectedJobIds = Lists.reverse(ids.subList(ids.size() - pageSize, ids.size()));
-      assertEquals(expectedJobIds, actualList.stream().map(Job::getId).toList());
+      assertEquals(expectedJobIds, actualList.stream().map(j -> j.id).toList());
     }
 
     @Test
@@ -2188,7 +2188,7 @@ class DefaultJobPersistenceTest {
       final List<Job> actualList = jobPersistence.listJobsIncludingId(Set.of(SPEC_JOB_CONFIG.getConfigType(), CHECK_JOB_CONFIG.getConfigType()),
           CONNECTION_ID.toString(), ids.get(includingIdIndex), pageSize);
       final List<Long> expectedJobIds = Lists.reverse(ids.subList(ids.size() - (pageSize * 2), ids.size()));
-      assertEquals(expectedJobIds, actualList.stream().map(Job::getId).toList());
+      assertEquals(expectedJobIds, actualList.stream().map(j -> j.id).toList());
     }
 
     @Test
@@ -2270,8 +2270,8 @@ class DefaultJobPersistenceTest {
       jobPersistence.resetJob(jobId);
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.PENDING, updated.getStatus());
-      assertNotEquals(created.getUpdatedAtInSecond(), updated.getUpdatedAtInSecond());
+      assertEquals(JobStatus.PENDING, updated.status);
+      assertNotEquals(created.updatedAtInSecond, updated.updatedAtInSecond);
     }
 
     @Test
@@ -2283,7 +2283,7 @@ class DefaultJobPersistenceTest {
       assertDoesNotThrow(() -> jobPersistence.resetJob(jobId));
 
       final Job updated = jobPersistence.getJob(jobId);
-      assertEquals(JobStatus.CANCELLED, updated.getStatus());
+      assertEquals(JobStatus.CANCELLED, updated.status);
     }
 
   }

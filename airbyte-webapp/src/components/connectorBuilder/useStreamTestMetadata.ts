@@ -14,6 +14,7 @@ import {
   DeclarativeStreamType,
   DynamicDeclarativeStream,
   PrimaryKey,
+  StateDelegatingStream,
 } from "core/api/types/ConnectorManifest";
 import { ConnectorBuilderMainRHFContext } from "services/connectorBuilder/ConnectorBuilderStateService";
 
@@ -62,7 +63,7 @@ export const useStreamTestMetadata = () => {
 
   const resolveStreamFromStreamId = useResolveStreamFromStreamId(getValues);
   const updateStreamTestResults = useCallback(
-    (streamRead: StreamReadTransformedSlices, resolvedTestStream: DeclarativeComponentSchemaStreamsItem) => {
+    (streamRead: StreamReadTransformedSlices, resolvedTestStream: DeclarativeStream | StateDelegatingStream) => {
       const streamTestResults = computeStreamTestResults(streamRead, resolvedTestStream);
 
       const streamName = resolvedTestStream.name ?? "";

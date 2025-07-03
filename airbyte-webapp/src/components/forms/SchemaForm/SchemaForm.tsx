@@ -23,6 +23,7 @@ interface SchemaFormProps<JsonSchema extends AirbyteJsonSchema, TsSchema extends
   onError?: (e: Error, values: TsSchema) => void;
   initialValues?: DefaultValues<TsSchema>;
   formClassName?: string;
+  refBasePath?: string;
   refTargetPath?: string;
   onlyShowErrorIfTouched?: boolean;
   disableFormControlsUnderPath?: string;
@@ -37,6 +38,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
   onError,
   initialValues,
   formClassName,
+  refBasePath,
   refTargetPath,
   onlyShowErrorIfTouched,
   disableFormControlsUnderPath,
@@ -46,7 +48,10 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
     () => initialValues ?? extractDefaultValuesFromSchema<TsSchema>(schema, schema),
     [initialValues, schema]
   );
-  const resolvedStartingValues = useMemo(() => resolveRefs(rawStartingValues), [rawStartingValues]);
+  const resolvedStartingValues = useMemo(
+    () => resolveRefs(rawStartingValues, rawStartingValues, refBasePath, refTargetPath),
+    [rawStartingValues, refBasePath, refTargetPath]
+  );
   const methods = useForm<TsSchema>({
     criteriaMode: "all",
     mode: "onChange",
@@ -82,7 +87,7 @@ export const SchemaForm = <JsonSchema extends AirbyteJsonSchema, TsSchema extend
         onlyShowErrorIfTouched={onlyShowErrorIfTouched}
         disableFormControlsUnderPath={disableFormControlsUnderPath}
       >
-        <RefsHandlerProvider values={rawStartingValues} refTargetPath={refTargetPath}>
+        <RefsHandlerProvider values={rawStartingValues} refBasePath={refBasePath} refTargetPath={refTargetPath}>
           <form className={formClassName} onSubmit={methods.handleSubmit(processSubmission)}>
             {children}
           </form>

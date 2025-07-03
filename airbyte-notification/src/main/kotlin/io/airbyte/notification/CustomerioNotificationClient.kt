@@ -39,6 +39,7 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 
 private val log = KotlinLogging.logger { }
 
@@ -118,8 +119,9 @@ class CustomerioNotificationClient : NotificationClient {
     val node = buildSyncCompletedJson(summary, receiverEmail, SYNC_FAILURE_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending job failure email notification for workspaceId ${summary.workspace.id}" }
       false
     }
   }
@@ -131,8 +133,9 @@ class CustomerioNotificationClient : NotificationClient {
     val node = buildSyncCompletedJson(summary, receiverEmail, SYNC_SUCCEED_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending job succcess email notification for workspaceId ${summary.workspace.id}" }
       false
     }
   }
@@ -147,8 +150,9 @@ class CustomerioNotificationClient : NotificationClient {
     val node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_TRANSACTION_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending connection disabled warning email notification for workspaceId ${summary.workspace.id}" }
       false
     }
   }
@@ -160,8 +164,9 @@ class CustomerioNotificationClient : NotificationClient {
     val node = buildSyncCompletedJson(summary, receiverEmail, AUTO_DISABLE_WARNING_TRANSACTION_MESSAGE_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, summary.workspace.id)
     } catch (e: IOException) {
+      log.error(e) { "Error sending connection disabled warning email notification for workspaceId ${summary.workspace.id}" }
       false
     }
   }
@@ -289,6 +294,7 @@ class CustomerioNotificationClient : NotificationClient {
   override fun notifySchemaPropagated(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
     val transactionalMessageId = if (notification.isBreakingChange) SCHEMA_BREAKING_CHANGE_TRANSACTION_ID else SCHEMA_CHANGE_TRANSACTION_ID
 
@@ -297,8 +303,9 @@ class CustomerioNotificationClient : NotificationClient {
 
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, workspaceId)
     } catch (e: IOException) {
+      log.error(e) { "Error sending schema propagation email notification for workspaceId $workspaceId" }
       false
     }
   }
@@ -306,13 +313,15 @@ class CustomerioNotificationClient : NotificationClient {
   override fun notifySchemaDiffToApply(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
     val node =
       buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_TRANSACTION_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, workspaceId)
     } catch (e: IOException) {
+      log.error(e) { "Error sending schema diff email notification for workspaceId $workspaceId" }
       false
     }
   }
@@ -320,13 +329,15 @@ class CustomerioNotificationClient : NotificationClient {
   override fun notifySchemaDiffToApplyWhenPropagationDisabled(
     notification: SchemaUpdateNotification,
     recipient: String,
+    workspaceId: UUID?,
   ): Boolean {
     val node =
       buildSchemaChangeJson(notification, recipient, SCHEMA_CHANGE_DETECTED_AND_PROPAGATION_DISABLED_TRANSACTION_ID)
     val payload = Jsons.serialize(node)
     return try {
-      notifyByEmail(payload)
+      notifyByEmail(payload, workspaceId)
     } catch (e: IOException) {
+      log.error(e) { "Error sending schema diff when propagation disabled email notification for workspaceId $workspaceId" }
       false
     }
   }
@@ -334,7 +345,10 @@ class CustomerioNotificationClient : NotificationClient {
   override fun getNotificationClientType(): String = CUSTOMERIO_TYPE
 
   @Throws(IOException::class)
-  private fun notifyByEmail(requestPayload: String): Boolean = sendNotifyRequest(CUSTOMERIO_EMAIL_API_ENDPOINT, requestPayload)
+  private fun notifyByEmail(
+    requestPayload: String,
+    workspaceId: UUID?,
+  ): Boolean = sendNotifyRequest(CUSTOMERIO_EMAIL_API_ENDPOINT, requestPayload, workspaceId)
 
   @VisibleForTesting
   @Throws(IOException::class)
@@ -366,7 +380,7 @@ class CustomerioNotificationClient : NotificationClient {
         ),
       )
 
-    return sendNotifyRequest(broadcastTriggerUrl, payload)
+    return sendNotifyRequest(broadcastTriggerUrl, payload, null)
   }
 
   @VisibleForTesting
@@ -374,9 +388,10 @@ class CustomerioNotificationClient : NotificationClient {
   fun sendNotifyRequest(
     urlEndpoint: String,
     payload: String,
+    workspaceId: UUID?,
   ): Boolean {
     if (apiToken == null || apiToken.isEmpty()) {
-      log.info { "Customer.io API token is empty. Skipping email notification." }
+      log.info { "Customer.io API token is empty. Skipping email notification. workspaceId: $workspaceId" }
       return false
     }
 
@@ -394,12 +409,12 @@ class CustomerioNotificationClient : NotificationClient {
 
     okHttpClient.newCall(request).execute().use { response ->
       if (response.isSuccessful) {
-        log.info { "Successful notification (${response.code}): ${response.body}" }
+        log.info { "Successful notification workspaceId $workspaceId (${response.code}): ${response.body}" }
         return true
       } else {
         val body = if (response.body != null) response.body!!.string() else ""
         val errorMessage = String.format("Failed to deliver notification (%s): %s", response.code, body)
-        log.info { "Error sending notification (${response.code}): $errorMessage" }
+        log.info { "Error sending notification workspaceId $workspaceId (${response.code}): $errorMessage" }
         throw IOException(errorMessage)
       }
     }

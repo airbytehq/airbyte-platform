@@ -27,10 +27,15 @@ class NoOpSecretsHydrator : SecretsHydrator {
 
   override fun hydrateSecretCoordinateFromDefaultSecretPersistence(secretCoordinate: JsonNode): JsonNode = secretCoordinate
 
-  override fun hydrateSecretCoordinate(
+  override fun hydrateSecretCoordinateAsJson(
     secretCoordinate: JsonNode,
     secretPersistence: SecretPersistence,
   ): JsonNode = secretCoordinate
+
+  override fun hydrateSecretCoordinate(
+    secretCoordinate: JsonNode,
+    secretPersistence: SecretPersistence,
+  ): String = secretCoordinate.toString()
 
   override fun hydrateSecretCoordinateFromRuntimeSecretPersistence(
     secretCoordinate: JsonNode,

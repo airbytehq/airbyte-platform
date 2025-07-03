@@ -7,10 +7,10 @@ package io.airbyte.data.services.impls.data
 import io.airbyte.commons.AUTO_DATAPLANE_GROUP
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.US_DATAPLANE_GROUP
-import io.airbyte.config.ConfigSchema
+import io.airbyte.config.ConfigNotFoundType
 import io.airbyte.config.Configs.AirbyteEdition
 import io.airbyte.config.DataplaneGroup
-import io.airbyte.data.exceptions.ConfigNotFoundException
+import io.airbyte.data.ConfigNotFoundException
 import io.airbyte.data.repositories.DataplaneGroupRepository
 import io.airbyte.data.services.DataplaneGroupService
 import io.airbyte.data.services.impls.data.mappers.DataplaneGroupMapper.toConfigModel
@@ -30,7 +30,7 @@ open class DataplaneGroupServiceDataImpl(
     repository
       .findById(id)
       .orElseThrow {
-        ConfigNotFoundException(ConfigSchema.DATAPLANE_GROUP, id)
+        ConfigNotFoundException(ConfigNotFoundType.DATAPLANE_GROUP, id)
       }.toConfigModel()
 
   override fun getDataplaneGroupByOrganizationIdAndName(

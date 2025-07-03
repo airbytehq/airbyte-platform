@@ -6,12 +6,12 @@ package io.airbyte.db.instance.configs.migrations
 
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.commons.json.Jsons
-import io.airbyte.config.ConfigSchema
 import io.airbyte.config.StandardSyncState
 import io.airbyte.config.State
 import io.airbyte.db.Database
 import io.airbyte.db.factory.DSLContextFactory.create
 import io.airbyte.db.factory.DatabaseDriver
+import io.airbyte.db.legacy.ConfigSchema
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.flywaydb.core.api.migration.BaseJavaMigration
 import org.flywaydb.core.api.migration.Context

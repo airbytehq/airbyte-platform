@@ -16,4 +16,13 @@ class OrganizationEmailDomainServiceDataImpl(
 ) : OrganizationEmailDomainService {
   override fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain> =
     repository.findByEmailDomain(emailDomain).map { it.toConfigModel() }
+
+  override fun createEmailDomain(emailDomainConfig: OrganizationEmailDomain) {
+    repository.save(
+      io.airbyte.data.repositories.entities.OrganizationEmailDomain(
+        organizationId = emailDomainConfig.organizationId,
+        emailDomain = emailDomainConfig.emailDomain,
+      ),
+    )
+  }
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useIntl } from "react-intl";
 import { z } from "zod";
 
@@ -6,7 +6,8 @@ import { Form, FormControl } from "components/forms";
 import { FormSubmissionButtons } from "components/forms/FormSubmissionButtons";
 import { Box } from "components/ui/Box";
 
-import { useCurrentWorkspace, useUpdateOrganization, useOrganization } from "core/api";
+import { useCurrentOrganizationId } from "area/organization/utils/useCurrentOrganizationId";
+import { useUpdateOrganization, useOrganization } from "core/api";
 import { useFeature, FeatureItem } from "core/services/features";
 import { useIntent } from "core/utils/rbac";
 import { useNotificationService } from "hooks/services/Notification";
@@ -23,9 +24,8 @@ const baseOrganizationValidationSchema = z.object({
 
 export type BaseOrganizationFormValues = z.infer<typeof baseOrganizationValidationSchema>;
 
-export const UpdateOrganizationSettingsForm: React.FC = () => {
-  const { organizationId } = useCurrentWorkspace();
-
+export const UpdateOrganizationSettingsForm = () => {
+  const organizationId = useCurrentOrganizationId();
   return <OrganizationSettingsForm organizationId={organizationId} />;
 };
 
@@ -92,6 +92,7 @@ const OrganizationSettingsForm = ({ organizationId }: { organizationId: string }
         }),
       }}
       disabled={!canUpdateOrganization}
+      reinitializeDefaultValues
     >
       <FormControl<BaseOrganizationFormValues>
         label={formatMessage({ id: "settings.organizationSettings.organizationName" })}

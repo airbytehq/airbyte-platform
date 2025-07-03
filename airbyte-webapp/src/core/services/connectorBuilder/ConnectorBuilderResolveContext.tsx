@@ -7,7 +7,7 @@ import { useMount } from "react-use";
 import { LoadingPage } from "components";
 import { DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM } from "components/connectorBuilder/constants";
 import { getStreamHash } from "components/connectorBuilder/useStreamTestMetadata";
-import { convertJsonToYaml, streamNameOrDefault } from "components/connectorBuilder/utils";
+import { convertJsonToYaml, getStreamName } from "components/connectorBuilder/utils";
 
 import { HttpError, useBuilderProject, useResolveManifest } from "core/api";
 import { ConnectorBuilderProjectRead } from "core/api/types/AirbyteClient";
@@ -19,7 +19,7 @@ interface ResolveContext {
   builderProject: ConnectorBuilderProjectRead;
   initialYaml: string;
   initialResolvedManifest: ConnectorManifest | null;
-  resolveManifest: (manifestToResolve: ConnectorManifest) => Promise<ResolveManifest>;
+  resolveManifest: (manifestToResolve: ConnectorManifest, shouldNormalize?: boolean) => Promise<ResolveManifest>;
   resolveError: HttpError<KnownExceptionInfo> | null;
   resolveErrorMessage: string | undefined;
   isResolving: boolean;
@@ -43,7 +43,6 @@ export const ConnectorBuilderResolveProvider: React.FC<React.PropsWithChildren<u
       (builderProject.declarativeManifest?.manifest as ConnectorManifest) ?? DEFAULT_JSON_MANIFEST_VALUES_WITH_STREAM,
     [builderProject.declarativeManifest?.manifest]
   );
-  const initialYaml = useMemo(() => convertJsonToYaml(persistedManifest), [persistedManifest]);
 
   const {
     resolveManifest: resolveManifestMutation,
@@ -52,8 +51,8 @@ export const ConnectorBuilderResolveProvider: React.FC<React.PropsWithChildren<u
     resetResolveState,
   } = useResolveManifest();
   const resolveManifest = useCallback(
-    async (manifestToResolve: ConnectorManifest) => {
-      return resolveManifestMutation({ manifestToResolve, projectId });
+    async (manifestToResolve: ConnectorManifest, shouldNormalize?: boolean) => {
+      return resolveManifestMutation({ manifestToResolve, projectId, shouldNormalize });
     },
     [resolveManifestMutation, projectId]
   );
@@ -74,16 +73,19 @@ export const ConnectorBuilderResolveProvider: React.FC<React.PropsWithChildren<u
   const [initialResolvedManifest, setInitialResolvedManifest] = useState<ConnectorManifest | null | undefined>(
     undefined
   );
+  const [initialYaml, setInitialYaml] = useState<string>("");
   useMount(() => {
-    resolveManifest(persistedManifest)
+    resolveManifest(persistedManifest, true)
       .then((result) => {
         const resolvedManifest = result.manifest as ConnectorManifest;
         setInitialStreamHashes(persistedManifest, resolvedManifest);
         setInitialResolvedManifest(resolvedManifest);
+        setInitialYaml(convertJsonToYaml(resolvedManifest));
         return result;
       })
       .catch(() => {
         setInitialResolvedManifest(null);
+        setInitialYaml(convertJsonToYaml(persistedManifest));
       });
   });
 
@@ -138,9 +140,8 @@ function setInitialStreamHashes(persistedManifest: ConnectorManifest, resolvedMa
     throw new Error("Persisted manifest streams length doesn't match resolved streams length");
   }
   resolvedManifest.streams.forEach((resolvedStream, i) => {
-    const streamName = streamNameOrDefault(resolvedStream.name, i);
-    // @ts-expect-error TODO: connector builder team to fix this https://github.com/airbytehq/airbyte-internal-issues/issues/12252
-    if (persistedManifest.metadata?.testedStreams?.[streamName]) {
+    const streamName = getStreamName(resolvedStream, i);
+    if ((persistedManifest.metadata?.testedStreams as Record<string, unknown>)?.[streamName]) {
       return;
     }
     const streamHash = getStreamHash(resolvedStream);

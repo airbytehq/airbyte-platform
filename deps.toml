@@ -1,12 +1,13 @@
 [versions]
 airbyte-protocol = "0.17.0"
+apollo = "3.8.2"
 azure-kevault-secrets = "4.3.5"
 azure-identity = "1.3.5"
 azure-storage = "12.27.1"
 bouncycastle = "1.79"
 datadog-version = "1.40.1"
 docker-java = "3.2.8"
-fasterxml_version = "2.18.3"
+fasterxml_version = "2.19.0"
 failsafe = "3.3.2"
 flyway = "10.22.0"
 grpc_version = "1.69.1"
@@ -21,7 +22,7 @@ keycloak-admin-client = "26.0.5" # should be kept in sync with airbyte-keycloak/
 kotest = "5.9.1"
 kotlin-logging = "7.0.6"
 kotlinx-coroutine = "1.10.2"
-kubernetes-client = "7.0.1"
+kubernetes-client = "7.3.1"
 logback = "1.5.18"
 micrometer = "1.14.7"
 micronaut = "4.8.3"
@@ -55,6 +56,9 @@ v3-swagger = "2.2.21"
 [libraries]
 airbyte-protocol = { module = "io.airbyte.airbyte-protocol:protocol-models", version.ref = "airbyte-protocol" }
 apache-mime4j-core = { module = "org.apache.james:apache-mime4j-core", version = "0.8.12" } # Transitive dependency of keycloak. Forced upgrade to 0.8.10 from 0.8.9. Also patches commons-io GHSA-78wr-2p64-hpwj
+apollo-runtime = { module = "com.apollographql.apollo3:apollo-runtime", version.ref = "apollo" }
+apollo-api-jvm = { module = "com.apollographql.apollo3:apollo-api-jvm", version.ref = "apollo" }
+apollo-adapters-jvm = { module = "com.apollographql.apollo3:apollo-adapters-jvm", version.ref = "apollo" }
 assertj-core = { module = "org.assertj:assertj-core", version = "3.21.0" }
 aws-java-sdk-s3 = { module = "com.amazonaws:aws-java-sdk-s3", version = "1.12.782" }
 aws-java-sdk-sts = {module = "com.amazonaws:aws-java-sdk-sts", version = "1.12.782"}
@@ -180,6 +184,7 @@ slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 snakeyaml = { module = "org.yaml:snakeyaml", version = "2.3" }
 spotbugs-annotations = { module = "com.github.spotbugs:spotbugs-annotations", version = "4.8.6" }
 spring-core = { module = "org.springframework:spring-core", version = "6.2.5" }
+stigg-api-client = { module = "io.stigg:stigg-api-client", version = "2.438.3" }
 stripe = { module = "com.stripe:stripe-java", version = "26.7.0" }
 swagger-annotations = { module = "io.swagger:swagger-annotations", version.ref = "swagger" }
 v3-swagger-annotations = { module = "io.swagger.core.v3:swagger-annotations", version.ref = "v3-swagger" }

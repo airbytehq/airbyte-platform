@@ -87,8 +87,10 @@ import io.airbyte.config.ActorDefinitionVersion;
 import io.airbyte.config.ConnectorJobOutput;
 import io.airbyte.config.DestinationConnection;
 import io.airbyte.config.Job;
+import io.airbyte.config.JobConfig;
 import io.airbyte.config.JobConfig.ConfigType;
 import io.airbyte.config.JobStatus;
+import io.airbyte.config.JobSyncConfig;
 import io.airbyte.config.JobTypeResourceLimit;
 import io.airbyte.config.JobTypeResourceLimit.JobType;
 import io.airbyte.config.NotificationItem;
@@ -112,7 +114,7 @@ import io.airbyte.config.persistence.domain.StreamRefresh;
 import io.airbyte.config.secrets.ConfigWithProcessedSecrets;
 import io.airbyte.config.secrets.SecretsHelpers.SecretReferenceHelpers;
 import io.airbyte.config.secrets.SecretsRepositoryWriter;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.CatalogService;
 import io.airbyte.data.services.ConnectionService;
@@ -177,6 +179,7 @@ class SchedulerHandlerTest {
   private static final String CONNECTION_URL = "connection_url";
 
   private static final long JOB_ID = 123L;
+  private static final UUID SCOPE = UUID.randomUUID();
   private static final UUID SYNC_JOB_ID = UUID.randomUUID();
   private static final UUID WORKSPACE_ID = UUID.randomUUID();
   private static final UUID SOURCE_ID = UUID.randomUUID();
@@ -287,7 +290,18 @@ class SchedulerHandlerTest {
 
   @BeforeEach
   void setup() throws JsonValidationException, ConfigNotFoundException, IOException {
-    job = mock(Job.class, RETURNS_DEEP_STUBS);
+    job = new Job(JOB_ID,
+        ConfigType.SYNC,
+        SCOPE.toString(),
+        new JobConfig().withConfigType(ConfigType.SYNC).withSync(new JobSyncConfig()
+            .withSourceDefinitionVersionId(UUID.randomUUID())
+            .withDestinationDefinitionVersionId(UUID.randomUUID())),
+        List.of(),
+        JobStatus.SUCCEEDED,
+        1001L,
+        1000L,
+        1002L,
+        true);
     jobResponse = mock(SynchronousResponse.class, RETURNS_DEEP_STUBS);
     final SynchronousJobMetadata synchronousJobMetadata = mock(SynchronousJobMetadata.class);
     when(synchronousJobMetadata.getConfigType())
@@ -296,10 +310,6 @@ class SchedulerHandlerTest {
         .thenReturn(synchronousJobMetadata);
     configurationUpdate = mock(ConfigurationUpdate.class);
     jsonSchemaValidator = mock(JsonSchemaValidator.class);
-    when(job.getStatus()).thenReturn(JobStatus.SUCCEEDED);
-    when(job.getConfig().getConfigType()).thenReturn(ConfigType.SYNC);
-    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
-    when(job.getScope()).thenReturn("sync:123");
 
     synchronousSchedulerClient = mock(SynchronousSchedulerClient.class);
     actorDefinitionService = mock(ActorDefinitionService.class);
@@ -979,8 +989,6 @@ class SchedulerHandlerTest {
     when(sourceService.getSourceConnection(source.getSourceId())).thenReturn(source);
     when(synchronousSchedulerClient.createDiscoverSchemaJob(source, sourceVersion, false, null, WorkloadPriority.HIGH))
         .thenReturn((SynchronousResponse<UUID>) jobResponse);
-    when(job.getSuccessOutput()).thenReturn(Optional.empty());
-    when(job.getStatus()).thenReturn(JobStatus.FAILED);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceId(request);
 
@@ -1077,9 +1085,6 @@ class SchedulerHandlerTest {
         source.getConfiguration(), sourceVersion.getSpec().getConnectionSpecification(), null);
     when(secretsRepositoryWriter.createEphemeralFromConfig(eq(processedSourceConfig), any()))
         .thenReturn(source.getConfiguration());
-
-    when(job.getSuccessOutput()).thenReturn(Optional.empty());
-    when(job.getStatus()).thenReturn(JobStatus.FAILED);
 
     final SourceDiscoverSchemaRead actual = schedulerHandler.discoverSchemaForSourceFromSourceCreate(sourceCoreConfig);
 
@@ -1217,28 +1222,22 @@ class SchedulerHandlerTest {
 
   @Test
   void testCancelJob() throws IOException {
-    final UUID connectionId = UUID.randomUUID();
-    final long jobId = 123L;
-    final Job job = mock(Job.class);
-    when(job.getScope()).thenReturn(connectionId.toString());
-    when(jobPersistence.getJob(jobId)).thenReturn(job);
+    when(jobPersistence.getJob(JOB_ID)).thenReturn(job);
 
-    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, jobId, null);
+    final ManualOperationResult manualOperationResult = new ManualOperationResult(null, JOB_ID, null);
 
-    when(eventRunner.startNewCancellation(connectionId))
+    when(eventRunner.startNewCancellation(SCOPE))
         .thenReturn(manualOperationResult);
     final JobInfoRead jobInfo = new JobInfoRead()
         .job(new JobRead()
-            .id(jobId)
+            .id(JOB_ID)
             .createdAt(123L)
             .updatedAt(321L));
     doReturn(jobInfo).when(jobConverter).getJobInfoRead(any());
 
-    when(job.getConfigType()).thenReturn(ConfigType.SYNC);
+    schedulerHandler.cancelJob(new JobIdRequestBody().id(JOB_ID));
 
-    schedulerHandler.cancelJob(new JobIdRequestBody().id(jobId));
-
-    verify(eventRunner).startNewCancellation(connectionId);
+    verify(eventRunner).startNewCancellation(SCOPE);
   }
 
   @Test

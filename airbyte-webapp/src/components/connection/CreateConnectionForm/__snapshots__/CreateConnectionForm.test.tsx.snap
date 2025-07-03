@@ -449,7 +449,7 @@ exports[`CreateConnectionForm should render 1`] = `
                               id="headlessui-listbox-button-:r2:"
                               type="button"
                             >
-                              <div
+                              <span
                                 class="<removed-for-snapshot-test>"
                               >
                                 <div
@@ -471,7 +471,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                   data-icon="chevron-down"
                                   data-testid="mocksvg"
                                 />
-                              </div>
+                              </span>
                             </button>
                             <div
                               style="position: absolute; z-index: 9999; top: 0px; left: 0px; transform: translate(5px,5px);"
@@ -887,7 +887,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                     <span
                                       class="<removed-for-snapshot-test>"
                                     >
-                                      <div
+                                      <span
                                         class="<removed-for-snapshot-test>"
                                       >
                                         <div
@@ -905,7 +905,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                           data-icon="chevron-down"
                                           data-testid="mocksvg"
                                         />
-                                      </div>
+                                      </span>
                                     </span>
                                   </button>
                                   <div
@@ -1044,7 +1044,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                     <span
                                       class="<removed-for-snapshot-test>"
                                     >
-                                      <div
+                                      <span
                                         class="<removed-for-snapshot-test>"
                                       >
                                         <div
@@ -1062,7 +1062,7 @@ exports[`CreateConnectionForm should render 1`] = `
                                           data-icon="chevron-down"
                                           data-testid="mocksvg"
                                         />
-                                      </div>
+                                      </span>
                                     </span>
                                   </button>
                                   <div

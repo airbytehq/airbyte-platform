@@ -107,6 +107,8 @@ tags:
     description: Public job-related endpoints.
   - name: Jobs
     description: Job management endpoints.
+  - name: entitlements
+    description: Entitlement management endpoints
 
 paths:
   /v1/workspaces/create:
@@ -230,27 +232,6 @@ paths:
                 $ref: "#/components/schemas/WorkspaceReadList"
         "404":
           $ref: "#/components/responses/NotFoundResponse"
-  /v1/workspaces/list_active_workspaces_by_most_recently_running_jobs:
-    post:
-      summary: Lists workspaces with the most recently running jobs within the given time window
-      tags:
-        - workspace
-      operationId: listActiveWorkspacesByMostRecentlyRunningJobs
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/TimeWindowRequestBody"
-        required: false
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkspaceIdList"
-        "422":
-          $ref: "#/components/responses/InvalidInputResponse"
   /v1/workspaces/get_available_dbt_jobs:
     post:
       tags:
@@ -5595,7 +5576,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_by_actor_definition_id:
     post:
       requestBody:
@@ -5619,7 +5599,6 @@ paths:
       tags:
         - connector_rollout
 
-  # Connector Rollouts
   /v1/connector_rollout/list_all:
     post:
       responses:
@@ -5878,6 +5857,55 @@ paths:
       operationId: manualPauseConnectorRollout
       tags:
         - connector_rollout
+
+  # Entitlements
+  /v1/entitlements/is_entitled:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationIsEntitledRequestBody"
+      responses:
+        "200":
+          description: Whether the organization is entitled to the specified resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationIsEntitledResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Determine whether the organization is entitled to the specified resource
+      operationId: checkEntitlement
+      tags:
+        - entitlements
+
+  /v1/entitlements/get_entitlements:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetEntitlementsByOrganizationIdRequestBody"
+      responses:
+        "200":
+          description: A list of entitlements for the organization
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetEntitlementsByOrganizationIdResponse"
+        "404":
+          $ref: "#/components/responses/NotFoundResponse"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+
+      summary: Gets a list of entitlements for the organization
+      operationId: getEntitlements
+      tags:
+        - entitlements
 
   # User Invitations
   /v1/user_invitations/create:
@@ -6900,6 +6928,23 @@ paths:
       responses:
         "204":
           description: The resource was deleted successfully.
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/create:
+    post:
+      summary: Onboard a cloud customer to SSO
+      tags:
+        - sso_config
+      operationId: createSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "Org successfully onboarded to sso"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
 
@@ -10334,6 +10379,51 @@ components:
         retain_pins_on_cancellation:
           type: boolean
           default: true
+
+    # ENTITLEMENTS
+    OrganizationIsEntitledRequestBody:
+      type: object
+      required:
+        - organization_id
+        - feature_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+        feature_id:
+          type: string
+
+    OrganizationIsEntitledResponse:
+      type: object
+      required:
+        - feature_id
+        - is_entitled
+      properties:
+        feature_id:
+          type: string
+        is_entitled:
+          type: boolean
+        access_denied_reason:
+          type: string
+
+    GetEntitlementsByOrganizationIdRequestBody:
+      type: object
+      required:
+        - organization_id
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+
+    GetEntitlementsByOrganizationIdResponse:
+      type: object
+      required:
+        - entitlements
+      properties:
+        entitlements:
+          type: array
+          items:
+            $ref: "#/components/schemas/OrganizationIsEntitledResponse"
 
     # WORKSPACE
     WorkspaceId:
@@ -20063,6 +20153,32 @@ components:
         permission:
           $ref: "#/components/schemas/PermissionType"
       x-sdk-component: true
+
+    CreateSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+        - clientId
+        - clientSecret
+        - discoveryUrl
+        - emailDomain
+      properties:
+        organizationId:
+          type: string
+          format: UUID
+        companyIdentifier:
+          type: string
+          description: Used to name the keycloak realm
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        discoveryUrl:
+          type: string
+          format: url
+        emailDomain:
+          type: string
 
   responses:
     NotFoundResponse:

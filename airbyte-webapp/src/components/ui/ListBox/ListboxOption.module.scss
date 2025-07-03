@@ -8,21 +8,12 @@
   border: variables.$border-thin solid transparent;
   cursor: pointer;
 
-  &:first-child {
-    border-top-left-radius: variables.$border-radius-lg;
-    border-top-right-radius: variables.$border-radius-lg;
-  }
-
-  &:last-child {
-    border-bottom-left-radius: variables.$border-radius-lg;
-    border-bottom-right-radius: variables.$border-radius-lg;
-  }
-
-  &:hover,
-  &:focus-visible,
   &[data-focus] {
     background-color: colors.$grey-50;
-    border-color: colors.$blue;
+
+    &[data-selected] {
+      background-color: colors.$blue-100;
+    }
   }
 
   &:disabled,

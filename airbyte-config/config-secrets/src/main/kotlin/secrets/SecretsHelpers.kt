@@ -485,17 +485,17 @@ object SecretsHelpers {
    * @param secretCoordinateAsJson The co-ordinate at which we expect the secret value to be present
    * in the secret persistence
    * @param readOnlySecretPersistence The secret persistence
-   * @return Original secret value as JsonNode
+   * @return Original secret value
    */
   fun hydrateSecretCoordinate(
     secretCoordinateAsJson: JsonNode,
     readOnlySecretPersistence: ReadOnlySecretPersistence,
-  ): JsonNode {
+  ): String {
     val secretCoordinate: SecretCoordinate =
       getCoordinateFromTextNode(
         secretCoordinateAsJson[COORDINATE_FIELD],
       )
-    return Jsons.deserialize(getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate))
+    return getOrThrowSecretValue(readOnlySecretPersistence, secretCoordinate)
   }
 
   /**

@@ -35,6 +35,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: calc(variables.$width-org-picker-popover - variables.$spacing-2xl);
 }
 
 .orgMeta {

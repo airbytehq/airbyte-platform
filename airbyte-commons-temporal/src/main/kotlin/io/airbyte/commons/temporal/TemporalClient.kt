@@ -127,7 +127,7 @@ class TemporalClient(
     var workflowExecutionsRequest =
       ListClosedWorkflowExecutionsRequest
         .newBuilder()
-        .setNamespace(workflowClientWrapped.getNamespace())
+        .setNamespace(workflowClientWrapped.namespace)
         .setStatusFilter(StatusFilter.newBuilder().setStatus(executionStatus).build())
         .setTypeFilter(WorkflowTypeFilter.newBuilder().setName(ConnectionManagerWorkflow::class.java.getSimpleName()).build())
         .build()

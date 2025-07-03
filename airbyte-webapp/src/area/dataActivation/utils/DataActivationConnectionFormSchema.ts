@@ -36,18 +36,30 @@ const noDestinationSyncModeSelected = z.object({
 
 const destinationAppendSyncMode = z.object({
   destinationSyncMode: z.literal(DestinationSyncMode.append),
-  primaryKey: z.null(),
+  matchingKeys: z.array(z.string()).optional(),
 });
 
 const destinationAppendDedupSyncMode = z.object({
   destinationSyncMode: z.literal(DestinationSyncMode.append_dedup),
-  primaryKey: z.string().nonempty("form.empty.error"),
+  matchingKeys: z.array(z.string()).optional(),
+});
+
+const destinationUpdateSyncMode = z.object({
+  destinationSyncMode: z.literal(DestinationSyncMode.update),
+  matchingKeys: z.array(z.string()).optional(),
+});
+
+const destinationSoftDeleteSyncMode = z.object({
+  destinationSyncMode: z.literal(DestinationSyncMode.soft_delete),
+  matchingKeys: z.array(z.string()).optional(),
 });
 
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
   noDestinationSyncModeSelected,
   destinationAppendSyncMode,
   destinationAppendDedupSyncMode,
+  destinationUpdateSyncMode,
+  destinationSoftDeleteSyncMode,
 ]);
 
 const DataActivationStreamSchema = z

@@ -52,7 +52,7 @@ import io.airbyte.commons.server.handlers.helpers.OAuthHelper;
 import io.airbyte.commons.version.Version;
 import io.airbyte.config.ActorDefinitionConfigInjection;
 import io.airbyte.config.ActorDefinitionVersion;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ConnectorBuilderProject;
 import io.airbyte.config.ConnectorBuilderProjectVersionedManifest;
 import io.airbyte.config.DeclarativeManifest;
@@ -76,7 +76,7 @@ import io.airbyte.connectorbuilderserver.api.client.model.generated.ResolveManif
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamRead;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadRequestBody;
 import io.airbyte.connectorbuilderserver.api.client.model.generated.StreamReadSlicesInner;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.repositories.entities.DeclarativeManifestImageVersion;
 import io.airbyte.data.services.ActorDefinitionService;
 import io.airbyte.data.services.ConnectorBuilderService;
@@ -270,7 +270,7 @@ public class ConnectorBuilderProjectsHandler {
   private void validateProjectUnderRightWorkspace(final ConnectorBuilderProject project, final UUID workspaceId) throws ConfigNotFoundException {
     final UUID actualWorkspaceId = project.getWorkspaceId();
     if (!actualWorkspaceId.equals(workspaceId)) {
-      throw new ConfigNotFoundException(ConfigSchema.CONNECTOR_BUILDER_PROJECT, project.getBuilderProjectId().toString());
+      throw new ConfigNotFoundException(ConfigNotFoundType.CONNECTOR_BUILDER_PROJECT, project.getBuilderProjectId().toString());
     }
   }
 
@@ -459,7 +459,11 @@ public class ConnectorBuilderProjectsHandler {
         .withInternalSupportLevel(100L)
         .withDocumentationUrl(connectorSpecification.getDocumentationUrl().toString());
 
-    sourceService.writeCustomConnectorMetadata(source, defaultVersion, workspaceId, ScopeType.WORKSPACE);
+    // Scope connector to the organization if present, otherwise scope to the workspace.
+    final Optional<UUID> organizationId = workspaceService.getOrganizationIdFromWorkspaceId(workspaceId);
+    final UUID scopeId = organizationId.orElse(workspaceId);
+    final ScopeType scopeType = organizationId.isPresent() ? ScopeType.ORGANIZATION : ScopeType.WORKSPACE;
+    sourceService.writeCustomConnectorMetadata(source, defaultVersion, scopeId, scopeType);
 
     final List<ActorDefinitionConfigInjection> configInjectionsToCreate =
         manifestInjector.getManifestConnectorInjections(source.getSourceDefinitionId(), manifest, componentFileContent);
@@ -489,8 +493,8 @@ public class ConnectorBuilderProjectsHandler {
 
       connectorBuilderService.updateBuilderProjectTestingValues(testingValuesUpdate.getBuilderProjectId(), updatedTestingValuesWithSecretCoordinates);
       return secretsProcessor.prepareSecretsForOutput(updatedTestingValuesWithSecretCoordinates, testingValuesUpdate.getSpec());
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
   }
 
@@ -529,8 +533,8 @@ public class ConnectorBuilderProjectsHandler {
       }
 
       return builderProjectStreamRead;
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
   }
 
@@ -745,8 +749,8 @@ public class ConnectorBuilderProjectsHandler {
           && featureFlagClient.boolVariation(UseRuntimeSecretPersistence.INSTANCE, new Organization(organizationId.get()))
               ? Optional.of(secretPersistenceConfigService.get(ScopeType.ORGANIZATION, organizationId.get()))
               : Optional.empty();
-    } catch (final io.airbyte.data.exceptions.ConfigNotFoundException e) {
-      throw new ConfigNotFoundException(e.getType(), e.getConfigId());
+    } catch (final ConfigNotFoundException e) {
+      throw new ConfigNotFoundException(e.type, e.configId);
     }
   }
 

@@ -9,14 +9,14 @@ import static org.jooq.impl.DSL.asterisk;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import io.airbyte.commons.json.Jsons;
-import io.airbyte.config.ConfigSchema;
+import io.airbyte.config.ConfigNotFoundType;
 import io.airbyte.config.ScopeType;
 import io.airbyte.config.SecretPersistenceConfig;
 import io.airbyte.config.SecretPersistenceConfig.SecretPersistenceType;
 import io.airbyte.config.SecretPersistenceCoordinate;
 import io.airbyte.config.secrets.SecretCoordinate;
 import io.airbyte.config.secrets.SecretsRepositoryReader;
-import io.airbyte.data.exceptions.ConfigNotFoundException;
+import io.airbyte.data.ConfigNotFoundException;
 import io.airbyte.data.services.SecretPersistenceConfigService;
 import io.airbyte.db.Database;
 import io.airbyte.db.ExceptionWrappingDatabase;
@@ -61,7 +61,7 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
   public SecretPersistenceConfig get(final ScopeType scope, final UUID scopeId) throws IOException, ConfigNotFoundException {
     final Optional<SecretPersistenceCoordinate> secretPersistenceCoordinate = getSecretPersistenceCoordinate(scope, scopeId);
     if (secretPersistenceCoordinate.isPresent()) {
-      final JsonNode configuration = secretsRepositoryReader.fetchSecretFromDefaultSecretPersistence(
+      final JsonNode configuration = secretsRepositoryReader.fetchJsonSecretFromDefaultSecretPersistence(
           SecretCoordinate.Companion.fromFullCoordinate(secretPersistenceCoordinate.get().getCoordinate()));
 
       return new SecretPersistenceConfig()
@@ -70,7 +70,7 @@ public class SecretPersistenceConfigServiceJooqImpl implements SecretPersistence
           .withScopeType(secretPersistenceCoordinate.get().getScopeType())
           .withConfiguration(Jsons.deserializeToStringMap(configuration));
     }
-    throw new ConfigNotFoundException(ConfigSchema.SECRET_PERSISTENCE_CONFIG, List.of(scope, scopeId).toString());
+    throw new ConfigNotFoundException(ConfigNotFoundType.SECRET_PERSISTENCE_CONFIG, List.of(scope, scopeId).toString());
   }
 
   @Override

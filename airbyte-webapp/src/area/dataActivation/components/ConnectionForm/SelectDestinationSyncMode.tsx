@@ -38,12 +38,19 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
     return destinationCatalog.operations.filter((operation) => operation.objectName === destinationObjectName);
   }, [destinationObjectName, destinationCatalog]);
 
-  // TODO: Update this to support update and soft_delete once they're available https://github.com/airbytehq/airbyte-internal-issues/issues/12920
   const destinationSyncModeOptions: Array<Option<DestinationSyncMode>> = [
     { label: formatMessage({ id: "connection.dataActivation.append" }), value: DestinationSyncMode.append },
     {
       label: formatMessage({ id: "connection.dataActivation.append_dedup" }),
       value: DestinationSyncMode.append_dedup,
+    },
+    {
+      label: formatMessage({ id: "connection.dataActivation.update" }),
+      value: DestinationSyncMode.update,
+    },
+    {
+      label: formatMessage({ id: "connection.dataActivation.soft_delete" }),
+      value: DestinationSyncMode.soft_delete,
     },
   ].map((option) => ({
     ...option,
@@ -63,10 +70,10 @@ export const SelectDestinationSyncMode: React.FC<SelectDestinationSyncModeProps>
                 return;
               }
               if (value === DestinationSyncMode.append) {
-                setValue(`streams.${streamIndex}.primaryKey`, null);
+                setValue(`streams.${streamIndex}.matchingKeys`, null);
               }
               if (value === DestinationSyncMode.append_dedup) {
-                setValue(`streams.${streamIndex}.primaryKey`, "");
+                setValue(`streams.${streamIndex}.matchingKeys`, null);
               }
               field.onChange(value);
             }}
