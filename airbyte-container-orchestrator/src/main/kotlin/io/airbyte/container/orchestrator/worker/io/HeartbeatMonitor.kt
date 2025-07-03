@@ -5,6 +5,8 @@
 package io.airbyte.container.orchestrator.worker.io
 
 import io.airbyte.commons.duration.formatMilli
+import io.airbyte.container.orchestrator.worker.context.ReplicationInputFeatureFlagReader
+import io.airbyte.featureflag.ShouldFailSyncIfHeartbeatFailure
 import io.airbyte.persistence.job.models.ReplicationInput
 import jakarta.annotation.PostConstruct
 import jakarta.inject.Singleton
@@ -28,10 +30,12 @@ import kotlin.let
 @Singleton
 class HeartbeatMonitor(
   val replicationInput: ReplicationInput,
+  private val replicationInputFeatureFlagReader: ReplicationInputFeatureFlagReader,
   private val nowSupplier: Supplier<Instant>? = Supplier { Instant.now() },
 ) {
   val heartbeatFreshnessThreshold: Duration = Duration.ofSeconds(replicationInput.heartbeatConfig.maxSecondsBetweenMessages)
   private val lastBeat: AtomicReference<Instant> = AtomicReference<Instant>(null)
+  private val shouldFailSync = replicationInputFeatureFlagReader.read(ShouldFailSyncIfHeartbeatFailure)
 
   @PostConstruct
   fun init() {
@@ -43,6 +47,18 @@ class HeartbeatMonitor(
    */
   fun beat() {
     nowSupplier?.let { supplier -> lastBeat.set(supplier.get()) }
+  }
+
+  /**
+   * Check if heartbeat failure should cause sync failure based on feature flag.
+   *
+   * @return true if heartbeat is not beating and feature flag is enabled, false otherwise
+   */
+  fun hasTimedOut(): Boolean {
+    if (!shouldFailSync) {
+      return false
+    }
+    return !isBeating.orElse(true)
   }
 
   val isBeating: Optional<Boolean>

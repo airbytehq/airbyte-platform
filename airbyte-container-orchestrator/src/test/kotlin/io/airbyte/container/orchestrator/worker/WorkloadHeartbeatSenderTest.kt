@@ -52,7 +52,7 @@ class WorkloadHeartbeatSenderTest {
     mockSourceTimeoutMonitor = mockk(relaxed = true)
 
     every { mockDestinationTimeoutMonitor.hasTimedOut() } returns false
-    every { mockSourceTimeoutMonitor.isBeating } returns Optional.of(true)
+    every { mockSourceTimeoutMonitor.hasTimedOut() } returns false
   }
 
   @AfterEach
@@ -167,13 +167,13 @@ class WorkloadHeartbeatSenderTest {
     }
 
   /**
-   * Similar scenario: skip sending heartbeat if the source is not beating.
+   * Similar scenario: skip sending heartbeat if source should fail on heartbeat failure.
    */
   @Test
-  fun `test skip heartbeat if source not beating, then GONE second iteration`() =
+  fun `test skip heartbeat if source should fail on heartbeat failure, then GONE second iteration`() =
     runTest {
-      // On first iteration, isBeating = false => skip heartbeat
-      every { mockSourceTimeoutMonitor.isBeating } returnsMany listOf(Optional.of(false), Optional.of(true))
+      // On first iteration, shouldFailOnHeartbeatFailure = true => skip heartbeat
+      every { mockSourceTimeoutMonitor.hasTimedOut() } returnsMany listOf(true, false)
       every { mockSourceTimeoutMonitor.timeSinceLastBeat } returnsMany
         listOf(
           Optional.of(Duration.ZERO),

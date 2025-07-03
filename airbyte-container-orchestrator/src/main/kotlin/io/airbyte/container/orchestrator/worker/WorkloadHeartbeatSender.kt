@@ -65,7 +65,7 @@ class WorkloadHeartbeatSender(
             }
           }
 
-          !sourceTimeoutMonitor.isBeating.orElse(true) -> {
+          sourceTimeoutMonitor.hasTimedOut() -> {
             logger.warn { "Source heartbeat missing; skipping heartbeat." }
             if (checkIfExpiredAndMarkSyncStateAsFailed(
                 lastSuccessfulHeartbeat,
