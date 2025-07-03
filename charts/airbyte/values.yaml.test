@@ -11,6 +11,9 @@ global:
   image:
     tag: dev
 
+  logging:
+    level: "info"
+
   env_vars: {}
   ##  database [object] -- Object used to override database configuration(to use external DB)
   ##  database.secretName -- secret name where DB creds are stored
