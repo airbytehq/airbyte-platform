@@ -34,32 +34,21 @@ const noDestinationSyncModeSelected = z.object({
   }),
 });
 
-const destinationAppendSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.append),
-  matchingKeys: z.array(z.string()).optional(),
-});
+const AllowedDestinationSyncModes = z.enum([
+  DestinationSyncMode.append,
+  DestinationSyncMode.append_dedup,
+  DestinationSyncMode.update,
+  DestinationSyncMode.soft_delete,
+]);
 
-const destinationAppendDedupSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.append_dedup),
-  matchingKeys: z.array(z.string()).optional(),
-});
-
-const destinationUpdateSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.update),
-  matchingKeys: z.array(z.string()).optional(),
-});
-
-const destinationSoftDeleteSyncMode = z.object({
-  destinationSyncMode: z.literal(DestinationSyncMode.soft_delete),
-  matchingKeys: z.array(z.string()).optional(),
+const someDestinationSyncMode = z.object({
+  destinationSyncMode: AllowedDestinationSyncModes,
+  matchingKeys: z.array(z.string()).nullable(),
 });
 
 const destinationSyncMode = z.discriminatedUnion("destinationSyncMode", [
   noDestinationSyncModeSelected,
-  destinationAppendSyncMode,
-  destinationAppendDedupSyncMode,
-  destinationUpdateSyncMode,
-  destinationSoftDeleteSyncMode,
+  someDestinationSyncMode,
 ]);
 
 const DataActivationStreamSchema = z
