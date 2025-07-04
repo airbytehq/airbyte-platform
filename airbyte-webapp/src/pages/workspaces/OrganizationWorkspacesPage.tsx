@@ -60,7 +60,7 @@ const WorkspacesContent: React.FC = () => {
               <Heading as="h1" size="lg">
                 {organization.organizationName}
               </Heading>
-              <Text color="grey400" size="sm" className={styles.metaInfo}>
+              <Text color="grey400" size="sm">
                 {capitalize(edition)} &bull; {formatMessage({ id: "organization.members" }, { count: users.length })}
               </Text>
             </Box>

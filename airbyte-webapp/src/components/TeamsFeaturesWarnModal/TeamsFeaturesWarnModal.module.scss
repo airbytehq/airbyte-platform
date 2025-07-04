@@ -1,0 +1,39 @@
+@use "scss/variables";
+@use "scss/colors";
+
+.teamsFeaturesModal {
+  padding: 0;
+  max-height: 404px;
+
+  & > * {
+    height: 100%;
+  }
+}
+
+.teamsFeaturesModal__layout {
+  height: 100%;
+}
+
+.teamsFeaturesModal__content {
+  width: 50%;
+  padding: variables.$spacing-2xl;
+}
+
+.teamsFeaturesModal__featuresList {
+  margin-top: variables.$spacing-sm;
+  padding-left: variables.$spacing-xl;
+  font-size: variables.$font-size-lg;
+  line-height: 1.5;
+}
+
+.teamsFeaturesModal__image {
+  width: 50%;
+  overflow: hidden;
+}
+
+.teamsFeaturesModal__imageImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

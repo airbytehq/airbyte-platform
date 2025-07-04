@@ -1,5 +1,5 @@
 import React from "react";
-import { useIntl } from "react-intl";
+import { FormattedMessage } from "react-intl";
 
 import { Box } from "components/ui/Box";
 import { FlexContainer } from "components/ui/Flex/FlexContainer";
@@ -34,7 +34,6 @@ export const OrganizationWorkspacesList: React.FC<OrganizationWorkspacesListProp
   showNoWorkspacesYet = false,
   showNoWorkspacesFound = false,
 }) => {
-  const { formatMessage } = useIntl();
   const currentOrganizationId = useCurrentOrganizationId();
   const currentOrganization = useOrganization(currentOrganizationId);
 
@@ -59,7 +58,9 @@ export const OrganizationWorkspacesList: React.FC<OrganizationWorkspacesListProp
           </FlexContainer>
         </Box>
         <Box mb="sm">
-          <Text size="md">{formatMessage({ id: "workspaces.noWorkspacesYet" })}</Text>
+          <Text size="md" color="grey500">
+            <FormattedMessage id="workspaces.noWorkspacesYet" />
+          </Text>
         </Box>
         <OrganizationWorkspacesCreateControlEmptyStateButton />
       </FlexContainer>
@@ -70,7 +71,9 @@ export const OrganizationWorkspacesList: React.FC<OrganizationWorkspacesListProp
     return (
       <Box mt="xl">
         <FlexContainer direction="column" alignItems="center" justifyContent="flex-start">
-          <Text size="md">{formatMessage({ id: "workspaces.noWorkspaces" })}</Text>
+          <Text size="md">
+            <FormattedMessage id="workspaces.noWorkspaces" />
+          </Text>
         </FlexContainer>
       </Box>
     );

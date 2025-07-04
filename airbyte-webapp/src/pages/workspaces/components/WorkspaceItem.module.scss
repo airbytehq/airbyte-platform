@@ -31,19 +31,3 @@
 .workspaceItem__workspaceButtonCaret {
   flex-shrink: 0;
 }
-
-.workspaceItem__memberPill {
-  background: colors.$green-30;
-  border-radius: variables.$border-radius-pill;
-  color: colors.$green-500;
-  border: variables.$border-thin solid colors.$green-50;
-  width: fit-content;
-}
-
-.workspaceItem__adminPill {
-  background: colors.$blue-30;
-  border-radius: variables.$border-radius-pill;
-  color: colors.$green-500;
-  border: variables.$border-thin solid colors.$blue-50;
-  width: fit-content;
-}
