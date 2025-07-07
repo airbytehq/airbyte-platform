@@ -5,7 +5,10 @@
 package io.airbyte.data.services
 
 import io.airbyte.domain.models.SsoConfig
+import java.util.UUID
 
 interface SsoConfigService {
   fun createSsoConfig(config: SsoConfig)
+
+  fun getSsoConfig(organizationId: UUID): io.airbyte.config.SsoConfig?
 }

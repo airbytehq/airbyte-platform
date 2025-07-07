@@ -5,7 +5,9 @@
 package io.airbyte.domain.services.sso
 
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
+import io.airbyte.config.Organization
 import io.airbyte.data.services.OrganizationEmailDomainService
+import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.domain.models.SsoConfig
@@ -18,12 +20,15 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.Optional
 import java.util.UUID
 
 class SsoConfigDomainServiceTest {
   private lateinit var ssoConfigService: SsoConfigService
   private lateinit var organizationEmailDomainService: OrganizationEmailDomainService
   private lateinit var airbyteKeycloakClient: AirbyteKeycloakClient
+  private lateinit var organizationService: OrganizationService
+
   private lateinit var ssoConfigDomainService: SsoConfigDomainService
 
   @BeforeEach
@@ -31,29 +36,31 @@ class SsoConfigDomainServiceTest {
     ssoConfigService = mockk()
     organizationEmailDomainService = mockk()
     airbyteKeycloakClient = mockk()
+    organizationService = mockk()
     ssoConfigDomainService =
       SsoConfigDomainService(
         ssoConfigService,
         organizationEmailDomainService,
         airbyteKeycloakClient,
+        organizationService,
       )
   }
 
   @Test
   fun `createAndStoreSsoConfig should create SSO config and save email domain successfully`() {
-    val config =
-      SsoConfig(
-        organizationId = UUID.randomUUID(),
-        companyIdentifier = "airbyte",
-        clientId = "client-id",
-        clientSecret = "client-secret",
-        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
-        emailDomain = "airbyte.com",
-      )
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
 
     every { airbyteKeycloakClient.createOidcSsoConfig(config) } just Runs
     every { ssoConfigService.createSsoConfig(any()) } returns mockk()
+    every { ssoConfigService.getSsoConfig(any()) } returns null
     every { organizationEmailDomainService.createEmailDomain(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
 
     ssoConfigDomainService.createAndStoreSsoConfig(config)
 
@@ -76,17 +83,17 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
-  fun `createSsoConfig should not save anything if keycloak fails`() {
-    val config =
-      SsoConfig(
-        organizationId = UUID.randomUUID(),
-        companyIdentifier = "airbyte",
-        clientId = "client-id",
-        clientSecret = "client-secret",
-        discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
-        emailDomain = "airbyte.com",
-      )
+  fun `createAndStoreSsoConfig should not save anything if keycloak fails`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
 
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
     every { airbyteKeycloakClient.createOidcSsoConfig(config) } throws RuntimeException("Keycloak failed")
 
     assertThrows<SSOSetupProblem> {
@@ -97,4 +104,118 @@ class SsoConfigDomainServiceTest {
     verify(exactly = 0) { ssoConfigService.createSsoConfig(any()) }
     verify(exactly = 0) { organizationEmailDomainService.createEmailDomain(any()) }
   }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when email domain already exists`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns null
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns listOf(mockk())
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem.data
+        .toString()
+        .contains("Email domain already exists: ${config.emailDomain}"),
+    )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when sso config already exists`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.com"
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem.data
+        .toString()
+        .contains("SSO Config already exists for organization ${config.organizationId}"),
+    )
+  }
+
+  @Test
+  fun `createAndStoreSsoConfig throws when the email domain is invalid`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "test@airbyte.io" // org email does not match domain
+
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { ssoConfigService.getSsoConfig(any()) } returns mockk()
+    every { organizationEmailDomainService.findByEmailDomain(any()) } returns emptyList()
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.createAndStoreSsoConfig(config)
+      }
+    assert(
+      exception.problem.data
+        .toString()
+        .contains("Domain must match the organization"),
+    )
+  }
+
+  @Test
+  fun `validateEmailDomain works even if the org email is incorrectly formatted`() {
+    val orgId = UUID.randomUUID()
+    val emailDomain = "airbyte.com"
+    val orgEmail = "just-a-string.com"
+
+    // get org with invalid email
+    val org = buildTestOrganization(orgId, orgEmail)
+    val config = buildTestSsoConfig(orgId, emailDomain)
+
+    every { organizationService.getOrganization(any()) } returns Optional.of(org)
+    val exception =
+      assertThrows<SSOSetupProblem> {
+        ssoConfigDomainService.validateEmailDomain(config)
+      }
+    assert(
+      exception.problem.data
+        .toString()
+        .contains("Domain must match the organization"),
+    )
+  }
+
+  private fun buildTestOrganization(
+    orgId: UUID,
+    email: String,
+  ): Organization =
+    Organization()
+      .withOrganizationId(orgId)
+      .withEmail(email)
+
+  private fun buildTestSsoConfig(
+    orgId: UUID,
+    emailDomain: String,
+  ): SsoConfig =
+    SsoConfig(
+      organizationId = orgId,
+      companyIdentifier = "airbyte",
+      clientId = "client-id",
+      clientSecret = "client-secret",
+      discoveryUrl = "https://auth.airbyte.com/.well-known/openid-configuration",
+      emailDomain = emailDomain,
+    )
 }

@@ -6,6 +6,7 @@ package io.airbyte.data.services.impls.data
 
 import io.airbyte.data.repositories.SsoConfigRepository
 import io.airbyte.data.services.SsoConfigService
+import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import io.airbyte.domain.models.SsoConfig
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -24,4 +25,7 @@ open class SsoConfigServiceDataImpl internal constructor(
         ),
       )
   }
+
+  override fun getSsoConfig(organizationId: UUID): io.airbyte.config.SsoConfig? =
+    ssoConfigRepository.findByOrganizationId(organizationId)?.toConfigModel()
 }

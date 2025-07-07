@@ -11,4 +11,6 @@ import io.micronaut.data.repository.PageableRepository
 import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
-interface SsoConfigRepository : PageableRepository<SsoConfig, UUID>
+interface SsoConfigRepository : PageableRepository<SsoConfig, UUID> {
+  fun findByOrganizationId(organizationId: UUID): SsoConfig?
+}
