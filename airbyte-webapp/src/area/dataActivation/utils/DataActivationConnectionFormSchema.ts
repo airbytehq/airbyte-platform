@@ -32,6 +32,7 @@ const noDestinationSyncModeSelected = z.object({
   destinationSyncMode: z.null().refine((val) => val !== null, {
     message: "form.empty.error",
   }),
+  matchingKeys: z.null(),
 });
 
 const AllowedDestinationSyncModes = z.enum([
