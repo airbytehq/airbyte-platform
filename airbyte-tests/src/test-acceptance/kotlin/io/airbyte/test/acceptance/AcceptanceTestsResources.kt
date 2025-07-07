@@ -28,7 +28,8 @@ import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.commons.json.Jsons
 import io.airbyte.featureflag.tests.TestFlagsSetter
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertRawDestinationContains
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
@@ -43,6 +44,7 @@ import java.net.URISyntaxException
 import java.security.GeneralSecurityException
 import java.sql.SQLException
 import java.time.Duration
+import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -393,7 +395,11 @@ class AcceptanceTestsResources {
 
   @Throws(URISyntaxException::class, IOException::class, InterruptedException::class, GeneralSecurityException::class)
   fun init() {
-    val airbyteApiClient = createAirbyteAdminApiClient()
+    val airbyteApiClient =
+      createAirbyteApiClient(
+        AcceptanceTestUtils.getAirbyteApiUrl(),
+        Map.of(GATEWAY_AUTH_HEADER, CLOUD_API_USER_HEADER_VALUE),
+      )
     val testFlagsSetter = TestFlagsSetter(AIRBYTE_SERVER_HOST)
 
     // If a workspace id is passed, use that. Otherwise, create a new workspace.

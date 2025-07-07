@@ -4,8 +4,6 @@
 
 package io.airbyte.test.utils
 
-import com.nimbusds.jwt.JWTClaimsSet
-import com.nimbusds.jwt.PlainJWT
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.ExecutionAttemptedEvent
 import dev.failsafe.event.ExecutionCompletedEvent
@@ -17,11 +15,8 @@ import io.airbyte.api.client.model.generated.ConfiguredStreamMapper
 import io.airbyte.api.client.model.generated.DestinationSyncMode
 import io.airbyte.api.client.model.generated.SelectedFieldInfo
 import io.airbyte.api.client.model.generated.SyncMode
-import io.airbyte.commons.DEFAULT_USER_ID
 import io.airbyte.commons.auth.AirbyteAuthConstants
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.micronaut.security.token.jwt.signature.secret.SecretSignature
-import io.micronaut.security.token.jwt.signature.secret.SecretSignatureConfiguration
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -56,8 +51,10 @@ object AcceptanceTestUtils {
   /**
    * This is a flag that can be used to enable/disable enterprise-only features in acceptance tests.
    */
+  @JvmStatic
   fun isEnterprise(): Boolean = System.getenv().getOrDefault(IS_ENTERPRISE, "false") == "true"
 
+  @JvmStatic
   fun getAirbyteApiUrl(): String {
     val host = System.getenv("AIRBYTE_SERVER_HOST")
     if (host.isNullOrBlank()) {
@@ -66,71 +63,55 @@ object AcceptanceTestUtils {
     return "$host/api"
   }
 
-  private fun JWTClaimsSet.toAuthHeader(): Map<String, String> {
-    val jwtSignatureKey = System.getenv("AB_JWT_SIGNATURE_SECRET")
-    if (jwtSignatureKey.isNullOrBlank()) {
-      val token = PlainJWT(this).serialize()
-      return mapOf("Authorization" to "Bearer $token")
-    }
-
-    val secretSignatureConfig = SecretSignatureConfiguration("airbyte-internal-api")
-    secretSignatureConfig.secret = jwtSignatureKey
-    val secretSignature = SecretSignature(secretSignatureConfig)
-    val token = secretSignature.sign(this).serialize()
-    return mapOf("Authorization" to "Bearer $token")
-  }
-
-  private fun getAdminAuthHeaders() =
-    JWTClaimsSet
-      .Builder()
-      .subject(DEFAULT_USER_ID.toString())
-      .build()
-      .toAuthHeader()
-
-  fun createAirbyteAdminApiClient(): AirbyteApiClient =
-    AirbyteApiClient(
-      basePath = getAirbyteApiUrl(),
-      policy = createRetryPolicy(),
-      httpClient = createOkHttpClient(getAdminAuthHeaders()),
-    )
-
-  fun createAirbyteUserApiClient(
-    email: String,
-    verified: Boolean = true,
+  @JvmStatic
+  @JvmOverloads
+  fun createAirbyteApiClient(
+    basePath: String,
+    headers: Map<String, String> = mapOf(),
+    applyHeaders: Boolean = System.getenv().containsKey(IS_GKE),
   ): AirbyteApiClient {
-    val headers =
-      JWTClaimsSet
-        .Builder()
-        .subject(email)
-        .claim("user_id", email)
-        .claim("user_email", email)
-        .claim("email_verified", verified)
-        .build()
-        .toAuthHeader()
-
+    // Set up the API client.
     return AirbyteApiClient(
-      basePath = getAirbyteApiUrl(),
+      basePath = basePath,
       policy = createRetryPolicy(),
-      httpClient = createOkHttpClient(headers),
+      httpClient =
+        createOkHttpClient(
+          applyHeaders = applyHeaders,
+          headers = headers,
+        ),
     )
   }
 
-  fun createOkHttpClient(headers: Map<String, String> = getAdminAuthHeaders()) =
-    OkHttpClient
-      .Builder()
-      .addInterceptor(
-        Interceptor { chain ->
-          val request = chain.request()
-          val builder: Request.Builder = request.newBuilder()
-          headers.entries.stream().forEach { e: Map.Entry<String, String> -> builder.addHeader(e.key, e.value) }
-          chain.proceed(builder.build())
-        },
-      ).addInterceptor(LoggingInterceptor)
-      .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
-      .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
-      .build()
+  @JvmStatic
+  @JvmOverloads
+  fun createOkHttpClient(
+    applyHeaders: Boolean = System.getenv().containsKey(IS_GKE),
+    headers: Map<String, String> = mapOf(),
+  ): OkHttpClient {
+    val okHttpClient: OkHttpClient =
+      OkHttpClient
+        .Builder()
+        .addInterceptor(
+          Interceptor { chain ->
+            val request = chain.request()
+            val builder: Request.Builder = request.newBuilder()
+            if (applyHeaders) {
+              headers.entries.stream().forEach { e: Map.Entry<String, String> -> builder.addHeader(e.key, e.value) }
+            }
+            if (isEnterprise()) {
+              builder.addHeader(AirbyteAuthConstants.X_AIRBYTE_AUTH_HEADER, X_AIRBYTE_AUTH_HEADER_TEST_CLIENT_VALUE)
+            }
+            chain.proceed(builder.build())
+          },
+        ).addInterceptor(LoggingInterceptor)
+        .connectTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
+        .readTimeout(Duration.ofSeconds(DEFAULT_TIMEOUT))
+        .build()
+    return okHttpClient
+  }
 
-  private fun createRetryPolicy(): RetryPolicy<Response> =
+  @JvmStatic
+  fun createRetryPolicy(): RetryPolicy<Response> =
     RetryPolicy
       .builder<Response>()
       .handle(
@@ -149,6 +130,7 @@ object AcceptanceTestUtils {
       .withMaxRetries(MAX_TRIES)
       .build()
 
+  @JvmStatic
   fun modifyCatalog(
     originalCatalog: AirbyteCatalog?,
     // TODO replace Optional with nullable values and leverage ?.let { } ?: config.<other value>

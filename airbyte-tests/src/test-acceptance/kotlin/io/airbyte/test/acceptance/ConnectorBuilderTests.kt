@@ -24,7 +24,8 @@ import io.airbyte.api.client.model.generated.WorkspaceCreate
 import io.airbyte.api.client.model.generated.WorkspaceIdRequestBody
 import io.airbyte.commons.DEFAULT_ORGANIZATION_ID
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Databases.listAllTables
 import io.airbyte.test.utils.Databases.retrieveDestinationRecords
@@ -42,6 +43,7 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.utility.DockerImageName
 import java.io.IOException
 import java.sql.SQLException
+import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -227,7 +229,7 @@ class ConnectorBuilderTests {
     @Throws(Exception::class)
     @JvmStatic
     fun init() {
-      apiClient = createAirbyteAdminApiClient()
+      apiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), Map.of())
       workspaceId =
         apiClient!!
           .workspaceApi
