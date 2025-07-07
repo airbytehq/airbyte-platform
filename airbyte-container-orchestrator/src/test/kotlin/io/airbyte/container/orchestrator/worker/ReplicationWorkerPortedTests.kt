@@ -564,34 +564,23 @@ class ReplicationWorkerPortedTests {
   }
 
   @Test fun `populates output on success`() {
-    every { syncStatsTracker.getTotalRecordsEmitted() } returns 12L
-    every { syncStatsTracker.getTotalBytesFilteredOut() } returns 0L
-    every { syncStatsTracker.getTotalRecordsFilteredOut() } returns 0L
-    every { syncStatsTracker.getTotalBytesEmitted() } returns 100L
-    every { syncStatsTracker.getTotalRecordsCommitted() } returns 12L
-    every { syncStatsTracker.getTotalBytesCommitted() } returns 100L
     every { syncStatsTracker.getTotalSourceStateMessagesEmitted() } returns 3L
     every { syncStatsTracker.getTotalDestinationStateMessagesEmitted() } returns 1L
-    every { syncStatsTracker.getStreamToEmittedBytes() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 100L,
-      )
-    every { syncStatsTracker.getStreamToFilteredOutBytes() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 0L,
-      )
-    every { syncStatsTracker.getStreamToFilteredOutRecords() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 0L,
-      )
-    every { syncStatsTracker.getStreamToEmittedRecords() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 12L,
-      )
     every { syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage() } returns 5L
     every { syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage() } returns 4L
     every { syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted() } returns 6L
     every { syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted() } returns 3L
+    every { syncStatsTracker.getStats() } returns
+      mapOf(
+        AirbyteStreamNameNamespacePair("stream", "namespace") to
+          mockk(relaxed = true) {
+            every { bytesCommitted } returns 100L
+            every { recordsCommitted } returns 12L
+            // This is because for completed syncs, we currently assume committed == emitted
+            every { bytesEmitted } returns 100L
+            every { recordsEmitted } returns 12L
+          },
+      )
 
     val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
@@ -601,42 +590,24 @@ class ReplicationWorkerPortedTests {
 
   @Test fun `populates stats on failure if available`() {
     every { source.close() } throws IllegalStateException("induced")
-    every { syncStatsTracker.getTotalRecordsEmitted() } returns 12L
-    every { syncStatsTracker.getTotalRecordsFilteredOut() } returns 0L
-    every { syncStatsTracker.getTotalBytesFilteredOut() } returns 0L
-    every { syncStatsTracker.getTotalBytesEmitted() } returns 100L
-    every { syncStatsTracker.getTotalBytesCommitted() } returns 12L
-    every { syncStatsTracker.getTotalRecordsCommitted() } returns 6L
     every { syncStatsTracker.getTotalSourceStateMessagesEmitted() } returns 3L
     every { syncStatsTracker.getTotalDestinationStateMessagesEmitted() } returns 2L
-    every { syncStatsTracker.getStreamToEmittedBytes() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 100L,
-      )
-    every { syncStatsTracker.getStreamToFilteredOutBytes() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 0L,
-      )
-    every { syncStatsTracker.getStreamToFilteredOutRecords() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 0L,
-      )
-    every { syncStatsTracker.getStreamToEmittedRecords() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 12L,
-      )
-    every { syncStatsTracker.getStreamToCommittedRecords() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 6L,
-      )
-    every { syncStatsTracker.getStreamToCommittedBytes() } returns
-      mapOf(
-        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to 13L,
-      )
     every { syncStatsTracker.getMaxSecondsToReceiveSourceStateMessage() } returns 10L
     every { syncStatsTracker.getMeanSecondsToReceiveSourceStateMessage() } returns 8L
     every { syncStatsTracker.getMaxSecondsBetweenStateMessageEmittedAndCommitted() } returns 12L
     every { syncStatsTracker.getMeanSecondsBetweenStateMessageEmittedAndCommitted() } returns 11L
+    every { syncStatsTracker.getStats() } returns
+      mapOf(
+        AirbyteStreamNameNamespacePair(STREAM_NAME, "") to
+          mockk(relaxed = true) {
+            every { bytesCommitted } returns 13L
+            every { bytesEmitted } returns 100L
+            every { bytesFilteredOut } returns 0L
+            every { recordsCommitted } returns 6L
+            every { recordsEmitted } returns 12L
+            every { recordsFilteredOut } returns 0L
+          },
+      )
 
     val out = runBlocking { getWorker().run(jobRoot) }
     assertEquals(ReplicationStatus.COMPLETED, out.replicationAttemptSummary.status)
@@ -649,7 +620,7 @@ class ReplicationWorkerPortedTests {
   }
 
   @Test fun `irrecoverable failure throws WorkerException`() {
-    every { syncStatsTracker.getTotalRecordsEmitted() } throws IllegalStateException("oops")
+    every { syncStatsTracker.getStats() } throws IllegalStateException("oops")
     assertThrows<WorkerException> {
       runBlocking { getWorker().run(jobRoot) }
     }

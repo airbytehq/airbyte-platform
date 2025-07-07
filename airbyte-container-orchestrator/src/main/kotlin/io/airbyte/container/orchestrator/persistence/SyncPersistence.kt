@@ -311,8 +311,8 @@ private fun buildSaveStatsRequest(
   attemptNumber: Int,
   connectionId: UUID,
 ): SaveStatsRequestBody {
-  val totalSyncStats = syncStatsTracker.getTotalStats(false)
   val streamSyncStats = syncStatsTracker.getPerStreamStats(false)
+  val totalSyncStats = syncStatsTracker.getTotalStats(streamSyncStats, false)
 
   return SaveStatsRequestBody(
     jobId = jobId,

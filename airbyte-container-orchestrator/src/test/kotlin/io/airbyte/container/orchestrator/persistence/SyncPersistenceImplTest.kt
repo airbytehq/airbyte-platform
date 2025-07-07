@@ -507,54 +507,6 @@ internal class SyncPersistenceImplTest {
     verify(exactly = 1) { syncStatsTracker.updateSourceStatesStats(any()) }
     clearInvocations(listOf(syncStatsTracker))
 
-    syncPersistence.getStreamToCommittedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToCommittedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToCommittedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToCommittedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEmittedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEmittedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEstimatedRecords()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEstimatedRecords() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEmittedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEmittedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getStreamToEstimatedBytes()
-    verify(exactly = 1) { syncStatsTracker.getStreamToEstimatedBytes() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsEmitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsEmitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsEstimated()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsEstimated() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesEmitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesEmitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesEstimated()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesEstimated() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalBytesCommitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalBytesCommitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
-    syncPersistence.getTotalRecordsCommitted()
-    verify(exactly = 1) { syncStatsTracker.getTotalRecordsCommitted() }
-    clearInvocations(listOf(syncStatsTracker))
-
     syncPersistence.getTotalSourceStateMessagesEmitted()
     verify(exactly = 1) { syncStatsTracker.getTotalSourceStateMessagesEmitted() }
     clearInvocations(listOf(syncStatsTracker))

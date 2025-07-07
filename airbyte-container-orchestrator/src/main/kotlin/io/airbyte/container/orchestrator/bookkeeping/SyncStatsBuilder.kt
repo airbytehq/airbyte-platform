@@ -11,29 +11,29 @@ import io.airbyte.config.SyncStats
 
 /**
  * Extract StreamStats from SyncStatsTracker.
+ *
+ * TODO the notion of hasReplicationCompleted feels obsolete, we should simplify and always return the count
  */
-fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> {
-  // for readability purposes, avoids having to use `this@getPerStreamStats` in the map below
-  val tracker = this
-
-  // assume every stream with stats is in streamToEmittedRecords map
-  return getStreamToEmittedRecords()
-    .map { (stream, records) ->
-      val syncStats: SyncStats =
+fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<StreamSyncStats> =
+  getStats()
+    .map { (stream, stats) ->
+      val syncStats =
         SyncStats()
-          .withBytesEmitted(tracker.getStreamToEmittedBytes()[stream])
-          .withRecordsEmitted(records)
-          .withRecordsFilteredOut(tracker.getStreamToFilteredOutRecords()[stream])
-          .withBytesFilteredOut(tracker.getStreamToFilteredOutBytes()[stream])
-          .withSourceStateMessagesEmitted(null)
-          .withDestinationStateMessagesEmitted(null)
+          .withBytesCommitted(stats.bytesCommitted)
+          .withBytesEmitted(stats.bytesEmitted)
+          .withBytesFilteredOut(stats.bytesFilteredOut)
+          .withEstimatedBytes(stats.bytesEstimated)
+          .withEstimatedRecords(stats.recordsEstimated)
+          .withRecordsCommitted(stats.recordsCommitted)
+          .withRecordsEmitted(stats.recordsEmitted)
+          .withRecordsFilteredOut(stats.recordsFilteredOut)
           .apply {
             if (hasReplicationCompleted) {
-              bytesCommitted = tracker.getStreamToEmittedBytes()[stream]?.minus(bytesFilteredOut)
-              recordsCommitted = tracker.getStreamToEmittedRecords()[stream]?.minus(recordsFilteredOut)
+              bytesCommitted = stats.bytesEmitted - stats.bytesFilteredOut
+              recordsCommitted = stats.recordsEmitted - stats.recordsFilteredOut
             } else {
-              bytesCommitted = tracker.getStreamToCommittedBytes()[stream]
-              recordsCommitted = tracker.getStreamToCommittedRecords()[stream]
+              bytesCommitted = stats.bytesCommitted
+              recordsCommitted = stats.recordsCommitted
             }
           }
 
@@ -41,18 +41,44 @@ fun SyncStatsTracker.getPerStreamStats(hasReplicationCompleted: Boolean): List<S
         .withStreamName(stream.name)
         .withStreamNamespace(stream.namespace)
         .withStats(syncStats)
-    }.toList()
+    }
+
+private data class TotalStats(
+  var recordsCommitted: Long = 0,
+  var recordsEmitted: Long = 0,
+  var recordsFilteredOut: Long = 0,
+  var bytesCommitted: Long = 0,
+  var bytesEmitted: Long = 0,
+  var bytesFilteredOut: Long = 0,
+) {
+  fun add(other: SyncStats) {
+    recordsCommitted += other.recordsCommitted
+    recordsEmitted += other.recordsEmitted
+    recordsFilteredOut += other.recordsFilteredOut
+    bytesCommitted += other.bytesCommitted
+    bytesEmitted += other.bytesEmitted
+    bytesFilteredOut += other.bytesFilteredOut
+  }
 }
 
 /**
  * Extract total stats from SyncStatsTracker.
+ *
+ * TODO the notion of hasReplicationCompleted feels obsolete, we should simplify and always return the count
  */
-fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats =
-  SyncStats()
-    .withRecordsEmitted(getTotalRecordsEmitted())
-    .withRecordsFilteredOut(getTotalRecordsFilteredOut())
-    .withBytesEmitted(getTotalBytesEmitted())
-    .withBytesFilteredOut(getTotalBytesFilteredOut())
+fun SyncStatsTracker.getTotalStats(
+  streamStats: List<StreamSyncStats>,
+  hasReplicationCompleted: Boolean,
+): SyncStats {
+  val totalStats = TotalStats()
+  streamStats.forEach {
+    totalStats.add(it.stats)
+  }
+  return SyncStats()
+    .withRecordsEmitted(totalStats.recordsEmitted)
+    .withRecordsFilteredOut(totalStats.recordsFilteredOut)
+    .withBytesEmitted(totalStats.bytesEmitted)
+    .withBytesFilteredOut(totalStats.bytesFilteredOut)
     .withSourceStateMessagesEmitted(getTotalSourceStateMessagesEmitted())
     .withDestinationStateMessagesEmitted(getTotalDestinationStateMessagesEmitted())
     .withMaxSecondsBeforeSourceStateMessageEmitted(getMaxSecondsToReceiveSourceStateMessage())
@@ -64,7 +90,8 @@ fun SyncStatsTracker.getTotalStats(hasReplicationCompleted: Boolean): SyncStats 
         bytesCommitted = bytesEmitted.minus(bytesFilteredOut)
         recordsCommitted = recordsEmitted.minus(recordsFilteredOut)
       } else {
-        bytesCommitted = getTotalBytesCommitted()
-        recordsCommitted = getTotalRecordsCommitted()
+        bytesCommitted = totalStats.bytesCommitted
+        recordsCommitted = totalStats.recordsCommitted
       }
     }
+}

@@ -15,6 +15,7 @@ import io.airbyte.config.ReplicationAttemptSummary
 import io.airbyte.config.ReplicationOutput
 import io.airbyte.config.StandardSyncSummary.ReplicationStatus
 import io.airbyte.config.StreamDescriptor
+import io.airbyte.config.StreamSyncStats
 import io.airbyte.config.SyncStats
 import io.airbyte.config.WorkerDestinationConfig
 import io.airbyte.container.orchestrator.bookkeeping.AirbyteMessageOrigin
@@ -183,7 +184,7 @@ class ReplicationWorkerHelper(
   }
 
   fun endOfSource() {
-    val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
+    val bytes = byteCountToDisplaySize(syncStatsTracker.getStats().values.sumOf { it.bytesEmitted })
     logger.info { "Total records read: ($bytes)" }
     fieldSelector?.reportMetrics(context.replicationContext.sourceId)
     timeTracker.trackSourceReadEndTime()
@@ -210,8 +211,8 @@ class ReplicationWorkerHelper(
         else -> ReplicationStatus.COMPLETED
       }
     val completed = outputStatus == ReplicationStatus.COMPLETED
-    val totalStats = getTotalStats(timeTracker, completed)
     val streamStats = syncStatsTracker.getPerStreamStats(completed)
+    val totalStats = getTotalStats(streamStats, timeTracker, completed)
 
     if (!completed && syncStatsTracker.getUnreliableStateTimingMetrics()) {
       logger.warn { "Unreliable committed record counts; setting committed record stats to null" }
@@ -220,8 +221,8 @@ class ReplicationWorkerHelper(
     val summary =
       ReplicationAttemptSummary()
         .withStatus(outputStatus)
-        .withRecordsSynced(syncStatsTracker.getTotalRecordsCommitted())
-        .withBytesSynced(syncStatsTracker.getTotalBytesCommitted())
+        .withRecordsSynced(totalStats.recordsCommitted)
+        .withBytesSynced(totalStats.bytesCommitted)
         .withTotalStats(totalStats)
         .withStreamStats(streamStats)
         .withStartTime(timeTracker.replicationStartTime)
@@ -329,10 +330,11 @@ class ReplicationWorkerHelper(
   }
 
   private fun getTotalStats(
+    streamStats: List<StreamSyncStats>,
     timeTracker: ThreadedTimeTracker,
     completed: Boolean,
   ): SyncStats =
-    syncStatsTracker.getTotalStats(completed).apply {
+    syncStatsTracker.getTotalStats(streamStats, completed).apply {
       replicationStartTime = timeTracker.replicationStartTime
       replicationEndTime = timeTracker.replicationEndTime
       sourceReadStartTime = timeTracker.sourceReadStartTime
@@ -373,7 +375,7 @@ class ReplicationWorkerHelper(
     if (recordsRead == 5000L) {
       totalRecordsRead += recordsRead
       logger.info {
-        val bytes = byteCountToDisplaySize(syncStatsTracker.getTotalBytesEmitted())
+        val bytes = byteCountToDisplaySize(syncStatsTracker.getStats().values.sumOf { it.bytesEmitted })
         "Records read: $totalRecordsRead ($bytes)"
       }
       recordsRead = 0
