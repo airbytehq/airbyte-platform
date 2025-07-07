@@ -312,15 +312,15 @@ connectorRollout:
   config:
     - env: CONNECTOR_ROLLOUT_EXPIRATION_SECONDS
       key: expirationSeconds
-      defaultValue: 7200
+      defaultValue: 604800
 
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_ROLLOUTS_SECONDS
       key: waitBetweenRolloutSeconds
-      defaultValue: 60
+      defaultValue: 10800
 
     - env: CONNECTOR_ROLLOUT_WAIT_BETWEEN_SYNC_RESULTS_QUERIES_SECONDS
       key: waitBetweenSyncResultsQueriesSeconds
-      defaultValue: 10
+      defaultValue: 3600
 
 connectorRollout.temporal:
   keyBasePath: global.temporal.cloud.connectorRollout
