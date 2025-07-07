@@ -14,6 +14,9 @@ import io.airbyte.config.ConfigTemplate
 import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.persistence.job.WorkspaceHelper
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.micronaut.test.extensions.junit5.annotation.MicronautTest
@@ -40,13 +43,19 @@ class ConfigTemplateControllerTest {
         getOrganizationForWorkspace(workspaceId)
       } returns organizationId
     }
-  val licenseEntitlementChecker: LicenseEntitlementChecker =
+  private val licenseEntitlementChecker: LicenseEntitlementChecker =
     mockk {
       every {
         ensureEntitled(organizationId, Entitlement.CONFIG_TEMPLATE_ENDPOINTS)
       } returns Unit
     }
-  val controller = ConfigTemplateController(configTemplateService, workspaceHelper, licenseEntitlementChecker)
+
+  private val featureFlagServiceClient =
+    mockk<FeatureFlagServiceClient> {
+      every { boolVariation(UseSonarServer, Organization(organizationId)) } returns false
+    }
+
+  val controller = ConfigTemplateController(configTemplateService, workspaceHelper, licenseEntitlementChecker, featureFlagServiceClient)
 
   @Nested
   inner class ListEndpointTests {

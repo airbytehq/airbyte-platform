@@ -7,6 +7,7 @@ package io.airbyte.server.apis.publicapi.controllers
 import com.google.common.annotations.VisibleForTesting
 import io.airbyte.api.model.generated.ListOrganizationsByUserRequestBody
 import io.airbyte.api.problems.model.generated.ProblemLicenseEntitlementData
+import io.airbyte.api.problems.throwable.generated.EmbeddedEndpointMovedProblem
 import io.airbyte.api.problems.throwable.generated.LicenseEntitlementProblem
 import io.airbyte.commons.auth.roles.AuthRoleConstants
 import io.airbyte.commons.entitlements.Entitlement
@@ -18,6 +19,9 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.publicApi.server.generated.apis.PublicConfigTemplatesApi
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateRequestBody
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateResponse
@@ -47,6 +51,7 @@ open class ConfigTemplatesPublicController(
   private val trackingHelper: TrackingHelper,
   private val licenseEntitlementChecker: LicenseEntitlementChecker,
   private val organizationsHandler: OrganizationsHandler,
+  private val featureFlagServiceClient: FeatureFlagServiceClient,
 ) : PublicConfigTemplatesApi {
   private val logger = KotlinLogging.logger {}
 
@@ -54,6 +59,7 @@ open class ConfigTemplatesPublicController(
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   override fun publicCreateConfigTemplate(configTemplateCreateRequestBody: ConfigTemplateCreateRequestBody): Response =
     wrap {
+      throwIfSonarServerEnabled(configTemplateCreateRequestBody.organizationId)
       createConfigTemplate(configTemplateCreateRequestBody).ok()
     }
 
@@ -97,6 +103,11 @@ open class ConfigTemplatesPublicController(
     ensureUserBelongsToAtLeastOneEntitledOrg(userId)
 
     val configTemplate = configTemplateService.getConfigTemplate(configTemplateId)
+
+    if (configTemplate.configTemplate.organizationId != null) {
+      throwIfSonarServerEnabled(configTemplate.configTemplate.organizationId!!)
+    }
+
     return configTemplate.toApiModel()
   }
 
@@ -104,6 +115,7 @@ open class ConfigTemplatesPublicController(
   @Secured(AuthRoleConstants.ORGANIZATION_READER)
   override fun publicListConfigTemplate(organizationId: String): Response =
     wrap {
+      throwIfSonarServerEnabled(UUID.fromString(organizationId))
       listConfigTemplate(organizationId).ok()
     }
 
@@ -130,6 +142,8 @@ open class ConfigTemplatesPublicController(
     configTemplateUpdateRequestBody: ConfigTemplateUpdateRequestBody,
   ): Response =
     wrap {
+      throwIfSonarServerEnabled(configTemplateUpdateRequestBody.organizationId)
+
       updateConfigTemplate(configTemplateId, configTemplateUpdateRequestBody).ok()
     }
 
@@ -190,6 +204,12 @@ open class ConfigTemplatesPublicController(
       name = actorName,
       icon = this.actorIcon,
     )
+
+  private fun throwIfSonarServerEnabled(organizationId: UUID) {
+    if (featureFlagServiceClient.boolVariation(UseSonarServer, Organization(organizationId))) {
+      throw EmbeddedEndpointMovedProblem()
+    }
+  }
 
   // wrap controller endpoints in common functionality: segment tracking, error conversion, etc.
   private fun wrap(block: () -> Response): Response {

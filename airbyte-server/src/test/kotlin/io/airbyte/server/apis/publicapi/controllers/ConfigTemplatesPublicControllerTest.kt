@@ -16,6 +16,9 @@ import io.airbyte.config.ConfigTemplateWithActorDetails
 import io.airbyte.data.services.ConfigTemplateService
 import io.airbyte.domain.models.ActorDefinitionId
 import io.airbyte.domain.models.OrganizationId
+import io.airbyte.featureflag.FeatureFlagServiceClient
+import io.airbyte.featureflag.Organization
+import io.airbyte.featureflag.UseSonarServer
 import io.airbyte.protocol.models.v0.ConnectorSpecification
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateCreateRequestBody
 import io.airbyte.publicApi.server.generated.models.ConfigTemplateUpdateRequestBody
@@ -40,6 +43,10 @@ class ConfigTemplatesPublicControllerTest {
   private val currentUserService: CurrentUserService = mockk()
   private val trackingHelper: TrackingHelper = mockk()
   private val licenseEntitlementChecker: LicenseEntitlementChecker = mockk()
+  private val featureFlagServiceClient =
+    mockk<FeatureFlagServiceClient> {
+      every { boolVariation(UseSonarServer, Organization(organizationId)) } returns false
+    }
   private val organizationHandler: OrganizationsHandler = mockk()
   private val controller =
     ConfigTemplatesPublicController(
@@ -48,6 +55,7 @@ class ConfigTemplatesPublicControllerTest {
       trackingHelper,
       licenseEntitlementChecker,
       organizationHandler,
+      featureFlagServiceClient,
     )
   private val organizationReadList =
     OrganizationReadList().organizations(listOf(OrganizationRead().organizationId(organizationId)))

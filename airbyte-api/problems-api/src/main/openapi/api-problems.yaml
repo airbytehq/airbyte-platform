@@ -87,6 +87,28 @@ components:
             detail:
               type: string
               default: Your email domain requires SSO sign-in. Please sign in using your SSO provider.
+    EmbeddedEndpointMovedProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 301
+            type:
+              type: string
+              default: error:embedded/endpoint-moved
+            title:
+              type: string
+              default: Airbyte Embedded Endpoint Moved
+            detail:
+              type: string
+              default: This endpoint for Airbyte Embedded has moved.  Please see https://api.airbyte.ai/api/v1/redoc for the latest Airbyte Embedded API documentation and update your configuration.
+            documentationUrl:
+              type: string
+              default: "https://api.airbyte.ai/api/v1/redoc"
     LicenseEntitlementProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object
