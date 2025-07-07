@@ -11,6 +11,7 @@ import {
   createDestination,
   deleteDestination,
   discoverCatalogForDestination,
+  getCatalogForConnection,
   getDestination,
   listDestinationsForWorkspace,
   updateDestination,
@@ -27,7 +28,8 @@ export const destinationsKeys = {
   list: (filters: string) => [...destinationsKeys.lists(), { filters }] as const,
   detail: (destinationId: string) => [...destinationsKeys.all, "details", destinationId] as const,
   discover: (destinationId: string) => [...destinationsKeys.all, "discover", destinationId] as const,
-  cachedDiscover: (destinationId: string) => [...destinationsKeys.all, "cachedDiscover", destinationId] as const,
+  catalogByConnectionId: (connectionId: string) =>
+    [...destinationsKeys.all, "catalogByConnectionId", connectionId] as const,
 };
 
 interface ValuesProps {
@@ -190,10 +192,11 @@ export const useDiscoverDestination = (destinationId: string) => {
   );
 };
 
-export const useCachedDestinationCatalog = (destinationId: string) => {
+// Gets the destination catalog that a connection was configured with
+export const useDestinationCatalogByConnectionId = (connectionId: string) => {
   const requestOptions = useRequestOptions();
 
-  return useSuspenseQuery(destinationsKeys.cachedDiscover(destinationId), () =>
-    discoverCatalogForDestination({ destinationId, disableCache: false }, requestOptions)
+  return useSuspenseQuery(destinationsKeys.catalogByConnectionId(connectionId), () =>
+    getCatalogForConnection({ connectionId }, requestOptions)
   );
 };
