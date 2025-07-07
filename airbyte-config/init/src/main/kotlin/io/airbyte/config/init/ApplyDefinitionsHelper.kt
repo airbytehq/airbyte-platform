@@ -226,8 +226,8 @@ class ApplyDefinitionsHelper(
       try {
         val connectorRollout =
           when (rcDef) {
-            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.getOrNull())
-            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.getOrNull())
+            is ConnectorRegistrySourceDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.orElseThrow())
+            is ConnectorRegistryDestinationDefinition -> ConnectorRegistryConverters.toConnectorRollout(rcDef, insertedAdv, initialAdv.orElseThrow())
             else -> throw IllegalArgumentException("Unsupported type: ${rcDef!!::class.java}")
           }
         val existingRollout =
