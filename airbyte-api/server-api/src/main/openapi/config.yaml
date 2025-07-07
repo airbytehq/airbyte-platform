@@ -6947,6 +6947,40 @@ paths:
           description: "Org successfully onboarded to sso"
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/delete:
+    post:
+      summary: Remove an SSO config
+      tags:
+        - sso_config
+      operationId: deleteSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeleteSSOConfigRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "SSO config successfully deleted"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/update_credentials:
+    post:
+      summary: Update a client id and client secret for an SSO IDP
+      tags:
+        - sso_config
+      operationId: updateSsoCredentials
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSSOCredentialsRequestBody"
+        required: true
+      responses:
+        "204":
+          description: "SSO credentials successfully updates"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
 
   # Airbyte API
   /public:
@@ -20178,6 +20212,34 @@ components:
           type: string
           format: url
         emailDomain:
+          type: string
+
+    DeleteSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+      properties:
+        organizationId:
+          type: string
+          format: UUID
+        companyIdentifier:
+          type: string
+          description: Matches the keycloak realm to be removed
+
+    UpdateSSOCredentialsRequestBody:
+      type: object
+      required:
+        - organizationId
+        - clientId
+        - clientSecret
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+        clientSecret:
           type: string
 
   responses:

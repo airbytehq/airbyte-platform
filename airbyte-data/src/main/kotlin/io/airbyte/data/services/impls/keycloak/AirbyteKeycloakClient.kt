@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.micronaut.context.annotation.Value
 import jakarta.inject.Singleton
@@ -144,6 +145,38 @@ class AirbyteKeycloakClient(
     }
   }
 
+  fun deleteRealm(realmName: String) {
+    keycloakAdminClient
+      .realms()
+      .realm(realmName)
+      .remove()
+  }
+
+  fun updateIdpClientCredentials(
+    clientConfig: SsoKeycloakIdpCredentials,
+    realmName: String,
+  ) {
+    val currentRealm = keycloakAdminClient.realms().realm(realmName)
+    val currentIdpRepresentation =
+      currentRealm
+        .identityProviders()
+        .findAll()
+        .filter { it.alias == DEFAULT_IDP_ALIAS }
+        .getOrNull(0)
+
+    if (currentIdpRepresentation == null) {
+      throw IdpNotFoundException("IDP $DEFAULT_IDP_ALIAS does not exist")
+    }
+
+    currentIdpRepresentation.config["clientId"] = clientConfig.clientId
+    currentIdpRepresentation.config["clientSecret"] = clientConfig.clientSecret
+
+    currentRealm
+      .identityProviders()
+      .get(DEFAULT_IDP_ALIAS)
+      .update(currentIdpRepresentation)
+  }
+
   companion object {
     private const val AIRBYTE_LOGIN_THEME = "airbyte-keycloak-theme"
     private const val DEFAULT_SCOPE = "openid profile email"
@@ -167,5 +200,9 @@ class ImportConfigException(
 ) : Exception(message)
 
 class CreateClientException(
+  message: String,
+) : Exception(message)
+
+class IdpNotFoundException(
   message: String,
 ) : Exception(message)

@@ -26,6 +26,8 @@ open class SsoConfigServiceDataImpl internal constructor(
       )
   }
 
+  override fun deleteSsoConfig(organizationId: UUID) = ssoConfigRepository.deleteByOrganizationId(organizationId)
+
   override fun getSsoConfig(organizationId: UUID): io.airbyte.config.SsoConfig? =
     ssoConfigRepository.findByOrganizationId(organizationId)?.toConfigModel()
 }

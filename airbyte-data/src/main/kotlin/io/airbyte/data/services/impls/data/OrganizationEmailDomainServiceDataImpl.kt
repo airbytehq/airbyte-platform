@@ -9,6 +9,7 @@ import io.airbyte.data.repositories.OrganizationEmailDomainRepository
 import io.airbyte.data.services.OrganizationEmailDomainService
 import io.airbyte.data.services.impls.data.mappers.toConfigModel
 import jakarta.inject.Singleton
+import java.util.UUID
 
 @Singleton
 class OrganizationEmailDomainServiceDataImpl(
@@ -25,4 +26,6 @@ class OrganizationEmailDomainServiceDataImpl(
       ),
     )
   }
+
+  override fun deleteAllEmailDomains(organizationId: UUID) = repository.deleteByOrganizationId(organizationId)
 }

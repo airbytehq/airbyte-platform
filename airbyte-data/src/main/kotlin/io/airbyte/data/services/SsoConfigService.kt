@@ -10,5 +10,7 @@ import java.util.UUID
 interface SsoConfigService {
   fun createSsoConfig(config: SsoConfig)
 
+  fun deleteSsoConfig(organizationId: UUID)
+
   fun getSsoConfig(organizationId: UUID): io.airbyte.config.SsoConfig?
 }

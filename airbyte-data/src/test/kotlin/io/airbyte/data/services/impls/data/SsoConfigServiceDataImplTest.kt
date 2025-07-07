@@ -52,4 +52,14 @@ class SsoConfigServiceDataImplTest {
       )
     }
   }
+
+  @Test
+  fun `deleteSsoConfig should remove SSO config successfully`() {
+    val orgId = UUID.randomUUID()
+    every { ssoConfigRepository.deleteByOrganizationId(orgId) } returns mockk()
+
+    ssoConfigService.deleteSsoConfig(orgId)
+
+    verify(exactly = 1) { ssoConfigRepository.deleteByOrganizationId(orgId) }
+  }
 }

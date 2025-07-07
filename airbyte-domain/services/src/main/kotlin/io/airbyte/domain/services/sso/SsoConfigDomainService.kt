@@ -4,7 +4,11 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
+import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
 import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
+import io.airbyte.api.problems.throwable.generated.SSOCredentialUpdateProblem
+import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.commons.annotation.InternalForTesting
 import io.airbyte.config.OrganizationEmailDomain
@@ -13,6 +17,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
 import java.util.UUID
@@ -49,6 +54,44 @@ open class SsoConfigDomainService internal constructor(
         emailDomain = config.emailDomain
       },
     )
+  }
+
+  fun deleteSsoConfig(
+    organizationId: UUID,
+    companyIdentifier: String,
+  ) {
+    try {
+      ssoConfigService.deleteSsoConfig(organizationId)
+      organizationEmailDomainService.deleteAllEmailDomains(organizationId)
+      airbyteKeycloakClient.deleteRealm(companyIdentifier)
+    } catch (ex: Exception) {
+      throw SSODeletionProblem(
+        ProblemSSODeletionData()
+          .organizationId(organizationId)
+          .companyIdentifier(companyIdentifier)
+          .errorMessage(ex.message),
+      )
+    }
+  }
+
+  fun updateClientCredentials(clientConfig: SsoKeycloakIdpCredentials) {
+    val currentSsoConfig = ssoConfigService.getSsoConfig(clientConfig.organizationId)
+    if (currentSsoConfig == null) {
+      throw SSOCredentialUpdateProblem(
+        ProblemSSOCredentialUpdateData()
+          .errorMessage("SSO Config does not exist for organization ${clientConfig.organizationId}"),
+      )
+    }
+
+    try {
+      airbyteKeycloakClient.updateIdpClientCredentials(clientConfig, currentSsoConfig.keycloakRealm)
+    } catch (e: Exception) {
+      throw SSOCredentialUpdateProblem(
+        ProblemSSOCredentialUpdateData()
+          .companyIdentifier(currentSsoConfig.keycloakRealm)
+          .errorMessage(e.message),
+      )
+    }
   }
 
   /**

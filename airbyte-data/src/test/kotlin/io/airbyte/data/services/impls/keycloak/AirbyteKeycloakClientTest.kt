@@ -5,6 +5,7 @@
 package io.airbyte.data.services.impls.keycloak
 
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -14,9 +15,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.keycloak.admin.client.Keycloak
 import org.keycloak.admin.client.resource.ClientsResource
+import org.keycloak.admin.client.resource.IdentityProviderResource
 import org.keycloak.admin.client.resource.IdentityProvidersResource
 import org.keycloak.admin.client.resource.RealmResource
 import org.keycloak.admin.client.resource.RealmsResource
+import org.keycloak.representations.idm.IdentityProviderRepresentation
 import java.util.UUID
 
 class AirbyteKeycloakClientTest {
@@ -83,5 +86,41 @@ class AirbyteKeycloakClientTest {
     val exception = assertThrows<RealmCreationException> { airbyteKeycloakClient.createOidcSsoConfig(config) }
 
     assertTrue(exception.message!!.contains("Create SSO config request failed"))
+  }
+
+  @Test
+  fun `updateIdpClientCredentials successfully changes the idp`() {
+    val config =
+      SsoKeycloakIdpCredentials(
+        organizationId = UUID.randomUUID(),
+        clientId = "client-id",
+        clientSecret = "client-secret",
+      )
+
+    val realmsMock = mockk<RealmsResource>(relaxed = true)
+    every { keycloakAdminClient.realms() } returns realmsMock
+
+    val realmMock = mockk<RealmResource>(relaxed = true)
+    every { realmsMock.realm(any()) } returns realmMock
+
+    val idpRepresentationMock = mockk<IdentityProviderRepresentation>(relaxed = true)
+    every { idpRepresentationMock.alias } returns "default"
+
+    val idpMock = mockk<IdentityProvidersResource>(relaxed = true)
+    every { idpMock.findAll() } returns listOf(idpRepresentationMock)
+    every { realmMock.identityProviders() } returns idpMock
+
+    // note that this is a IdentityProviderResource, not an IdentityProvidersResource
+    // as above (singular Provider, not plural Providers)!
+    val idpProviderMock = mockk<IdentityProviderResource>(relaxed = true)
+    every { idpMock.get(any()) } returns idpProviderMock
+    every { idpProviderMock.update(any()) } returns Unit
+
+    airbyteKeycloakClient.updateIdpClientCredentials(config, "testrealm")
+    verify(exactly = 1) { keycloakAdminClient.realms() }
+    verify(exactly = 2) { realmMock.identityProviders() }
+    verify(exactly = 1) { idpMock.findAll() }
+    verify(exactly = 1) { idpMock.get(any()) }
+    verify(exactly = 1) { idpProviderMock.update(any()) }
   }
 }

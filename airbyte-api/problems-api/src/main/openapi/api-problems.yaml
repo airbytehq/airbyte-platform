@@ -1648,3 +1648,67 @@ components:
           type: string
         errorMessage:
           type: string
+    SSODeletionProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-deletion
+            title:
+              type: string
+              default: SSO deletion failed
+            detail:
+              type: string
+              default: An error occurred when performing an SSO config delete
+            data:
+              $ref: "#/components/schemas/ProblemSSODeletionData"
+    ProblemSSODeletionData:
+      type: object
+      required:
+        - organizationId
+        - companyIdentifier
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string
+    SSOCredentialUpdateProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-credential-update
+            title:
+              type: string
+              default: SSO credential update failed
+            detail:
+              type: string
+              default: An error occurred when performing an SSO IDP credentials update
+            data:
+              $ref: "#/components/schemas/ProblemSSOCredentialUpdateData"
+    ProblemSSOCredentialUpdateData:
+      type: object
+      required:
+        - companyIdentifier
+      properties:
+        companyIdentifier:
+          type: string
+        errorMessage:
+          type: string

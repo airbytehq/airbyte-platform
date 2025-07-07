@@ -106,6 +106,22 @@ class SsoConfigDomainServiceTest {
   }
 
   @Test
+  fun `deleteSsoConfig should remove the config and domain email in the db and keycloak`() {
+    val orgId = UUID.randomUUID()
+    val companyIdentifier = "test-company-identifier"
+
+    every { airbyteKeycloakClient.deleteRealm(companyIdentifier) } just Runs
+    every { ssoConfigService.deleteSsoConfig(orgId) } just Runs
+    every { organizationEmailDomainService.deleteAllEmailDomains(orgId) } just Runs
+
+    ssoConfigDomainService.deleteSsoConfig(orgId, companyIdentifier)
+
+    verify(exactly = 1) { ssoConfigService.deleteSsoConfig(orgId) }
+    verify(exactly = 1) { organizationEmailDomainService.deleteAllEmailDomains(orgId) }
+    verify(exactly = 1) { airbyteKeycloakClient.deleteRealm(companyIdentifier) }
+  }
+
+  @Test
   fun `createAndStoreSsoConfig throws when email domain already exists`() {
     val orgId = UUID.randomUUID()
     val emailDomain = "airbyte.com"

@@ -12,5 +12,7 @@ import java.util.UUID
 
 @JdbcRepository(dialect = Dialect.POSTGRES, dataSource = "config")
 interface SsoConfigRepository : PageableRepository<SsoConfig, UUID> {
+  fun deleteByOrganizationId(organizationId: UUID)
+
   fun findByOrganizationId(organizationId: UUID): SsoConfig?
 }
