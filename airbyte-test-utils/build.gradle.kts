@@ -31,6 +31,7 @@ dependencies {
   implementation(libs.temporal.sdk)
   implementation(libs.google.cloud.api.client)
   implementation(libs.google.cloud.sqladmin)
+  implementation(libs.micronaut.security.jwt)
 
   // Mark as compile only to avoid leaking transitively to connectors
   compileOnly(libs.platform.testcontainers.postgresql)

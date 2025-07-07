@@ -11,8 +11,7 @@ import io.airbyte.api.client.model.generated.StreamStatusJobType
 import io.airbyte.api.client.model.generated.StreamStatusRunState
 import io.airbyte.api.client.model.generated.SyncMode
 import io.airbyte.test.utils.AcceptanceTestHarness
-import io.airbyte.test.utils.AcceptanceTestUtils
-import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteApiClient
+import io.airbyte.test.utils.AcceptanceTestUtils.createAirbyteAdminApiClient
 import io.airbyte.test.utils.AcceptanceTestUtils.modifyCatalog
 import io.airbyte.test.utils.Asserts.assertSourceAndDestinationDbRawRecordsInSync
 import io.airbyte.test.utils.Asserts.assertStreamStatuses
@@ -27,7 +26,6 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestMethodOrder
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.Map
 import java.util.Optional
 import java.util.UUID
 
@@ -111,7 +109,7 @@ internal class AdvancedAcceptanceTests {
       workspaceId = acceptanceTestsResources.workspaceId
       LOGGER.info("workspaceId = {}", workspaceId)
 
-      val apiClient = createAirbyteApiClient(AcceptanceTestUtils.getAirbyteApiUrl(), Map.of())
+      val apiClient = createAirbyteAdminApiClient()
 
       // log which connectors are being used.
       val sourceDef =
