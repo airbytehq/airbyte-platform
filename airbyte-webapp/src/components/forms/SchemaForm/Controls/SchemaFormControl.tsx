@@ -107,8 +107,9 @@ export const SchemaFormControl = ({
   }
 
   // Check if there's an override for this path
-  if (overrideByPath[path] !== undefined) {
-    return overrideByPath[path];
+  const matchingOverride = getMatchingOverrideForPath(overrideByPath, path);
+  if (matchingOverride !== undefined) {
+    return matchingOverride(path);
   }
 
   if (targetSchema.deprecated && value === undefined) {
@@ -214,4 +215,18 @@ const DeprecatedBadge = ({ message }: { message?: string }) => {
       <FormattedMessage id="form.deprecated" />
     </Badge>
   );
+};
+
+export const getMatchingOverrideForPath = (overrideByPath: OverrideByPath, path: string) => {
+  const matchingOverridePath = Object.keys(overrideByPath).find((overridePath) => {
+    // if overridePath contains a * then it is a wildcard that should match any character besides .
+    if (overridePath.includes("*")) {
+      const regex = new RegExp(`^${overridePath.replace("*", "[^.]+")}$`);
+      return regex.test(path);
+    }
+
+    return overridePath === path;
+  });
+
+  return matchingOverridePath ? overrideByPath[matchingOverridePath] : undefined;
 };

@@ -1,10 +1,7 @@
-import { ReactElement } from "react";
-
 import { SchemaFormControl } from "./Controls/SchemaFormControl";
+import { OverrideByPath } from "./Controls/types";
 import { useSchemaForm } from "./SchemaForm";
 import { getDeclarativeSchemaTypeValue } from "./utils";
-
-type OverrideByPath = Record<string, ReactElement | null>;
 
 /**
  * Component that renders form controls that haven't been rendered by other SchemaFormControl components

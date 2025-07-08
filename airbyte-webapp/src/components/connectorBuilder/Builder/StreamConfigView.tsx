@@ -749,7 +749,7 @@ const SchemaEditor = ({
       <SchemaFormControl
         path={schemaLoaderPath}
         overrideByPath={{
-          [schemaLoaderPath]: (
+          [schemaLoaderPath]: () => (
             <Message type="warning" text={formatMessage({ id: "connectorBuilder.streamSchema.noStreamName" })} />
           ),
         }}
@@ -785,7 +785,7 @@ const SchemaEditor = ({
           !Array.isArray(schemaLoader) &&
           schemaLoader?.type === InlineSchemaLoaderType.InlineSchemaLoader
             ? {
-                [schemaLoaderPath]: (
+                [schemaLoaderPath]: () => (
                   <div className={styles.autoSchemaContainer}>
                     <Pre>{formatJson(schemaLoader.schema, true)}</Pre>
                   </div>

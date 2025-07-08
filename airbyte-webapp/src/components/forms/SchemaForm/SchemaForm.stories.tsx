@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useFormState, useWatch } from "react-hook-form";
 
 import { formatJson } from "components/connectorBuilder/utils";
+import { Box } from "components/ui/Box";
 import { Button } from "components/ui/Button";
 import { Card } from "components/ui/Card";
 import { FlexContainer } from "components/ui/Flex";
@@ -18,7 +19,6 @@ import { resolveTopLevelRef } from "./utils";
 import declarativeComponentSchema from "../../../../build/declarative_component_schema.yaml";
 import { FormControl } from "../FormControl";
 import { FormSubmissionButtons } from "../FormSubmissionButtons";
-
 export default {
   title: "SchemaForm",
   component: SchemaForm,
@@ -301,10 +301,10 @@ export const AdvancedFields = () => {
       <SchemaForm schema={schema2} onSubmit={onSubmit}>
         <SchemaFormControl
           overrideByPath={{
-            "parent.child.name": (
+            "parent.child.name": () => (
               <FormControl name="parent.child.name" label="A different label for Name" fieldType="input" />
             ),
-            "parent.uncommonField2": (
+            "parent.uncommonField2": () => (
               <FormControl
                 name="parent.uncommonField2"
                 label="A different label for Uncommon Field 2"
@@ -331,28 +331,32 @@ export const AdvancedFields = () => {
 /**
  * Shows how to override specific fields with custom components
  */
-export const OverrideByPath = () => (
-  <Card>
-    <SchemaForm schema={schema} onSubmit={onSubmit}>
-      <SchemaFormControl
-        overrideByPath={{
-          "address.deliveryInstructions.dropOff": (
-            <FormControl
-              name="address.deliveryInstructions.dropOff"
-              label="Drop Off (custom)"
-              fieldType="input"
-              optional
-            />
-          ),
-          // Example of hiding a field by setting it to null
-          ageGroup: null,
-        }}
-      />
-      <FormSubmissionButtons />
-      <ShowFormValues />
-    </SchemaForm>
-  </Card>
-);
+export const OverrideByPath = () => {
+  return (
+    <Card>
+      <SchemaForm schema={schema} onSubmit={onSubmit}>
+        <SchemaFormControl
+          overrideByPath={{
+            "address.deliveryInstructions.dropOff": () => (
+              <FormControl
+                name="address.deliveryInstructions.dropOff"
+                label="Drop Off (custom)"
+                fieldType="input"
+                optional
+              />
+            ),
+            // Example of hiding a field by setting it to null
+            ageGroup: () => null,
+            // Example of overriding a field within an array of objects
+            "friends.*.name": () => <Box pb="xl">Override for name field</Box>,
+          }}
+        />
+        <FormSubmissionButtons />
+        <ShowFormValues />
+      </SchemaForm>
+    </Card>
+  );
+};
 
 /**
  * Shows how fields can be linked via reference handling
