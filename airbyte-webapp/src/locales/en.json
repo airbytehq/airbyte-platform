@@ -2300,6 +2300,16 @@
   "connectorBuilder.graphQL.query.invalidSyntax": "Invalid GraphQL syntax. Please check your query for syntax errors.",
   "connectorBuilder.graphQL.additionalProperties.title": "Additional Properties",
   "connectorBuilder.graphQL.additionalProperties.tooltip": "Additional properties to be sent in the GraphQL request body.",
+  "connectorBuilder.requestOption.parameter.label": "Parameter Name",
+  "connectorBuilder.requestOption.header.label": "Header Name",
+  "connectorBuilder.requestOption.body_data.label": "Field Name",
+  "connectorBuilder.requestOption.fieldPath.label": "Field Path",
+  "connectorBuilder.requestOption.field.tooltip": "Configures the field into which the value will be injected.",
+  "connectorBuilder.requestOption.injectInto.requestParameter": "Query Parameter",
+  "connectorBuilder.requestOption.injectInto.header": "Header",
+  "connectorBuilder.requestOption.injectInto.bodyData": "Body Data (url-encoded form)",
+  "connectorBuilder.requestOption.injectInto.bodyJson": "Body JSON payload",
+  "connectorBuilder.declarativeOAuth.label": "OAuth 2.0",
 
   "jobs.noAttemptsFailure": "Failed to start job.",
 

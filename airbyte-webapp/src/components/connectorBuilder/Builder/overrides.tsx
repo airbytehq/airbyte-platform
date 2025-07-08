@@ -12,16 +12,22 @@ import {
   FormControlErrorMessage,
   FormControlFooterError,
   FormControlFooterInfo,
+  FormControl,
 } from "components/forms/FormControl";
 import { ControlGroup } from "components/forms/SchemaForm/Controls/ControlGroup";
 import { LabelInfo } from "components/Label";
 import { CodeEditor } from "components/ui/CodeEditor";
 import { GraphQLEditor } from "components/ui/CodeEditor/GraphqlEditor";
 import { FlexContainer } from "components/ui/Flex";
+import { Input } from "components/ui/Input";
 import { ListBox } from "components/ui/ListBox";
+import { Option } from "components/ui/ListBox/Option";
+import { TagInput } from "components/ui/TagInput";
 
+import { RequestOptionInjectInto } from "core/api/types/ConnectorManifest";
 import { useConnectorBuilderPermission } from "services/connectorBuilder/ConnectorBuilderStateService";
 
+import { getDescriptionByManifest, getLabelByManifest } from "./manifestHelpers";
 import styles from "./overrides.module.scss";
 
 export const ParentStreamSelector = ({ path, currentStreamName }: { path: string; currentStreamName?: string }) => {
@@ -75,7 +81,7 @@ export const ParentStreamSelector = ({ path, currentStreamName }: { path: string
   const hasError = !!get(errors, path) && !!get(touchedFields, path);
 
   return (
-    <FlexContainer direction="column" gap="none" className={styles.parentStreamSelector} data-field-path={path}>
+    <FlexContainer direction="column" gap="none" className={styles.controlContainer} data-field-path={path}>
       <FormLabel
         htmlFor={path}
         label={formatMessage({ id: "connectorBuilder.parentStream.label" })}
@@ -264,4 +270,96 @@ const validateJSON = (value: string | undefined) => {
   } catch (error) {
     return false;
   }
+};
+
+export type RequestOptionInjectIntoValues = (typeof RequestOptionInjectInto)[keyof typeof RequestOptionInjectInto];
+
+export const RequestOptionFieldName = () => {
+  return null;
+};
+
+export const RequestOptionFieldPath = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  const { setValue } = useFormContext();
+
+  const fieldNamePath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.field_name`, [path]);
+  const injectIntoPath = useMemo(() => `${path.split(".").slice(0, -1).join(".")}.inject_into`, [path]);
+
+  const fieldPathValue = useBuilderWatch(path) as string[] | undefined;
+  const fieldNameValue = useBuilderWatch(fieldNamePath) as string | undefined;
+  const injectIntoValue = useBuilderWatch(injectIntoPath) as RequestOptionInjectIntoValues | undefined;
+
+  const fieldLabel = useMemo(() => {
+    switch (injectIntoValue) {
+      case "request_parameter":
+        return formatMessage({ id: "connectorBuilder.requestOption.parameter.label" });
+      case "header":
+        return formatMessage({ id: "connectorBuilder.requestOption.header.label" });
+      case "body_data":
+        return formatMessage({ id: "connectorBuilder.requestOption.body_data.label" });
+      default:
+        return formatMessage({ id: "connectorBuilder.requestOption.fieldPath.label" });
+    }
+  }, [formatMessage, injectIntoValue]);
+
+  return (
+    <FlexContainer direction="column" gap="none" className={styles.controlContainer}>
+      <FormLabel
+        htmlFor={path}
+        label={fieldLabel}
+        labelTooltip={formatMessage({ id: "connectorBuilder.requestOption.field.tooltip" })}
+      />
+      {injectIntoValue === "request_parameter" || injectIntoValue === "header" || injectIntoValue === "body_data" ? (
+        <Input
+          value={fieldNameValue}
+          onChange={(e) => {
+            setValue(fieldNamePath, e.target.value);
+            setValue(path, undefined);
+          }}
+        />
+      ) : (
+        <TagInput
+          name={path}
+          fieldValue={fieldPathValue ?? []}
+          onChange={(newValue: string[]) => {
+            setValue(path, newValue);
+            setValue(fieldNamePath, undefined);
+          }}
+        />
+      )}
+    </FlexContainer>
+  );
+};
+
+export const RequestOptionInjectSelector = ({ path }: { path: string }) => {
+  const { formatMessage } = useIntl();
+  const injectIntoOptions: Array<Option<string>> = [
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOption.injectInto.requestParameter" }),
+      value: "request_parameter",
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOption.injectInto.header" }),
+      value: "header",
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOption.injectInto.bodyData" }),
+      value: "body_data",
+    },
+    {
+      label: formatMessage({ id: "connectorBuilder.requestOption.injectInto.bodyJson" }),
+      value: "body_json",
+    },
+  ];
+
+  return (
+    <FormControl
+      fieldType="dropdown"
+      name={path}
+      options={injectIntoOptions}
+      label={getLabelByManifest("RequestOption.properties.inject_into")}
+      labelTooltip={getDescriptionByManifest("RequestOption.properties.inject_into")}
+      onlyShowErrorIfTouched
+    />
+  );
 };
