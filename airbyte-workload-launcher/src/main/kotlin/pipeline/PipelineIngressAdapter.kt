@@ -46,6 +46,7 @@ class PipelineIngressAdapter(
 
     val commonTags = hashMapOf<String, Any>()
     commonTags[MetricTags.DATA_PLANE_ID_TAG] = identityService.getDataplaneId()
+    commonTags[MetricTags.DATA_PLANE_NAME_TAG] = identityService.getDataplaneName()
     commonTags[MetricTags.WORKLOAD_ID_TAG] = input.workloadId
     ApmTraceUtils.addTagsToTrace(commonTags.toMap())
 

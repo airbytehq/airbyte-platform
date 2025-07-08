@@ -62,23 +62,25 @@ class WorkloadApiClient(
   }
 
   fun claim(workloadId: String): Boolean {
+    val dataplaneId = identityService.getDataplaneId()
+    val dataplaneName = identityService.getDataplaneName()
     var result = false
 
     val req =
       WorkloadClaimRequest(
         workloadId,
-        identityService.getDataplaneId(),
+        dataplaneId,
       )
 
     try {
       val resp: ClaimResponse =
         workloadApiClient.workloadApi.workloadClaim(req)
-      logger.info { "Claimed: ${resp.claimed} for $workloadId via API for ${req.dataplaneId}" }
+      logger.info { "Claimed: ${resp.claimed} for workload $workloadId via API in dataplane $dataplaneName ($dataplaneId)" }
 
       result = resp.claimed
     } catch (e: Exception) {
       logger.error(e) {
-        "Error claiming workload $workloadId via API for ${req.dataplaneId}.\n" +
+        "Error claiming workload $workloadId via API in dataplane $dataplaneName ($dataplaneId).\n" +
           "Exception: $e\n" +
           "message: ${e.message}\n" +
           "stackTrace: ${e.stackTrace}\n"
