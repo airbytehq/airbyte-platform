@@ -6,6 +6,13 @@
 */}}
 
 {{/*
+Renders the global.auth.instanceAdmin.password value
+*/}}
+{{- define "airbyte.auth.instanceAdmin.password" }}
+    {{- .Values.global.auth.instanceAdmin.password }}
+{{- end }}
+
+{{/*
 Renders the auth.instanceAdmin.password secret key
 */}}
 {{- define "airbyte.auth.instanceAdmin.password.secretKey" }}
@@ -831,6 +838,13 @@ Renders the auth.jwt secret name
 {{- else }}
     {{- .Values.global.secretName | default (printf "%s-airbyte-secrets" .Release.Name) }}
 {{- end }}
+{{- end }}
+
+{{/*
+Renders the global.auth.security.jwtSignatureSecret value
+*/}}
+{{- define "airbyte.auth.jwt.jwtSignatureSecret" }}
+    {{- .Values.global.auth.security.jwtSignatureSecret }}
 {{- end }}
 
 {{/*
