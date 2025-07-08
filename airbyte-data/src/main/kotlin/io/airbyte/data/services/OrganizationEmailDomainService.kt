@@ -13,4 +13,6 @@ interface OrganizationEmailDomainService {
   fun createEmailDomain(emailDomainConfig: OrganizationEmailDomain)
 
   fun deleteAllEmailDomains(organizationId: UUID)
+
+  fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain>
 }

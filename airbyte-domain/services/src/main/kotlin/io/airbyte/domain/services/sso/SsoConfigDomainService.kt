@@ -4,9 +4,13 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.model.generated.ProblemResourceData
+import io.airbyte.api.problems.model.generated.ProblemSSOConfigRetrievalData
 import io.airbyte.api.problems.model.generated.ProblemSSOCredentialUpdateData
 import io.airbyte.api.problems.model.generated.ProblemSSODeletionData
 import io.airbyte.api.problems.model.generated.ProblemSSOSetupData
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
+import io.airbyte.api.problems.throwable.generated.SSOConfigRetrievalProblem
 import io.airbyte.api.problems.throwable.generated.SSOCredentialUpdateProblem
 import io.airbyte.api.problems.throwable.generated.SSODeletionProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
@@ -17,6 +21,7 @@ import io.airbyte.data.services.OrganizationService
 import io.airbyte.data.services.SsoConfigService
 import io.airbyte.data.services.impls.keycloak.AirbyteKeycloakClient
 import io.airbyte.domain.models.SsoConfig
+import io.airbyte.domain.models.SsoConfigRetrieval
 import io.airbyte.domain.models.SsoKeycloakIdpCredentials
 import io.micronaut.transaction.annotation.Transactional
 import jakarta.inject.Singleton
@@ -29,6 +34,34 @@ open class SsoConfigDomainService internal constructor(
   private val airbyteKeycloakClient: AirbyteKeycloakClient,
   private val organizationService: OrganizationService,
 ) {
+  fun retrieveSsoConfig(organizationId: UUID): SsoConfigRetrieval {
+    val currentConfig = ssoConfigService.getSsoConfig(organizationId)
+    if (currentConfig == null) {
+      throw ResourceNotFoundProblem(
+        ProblemResourceData()
+          .resourceId(organizationId.toString())
+          .resourceType("sso_config"),
+      )
+    }
+
+    try {
+      val keycloakData = airbyteKeycloakClient.getSsoConfigData(organizationId, currentConfig.keycloakRealm)
+      val domainData = organizationEmailDomainService.findByOrganizationId(organizationId).map { it.emailDomain }
+      return SsoConfigRetrieval(
+        companyIdentifier = currentConfig.keycloakRealm,
+        clientId = keycloakData.clientId,
+        clientSecret = keycloakData.clientSecret,
+        emailDomains = domainData,
+      )
+    } catch (e: Exception) {
+      throw SSOConfigRetrievalProblem(
+        ProblemSSOConfigRetrievalData()
+          .organizationId(organizationId.toString())
+          .errorMessage("Error retrieving SSO config: $e"),
+      )
+    }
+  }
+
   @Transactional("config")
   open fun createAndStoreSsoConfig(config: SsoConfig) {
     validateEmailDomain(config)

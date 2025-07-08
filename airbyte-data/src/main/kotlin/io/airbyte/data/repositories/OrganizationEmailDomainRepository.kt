@@ -15,4 +15,6 @@ interface OrganizationEmailDomainRepository : PageableRepository<OrganizationEma
   fun findByEmailDomain(emailDomain: String): List<OrganizationEmailDomain>
 
   fun deleteByOrganizationId(organizationId: UUID)
+
+  fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain>
 }

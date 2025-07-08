@@ -28,4 +28,9 @@ class OrganizationEmailDomainServiceDataImpl(
   }
 
   override fun deleteAllEmailDomains(organizationId: UUID) = repository.deleteByOrganizationId(organizationId)
+
+  override fun findByOrganizationId(organizationId: UUID): List<OrganizationEmailDomain> =
+    repository.findByOrganizationId(organizationId).map {
+      it.toConfigModel()
+    }
 }

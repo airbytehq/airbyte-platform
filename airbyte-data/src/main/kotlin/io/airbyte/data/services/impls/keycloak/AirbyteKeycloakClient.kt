@@ -13,6 +13,7 @@ import org.keycloak.admin.client.Keycloak
 import org.keycloak.representations.idm.ClientRepresentation
 import org.keycloak.representations.idm.IdentityProviderRepresentation
 import org.keycloak.representations.idm.RealmRepresentation
+import java.util.UUID
 
 private val logger = KotlinLogging.logger {}
 
@@ -21,6 +22,29 @@ class AirbyteKeycloakClient(
   private val keycloakAdminClient: Keycloak,
   @Value("\${airbyte.airbyte-url}") private val airbyteUrl: String,
 ) {
+  fun getSsoConfigData(
+    organizationId: UUID,
+    realmName: String,
+  ): SsoKeycloakIdpCredentials {
+    val currentRealm = keycloakAdminClient.realms().realm(realmName)
+    val currentIdpRepresentation =
+      currentRealm
+        .identityProviders()
+        .findAll()
+        .filter { it.alias == DEFAULT_IDP_ALIAS }
+        .getOrNull(0)
+
+    if (currentIdpRepresentation == null) {
+      throw IdpNotFoundException("IDP $DEFAULT_IDP_ALIAS does not exist")
+    }
+
+    return SsoKeycloakIdpCredentials(
+      organizationId = organizationId,
+      clientId = currentIdpRepresentation.config["clientId"].toString(),
+      clientSecret = currentIdpRepresentation.config["clientSecret"].toString(),
+    )
+  }
+
   fun createOidcSsoConfig(request: SsoConfig) {
     createRealm(
       RealmRepresentation().apply {

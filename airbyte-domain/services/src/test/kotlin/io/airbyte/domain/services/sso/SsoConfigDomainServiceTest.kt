@@ -4,6 +4,7 @@
 
 package io.airbyte.domain.services.sso
 
+import io.airbyte.api.problems.throwable.generated.ResourceNotFoundProblem
 import io.airbyte.api.problems.throwable.generated.SSOSetupProblem
 import io.airbyte.config.Organization
 import io.airbyte.data.services.OrganizationEmailDomainService
@@ -44,6 +45,31 @@ class SsoConfigDomainServiceTest {
         airbyteKeycloakClient,
         organizationService,
       )
+  }
+
+  @Test
+  fun `retrieveSsoConfig should return SsoConfig successfully`() {
+    val organizationId = UUID.randomUUID()
+
+    every { ssoConfigService.getSsoConfig(organizationId) } returns mockk(relaxed = true)
+    every { airbyteKeycloakClient.getSsoConfigData(organizationId, any()) } returns mockk(relaxed = true)
+    every { organizationEmailDomainService.findByOrganizationId(organizationId) } returns listOf(mockk(relaxed = true))
+
+    ssoConfigDomainService.retrieveSsoConfig(organizationId)
+
+    verify(exactly = 1) { ssoConfigService.getSsoConfig(organizationId) }
+    verify(exactly = 1) { airbyteKeycloakClient.getSsoConfigData(organizationId, any()) }
+    verify(exactly = 1) { organizationEmailDomainService.findByOrganizationId(organizationId) }
+  }
+
+  @Test
+  fun `should throw SSOConfigRetrievalProblem if config is null`() {
+    val organizationId = UUID.randomUUID()
+    every { ssoConfigService.getSsoConfig(organizationId) } returns null
+
+    assertThrows<ResourceNotFoundProblem> {
+      ssoConfigDomainService.retrieveSsoConfig(organizationId)
+    }
   }
 
   @Test

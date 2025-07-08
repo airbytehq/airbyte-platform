@@ -1640,6 +1640,36 @@ components:
           type: string
           format: uuid
           description: The ID of the destination
+    SSOConfigRetrievalProblemResponse:
+      x-implements: io.airbyte.api.problems.ProblemResponse
+      type: object
+      allOf:
+        - $ref: "#/components/schemas/BaseProblemFields"
+        - type: object
+          properties:
+            status:
+              type: integer
+              default: 500
+            type:
+              type: string
+              default: error:sso-config-retrieval
+            title:
+              type: string
+              default: SSO config retrieval error
+            detail:
+              type: string
+              default: An error occurred when attempting to retrieve sso config data
+            data:
+              $ref: "#/components/schemas/ProblemSSOConfigRetrievalData"
+    ProblemSSOConfigRetrievalData:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+        errorMessage:
+          type: string
     SSOSetupProblemResponse:
       x-implements: io.airbyte.api.problems.ProblemResponse
       type: object

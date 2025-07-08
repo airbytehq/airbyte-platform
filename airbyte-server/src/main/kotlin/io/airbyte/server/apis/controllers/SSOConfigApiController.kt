@@ -7,6 +7,8 @@ package io.airbyte.server.apis.controllers
 import io.airbyte.api.server.generated.apis.SsoConfigApi
 import io.airbyte.api.server.generated.models.CreateSSOConfigRequestBody
 import io.airbyte.api.server.generated.models.DeleteSSOConfigRequestBody
+import io.airbyte.api.server.generated.models.GetSSOConfigRequestBody
+import io.airbyte.api.server.generated.models.SSOConfigRead
 import io.airbyte.api.server.generated.models.UpdateSSOCredentialsRequestBody
 import io.airbyte.commons.annotation.AuditLogging
 import io.airbyte.commons.annotation.AuditLoggingProvider
@@ -25,6 +27,19 @@ import java.util.UUID
 open class SSOConfigApiController(
   private val ssoConfigDomainService: SsoConfigDomainService,
 ) : SsoConfigApi {
+  @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
+  @ExecuteOn(AirbyteTaskExecutors.IO)
+  override fun getSsoConfig(getSSOConfigRequestBody: GetSSOConfigRequestBody): SSOConfigRead {
+    val ssoConfig = ssoConfigDomainService.retrieveSsoConfig(getSSOConfigRequestBody.organizationId)
+    return SSOConfigRead(
+      organizationId = getSSOConfigRequestBody.organizationId,
+      companyIdentifier = ssoConfig.companyIdentifier,
+      clientId = ssoConfig.clientId,
+      clientSecret = ssoConfig.clientSecret,
+      emailDomains = ssoConfig.emailDomains,
+    )
+  }
+
   @Secured(AuthRoleConstants.ORGANIZATION_ADMIN)
   @ExecuteOn(AirbyteTaskExecutors.IO)
   @AuditLogging(provider = AuditLoggingProvider.BASIC)

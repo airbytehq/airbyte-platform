@@ -6930,6 +6930,27 @@ paths:
           description: The resource was deleted successfully.
         "422":
           $ref: "#/components/responses/InvalidInputResponse"
+  /v1/sso_config/get:
+    post:
+      summary: Retrieve the sso config for an organization
+      tags:
+        - sso_config
+      operationId: getSsoConfig
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetSSOConfigRequestBody"
+        required: true
+      responses:
+        "200":
+          description: SSO config retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SSOConfigRead"
+        "422":
+          $ref: "#/components/responses/InvalidInputResponse"
   /v1/sso_config/create:
     post:
       summary: Onboard a cloud customer to SSO
@@ -20188,6 +20209,32 @@ components:
         permission:
           $ref: "#/components/schemas/PermissionType"
       x-sdk-component: true
+
+    GetSSOConfigRequestBody:
+      type: object
+      required:
+        - organizationId
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+
+    SSOConfigRead:
+      type: object
+      properties:
+        organizationId:
+          type: string
+          format: uuid
+        companyIdentifier:
+          type: string
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+        emailDomains:
+          type: array
+          items:
+            type: string
 
     CreateSSOConfigRequestBody:
       type: object
