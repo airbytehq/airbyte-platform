@@ -20,7 +20,7 @@
   max-height: variables.$height-org-picker-popover-list;
   overflow-y: auto;
 
-  &__singleWorkspace {
+  &--singleWorkspace {
     border: none;
   }
 }

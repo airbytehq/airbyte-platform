@@ -20,7 +20,7 @@
   border-radius: variables.$border-radius-sm;
 
   &:focus-visible {
-    outline-offset: -2px;
+    outline: none;
   }
 
   .orgPicker__logo {

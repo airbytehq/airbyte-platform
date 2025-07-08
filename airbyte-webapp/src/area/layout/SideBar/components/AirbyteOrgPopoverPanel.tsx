@@ -11,9 +11,9 @@ import { LoadingSpinner } from "components/ui/LoadingSpinner";
 import { Text } from "components/ui/Text";
 
 import { useListOrganizationSummaries } from "core/api";
-import { OrganizationSummary } from "core/api/types/AirbyteClient";
 import { useCurrentUser } from "core/services/auth/AuthContext";
 import { useFeature, FeatureItem } from "core/services/features";
+import { isNonNullable } from "core/utils/isNonNullable";
 
 import styles from "./AirbyteOrgPopoverPanel.module.scss";
 import { OrganizationWithWorkspaces } from "./OrganizationWithWorkspaces";
@@ -28,7 +28,7 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
   const [search, setSearch] = useState("");
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
 
-  const { data, isLoading, hasNextPage, fetchNextPage } = useListOrganizationSummaries({
+  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useListOrganizationSummaries({
     userId,
     nameContains: debouncedSearchValue,
     pagination: {
@@ -98,11 +98,11 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
       <FlexContainer
         direction="column"
         gap="xs"
-        className={classNames(styles.list, { [styles.list__singleWorkspace]: !allowMultiWorkspace })}
+        className={classNames(styles.list, { [styles["list--singleWorkspace"]]: !allowMultiWorkspace })}
         style={{ overflow: "auto" }}
       >
         {isLoading ? (
-          <Box p="lg">
+          <Box p="md" pb="sm">
             <LoadingSpinner />
           </Box>
         ) : organizationSummaries?.length === 0 ? (
@@ -115,10 +115,19 @@ export const AirbyteOrgPopoverPanel: React.FC<{ closePopover: () => void }> = ({
           <Virtuoso
             ref={virtuosoRef}
             style={{ height: estimatedHeight }}
-            data={organizationSummaries?.filter(Boolean) as OrganizationSummary[]}
+            data={organizationSummaries?.filter(isNonNullable)}
             endReached={handleEndReached}
             computeItemKey={(index, item) => item.organization.organizationId + index}
             itemContent={OrganizationWithWorkspaces}
+            components={{
+              Footer: isFetchingNextPage
+                ? () => (
+                    <Box pt="md" pb="sm">
+                      <LoadingSpinner />
+                    </Box>
+                  )
+                : undefined,
+            }}
           />
         )}
       </FlexContainer>
